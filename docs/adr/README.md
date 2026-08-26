@@ -12,3 +12,6 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Proposed |
 | [0002](0002-decorrelation-timescale-as-a-field.md) | Decorrelation timescale is a field, authored per feature | Accepted |
 | [0003](0003-bespoke-edr-trajectory-provider.md) | Trajectory queries are served by a bespoke pygeoapi provider | Accepted |
+| [0004](0004-bespoke-sensorthings-provider.md) | SensorThings is served by a bespoke pygeoapi provider | Accepted |
+| [0005](0005-sound-speed-is-derived-not-stored.md) | Sound speed is derived at the point of use, not stored | Accepted |
+| [0006](0006-heartbeat-cadence-is-real-time.md) | Heartbeat cadence and liveness windows are real time | Accepted |

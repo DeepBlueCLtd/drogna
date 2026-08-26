@@ -1,0 +1,103 @@
+{
+  "component": "deployment",
+  "destination": "droplet",
+  "project_name": "drogna",
+  "profiles": {
+    "active": [
+      "core"
+    ]
+  },
+  "runtime": {
+    "restart_policy": "unless-stopped",
+    "log_driver": "json-file",
+    "log_max_size": "10m",
+    "log_max_files": "3",
+    "healthcheck": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 30,
+      "start_period": "30s"
+    },
+    "wait_timeout_seconds": 900
+  },
+  "container_paths": {
+    "app_root": "/opt/drogna",
+    "config_dir": "/etc/drogna",
+    "coverage_root": "/var/lib/drogna/coverage",
+    "static_root": "/usr/share/nginx/html",
+    "broker_config_dir": "/mosquitto/config",
+    "broker_data_dir": "/mosquitto/data",
+    "database_data_dir": "/var/lib/postgresql/data"
+  },
+  "host_paths": {
+    "runtime_dir": "deploy/.runtime",
+    "broker_config_dir": "deploy/broker"
+  },
+  "network": {
+    "publish": {
+      "clock": {
+        "bind": "127.0.0.1",
+        "host_port": 8090,
+        "container_port": 8090
+      },
+      "broker": {
+        "bind": "127.0.0.1",
+        "host_port": 1883,
+        "container_port": 1883
+      },
+      "observations": {
+        "bind": "127.0.0.1",
+        "host_port": 5432,
+        "container_port": 5432
+      },
+      "query": {
+        "bind": "127.0.0.1",
+        "host_port": 8082,
+        "container_port": 8080
+      },
+      "proxy": {
+        "bind": "0.0.0.0",
+        "host_port": 443,
+        "container_port": 8080
+      },
+      "client": {
+        "bind": "127.0.0.1",
+        "host_port": 8080,
+        "container_port": 8080
+      },
+      "telemetry": {
+        "bind": "127.0.0.1",
+        "host_port": 8091,
+        "container_port": 8091
+      }
+    }
+  },
+  "public_url": {
+    "scheme": "https",
+    "host": "drogna.invalid",
+    "port": 443,
+    "base_path": "/"
+  },
+  "tls": {
+    "terminate": true,
+    "hostname": "drogna.invalid"
+  },
+  "database": {
+    "name": "drogna",
+    "user": "drogna"
+  },
+  "resources": {
+    "default": {
+      "memory": "384m",
+      "cpus": "0.75"
+    },
+    "observations": {
+      "memory": "1g",
+      "cpus": "1.0"
+    }
+  },
+  "seeding": {
+    "record_filename": "seeding-record.json",
+    "artefact_dirname": "artefacts"
+  }
+}

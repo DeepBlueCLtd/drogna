@@ -32,7 +32,7 @@ requires a configuration edit, the sense → decide → act → publish cycle st
 
 ## Why the output is a port
 
-NetCDF today, [Zarr](../glossary.md#coverage) plausibly later. This is one of
+NetCDF today, Zarr plausibly later. This is one of
 the four boundaries drogna is willing to call a genuine port, because a second
 implementation is actually conceivable rather than theoretically conceivable.
 The bespoke trajectory provider described under the

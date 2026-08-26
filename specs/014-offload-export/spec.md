@@ -242,8 +242,9 @@ appears in it.
   any other I/O. (Constitution IV; SRD NFR-04)
 - **FR-020**: The packager MUST publish a heartbeat on `ctl/heartbeat` at its declared
   interval carrying its component identifier, the simulation time and a status, and MUST
-  publish bundle-state counts and verification failures on `ctl/telemetry`.
-  (`docs/architecture/repo-layout.md`; SRD FR-45)
+  publish bundle-state counts and verification failures on `ctl/telemetry`. Illumination
+  of this component in the client follows from that heartbeat alone.
+  (`docs/architecture/repo-layout.md`; SRD FR-45, FR-52)
 - **FR-021**: `docs/standards/cf-conventions.md` MUST explain the conventions the export
   follows, why `trajectoryProfile` is the geometry that fits, how ragged profiles are
   represented, and which attributes are deliberately not emitted and why. (SRD PR-09,

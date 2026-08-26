@@ -6,16 +6,16 @@
 
 **Status**: Draft
 
-**Input**: SRD FR-45, FR-01, C-18, §10 delivery priority 3, §11 open question 3. Constitution VII is the load-bearing principle.
+**Input**: SRD FR-45, FR-01, FR-52, FR-53, C-18, §10 delivery priority 3, §11 resolved question 3. Constitution VII is the load-bearing principle.
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The whole architecture, dark, and an honest label (Priority: P1)
 
-Someone opens the harness in a browser on the first day of the project, when nothing else exists.
-They see the entire component layout — all eighteen components and the flow between them — with
-every component greyed out, and a plain statement that this is a learning harness running synthetic
-data and fake numerics. Nothing on the page suggests anything is working, because nothing is.
+Someone opens drogna in a browser on the first day, when almost nothing exists. They see the entire
+component layout — all eighteen components and the flow between them — with every component greyed
+out, and a plain statement that this is a learning harness running synthetic data and fake numerics.
+Nothing on the page suggests anything is working, because nothing is.
 
 **Why this priority**: §10 puts the shell third because it is the feedback surface, the
 always-showable artefact and the anchor for the Playwright loop. FR-01 rides with it: the moment
@@ -37,7 +37,7 @@ scrolling or interaction.
    blank screen or an empty diagram.
 4. **Given** the page is open, **When** a viewer inspects the layout, **Then** it is labelled as a
    drawing of the intended architecture, so a dark component reads as "not heard from" rather than
-   "planned but nonexistent" or "broken".
+   "broken" or "imaginary".
 
 ---
 
@@ -46,20 +46,21 @@ scrolling or interaction.
 A component starts, publishes a heartbeat on `ctl/heartbeat`, and its node lights. It keeps
 heartbeating and stays lit. It stops, and after its declared liveness window has elapsed in
 simulation time, it goes dark again. Nothing else can light it: not a configuration file, not a
-flag, not a list in the client's source.
+flag, not a list in the client's source, and not a mock.
 
-**Why this priority**: Constitution VII, and the whole evidential value of the harness. A display
-that can claim a component exists when it does not makes every other claim suspect.
+**Why this priority**: Constitution VII, promoted to non-negotiable in version 1.1.0, and the whole
+evidential value of drogna. A display that can claim a component exists when it does not makes every
+other claim suspect.
 
-**Independent Test**: Publish heartbeats for one component id from a script, and stop. The node
-lights within one interval and darkens within its declared window. Delete every heartbeat and no
-node lights, whatever the configuration says.
+**Independent Test**: Publish heartbeats for one component id, then stop. The node lights within one
+interval and darkens within its declared window. With no heartbeats at all, no node lights, whatever
+any configuration document contains.
 
 **Acceptance Scenarios**:
 
 1. **Given** no heartbeats have been received, **When** the client renders, **Then** every node is
    dark regardless of what any configuration document contains.
-2. **Given** a valid heartbeat for component `C-01` with a declared liveness window, **When** it is
+2. **Given** a valid heartbeat for a component with a declared liveness window, **When** it is
    received, **Then** that node lights within one render frame and shows its reported status.
 3. **Given** a lit component, **When** heartbeats stop and simulation time advances past the
    declared window, **Then** the node returns to dark without any other input.
@@ -77,33 +78,36 @@ node lights, whatever the configuration says.
 
 ---
 
-### User Story 3 - Known states, on demand, for capture (Priority: P3)
+### User Story 3 - The clock is the first thing that lights (Priority: P3)
 
-Playwright needs the shell in a specific state — everything dark, three components lit, one
-degraded, one unmapped, the clock paused, the broker silent — without the rest of the harness
-existing. A fixture feed replays recorded heartbeats into the same transport boundary the real
-broker connection uses, so the illumination path under test is the real one.
+The simulation clock from feature 001 publishes a heartbeat on the control namespace. The client
+derives that component's illumination from it, and that single lit node — against seventeen dark
+ones — is drogna's first genuine liveness signal and the pattern every later component follows. It
+is also what makes a screenshot worth taking: an all-grey shell yields an image that never changes,
+so the capture pipeline could be shown to run but never shown to discriminate.
 
-**Why this priority**: This answers SRD §11 open question 3. The harness's starting position is
-that liveness-driven illumination alone cannot exercise the capture pipeline, because early on
-there is nothing alive to light anything; but the mock must be traffic, not configuration, or
-Constitution VII is broken by the test harness itself.
+**Why this priority**: SRD FR-52 settles the question of whether the shell needs mocked traffic, and
+the answer is no. One genuinely live component supplies the change, and the clock is already first
+in the delivery order for unrelated reasons.
 
-**Independent Test**: Drive the fixture feed to each declared state and capture a screenshot.
-Repeat; the captures match apart from regions declared dynamic.
+**Independent Test**: Run the clock service and nothing else. Exactly one node is lit. Stop the
+clock service and, once simulation time has passed the declared window — which requires the clock,
+so the display correctly becomes indeterminate instead — the page says what it can no longer tell.
 
 **Acceptance Scenarios**:
 
-1. **Given** a capture build, **When** a fixture scenario is selected, **Then** heartbeats are
-   injected at the transport boundary and travel the same reducer path as broker traffic.
-2. **Given** any fixture scenario, **When** the page renders, **Then** it is visibly labelled as
-   replaying recorded traffic, so no capture can be mistaken for a live system.
-3. **Given** a deployed, non-capture build, **When** it is inspected, **Then** the fixture feed is
-   not reachable and no scenario can be selected.
-4. **Given** the same fixture scenario is run twice, **When** two captures are compared, **Then**
-   they are identical outside the regions the capture configuration declares dynamic.
-5. **Given** a fixture scenario, **When** the liveness reducer runs on it, **Then** it receives only
-   heartbeats and simulation time, exactly as it does from the broker.
+1. **Given** the clock service is running and no other component exists, **When** the page loads,
+   **Then** exactly one node is lit, and it is the simulation clock.
+2. **Given** the clock's heartbeat is the only traffic on `ctl/heartbeat`, **When** a later component
+   begins heartbeating, **Then** it lights by exactly the same path, with no client change.
+3. **Given** a capture pins the clock rate to zero, **When** the page is captured, **Then** it
+   renders correctly with the rate at zero, shows the clock as paused rather than stale, and nothing
+   decays for the duration of the capture, because simulation time is not advancing.
+4. **Given** two captures taken with the rate pinned to zero, **When** they are compared, **Then**
+   they are identical outside regions the capture configuration declares dynamic.
+5. **Given** the built client, **When** it is searched for a way to light a node without a received
+   heartbeat, **Then** there is none: no demo mode, no fixture mode, no populate-for-screenshot
+   path, no query parameter, no build flag.
 
 ---
 
@@ -114,9 +118,9 @@ decide → act → publish cycle is visible as a cycle, and the parts that are g
 distinguished from the parts that are well-chosen plumbing.
 
 **Why this priority**: SRD §2 says the architecture's interesting property is temporal and that a
-static structural diagram obscures it, and §2.2 says the visualisation makes the core/plumbing
-distinction visible rather than hiding it. It is fourth because it is a refinement of a layout that
-already works.
+static structural diagram obscures it, and §2.2 says the visualisation makes the core and plumbing
+distinction visible rather than hiding it. It is fourth because it refines a layout that already
+works.
 
 **Independent Test**: A reader who has not read the SRD can trace the cycle around the diagram and
 say which components hold bespoke logic.
@@ -147,12 +151,18 @@ say which components hold bespoke logic.
 - A heartbeat whose simulation time is ahead of the client's last received tick, which happens when
   the client's tick stream lags. Within one tick this is treated as current; beyond that it is
   flagged.
+- The clock rate is pinned to zero for a long real interval during a capture. Nothing decays and the
+  display is stable, which is the point; the clock state shows paused throughout so the stillness is
+  never read as health.
+- Rate zero and clock unreachable look similar to a casual glance and mean opposite things. Paused
+  is a state received from the clock; stale is the absence of any state. They are rendered
+  differently and labelled.
 - High rate multipliers. Rendering is throttled to the display's frame budget, but liveness is
   computed from every heartbeat received, never from a sampled subset.
 - Broker reachable, no traffic at all. The page distinguishes "connected and hearing nothing" from
   "not connected", because they mean different things.
-- The runtime configuration document is missing or invalid. The static shell and the FR-01 statement
-  still render; the transport does not start, and the failure is shown.
+- The runtime configuration document is missing or invalid. The static shell and the FR-001
+  statement still render; the transport does not start, and the failure is shown.
 - A very small viewport. The layout remains legible or becomes scrollable, and the honesty statement
   is never the thing that gets dropped.
 
@@ -168,59 +178,62 @@ say which components hold bespoke logic.
   (SRD FR-45)
 - **FR-003**: A component MUST be lit only because a heartbeat from it arrived within its declared
   liveness window. (SRD FR-45, Constitution VII)
-- **FR-004**: No configuration document, feature flag, build-time list or hardcoded set may cause a
-  component to be lit. The liveness computation's only inputs are received heartbeats and the
-  simulation time. (Constitution VII)
-- **FR-005**: The liveness window MUST be evaluated in simulation time, comparing the current
+- **FR-004**: No configuration document, feature flag, build-time list, query parameter or mocked
+  message may cause a component to be lit. The liveness computation's only inputs are heartbeats
+  received from the broker and the simulation time. (SRD FR-52, Constitution VII)
+- **FR-005**: The client MUST contain no demo mode, no fixture mode and no
+  populate-for-the-screenshot path, in any build. A mock asserts the existence of something that does
+  not exist, which is the failure FR-45 exists to prevent. (SRD FR-52, Constitution VII)
+- **FR-006**: The liveness window MUST be evaluated in simulation time, comparing the current
   simulation time from the clock service against the simulation time carried in the heartbeat, using
   the window the heartbeat itself declares. (SRD FR-09, FR-45)
-- **FR-006**: The client MUST take simulation time from the clock service (C-01) and MUST NOT read
+- **FR-007**: The client MUST take simulation time from the clock service (C-01) and MUST NOT read
   the browser clock in any operational path. (SRD FR-09, Constitution I)
-- **FR-007**: The client MUST display the clock state — mode, rate, current tick, and staleness —
-  and MUST display a paused or stale clock prominently, because both freeze the liveness display.
-  (SRD FR-10, FR-45)
-- **FR-008**: When the clock is stale beyond the configured tolerance, liveness MUST be displayed as
+- **FR-008**: The client MUST derive the simulation clock's illumination from its heartbeat on
+  `ctl/heartbeat`, by the same path every later component uses. (SRD FR-52)
+- **FR-009**: The client MUST display the clock state — mode, rate, current tick, and staleness —
+  and MUST render a paused clock and a stale clock differently, since one is a state received and
+  the other is the absence of any state. (SRD FR-10, FR-53, FR-45)
+- **FR-010**: A clock rate of zero MUST be a legitimate displayed state: the page renders correctly,
+  liveness does not decay because simulation time is not advancing, and the display remains stable
+  for the duration of a capture. (SRD FR-53, PR-10)
+- **FR-011**: When the clock is stale beyond the configured tolerance, liveness MUST be displayed as
   indeterminate rather than as lit or dark. (SRD FR-09, FR-45)
-- **FR-009**: The heartbeat message MUST be defined once in
+- **FR-012**: The heartbeat message MUST be defined once in
   `contracts/schemas/heartbeat.schema.json`, with `$id`
   `https://schemas.harness.invalid/heartbeat.schema.json`, carrying at least: component id,
   simulation time, tick, status, declared heartbeat interval, declared liveness window, run id and
-  config digest. (SRD NFR-02, repo layout)
-- **FR-010**: A heartbeat failing schema validation MUST light nothing, MUST be counted, and the
+  config digest. (SRD NFR-02, FR-52, repo layout)
+- **FR-013**: A heartbeat failing schema validation MUST light nothing, MUST be counted, and the
   count MUST be visible. (SRD NFR-02, FR-45)
-- **FR-011**: A heartbeat carrying a component id absent from the layout MUST be displayed as an
+- **FR-014**: A heartbeat carrying a component id absent from the layout MUST be displayed as an
   unmapped live component, never silently discarded. (Constitution VII)
-- **FR-012**: Reported status MUST be rendered distinguishably — at least starting, ok, degraded and
-  stopping — so a degraded component is not shown as a healthy one. (SRD FR-45, FR-38 in spirit)
-- **FR-013**: The layout MUST be labelled as a drawing of the intended architecture, so that a dark
+- **FR-015**: Reported status MUST be rendered distinguishably — at least starting, ok, degraded and
+  stopping — so a degraded component is not shown as a healthy one. (SRD FR-45)
+- **FR-016**: The layout MUST be labelled as a drawing of the intended architecture, so that a dark
   node reads as "not heard from". (SRD FR-45, Constitution VII)
-- **FR-014**: The layout MUST render the control loop as a closed cycle, matching SRD §2, and MUST
+- **FR-017**: The layout MUST render the control loop as a closed cycle, matching SRD §2, and MUST
   distinguish components holding bespoke logic from plumbing with a legend, matching SRD §2.2.
   (SRD §2, §2.2)
-- **FR-015**: The client MUST obtain its runtime configuration from a served document validated
+- **FR-018**: The client MUST obtain its runtime configuration from a served document validated
   against `contracts/schemas/config.client.schema.json` before it opens any transport, and MUST
   contain no other literal host, port or URL. (SRD NFR-04, Constitution IV)
-- **FR-016**: The static shell and the FR-001 statement MUST render before, and independently of,
+- **FR-019**: The static shell and the FR-001 statement MUST render before, and independently of,
   any successful network call. (SRD FR-45)
-- **FR-017**: The client MUST be read-only on the broker: it subscribes to `ctl/heartbeat` and
+- **FR-020**: The client MUST be read-only on the broker: it subscribes to `ctl/heartbeat` and
   publishes nothing on any topic. (SRD FR-14, Constitution X)
-- **FR-018**: Connection state MUST be displayed, distinguishing not connected from connected but
+- **FR-021**: Connection state MUST be displayed, distinguishing not connected from connected but
   silent. (SRD FR-45)
-- **FR-019**: A fixture heartbeat feed MUST exist for capture work, injecting recorded heartbeats at
-  the same transport boundary the broker connection uses, so the illumination path under test is the
-  production path. (SRD §11 open question 3, PR-10)
-- **FR-020**: A build replaying fixture traffic MUST say so on the page, and the fixture feed MUST
-  be absent from, and unreachable in, a deployed build. (SRD FR-01, FR-45)
-- **FR-021**: At least six fixture scenarios MUST exist: all dark; several lit; one degraded; one
-  unmapped component; clock paused; broker silent. (PR-10, SRD §11 open question 3)
-- **FR-022**: Every component node and every status region MUST carry a stable test identifier for
-  capture and end-to-end work. (PR-10)
+- **FR-022**: Every component node and every status region MUST carry a stable test identifier, so
+  that capture and end-to-end work can address them without depending on layout. (PR-10)
 - **FR-023**: The liveness computation MUST be a pure function of received heartbeats and simulation
-  time, unit tested independently of rendering. (Constitution VII)
+  time, unit tested independently of rendering. Constructing heartbeat values as inputs to that
+  function in a unit test is testing a function, not driving a display, and no such path exists in
+  the built client. (Constitution VII)
 - **FR-024**: Lit and dark MUST be distinguishable by more than colour alone, so the state survives
   a greyscale screenshot in the blog. (PR-08)
 - **FR-025**: The client's own node MUST be lit by its own presence and labelled as such, since it
-  cannot hear itself over the broker. (Constitution VII, honesty)
+  cannot hear itself over the broker. (Constitution VII)
 
 ### Key Entities
 
@@ -233,10 +246,8 @@ say which components hold bespoke logic.
 - **Liveness state**: Per component: last heartbeat, last status, and the derived state of lit,
   dark, indeterminate or unmapped.
 - **Clock state**: Mode, rate, current tick, simulation time, staleness, as read from the clock
-  service.
+  service. A rate of zero is a normal value.
 - **Connection state**: Not connected, connected and silent, or receiving.
-- **Fixture scenario**: A named, ordered set of recorded heartbeats and clock states, replayed at
-  the transport boundary for capture.
 
 ## Success Criteria *(mandatory)*
 
@@ -244,43 +255,48 @@ say which components hold bespoke logic.
 
 - **SC-001**: With no broker and no clock service reachable, the page renders the complete dark
   layout and the honesty statement within two seconds of load over the droplet link on a cold cache.
-- **SC-002**: A component that begins publishing heartbeats is lit within one declared interval, and
+- **SC-002**: With the clock service running and nothing else, exactly one node is lit, and it is the
+  simulation clock.
+- **SC-003**: A component that begins publishing heartbeats is lit within one declared interval, and
   returns to dark within its declared liveness window plus one tick after they stop.
-- **SC-003**: The liveness reducer's unit tests demonstrate that its output changes only in response
-  to heartbeats and simulation time; passing it any configuration changes nothing.
-- **SC-004**: The client's operational source contains zero occurrences of `Date.now`, `new Date`
+- **SC-004**: The built client contains no code path that lights a node from anything other than a
+  received heartbeat: no demo mode, no fixture module, no query parameter and no build flag, as
+  demonstrated by inspection of the bundle and by the reducer's unit tests.
+- **SC-005**: The client's operational source contains zero occurrences of `Date.now`, `new Date`
   or `performance.now`, as demonstrated by the wall-clock gate.
-- **SC-005**: An invalid heartbeat never lights a node, and the visible discard count increments by
+- **SC-006**: An invalid heartbeat never lights a node, and the visible discard count increments by
   exactly one per invalid message.
-- **SC-006**: Playwright drives the shell to each of the six declared fixture states and produces
-  captures that are identical across two consecutive runs outside declared dynamic regions.
-- **SC-007**: A heartbeat carrying an unmapped component id becomes visible on the page within one
+- **SC-007**: Two captures taken with the clock rate pinned to zero are identical outside regions the
+  capture configuration declares dynamic.
+- **SC-008**: A heartbeat carrying an unmapped component id becomes visible on the page within one
   declared interval.
-- **SC-008**: The honesty statement is present in the initial HTML payload, not only after
+- **SC-009**: The honesty statement is present in the initial HTML payload, not only after
   hydration, and remains visible at a 375-pixel-wide viewport.
 
 ## Assumptions
 
-- The broker exposes an MQTT-over-WebSocket listener that the browser can reach. The listener's
-  configuration and its exposure through the reverse proxy belong to the deployment and proxy
-  features; this feature consumes them and records the dependency.
+- SRD §11 records the mocked-traffic question as resolved: the shell needs no mocked traffic, because
+  the clock's heartbeat is the first real liveness signal and capture pins the clock rate to zero.
+  This feature implements that answer rather than reopening it, which is why it depends on feature
+  001 being delivered first — as the delivery order already requires.
+- The broker exposes an MQTT-over-WebSocket listener the browser can reach. Its configuration and its
+  exposure through the reverse proxy belong to the deployment and proxy features; this feature
+  consumes them and records the dependency.
 - Deck.gl is a dependency of the client package because the map surfaces of later features need it.
   The component shell itself is a node-link diagram rendered as SVG, because Deck.gl adds nothing to
   a diagram of eighteen boxes and an abstraction for its own sake is a constitution violation.
 - The layout map is derived from the SRD component table (C-01 to C-18) and held as a static data
-  module inside the client, labelled as a drawing. This is not a violation of Constitution VII: it
+  module inside the client, labelled as a drawing. This is not a breach of Constitution VII: it
   determines what is drawn, never what is lit.
 - One relative bootstrap URL for the runtime configuration document is unavoidable in a browser
   application. It is the single permitted literal in the client, carries an inline exemption marker
   with its reason, and appears in the exemption inventory.
 - `contracts/schemas/config.client.schema.json` is created by this feature as the first to need it.
-- The simulation speed control of SRD FR-49 belongs to the visualisation feature. This feature
-  displays clock state and does not offer the control, so that the control surface is designed once.
-- SRD §11 open question 3 is answered here as: yes, early capture work needs traffic, and the
-  traffic is injected at the transport boundary as recorded heartbeats rather than as configuration.
-  If a later feature finds this unnecessary once real components exist, the fixture feed can be
-  retired without touching the illumination path.
+- The simulation speed control of SRD FR-49 belongs to the visualisation feature, and pinning the
+  rate to zero for a capture (FR-53) is done by the capture feature against the clock's control
+  surface. This feature displays clock state and offers no control, so the control surface is
+  designed once.
 - The heartbeat's declared liveness window is chosen per component and carried in the message, so
   the client holds no table of expected intervals.
 - Screenshot capture and its plumbing belong to feature 016. This feature provides the stable test
-  identifiers and the deterministic states that capture needs.
+  identifiers and the honest states that capture needs.

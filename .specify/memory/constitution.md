@@ -22,7 +22,13 @@ time comes from the shared simulation clock service (C-01) via the clock port.
   `performance.now`, SQL `now()`, `current_timestamp`, broker-assigned timestamps
   used as truth.
 - Permitted only in: log line decoration, process-level metrics, test harness setup,
-  and the clock service's own real-time driver.
+  the clock service's own real-time driver, and **heartbeat emission and liveness
+  evaluation** (ADR-0006). The last of these is narrow and stays narrow: it covers
+  emitting a heartbeat on a real-time interval and evaluating a liveness window. It
+  does not cover timestamping an observation, scheduling a model run, ageing an
+  uncertainty field, or anything else. Liveness answers "is this process alive?",
+  which is a fact about the host and not about the simulated world, and deterministic
+  replay is untouched because no operational output depends on heartbeat timing.
 - Enforced by an automated lint gate (`scripts/check_no_wallclock.py`) that runs in
   CI and fails the build. Any exemption is an inline `# harness:allow-wallclock
   <reason>` marker, and every marker is reviewed.
@@ -103,7 +109,10 @@ The harness claims exactly the pluggability it has, and no more.
   implementation: the **model kernel** (initialisation state in, gridded field out),
   the **coverage output** (NetCDF today, Zarr plausibly later), the **clock**, and
   the **RNG**. The bespoke EDR trajectory provider sits behind the coverage output
-  port as a planned component, not a workaround (FR-50).
+  port as a planned component, not a workaround (FR-50, ADR-0003), as does the bespoke
+  SensorThings provider (ADR-0004). Where a standard is ahead of its implementations,
+  drogna writes the adapter rather than bending the architecture around the gap — and
+  states plainly which subset of the standard it actually implements.
 - Marginal, wrapped thinly and documented as marginal: **event publication**.
 - Not ports, and not to be dressed as ports: the **observation store** (Postgres is
   not being swapped) and **observation intake** (aspirational, not real).
@@ -257,8 +266,13 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+**Version**: 1.2.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
 
 *1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
 extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
 EDR trajectory provider as sitting behind an existing port (FR-50). Project named.*
+
+*1.2.0 — Principle I gains a narrow exemption for heartbeat emission and liveness
+evaluation (ADR-0006), without which FR-53's rate-zero capture greys out a running
+system. Principle VI records the bespoke SensorThings provider (ADR-0004) and the
+obligation to state which subset of a standard is actually implemented.*

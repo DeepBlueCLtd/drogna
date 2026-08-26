@@ -1,0 +1,20 @@
+{
+  "component": "common",
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "mode": "simulated",
+    "start_instant": "2026-01-01T00:00:00Z",
+    "rate": 1.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "common"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "common"
+  },
+  "logging": {
+    "level": "INFO"
+  }
+}

@@ -1,6 +1,6 @@
 """Simulation time: the value types, the port implementations, and the tick transport.
 
-Simulation time is quantised. The instant of tick ``n`` is ``epoch + n × tick_interval``
+Simulation time is quantised. The instant of tick ``n`` is ``epoch + n * tick_interval``
 computed in exact integer microseconds, so a tick value is fixed by the run's clock
 configuration and is unaffected by the rate at which ticks are emitted. Changing the
 rate changes pace, never values; that is what makes a replay comparable.
@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from enum import Enum
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import IO, Any
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
+
+from harness_core.ports import Clock  # re-exported: components name harness_core.clock.Clock
 
 __all__ = [
     "Clock",
@@ -34,8 +36,8 @@ __all__ = [
     "ClockEndpoint",
     "ClockError",
     "ClockMode",
-    "ClockState",
     "ClockStaleError",
+    "ClockState",
     "ClockStatus",
     "HttpTickTransport",
     "ManualClock",
@@ -46,11 +48,10 @@ __all__ = [
     "Tick",
     "TickNotReachedError",
     "TickTransport",
+    "tick_at",
 ]
 
-from harness_core.ports import Clock  # re-exported: components name harness_core.clock.Clock
-
-_UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 _MICROS_PER_SECOND = 1_000_000
 _MICROS_PER_DAY = 86_400 * _MICROS_PER_SECOND
 
@@ -80,7 +81,7 @@ class ClockControlError(ClockError):
     """A control request was refused: out of bounds, unknown mode, or unregistered."""
 
 
-class ClockMode(str, Enum):
+class ClockMode(StrEnum):
     """The four modes of the simulation clock.
 
     ``realtime`` and ``accelerated`` are free-running and differ only in rate.
@@ -95,7 +96,7 @@ class ClockMode(str, Enum):
     LOCKSTEP = "lockstep"
 
 
-class ParticipantRole(str, Enum):
+class ParticipantRole(StrEnum):
     """What the clock service expects of a participant."""
 
     OBSERVER = "observer"
@@ -133,7 +134,9 @@ class SimInstant:
         if parsed.utcoffset() != timedelta(0):
             raise ValueError(f"simulation time crosses boundaries in UTC only: {text!r}")
         delta = parsed - _UNIX_EPOCH
-        return cls(delta.days * _MICROS_PER_DAY + delta.seconds * _MICROS_PER_SECOND + delta.microseconds)
+        return cls(
+            delta.days * _MICROS_PER_DAY + delta.seconds * _MICROS_PER_SECOND + delta.microseconds
+        )
 
     def iso(self) -> str:
         """Render as ISO-8601 UTC with microsecond precision, always six digits."""
@@ -285,7 +288,15 @@ class ClockStatus:
     reason: str = ""
 
 
-def tick_at(index: int, *, epoch: SimInstant, tick_interval_us: int, mode: ClockMode, rate: float, run_id: str) -> Tick:
+def tick_at(
+    index: int,
+    *,
+    epoch: SimInstant,
+    tick_interval_us: int,
+    mode: ClockMode,
+    rate: float,
+    run_id: str,
+) -> Tick:
     """Return tick ``index`` by exact integer arithmetic.
 
     The one place tick values are computed. Rate and mode are carried on the tick but
@@ -421,7 +432,9 @@ class ClockEndpoint:
             control_route=str(routes["control"]),
             stale_after_gap=int(section.get("stale_after_gap", 0)),
             timeout_seconds=(
-                None if section.get("timeout_seconds") is None else float(section["timeout_seconds"])
+                None
+                if section.get("timeout_seconds") is None
+                else float(section["timeout_seconds"])
             ),
         )
 
@@ -444,22 +457,22 @@ class HttpTickTransport(TickTransport):
 
     def _default_opener(self, request: Request) -> IO[bytes]:
         if self._endpoint.timeout_seconds is None:
-            return urlopen(request)  # noqa: S310 - scheme is fixed by validated config
-        return urlopen(request, timeout=self._endpoint.timeout_seconds)  # noqa: S310
+            return urlopen(request)
+        return urlopen(request, timeout=self._endpoint.timeout_seconds)
 
     def snapshot(self) -> ClockState:
-        request = Request(self._endpoint.url_for(self._endpoint.snapshot_route))  # noqa: S310
+        request = Request(self._endpoint.url_for(self._endpoint.snapshot_route))
         with self._opener(request) as response:
             return ClockState.from_message(json.loads(response.read().decode("utf-8")))
 
     def ticks(self) -> Iterator[Tick]:
-        request = Request(self._endpoint.url_for(self._endpoint.stream_route))  # noqa: S310
+        request = Request(self._endpoint.url_for(self._endpoint.stream_route))
         with self._opener(request) as response:
             yield from _parse_server_sent_events(response)
 
     def control(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         body = json.dumps({"operation": operation, **payload}).encode("utf-8")
-        request = Request(  # noqa: S310
+        request = Request(
             self._endpoint.url_for(self._endpoint.control_route),
             data=body,
             headers={"Content-Type": "application/json"},
@@ -643,10 +656,3 @@ class RemoteClock:
 
     def set_mode(self, mode: ClockMode) -> Mapping[str, Any]:
         return self._transport.control("set_mode", {"mode": mode.value})
-
-
-@dataclass
-class _Unused:
-    """Kept out of the public surface; exists so ``field`` import stays honest."""
-
-    placeholder: tuple[str, ...] = field(default_factory=tuple)

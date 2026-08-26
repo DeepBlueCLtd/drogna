@@ -368,7 +368,8 @@ accept or task the route.
   bespoke core or well-chosen plumbing, together with the named bespoke logic where
   applicable. Never a claim that anything exists or is running.
 - **Rate state**: the simulation rate requested by the viewer, the rate the clock
-  service reports in force, and whether the two differ.
+  service reports in force, whether the two differ, and whether the rate in force is
+  zero — the pinned state a screenshot capture depends on.
 - **Uncertainty overlay**: the published uncertainty field, the projection governing
   its displayed decay, the identifier of the run it came from, and its displayed
   resolution.
@@ -398,14 +399,21 @@ accept or task the route.
 - **SC-007**: 100% of rendered components and boundaries carry a classification, and
   removing a component's heartbeat greys it out regardless of classification in 100%
   of trials.
-- **SC-008**: The uncertainty overlay refreshes within one animation cycle of a
+- **SC-008**: With only the simulation clock alive, exactly one component is lit —
+  the clock — and it is lit by its heartbeat. With nothing alive, the count of lit
+  components is zero. A search of the client for a fixture, demo or seeded-traffic path
+  capable of lighting a component returns nothing.
+- **SC-009**: With the rate pinned to zero and acknowledged, the client's rendered
+  output does not change between frames, so two captures of the same state are
+  identical.
+- **SC-010**: The uncertainty overlay refreshes within one animation cycle of a
   `ctl/run-published` message, and the count of polling requests issued to the query
   layer for freshness is zero over a full session.
-- **SC-009**: For every vertex of a displayed route, the conditions shown match the EDR
+- **SC-011**: For every vertex of a displayed route, the conditions shown match the EDR
   trajectory response for that vertex's timestamp to within display precision.
-- **SC-010**: The interface contains zero controls to accept, task, execute or order a
+- **SC-012**: The interface contains zero controls to accept, task, execute or order a
   route, asserted by an automated interaction and vocabulary test.
-- **SC-011**: The wall-clock lint gate reports zero unmarked uses of host time in the
+- **SC-013**: The wall-clock lint gate reports zero unmarked uses of host time in the
   client additions; the only marked exemption is frame interpolation, which carries an
   ADR.
 
@@ -437,9 +445,20 @@ accept or task the route.
   single wall-clock exemption in the client and is recorded in the plan's Complexity
   Tracking table with an ADR.
 - Screenshot capture, before-and-after pairs and feature-completion shots are feature
-  016's, and this feature adds no capture plumbing of its own. It aims to be
-  capturable: states are reachable deterministically from a seed and a rate.
+  016's, and this feature adds no capture plumbing of its own. What it owes the capture
+  path is FR-53's two halves: a rate of zero that pins the clock, and an acknowledged
+  rate readable from outside so the capture knows the pin took effect. States are
+  otherwise reachable deterministically from a seed and a rate.
+- There is no route by which this feature can light a component other than a
+  heartbeat. Feature 003 builds the shell against SRD FR-52 and this feature adds no
+  demo mode, no fixture mode and no synthesised traffic, in the client or in its tests
+  that run against the real client build. Test doubles exist only inside unit tests and
+  never in a shipped code path.
 - Route rendering depends on EDR trajectory queries with per-vertex timestamps
-  (SRD FR-20), whose viability is the subject of feature 002's spike. If that spike
-  fails, User Story 5's time control changes shape and this specification is amended
-  rather than worked around in the client.
+  (SRD FR-20). Those are served by a bespoke pygeoapi EDR provider plugin (SRD FR-50)
+  owned by feature 008, since no supplied provider implements trajectory; the standard
+  carries the per-vertex time natively as the M ordinate of a WKT `LINESTRINGM` or
+  `LINESTRINGZM`, and the response is CoverageJSON's Trajectory domain. The one
+  narrow unknown left is whether M survives WKT parsing, which SRD FR-51 addresses with
+  a Shapely and GEOS version pin and a test, and which feature 002's spike proves. This
+  feature consumes the resulting responses and implements none of that.

@@ -76,6 +76,28 @@ the pin explaining why, and a test asserts that the M ordinate survives WKT pars
 
   This is why the pin carries its reason inline. A pin whose purpose is invisible gets
   removed by someone doing housekeeping.
+- **The spike and the deployment are on different pygeoapi versions, and the difference
+  changes how a provider registers its query types.** The feature 002 spike measured
+  `0.25.dev0`, where `BaseEDRProvider.__init_subclass__` builds `query_types` from the
+  subclass's own `__dict__` — so a plugin subclassing `XarrayEDRProvider` and adding only
+  `trajectory` silently loses `position` and `cube`. The deployment pins **0.20.0**, which
+  instead has `@BaseEDRProvider.register()` append to a `query_types` list that is a
+  *mutable class attribute of the base*, shared by every provider in the process. That is
+  the more dangerous of the two: the first loses capability visibly in one collection,
+  the second lets one provider's registration leak into another's.
+
+  Feature 008 satisfies both mechanisms rather than choosing between them — all three
+  query types are declared in the subclass's own `__dict__`, as delegations where
+  inherited, *and* named in a `query_types` list set on the class, which shadows the
+  base's shared one. A test asserts both. The served collection was verified live to
+  advertise `['cube', 'instances', 'position', 'trajectory']`.
+
+  The general lesson is the one the spike wrote into its own shelf-life note and which
+  nearly went unread: **a measured finding is measured against a version.** Pinning a
+  different version than the one measured does not merely weaken the finding, it can
+  replace the hazard with a different one. Where a spike and a deployment disagree on a
+  version, that disagreement is itself a finding.
+
 - Writing the provider means owning a compatibility surface against pygeoapi's internal
   provider base class. That is accepted: it is the price of the standard being ahead of
   its implementations, and the alternative — stitching one position query per vertex —

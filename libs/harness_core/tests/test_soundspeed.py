@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from harness_core.soundspeed import (
     EQUATION,
     VALIDITY,
@@ -65,7 +64,9 @@ def test_the_arithmetic_is_elementwise_so_a_field_works_as_well_as_a_point() -> 
 
             function = getattr(operator, operation)
             if isinstance(other, Column):
-                return Column(tuple(function(a, b) for a, b in zip(self.values, other.values)))
+                return Column(
+                    tuple(function(a, b) for a, b in zip(self.values, other.values, strict=True))
+                )
             return Column(tuple(function(value, other) for value in self.values))
 
         def __add__(self, other: object) -> Column:

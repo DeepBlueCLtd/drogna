@@ -80,7 +80,9 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
     # for deployment locations or forbidden nouns finds the hunter, not the quarry.
     "wallclock": (),
     "seeded-rng": ("scripts",),
-    "literal-path": ("scripts", "tests", "config", "deploy"),
+    # Tests are skipped by path rule inside the gate, like the wall-clock gate's test
+    # zone; config/ and deploy/ exist precisely to name locations.
+    "literal-path": ("scripts", "config", "deploy"),
     # Documents that discuss the prohibition necessarily use the words. Code, contracts
     # and configuration are where the data model lives, and that is what is scanned.
     "forbidden-vocabulary": (
@@ -91,6 +93,9 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
         "harness-srd.md",
         "README.md",
     ),
+    # The inventory lists exemptions that exempt something. A specification quoting the
+    # marker is prose, not permission, so the documents are not walked for it.
+    "inventory": ("specs", "docs", ".specify", "harness-srd.md", "README.md"),
 }
 
 GateFunction: TypeAlias = Callable[[Sequence[Path], Path], Iterable["Finding"]]
@@ -249,9 +254,7 @@ def marker_index(path: Path, text: str | None = None) -> dict[int, Marker]:
     return index
 
 
-def exempted(
-    index: dict[int, Marker], line: int, gate: str
-) -> tuple[bool, Marker | None]:
+def exempted(index: dict[int, Marker], line: int, gate: str) -> tuple[bool, Marker | None]:
     """Whether ``line`` carries a marker for ``gate``, and the marker if it does.
 
     A marker without a reason does not exempt anything. The gate reports it instead, which

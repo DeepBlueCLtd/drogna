@@ -75,7 +75,7 @@
         {
           "index": 5,
           "returned": 6.306403804283782,
-          "expected_per_vertex": 6.306403802725257,
+          "expected_per_vertex": 6.30640380272516,
           "expected_single_time_query": 9.668121868629118,
           "expected_nearest_time_step": 6.532840770894857
         },
@@ -103,14 +103,14 @@
         {
           "index": 9,
           "returned": 3.2473784492722335,
-          "expected_per_vertex": 3.247378464922373,
+          "expected_per_vertex": 3.2473784649222712,
           "expected_single_time_query": 9.097439256922845,
           "expected_nearest_time_step": 3.670666722599494
         },
         {
           "index": 10,
           "returned": 2.479868378570461,
-          "expected_per_vertex": 2.4798683621468474,
+          "expected_per_vertex": 2.479868362146746,
           "expected_single_time_query": 8.979358634179999,
           "expected_nearest_time_step": 2.406840381562103
         },
@@ -131,7 +131,7 @@
         {
           "index": 13,
           "returned": 0.17072902481866079,
-          "expected_per_vertex": 0.17072900984071848,
+          "expected_per_vertex": 0.1707290098406139,
           "expected_single_time_query": 8.684132838392367,
           "expected_nearest_time_step": -0.32078967748432163
         },
@@ -159,14 +159,14 @@
         {
           "index": 17,
           "returned": -2.923544581794025,
-          "expected_per_vertex": -2.9235445625197176,
+          "expected_per_vertex": -2.923544562519826,
           "expected_single_time_query": 8.428202613037678,
           "expected_nearest_time_step": -3.2305586080073443
         },
         {
           "index": 18,
           "returned": -3.6998666985858875,
-          "expected_per_vertex": -3.6998667239346323,
+          "expected_per_vertex": -3.6998667239347416,
           "expected_single_time_query": 8.388810086882726,
           "expected_nearest_time_step": -3.3706031532120866
         },
@@ -196,7 +196,7 @@
         48.4,
         5.0
       ],
-      "per_vertex_times_returned_match_times_sent": false,
+      "per_vertex_times_returned_match_times_sent": true,
       "referencing_systems": [
         "GeographicCRS",
         "VerticalCRS",

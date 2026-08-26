@@ -89,7 +89,7 @@ change is empty three times running.
 - [ ] T017 [P] [US2] Write `client/e2e/tests/fingerprint.test.ts`: two fingerprints differing in browser version, viewport, device scale, seed or capture environment are refused, and the refusal names the field (FR-009, FR-010, SC-005).
 - [ ] T018 [P] [US2] Write the no-change determinism test: capture a pair with nothing changed, three consecutive times, asserting an empty difference each time (FR-011, SC-003).
 - [ ] T019 [P] [US2] Write the clock-restore test with injected failures at each step of the pair — after pinning, mid-capture, before restoring — asserting the previous rate is restored in every case (FR-007, SC-006).
-- [ ] T020 [P] [US2] Write the liveness-under-pin test: assert every component lit before the pin is still lit in the captured image, and that the capture fails if any fell dark (FR-008, SC-007).
+- [ ] T020 [P] [US2] Write the liveness-under-pin test: assert every component lit before the pin is still lit in the captured image, and that the capture fails if any fell dark (FR-008, SC-007). It is a regression test on ADR-0006 — real-time cadence, simulation time as payload — not a hedge against an undecided question, and its failure means a component has reverted to a simulation-time cadence.
 - [ ] T021 [P] [US2] Write the canonical first-pair test: capture across the simulation clock's grey-to-lit transition and assert the difference is confined to that component (FR-006, SC-004).
 
 ### Implementation for User Story 2
@@ -97,7 +97,7 @@ change is empty three times running.
 - [ ] T022 [US2] Write `client/e2e/pair.config.ts`: its own output directory under the branch-scoped area, no retries — a retry that succeeds after a failure is a comparability hazard, not a rescue.
 - [ ] T023 [US2] Implement `scripts/capture/pair/fingerprint.mjs`: gather browser version, container image, viewport, device scale factor, scenario seed, simulation time and entry-point version, and compare two fingerprints field by field (FR-009).
 - [ ] T024 [US2] Implement clock pinning in `scripts/capture/pair/run.mjs`: set the rate to zero through the client's own rate control, capture, restore the previous rate, and restore it on every failure path (FR-007).
-- [ ] T025 [US2] Add the lit-component check around the pin, so a pinned clock cannot produce an all-grey pair that looks like a passing capture (FR-008).
+- [ ] T025 [US2] Add the lit-component check around the pin, so a pinned clock cannot produce an all-grey pair that looks like a passing capture, and name ADR-0006 in the failure message so whoever meets it knows which decision has been broken (FR-008).
 - [ ] T026 [US2] Implement `scripts/capture/pair/diff.mjs`: refuse to diff when the fingerprints differ, otherwise produce the difference image and a summary of what changed (FR-009, FR-011).
 - [ ] T027 [US2] Write `client/e2e/specs/pair.spec.ts` and wire the before and after halves so that both are captured in the same environment, refusing a pair assembled from two environments (FR-010).
 - [ ] T028 [US2] Add the concurrent-capture guard: a second pair capture beginning while one holds the pin is refused rather than restoring a rate it did not observe (spec edge cases).
@@ -161,7 +161,7 @@ and confirm it fails.
 
 - [ ] T044 [P] Add a size budget for curated images and fail the curated run when a candidate exceeds it, before it can be committed.
 - [ ] T045 [P] Add the whole capture test suite to CI, excluding the glance, which has no CI role by design.
-- [ ] T046 Record in `scripts/capture/README.md` the outcome of the liveness-under-pin assertion in practice, since it is the one interaction with the clock this feature asserts rather than controls.
+- [ ] T046 Record in `scripts/capture/README.md` the outcome of the liveness-under-pin assertion in practice, since it is the one interaction with the clock this feature asserts rather than controls, and cite ADR-0006 as the decision it regression-tests.
 
 ---
 

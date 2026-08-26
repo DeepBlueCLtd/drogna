@@ -4,7 +4,7 @@
   "status": 200,
   "headers": {
     "Server": "gunicorn",
-    "Date": "Wed, 26 Aug 2026 19:04:31 GMT",
+    "Date": "Wed, 26 Aug 2026 19:06:18 GMT",
     "Connection": "close",
     "Content-Type": "application/json",
     "X-Powered-By": "pygeoapi 0.25.dev0",

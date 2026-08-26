@@ -37,6 +37,7 @@ __all__ = [
 SCHEMA_VERSION = 1
 
 _PARTIAL_SUFFIX = ".partial"
+# harness:allow-literal-path JSON pointer into the manifest document, not a filesystem path
 _NON_REPRODUCIBLE = ("/exit_state/detail",)
 
 

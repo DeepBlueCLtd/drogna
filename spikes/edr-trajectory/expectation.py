@@ -52,8 +52,15 @@ ROUTE_DEPTH = (5.0, 380.0)
 # Arrival times: first vertex 1.5 h after the fixture's origin, then 1.63 h apart. The
 # offsets are chosen so that no vertex lands on a three-hourly grid step (asserted in
 # selfcheck.py), so the interpolation question cannot be dodged.
-ROUTE_FIRST_OFFSET_HOURS = 1.5
-ROUTE_STEP_HOURS = 1.63
+# Held as whole seconds so every vertex time is exactly representable, both as a
+# datetime64 and as the integer M ordinate that goes into the WKT. Derived from 1.5 h
+# and 1.63 h; carrying them as floats leaves some vertices a nanosecond short of the
+# second they are meant to be, which then reads as a spurious one-second disagreement
+# between what was sent and what came back.
+ROUTE_FIRST_OFFSET_SECONDS = 5400  # 1.5 h
+ROUTE_STEP_SECONDS = 5868  # 1.63 h
+ROUTE_FIRST_OFFSET_HOURS = ROUTE_FIRST_OFFSET_SECONDS / 3600
+ROUTE_STEP_HOURS = ROUTE_STEP_SECONDS / 3600
 
 # The time the request's `datetime` parameter names: the fixture's first step. No route
 # vertex shares it.
@@ -70,13 +77,13 @@ def epoch_seconds(times: np.ndarray) -> np.ndarray:
 def route() -> dict[str, np.ndarray]:
     """The test route: longitude, latitude, depth and arrival time per vertex."""
     fraction = np.linspace(0.0, 1.0, N_VERTICES)
-    offsets = ROUTE_FIRST_OFFSET_HOURS + ROUTE_STEP_HOURS * np.arange(N_VERTICES)
+    seconds = ROUTE_FIRST_OFFSET_SECONDS + ROUTE_STEP_SECONDS * np.arange(N_VERTICES)
     return {
         "lon": ROUTE_LON[0] + fraction * (ROUTE_LON[1] - ROUTE_LON[0]),
         "lat": ROUTE_LAT[0] + fraction * (ROUTE_LAT[1] - ROUTE_LAT[0]),
         "depth": ROUTE_DEPTH[0] + fraction * (ROUTE_DEPTH[1] - ROUTE_DEPTH[0]),
-        "time": T0.astype("datetime64[ns]") + (offsets * 3600.0 * 1e9).astype("timedelta64[ns]"),
-        "offset_hours": offsets,
+        "time": T0.astype("datetime64[ns]") + seconds.astype("timedelta64[s]"),
+        "offset_hours": seconds / 3600.0,
     }
 
 

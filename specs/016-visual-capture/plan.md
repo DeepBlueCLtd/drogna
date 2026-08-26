@@ -82,8 +82,11 @@ workflow, sixteen features' worth of curated shots over the project's life.
   populate a screenshot is exactly what it rules out. There is no fixture mode and no demo
   mode, so the earliest capture work has one live component, the simulation clock, and its
   illumination transition is the first genuine before/after pair. FR-008 goes further and
-  asserts that pinning the clock has not put components out of their liveness window, so a
-  capture cannot quietly show a dead system. Compliant.
+  asserts that pinning the clock has not put components out of their liveness window. Under
+  ADR-0006 it should not: cadence and liveness are real time, so a rate of zero stops
+  simulated time and stops nothing else. The assertion stays as a regression test on that
+  decision, so a component that reverts to a simulation-time cadence fails a capture loudly
+  instead of publishing an all-grey pair. Compliant.
 - **VI. Honest Ports** — No abstraction is placed over Playwright, and the three
   mechanisms are three scripts rather than one framework with three strategies. Compliant.
 

@@ -164,3 +164,94 @@ target = "services/env_generator/src/harness_env_generator/schemas/config.env_ge
 [[copy]]
 source = "contracts/schemas/manifest.schema.json"
 target = "services/env_generator/src/harness_env_generator/schemas/manifest.schema.json"
+
+# The control loop's four services validate their configuration before any other I/O, so
+# each carries its own schema and the common sections it references.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/monitor/src/harness_monitor/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.monitor.schema.json"
+target = "services/monitor/src/harness_monitor/schemas/config.monitor.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/scheduler/src/harness_scheduler/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.scheduler.schema.json"
+target = "services/scheduler/src/harness_scheduler/schemas/config.scheduler.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/model_runner/src/harness_model_runner/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.model_runner.schema.json"
+target = "services/model_runner/src/harness_model_runner/schemas/config.model_runner.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/publisher/src/harness_publisher/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.publisher.schema.json"
+target = "services/publisher/src/harness_publisher/schemas/config.publisher.schema.json"
+
+# C-01 validates its configuration before it binds a socket, so it carries its own schema
+# and the common sections that schema references, like every other component.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/clock/src/harness_clock/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.clock.schema.json"
+target = "services/clock/src/harness_clock/schemas/config.clock.schema.json"
+
+# C-01 also writes the run manifest — it holds the run's identity, so it is the component
+# that must validate the document before writing it.
+[[copy]]
+source = "contracts/schemas/run-manifest.schema.json"
+target = "services/clock/src/harness_clock/schemas/run-manifest.schema.json"
+
+# The observation path. Both services validate their configuration before any other I/O,
+# so each carries its own schema and the common sections it references. Neither carries a
+# copy of the observation message master: both validate messages against the Pydantic model
+# generated from it into libs/harness_types, which is the one definition either end holds
+# (Constitution III), so the publisher and the single ingestion seam cannot come to
+# disagree about what a valid observation is.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.sensors.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/config.sensors.schema.json"
+
+# The sensors' configuration schema references the observed-property enumeration in the
+# observation master rather than restating it — the three quantities are defined once
+# (ADR-0005) — so the component needs that document to hand to resolve the reference when
+# it validates its configuration before any other I/O.
+[[copy]]
+source = "contracts/schemas/observation.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/observation.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/ingest/src/harness_ingest/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.ingest.schema.json"
+target = "services/ingest/src/harness_ingest/schemas/config.ingest.schema.json"
+
+# C-07's provisioning script validates its configuration the same way a component does,
+# and for the same reason: it writes to a database, and an invalid configuration should
+# stop it before it opens a connection rather than part way through a schema.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "stores/features/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.features.schema.json"
+target = "stores/features/schemas/config.features.schema.json"

@@ -1,0 +1,60 @@
+{
+  "component": {
+    "id": "ingest",
+    "description": "C-05: the single ingestion seam. Validates, batches and writes; the only role that can.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 4,
+    "timeout_seconds": 5.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "ingest"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "ingest",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "ingest": {
+    "subscription": {
+      "qos": 1
+    },
+    "store": {
+      "dsn": "postgresql://drogna_ingest@observations:5432/drogna",
+      "schema": "observations",
+      "role": "drogna_ingest",
+      "tables": {
+        "things": "thing",
+        "sensors": "sensor",
+        "observed_properties": "observed_property",
+        "datastreams": "datastream",
+        "observations": "observation",
+        "features_of_interest": "feature_of_interest"
+      }
+    },
+    "batch": {
+      "maximum_messages": 500,
+      "maximum_interval_seconds": 60.0
+    },
+    "queue": {
+      "maximum_depth": 5000
+    },
+    "rejections": {
+      "maximum_retained": 2000
+    },
+    "telemetry": {
+      "interval_seconds": 60.0
+    }
+  }
+}

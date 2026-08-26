@@ -9,14 +9,28 @@ requires-python = ">=3.11"
 # nothing from it, and every test that imports a harness package fails to
 # collect. Add each new library here as it is created.
 dependencies = [
+    "harness-clock",
     "harness-core",
     "harness-env-generator",
+    "harness-ingest",
+    "harness-model-runner",
+    "harness-monitor",
+    "harness-publisher",
+    "harness-scheduler",
+    "harness-sensors",
     "harness-types",
 ]
 
 [tool.uv.sources]
+harness-clock = { workspace = true }
 harness-core = { workspace = true }
 harness-env-generator = { workspace = true }
+harness-ingest = { workspace = true }
+harness-model-runner = { workspace = true }
+harness-monitor = { workspace = true }
+harness-publisher = { workspace = true }
+harness-scheduler = { workspace = true }
+harness-sensors = { workspace = true }
 harness-types = { workspace = true }
 
 [dependency-groups]
@@ -60,4 +74,14 @@ addopts = "-q --import-mode=importlib"
 # this implicitly; importlib mode does not, and doing it explicitly is better anyway —
 # the helpers are imported because they are on the path on purpose, not because pytest
 # happened to put them there.
-pythonpath = ["services/env_generator/tests"]
+pythonpath = [
+    "services/clock/tests",
+    "services/env_generator/tests",
+    "services/monitor/tests",
+    "services/scheduler/tests",
+    "services/model_runner/tests",
+    "services/publisher/tests",
+    "services/sensors/tests",
+    "services/ingest/tests",
+    "tests/support",
+]

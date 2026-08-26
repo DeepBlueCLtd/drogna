@@ -1,0 +1,27 @@
+[project]
+name = "harness-sensors"
+version = "0.1.0"
+description = "C-04: simulated sensors publishing observations in SensorThings vocabulary on the observation branch"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    # The generated payload types. Constitution III: the observation message is defined
+    # once, in JSON Schema, and both ends of the path use what is generated from it.
+    "harness-types",
+    "harness-env-generator",
+    # The broker client. Event publication is the one seam the constitution calls
+    # marginal rather than a port, so it is wrapped thinly and this is the wrapping.
+    "paho-mqtt>=2.1",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+harness-types = { workspace = true }
+harness-env-generator = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_sensors"]

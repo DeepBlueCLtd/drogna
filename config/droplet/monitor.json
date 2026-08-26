@@ -1,0 +1,56 @@
+{
+  "component": {
+    "id": "monitor",
+    "description": "C-11: scores observation traffic against the current forecast on sound speed.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 8,
+    "timeout_seconds": 10.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "monitor"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "monitor",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "WARNING"
+  },
+  "monitor": {
+    "window": {
+      "span_seconds": 3600.0,
+      "maximum_samples": 20000,
+      "maximum_pending": 2000
+    },
+    "residual": {
+      "threshold_m_per_s": 1.75
+    },
+    "persistence": {
+      "neighbourhood_radius_m": 5000.0,
+      "spatial_sample_count": 3,
+      "temporal_sample_count": 3,
+      "temporal_span_seconds": 600.0
+    },
+    "warmup": {
+      "mode": "span",
+      "span_seconds": 300.0,
+      "catchup_sample_limit": 5000
+    },
+    "coverage": {
+      "root_directory": "/srv/drogna/coverage",
+      "current_pointer": "current",
+      "runs_dirname": "runs",
+      "forecast_file": "forecast.nc"
+    }
+  }
+}

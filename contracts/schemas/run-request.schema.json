@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/run-request.schema.json",
+  "title": "drogna model run request",
+  "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run ordinal, so a replay requests the same run under the same name.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "run_id",
+    "initialisation_sim_time",
+    "ensemble_size",
+    "region",
+    "divergence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The scheduler that published the request, matching config /component/id."
+    },
+    "scenario_run_id": {
+      "type": "string",
+      "description": "The scenario run this request belongs to, as carried on every clock sample."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the request was published, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": { "type": "integer", "minimum": 0, "description": "The tick index the scheduler had observed." },
+    "run_id": {
+      "type": "string",
+      "description": "Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store."
+    },
+    "initialisation_sim_time": {
+      "type": "string",
+      "description": "The simulation instant the run initialises from. The forecast is valid forward of it."
+    },
+    "ensemble_size": {
+      "type": "integer",
+      "minimum": 2,
+      "description": "How many perturbed members the run is asked for. At least two, or there is no spread to publish and the uncertainty field would be a fiction."
+    },
+    "region": {
+      "$ref": "https://schemas.harness.invalid/divergence.schema.json#/$defs/region",
+      "description": "The region that diverged. It does not bound the run's domain, which is the whole grid; it records where the disagreement was."
+    },
+    "divergence": {
+      "$ref": "https://schemas.harness.invalid/divergence.schema.json",
+      "description": "The divergence event that justified this request, carried whole."
+    }
+  }
+}

@@ -1,0 +1,160 @@
+{
+  "component": {
+    "id": "sensors",
+    "description": "C-04: samples the generated world and publishes observations on the obs/ branch.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 4,
+    "timeout_seconds": 5.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "sensors"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "sensors",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "sensors": {
+    "platform": {
+      "id": "platform-a",
+      "name": "sampling platform A",
+      "description": "A simulated sampling platform. A coordinate and a sampler."
+    },
+    "field": {
+      "directory": "/data/environment",
+      "manifest_file": "environment.manifest.json"
+    },
+    "sampling": {
+      "interval_seconds": 600.0,
+      "depths_m": [
+        0.0,
+        25.0,
+        100.0
+      ],
+      "positions": [
+        {
+          "latitude": 49.0,
+          "longitude": -4.5
+        },
+        {
+          "latitude": 49.1,
+          "longitude": -4.4
+        },
+        {
+          "latitude": 49.2,
+          "longitude": -4.3
+        },
+        {
+          "latitude": 49.3,
+          "longitude": -4.2
+        }
+      ]
+    },
+    "datastreams": [
+      {
+        "id": "ds-temperature",
+        "name": "temperature at platform A",
+        "description": "Simulated temperature series.",
+        "observed_property": {
+          "measured": "temperature",
+          "id": "sea_water_temperature",
+          "name": "sea water temperature",
+          "definition": "sea_water_temperature",
+          "description": "Sea water temperature."
+        },
+        "observation_type": "OM_Measurement",
+        "unit_of_measurement": {
+          "name": "degree Celsius",
+          "symbol": "degC",
+          "definition": "degree_C"
+        },
+        "sensor": {
+          "id": "sensor-temperature",
+          "name": "simulated temperature sensor",
+          "description": "Simulated temperature instrument with a seeded noise model.",
+          "encoding_type": "text/plain"
+        },
+        "noise": {
+          "distribution": "gaussian",
+          "standard_deviation": 0.02
+        }
+      },
+      {
+        "id": "ds-salinity",
+        "name": "salinity at platform A",
+        "description": "Simulated salinity series.",
+        "observed_property": {
+          "measured": "salinity",
+          "id": "sea_water_practical_salinity",
+          "name": "sea water practical salinity",
+          "definition": "sea_water_practical_salinity",
+          "description": "Sea water practical salinity."
+        },
+        "observation_type": "OM_Measurement",
+        "unit_of_measurement": {
+          "name": "practical salinity unit",
+          "symbol": "psu",
+          "definition": "1e-3"
+        },
+        "sensor": {
+          "id": "sensor-salinity",
+          "name": "simulated salinity sensor",
+          "description": "Simulated salinity instrument with a seeded noise model.",
+          "encoding_type": "text/plain"
+        },
+        "noise": {
+          "distribution": "gaussian",
+          "standard_deviation": 0.01
+        }
+      },
+      {
+        "id": "ds-pressure",
+        "name": "pressure at platform A",
+        "description": "Simulated pressure series.",
+        "observed_property": {
+          "measured": "pressure",
+          "id": "sea_water_pressure",
+          "name": "sea water pressure",
+          "definition": "sea_water_pressure",
+          "description": "Sea water pressure."
+        },
+        "observation_type": "OM_Measurement",
+        "unit_of_measurement": {
+          "name": "decibar",
+          "symbol": "dbar",
+          "definition": "dbar"
+        },
+        "sensor": {
+          "id": "sensor-pressure",
+          "name": "simulated pressure sensor",
+          "description": "Simulated pressure instrument with a seeded noise model.",
+          "encoding_type": "text/plain"
+        },
+        "noise": {
+          "distribution": "gaussian",
+          "standard_deviation": 0.5
+        }
+      }
+    ],
+    "publication": {
+      "qos": 1,
+      "retain": false
+    },
+    "reconnect": {
+      "initial_seconds": 5.0,
+      "maximum_seconds": 120.0
+    }
+  }
+}

@@ -1,0 +1,26 @@
+[project]
+name = "harness-ingest"
+version = "0.1.0"
+description = "C-05: the ingest client, the single seam through which observations reach the store"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    # The generated payload types. Constitution III: the observation message is defined
+    # once, in JSON Schema, and both ends of the path use what is generated from it.
+    "harness-types",
+    "paho-mqtt>=2.1",
+    # The binary distribution, so the image needs no libpq of its own. The query layer
+    # installs its own driver in its own image; this is the writer's.
+    "psycopg[binary]>=3.2",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+harness-types = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_ingest"]

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/divergence.schema.json",
+  "title": "drogna divergence event",
+  "description": "The message the monitor publishes on ctl/divergence when the current forecast has disagreed with the observations for long enough to be worth a model run. The residual is defined on sound speed and never on temperature (ADR-0005), and a single sample is never sufficient: the persistence evidence that justified the event travels with it so that a reader can judge the claim rather than trust it. The monitor raises requests only — nothing here instructs anybody to run anything, and the scheduler is free to decline.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "divergence_id",
+    "forecast_run_id",
+    "region",
+    "residual",
+    "persistence",
+    "sound_speed_equation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The component id of the monitor that raised it, matching config /component/id."
+    },
+    "scenario_run_id": {
+      "type": "string",
+      "description": "The scenario run this event belongs to, as carried on every clock sample."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the event was raised, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the monitor had observed when it raised the event."
+    },
+    "divergence_id": {
+      "type": "string",
+      "description": "Deterministic identifier derived from the root seed and the monitor's divergence ordinal, never from entropy or a host clock."
+    },
+    "forecast_run_id": {
+      "type": "string",
+      "description": "The model run whose forecast field the residuals were scored against. Evidence gathered against a superseded field is discarded rather than carried, so every sample counted here scored this run."
+    },
+    "region": { "$ref": "#/$defs/region" },
+    "residual": { "$ref": "#/$defs/residual" },
+    "persistence": { "$ref": "#/$defs/persistence" },
+    "sound_speed_equation": {
+      "type": "string",
+      "description": "The named equation the derivation used, so a residual can say which model of sound speed produced it."
+    }
+  },
+  "$defs": {
+    "region": {
+      "title": "Divergence region",
+      "description": "Where the disagreement is: a centre, a radius in metres and the depth band the contributing samples came from. A radius rather than a spatial index, because indexing belongs to the planner and coupling the monitor to it would buy nothing here.",
+      "type": "object",
+      "required": [
+        "centre_latitude",
+        "centre_longitude",
+        "radius_m",
+        "minimum_depth_m",
+        "maximum_depth_m"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "centre_latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "centre_longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Radius enclosing the contributing samples, in metres."
+        },
+        "minimum_depth_m": { "type": "number", "minimum": 0 },
+        "maximum_depth_m": { "type": "number", "minimum": 0 }
+      }
+    },
+    "residual": {
+      "title": "Residual summary",
+      "description": "The disagreement in metres per second of sound speed. Signed on the mean, because a forecast that is uniformly too fast is a different fault from one that is noisy, and unsigned on the peak.",
+      "type": "object",
+      "required": ["mean_m_per_s", "peak_m_per_s", "threshold_m_per_s", "sample_count"],
+      "additionalProperties": false,
+      "properties": {
+        "mean_m_per_s": {
+          "type": "number",
+          "description": "Signed mean of measured minus forecast sound speed over the contributing samples."
+        },
+        "peak_m_per_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Largest absolute residual among the contributing samples."
+        },
+        "threshold_m_per_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The threshold in force when the event was raised, of the order of 1.5 to 2 m/s, which is roughly half a degree Celsius. Carried so a reader need not guess what the scenario was tuned to."
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "How many residual samples justified the event. Never one: a single sample is a spike, and a spike is not a divergence."
+        }
+      }
+    },
+    "persistence": {
+      "title": "Persistence evidence",
+      "description": "Which rule was satisfied and over what. This is the part that separates a divergence from an outlier, so it is carried rather than summarised away.",
+      "type": "object",
+      "required": ["rule", "sample_count", "span_seconds", "first_sim_time", "last_sim_time"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "type": "string",
+          "enum": ["spatial", "temporal"],
+          "description": "spatial: distinct samples above threshold inside one neighbourhood. temporal: consecutive samples above threshold spanning at least the configured simulation-time span."
+        },
+        "sample_count": { "type": "integer", "minimum": 2 },
+        "span_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Simulation-time span from the first contributing sample to the last, in seconds."
+        },
+        "first_sim_time": { "type": "string", "description": "Simulation time of the earliest contributing sample." },
+        "last_sim_time": { "type": "string", "description": "Simulation time of the latest contributing sample." }
+      }
+    }
+  }
+}

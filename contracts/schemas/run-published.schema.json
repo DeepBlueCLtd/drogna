@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/run-published.schema.json",
+  "title": "drogna model run published",
+  "description": "The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "run_id",
+    "current",
+    "valid_time",
+    "grid_bounds",
+    "collections",
+    "digests"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The publisher, matching config /component/id."
+    },
+    "scenario_run_id": { "type": "string", "description": "The scenario run this belongs to." },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": { "type": "integer", "minimum": 0, "description": "The tick index the publisher had observed." },
+    "run_id": { "type": "string", "description": "The model run that has been published." },
+    "current": {
+      "type": "boolean",
+      "description": "Whether this run is now the current one. Announced rather than assumed, because a run can be published for inspection without being made current."
+    },
+    "valid_time": { "$ref": "#/$defs/valid_time" },
+    "grid_bounds": { "$ref": "#/$defs/grid_bounds" },
+    "collections": { "$ref": "#/$defs/collections" },
+    "digests": { "$ref": "#/$defs/digests" }
+  },
+  "$defs": {
+    "valid_time": {
+      "title": "Valid time range",
+      "description": "The simulation-time span the forecast covers, inclusive of both ends.",
+      "type": "object",
+      "required": ["start_sim_time", "end_sim_time"],
+      "additionalProperties": false,
+      "properties": {
+        "start_sim_time": { "type": "string", "description": "Simulation time of the first forecast step." },
+        "end_sim_time": { "type": "string", "description": "Simulation time of the last forecast step." }
+      }
+    },
+    "grid_bounds": {
+      "title": "Grid bounds",
+      "description": "The extent of the published grid on all three spatial axes. Depth increases downwards, as the field itself says explicitly.",
+      "type": "object",
+      "required": [
+        "minimum_latitude",
+        "maximum_latitude",
+        "minimum_longitude",
+        "maximum_longitude",
+        "minimum_depth_m",
+        "maximum_depth_m"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "minimum_latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "maximum_latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "minimum_longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "maximum_longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "minimum_depth_m": { "type": "number", "minimum": 0 },
+        "maximum_depth_m": { "type": "number", "minimum": 0 }
+      }
+    },
+    "collections": {
+      "title": "Servable collections",
+      "description": "The identifiers under which the query layer serves this run's two fields. They are resolved from the store's layout at request time, so publishing a run adds collections without editing any configuration.",
+      "type": "object",
+      "required": ["forecast", "uncertainty"],
+      "additionalProperties": false,
+      "properties": {
+        "forecast": { "type": "string", "minLength": 1, "description": "Collection identifier of the ensemble mean." },
+        "uncertainty": { "type": "string", "minLength": 1, "description": "Collection identifier of the per-cell ensemble spread." }
+      }
+    },
+    "digests": {
+      "title": "Field digests",
+      "description": "SHA-256 digests of the two published fields. A reader that has both bytes and digest can say which run it read, which is what makes the atomicity claim checkable rather than merely asserted.",
+      "type": "object",
+      "required": ["forecast", "uncertainty"],
+      "additionalProperties": false,
+      "properties": {
+        "forecast": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "uncertainty": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

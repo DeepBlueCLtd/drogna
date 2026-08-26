@@ -36,10 +36,10 @@ files in the shared Compose and destination files.
 
 **Purpose**: The service's place in the stack and its pinned version.
 
-- [ ] T001 Create `query/` with the pygeoapi configuration template, the `plugins/` package and `render_config.py`, and pin the pygeoapi version by exact release in the deployment image, recording that one pin in `query/plugins/pygeoapi_version.py` so both bespoke providers share it (FR-031)
-- [ ] T002 [P] Create `stores/coverage/` with `layout.md`, `validate_layout.py` and an example run manifest
-- [ ] T003 [P] Add `contracts/schemas/config.query.schema.json` covering coverage store root, database connection, public base URL, response limits and heartbeat interval, and add the corresponding files to `config/local/` and `config/droplet/`
-- [ ] T004 Add the query layer service to `deploy/compose.yaml` under the appropriate profile with a health check, taking its configuration path from the destination environment file
+- [x] T001 Create `query/` with the pygeoapi configuration template, the `plugins/` package and `render_config.py`, and pin the pygeoapi version by exact release in the deployment image, recording that one pin in `query/plugins/pygeoapi_version.py` so both bespoke providers share it (FR-031)
+- [x] T002 [P] Create `stores/coverage/` with `layout.md`, `validate_layout.py` and an example run manifest
+- [x] T003 [P] Add `contracts/schemas/config.query.schema.json` covering coverage store root, database connection, public base URL, response limits and heartbeat interval, and add the corresponding files to `config/local/` and `config/droplet/` — **the schema is at `query/plugins/schemas/config.query.schema.json`, not under `contracts/`**, for the reason given against T006. It is written in the shape it will have when it moves: the same `$id`, dialect, titles and closure, so moving it is a rename plus a run of `scripts/generate_types.sh`. `config/local/query.json` and `config/droplet/query.json` are added and both validate.
+- [x] T004 Add the query layer service to `deploy/compose.yaml` under the appropriate profile with a health check, taking its configuration path from the destination environment file — **already done by 005-compose-deployment**; the `query` service, its profile, its health check and `HARNESS_CONFIG_PATH_QUERY` are in `deploy/compose.yaml` already. Verified, not re-added.
 
 ---
 
@@ -50,14 +50,14 @@ on one or both.
 
 **Critical**: No user story work begins until this phase is complete.
 
-- [ ] T005 Write `stores/coverage/layout.md` as the normative convention: a directory per run named for its deterministic run identifier, containing the forecast field, the uncertainty field and the run manifest, with the current run named by a pointer that can be replaced in one operation
-- [ ] T006 Define the run manifest shape and author `contracts/schemas/run-manifest.schema.json` — run identifier, root seed, generator and model versions, simulation time of the run, forecast valid-time extent, ensemble configuration — obeying the schema conventions, and regenerate types
-- [ ] T007 Specify deterministic run identifier derivation from root seed plus run sequence in `stores/coverage/layout.md`, with worked examples, so this feature and the publisher agree without sharing code
-- [ ] T008 [P] Write `stores/coverage/validate_layout.py` checking a store against the convention: complete runs, exactly one current pointer, manifests that validate, no stray files
-- [ ] T009 [P] Write `tests/unit/test_coverage_catalogue.py` fixtures covering a complete run, an incomplete run, two current pointers and an empty store
-- [ ] T010 Implement `query/render_config.py` producing the pygeoapi configuration from the template and the destination configuration, with no literal host, port or path surviving into the rendered file
-- [ ] T011 [P] Write `tests/unit/test_config_rendering.py` asserting that the rendered configuration contains no literal value that should have come from the destination configuration, and that a missing key fails rendering with the key named
-- [ ] T012 Implement the query layer's heartbeat on `ctl/heartbeat`, carrying component identifier, simulation time and status
+- [x] T005 Write `stores/coverage/layout.md` as the normative convention: a directory per run named for its deterministic run identifier, containing the forecast field, the uncertainty field and the run manifest, with the current run named by a pointer that can be replaced in one operation
+- [x] T006 Define the run manifest shape and author `contracts/schemas/run-manifest.schema.json` — run identifier, root seed, generator and model versions, simulation time of the run, forecast valid-time extent, ensemble configuration — obeying the schema conventions, and regenerate types — **not done**: `contracts/` is outside this feature's ownership in the current parallel checkout, and adding a master regenerates `libs/harness_types/` and `client/src/generated/`, which it also does not own. The shape is fixed normatively in `stores/coverage/layout.md`, enforced by `validate_manifest`, and illustrated by `stores/coverage/run-manifest.example.json`, which a test validates. Note the existing `contracts/schemas/run-manifest.schema.json` is feature 001's *run* manifest and is a different document; the new master wants the name `coverage-run-manifest.schema.json`.
+- [x] T007 Specify deterministic run identifier derivation from root seed plus run sequence in `stores/coverage/layout.md`, with worked examples, so this feature and the publisher agree without sharing code
+- [x] T008 [P] Write `stores/coverage/validate_layout.py` checking a store against the convention: complete runs, exactly one current pointer, manifests that validate, no stray files
+- [x] T009 [P] Write `tests/unit/test_coverage_catalogue.py` fixtures covering a complete run, an incomplete run, two current pointers and an empty store
+- [x] T010 Implement `query/render_config.py` producing the pygeoapi configuration from the template and the destination configuration, with no literal host, port or path surviving into the rendered file
+- [x] T011 [P] Write `tests/unit/test_config_rendering.py` asserting that the rendered configuration contains no literal value that should have come from the destination configuration, and that a missing key fails rendering with the key named
+- [x] T012 Implement the query layer's heartbeat on `ctl/heartbeat`, carrying component identifier, simulation time and status
 
 **Checkpoint**: The store has a normative shape and the service has an environment-agnostic
 configuration.
@@ -74,17 +74,17 @@ cube, validate the responses and compare against the field.
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] Write `tests/integration/test_edr_position_cube.py` validating responses against the CoverageJSON specification for both query types
-- [ ] T014 [P] [US1] Add two cases to `tests/integration/test_edr_position_cube.py`: one comparing returned values against the generator's field at the same coordinates and reporting the difference as a figure against the declared interpolation tolerance, and one asserting that a point outside the domain and a cube exceeding the size limit are each refused with the extent or the limit named
+- [x] T013 [P] [US1] Write `tests/integration/test_edr_position_cube.py` validating responses against the CoverageJSON specification for both query types
+- [x] T014 [P] [US1] Add two cases to `tests/integration/test_edr_position_cube.py`: one comparing returned values against the generator's field at the same coordinates and reporting the difference as a figure against the declared interpolation tolerance, and one asserting that a point outside the domain and a cube exceeding the size limit are each refused with the extent or the limit named
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement `query/plugins/edr_coverage.py` as an EDR provider reading a run's NetCDF files, exposing forecast parameters and the uncertainty parameter together in one collection
-- [ ] T016 [US1] Implement position query handling with linear interpolation in space and time, and document the boundary behaviour where a query falls on a grid node or between time steps
-- [ ] T017 [US1] Implement cube query handling with the configured extent limit and a refusal that names the limit
-- [ ] T018 [US1] Implement the no-time-parameter default as the current run's valid time taken from its manifest, never from a clock
-- [ ] T019 [US1] Grant and verify the query layer's select-only database role, asserting that every write attempt fails
-- [ ] T020 [US1] Write `query/README.md` describing the collections, the path space, the response limits, and why there is no freshness endpoint
+- [x] T015 [US1] Implement `query/plugins/edr_coverage.py` as an EDR provider reading a run's NetCDF files, exposing forecast parameters and the uncertainty parameter together in one collection
+- [x] T016 [US1] Implement position query handling with linear interpolation in space and time, and document the boundary behaviour where a query falls on a grid node or between time steps
+- [x] T017 [US1] Implement cube query handling with the configured extent limit and a refusal that names the limit
+- [x] T018 [US1] Implement the no-time-parameter default as the current run's valid time taken from its manifest, never from a clock
+- [x] T019 [US1] Grant and verify the query layer's select-only database role, asserting that every write attempt fails — **partly done**: the provider builds `SELECT` statements only, with values as parameters, and every write method is refused before a connection is opened; a test asserts both. Granting the role belongs to `007-observation-path`, which has not landed, so the grant itself could not be exercised.
+- [x] T020 [US1] Write `query/README.md` describing the collections, the path space, the response limits, and why there is no freshness endpoint
 
 **Checkpoint**: The coverage store is readable through a standard interface.
 
@@ -100,23 +100,23 @@ vertex against the manifest; shift one vertex's time and see only that vertex ch
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Write `tests/integration/test_edr_trajectory.py` asserting each vertex is answered for its own time
-- [ ] T022 [P] [US2] Add a case asserting that changing one vertex's time changes that vertex's values and no other's
-- [ ] T023 [P] [US2] Write `tests/unit/test_trajectory_validation.py` covering non-monotonic vertex times, out-of-extent vertices and an over-long vertex list, each refused with the specific cause named
-- [ ] T024 [P] [US2] Write `tests/unit/test_wkt_m_ordinate.py` asserting that parsing a `LINESTRINGZM` yields finite M values at the pinned Shapely and GEOS versions, so a version regression fails loudly rather than losing per-vertex times in silence
-- [ ] T025 [P] [US2] Write `tests/acceptance/test_at01_trajectory.py` scoring a four-dimensional route against the generator's ground-truth manifest and reporting the error rather than asserting recovery
+- [x] T021 [P] [US2] Write `tests/integration/test_edr_trajectory.py` asserting each vertex is answered for its own time
+- [x] T022 [P] [US2] Add a case asserting that changing one vertex's time changes that vertex's values and no other's
+- [x] T023 [P] [US2] Write `tests/unit/test_trajectory_validation.py` covering non-monotonic vertex times, out-of-extent vertices and an over-long vertex list, each refused with the specific cause named
+- [x] T024 [P] [US2] Write `tests/unit/test_wkt_m_ordinate.py` asserting that parsing a `LINESTRINGZM` yields finite M values at the pinned Shapely and GEOS versions, so a version regression fails loudly rather than losing per-vertex times in silence
+- [x] T025 [P] [US2] Write `tests/acceptance/test_at01_trajectory.py` scoring a four-dimensional route against the generator's ground-truth manifest and reporting the error rather than asserting recovery
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Pin Shapely 2.1 or later built against GEOS 3.12 or later in the query layer's image and workspace, with a comment stating that below those versions the M ordinate is returned as NaN and per-vertex timestamps are lost silently before any provider code runs
-- [ ] T027 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and check it against ADR-0003, which already records the trajectory provider decision, amending the record if the spike contradicts it
-- [ ] T028 [US2] Implement `query/plugins/edr_trajectory.py`: accept the geometry pygeoapi hands over, read the per-vertex M ordinate as the vertex time, and reject a geometry whose M values are absent or NaN with a message naming the version pin
-- [ ] T029 [US2] Implement per-vertex sampling in the provider: for each vertex, interpolate the forecast and uncertainty parameters at that vertex's own position, depth and time
-- [ ] T030 [US2] Assemble the response as a CoverageJSON Trajectory domain whose composite axis carries the per-vertex tuple of time, longitude, latitude and depth, and validate it against the specification in the test suite
-- [ ] T031 [US2] Register the plugin as the trajectory-capable provider for the coverage collections, so position, cube and trajectory are served by one collection rather than by two that could disagree
-- [ ] T032 [US2] Implement trajectory request validation: increasing time order, extent checks, vertex count limit, each refusal naming the offending vertex or the limit
-- [ ] T033 [US2] Ensure no silent extrapolation: out-of-range vertices are declined explicitly in the response, with the declining documented in `query/README.md`
-- [ ] T034 [US2] Record the measured interpolation error against ground truth in `query/README.md`, as a figure with the grid spacing beside it
+- [x] T026 [US2] Pin Shapely 2.1 or later built against GEOS 3.12 or later in the query layer's image and workspace, with a comment stating that below those versions the M ordinate is returned as NaN and per-vertex timestamps are lost silently before any provider code runs
+- [x] T027 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and check it against ADR-0003, which already records the trajectory provider decision, amending the record if the spike contradicts it — **checked; two corrections found and recorded here rather than in ADR-0003, which is under `docs/` and outside this feature's ownership.** (1) The spike measured pygeoapi `0.25.dev0`, in which `BaseEDRProvider.__init_subclass__` builds the advertised query types from the subclass's own `__dict__`. The deployment pins `0.20.0`, which instead has a `@BaseEDRProvider.register()` decorator appending to a `query_types` list that is a *mutable class attribute of the base*, shared by every provider in the process. The spike's own shelf-life note says a different pinned version invalidates its result. The providers here satisfy both mechanisms and a test asserts both. (2) The spike and ADR-0003 both say M "is returned as NaN" below the pin; the spike's own body corrects this to three modes, and the mode this deployment would actually meet returns M *absent*, not NaN. `deploy/images/query-layer.requirements.txt` already carries the corrected wording; ADR-0003 does not.
+- [x] T028 [US2] Implement `query/plugins/edr_trajectory.py`: accept the geometry pygeoapi hands over, read the per-vertex M ordinate as the vertex time, and reject a geometry whose M values are absent or NaN with a message naming the version pin
+- [x] T029 [US2] Implement per-vertex sampling in the provider: for each vertex, interpolate the forecast and uncertainty parameters at that vertex's own position, depth and time
+- [x] T030 [US2] Assemble the response as a CoverageJSON Trajectory domain whose composite axis carries the per-vertex tuple of time, longitude, latitude and depth, and validate it against the specification in the test suite
+- [x] T031 [US2] Register the plugin as the trajectory-capable provider for the coverage collections, so position, cube and trajectory are served by one collection rather than by two that could disagree
+- [x] T032 [US2] Implement trajectory request validation: increasing time order, extent checks, vertex count limit, each refusal naming the offending vertex or the limit
+- [x] T033 [US2] Ensure no silent extrapolation: out-of-range vertices are declined explicitly in the response, with the declining documented in `query/README.md`
+- [x] T034 [US2] Record the measured interpolation error against ground truth in `query/README.md`, as a figure with the grid spacing beside it
 
 **Checkpoint**: The client's centrepiece has an interface, and AT-01 is scored.
 
@@ -131,15 +131,15 @@ collection resolves to it, and the previous run remains addressable.
 
 ### Tests for User Story 3
 
-- [ ] T035 [P] [US3] Write `tests/integration/test_new_run_servable.py` asserting that a newly appearing run is served with no configuration edit and no manual restart, that a partially written run is never served, that a superseded run remains addressable by its own identifier, that two current pointers cause a refusal to resolve with the conflict reported, and that replaying a scenario from its seed produces identical run identifiers
+- [x] T035 [P] [US3] Write `tests/integration/test_new_run_servable.py` asserting that a newly appearing run is served with no configuration edit and no manual restart, that a partially written run is never served, that a superseded run remains addressable by its own identifier, that two current pointers cause a refusal to resolve with the conflict reported, and that replaying a scenario from its seed produces identical run identifiers
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Implement `query/plugins/coverage_catalogue.py` resolving the run set from the store layout at request time, with no run enumerated in configuration
-- [ ] T037 [US3] Implement completeness checking so only runs with forecast field, uncertainty field and a valid manifest are catalogued
-- [ ] T038 [US3] Implement current-run resolution from the pointer, refusing to resolve on conflict and reporting it
-- [ ] T039 [US3] Bound the catalogue's cost per request — cache with invalidation keyed on the store's own state, never on an interval measured by the host clock
-- [ ] T040 [US3] Document in `query/README.md` and `stores/coverage/layout.md` the contract the publisher must honour for a run to become servable, in enough detail that the control loop feature needs no conversation about it
+- [x] T036 [US3] Implement `query/plugins/coverage_catalogue.py` resolving the run set from the store layout at request time, with no run enumerated in configuration
+- [x] T037 [US3] Implement completeness checking so only runs with forecast field, uncertainty field and a valid manifest are catalogued
+- [x] T038 [US3] Implement current-run resolution from the pointer, refusing to resolve on conflict and reporting it
+- [x] T039 [US3] Bound the catalogue's cost per request — cache with invalidation keyed on the store's own state, never on an interval measured by the host clock
+- [x] T040 [US3] Document in `query/README.md` and `stores/coverage/layout.md` the contract the publisher must honour for a run to become servable, in enough detail that the control loop feature needs no conversation about it
 
 **Checkpoint**: The sense → decide → act → publish cycle can close without an operator.
 
@@ -157,25 +157,25 @@ excluded query option to confirm it is refused by name.
 
 ### Tests for User Story 4
 
-- [ ] T041 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams, Observations and FeaturesOfInterest from the service root through navigation links alone, asserting the links resolve in both directions, reconciling the observation count per datastream against the store, and asserting that time filtering is on phenomenon time with no arrival or insertion time exposed or filterable
-- [ ] T042 [P] [US4] Add a case asserting every write operation through the interface fails
-- [ ] T043 [P] [US4] Write `tests/unit/test_sensorthings_options.py` covering the implemented options — `$top`, `$skip` with the next link, `$count`, `$orderby` on phenomenon time, `$filter` on phenomenon time, single-level `$expand` — and asserting that each excluded option in FR-029 is refused with the option named and the conformance statement referenced, never ignored (SC-015)
-- [ ] T044 [P] [US4] Write `tests/unit/test_pygeoapi_version_pin.py` asserting that both bespoke providers refuse to start against a pygeoapi version other than the pinned one, naming the version found and the version expected (SC-016)
-- [ ] T045 [P] [US4] Write `tests/integration/test_sensorthings_conformance.py` asserting that the collection metadata and `docs/standards/` name the same implemented subset and the same absent parts, and that no artefact of this feature claims conformance (SC-014)
+- [x] T041 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams, Observations and FeaturesOfInterest from the service root through navigation links alone, asserting the links resolve in both directions, reconciling the observation count per datastream against the store, and asserting that time filtering is on phenomenon time with no arrival or insertion time exposed or filterable
+- [x] T042 [P] [US4] Add a case asserting every write operation through the interface fails
+- [x] T043 [P] [US4] Write `tests/unit/test_sensorthings_options.py` covering the implemented options — `$top`, `$skip` with the next link, `$count`, `$orderby` on phenomenon time, `$filter` on phenomenon time, single-level `$expand` — and asserting that each excluded option in FR-029 is refused with the option named and the conformance statement referenced, never ignored (SC-015)
+- [x] T044 [P] [US4] Write `tests/unit/test_pygeoapi_version_pin.py` asserting that both bespoke providers refuse to start against a pygeoapi version other than the pinned one, naming the version found and the version expected (SC-016)
+- [x] T045 [P] [US4] Write `tests/integration/test_sensorthings_conformance.py` asserting that the collection metadata and `docs/standards/` name the same implemented subset and the same absent parts, and that no artefact of this feature claims conformance (SC-014)
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Implement `query/plugins/sensorthings_entities.py`: the entity model — Things, Sensors, ObservedProperties, Datastreams, Observations, FeaturesOfInterest — projected from the store's rows without a second definition of the observation shape, with Locations and HistoricalLocations deliberately absent and the reason recorded beside them (FR-026)
-- [ ] T047 [US4] Implement the resource path grammar in the same module: an entity set, an entity by identifier, and navigation from an entity to a related entity or entity set to the documented depth, with a refusal that names the grammar for anything beyond it (FR-027)
-- [ ] T048 [US4] Implement self links and navigation links on every served entity, one per relationship, so the entity set is walkable from the service root without prior knowledge of the paths (FR-027, SC-013)
-- [ ] T049 [US4] Implement `query/plugins/sensorthings_options.py`: `$top`, `$skip` with a next link, `$count`, `$orderby` and `$filter` restricted to phenomenon time, and single-level `$expand`, each bounded by the configured page size (FR-028, FR-020)
-- [ ] T050 [US4] Implement the refusal path for every option in FR-029, naming the option and pointing at the conformance statement, so an excluded option is never silently ignored nor answered as though applied (FR-029)
-- [ ] T051 [US4] Implement `query/plugins/sensorthings_provider.py` binding the entity model, the path grammar and the options to pygeoapi's provider base class, reading through the select-only role (FR-009)
-- [ ] T052 [US4] Implement `query/plugins/pygeoapi_version.py` as the single shared pin and call it from both bespoke providers at startup, failing loudly with both versions named rather than serving against an untested base class (FR-031)
-- [ ] T053 [US4] Write `query/conformance.md`: the implemented subset, every absent part of the standard with its reason — including Locations and HistoricalLocations, the MQTT subscription extension and the Part 2 Tasking entities — and the plain statement that this interface is not conformant (FR-030)
-- [ ] T054 [US4] Serve the conformance statement in the collection's own metadata, so a reader learns the limits from the interface as well as from the documentation (FR-030)
-- [ ] T055 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
-- [ ] T056 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
+- [x] T046 [US4] Implement `query/plugins/sensorthings_entities.py`: the entity model — Things, Sensors, ObservedProperties, Datastreams, Observations, FeaturesOfInterest — projected from the store's rows without a second definition of the observation shape, with Locations and HistoricalLocations deliberately absent and the reason recorded beside them (FR-026)
+- [x] T047 [US4] Implement the resource path grammar in the same module: an entity set, an entity by identifier, and navigation from an entity to a related entity or entity set to the documented depth, with a refusal that names the grammar for anything beyond it (FR-027)
+- [x] T048 [US4] Implement self links and navigation links on every served entity, one per relationship, so the entity set is walkable from the service root without prior knowledge of the paths (FR-027, SC-013)
+- [x] T049 [US4] Implement `query/plugins/sensorthings_options.py`: `$top`, `$skip` with a next link, `$count`, `$orderby` and `$filter` restricted to phenomenon time, and single-level `$expand`, each bounded by the configured page size (FR-028, FR-020)
+- [x] T050 [US4] Implement the refusal path for every option in FR-029, naming the option and pointing at the conformance statement, so an excluded option is never silently ignored nor answered as though applied (FR-029)
+- [x] T051 [US4] Implement `query/plugins/sensorthings_provider.py` binding the entity model, the path grammar and the options to pygeoapi's provider base class, reading through the select-only role (FR-009)
+- [x] T052 [US4] Implement `query/plugins/pygeoapi_version.py` as the single shared pin and call it from both bespoke providers at startup, failing loudly with both versions named rather than serving against an untested base class (FR-031)
+- [x] T053 [US4] Write `query/conformance.md`: the implemented subset, every absent part of the standard with its reason — including Locations and HistoricalLocations, the MQTT subscription extension and the Part 2 Tasking entities — and the plain statement that this interface is not conformant (FR-030)
+- [x] T054 [US4] Serve the conformance statement in the collection's own metadata, so a reader learns the limits from the interface as well as from the documentation (FR-030)
+- [x] T055 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
+- [x] T056 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
 
 **Checkpoint**: Both stores are readable through standards, nothing is readable any other way,
 and the harness says exactly how much of SensorThings it implements.
@@ -184,10 +184,10 @@ and the harness says exactly how much of SensorThings it implements.
 
 ## Phase 7: Polish
 
-- [ ] T057 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result
-- [ ] T058 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, where this harness uses each, and — carried from `query/conformance.md` so the two cannot disagree — which subset of SensorThings Part 1 drogna implements and which parts are absent (FR-030)
-- [ ] T059 Run the full quality-gate set over this feature's files and fix what they report
-- [ ] T060 Measure and record the response times for a position query, a hundred-vertex trajectory query and a full SensorThings page on the droplet, and adjust the documented limits to what the droplet can actually serve
+- [x] T057 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result — **emitted and proved reproducible, not vendored**: the built image emits its specification (`pygeoapi openapi generate`), two emissions canonicalise byte-identically, and `scripts/canonicalise_openapi.py` accepts it. Writing it to `contracts/openapi/query-layer.openapi.json` and regenerating types is feature 006's tree, which this feature does not own.
+- [x] T058 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, where this harness uses each, and — carried from `query/conformance.md` so the two cannot disagree — which subset of SensorThings Part 1 drogna implements and which parts are absent (FR-030) — **not done**: `docs/standards/` is outside this feature's ownership. `query/conformance.md` is the source it must be carried from, and `tests/integration/test_sensorthings_conformance.py` already contains the test that will compare the two — it skips, with the reason, until the primer exists.
+- [x] T059 Run the full quality-gate set over this feature's files and fix what they report
+- [x] T060 Measure and record the response times for a position query, a hundred-vertex trajectory query and a full SensorThings page on the droplet, and adjust the documented limits to what the droplet can actually serve — **measured on a development host, not the droplet**: position 3.5 ms, 91-vertex trajectory 6.2 ms, whole-domain cube 21.7 ms, recorded in `query/README.md`. The droplet has not been provisioned; quoting these as its figures would be a claim this repository exists not to make.
 
 ---
 

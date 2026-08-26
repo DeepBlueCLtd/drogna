@@ -35,7 +35,7 @@ against the component schema before any other I/O.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create the four service package skeletons — `services/monitor/`,
+- [x] T001 Create the four service package skeletons — `services/monitor/`,
   `services/scheduler/`, `services/model_runner/`, `services/publisher/`, each with
   `pyproject.toml`, `src/harness_<name>/__init__.py` and `tests/` — and register all
   four in the `uv` workspace.
@@ -48,17 +48,17 @@ against the component schema before any other I/O.
 
 **CRITICAL**: no user story work begins until this phase is complete.
 
-- [ ] T002 Write `contracts/schemas/divergence.schema.json` (region, mean and peak
+- [x] T002 Write `contracts/schemas/divergence.schema.json` (region, mean and peak
   residual in m/s, sample count, simulation-time span, forecast run identifier scored
   against, persistence rule satisfied) and `contracts/schemas/run-request.schema.json`
   (run identifier, initialisation simulation time, region, ensemble size, the
   divergence that justified it). `$id`s of the form
   `https://schemas.harness.invalid/<name>.schema.json`.
-- [ ] T003 [P] Write `contracts/schemas/run-started.schema.json` (run identifier,
+- [x] T003 [P] Write `contracts/schemas/run-started.schema.json` (run identifier,
   request reference, member count, start simulation time) and
   `contracts/schemas/run-published.schema.json` (run identifier, valid time range,
   grid bounds, forecast and uncertainty collection identifiers, current flag).
-- [ ] T004 [P] Write the four component config schemas —
+- [x] T004 [P] Write the four component config schemas —
   `contracts/schemas/config.{monitor,scheduler,model_runner,publisher}.schema.json` —
   each `$ref`ing `config.common.schema.json` and adding: window bounds, threshold in
   m/s, persistence counts, spans and neighbourhood radius, warm-up mode (monitor);
@@ -66,11 +66,11 @@ against the component schema before any other I/O.
   and noise parameters, staging location, kernel selector (model runner); staging and
   catalogued locations and catalogue naming parameters (publisher). All four carry a
   heartbeat interval.
-- [ ] T005 Regenerate Python and TypeScript types from the four message schemas and
+- [x] T005 Regenerate Python and TypeScript types from the four message schemas and
   confirm the drift check passes (`libs/harness_types/`, `client/src/generated/`).
-- [ ] T006 [P] Add the four component config files to `config/local/` and the four
+- [x] T006 [P] Add the four component config files to `config/local/` and the four
   matching files to `config/droplet/` — same shape, destination-specific values.
-- [ ] T007 [P] Contract tests asserting each of the four message schemas accepts a
+- [x] T007 [P] Contract tests asserting each of the four message schemas accepts a
   canonical example and rejects a payload missing each required field, in
   `tests/integration/test_control_schemas.py`.
 
@@ -89,26 +89,26 @@ one `ctl/divergence` carrying its evidence.
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Unit tests for the residual being defined on sound speed — a
+- [x] T008 [P] [US1] Unit tests for the residual being defined on sound speed — a
   case where temperature diverges but salinity compensates raises nothing — and for
   the monitor calling `harness_core`'s shared sound-speed derivation rather than any
   local copy of the equation (ADR-0005), in `services/monitor/tests/test_residual.py`.
   Scoring the derivation itself against published reference values belongs beside the
   shared implementation, not here, because there is only one of it.
-- [ ] T009 [P] [US1] Unit test for the rolling window: eviction by simulation-time
+- [x] T009 [P] [US1] Unit test for the rolling window: eviction by simulation-time
   span, eviction by sample count, and shed counting under overload, in
   `services/monitor/tests/test_window.py`.
-- [ ] T010 [P] [US1] Unit test for the persistence rules: single spike rejected,
+- [x] T010 [P] [US1] Unit test for the persistence rules: single spike rejected,
   spatial rule satisfied, temporal rule satisfied, evidence invalidated on a new
   publication and on broker reconnection, in
   `services/monitor/tests/test_persistence.py`.
-- [ ] T011 [P] [US1] Integration test for warm-up and restart catch-up: no divergence
+- [x] T011 [P] [US1] Integration test for warm-up and restart catch-up: no divergence
   before warm-up completes, exactly one store query in catch-up mode, zero store
   queries thereafter, in `tests/integration/test_monitor_warmup.py`.
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement the residual against the current forecast, sampled through
+- [x] T012 [US1] Implement the residual against the current forecast, sampled through
   the coverage read port at the observation's four-dimensional position and derived by
   calling `harness_core`'s shared sound-speed implementation, in
   `services/monitor/src/harness_monitor/residual.py`. Where that shared implementation
@@ -116,19 +116,19 @@ one `ctl/divergence` carrying its evidence.
   formulation and validity range written up in `docs/algorithms/`, so telemetry and the
   environment generator call the same function (ADR-0005). The monitor holds no copy of
   the equation, and there is no stored sound-speed datastream to read instead.
-- [ ] T013 [P] [US1] Implement the bounded rolling window with simulation-time
+- [x] T013 [P] [US1] Implement the bounded rolling window with simulation-time
   eviction and shed counters in `services/monitor/src/harness_monitor/window.py`.
-- [ ] T014 [US1] Implement the spatial and temporal persistence rules and evidence
+- [x] T014 [US1] Implement the spatial and temporal persistence rules and evidence
   invalidation in `services/monitor/src/harness_monitor/persistence.py`.
-- [ ] T015 [US1] Implement warm-up and the single restart catch-up query in
+- [x] T015 [US1] Implement warm-up and the single restart catch-up query in
   `services/monitor/src/harness_monitor/catchup.py`.
-- [ ] T016 [US1] Implement divergence publication on `ctl/divergence`, residual
+- [x] T016 [US1] Implement divergence publication on `ctl/divergence`, residual
   summaries on `ctl/telemetry`, and the heartbeat carrying `warming` / `scoring` /
   `no-forecast`, in `services/monitor/src/harness_monitor/publish.py`. The heartbeat
   fires on a real-time interval and carries the current simulation time as payload,
   marked `# harness:allow-wallclock` with ADR-0006 as its reason; every other interval
   in the service stays on the simulation clock.
-- [ ] T017 [US1] Wire config loading and validation, the `obs/#` subscription loop and
+- [x] T017 [US1] Wire config loading and validation, the `obs/#` subscription loop and
   the `ctl/run-published` subscription that swaps the field being scored, in
   `services/monitor/src/harness_monitor/config.py` and
   `services/monitor/src/harness_monitor/service.py`.
@@ -148,28 +148,28 @@ decision count and decision reasons.
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Unit test for the minimum-interval rule, including a divergence
+- [x] T018 [P] [US2] Unit test for the minimum-interval rule, including a divergence
   arriving exactly at the interval boundary, in
   `services/scheduler/tests/test_policy.py`.
-- [ ] T019 [P] [US2] Unit test for duplicate rejection while a request is
+- [x] T019 [P] [US2] Unit test for duplicate rejection while a request is
   outstanding, clearing on `ctl/run-published`, and clearing on outstanding timeout,
   in `services/scheduler/tests/test_outstanding.py`.
-- [ ] T020 [P] [US2] Unit test asserting run identifiers derive from root seed and run
+- [x] T020 [P] [US2] Unit test asserting run identifiers derive from root seed and run
   ordinal and are stable across replays, in `services/scheduler/tests/test_run_id.py`.
-- [ ] T021 [P] [US2] Integration test: a burst of 50 divergences inside one minimum
+- [x] T021 [P] [US2] Integration test: a burst of 50 divergences inside one minimum
   interval yields at most one `ctl/run-request` and 50 recorded decisions, in
   `tests/integration/test_monitor_scheduler_handoff.py`.
 
 ### Implementation for User Story 2
 
-- [ ] T022 [P] [US2] Implement deterministic run identifiers in
+- [x] T022 [P] [US2] Implement deterministic run identifiers in
   `services/scheduler/src/harness_scheduler/run_id.py`.
-- [ ] T023 [US2] Implement the minimum-interval and duplicate-rejection policy, with
+- [x] T023 [US2] Implement the minimum-interval and duplicate-rejection policy, with
   a recorded decision for every divergence, in
   `services/scheduler/src/harness_scheduler/policy.py`.
-- [ ] T024 [US2] Implement the outstanding-request register with simulation-time
+- [x] T024 [US2] Implement the outstanding-request register with simulation-time
   timeout in `services/scheduler/src/harness_scheduler/outstanding.py`.
-- [ ] T025 [US2] Wire config loading, the `ctl/divergence` and `ctl/run-published`
+- [x] T025 [US2] Wire config loading, the `ctl/divergence` and `ctl/run-published`
   subscriptions, publication on `ctl/run-request`, decision records on
   `ctl/telemetry`, and the heartbeat, in
   `services/scheduler/src/harness_scheduler/config.py` and
@@ -190,16 +190,16 @@ seed; swap in the test-double kernel with no edits outside `services/model_runne
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Unit test for the kernel port contract, exercised against both
+- [x] T026 [P] [US3] Unit test for the kernel port contract, exercised against both
   the analytic kernel and a test double, in
   `services/model_runner/tests/test_kernel_port.py`.
-- [ ] T027 [P] [US3] Unit test for analytic advection: a seeded feature with known
+- [x] T027 [P] [US3] Unit test for analytic advection: a seeded feature with known
   drift velocity is displaced by velocity times elapsed simulation time, within grid
   resolution, in `services/model_runner/tests/test_advection.py`.
-- [ ] T028 [P] [US3] Unit test asserting the uncertainty field equals the per-cell
+- [x] T028 [P] [US3] Unit test asserting the uncertainty field equals the per-cell
   spread across members and the forecast field their mean, on identical grids, in
   `services/model_runner/tests/test_ensemble.py`.
-- [ ] T029 [P] [US3] Tests asserting two runs from the same manifest produce
+- [x] T029 [P] [US3] Tests asserting two runs from the same manifest produce
   byte-identical fields, and that a failed member invalidates the run so no
   partial-ensemble spread is offered for publication, in
   `services/model_runner/tests/test_determinism.py` and
@@ -207,15 +207,15 @@ seed; swap in the test-double kernel with no edits outside `services/model_runne
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Define the model kernel port — initialisation state in, gridded field
+- [x] T030 [US3] Define the model kernel port — initialisation state in, gridded field
   out — in `services/model_runner/src/harness_model_runner/kernel.py`.
-- [ ] T031 [US3] Implement the analytic kernel: advection of the manifest-recorded
+- [x] T031 [US3] Implement the analytic kernel: advection of the manifest-recorded
   features plus seeded noise, no real numerics, in
   `services/model_runner/src/harness_model_runner/analytic_kernel.py`.
-- [ ] T032 [US3] Implement ensemble execution with one derived RNG stream per member,
+- [x] T032 [US3] Implement ensemble execution with one derived RNG stream per member,
   and the mean and spread reduction, in
   `services/model_runner/src/harness_model_runner/ensemble.py`.
-- [ ] T033 [US3] Implement staging writes through the coverage output port, holding
+- [x] T033 [US3] Implement staging writes through the coverage output port, holding
   the invariant that nothing is written where a reader can reach it, and wire config
   loading, the `ctl/run-request` subscription, the `ctl/run-started` publication
   before any computation, failure reporting and the heartbeat, in
@@ -237,29 +237,29 @@ fields across a publication; the announcement is emitted; nothing polls.
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Unit tests for staged-run validation — incomplete or
+- [x] T034 [P] [US4] Unit tests for staged-run validation — incomplete or
   failed-member runs refused — and for a failed publication leaving the previous
   current run intact and discarding staging, in
   `services/publisher/tests/test_validate.py` and
   `services/publisher/tests/test_failure.py`.
-- [ ] T035 [P] [US4] Unit test for the catalogue naming convention and the
+- [x] T035 [P] [US4] Unit test for the catalogue naming convention and the
   mark-current operation, in `services/publisher/tests/test_catalogue.py`.
-- [ ] T036 [P] [US4] Concurrency test: ten thousand reads issued across a publication
+- [x] T036 [P] [US4] Concurrency test: ten thousand reads issued across a publication
   all return a complete field whose checksum matches one of two known runs, in
   `tests/integration/test_publication_atomicity.py`.
-- [ ] T037 [P] [US4] Integration test asserting the published run is servable through
+- [x] T037 [P] [US4] Integration test asserting the published run is servable through
   the query layer with no collection configuration edited, and that no consumer
   issued a polling request, in `tests/integration/test_runner_publisher_handoff.py`.
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Implement staged-run completeness validation in
+- [x] T038 [US4] Implement staged-run completeness validation in
   `services/publisher/src/harness_publisher/validate.py`.
-- [ ] T039 [US4] Implement the single indivisible visibility step behind the coverage
+- [x] T039 [US4] Implement the single indivisible visibility step behind the coverage
   output port, and the catalogue naming and mark-current operation, in
   `services/publisher/src/harness_publisher/atomic.py` and
   `services/publisher/src/harness_publisher/catalogue.py`.
-- [ ] T040 [US4] Wire config loading, staged-run intake, the `ctl/run-published`
+- [x] T040 [US4] Wire config loading, staged-run intake, the `ctl/run-published`
   announcement, failure recording and the heartbeat, in
   `services/publisher/src/harness_publisher/config.py` and
   `services/publisher/src/harness_publisher/service.py`.
@@ -277,7 +277,7 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 ### Tests for User Story 5
 
-- [ ] T041 [US5] Acceptance test AT-02 asserting the ordered sequence
+- [x] T041 [US5] Acceptance test AT-02 asserting the ordered sequence
   `ctl/divergence` → `ctl/run-request` → `ctl/run-started` → `ctl/run-published`
   with matching identifiers within the configured budget, plus a replay assertion
   that the sequence and both field outputs are identical across two runs from the
@@ -288,7 +288,7 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 - [ ] T042 [US5] Add the four services to the Compose configuration with their config
   file mounts, following the shape feature 005 fixed.
-- [ ] T043 [US5] Add the divergence-guaranteed scenario configuration to
+- [x] T043 [US5] Add the divergence-guaranteed scenario configuration to
   `config/local/` — thresholds, intervals and budgets tuned so the loop is watchable
   at the demonstration clock rate.
 
@@ -298,7 +298,7 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T044 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
+- [x] T044 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
   lint gates over all four packages and fix anything they surface, confirming that
   every surviving `# harness:allow-wallclock` marker is a heartbeat emission citing
   ADR-0006 and that nothing else in the four services reads host time (SC-014).
@@ -309,13 +309,71 @@ within the configured simulation-time budget, reproducible from the manifest.
   formulation is written up there too, beside the shared implementation it documents,
   per ADR-0005. Record an ADR if atomic visibility cannot be achieved by a single
   rename on the deployment's volume.
-- [ ] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
+- [x] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
   with the clock rate pinned to zero for longer than every declared liveness window,
   all four services keep publishing heartbeats on their real-time cadence, each
   carrying the same unchanging simulation time, and no component falls out of its
   liveness window (SC-013, ADR-0006). This is the regression test on the decision that
   a rate of zero stops simulated time and stops nothing else, and it is what makes
   feature 016's rate-zero capture meaningful.
+
+---
+
+## Phase 9: The coverage store seam
+
+Features 008 and 009 were built in parallel and met at the coverage store, which
+`docs/architecture/delivery-plan.md` gives 008 to define and 009 to consume. They met
+badly: the publisher wrote runs at the store root under a `run_` prefix, put a symlink
+where the pointer belongs, and called the manifest `run.json`, while the query layer
+looked under `runs/`, read the pointer as text and wanted `run-manifest.json`. Nothing
+the control loop published was visible to the read path, and every test on both sides
+passed, because no test crossed. These tasks are the repair and what it uncovered.
+
+- [x] T047 [US4] Conform the publisher to `stores/coverage/layout.md`: the store root,
+  the `runs/` subdirectory, run directories named by the run identifier alone, and the
+  manifest name, in `config/local/publisher.json`, `config/droplet/publisher.json` and
+  `services/publisher/src/harness_publisher/catalogue.py`.
+- [x] T048 [US4] Rewrite `make_current` to write the pointer the layout defines — one run
+  identifier, one line, flushed to a pending file and moved onto the pointer in a single
+  `os.replace` — keeping the atomicity the existing tests prove, in
+  `services/publisher/src/harness_publisher/atomic.py`.
+- [x] T049 [US4] Translate the staged descriptor into the store's run manifest in
+  `services/publisher/src/harness_publisher/manifest.py`, and write it into staging before
+  the run moves, so a run arrives in the store complete in one rename. Renaming the file
+  alone would not have joined the two ends: the descriptor's keys are not the manifest's.
+- [x] T050 [US4] Cross-feature integration test in
+  `tests/integration/test_coverage_store_seam.py`: publish through the publisher's own code
+  path, resolve through feature 008's catalogue, and check both destinations' configuration
+  files name one store. It fails on any of the pointer, the run directory, the manifest
+  name, the manifest's contents or a configured root drifting apart.
+- [ ] T051 [US1] Change the monitor's coverage reader to resolve the pointer as the layout
+  defines it — read one identifier as text, then open the run under `runs/` — in
+  `services/monitor/src/harness_monitor/coverage.py`, with the runs directory named in
+  `contracts/schemas/config.monitor.schema.json` and both `monitor.json` files. Until this
+  lands the monitor reads no published field, and
+  `tests/acceptance/test_at_02_threshold_breach_triggers_run.py` fails at its first
+  assertion. That failure is true and should not be worked around in the test.
+- [ ] T052 [US2] Adopt the coverage store's run identifier rule in
+  `services/scheduler/src/harness_scheduler/run_id.py`. The store derives a name from the
+  root seed and the run sequence and puts the sequence in the name; the scheduler hashes an
+  ordinal, so a published run's name cannot be read back as the sequence it was, and the
+  run manifest records a null `run_sequence` for want of one.
+- [ ] T053 [US2] Carry the run ordinal on `ctl/run-request` and through the staged
+  descriptor, so the publisher records which run of the scenario a manifest describes
+  rather than the absence of one.
+- [ ] T054 [US4] Give the publisher's configuration master its own keys for the runs
+  subdirectory and the partial suffix, in
+  `contracts/schemas/config.publisher.schema.json`. Today the subdirectory is carried in
+  `run_directory_prefix` — the layout gives a run directory no prefix of its own and the
+  key cannot be empty — and the partial suffix is a constant in three components.
+- [ ] T055 [US4] Write the run manifest's master as
+  `contracts/schemas/coverage-run-manifest.schema.json`, which Constitution III requires and
+  `stores/coverage/layout.md` records as an outstanding gap. Its absence is why the shape is
+  stated twice, in the publisher that writes it and the catalogue that reads it.
+- [ ] T056 [US4] Put staging on the volume the coverage store is on. Both destinations name
+  a staging directory that no Compose volume mounts, so the model runner writes into its own
+  container and the publisher sees nothing; and a move between volumes is a copy, which the
+  publisher refuses rather than performing non-atomically. This belongs with T042.
 
 ---
 

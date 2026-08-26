@@ -1,0 +1,57 @@
+{
+  "component": {
+    "id": "model_runner",
+    "description": "C-13: analytic advection and a seeded ensemble, behind the model kernel port.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 4,
+    "timeout_seconds": 5.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "model_runner"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "model_runner",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "model_runner": {
+    "kernel": {
+      "name": "analytic",
+      "noise_temperature_c": 0.05,
+      "noise_salinity_psu": 0.01
+    },
+    "ensemble": {
+      "maximum_size": 8,
+      "perturbation_temperature_c": 0.2,
+      "perturbation_salinity_psu": 0.05,
+      "perturbation_drift_fraction": 0.2
+    },
+    "forecast": {
+      "step_seconds": 3600.0,
+      "step_count": 7
+    },
+    "ground_truth": {
+      "directory": "/data/environment",
+      "manifest_file": "environment.manifest.json"
+    },
+    "staging": {
+      "directory": "/data/staging",
+      "forecast_file": "forecast.nc",
+      "uncertainty_file": "uncertainty.nc",
+      "manifest_file": "run.json"
+    },
+    "stored_dtype": "float32"
+  }
+}

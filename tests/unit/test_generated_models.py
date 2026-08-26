@@ -15,13 +15,27 @@ from typing import Any
 
 import pytest
 from harness_types.config.client import DrognaBrowserClientRuntimeConfiguration
+from harness_types.config.clock import DrognaClockConfiguration
 from harness_types.config.common import DrognaCommonConfigurationSections
 from harness_types.config.deployment import DestinationDeploymentValues
 from harness_types.config.env_generator import DrognaEnvironmentGeneratorConfiguration
+from harness_types.config.features import DrognaFeatureStoreProvisioningConfiguration
+from harness_types.config.ingest import DrognaIngestClientConfiguration
+from harness_types.config.model_runner import DrognaModelRunnerConfiguration
+from harness_types.config.monitor import DrognaMonitorConfiguration
+from harness_types.config.publisher import DrognaPublisherConfiguration
+from harness_types.config.scheduler import DrognaSchedulerConfiguration
+from harness_types.config.sensors import DrognaSimulatedSensorsConfiguration
 from harness_types.messages.clock import DrognaSimulationTimeSample
+from harness_types.messages.divergence import DrognaDivergenceEvent
 from harness_types.messages.heartbeat import DrognaComponentHeartbeat
+from harness_types.messages.ingest_telemetry import DrognaIngestTelemetry
 from harness_types.messages.manifest import DrognaGroundTruthManifest
+from harness_types.messages.observation import DrognaObservation
 from harness_types.messages.run_manifest import DrognaRunManifest
+from harness_types.messages.run_published import DrognaModelRunPublished
+from harness_types.messages.run_request import DrognaModelRunRequest
+from harness_types.messages.run_started import DrognaModelRunStarted
 from pydantic import BaseModel, ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +50,20 @@ MODELS: dict[str, type[BaseModel]] = {
     "config.common.schema.json": DrognaCommonConfigurationSections,
     "config.env_generator.schema.json": DrognaEnvironmentGeneratorConfiguration,
     "config.deployment.schema.json": DestinationDeploymentValues,
+    "config.clock.schema.json": DrognaClockConfiguration,
+    "divergence.schema.json": DrognaDivergenceEvent,
+    "run-request.schema.json": DrognaModelRunRequest,
+    "run-started.schema.json": DrognaModelRunStarted,
+    "run-published.schema.json": DrognaModelRunPublished,
+    "config.monitor.schema.json": DrognaMonitorConfiguration,
+    "config.scheduler.schema.json": DrognaSchedulerConfiguration,
+    "config.model_runner.schema.json": DrognaModelRunnerConfiguration,
+    "config.publisher.schema.json": DrognaPublisherConfiguration,
+    "observation.schema.json": DrognaObservation,
+    "ingest-telemetry.schema.json": DrognaIngestTelemetry,
+    "config.sensors.schema.json": DrognaSimulatedSensorsConfiguration,
+    "config.ingest.schema.json": DrognaIngestClientConfiguration,
+    "config.features.schema.json": DrognaFeatureStoreProvisioningConfiguration,
 }
 
 CLOCK_SAMPLE: dict[str, Any] = {

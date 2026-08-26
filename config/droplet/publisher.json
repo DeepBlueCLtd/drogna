@@ -1,0 +1,49 @@
+{
+  "component": {
+    "id": "publisher",
+    "description": "C-14: makes a completed run visible in one operation and announces it.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 8,
+    "timeout_seconds": 10.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "publisher"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "publisher",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "WARNING"
+  },
+  "publisher": {
+    "staging": {
+      "directory": "/srv/drogna/staging",
+      "forecast_file": "forecast.nc",
+      "uncertainty_file": "uncertainty.nc",
+      "manifest_file": "run.json"
+    },
+    "catalogue": {
+      "root_directory": "/var/lib/drogna/coverage",
+      "run_directory_prefix": "runs/",
+      "current_pointer": "current",
+      "forecast_file": "forecast.nc",
+      "uncertainty_file": "uncertainty.nc",
+      "manifest_file": "run-manifest.json"
+    },
+    "collections": {
+      "forecast_prefix": "forecast-",
+      "uncertainty_prefix": "uncertainty-"
+    }
+  }
+}

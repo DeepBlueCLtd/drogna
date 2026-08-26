@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.publisher.schema.json",
+  "title": "drogna publisher configuration",
+  "description": "Configuration for C-14, the publisher. Partial visibility is the failure this component owns: everything here exists so that making a run visible is one operation on one volume, and so that the names a run is servable under are derived from the store's layout rather than enumerated in a collection file. The common sections are referenced from config.common.schema.json rather than restated.",
+  "type": "object",
+  "required": ["component", "clock", "seed", "logging", "publisher"],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component" },
+    "clock": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock" },
+    "seed": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed" },
+    "broker": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker" },
+    "logging": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging" },
+    "publisher": {
+      "title": "Publication",
+      "type": "object",
+      "required": ["staging", "catalogue", "collections"],
+      "additionalProperties": false,
+      "properties": {
+        "staging": {
+          "title": "Where completed runs are collected from",
+          "description": "The same location the model runner writes into, on the same volume as the catalogue, because a move across volumes is a copy and a copy is not indivisible.",
+          "type": "object",
+          "required": ["directory", "forecast_file", "uncertainty_file", "manifest_file"],
+          "additionalProperties": false,
+          "properties": {
+            "directory": { "type": "string", "minLength": 1 },
+            "forecast_file": { "type": "string", "minLength": 1 },
+            "uncertainty_file": { "type": "string", "minLength": 1 },
+            "manifest_file": { "type": "string", "minLength": 1 }
+          }
+        },
+        "catalogue": {
+          "title": "The coverage store's layout",
+          "description": "A directory per run under a root, with the current run named by a pointer that is replaced in one operation. The layout is the query layer's to define; these are the names this component needs in order to write into it.",
+          "type": "object",
+          "required": [
+            "root_directory",
+            "run_directory_prefix",
+            "current_pointer",
+            "forecast_file",
+            "uncertainty_file",
+            "manifest_file"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "root_directory": { "type": "string", "minLength": 1 },
+            "run_directory_prefix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prefixed to the run identifier to name a run's directory, so a run directory is recognisable as one."
+            },
+            "current_pointer": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the entry in the root that resolves to the current run's directory."
+            },
+            "forecast_file": { "type": "string", "minLength": 1 },
+            "uncertainty_file": { "type": "string", "minLength": 1 },
+            "manifest_file": { "type": "string", "minLength": 1 }
+          }
+        },
+        "collections": {
+          "title": "How a run's collections are named",
+          "description": "Identifiers are derived from the run identifier by prefix, so that a new run is addressable the moment it is catalogued and no collection is ever enumerated in a configuration file.",
+          "type": "object",
+          "required": ["forecast_prefix", "uncertainty_prefix"],
+          "additionalProperties": false,
+          "properties": {
+            "forecast_prefix": { "type": "string", "minLength": 1 },
+            "uncertainty_prefix": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

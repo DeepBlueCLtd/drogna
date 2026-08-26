@@ -24,9 +24,12 @@ import json
 import os
 import shutil
 import subprocess
+import sys
+import tempfile
 import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -74,17 +77,96 @@ def _container_name(kind: str) -> str:
     return f"drogna-{kind}-{os.getpid()}-{next(_NAMES)}"
 
 
-def docker_available() -> bool:
-    """Whether there is a container runtime to run any of this against."""
+@dataclass(frozen=True)
+class ContainerSupport:
+    """Whether this machine can run these tests, and if not, exactly what is missing."""
+
+    usable: bool
+    reason: str = ""
+
+
+@cache
+def container_support() -> ContainerSupport:
+    """Probe once for everything these tests need, and name whatever is absent.
+
+    A container-backed test must skip where the environment cannot give it a container —
+    loudly, and never by quietly passing. A test that passes without its container is a
+    check that examines nothing, which is the failure this repository's gates exist to
+    prevent; a test that errors makes the whole run useless as a signal. So this probes,
+    once per session, for each thing that has actually gone wrong somewhere:
+
+    - the client and a reachable daemon;
+    - the pinned images, pulling them if the machine has not got them;
+    - and the one that is easy to miss — that a file a container writes into a bind mount
+      is usable afterwards by whoever is running the tests. As root the question does not
+      arise. On a CI runner that is not root it decides whether the broker can be given a
+      credential file at all.
+    """
     if shutil.which("docker") is None:
-        return False
-    return _run(["docker", "info"], check=False).returncode == 0
+        return ContainerSupport(False, "no docker client on the path")
+    info = _run(["docker", "info"], check=False)
+    if info.returncode != 0:
+        detail = info.stderr.decode("utf-8", errors="replace").strip().splitlines()
+        return ContainerSupport(
+            False,
+            "the container daemon is not reachable" + (f": {detail[-1]}" if detail else ""),
+        )
+    for image in (BROKER_IMAGE, STORE_IMAGE):
+        if _run(["docker", "image", "inspect", image], check=False).returncode == 0:
+            continue
+        pull = _run(["docker", "pull", image], check=False)
+        if pull.returncode != 0:
+            return ContainerSupport(
+                False,
+                f"the pinned image {image.split('@')[0]} is not present and cannot be pulled",
+            )
+    with tempfile.TemporaryDirectory() as scratch:
+        written = _run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{scratch}:/work",
+                BROKER_IMAGE,
+                "sh",
+                "-c",
+                "echo probe > /work/probe && chmod 0640 /work/probe",
+            ],
+            check=False,
+        )
+        if written.returncode != 0:
+            detail = written.stderr.decode("utf-8", errors="replace").strip().splitlines()
+            return ContainerSupport(
+                False,
+                "a container cannot write into a bind mount here"
+                + (f": {detail[-1]}" if detail else ""),
+            )
+        probe = Path(scratch) / "probe"
+        if not probe.is_file():
+            return ContainerSupport(False, "a file a container wrote into a bind mount is absent")
+    return ContainerSupport(True)
+
+
+def docker_available() -> bool:
+    """Whether these tests can run at all. The reason for a no is in :func:`container_support`."""
+    return container_support().usable
+
+
+def skip_reason() -> str:
+    """What to tell the reader when they cannot. Never empty when they cannot."""
+    support = container_support()
+    return (
+        f"{support.reason}; the broker and the store in these tests are real"
+        if not support.usable
+        else ""
+    )
 
 
 def requires_docker() -> None:
-    """Skip, loudly and with a reason, where no container runtime is available."""
-    if not docker_available():
-        pytest.skip("no container runtime: the broker and the store are real in these tests")
+    """Skip, loudly and with the reason, where the environment cannot oblige."""
+    if not container_support().usable:
+        pytest.skip(skip_reason())
 
 
 def _run(command: Sequence[str], *, check: bool = True, stdin: bytes | None = None):
@@ -215,7 +297,16 @@ class Broker:
 
 
 def _write_credentials(directory: Path) -> None:
-    """Produce the broker's password file the way the deployment does: with its own tool."""
+    """Produce the broker's password file the way the deployment does: with its own tool.
+
+    The container runs as the invoking user rather than as root. Without that, the file it
+    creates on the host belongs to root, and the ``chmod`` below then fails with EPERM
+    wherever the tests are not themselves run as root — which is every continuous
+    integration runner, and none of the development containers where this was written. The
+    tests passed locally and errored in CI for that reason alone, twenty-seven of them, and
+    the cause was a permission rather than anything the tests assert.
+    """
+    user = f"{os.getuid()}:{os.getgid()}"
     first = True
     for role, secret in ROLES.items():
         flags = ["-c", "-b"] if first else ["-b"]
@@ -224,6 +315,8 @@ def _write_credentials(directory: Path) -> None:
                 "docker",
                 "run",
                 "--rm",
+                "--user",
+                user,
                 "-v",
                 f"{directory}:/work",
                 BROKER_IMAGE,
@@ -235,7 +328,15 @@ def _write_credentials(directory: Path) -> None:
             ]
         )
         first = False
-    (directory / "passwd").chmod(0o644)
+
+    credentials = directory / "passwd"
+    if credentials.stat().st_uid != os.getuid():
+        raise RuntimeError(
+            f"{credentials} belongs to uid {credentials.stat().st_uid}, not to this "
+            f"process ({os.getuid()}). The container ignored --user, so the chmod below "
+            "would fail with a bare EPERM naming only the path. Say it here instead."
+        )
+    credentials.chmod(0o644)
 
 
 def start_broker(tmp_path: Path, *, configuration: Path | None = None) -> Iterator[Broker]:
@@ -250,6 +351,12 @@ def start_broker(tmp_path: Path, *, configuration: Path | None = None) -> Iterat
     source = configuration or BROKER_CONFIG
     directory = tmp_path / "broker"
     directory.mkdir(parents=True, exist_ok=True)
+    # The broker runs as its own unprivileged user inside the container, so it needs to be
+    # able to traverse this directory and read what is in it. A temporary directory is
+    # private to its creator by default, which is right everywhere except here. These are
+    # files this process has just made, so setting their mode needs no privilege — unlike
+    # the credential file, which the container makes and the container finishes with.
+    directory.chmod(0o755)
     for name in ("mosquitto.conf", "acl"):
         shutil.copy(source / name, directory / name)
         (directory / name).chmod(0o644)
@@ -425,21 +532,19 @@ def start_store(tmp_path: Path) -> Iterator[Store]:
 
 
 def feature_store_sql(config: Path, *, emit: str) -> str:
-    """The feature store's schema, content or digest report, from its own script."""
+    """The feature store's schema, content or digest report, from its own script.
+
+    Run with the interpreter running the tests rather than through a launcher, so it works
+    the same wherever the tests are run from and needs nothing on the path.
+    """
     result = subprocess.run(
-        ["uv", "run", "python", str(FEATURE_STORE / "provision.py"), "--emit", emit],
+        [sys.executable, str(FEATURE_STORE / "provision.py"), "--emit", emit],
         check=True,
         capture_output=True,
         cwd=REPO_ROOT,
-        env={**_environment(), "HARNESS_CONFIG": str(config)},
+        env={**os.environ, "HARNESS_CONFIG": str(config)},
     )
     return result.stdout.decode("utf-8")
-
-
-def _environment() -> dict[str, str]:
-    import os
-
-    return dict(os.environ)
 
 
 def destination_config(name: str) -> dict[str, Any]:

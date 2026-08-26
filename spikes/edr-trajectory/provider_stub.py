@@ -32,6 +32,7 @@ question deliberately and test both directions of travel.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import pathlib
@@ -259,8 +260,12 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
         # vertex count, overwritten on repeat.
         vertices = 0 if geometry is None else len(geometry.coords)
         suffix = "" if self.out_of_domain == "null" else f"-{self.out_of_domain}"
+        # Deterministic, collision-free, and no clock: the digest is of the geometry as
+        # received, so two different routes of the same length do not overwrite each
+        # other and re-running the same route rewrites the same file.
+        digest = hashlib.sha256(("" if geometry is None else geometry.wkt).encode()).hexdigest()[:8]
         path = RESULTS_DIR / (
-            f"handoff-{kwargs.get('query_type', 'unknown')}-{vertices}v{suffix}.json"
+            f"handoff-{kwargs.get('query_type', 'unknown')}-{vertices}v{suffix}-{digest}.json"
         )
         path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
         LOGGER.debug(f"recorded provider hand-off to {path}")

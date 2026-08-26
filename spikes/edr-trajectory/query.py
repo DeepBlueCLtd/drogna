@@ -10,6 +10,7 @@ those files; it does not paraphrase them.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import sys
@@ -19,6 +20,7 @@ import urllib.request
 
 import numpy as np
 import shapely
+import shapely.wkt
 from expectation import (
     QUERY_TIME,
     as_records,
@@ -234,7 +236,9 @@ def validate_coveragejson(body: dict) -> dict:
 
 def compare_handoff() -> dict:
     """Vertex by vertex: what was sent against what the provider was handed."""
-    path = RESULTS / f"handoff-trajectory-{len(route()['lon'])}v.json"
+    wkt_sent = wkt_linestring_zm()
+    digest = hashlib.sha256(shapely.wkt.loads(wkt_sent).wkt.encode()).hexdigest()[:8]
+    path = RESULTS / f"handoff-trajectory-{len(route()['lon'])}v-{digest}.json"
     if not path.exists():
         return {"available": False, "reason": f"{path.name} not written"}
     handoff = json.loads(path.read_text())

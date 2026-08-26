@@ -79,6 +79,11 @@ WKT_M = (
     "0.60 52.60 1788238404)"
 )
 
+# The OGC API-EDR specification writes the geometry type without a space
+# (`LINESTRINGZM`). GEOS accepts that spelling from 3.12 and rejects it before, which is
+# a second, separate reason the GEOS half of the pin matters.
+WKT_ZM_NO_SPACE = WKT_ZM.replace("LINESTRING ZM (", "LINESTRINGZM(")
+
 EXPECTED_M = [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
 EXPECTED_Z = [-5.0, -100.0, -220.0, -380.0]
 
@@ -180,6 +185,7 @@ def probe() -> dict:
         "cases": {
             "LINESTRING ZM": probe_one("LINESTRING ZM", WKT_ZM),
             "LINESTRING M": probe_one("LINESTRING M", WKT_M),
+            "LINESTRINGZM (no space)": probe_one("LINESTRINGZM (no space)", WKT_ZM_NO_SPACE),
         },
         "vertical_convention": {
             "wkt_z_is": "elevation, metres, positive up (OGC simple features)",

@@ -6,9 +6,9 @@
 
 **Status**: Draft
 
-**Input**: SRD §5.9 FR-46, FR-47, FR-48, FR-49; SRD §2.2 (core versus plumbing).
-Extends the browser client (C-18) whose shell and liveness-driven component layout are
-delivered by feature 003.
+**Input**: SRD §5.9 FR-46, FR-47, FR-48, FR-49, FR-52, FR-53; SRD §2.2 (core versus
+plumbing). Extends the browser client (C-18) whose shell and liveness-driven component
+layout are delivered by feature 003.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -49,6 +49,10 @@ and schema name of the most recent message that crossed it.
 5. **Given** a burst of messages arriving faster than the display can draw them,
    **When** the client renders, **Then** transits are coalesced with the number
    coalesced shown, and the message buffer stays within its configured bound.
+6. **Given** the client in any state whatever, **When** its code and behaviour are
+   examined, **Then** there is no demo mode, no fixture mode and no
+   populate-for-the-screenshot path: every transit drawn and every component lit
+   traces to a message genuinely received. (SRD FR-52)
 
 ---
 
@@ -62,7 +66,9 @@ that was asked for.
 this feature is worth more when the viewer can slow the loop down to watch a single
 cycle, or speed it up to watch uncertainty decay over hours of simulated time in a
 minute of demonstration. It is also the requirement that keeps FR-10's rate control on
-the browser side, where the SRD puts it.
+the browser side, where the SRD puts it, and the requirement screenshot capture leans
+on: FR-53 pins the rate to zero for the duration of a capture so a before-and-after
+pair differs only where the change under evidence differs.
 
 **Independent Test**: Set the control to each supported rate and assert that the
 observed advance of displayed simulation time changes accordingly, and that the
@@ -83,6 +89,14 @@ requested.
 4. **Given** the clock service becomes unreachable, **When** the client notices,
    **Then** displayed simulation time stops and is marked stale rather than continuing
    to advance from the browser's own clock.
+5. **Given** the rate is set to zero, **When** the clock acknowledges it, **Then** the
+   rate of zero is treated as a legitimate rate in force: simulation time stops, every
+   time-driven animation stops, and the display says paused rather than appearing
+   broken or disconnected. (SRD FR-53)
+6. **Given** a capture is about to be taken, **When** the rate has been set to zero,
+   **Then** the client exposes the acknowledged rate in a form the capture path can
+   read, so the capture begins only once the pin has taken effect and two shots of the
+   same state are identical. (SRD FR-53)
 
 ---
 
@@ -209,9 +223,10 @@ accept or task the route.
   rendered as though valid.
 - **Very long session.** Message buffers are bounded per topic and evict oldest first;
   the client's memory footprint is stable over an hour of demonstration.
-- **Speed set to zero or pause.** Simulation time stops advancing, animations that
-  represent simulation time stop, and the display says paused rather than appearing
-  broken.
+- **Speed set to zero.** Zero is a rate, not an error. Simulation time stops
+  advancing, animations that represent simulation time stop, the display says paused,
+  and the acknowledged rate is readable so a capture can know the pin took effect
+  (SRD FR-53).
 - **Clock service unreachable.** Displayed simulation time stops and is marked stale.
   Nothing falls back to the browser's clock as a source of truth.
 - **No plan has ever been published.** The route surface says so. It does not draw a
@@ -250,77 +265,93 @@ accept or task the route.
   MUST coalesce transits and show the number coalesced rather than dropping them
   silently or falling behind unboundedly.
 
+#### Liveness
+
+- **FR-009**: The client MUST derive the simulation clock component's illumination
+  from the clock's heartbeat on the control namespace. That heartbeat is drogna's first
+  liveness signal and the pattern every later component follows. (SRD FR-52)
+- **FR-010**: No mocked, synthesised or fixture-sourced traffic may drive illumination
+  or a transit. The client MUST contain no demo mode, no fixture mode and no
+  populate-for-the-screenshot path, because a mock asserts the existence of something
+  that does not exist and so defeats FR-45. (SRD FR-52, Constitution VII)
+
 #### Simulation speed
 
-- **FR-009**: The client MUST expose the simulation speed control. (SRD FR-49, FR-10)
-- **FR-010**: A rate change MUST be a request to the clock service, and the displayed
+- **FR-011**: The client MUST expose the simulation speed control. (SRD FR-49, FR-10)
+- **FR-012**: A rate change MUST be a request to the clock service, and the displayed
   rate MUST be the rate the clock service reports in force, not the rate requested.
   Where a request is clamped or refused, the display MUST say so. (SRD FR-10)
-- **FR-011**: Every time the client displays MUST be simulation time obtained from the
+- **FR-013**: Every time the client displays MUST be simulation time obtained from the
   clock service. When the clock service is unreachable, displayed time MUST stop and
   be marked stale, and MUST NOT continue to advance from the browser's clock.
   (Constitution I)
+- **FR-014**: A rate of zero MUST be a legitimate rate. Setting it pins the clock:
+  simulation time stops, every time-driven animation stops, and the display says paused
+  rather than showing an error or a disconnection. (SRD FR-49, FR-53)
+- **FR-015**: The client MUST expose the acknowledged rate in force in a form the
+  screenshot capture path can read, so a capture can set the rate to zero and know the
+  pin has taken effect before it shoots. (SRD FR-53)
 
 #### Core versus plumbing
 
-- **FR-012**: Every component and every boundary rendered MUST carry a classification
+- **FR-016**: Every component and every boundary rendered MUST carry a classification
   of bespoke core or well-chosen plumbing, with no unclassified elements. (SRD §2.2)
-- **FR-013**: Components classified as bespoke MUST name the specific logic that makes
+- **FR-017**: Components classified as bespoke MUST name the specific logic that makes
   them so — residual and divergence rules, scheduling policy, sound speed computation,
   quality flagging, uncertainty and planning mathematics, the executable data
   dictionary — rather than asserting bespokeness in the abstract. (SRD §2.2)
-- **FR-014**: Classification MUST affect appearance only. It MUST NOT cause a
+- **FR-018**: Classification MUST affect appearance only. It MUST NOT cause a
   component to appear in the layout, MUST NOT light a component, and MUST NOT
   substitute for a heartbeat. Illumination remains liveness-driven.
   (Constitution VII, SRD FR-45)
-- **FR-015**: The message inspector MUST display the governing schema alongside the
+- **FR-019**: The message inspector MUST display the governing schema alongside the
   payload, so the data dictionary is visible in execution rather than only in
   documentation. (SRD §2.2)
 
 #### Uncertainty over time
 
-- **FR-016**: The client MUST render the uncertainty field published by the model
+- **FR-020**: The client MUST render the uncertainty field published by the model
   runner, and MUST refresh it on receipt of `ctl/run-published`. (SRD FR-48, FR-31)
-- **FR-017**: The client MUST NOT poll the query layer to discover that a new run
+- **FR-021**: The client MUST NOT poll the query layer to discover that a new run
   exists. Freshness arrives as an announcement. (SRD FR-31)
-- **FR-018**: Between runs, the client MUST render the decay of confidence using the
+- **FR-022**: Between runs, the client MUST render the decay of confidence using the
   projection the planner publishes, and MUST NOT compute its own decay model. Where no
   projection is available, the field MUST be rendered and marked as not decaying.
   (SRD FR-48, FR-34)
-- **FR-019**: Where telemetry reports that the forecast is not beating its persistence
+- **FR-023**: Where telemetry reports that the forecast is not beating its persistence
   reference, the client MUST say so in plain words, alongside the sample count and the
   two errors behind the figure. Where telemetry reports a statistic stale, the client
   MUST render it as stale with its last-update simulation time. (SRD FR-38,
   Constitution IX)
-- **FR-020**: A field too large to draw usefully MUST be downsampled with the displayed
+- **FR-024**: A field too large to draw usefully MUST be downsampled with the displayed
   resolution stated, never silently.
 
 #### The route
 
-- **FR-021**: The client MUST render the planned route as a four-dimensional curve
+- **FR-025**: The client MUST render the planned route as a four-dimensional curve
   through the forecast volume: horizontal path, depth, and arrival simulation time at
   each vertex. (SRD FR-47)
-- **FR-022**: The client MUST provide a time control along the route which shows, for
+- **FR-026**: The client MUST provide a time control along the route which shows, for
   each point, the conditions forecast for the moment of arrival at that point,
   obtained from an EDR trajectory query with per-vertex timestamps. (SRD FR-47, FR-20)
-- **FR-023**: Where a vertex's arrival time falls outside the forecast's valid range,
+- **FR-027**: Where a vertex's arrival time falls outside the forecast's valid range,
   the client MUST say there is no forecast for that moment rather than substituting
   the nearest available field. (SRD FR-20)
-- **FR-024**: The route MUST be labelled a recommendation, and the interface MUST
+- **FR-028**: The route MUST be labelled a recommendation, and the interface MUST
   contain no control to accept, task, execute or order it. (SRD FR-36,
   Constitution VIII)
-- **FR-025**: An empty recommended route MUST be rendered with the reason the planner
+- **FR-029**: An empty recommended route MUST be rendered with the reason the planner
   gave. (SRD FR-36)
 
 #### Cross-cutting
 
-- **FR-026**: All message and API types used by these additions MUST come from
+- **FR-030**: All message and API types used by these additions MUST come from
   `client/src/generated/`. No shape crossing the language boundary may be
   hand-written here. (Constitution III)
-- **FR-027**: Broker URL, query layer base path and topic prefixes MUST arrive from
+- **FR-031**: Broker URL, query layer base path and topic prefixes MUST arrive from
   runtime configuration served to the client, never as literals in source.
   (Constitution IV)
-- **FR-028**: No display element may present a tracked entity, contact, detection or
+- **FR-032**: No display element may present a tracked entity, contact, detection or
   track. The sampling platform is a position marker; the route is a recommendation
   over cells. (Constitution V)
 

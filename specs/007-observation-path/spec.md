@@ -225,7 +225,7 @@ run-time role and confirm every attempt is refused.
   configuration produced from a template at deploy time and appear in no tracked file.
 - The retained-rejection bound is a count rather than a size, defaulting to a few thousand
   records, tunable per scenario in configuration. The SRD does not fix it.
-- The sensors' sampling pattern during the arrive-cold-then-loiter scenario, and the
-  decorrelation-driven revisit cadence, belong to the scenario and planner features. This
-  feature provides sensors that sample where and when they are told to, at a rate from
-  configuration.
+- The sensors' sampling pattern during the arrive-cold-then-loiter scenario, and the revisit
+  cadence that tracks the local decorrelation timescale — a field evaluated per location under
+  SRD FR-05 — belong to the scenario and planner features. This feature provides sensors that
+  sample where and when they are told to, at a rate from configuration.

@@ -238,6 +238,7 @@ quoting them.
 Task: "Write tests/integration/test_edr_trajectory.py per-vertex assertions"
 Task: "Add the single-vertex-time-change case"
 Task: "Write tests/unit/test_trajectory_validation.py refusal cases"
+Task: "Write tests/unit/test_wkt_m_ordinate.py against the pinned Shapely and GEOS versions"
 Task: "Write tests/acceptance/test_at01_trajectory.py against the ground-truth manifest"
 ```
 

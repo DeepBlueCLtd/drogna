@@ -163,8 +163,9 @@ consults no artefact of this feature.
 
 - [ ] T041 [P] Add a `deploy/README.md` troubleshooting section covering the eight edge cases in `spec.md`, each with the message the operator will see and the remedy
 - [ ] T042 [P] Pin every base image by digest and record the digests with a note on how to refresh them deliberately
-- [ ] T043 Run the full quality-gate set against this feature's files — lint, format, wall-clock gate, literal-path gate, forbidden-vocabulary gate — and fix what they report
-- [ ] T044 Walk the whole feature from a genuinely clean machine: provision, deploy, seed, reset, reboot; correct the documentation wherever it proved wrong
+- [ ] T043 [P] Pin Shapely 2.1 or later against GEOS 3.12 or later in the query layer's image with the reason beside the pin, add the behavioural-pin table to `deploy/README.md`, and add a check asserting both destinations resolve to the same pinned versions
+- [ ] T044 Run the full quality-gate set against this feature's files — lint, format, wall-clock gate, literal-path gate, forbidden-vocabulary gate — and fix what they report
+- [ ] T045 Walk the whole feature from a genuinely clean machine: provision, deploy, seed, reset, reboot; correct the documentation wherever it proved wrong
 
 ---
 

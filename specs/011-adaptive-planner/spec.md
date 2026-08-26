@@ -47,8 +47,8 @@ sum of the two standalone values.
    error being avoided is visible.
 4. **Given** a route that revisits a cell it has already sampled, **When** it is
    evaluated, **Then** the second visit contributes only the uncertainty that has
-   regrown since the first, governed by the decorrelation timescale, and not the
-   original value again.
+   regrown since the first, governed by the decorrelation timescale evaluated at that
+   cell, and not the original value again.
 5. **Given** a cell whose uncertainty is already below the usable-confidence
    threshold, **When** a route passes through it, **Then** its marginal contribution
    is approximately zero and the route gains nothing from the detour.
@@ -144,8 +144,9 @@ time rather than waiting for a problem to arrive.
 it is the requirement that makes the loiter phase of the scenario interesting. It is
 last because it is an additional output of machinery the earlier stories build.
 
-**Independent Test**: Take a field with known decorrelation timescales and assert the
-reported crossing times match the times computed analytically from the growth model,
+**Independent Test**: Take a field whose decorrelation timescales are known from the
+ground-truth manifest and assert the reported crossing times match the times computed
+analytically from the growth model,
 and that every region in the domain appears in the report with either a crossing time
 or an explicit statement that none occurs within the horizon.
 
@@ -184,6 +185,12 @@ or an explicit statement that none occurs within the horizon.
 - **Depth bands with no observations at all.** Uncertainty there is ensemble spread
   alone, exactly as in the cold-arrival phase of the scenario, and the planner does
   not treat absence of data as low uncertainty.
+- **A cell in open background water, outside every seeded feature.** It still has a
+  decorrelation timescale, because tau is a field with a domain-wide background
+  (SRD FR-05). There is no unscoreable cell and no fallback constant.
+- **A moving feature drifts across a cell between replans.** The cell's tau changes,
+  because a moving feature's timescale advects with it. The planner re-evaluates tau
+  at replan rather than caching it for the life of the scenario.
 - **Two regions with equal projected crossing times.** The tie is broken
   deterministically from the seed, not by iteration order of a dictionary.
 - **A consumer wants the planner to command.** Out of scope by construction. The
@@ -225,79 +232,79 @@ or an explicit statement that none occurs within the horizon.
 
 #### Route selection
 
-- **FR-007**: Horizontal indexing MUST use H3 at a configured resolution, layered with
+- **FR-008**: Horizontal indexing MUST use H3 at a configured resolution, layered with
   a separate depth index. A planning cell is the pairing of an H3 index with a depth
   band. (SRD FR-35)
-- **FR-008**: Route selection MUST be treated as an orienteering, prize-collecting
+- **FR-009**: Route selection MUST be treated as an orienteering, prize-collecting
   problem: cells carry prizes, traversal carries cost, and a subset is chosen under a
   budget. The planner MUST NOT formulate the problem as travelling-salesman and MUST
   NOT require every candidate to be visited. (SRD FR-35)
-- **FR-009**: The planner MUST emit a single committed route, ordered, with each
+- **FR-010**: The planner MUST emit a single committed route, ordered, with each
   vertex carrying its H3 index, depth band and simulation time of arrival, so the
   route is a four-dimensional curve. (SRD FR-33, FR-20)
-- **FR-010**: The emitted route's stated value MUST be its collapse-aware value, so
+- **FR-011**: The emitted route's stated value MUST be its collapse-aware value, so
   diminishing returns are already incorporated in what is committed to, not applied by
   a consumer afterwards. (SRD FR-33)
-- **FR-011**: The route MUST respect its budget. A plan exceeding the budget is a
+- **FR-012**: The route MUST respect its budget. A plan exceeding the budget is a
   defect, not a suggestion. (SRD FR-35)
-- **FR-012**: Plans MUST be published on `ctl/plan` and MUST conform to
+- **FR-013**: Plans MUST be published on `ctl/plan` and MUST conform to
   `contracts/schemas/plan.schema.json`.
 
 #### Receding horizon
 
-- **FR-013**: The planner MUST replan on a receding horizon, triggered by its
+- **FR-014**: The planner MUST replan on a receding horizon, triggered by its
   configured cadence in simulation time, by a new uncertainty field announced on
   `ctl/run-published`, and by the arrival of measurements. (SRD FR-33)
-- **FR-014**: Each plan MUST carry a plan identifier, the horizon it covers, and the
+- **FR-015**: Each plan MUST carry a plan identifier, the horizon it covers, and the
   identifier of the plan it supersedes, so a consumer can distinguish a replan from a
   first plan.
-- **FR-015**: The planner MUST hold its commitment: the portion of the route within
+- **FR-016**: The planner MUST hold its commitment: the portion of the route within
   the configured commitment window is retained across a replan unless the improvement
   from changing it exceeds a configured margin, and a departure from the previous
   plan MUST be recorded with its margin. (SRD FR-33)
-- **FR-016**: A plan MUST NOT be emitted against an uncertainty field that has already
+- **FR-017**: A plan MUST NOT be emitted against an uncertainty field that has already
   been superseded. (SRD FR-30, FR-31)
 
 #### Forward projection
 
-- **FR-017**: The planner MUST project uncertainty growth forward from the current
+- **FR-018**: The planner MUST project uncertainty growth forward from the current
   field and report, per region, the simulation time at which confidence falls below
   the configured usable threshold. (SRD FR-34)
-- **FR-018**: The projection MUST be emitted with the plan so the output is
+- **FR-019**: The projection MUST be emitted with the plan so the output is
   schedulable — a consumer can act against a stated future time rather than only
   reacting to a present condition. (SRD FR-34)
-- **FR-019**: Every region in the domain MUST appear in the projection, either with a
+- **FR-020**: Every region in the domain MUST appear in the projection, either with a
   crossing time or with an explicit no-crossing-within-horizon state. Omission is not
   permitted, because an absent region reads as a healthy one. (SRD FR-34)
 
 #### Recommendations, not decisions
 
-- **FR-020**: The planner MUST emit recommendations only. No output may command, task
+- **FR-021**: The planner MUST emit recommendations only. No output may command, task
   or address a person. (SRD FR-36, Constitution VIII)
-- **FR-021**: `plan.schema.json` MUST contain no field that could only be an
+- **FR-022**: `plan.schema.json` MUST contain no field that could only be an
   instruction — no addressee, no tasking, no directive, no order — and an automated
   test MUST assert both the schema and emitted payloads against a forbidden-vocabulary
   list. (Constitution VIII)
-- **FR-022**: The planner MUST NOT render, and MUST NOT emit display text addressed to
+- **FR-023**: The planner MUST NOT render, and MUST NOT emit display text addressed to
   an operator. Rendering and advice occur downstream. (SRD FR-36)
-- **FR-023**: No component may act automatically on a plan. Consumers of `ctl/plan`
+- **FR-024**: No component may act automatically on a plan. Consumers of `ctl/plan`
   render and record. (SRD FR-36)
 
 #### Cross-cutting
 
-- **FR-024**: The planner MUST read exactly one configuration file whose path arrives
+- **FR-025**: The planner MUST read exactly one configuration file whose path arrives
   in `HARNESS_CONFIG` and MUST validate it against
   `contracts/schemas/config.planner.schema.json` before any other I/O.
   (Constitution IV)
-- **FR-025**: All horizons, cadences, arrival times, regrowth intervals and message
+- **FR-026**: All horizons, cadences, arrival times, regrowth intervals and message
   timestamps MUST come from the simulation clock port. (Constitution I)
-- **FR-026**: Any randomisation in the search — restarts, tie-breaks, sampling of
+- **FR-027**: Any randomisation in the search — restarts, tie-breaks, sampling of
   candidates — MUST draw from a seeded generator obtained through the RNG port, and
   plan identifiers MUST be derived deterministically. (Constitution II)
-- **FR-027**: The planner MUST publish a heartbeat on `ctl/heartbeat` carrying its
+- **FR-028**: The planner MUST publish a heartbeat on `ctl/heartbeat` carrying its
   component identifier, the simulation time and one of `planning`, `no-field` or
   `nothing-worth-sampling`. (Constitution VII)
-- **FR-028**: No plan may carry a tracked entity, contact, detection or track. The
+- **FR-029**: No plan may carry a tracked entity, contact, detection or track. The
   sampling platform appears as a position, a depth and a budget. A route is a
   recommendation over cells, not a track. (Constitution V)
 
@@ -308,6 +315,11 @@ or an explicit statement that none occurs within the horizon.
 - **Uncertainty state**: the planner's working field over planning cells, combining
   the published ensemble spread with an observation-age term, carrying for each cell
   its current value, the simulation time it was last informed, and its regrowth rate.
+- **Decorrelation timescale field**: tau(latitude, longitude, depth, time), authored
+  per seeded feature over a domain-wide background and evaluated per planning cell.
+  It governs how fast collapsed uncertainty regrows, it is defined everywhere in the
+  domain, it advects with a moving feature, and it is ground truth recorded in the
+  generator's manifest.
 - **Sensing footprint**: the model of which cells a visit informs and by how much,
   in the horizontal and in depth.
 - **Candidate route**: an ordered sequence of planning cells with arrival times, under
@@ -345,15 +357,31 @@ or an explicit statement that none occurs within the horizon.
   with either a crossing time or an explicit no-crossing state.
 - **SC-008**: Projected crossing times match analytically derived times to within one
   projection step, for 100% of tested regions with known growth rates.
-- **SC-009**: The forbidden-vocabulary test over `plan.schema.json` and over every
+- **SC-009**: The tau values the planner evaluates match the ground-truth
+  decorrelation timescale field recorded in the generator's manifest, to within the
+  stated interpolation tolerance, at 100% of sampled planning cells — including cells
+  in background water and cells a moving feature has drifted across.
+- **SC-010**: The forbidden-vocabulary test over `plan.schema.json` and over every
   emitted plan payload finds zero instruction-shaped fields or strings.
-- **SC-010**: No component subscribes to `ctl/plan` in order to actuate: the count of
+- **SC-011**: No component subscribes to `ctl/plan` in order to actuate: the count of
   automatic actions taken on a plan across the system is zero.
-- **SC-011**: The same scenario replayed from its manifest produces an identical
+- **SC-012**: The same scenario replayed from its manifest produces an identical
   ordered sequence of plans with identical routes and identical projections.
 
 ## Assumptions
 
+- The decorrelation timescale is a field, per SRD FR-05: authored per seeded feature
+  over a domain-wide background, evaluated per location, advecting with a moving
+  feature. The planner therefore assumes a defined tau at every H3 cell and depth
+  layer it scores and needs no special case for background water. Both the background
+  and the per-feature timescales are ground truth in the FR-04 manifest, which gives
+  this feature's uncertainty-growth projections something to be scored against rather
+  than merely asserted (Constitution IX).
+- Evaluating tau is the environment generator's business, since it authors the field
+  and records it in the manifest. The planner reads it and interpolates it to its own
+  planning cells; it does not author its own blend of feature and background
+  timescales. Recorded here because the SRD says what tau is without naming the
+  component that evaluates it.
 - The uncertainty the planner works over combines the ensemble spread published by
   the model runner (SRD FR-29) with an observation-age term the planner maintains from
   observation arrivals, per SRD FR-07 and FR-08. The SRD does not say which component
@@ -381,7 +409,7 @@ or an explicit statement that none occurs within the horizon.
   committed prefix are this feature's choice, made because FR-33 says "a single
   committed route" and commitment without hysteresis is not commitment. Both are
   configuration.
-- The usable-confidence threshold that FR-017 reports against is scenario configuration. The
+- The usable-confidence threshold that FR-018 reports against is scenario configuration. The
   SRD fixes no value.
 - H3 resolution is scenario configuration. The scenario's domain size and the sensing
   footprint decay length together determine a sensible value; the planner records the

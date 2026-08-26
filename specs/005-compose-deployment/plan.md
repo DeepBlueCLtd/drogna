@@ -49,8 +49,11 @@ and scripts.
 in under two minutes. Cold bring-up on the droplet including image build completes in under
 fifteen minutes. Reset plus reseed completes in under three minutes on either destination.
 
-**Constraints**: No outbound network dependency beyond container image pull, so the stack
-works inside an ephemeral agent session behind a proxy. No interactive prompts anywhere in
+**Constraints**: Library versions pinned for behavioural reasons are part of the configuration's
+contract and carry their reason beside them — Shapely 2.1 or later against GEOS 3.12 or later
+in the query layer's image, because below that the M ordinate carrying per-vertex trajectory
+times is lost in parsing (SRD FR-51). No outbound network dependency beyond container image
+pull, so the stack works inside an ephemeral agent session behind a proxy. No interactive prompts anywhere in
 the bring-up path. No literal hostname, port, absolute path or URL in any tracked source or
 Compose file. Droplet resource envelope of two virtual CPUs and four gigabytes.
 
@@ -84,10 +87,12 @@ added directory of identical shape rather than a code change.
 - **V. No Tracked Entities** — Seeded content is environmental: bathymetry, coastlines,
   synthetic fields. The seeding scripts are reviewed against the forbidden-vocabulary gate
   like everything else, and no fixture may introduce an entity vocabulary.
-- **VII. Liveness, Not Configuration** — A hazard specific to this feature. Compose profiles
-  decide what runs; they must never become the source of what the client displays as alive.
-  The feature therefore ships a test asserting that no client source file reads the profile,
-  the Compose file, or any destination configuration key naming a component list.
+- **VII. Liveness, Not Configuration** — A hazard specific to this feature, and one the
+  constitution strengthened when it forbade mocked traffic outright. Compose profiles decide
+  what runs; they must never become the source of what the client displays as alive, and no
+  profile may exist whose purpose is to populate a display. The feature therefore ships a test
+  asserting that no client source file reads the profile, the Compose file, or any destination
+  configuration key naming a component list, and there is no demo or fixture profile.
 - **Demonstrability (Additional Constraints)** — "Runnable from a clean checkout with one
   command" is exactly User Story 1, and this feature is what makes the demonstrability gate
   meaningful for every later stage.

@@ -150,6 +150,8 @@ the profile selection mechanism itself.
 - **FR-018**: A destination-parity check and a configuration-validation check MUST both run in CI and fail the build on drift. (SRD NFR-06; Constitution, Quality gates)
 - **FR-019**: `deploy/` MUST document the two destinations, the meaning of each configuration key, and the resource expectations of the droplet, in enough detail that the droplet can be rebuilt from nothing. (SRD NFR-06)
 - **FR-020**: Container images MUST be built reproducibly from the repository, pinned by base image digest, so that the same checkout yields the same image content on both destinations. (Constitution II, in spirit: a replay that depends on an unpinned base image is not a replay)
+- **FR-021**: The query layer's image MUST pin Shapely 2.1 or later built against GEOS 3.12 or later, with a comment stating the reason: below those versions the M ordinate of a `LINESTRINGM` or `LINESTRINGZM` is returned as NaN, so per-vertex timestamps are lost silently. The pin is part of this configuration's contract on both destinations, and a test owned by the query layer feature asserts that M survives parsing. (SRD FR-51)
+- **FR-022**: Where a library version is pinned for a stated behavioural reason rather than for routine reproducibility, the reason MUST be recorded beside the pin and in `deploy/README.md`, so a later upgrade cannot silently remove it. (SRD FR-51)
 
 ### Key Entities
 
@@ -174,6 +176,7 @@ the profile selection mechanism itself.
 - **SC-008**: The droplet's persistent URL serves the client after an unattended host reboot, with no human intervention.
 - **SC-009**: Deploying to the droplet from a checkout on a freshly provisioned host requires exactly one command after Docker is installed.
 - **SC-010**: Both destination checks run in CI on every change and fail the build when either drifts.
+- **SC-011**: Every library version pinned for a behavioural reason carries that reason beside the pin; the count of unexplained behavioural pins is zero, and both destinations resolve to the same pinned versions.
 
 ## Assumptions
 

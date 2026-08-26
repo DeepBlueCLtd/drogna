@@ -1,0 +1,4 @@
+# drogna is public but unadvertised (SRD PR-01). Unadvertised is taken to mean
+# not indexed as well as not promoted.
+User-agent: *
+Disallow: /

@@ -270,13 +270,12 @@ power to fail.
   that refused it, so that an unexpected refusal is diagnosable without loosening
   policy to find out what happened. (SRD C-10)
 - **FR-021**: Every HTTP surface the proxy fronts MUST be subject to the same
-  default-deny, including any protocol-upgrade path.
-  [NEEDS CLARIFICATION: the SRD does not say how the browser client receives live
-  messages (FR-46). If that is a broker connection upgraded over HTTP through this
-  proxy, the upgrade path is a released location whose policy must confine it to the
-  control namespace and exclude `obs/#`; if the client reaches the broker directly, the
-  proxy fronts only the query layer and the client bundle. The two produce materially
-  different path policies.]
+  default-deny, including any protocol-upgrade path. Until the client's transport for
+  control-namespace messages is settled, the rendered configuration MUST emit no
+  protocol-upgrade location at all, which is the safe reading of default-deny. If such a
+  location is later added, it MUST be confined to the control namespace and MUST NOT
+  carry `obs/#`, which is where measurement locations travel. (SRD FR-41, FR-46, FR-52;
+  Constitution X)
 
 ### Key Entities
 
@@ -346,8 +345,13 @@ power to fail.
   fixtures committed with the tests.
 - TLS material is provisioned by the deployment feature (SRD NFR-06); this feature
   consumes its location from configuration and does not manage certificates.
-- The proxy fronts HTTP surfaces only. The broker is not proxied unless FR-021 is
-  resolved otherwise.
+- The proxy fronts HTTP surfaces only, and the broker is not proxied. The SRD does not
+  say how the browser client receives the control-namespace messages that drive
+  illumination (FR-46, FR-52) — whether over a broker connection upgraded through this
+  proxy or by reaching the broker directly. The two produce materially different path
+  policies, so this feature takes the closed reading and emits no upgrade location. The
+  question belongs in the SRD's §11 table if the client is to reach the broker through
+  this proxy.
 - `contracts/schemas/config.proxy.schema.json` is added additively by this feature, per
   the ownership rule in `docs/architecture/repo-layout.md`.
 - nginx access and error logs are written with the host clock. This is log line

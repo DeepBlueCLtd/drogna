@@ -13,7 +13,7 @@ conventions from `001-deterministic-foundations`.
 **Tests**: Requested for this project. Test tasks are included and precede the
 implementation they cover.
 
-**Organization**: Tasks are grouped by user story so each story can be finished, tested and
+**Organisation**: Tasks are grouped by user story so each story can be finished, tested and
 demonstrated on its own.
 
 ## Format: `[ID] [P?] [Story] Description`

@@ -246,5 +246,6 @@ gate (US4). Nothing later weakens anything earlier.
   that the gate has stopped working.
 - The recovery statistic, both bounds, the identification radius and the quantisation
   step are configuration, not constants in test source.
-- FR-021 is open. Until it is resolved, the template emits no protocol-upgrade location
-  at all, which is the safe reading of default-deny.
+- The template emits no protocol-upgrade location. If the client is later required to
+  reach the broker through this proxy, that is a change to FR-021 and to the SRD, not a
+  configuration tweak.

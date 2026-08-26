@@ -78,7 +78,9 @@ one shared config schema, three gate scripts and their fixtures.
   genuine. Each has more than one real implementation (network client, manual clock for tests,
   internal driver). No other abstraction is introduced. Compliant.
 - **VII. Liveness, Not Configuration**: The clock service publishes a heartbeat on `ctl/heartbeat`
-  like every other long-lived component, and claims nothing about any other component. Compliant.
+  like every other long-lived component, and claims nothing about any other component. Because the
+  clock is first in the delivery order, its heartbeat is drogna's first genuine liveness signal and
+  the one that lights the first component in the shell (SRD FR-52). Compliant.
 - **VIII. Recommendations, Not Decisions**: Not touched.
 - **IX. Ground Truth Is Scored, Not Assumed**: Not touched directly. The run manifest is the
   document the ground-truth manifest of feature 004 refers to by run id.

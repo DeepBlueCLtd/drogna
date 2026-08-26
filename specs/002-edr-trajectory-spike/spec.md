@@ -6,259 +6,284 @@
 
 **Status**: Draft
 
-**Input**: SRD FR-20, §5.3 note, §10 delivery priority 2, §11 open question 1. AT-01 depends on the answer.
+**Input**: SRD FR-20, FR-50, FR-51, §5.3 note, §10 delivery priority 2, §11 resolved question 1. AT-01 depends on the result.
 
 ## User Scenarios & Testing *(mandatory)*
 
 This feature is a spike. Its deliverable is a dated written finding with a runnable reproduction
-behind it, not a component. It is complete when the question is answered and the answer is
-recorded, whichever way the answer goes.
+behind it, not a component. Since SRD v0.3 the question it answers is narrow. What is already
+settled, and is not re-investigated here:
 
-The question: **does pygeoapi's OGC API-EDR implementation support trajectory queries with
-per-vertex timestamps, so that a response reports conditions forecast for the moment of arrival at
-each point rather than conditions at a single time?**
+- No supplied pygeoapi provider implements trajectory. The provider matrix lists `xarray-edr` as
+  position and cube only, and that provider's source defines no trajectory method. drogna therefore
+  builds a bespoke EDR provider plugin, which is a planned component behind the coverage output
+  port, not a workaround (FR-50).
+- The standard expresses per-vertex timestamps natively: EDR trajectory `coords` is WKT
+  `LINESTRINGM` or `LINESTRINGZM` with M carrying the vertex time. pygeoapi parses `coords` with
+  `shapely.wkt.loads` and hands the geometry to the provider untouched, so all interpretation of M
+  belongs to the provider. The response is CoverageJSON's Trajectory domain, whose composite axis is
+  a per-vertex (t, x, y, z) tuple.
 
-### User Story 1 - A reproduction anyone can run (Priority: P1)
+What remains unproven, and is the whole point of this spike: **that the per-vertex M ordinate
+survives WKT parsing and arrives at the provider intact**. Below Shapely 2.1 built against GEOS
+3.12 it does not: M comes back as NaN, silently, before any provider code runs, so FR-20 fails
+without raising an error (FR-51). Everything after that proof is a build, and the build belongs to
+the query-layer feature.
 
-The author, or a colleague reading the finding a month later, brings up a pygeoapi instance over a
-small synthetic four-dimensional coverage with one command, issues a trajectory query whose
-vertices each carry their own time, and sees what comes back. The fixture is built so that a
-correct per-vertex answer and an answer evaluated at one single time are obviously different
-numbers, not two plausible ones.
+### User Story 1 - M survives parsing, and is seen to (Priority: P1)
 
-**Why this priority**: Without a reproduction the finding is an opinion. The discriminating fixture
-is the part that takes thought; a trajectory query that returns HTTP 200 with plausible but
-wrong values is the outcome most likely to be believed by mistake.
+Someone runs one script. It parses a `LINESTRINGZM` with a distinct time on every vertex, at the
+versions drogna intends to pin, and prints the M ordinates it recovered. Then it does the same at a
+version below the pin and prints NaNs, so the failure mode the pin exists to prevent is on the page
+rather than in an assertion someone has to trust.
 
-**Independent Test**: From a clean checkout, run the one command, then run the query script. The
-output shows the request, the response, and the two hypotheses' expected values side by side.
+**Why this priority**: It is the one thing §10 still calls unproven, and its failure mode is
+silence. A trajectory query that returns HTTP 200 with values evaluated at a meaningless time is
+the outcome most likely to be believed by mistake.
+
+**Independent Test**: Run the probe script at both version sets. The recovered M values match the
+values put in at the pinned versions, and are NaN below the pin.
 
 **Acceptance Scenarios**:
 
-1. **Given** a clean checkout and a working container runtime, **When** the documented single
-   command is run, **Then** a pygeoapi instance is serving an EDR collection over the fixture
-   coverage within a few minutes, with no dependency on any other part of the harness.
-2. **Given** the instance is up, **When** the trajectory query script runs, **Then** it prints the
-   exact request URL, the HTTP status, the response body or its first part, and the values expected
-   under each of the two hypotheses.
-3. **Given** the fixture, **When** the analytic expectation is evaluated at each vertex's own time
-   and at the first vertex's time, **Then** the two sets of values differ by at least an order of
-   magnitude more than the fixture's numerical tolerance, so the verdict cannot turn on rounding.
-4. **Given** the reproduction has been run, **When** the captured request and response are stored
-   under the spike directory, **Then** the finding cites them rather than paraphrasing them.
+1. **Given** Shapely 2.1 or later built against GEOS 3.12 or later, **When** a `LINESTRINGZM` whose
+   vertices carry distinct M values is parsed with `shapely.wkt.loads`, **Then** every M value is
+   recovered exactly and in order.
+2. **Given** a Shapely or GEOS version below the pin, **When** the same string is parsed, **Then**
+   the M ordinates come back as NaN and no exception is raised, and the probe records both facts.
+3. **Given** either run, **When** the probe finishes, **Then** it prints the Shapely version, the
+   GEOS version it was built against, and the recovered ordinates, into a captured result file.
+4. **Given** the recovered geometry, **When** the Z ordinate is examined, **Then** the probe records
+   the sign and unit convention it carries, because WKT Z is conventionally elevation while the
+   coverage's vertical axis is depth positive downwards, and the provider must reconcile the two.
+5. **Given** the probe exists, **When** it is read, **Then** it is written so that the deployment can
+   adopt it directly as the test FR-51 requires, rather than needing it rewritten.
 
 ---
 
-### User Story 2 - A dated finding that answers the question (Priority: P2)
+### User Story 2 - The geometry reaches a provider untouched (Priority: P2)
 
-The finding says, in one sentence near the top, whether per-vertex timestamps are supported,
-partially supported or unsupported, and then shows the evidence. It names the pygeoapi version, the
-provider class, the container image digest and the request spelling used. It is dated, so a reader
-knows how much of it to trust a year later.
+A throwaway provider plugin is registered with a pygeoapi instance and asked for a trajectory. It
+records exactly what pygeoapi handed it: the geometry type, the coordinate tuples, the M values, the
+query parameters, and anything the framework did to them on the way. The finding quotes that record.
 
-**Why this priority**: This is the artefact the rest of the delivery order depends on. §10 puts it
-second precisely because the read path and the client's centrepiece both change shape if the answer
-is no.
+**Why this priority**: The claim that pygeoapi passes the geometry to the provider untouched is the
+load-bearing assumption behind FR-50. It is cheap to verify here and expensive to discover wrong
+during the build.
 
-**Independent Test**: A reader who has not seen the spike can state the verdict, the version it
-applies to, and what would change it, after reading one page.
+**Independent Test**: Bring up the instance with one command, issue one trajectory request, and read
+the recorded hand-off.
 
 **Acceptance Scenarios**:
 
-1. **Given** the reproduction has been run, **When** the finding is written, **Then** it states the
-   verdict as exactly one of supported, partially supported, or unsupported, and names which part
-   is partial where that applies.
-2. **Given** the finding, **When** a reader looks for provenance, **Then** the pygeoapi version,
-   provider class, image digest, fixture seed and date of the run are all present.
-3. **Given** the verdict is negative, **When** the finding is written, **Then** it records the
-   negative plainly, with no softening and no implication that a workaround makes the standard
-   behave as FR-20 asks.
-4. **Given** the finding, **When** a reader asks what would change the verdict, **Then** the
-   finding names the specific conditions — a version, a provider, a pull request upstream — under
-   which it should be re-run.
+1. **Given** a pygeoapi instance with the throwaway provider registered, **When** a trajectory query
+   is issued, **Then** the provider's trajectory method is called and records the geometry it was
+   given.
+2. **Given** the recorded hand-off, **When** it is compared with the request, **Then** every vertex's
+   latitude, longitude, Z and M matches what was sent, or the difference is recorded exactly.
+3. **Given** the collection metadata, **When** it is fetched, **Then** the finding records whether
+   the collection advertises `trajectory` among its query types once the plugin declares it, since
+   FR-21 depends on collections being servable without hand-editing.
+4. **Given** a trajectory of enough vertices to make the request URL long, **When** it is issued,
+   **Then** the finding records the point at which the request becomes impractical and whether a
+   POST form of the query exists.
 
 ---
 
-### User Story 3 - Fallback options treated as outcomes, not consolations (Priority: P3)
+### User Story 3 - One four-dimensional route, sampled and scored (Priority: P3)
 
-Each way forward is specified to the same standard as the happy path: what it costs, what it
-changes in the read path, what it changes in the client's centrepiece, and what the harness may
-honestly claim about standards conformance afterwards. A reader planning feature 008 or feature 012
-can plan from this section without reopening the question.
+The throwaway provider evaluates a small synthetic four-dimensional coverage at each vertex's own
+time and returns CoverageJSON. The route's values are compared against the analytic expectation
+computed two ways: each vertex at its own time, and every vertex at the first vertex's time. The
+fixture is built so those two answers cannot be confused.
 
-**Why this priority**: The SRD says the read path and the client centrepiece both change shape if
-per-vertex timestamps fail. That change of shape has to be describable before it is needed, or the
-spike has answered only half the question.
+**Why this priority**: It converts the parsing proof into an end-to-end demonstration of FR-20's
+actual claim — conditions forecast for the moment of arrival — and it rehearses in miniature the
+scoring AT-01 will do against the generator's ground-truth manifest.
 
-**Independent Test**: Hand the options section to someone drafting the query-layer plan. They can
-choose a path and enumerate its consequences without asking a further question.
+**Independent Test**: Run the query script; it prints the returned values beside both expectations
+and the resulting errors.
 
 **Acceptance Scenarios**:
 
-1. **Given** the finding, **When** the options section is read, **Then** it carries at least the
-   five options named in FR-011 below, each with cost, read-path consequence, client consequence and
-   conformance consequence.
-2. **Given** an option that abandons a single standards-conformant trajectory response, **When** it
-   is described, **Then** the description says plainly which SRD requirement is no longer met in
-   full and what weaker claim replaces it.
-3. **Given** the option of a custom pygeoapi provider plugin, **When** it is described, **Then** it
-   states where that plugin would live, what it would have to implement, and what it means for
-   FR-21 (a new run becoming servable without editing collection configuration).
-4. **Given** any option, **When** its cost is stated, **Then** the cost is in working sessions or
-   days, not in adjectives.
+1. **Given** the fixture coverage and a route of the order of twenty vertices crossing latitude,
+   longitude, depth and time, **When** the trajectory query is issued, **Then** the returned values
+   match the per-vertex expectation within the fixture's stated tolerance.
+2. **Given** the same returned values, **When** they are compared against the single-time
+   expectation, **Then** they differ from it by at least ten times that tolerance, so the result
+   cannot be explained by a query evaluated at one moment.
+3. **Given** vertex times that fall between the coverage's time steps, **When** the response is
+   examined, **Then** the finding records whether the provider stub interpolated or snapped, and
+   states which behaviour the real provider should implement and why AT-01's reported error depends
+   on the choice.
+4. **Given** the response, **When** it is validated, **Then** it is well-formed CoverageJSON of the
+   Trajectory domain type, with a composite axis carrying one (t, x, y, z) tuple per vertex.
+5. **Given** vertices outside the domain in space, in depth, or beyond the last time step, **When**
+   they are queried, **Then** the behaviour — error, null, nearest value or extrapolation — is
+   recorded, because the real provider must choose deliberately.
 
 ---
 
-### User Story 4 - The decision recorded and handed on (Priority: P4)
+### User Story 4 - The finding, and the groundwork handed to the build (Priority: P4)
 
-One option is recommended, the criteria on which it won are stated, and the recommendation is
-transcribed into an ADR so it survives the spike directory being deleted.
+The dated finding states the result, quotes the evidence, and hands the query-layer feature what it
+needs to start building: the provider base class and the methods to implement, how a collection
+selects the plugin, the version pin with the comment FR-51 requires, and the adoptable parsing test.
+The decision is transcribed into an ADR.
 
-**Why this priority**: The spike is disposable; the decision is not. PR-03 requires an ADR for
-decisions that are hard to reverse or where a plausible alternative was rejected, and this is both.
+**Why this priority**: The spike is disposable and the build is not. Everything the build would
+otherwise have to rediscover is written down once, here.
 
-**Independent Test**: The ADR can be read on its own and gives the decision, the context and the
-consequences without reference to the spike.
+**Independent Test**: A reader drafting the query-layer plan can start the provider without opening
+the spike's code.
 
 **Acceptance Scenarios**:
 
-1. **Given** the options have been costed, **When** the recommendation is written, **Then** it names
-   one option and the criteria it won on: fidelity to FR-20, standards conformance, implementation
-   cost, and risk to the client centrepiece.
-2. **Given** the recommendation, **When** the ADR is written, **Then** it carries Status, Context,
-   Decision and Consequences, and names the rejected alternatives.
-3. **Given** the spike directory is later deleted, **When** a reader asks why the read path is
-   shaped as it is, **Then** the ADR answers without the spike.
+1. **Given** the spike has run, **When** the finding is written, **Then** it states in one sentence
+   whether M survives parsing at the pinned versions, with the versions named and the run dated.
+2. **Given** the finding, **When** the build section is read, **Then** it names the provider base
+   class, the methods the plugin must implement, where the plugin will live, and what FR-21 requires
+   of the collection configuration.
+3. **Given** the finding, **When** the deployment section is read, **Then** it gives the exact
+   version pin, the comment that must accompany it, and the test that asserts M survives.
+4. **Given** the finding, **When** the ADR is written, **Then** it carries Status, Context, Decision
+   and Consequences, records that no supplied provider implements trajectory, and names the
+   alternatives rejected.
+5. **Given** the spike directory is later deleted, **When** a reader asks why drogna carries a
+   bespoke EDR provider and a Shapely version pin, **Then** the ADR answers without it.
 
 ---
 
 ### Edge Cases
 
-- **The dangerous outcome**: the query returns HTTP 200 with values that look reasonable but were
-  evaluated at a single time. The fixture must be built so this is caught, which is why the
-  discriminating margin in FR-004 exists.
-- The trajectory query is rejected outright, or the query type is absent from the collection's
-  advertised query types. Both are clean answers and are recorded as such.
-- Trajectory support exists for one provider but not for the provider the harness intends to use
-  over NetCDF coverage. The verdict must be stated for the provider the harness will actually use,
-  not for the one that happens to work.
-- The vertical coordinate is ignored while the temporal one is honoured, or the reverse.
-- The response is CoverageJSON but not of a trajectory domain type, or carries one time axis for
-  the whole trajectory rather than one value per vertex.
-- Vertices fall outside the coverage domain in space, in depth, or beyond the forecast horizon. The
-  behaviour — error, null, nearest value, extrapolation — is recorded, because AT-01 will meet it.
-- The coverage's time steps are coarser than the trajectory's vertex times. Whether the
-  implementation interpolates in time or snaps to the nearest step changes the error AT-01 reports,
-  so it must be established, not assumed.
-- A trajectory with many vertices makes the request URL long enough to hit a server or proxy limit.
-  Whether a POST form of the query exists is part of the finding.
-- The version tested is not the version the deployment later pins. The finding records the version
-  and the re-run condition.
+- **The failure the pin exists to prevent**: M returns as NaN with no exception. The probe must
+  demonstrate this deliberately at a version below the pin, or the pin is folklore.
+- M survives parsing but the pinned versions are unavailable in the container image drogna intends
+  to deploy. The finding records the image and how the pin is satisfied there.
+- M does not survive even at the pinned versions. This is the one outcome that reopens the shape of
+  the read path and the client's centrepiece (SRD §10 priority 2). FR-013 below requires the finding
+  to record the narrow contingency — parsing `coords` from the raw query string inside the plugin,
+  bypassing the framework's geometry parsing — with its cost, so the position is not discovered
+  under pressure later.
+- `LINESTRINGM` and `LINESTRINGZM` behave differently: a three-dimensional route without depth is a
+  legitimate query and must be recorded separately from the four-dimensional case.
+- Z is elevation by WKT convention and depth positive downwards in the coverage. Whichever way the
+  provider resolves it, a route that ascends and one that descends must be distinguishable in the
+  result, or the sign error will be invisible.
+- Vertex times that are not monotonic, or a repeated vertex. The finding records what the framework
+  does before the provider sees it.
+- A trajectory long enough to exceed a URL length limit at the server or a proxy.
+- The pygeoapi version tested differs from the version later pinned in the Compose configuration.
+  The finding records the version and the condition for re-running.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The spike MUST determine whether pygeoapi's EDR implementation accepts a trajectory
-  query whose geometry carries a time value per vertex and returns, for each vertex, the value at
-  that vertex's own time. (SRD FR-20, §11 open question 1)
-- **FR-002**: The reproduction MUST run from a clean checkout with one documented command and MUST
-  NOT depend on any other part of the harness, none of which exists when the spike runs. (SRD §10
-  priority 2)
-- **FR-003**: The fixture coverage MUST be generated by a script from a fixed seed, be small enough
-  to commit (target under 5 MB), be NetCDF with CF conventions, and vary in latitude, longitude,
-  depth and time. (SRD FR-02 in miniature, NFR-07)
-- **FR-004**: The fixture MUST make the verdict falsifiable: the values expected under per-vertex
-  evaluation and under single-time evaluation MUST differ, at every vertex, by at least ten times
-  the fixture's numerical tolerance. (SRD FR-20, AT-01)
-- **FR-005**: The spike MUST record the pygeoapi version, the provider class, the container image
-  digest, the fixture seed, the exact request URLs and the responses received. (SRD FR-20)
-- **FR-006**: The finding MUST state the verdict as exactly one of supported, partially supported
-  or unsupported, naming which part is partial where that applies. (SRD §11 open question 1)
-- **FR-007**: The spike MUST additionally establish, for trajectory queries: whether the vertical
-  coordinate is honoured; whether parameter selection works; what domain type the CoverageJSON
-  response carries; and whether values are interpolated in time between coverage steps or snapped
-  to the nearest step. (SRD FR-19, FR-20, AT-01)
-- **FR-008**: The spike MUST establish whether the trajectory response is well-formed CoverageJSON
-  that the browser client could consume for FR-47. (SRD FR-19, FR-47)
-- **FR-009**: The finding MUST be a dated markdown document under `spikes/edr-trajectory/`, stating
-  the question, the method, the evidence, the verdict, the options and the recommendation. (SRD
-  §8.1, repo layout `spikes/`)
-- **FR-010**: The finding MUST specify each way forward with its cost in working sessions, its
-  consequence for the read path, its consequence for the client's centrepiece, and the claim the
-  harness may honestly make about standards conformance under it. (SRD FR-19 to FR-21, FR-47)
-- **FR-011**: The options considered MUST include at least: (a) native pygeoapi support used as
-  is; (b) a custom pygeoapi EDR provider plugin implementing per-vertex trajectory evaluation;
-  (c) client-side decomposition of the trajectory into one position query per vertex at that
-  vertex's time, stitched by the client; (d) a non-standard trajectory endpoint in front of the
-  query layer; (e) changing the client centrepiece from an arrival-time curve to a time-animated
-  section of the forecast volume. (SRD FR-20, FR-47, §11 open question 1)
-- **FR-012**: The recommendation MUST name one option and the criteria on which it won: fidelity to
-  FR-20, standards conformance, implementation cost, and risk to the client centrepiece. (SRD
-  FR-20, §10)
-- **FR-013**: The finding MUST state the conditions under which it should be re-run, so its shelf
-  life is visible. (SRD §11)
-- **FR-014**: The recommendation MUST be transcribed into an ADR, which survives deletion of the
-  spike directory. (SRD PR-03)
-- **FR-015**: Spike code MUST be throwaway: nothing under `spikes/` may be imported by harness code,
-  and the spike MUST NOT become the environment generator by accident. (SRD §1.1, repo layout)
-- **FR-016**: The spike MUST be timeboxed. On expiry the finding records what was established, what
-  was not, and recommends the option with the lowest risk given what is known. (SRD §10)
-- **FR-017**: The fixture MUST be synthetic and MUST say so in its own metadata, so no artefact of
-  the spike can be mistaken for real data. (SRD FR-01, Constitution V)
+- **FR-001**: The spike MUST demonstrate that the M ordinate of a `LINESTRINGZM` survives
+  `shapely.wkt.loads` with Shapely 2.1 or later built against GEOS 3.12 or later, recovering every
+  vertex time exactly and in order. (SRD FR-51, FR-20)
+- **FR-002**: The spike MUST demonstrate the failure mode below those versions — M returned as NaN
+  with no exception raised — so the pin rests on evidence rather than on report. (SRD FR-51)
+- **FR-003**: The spike MUST record the Shapely version, the GEOS version it was built against, the
+  pygeoapi version and the container image digest for every run it reports. (SRD FR-51)
+- **FR-004**: The spike MUST record what pygeoapi hands to a provider for a trajectory query —
+  geometry type, per-vertex coordinates, M values and query parameters — and compare it with what was
+  requested. (SRD FR-50, §5.3)
+- **FR-005**: The spike MUST register a throwaway EDR provider plugin with a pygeoapi instance,
+  implementing only enough to record the hand-off and answer a trajectory query. (SRD FR-50)
+- **FR-006**: The throwaway provider MUST evaluate the fixture coverage at each vertex's own time,
+  so the demonstration exercises FR-20's actual claim rather than a single-time query in trajectory
+  clothing. (SRD FR-20)
+- **FR-007**: The fixture MUST make the result falsifiable: the values expected under per-vertex
+  evaluation and under single-time evaluation MUST differ, at every vertex, by at least ten times the
+  fixture's stated numerical tolerance. (SRD FR-20, AT-01)
+- **FR-008**: The spike MUST establish that the response is well-formed CoverageJSON of the
+  Trajectory domain type, with a composite axis carrying one (t, x, y, z) tuple per vertex.
+  (SRD FR-19, FR-20)
+- **FR-009**: The spike MUST record the vertical convention: WKT Z as elevation against the
+  coverage's depth axis positive downwards, and which reconciliation the real provider must apply.
+  (SRD FR-02, FR-20)
+- **FR-010**: The spike MUST record the behaviour of vertices outside the domain in space, in depth
+  and beyond the last time step, and whether values between coverage time steps are interpolated or
+  snapped, since AT-01's reported error depends on both. (SRD AT-01)
+- **FR-011**: The spike MUST deliver the parsing assertion in a form the deployment can adopt
+  directly as the test FR-51 requires, together with the exact version pin and the comment that must
+  accompany it. (SRD FR-51, NFR-05)
+- **FR-012**: The finding MUST hand the build what it needs: the provider base class, the methods to
+  implement, where the plugin lives, how a collection selects it, and what FR-21 requires of the
+  collection configuration. (SRD FR-50, FR-21)
+- **FR-013**: The finding MUST record, in one section and with its cost, the contingency that applies
+  if M does not survive even at the pinned versions: parsing `coords` from the raw query string inside
+  the plugin, and what that would mean for the read path and for the client's four-dimensional route
+  rendering. (SRD §10 priority 2, FR-47)
+- **FR-014**: The finding MUST be a dated markdown document under `spikes/edr-trajectory/`, stating
+  the question, the method, the evidence, the result and the handover. (SRD §8.1, repo layout)
+- **FR-015**: The decision MUST be transcribed into an ADR, which survives deletion of the spike
+  directory. (SRD §5.3 note, PR-03)
+- **FR-016**: The reproduction MUST run from a clean checkout with one documented command and MUST
+  NOT depend on any other part of drogna, none of which exists at this point in the delivery order.
+  (SRD §10 priority 2)
+- **FR-017**: The fixture coverage MUST be generated from a fixed seed, be CF-conventions NetCDF
+  varying in latitude, longitude, depth and time, be under 5 MB, and carry a metadata attribute
+  stating that the data are synthetic. (SRD FR-01, FR-02 in miniature, NFR-07)
+- **FR-018**: Nothing under `spikes/` may be imported by drogna's code. The real provider plugin is
+  built by the query-layer feature; the throwaway one is deleted with the spike. (SRD §1.1, repo
+  layout)
+- **FR-019**: The spike MUST be timeboxed. On expiry the finding records what was established and
+  what was not. (SRD §10)
 
 ### Key Entities
 
-- **Trajectory query**: A request for values along a path through the forecast volume, whose
-  geometry carries latitude, longitude, depth and a time per vertex.
-- **Per-vertex timestamp**: The time of arrival at one vertex, which is what the value returned for
-  that vertex must be evaluated at.
-- **Fixture coverage**: A small synthetic four-dimensional NetCDF field, generated from a fixed
-  seed, whose analytic form is known so expectations can be computed rather than eyeballed.
-- **Discriminating expectation**: The pair of value sets — per-vertex evaluation and single-time
-  evaluation — whose separation makes the verdict falsifiable.
-- **Finding**: The dated document: question, method, evidence, verdict, options, recommendation.
-- **Option**: A way forward, with cost, read-path consequence, client consequence and conformance
-  consequence.
-- **Verdict**: Supported, partially supported, or unsupported, bound to a named version.
+- **Trajectory query**: A request for values along a path through the forecast volume, expressed as
+  WKT `LINESTRINGM` or `LINESTRINGZM` where M carries the time of arrival at each vertex.
+- **M ordinate**: The per-vertex time. The single thing this spike exists to prove survives parsing.
+- **Version pin**: Shapely 2.1 or later built against GEOS 3.12 or later, with the comment saying
+  what silently breaks below it.
+- **Throwaway provider**: A minimal pygeoapi EDR provider plugin that records the hand-off and
+  answers one trajectory query. Deleted with the spike.
+- **Fixture coverage**: A small synthetic four-dimensional NetCDF field whose analytic form is known,
+  so expectations are computed rather than eyeballed.
+- **Discriminating expectation**: The pair of value sets — per-vertex and single-time — whose
+  separation makes the result falsifiable.
+- **Finding**: The dated document: question, method, evidence, result, handover to the build.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: A reader who has not seen the repository reproduces the result in under ten minutes,
+- **SC-001**: The probe recovers every M value exactly at the pinned versions, and reports NaN for
+  every M value below the pin, in the same run report.
+- **SC-002**: A reader who has not seen the repository reproduces both results in under ten minutes,
   using one command and the spike's README.
-- **SC-002**: The finding names the pygeoapi version, provider class, image digest, fixture seed and
-  run date, and quotes the request and response verbatim.
-- **SC-003**: At every trajectory vertex, the expected values under the two hypotheses differ by at
-  least ten times the fixture's stated numerical tolerance.
-- **SC-004**: At least five options are costed, each in working sessions, each naming its read-path
-  and client consequences.
-- **SC-005**: A reviewer drafting the plans for features 008 and 012 raises no question about EDR
-  trajectory support that the finding does not answer.
-- **SC-006**: The recommendation exists as an ADR with Status, Context, Decision and Consequences,
-  and names the rejected alternatives.
-- **SC-007**: No file outside `spikes/` imports anything inside it, verified by inspection and by
-  the repository's gate exclusions.
-- **SC-008**: The spike closes within its timebox, with a recorded verdict, including the verdict
-  "not established within the timebox" if that is what happened.
+- **SC-003**: The recorded provider hand-off matches the issued request vertex for vertex, or every
+  difference is quoted.
+- **SC-004**: At every route vertex, the values returned match the per-vertex expectation within
+  tolerance and differ from the single-time expectation by at least ten times that tolerance.
+- **SC-005**: The response validates as CoverageJSON with a Trajectory domain and one (t, x, y, z)
+  tuple per vertex.
+- **SC-006**: The finding names the Shapely, GEOS and pygeoapi versions, the image digest, the
+  fixture seed and the run date, and quotes requests and responses verbatim.
+- **SC-007**: A reviewer drafting the query-layer plan raises no question about the provider seam,
+  the version pin or the vertical convention that the finding does not answer.
+- **SC-008**: The parsing test is adopted by the deployment unchanged, and the version pin carries
+  the comment FR-51 requires.
+- **SC-009**: No file outside `spikes/` imports anything inside it.
+- **SC-010**: The spike closes within its timebox with a recorded result.
 
 ## Assumptions
 
-- The spike is timeboxed to two working sessions. The SRD sets no timebox; this is chosen so the
-  spike cannot become a project, and FR-016 says what happens if the box expires.
-- OGC API-EDR expresses trajectory geometry as WKT with measure and elevation components, the
-  measure carrying time. If pygeoapi expects a different spelling, the spelling actually accepted is
-  recorded as part of the finding rather than treated as a failure.
-- The provider tested is the one the harness intends to use for NetCDF coverage under C-08 and C-09.
-  If more than one candidate provider exists, each is tested and the verdict names the provider.
-- The version tested is the latest pygeoapi release at the date of the spike. If the deployment
-  later pins a different version, the finding's re-run condition applies.
+- The spike is timeboxed to two working sessions. The SRD sets no timebox; this one is chosen so a
+  narrow proof cannot expand into a build, which now belongs elsewhere.
+- The pygeoapi version tested is the one the Compose configuration intends to pin. If they diverge,
+  the finding's re-run condition applies.
+- The throwaway provider is the crudest thing that can record a hand-off and answer a query. It is
+  not a draft of the real plugin, and the finding says so, because a spike promoted into production
+  is how a bespoke component acquires an unexamined design.
 - The fixture is a stand-in for the environment generator (feature 004), which does not exist yet.
-  It is deliberately cruder: one analytic parameter varying in all four dimensions, enough to
-  discriminate and no more.
+  One analytic parameter varying in all four dimensions, enough to discriminate and no more.
 - `spikes/` is excluded from the wall-clock, seeded-RNG and literal-path gates by the shared
-  exclusion list owned by feature 001. The spike nonetheless uses a fixed seed, because a
-  reproduction that cannot be reproduced is not one.
-- The harness's own client library choice for CoverageJSON is not settled by this spike; the spike
-  establishes only whether the response is well-formed and carries per-vertex times.
+  exclusion list owned by feature 001. The spike still uses a fixed seed, because a reproduction that
+  cannot be reproduced is not one.
+- The real provider plugin lives under `query/` and is built by the query-layer feature. This spike
+  writes down its seam and nothing more.

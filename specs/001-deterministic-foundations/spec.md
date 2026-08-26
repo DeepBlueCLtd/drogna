@@ -177,6 +177,10 @@ manifests field for field.
 - The tick stream drops and reconnects with a gap. The clock port reports the gap explicitly; it
   does not fill it in.
 - Rate is set to zero. This is `paused`, not a division by zero, and is expressed as a mode change.
+  It is also the mechanism a screenshot capture uses to hold the system still (SRD FR-53), so pinning
+  an already-paused clock and releasing an already-running one must both be harmless.
+- A capture pins the rate to zero while components are mid-work. On release, ticks resume from the
+  tick that was current, and no tick value is skipped or repeated.
 - A negative or absurd rate is requested from the browser. It is rejected against the configured
   bounds with a readable error, and the current state is unchanged.
 - Two call sites request the same RNG stream name. The second receives the same cached generator,
@@ -213,7 +217,8 @@ manifests field for field.
 - **FR-007**: Control endpoints MUST sit under a path prefix distinct from read endpoints, so the
   reverse proxy can apply policy to them without enumerating routes. (SRD FR-40, FR-41)
 - **FR-008**: The clock service MUST publish a heartbeat on `ctl/heartbeat` carrying its component
-  id, the simulation time and a status, at its declared interval. (SRD FR-45)
+  id, the simulation time and a status, at its declared interval. This is drogna's first liveness
+  signal and the pattern every later component follows. (SRD FR-52, FR-45)
 - **FR-009**: The clock service's real-time driver MUST be the only code in the repository that
   reads a host clock for an operational purpose, and MUST carry an inline
   `# harness:allow-wallclock` marker. (Constitution I; SRD FR-09)
@@ -289,6 +294,10 @@ manifests field for field.
   ones. (Constitution quality gates)
 - **FR-037**: Each gate MUST have tests using fixture files containing known violations and known
   clean equivalents; a gate that passes a known violation is a defect. (Constitution quality gates)
+- **FR-038**: The control surface MUST allow the rate to be pinned to zero and released again, so
+  that a screenshot capture can hold the whole system still and a before-and-after pair differs only
+  where the change under evidence differs. Pinning and releasing MUST be idempotent, and the tick
+  sequence MUST resume unbroken. (SRD FR-53, PR-10)
 
 ### Key Entities
 
@@ -329,7 +338,9 @@ manifests field for field.
   and an I/O recorder confirms no file, socket or database access occurred before validation.
 - **SC-007**: A reviewer given only a run manifest and the code version it names can start an
   equivalent run with one command and no further input.
-- **SC-008**: The exemption inventory contains no entry outside the four permitted zones — clock
+- **SC-008**: Pinning the rate to zero and releasing it leaves the tick sequence unbroken: the tick
+  observed after release is the successor of the tick observed before pinning.
+- **SC-009**: The exemption inventory contains no entry outside the four permitted zones — clock
   service driver, log line decoration, process-level metrics, test setup — and every entry carries
   a reason.
 

@@ -101,7 +101,8 @@ both observe identical tick values at the new pace; neither contains a host-cloc
 - [ ] T016 [US1] Implement the snapshot and tick-stream endpoints in
       `services/clock/src/harness_clock/http.py` using server-sent events for the stream.
 - [ ] T017 [US1] Implement the control endpoints (mode, rate, pause, resume) under the control path
-      prefix, validating against the configured bounds.
+      prefix, validating against the configured bounds, with pin-to-zero and release idempotent so a
+      screenshot capture can hold the system still without breaking the tick sequence (SRD FR-53).
 - [ ] T018 [US1] Implement `services/clock/src/harness_clock/__main__.py`: read `HARNESS_CONFIG`,
       validate, and only then bind a socket.
 - [ ] T019 [US1] Author `contracts/schemas/config.clock.schema.json` referencing the common schema

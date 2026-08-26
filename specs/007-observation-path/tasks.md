@@ -16,7 +16,7 @@ from `006-generated-types`.
 **Tests**: Requested for this project. Test tasks are included and precede the implementation
 they cover.
 
-**Organization**: Grouped by user story so each can be finished, tested and demonstrated on
+**Organisation**: Grouped by user story so each can be finished, tested and demonstrated on
 its own.
 
 ## Format: `[ID] [P?] [Story] Description`

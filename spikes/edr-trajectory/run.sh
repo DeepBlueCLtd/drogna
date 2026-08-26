@@ -69,10 +69,14 @@ for port in 5001 5002; do
 done
 
 step "recording what each instance is running"
+# pygeoapi's own __init__ imports jsonschema, which the published image does not
+# carry, so the version is read from the source file rather than imported.
 ${COMPOSE} run --rm tools -c "
-import json, shapely, pygeoapi
+import json, re, pathlib, shapely
+source = pathlib.Path('/pygeoapi/pygeoapi/__init__.py').read_text()
+version = re.search(r\"__version__ = '([^']+)'\", source).group(1)
 print(json.dumps({
-    'pygeoapi_version': pygeoapi.__version__,
+    'pygeoapi_version': version,
     'shapely_version': shapely.__version__,
     'geos_version': '.'.join(str(p) for p in shapely.geos_version),
 }, indent=2))

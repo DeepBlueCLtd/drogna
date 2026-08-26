@@ -31,7 +31,7 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "fetching attribute",
         re.compile(
-            r"""\s(?:%s)\s*=\s*["']([^"']+)["']""" % "|".join(FETCHING_ATTRIBUTES),
+            r"""\s(?:{})\s*=\s*["']([^"']+)["']""".format("|".join(FETCHING_ATTRIBUTES)),
             re.IGNORECASE,
         ),
     ),

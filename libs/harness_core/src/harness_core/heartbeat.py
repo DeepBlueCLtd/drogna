@@ -32,12 +32,11 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from functools import lru_cache
-from importlib import resources
 from typing import Any, Protocol
 
 from harness_core.clock import Tick
 from harness_core.config import validate_document
+from harness_core.schemas import schema
 
 __all__ = [
     "HEARTBEAT_TOPIC",
@@ -65,11 +64,9 @@ class HeartbeatStatus(StrEnum):
     STOPPING = "stopping"
 
 
-@lru_cache(maxsize=1)
 def heartbeat_schema() -> Mapping[str, Any]:
     """The heartbeat schema, as published by whichever component sends one."""
-    package = resources.files("harness_core.schemas")
-    return json.loads(package.joinpath(_SCHEMA_FILE).read_text(encoding="utf-8"))
+    return schema(_SCHEMA_FILE)
 
 
 def validate_heartbeat(message: Mapping[str, Any]) -> None:

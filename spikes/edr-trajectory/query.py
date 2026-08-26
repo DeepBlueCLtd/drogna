@@ -53,7 +53,12 @@ AT_PIN = 'http://pygeoapi:80'
 BELOW_PIN = 'http://pygeoapi-below-pin:80'
 
 COLLECTION = 'spike_coverage'
+EXTRAPOLATING_COLLECTION = 'spike_coverage_extrapolate'
 STOCK_COLLECTION = 'spike_coverage_stock'
+
+# The WKT is emitted with six decimal places, so the comparison rounds to the same
+# precision. Anything beyond that is the spike's own formatting, not the framework's.
+WKT_DECIMALS = 6
 PARAMETER = 'sea_water_temperature'
 
 
@@ -248,13 +253,13 @@ def compare_handoff() -> dict:
     geometry = handoff.get('geometry') or {}
     sent = as_records()
     m_sent = [record['m_epoch_seconds'] for record in sent]
-    z_sent = [record['wkt_z_elevation_m'] for record in sent]
-    lon_sent = [round(record['lon'], 6) for record in sent]
-    lat_sent = [round(record['lat'], 6) for record in sent]
+    z_sent = [round(record['wkt_z_elevation_m'], WKT_DECIMALS) for record in sent]
+    lon_sent = [round(record['lon'], WKT_DECIMALS) for record in sent]
+    lat_sent = [round(record['lat'], WKT_DECIMALS) for record in sent]
 
     coords = geometry.get('coords_tuples') or []
-    lon_got = [round(vertex[0], 6) for vertex in coords]
-    lat_got = [round(vertex[1], 6) for vertex in coords]
+    lon_got = [round(vertex[0], WKT_DECIMALS) for vertex in coords]
+    lat_got = [round(vertex[1], WKT_DECIMALS) for vertex in coords]
 
     differences = []
     for index in range(len(sent)):
@@ -293,7 +298,7 @@ def compare_handoff() -> dict:
     }
 
 
-def boundary_probes(base: str) -> dict:
+def boundary_probes(base: str, collection: str = COLLECTION) -> dict:
     """Vertices outside the domain, non-monotonic times, and a repeated vertex."""
     origin = float(epoch_seconds(np.array([T0]))[0])
     hour = 3600.0
@@ -332,7 +337,7 @@ def boundary_probes(base: str) -> dict:
     results = {}
     for label, wkt in cases.items():
         response = fetch(
-            edr_url(base, COLLECTION, 'trajectory', {'coords': wkt, 'f': 'json'})
+            edr_url(base, collection, 'trajectory', {'coords': wkt, 'f': 'json'})
         )
         body = response.get('body')
         results[label] = {
@@ -351,47 +356,78 @@ def boundary_probes(base: str) -> dict:
     return results
 
 
-def length_probe(base: str) -> dict:
-    """How long a trajectory can be before the request stops working."""
+def _long_route_url(base: str, count: int) -> str:
     origin = float(epoch_seconds(np.array([T0]))[0])
-    outcomes = []
-    for count in (20, 50, 100, 200, 400, 800, 1600, 3200):
-        fraction = np.linspace(0.0, 1.0, count)
-        lon = LON0 + 0.5 + fraction * (LON1 - LON0 - 1.0)
-        lat = LAT0 + 0.5 + fraction * (LAT1 - LAT0 - 1.0)
-        seconds = origin + fraction * 30 * 3600.0
-        wkt = 'LINESTRING ZM (' + ', '.join(
+    fraction = np.linspace(0.0, 1.0, count)
+    lon = LON0 + 0.5 + fraction * (LON1 - LON0 - 1.0)
+    lat = LAT0 + 0.5 + fraction * (LAT1 - LAT0 - 1.0)
+    seconds = origin + fraction * 30 * 3600.0
+    wkt = (
+        'LINESTRING ZM ('
+        + ', '.join(
             f'{lon[i]:.5f} {lat[i]:.5f} -25 {seconds[i]:.0f}' for i in range(count)
-        ) + ')'
-        url = edr_url(base, COLLECTION, 'trajectory', {'coords': wkt, 'f': 'json'})
-        response = fetch(url)
-        outcomes.append(
-            {
-                'vertices': count,
-                'url_length_bytes': len(url),
-                'status': response['status'],
-                'error': response.get('error'),
-                'values_returned': (
-                    len(returned_values(response.get('body')) or [])
-                    if isinstance(response.get('body'), dict)
-                    else None
-                ),
-            }
         )
-        if response['status'] not in (200,):
-            break
-
-    post = fetch(
-        f'{base}/collections/{COLLECTION}/trajectory?f=json', method='POST'
+        + ')'
     )
+    return edr_url(base, COLLECTION, 'trajectory', {'coords': wkt, 'f': 'json'})
+
+
+def length_probe(base: str) -> dict:
+    """How long a trajectory can be before the request stops working, and why."""
+    attempts = []
+
+    def attempt(count: int) -> dict:
+        url = _long_route_url(base, count)
+        response = fetch(url)
+        record = {
+            'vertices': count,
+            'url_length_bytes': len(url),
+            'status': response['status'],
+            'error': response.get('error'),
+            'values_returned': (
+                len(returned_values(response.get('body')) or [])
+                if isinstance(response.get('body'), dict)
+                else None
+            ),
+            'body_excerpt': (
+                str(response.get('body'))[:300]
+                if response['status'] != 200
+                else None
+            ),
+        }
+        attempts.append(record)
+        return record
+
+    low, high = 2, 2
+    while attempt(high)['status'] == 200 and high < 8192:
+        low, high = high, high * 2
+    # Bisect for the exact vertex count at which the request stops being accepted.
+    while high - low > 1:
+        middle = (low + high) // 2
+        if attempt(middle)['status'] == 200:
+            low = middle
+        else:
+            high = middle
+
+    last_good = _long_route_url(base, low)
+    first_bad = _long_route_url(base, high)
+
+    post = fetch(f'{base}/collections/{COLLECTION}/trajectory?f=json', method='POST')
     return {
-        'attempts': outcomes,
+        'attempts': attempts,
+        'largest_accepted_vertex_count': low,
+        'largest_accepted_url_bytes': len(last_good),
+        'smallest_rejected_vertex_count': high,
+        'smallest_rejected_url_bytes': len(first_bad),
+        'note': (
+            'The rejection is a request-line length limit, not anything about EDR: '
+            'gunicorn defaults limit_request_line to 4094 bytes. It is configurable, '
+            'and the vertex count it corresponds to depends on coordinate precision.'
+        ),
         'post_form': {
             'request_url': post['request_url'],
             'status': post['status'],
-            'body_excerpt': (
-                post['body'] if not isinstance(post['body'], dict) else post['body']
-            ),
+            'body_excerpt': str(post['body'])[:300],
         },
     }
 
@@ -520,7 +556,12 @@ def run() -> dict:
         ),
     }
 
-    summary['boundary_probes'] = boundary_probes(AT_PIN)
+    summary['boundary_probes'] = {
+        'returning_null_outside_the_domain': boundary_probes(AT_PIN, COLLECTION),
+        'extrapolating_outside_the_domain': boundary_probes(
+            AT_PIN, EXTRAPOLATING_COLLECTION
+        ),
+    }
     write('boundary-probes.json', summary['boundary_probes'])
 
     summary['length_probe'] = length_probe(AT_PIN)

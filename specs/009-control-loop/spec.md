@@ -238,13 +238,13 @@ within a bounded span of simulation time.
   simulation time. (SRD FR-22)
 - **FR-003**: The monitor MUST compute the residual between measured and forecast
   **sound speed**, deriving measured sound speed from the observed temperature,
-  salinity and pressure. It MUST NOT define the residual on temperature. (SRD FR-24)
-- **FR-003a**: The derivation MUST call the single shared sound-speed implementation in
-  `libs/harness_core`, the same one telemetry (SRD FR-37) and the environment
-  generator (SRD FR-02) call. This feature MUST NOT carry its own copy of the
-  equation. Sound speed is not published, not stored and not a datastream: it is
-  derived at the point of use, so both consumers get the same numbers by construction
-  rather than by agreement. (ADR-0005; SRD §2.2)
+  salinity and pressure. It MUST NOT define the residual on temperature. The
+  derivation MUST call the single shared sound-speed implementation in
+  `libs/harness_core` — the same one telemetry (SRD FR-37) and the environment
+  generator (SRD FR-02) call — and this feature MUST NOT carry its own copy of the
+  equation. Sound speed is never published, never stored and is not a datastream; it
+  is derived at the point of use, so every consumer gets the same numbers by
+  construction rather than by agreement. (SRD FR-24, §2.2; ADR-0005)
 - **FR-004**: The forecast term of the residual MUST be sampled from the currently
   published forecast field at the observation's latitude, longitude, depth and time,
   through the coverage read port. (SRD FR-24, FR-30)
@@ -305,11 +305,10 @@ within a bounded span of simulation time.
   (SRD FR-29)
 - **FR-020**: The model runner MUST emit the per-cell ensemble spread as an
   uncertainty field alongside the forecast field, on the same grid, in the same run.
-  (SRD FR-29)
-- **FR-020a**: That field MUST be ensemble spread alone. The model runner MUST NOT
-  combine it with observation age: the planner (feature 011) holds that combination,
-  because it is the only consumer that needs it and because combining it here would
-  make the runner depend on an observation stream it does not otherwise read.
+  That field MUST be ensemble spread alone: the model runner MUST NOT combine it with
+  observation age. The planner (feature 011) holds that combination, because it is the
+  only consumer that needs it and because combining it here would make the runner
+  depend on an observation stream it does not otherwise read.
   (SRD FR-07, FR-08, FR-29; Constitution VI)
 - **FR-021**: The model runner MUST write only into a staging location and MUST NOT
   write into any location a reader can reach. A run in which any member fails MUST be
@@ -442,7 +441,7 @@ within a bounded span of simulation time.
   which side of that boundary the monitor sits on.
 - **Settled: the planner combines ensemble spread with observation age, not this
   feature.** The model runner publishes the per-cell ensemble spread and nothing more
-  (FR-020a). The uncertainty field the planner scores — spread combined with an
+  (FR-020). The uncertainty field the planner scores — spread combined with an
   observation-age term, per SRD FR-07 and FR-08 — is assembled in feature 011, which
   is the only consumer that needs the combination and the only component already
   subscribed to observation arrivals for that purpose. Putting it here would make the

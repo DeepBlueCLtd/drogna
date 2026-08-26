@@ -20,12 +20,14 @@ so a capture that pins twice or releases without pinning does not disturb the se
 
 from __future__ import annotations
 
+import json
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
 from harness_core.clock import (
+    CLOCK_TOPIC,
     ClockControlError,
     ClockMode,
     ClockState,
@@ -35,8 +37,17 @@ from harness_core.clock import (
     Tick,
     tick_at,
 )
+from harness_core.config import validate_document
+from harness_core.heartbeat import MessagePublisher
+from harness_core.schemas import schema
 
-__all__ = ["ClockEngine", "ClockSettings", "LockstepStall", "RealTimeDriver"]
+__all__ = [
+    "ClockEngine",
+    "ClockSamplePublisher",
+    "ClockSettings",
+    "LockstepStall",
+    "RealTimeDriver",
+]
 
 _FREE_RUNNING = (ClockMode.REALTIME, ClockMode.ACCELERATED)
 
@@ -361,3 +372,26 @@ class RealTimeDriver:
             # Acknowledgements arrive from elsewhere; wait a poll interval for them.
             self._sleep(min(interval, deadline))
         return emitted
+
+
+class ClockSamplePublisher:
+    """Publishes simulation time on ``ctl/clock``, validated against the message schema.
+
+    ADR-0009: consumers receive time by subscribing to the control namespace. This is the
+    publishing half of that, and it validates before it publishes because a malformed
+    clock sample would be worse than a missing one — every consumer keys its work to it.
+    """
+
+    def __init__(self, publisher: MessagePublisher, *, topic: str = CLOCK_TOPIC) -> None:
+        self._publisher = publisher
+        self._topic = topic
+
+    @property
+    def topic(self) -> str:
+        return self._topic
+
+    def publish(self, tick: Tick) -> Mapping[str, Any]:
+        message = tick.as_message()
+        validate_document(message, schema("clock.schema.json"), source=self._topic)
+        self._publisher.publish(self._topic, json.dumps(message, sort_keys=True).encode("utf-8"))
+        return message

@@ -59,6 +59,21 @@ jobs:
       - name: Gate — no tracked-entity vocabulary (Constitution V)
         run: uv run python scripts/check_forbidden_vocabulary.py
 
+      # Constitution III is three checks, not one. The conventions gate runs first because
+      # a master that breaks them generates a type nobody can find; the drift check runs
+      # last because it is the one that proves the committed trees still match their
+      # sources. The middle one covers the direction the drift check cannot see: a shape
+      # hand-written outside the generated directories, which nothing regenerates and
+      # nothing diffs.
+      - name: Gate — schema conventions (Constitution III)
+        run: uv run python scripts/check_schema_conventions.py
+
+      - name: Gate — no hand-written boundary types (Constitution III)
+        run: uv run python scripts/check_handwritten_types.py
+
+      - name: Gate — generated types are current (Constitution III)
+        run: ./scripts/check_types_drift.sh
+
   # The client has its own toolchain and its own tests, and they are no less part of the
   # build for being written in a different language. Kept as a separate job so a Python
   # failure and a client failure are told apart at a glance rather than by reading a log.

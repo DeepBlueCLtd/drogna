@@ -66,7 +66,12 @@ SMALLEST_MEANINGFUL_SHAPE = 3
 # one place is the only form of this that a reviewer can read at a glance. The list may
 # shrink and may not grow: a new boundary shape has the generated model to import.
 AWAITING_ADOPTION: dict[str, tuple[str, ...]] = {
-    "libs/harness_core/src/harness_core/manifest.py": ("ManifestParticipant",),
+    # A test helper that restates the heartbeat payload field for field. It was written
+    # when there was no generated type to import, and it drifts the moment the master
+    # gains a field — which is the whole argument for this gate. The client feature owns
+    # the file; adopting `DrognaComponentHeartbeat` from client/src/generated/messages is
+    # a one-line change there and this entry goes with it.
+    "client/tests/heartbeats.ts": ("HeartbeatFields",),
 }
 
 MESSAGE = (
@@ -83,25 +88,38 @@ TYPESCRIPT_FIELD = re.compile(r"^\s*(?:readonly\s+)?(?P<name>[A-Za-z_$][\w$]*)\s
 
 
 class Shape:
-    """One shape a master declares: where it came from, and what it is called there."""
+    """One shape a master declares, and everything it calls its fields.
+
+    ``names`` is every property name anywhere inside the shape, not only the top level.
+    That is what tells a copy from an adapter: a copy uses the master's vocabulary all the
+    way down, while a client's internal model of the same document renames as it adapts —
+    ``clientId`` for ``client_id`` — and stops matching at the first nested field.
+    """
 
     def __init__(self, source: str, pointer: str, schema: dict[str, Any]) -> None:
         self.source = source
         self.pointer = pointer
-        self.properties = frozenset(schema.get("properties", {}))
+        self.names = frozenset(_property_names(schema))
         self.required = frozenset(schema.get("required", []))
 
     def matches(self, fields: frozenset[str]) -> bool:
-        if len(fields) < SMALLEST_MEANINGFUL_SHAPE or len(self.properties) < 2:
+        if len(fields) < SMALLEST_MEANINGFUL_SHAPE or len(self.names) < 2:
             return False
-        return self.required <= fields <= self.properties
+        return self.required <= fields <= self.names
 
     def __str__(self) -> str:
         return f"{self.source}{self.pointer}"
 
 
 def shapes(root: Path) -> list[Shape]:
-    """Every object shape the masters declare, at the document root and in `$defs`."""
+    """Every shape a master gives a name to: the document root, and each `$defs` entry.
+
+    Only named shapes, because those are the ones that cross the boundary as a unit and
+    that the generators give a type name to. A subsection nested inside a configuration
+    document is not a shape anybody imports; a component computing with a structure that
+    happens to share its field names is doing its job, not declaring a contract, and a
+    gate that cannot tell the two apart would be switched off within a week.
+    """
     found: list[Shape] = []
     directory = root / SCHEMA_DIRECTORY
     if not directory.is_dir():
@@ -109,20 +127,28 @@ def shapes(root: Path) -> list[Shape]:
     for path in sorted(directory.glob("*" + SUFFIX)):
         document = json.loads(path.read_text(encoding="utf-8"))
         source = path.relative_to(root).as_posix()
-        for pointer, node in _object_schemas(document):
-            found.append(Shape(source, pointer, node))
+        if isinstance(document.get("properties"), dict):
+            found.append(Shape(source, "", document))
+        for key, definition in (document.get("$defs") or {}).items():
+            if isinstance(definition, dict) and isinstance(definition.get("properties"), dict):
+                found.append(Shape(source, f"/$defs/{key}", definition))
     return found
 
 
-def _object_schemas(node: Any, pointer: str = "") -> Iterable[tuple[str, dict[str, Any]]]:
+def _property_names(node: Any) -> Iterable[str]:
+    """Every property name inside one shape, at any depth."""
     if isinstance(node, dict):
-        if isinstance(node.get("properties"), dict):
-            yield pointer or "", node
+        properties = node.get("properties")
+        if isinstance(properties, dict):
+            for key, value in properties.items():
+                yield key
+                yield from _property_names(value)
         for key, value in node.items():
-            yield from _object_schemas(value, f"{pointer}/{key}")
+            if key != "properties":
+                yield from _property_names(value)
     elif isinstance(node, list):
-        for index, value in enumerate(node):
-            yield from _object_schemas(value, f"{pointer}/{index}")
+        for value in node:
+            yield from _property_names(value)
 
 
 def _python_declarations(text: str) -> Iterable[tuple[int, str, frozenset[str]]]:
@@ -140,15 +166,19 @@ def _python_declarations(text: str) -> Iterable[tuple[int, str, frozenset[str]]]
             if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name)
         }
         if fields:
-            yield node.lineno, node.name, frozenset(fields)
+            # A decorated class is reported at its first decorator, so that an exemption
+            # marker written above `@dataclass` — where a person would put it — covers it.
+            start = min([node.lineno, *(item.lineno for item in node.decorator_list)])
+            yield start, node.name, frozenset(fields)
 
 
 def _typescript_declarations(text: str) -> Iterable[tuple[int, str, frozenset[str]]]:
     """(line, name, field names) for every interface or object type alias.
 
-    A brace count is enough here — the declarations this gate is looking for are flat
-    lists of fields, and a nested one is reported by its outer name, which is the file and
-    the line a reader needs anyway.
+    Fields are collected at every depth, for the reason :class:`Shape` gives: a copy
+    speaks the master's vocabulary all the way down, and an internal model that renames as
+    it adapts stops matching at the first nested field. A brace count is enough to find
+    them — these declarations are field lists, not expressions.
     """
     lines = text.splitlines()
     index = 0
@@ -164,10 +194,9 @@ def _typescript_declarations(text: str) -> Iterable[tuple[int, str, frozenset[st
         index += 1
         while index < len(lines) and depth > 0:
             line = lines[index]
-            if depth == 1:
-                field = TYPESCRIPT_FIELD.match(line)
-                if field is not None:
-                    fields.add(field.group("name"))
+            field = TYPESCRIPT_FIELD.match(line)
+            if field is not None:
+                fields.add(field.group("name"))
             depth += line.count("{") - line.count("}")
             index += 1
         if fields:

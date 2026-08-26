@@ -1,0 +1,31 @@
+[project]
+name = "drogna-harness"
+version = "0.1.0"
+description = "Environmental data architecture harness — synthetic data, fake numerics, learning purposes only"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["libs/harness_types", "client/src/generated"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "DTZ"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.pytest.ini_options]
+testpaths = ["libs", "services", "tests"]
+addopts = "-q"

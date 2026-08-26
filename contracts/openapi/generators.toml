@@ -131,14 +131,27 @@ message_directory = "messages"
 # assert each copy is byte-identical to its master are unchanged — they simply cannot fail
 # any more without the drift check failing first.
 #
-# `libs/harness_core/src/harness_core/schemas/heartbeat.schema.json` is deliberately not
-# in this list. That copy has diverged from its master, which has since gained two
-# optional fields, and reconciling it is a change to what harness_core validates — the
-# owning feature's call to make, not this chain's to make silently. It is named here so
-# the omission is a decision on the record rather than an oversight.
+# `libs/harness_core/src/harness_core/schemas/heartbeat.schema.json` was left out of this
+# list when the chain was written, on the ground that reconciling a diverged copy changes
+# what harness_core validates and is the owning feature's call rather than this chain's to
+# make silently. That was the right instinct and the wrong outcome, so the omission was
+# reviewed and reversed.
+#
+# The copy did not merely lag. It said liveness is judged in simulation time, which is
+# what ADR-0006 overturned: cadence and liveness windows are real time, and the simulation
+# time a heartbeat carries is payload rather than schedule. It also lacked the two optional
+# declarations the master gained for that decision, while declaring
+# `additionalProperties: false` — and the client already reads both fields. A clock service
+# publishing the heartbeat ADR-0006 describes, to a client that expects it, would have been
+# rejected by harness_core's own validation. The reconciliation is not housekeeping; it is
+# the repair of a live contradiction between a component and a ratified decision.
 [[copy]]
 source = "contracts/schemas/clock.schema.json"
 target = "libs/harness_core/src/harness_core/schemas/clock.schema.json"
+
+[[copy]]
+source = "contracts/schemas/heartbeat.schema.json"
+target = "libs/harness_core/src/harness_core/schemas/heartbeat.schema.json"
 
 [[copy]]
 source = "contracts/schemas/config.common.schema.json"

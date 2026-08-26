@@ -48,13 +48,29 @@ from _gate_lib import (
 
 GATE = "forbidden-vocabulary"
 
+# `\b` is the wrong boundary here, and the difference is the whole point of the gate.
+# An underscore is a word character, so `\bcontacts?\b` does not match `contact_id` — the
+# exact identifier this module's docstring names as the thing a data model acquires a
+# tracked entity by. The same hole swallowed `track_id`, `detection_id` and
+# `tracked_entity`. These boundaries treat anything that is not a letter or a digit as a
+# separator, so an identifier spelt in snake_case, kebab-case or camelCase is caught while
+# `contactless` and `soundtrack` are not.
+_BEFORE = r"(?<![A-Za-z0-9])"
+_AFTER = r"(?![A-Za-z0-9])"
+
+
+def _noun(pattern: str) -> re.Pattern[str]:
+    """A forbidden noun, bounded by anything that is not alphanumeric."""
+    return re.compile(_BEFORE + pattern + _AFTER, re.IGNORECASE)
+
+
 FORBIDDEN: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("tracked entity", re.compile(r"\btracked\s+entit(?:y|ies)\b", re.IGNORECASE)),
-    ("track", re.compile(r"\btracks?\b", re.IGNORECASE)),
-    ("tracking", re.compile(r"\btracking\b", re.IGNORECASE)),
-    ("tracklet", re.compile(r"\btracklets?\b", re.IGNORECASE)),
-    ("contact", re.compile(r"\bcontacts?\b", re.IGNORECASE)),
-    ("detection", re.compile(r"\bdetections?\b", re.IGNORECASE)),
+    ("tracked entity", _noun(r"tracked[\s_-]+entit(?:y|ies)")),
+    ("track", _noun(r"tracks?")),
+    ("tracking", _noun(r"tracking")),
+    ("tracklet", _noun(r"tracklets?")),
+    ("contact", _noun(r"contacts?")),
+    ("detection", _noun(r"detections?")),
 )
 
 # Ordinary English and version-control usage that happens to share a word with the

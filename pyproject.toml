@@ -22,6 +22,12 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
+    # The generator half of Constitution III's chain. It is a development dependency
+    # rather than a component one because nothing at run time needs it: the models it
+    # writes are committed, and a checkout builds without it. It is pinned to an exact
+    # version, and `contracts/openapi/generators.toml` records why: the generated tree is
+    # compared byte for byte in CI, so the tool that writes it is part of the contract.
+    "datamodel-code-generator==0.75.1",
 ]
 
 [tool.uv.workspace]

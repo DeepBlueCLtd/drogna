@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.client.schema.json",
+  "title": "drogna browser client runtime configuration",
+  "description": "The document the browser client (C-18) fetches before it opens any transport, and the only place a location may be named for it. A browser reads no environment variable, so the single-variable rule of NFR-04 becomes a single served document reached by one relative bootstrap URL, which is the client's one permitted literal and carries an inline exemption marker naming this schema. Nothing here can light a component: the document names where to listen and how long to keep believing what was heard, and Constitution VII means illumination comes from received heartbeats and nothing else. A window is a tolerance, not a claim that a component exists.",
+  "type": "object",
+  "required": ["broker", "clock", "liveness", "display"],
+  "additionalProperties": false,
+  "properties": {
+    "broker": {
+      "title": "Broker connection",
+      "description": "How the browser reaches the control namespace: an MQTT-over-WebSockets connection through the reverse proxy's upgrade location (ADR-0008). The identity is subscribe-only; the client publishes on no topic.",
+      "type": "object",
+      "required": ["url", "client_id"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "WebSocket URL of the proxy's upgrade location. Not the broker's own port: everything stays behind one reverse proxy under one policy."
+        },
+        "client_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "description": "The MQTT client identifier. Deterministic, never derived from entropy or a host clock (Constitution II). Two viewers served the same identifier will disconnect one another, so a deployment that expects several viewers issues a distinct identifier per served document."
+        },
+        "keepalive_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Transport keepalive. A socket parameter, not simulation time."
+        },
+        "reconnect_period_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "How long the transport waits before retrying a dropped connection. Zero disables retrying."
+        }
+      }
+    },
+    "clock": {
+      "title": "Simulation clock",
+      "description": "Simulation time arrives by subscription to ctl/clock (ADR-0009). The HTTP interface is optional here and is used for one thing only: asking what the time is at startup, so the page is not blank until the next sample. The client offers no control over the clock; the rate is pinned for capture against the clock's own control surface, not from here.",
+      "type": "object",
+      "required": ["stale_after_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "stale_after_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How long, in host seconds, the client waits for a time sample before reporting the clock stale. Staleness is the absence of samples and is not the same as a rate of zero, which is a state the clock reports and which stops emission legitimately (FR-53)."
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL of the clock service's HTTP interface, where the deployment exposes it to the browser. Absent means the client waits for the first sample instead."
+        },
+        "routes": {
+          "type": "object",
+          "required": ["snapshot"],
+          "additionalProperties": false,
+          "description": "Routes relative to the endpoint. Only the read route appears here: the client is not a controller.",
+          "properties": {
+            "snapshot": {
+              "type": "string",
+              "description": "What the time is now, for a page that has just loaded."
+            }
+          }
+        }
+      }
+    },
+    "liveness": {
+      "title": "Liveness tolerances",
+      "description": "How long a received heartbeat is taken as evidence, when its sender did not declare that itself. Real time by ADR-0006: a rate of zero stops simulated time and stops nothing else, so a pinned clock keeps its lit components lit for the duration of a capture.",
+      "type": "object",
+      "required": ["default_window_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "default_window_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The window applied to a heartbeat that declares neither a window nor an interval. One scalar tolerance, deliberately not a table of components: a table would be a list of what ought to exist, which is what Constitution VII forbids."
+        },
+        "window_multiplier": {
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "description": "Applied to a declared interval when the sender declares an interval but no window: a sender that says it speaks every n seconds is believed for a small multiple of n, so one dropped message is not read as death."
+        },
+        "disconnected_is_indeterminate": {
+          "type": "boolean",
+          "description": "Whether evidence that expires while the transport is down renders as indeterminate rather than dark. Default true: a client that has gone deaf cannot honestly say a component died. It can never light anything — indeterminate is not lit."
+        }
+      }
+    },
+    "display": {
+      "title": "Display",
+      "description": "Rendering settings, and nothing that changes what is believed. A high clock rate degrades the frame rate and never the truth: every received heartbeat is folded into liveness state whether or not a frame is drawn for it.",
+      "type": "object",
+      "required": ["frame_interval_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "frame_interval_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Minimum host milliseconds between re-renders. The frame budget, not a sampling interval for liveness."
+        }
+      }
+    }
+  }
+}

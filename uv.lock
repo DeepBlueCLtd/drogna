@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 members = [
     "drogna-harness",
     "harness-core",
+    "harness-env-generator",
 ]
 
 [[package]]
@@ -180,6 +181,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "jsonschema", specifier = ">=4.21" }]
+
+[[package]]
+name = "harness-env-generator"
+version = "0.1.0"
+source = { editable = "services/env_generator" }
+dependencies = [
+    { name = "harness-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "harness-core", editable = "libs/harness_core" }]
 
 [[package]]
 name = "iniconfig"

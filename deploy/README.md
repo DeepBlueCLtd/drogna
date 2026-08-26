@@ -263,7 +263,7 @@ alive.** That is heartbeats, always.
 | C-06 observation store | `observations` | `core` | **Live.** Verified from this checkout: starts, reports healthy, survives down and up. |
 | C-07 feature store | `features` | `provisioning` | Declared as a one-shot provisioning job against the same database instance. Not built. |
 | C-08 coverage store | — | — | Not a service. It is the `coverage-data` volume, read by the query layer and written by the generator, model runner and publisher. |
-| C-09 query layer | `query` | `query` | Declared, not built. Its image fixes the Shapely and GEOS bound described below. |
+| C-09 query layer | `query` | `query` | Declared, not built. Its image does build, and asserts the Shapely and GEOS bound described below as it does so; but the pygeoapi configuration and the trajectory provider it would serve belong to 008-query-layer and do not exist. |
 | C-10 reverse proxy | `proxy` | `edge` | Declared, not built. |
 | C-11 monitor | `monitor` | `control` | Declared, not built. |
 | C-12 scheduler | `scheduler` | `control` | Declared, not built. |
@@ -272,11 +272,13 @@ alive.** That is heartbeats, always.
 | C-15 planner | `planner` | `planning` | Declared, not built. |
 | C-16 telemetry | `telemetry` | `telemetry` | Declared, not built. |
 | C-17 offload packager | `offload` | `offload` | Declared, not built. |
-| C-18 browser client | `client` | `shell` | Declared, not built. The image definition has never been built, because `client/` does not exist yet. |
+| C-18 browser client | `client` | `shell` | Declared, not built. The image definition is complete and has never been built, because `client/` does not exist yet. |
 
 "Declared, not built" means precisely this: the service entry is complete and correct as far
-as it can be, and starting its profile today would fail at the image build, because the
-package it names is not in the repository yet.
+as it can be, and starting its profile today would fail — at the image build for most of
+them, because the package the build argument names is not in the repository yet; at start-up
+for the query layer, whose image builds but has nothing to serve. What has been built, and
+what that proves, is set out under *Images* below.
 
 ---
 
@@ -348,14 +350,93 @@ To refresh a digest deliberately: resolve the new one with
 rebuild, and run the tests. Do it as its own change, so that a base image moving is visible
 in the history rather than buried in an unrelated one.
 
+### What has actually been built
+
+Three image definitions exist and no more, because there are only three kinds of image in
+this deployment: a Python service, the query layer, and the browser client. Everything else
+in the Compose file runs a third-party image unchanged.
+
+**This table records what has been built and run, on the date given. Like the service
+table above, it is read by people and by nothing else** — no script consults it, and it has
+no bearing whatever on what the client draws as alive, which is heartbeats and only
+heartbeats (Constitution VII). It is here so that "it builds" is a claim someone checked
+rather than one the file's existence implies.
+
+| Image definition | Built? | What that means |
+|---|---|---|
+| `images/query-layer.Dockerfile` | **Yes**, 26 August 2026. | Builds clean and installs pygeoapi 0.20.0 with Shapely 2.1.2 on GEOS 3.13.1. The FR-51 pin check runs during the build and passes. Never started: it has no pygeoapi configuration to serve until `query/` arrives with 008-query-layer. |
+| `images/python-service.Dockerfile` | **Partly**, 26 August 2026. | Builds clean against `harness-core` from the workspace lock, which is the only package that exists. No drogna service exists yet, so nothing has been built or run as a service. The image does not yet carry the `drogna-healthcheck` console script the Compose health checks invoke; that convention belongs to 001-deterministic-foundations. |
+| `images/client.Dockerfile` | **No.** | `client/` does not exist, so this has never been built. Its first stage — the Node base, corepack, `pnpm install` — was exercised against a stub package to confirm the build stage and its proxy handling work; `pnpm build` and the nginx stage were not. |
+
+Two image definitions carry a commented-out `COPY` of a directory that does not exist yet:
+`services/` in the Python service image and `query/` in the query layer image. Each is one
+line, with the condition for uncommenting it written above it. They are commented rather
+than absent so that arriving at those components is an uncommenting, not a decision about
+how the image should have been laid out; and commented rather than present because `COPY`
+of a missing directory fails the build, which would leave nothing buildable at all today.
+
+### Building behind a TLS-terminating proxy
+
+Each image definition mounts an optional build secret named `proxy_ca`, and the Compose
+file declares it from `HARNESS_PROXY_CA_FILE`, defaulting to an empty source. On a machine
+with direct egress there is nothing to set and nothing to configure: the builds behave as
+ordinary builds, nothing about any proxy is written into an image, and no host or address
+appears in any Dockerfile.
+
+It exists because this deployment is meant to build inside an ephemeral agent session (SRD
+NFR-06), where the package index is reached through a proxy that terminates TLS with a
+certificate authority the base images do not know. Without it, `pip` and `pnpm` fail there
+with `CERTIFICATE_VERIFY_FAILED` and the bring-up never reaches a container. In such a
+session, name the bundle:
+
+```sh
+export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"   # or wherever the session keeps its bundle
+scripts/run_local.sh
+```
+
+It is the one value in this deployment that does not come from `config/<destination>/`, and
+deliberately so: it describes the machine the build runs on, not the destination being
+deployed. It names no host, is read only during a build, and reaches no running container.
+The same applies to a direct `docker build`, which takes it as
+`--secret id=proxy_ca,src="$SSL_CERT_FILE"`.
+
 ### The Shapely and GEOS pin
 
 `images/query-layer.requirements.txt` pins Shapely to 2.1 or later, built against GEOS 3.12
-or later, and the reason is written beside the pin rather than here. In short: below those
-versions the M ordinate of a `LINESTRINGM` is silently returned as NaN, so an EDR
-trajectory's per-vertex timestamps are lost before any provider code runs, and nothing
-raises (SRD FR-51). It is a silent-failure guard. Do not relax it without running the tests
-in features 002 and 008 that assert M survives parsing.
+or later. The reason is written at the pin rather than here, at length, because that is
+where someone tidying dependencies will be standing. This section records the same thing
+for someone reading the deployment rather than the file (FR-022).
+
+It is a silent-failure guard. An EDR trajectory carries its per-vertex arrival times in the
+M ordinate of a WKT `LINESTRING M` or `LINESTRING ZM`; pygeoapi parses that string with
+`shapely.wkt.loads` before any drogna code runs. If M does not survive the parse, the
+arrival times are gone, FR-20 fails, and the response is still structurally correct — the
+first symptom is wrong values that look reasonable.
+
+Feature 002 measured the failure rather than citing it, and found **three** modes, not the
+one FR-51 names. Shapely and GEOS fail independently, so pinning Shapely alone would not be
+enough: the GEOS a wheel was built against decides two of the three. None of them raises.
+
+| Shapely | GEOS | What happens to the M ordinate |
+|---|---|---|
+| >= 2.1 | < 3.12 | Returned as **NaN**. This is the case FR-51 describes. `shapely.has_m` raises rather than returning False, so a guard written in terms of it errors instead of failing informatively. |
+| 2.0.x | >= 3.12 | Not NaN — **absent**. No `include_m` parameter and no `has_m` attribute exist at all. `LINESTRING ZM` yields `(x, y, z)` and round-trips out as `LINESTRING Z`. **This is the published pygeoapi image as it ships**, and so the mode this image exists to correct. |
+| 2.0.x | < 3.12 | Worse than either: `LINESTRING M` returns a `LINESTRING Z` whose Z values are the timestamps, with `has_z` True — a Unix timestamp silently promoted into the depth axis. |
+
+Evidence: `spikes/edr-trajectory/FINDING.md` and
+`docs/adr/0003-bespoke-edr-trajectory-provider.md`.
+
+The pin has two halves and both are required. The version constraint in the requirements
+file is one. The other is `images/query-layer-pin-check.py`, which runs during the build:
+GEOS is bundled inside the Shapely wheel, so which GEOS an image ends up with is a property
+of the built artefact and not of anything a requirements file can constrain. The check
+parses a `LINESTRING ZM` and asserts that the M ordinates come back exactly and that Z is
+still the elevations — behaviour, not version numbers — and fails the build otherwise. It
+has been confirmed to fail on Shapely 2.0.3 and 2.0.7, so it is a guard that is known to
+fire and not merely one that has never complained. The check stays inside the image so the
+same assertion can be made against a running container after a base image moves.
+
+Do not relax either half without running the FR-51 tests owned by features 002 and 008.
 
 ---
 

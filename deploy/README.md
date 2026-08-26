@@ -366,7 +366,16 @@ rather than one the file's existence implies.
 |---|---|---|
 | `images/query-layer.Dockerfile` | **Yes**, 26 August 2026. | Builds clean and installs pygeoapi 0.20.0 with Shapely 2.1.2 on GEOS 3.13.1. The FR-51 pin check runs during the build and passes. Never started: it has no pygeoapi configuration to serve until `query/` arrives with 008-query-layer. |
 | `images/python-service.Dockerfile` | **Partly**, 26 August 2026. | Builds clean against `harness-core` from the workspace lock, which is the only package that exists. No drogna service exists yet, so nothing has been built or run as a service. The image does not yet carry the `drogna-healthcheck` console script the Compose health checks invoke; that convention belongs to 001-deterministic-foundations. |
-| `images/client.Dockerfile` | **No.** | `client/` does not exist, so this has never been built. Its first stage — the Node base, corepack, `pnpm install` — was exercised against a stub package to confirm the build stage and its proxy handling work; `pnpm build` and the nginx stage were not. |
+| `images/client.Dockerfile` | **No**, but it now gets as far as installing dependencies. | The build stage runs: the Node base, corepack and the package manager all work, and the dependency install is reached and begins. It then stops on a supply-chain policy applied to `client/pnpm-lock.yaml` by the environment this was built in — one lockfile entry was published more recently than that environment's minimum-release-age cutoff allows. That is a property of the lockfile and of the machine, not of this image definition, and it says nothing about whether `pnpm build` and the nginx stage work; neither has been reached. |
+
+Each image definition has its own build context, stated in a `<name>.Dockerfile.dockerignore`
+beside it. BuildKit reads one of those in preference to any ignore file at the context root,
+which keeps each image's context a property of that image rather than a shared list nobody
+owns. The context root is the repository root for all three, because the workspace lock and
+the client sources both sit above `deploy/`; what each excludes is what that build does not
+read. This is not only about build time: copying the host's own installed dependencies into
+a container is how a build acquires artefacts compiled for the wrong interpreter, and in the
+client's case it made the package manager fail outright.
 
 Two image definitions carry a commented-out `COPY` of a directory that does not exist yet:
 `services/` in the Python service image and `query/` in the query layer image. Each is one

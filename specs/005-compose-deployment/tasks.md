@@ -35,8 +35,8 @@ the six named `scripts/` entries, and its own tests.
 
 - [ ] T001 Create `deploy/` with `compose.yaml`, `env.template`, `images/` and `README.md` stubs, and add the ignore rule for the generated per-destination environment file to `.gitignore`
 - [ ] T002 [P] Create `config/local/` and `config/droplet/` each containing `common.json`, carrying the `component`, `clock`, `seed`, `broker` and `logging` sections in the shape fixed by `docs/architecture/repo-layout.md`
-- [ ] T003 [P] Write `deploy/images/python-service.Dockerfile` with its base image pinned by digest, installing dependencies from the `uv` workspace lock and taking `HARNESS_CONFIG` as its only meaningful environment variable
-- [ ] T004 [P] Write `deploy/images/client.Dockerfile` with its base images pinned by digest, building the client with `pnpm` and serving the built assets from a static server whose listen port comes from the environment file
+- [x] T003 [P] Write `deploy/images/python-service.Dockerfile` with its base image pinned by digest, installing dependencies from the `uv` workspace lock and taking `HARNESS_CONFIG` as its only meaningful environment variable
+- [x] T004 [P] Write `deploy/images/client.Dockerfile` with its base images pinned by digest, building the client with `pnpm` and serving the built assets from a static server whose listen port comes from the environment file
 
 ---
 
@@ -162,8 +162,22 @@ consults no artefact of this feature.
 ## Phase 7: Polish
 
 - [ ] T041 [P] Add a `deploy/README.md` troubleshooting section covering the eight edge cases in `spec.md`, each with the message the operator will see and the remedy
-- [ ] T042 [P] Pin every base image by digest and record the digests with a note on how to refresh them deliberately
-- [ ] T043 [P] Pin Shapely 2.1 or later against GEOS 3.12 or later in the query layer's image with the reason beside the pin, add the behavioural-pin table to `deploy/README.md`, and add a check asserting both destinations resolve to the same pinned versions
+- [x] T042 [P] Pin every base image by digest and record the digests with a note on how to refresh them deliberately
+- [x] T043 [P] Pin Shapely 2.1 or later against GEOS 3.12 or later in the query layer's image with the reason beside the pin, add the behavioural-pin table to `deploy/README.md`, and assert the pin holds at build time
+
+      The third clause originally read "add a check asserting both destinations resolve
+      to the same pinned versions". It was replaced by a stronger check rather than
+      dropped. GEOS is bundled inside the Shapely wheel, so no version constraint can
+      express the half of FR-51 that decides two of the three failure modes; a
+      resolved-version lock would agree across destinations while still shipping a GEOS
+      that loses the M ordinate. `deploy/images/query-layer-pin-check.py` runs during the
+      build and asserts the behaviour instead — that M comes back exactly *and* that Z is
+      still the elevations, since a check on M alone cannot distinguish the third mode —
+      and fails the build otherwise. Both destinations build from one Dockerfile and one
+      requirements file, so what they share is not merely a version string but a proven
+      property: whatever resolves, it demonstrably survives WKT parsing or there is no
+      image. The guard is negative-tested against Shapely 2.0.3/GEOS 3.11.3 and
+      2.0.7/GEOS 3.11.4, both of which fail the build.
 - [ ] T044 Run the full quality-gate set against this feature's files — lint, format, wall-clock gate, literal-path gate, forbidden-vocabulary gate — and fix what they report
 - [ ] T045 Walk the whole feature from a genuinely clean machine: provision, deploy, seed, reset, reboot; correct the documentation wherever it proved wrong
 

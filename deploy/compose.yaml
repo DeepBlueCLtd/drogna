@@ -78,7 +78,7 @@ services:
     healthcheck: *python-healthcheck
 
   # C-02 environment generator.
-  generator:
+  env-generator:
     <<: *runtime
     profiles: [generator, full]
     build:
@@ -87,7 +87,7 @@ services:
         HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
         HARNESS_SERVICE: harness_env_generator
     environment:
-      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_GENERATOR}
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_ENV_GENERATOR}
     volumes:
       - *config-mount
       - type: volume
@@ -192,7 +192,7 @@ services:
 
   # C-07 feature store. Static spatial reference, provisioned by script at scenario start
   # and read-only thereafter, so it is a one-shot job rather than a long-lived service.
-  features-provisioner:
+  features:
     <<: *runtime
     profiles: [provisioning, full]
     restart: "no"

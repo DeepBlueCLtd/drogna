@@ -17,3 +17,4 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0006](0006-heartbeat-cadence-is-real-time.md) | Heartbeat cadence and liveness windows are real time | Accepted |
 | [0007](0007-host-time-for-display-smoothing.md) | Host time may smooth the display between clock samples | Accepted |
 | [0008](0008-control-messages-reach-the-client-by-websocket-upgrade.md) | Control messages reach the client by WebSocket upgrade at the proxy | Accepted |
+| [0009](0009-clock-transport-and-lockstep-mode.md) | The clock publishes on the control namespace, and gains a lockstep mode | Accepted |

@@ -1,0 +1,22 @@
+# The gates, in the order scripts/gates.sh runs them.
+#
+# One gate per line: the principle it enforces, a bar, then the command. Blank lines and
+# lines beginning with # are ignored, so a gate can be introduced with the reason it
+# exists rather than left to be inferred from its filename.
+#
+# A later feature adds a gate by appending a line here. That is the whole of FR-036's
+# second half: nothing in scripts/gates.sh names an individual gate, so adding one never
+# means editing the runner and never risks disturbing the gates already registered.
+#
+# Ordering is deliberate where it matters. The three Constitution III checks run last and
+# in their own sequence: conventions first, because a master that breaks them generates a
+# type nobody can find; the drift check last, because it is the one that proves the
+# committed trees still match their sources.
+
+Constitution I — no wall-clock time|uv run python scripts/check_no_wallclock.py
+Constitution II — seeded randomness|uv run python scripts/check_seeded_rng.py
+Constitution IV — no literal paths or hosts|uv run python scripts/check_no_literal_paths.py
+Constitution V — no tracked-entity vocabulary|uv run python scripts/check_forbidden_vocabulary.py
+Constitution III — schema conventions|uv run python scripts/check_schema_conventions.py
+Constitution III — no hand-written boundary types|uv run python scripts/check_handwritten_types.py
+Constitution III — generated types are current|./scripts/check_types_drift.sh

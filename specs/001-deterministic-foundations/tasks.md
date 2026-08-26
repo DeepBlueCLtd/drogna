@@ -53,8 +53,8 @@ what a plan turned out to be wrong about is worth more than a plan that looks pr
    added there.
 
 What is still open is left unticked and named at the end of this list rather than quietly
-dropped: the gate fixtures cover Python only (T033), there is no single `scripts/gates.sh`
-(T039), and AT-04's lockstep two-participant replay proof does not exist (T042, T047). AT-04 today
+dropped: the gate fixtures cover Python only (T033), and AT-04's lockstep two-participant replay
+proof does not exist (T042, T047). AT-04 today
 scores the environment generator's reproducibility of values, under a different file name, which is
 a narrower claim than the one T042 was written for.
 
@@ -266,11 +266,12 @@ different sequences from a different root; reconstruction from the manifest alon
 - [x] T038 [P] [US4] Implement `scripts/check_no_literal_paths.py`: flag path-like, host-like,
       URL-like and port-like literals in component source and any environment variable read other
       than `HARNESS_CONFIG`.
-- [ ] T039 [US4] Implement `scripts/gates.sh`: run the gates in a fixed order, aggregate exit codes,
+- [x] T039 [US4] Implement `scripts/gates.sh`: run the gates in a fixed order, aggregate exit codes,
       print the exemption inventory, and take gates from a registry list so later features append
-      rather than edit. **Not done**: six gates now exist in `scripts/` and are run one at a time, so
-      the single documented command FR-036 asks for does not exist and later features have been
-      adding gates without a runner to append to.
+      rather than edit. Gates are listed in `scripts/gates.registry`; the runner names none of them.
+      Every gate runs even after one fails, so a run reports the whole picture rather than one
+      violation at a time, and the inventory is printed once rather than per gate. CI now runs the
+      one command instead of keeping a second copy of the list that could fall behind.
 - [x] T040 [US4] Run the gates over the tree and remove every finding. Two operational wall-clock
       exemptions survive rather than one: the clock service's real-time driver, and heartbeat
       emission. The second is ADR-0006, ratified into Constitution I after this task was written,

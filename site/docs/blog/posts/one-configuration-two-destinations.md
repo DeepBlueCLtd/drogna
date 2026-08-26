@@ -81,10 +81,11 @@ believes a file.
 
 ## Seed data is produced, never accumulated
 
-Every volume holds derived data. Every one has a script that fills it. Removing any of
-them loses nothing that cannot be made again, which is what makes an instance
-disposable — and it is why a fresh instance is equivalent to one that has been running
-for a week.
+Every volume holds derived data, and removing any of them loses nothing that cannot be
+made again: the stores are refilled by a seeding script from the root seed, and the
+broker's persistence by the messages a running stack produces inside its own liveness
+windows. That is what makes an instance disposable, and it is why a fresh instance is
+equivalent to one that has been running for a week.
 
 "Equivalent" is worth little as an assertion, so seeding writes a record: the root
 seed, the version of the seeding driver, the active profiles, a digest of every

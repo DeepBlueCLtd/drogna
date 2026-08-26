@@ -12,8 +12,9 @@ description: >-
 
 # Eighteen boxes, none of them lit
 
-Here is the first thing drogna built that you can look at. It is an application in
-which nothing works, and that is the finished state of it.
+This is the first piece of drogna itself — as opposed to the site you are reading —
+that there is anything to look at. It is an application in which nothing works, and
+that is the finished state of it.
 
 <!-- more -->
 
@@ -80,7 +81,7 @@ at, lit by its own presence.
 Every state carries a word and a mark as well as a colour, and the word is the primary
 carrier. That is because these screenshots are meant to be printed in blog posts,
 possibly in greyscale, and a display distinguished only by hue does not survive the
-trip. `NOT HEARD FROM` is written in each of those eighteen boxes.
+trip. `NOT HEARD FROM` is written inside every dark box above.
 
 ## Two panels for the awkward cases
 
@@ -111,9 +112,9 @@ impressive is doing its author a favour rather than its reader.
 
 ## What is not built
 
-Almost all of it. Every one of those eighteen boxes is a component that does not exist
-or does not yet run: the drawing is a statement of intent, and it says so on the page
-in words directly above the diagram. Adding a box to this layout adds a grey rectangle
+Almost all of it. Seventeen of those eighteen boxes are components that do not exist
+yet or do not yet run; the eighteenth is the page itself. The drawing is a statement
+of intent, and it says so on the page, in words directly above the diagram. Adding a box to this layout adds a grey rectangle
 and nothing else — no claim, no capability, no change to what the page can report.
 
 The first component to publish a real heartbeat will change exactly one of those boxes,

@@ -187,9 +187,7 @@ def _document_findings(
 ) -> Iterable[Finding]:
     name = path.name
     if not name.endswith(SUFFIX):
-        yield _findings(
-            path, 1, "naming", name, f"a master is named <topic-noun>{SUFFIX}"
-        )
+        yield _findings(path, 1, "naming", name, f"a master is named <topic-noun>{SUFFIX}")
         stem = name.split(".")[0]
     else:
         stem = name[: -len(SUFFIX)]

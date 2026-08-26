@@ -302,12 +302,6 @@ within the configured simulation-time budget, reproducible from the manifest.
   lint gates over all four packages and fix anything they surface, confirming that
   every surviving `# harness:allow-wallclock` marker is a heartbeat emission citing
   ADR-0006 and that nothing else in the four services reads host time (SC-014).
-- [ ] T044a [P] Integration test: with the clock rate pinned to zero for longer than
-  every declared liveness window, all four services keep publishing heartbeats on
-  their real-time cadence, each carrying the same unchanging simulation time, and no
-  component falls out of its liveness window (SC-013, ADR-0006). This is the
-  regression test on the decision that a rate of zero stops simulated time and stops
-  nothing else, and it is what makes feature 016's rate-zero capture meaningful.
 - [ ] T045 [P] Add the four components to the component reference in
   `docs/architecture/`, naming the failure mode each owns, and write the
   ensemble-spread and advection derivations in `docs/algorithms/`, which PR-09
@@ -315,6 +309,13 @@ within the configured simulation-time budget, reproducible from the manifest.
   formulation is written up there too, beside the shared implementation it documents,
   per ADR-0005. Record an ADR if atomic visibility cannot be achieved by a single
   rename on the deployment's volume.
+- [ ] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
+  with the clock rate pinned to zero for longer than every declared liveness window,
+  all four services keep publishing heartbeats on their real-time cadence, each
+  carrying the same unchanging simulation time, and no component falls out of its
+  liveness window (SC-013, ADR-0006). This is the regression test on the decision that
+  a rate of zero stops simulated time and stops nothing else, and it is what makes
+  feature 016's rate-zero capture meaningful.
 
 ---
 

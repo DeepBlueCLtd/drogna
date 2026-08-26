@@ -52,5 +52,5 @@ if ! compose up --detach --build --wait --wait-timeout "${wait_timeout}"; then
 fi
 
 step "Up after $(elapsed)"
-compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Health}}'
+compose ps
 printf '\nThis destination advertises %s\n' "$(public_url)"

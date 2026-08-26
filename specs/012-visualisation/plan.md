@@ -44,9 +44,11 @@ the maximum supported simulation rate; message buffers bounded so an hour-long
 demonstration does not degrade; uncertainty overlay refresh within one animation cycle
 of a `ctl/run-published` message.
 
-**Constraints**: No host time as a source of truth anywhere (one narrow, marked and
-argued exemption, below). No mocked or synthesised traffic, no demo mode, no fixture
-mode. No hand-written message or API types. No broker URL, query layer path or topic
+**Constraints**: No host time as a source of truth anywhere. Host time appears in two
+places only, both of them exemptions the constitution already carries and both marked
+in source with the ADR that grants them: liveness evaluation (ADR-0006) and
+interpolation between received clock samples in the render path (ADR-0007). No mocked
+or synthesised traffic, no demo mode, no fixture mode. No hand-written message or API types. No broker URL, query layer path or topic
 prefix as a literal in source. No control that accepts, tasks or executes a route.
 
 **Scale/Scope**: Four user-visible additions plus one cross-cutting visual treatment,

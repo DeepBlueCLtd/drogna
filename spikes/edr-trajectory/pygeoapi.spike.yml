@@ -91,6 +91,46 @@ resources:
         options:
           time_method: linear
 
+  # The same provider with the other out-of-domain behaviour, so the finding can show
+  # both. Nothing in the request distinguishes them: the choice is the provider's, and
+  # it is invisible from outside.
+  spike_coverage_extrapolate:
+    type: collection
+    title: Synthetic four-dimensional coverage (extrapolating variant)
+    description: >-
+      SYNTHETIC. The spike fixture served by the same throwaway provider configured to
+      extrapolate outside the coverage's domain rather than return null.
+    keywords:
+      - synthetic
+      - spike
+    extents:
+      spatial:
+        bbox: [-4.0, 48.0, 1.0, 53.0]
+        crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+      temporal:
+        begin: 2026-09-01T00:00:00Z
+        end: 2026-09-02T12:00:00Z
+    links:
+      - type: text/html
+        rel: canonical
+        title: the spike's own finding
+        href: https://example.invalid/drogna-spike/FINDING.md
+        hreflang: en-GB
+    providers:
+      - type: edr
+        name: provider_stub.SpikeTrajectoryEDRProvider
+        data: /spike/fixture/spike_coverage.nc
+        x_field: lon
+        y_field: lat
+        z_field: depth
+        time_field: time
+        format:
+          name: NetCDF
+          mimetype: application/x-netcdf
+        options:
+          time_method: linear
+          out_of_domain: extrapolate
+
   # The same fixture through the supplied provider, so the finding can quote what
   # pygeoapi offers out of the box rather than asserting it.
   spike_coverage_stock:

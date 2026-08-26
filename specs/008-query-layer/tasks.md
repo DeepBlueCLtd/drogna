@@ -109,7 +109,7 @@ vertex against the manifest; shift one vertex's time and see only that vertex ch
 ### Implementation for User Story 2
 
 - [ ] T026 [US2] Pin Shapely 2.1 or later built against GEOS 3.12 or later in the query layer's image and workspace, with a comment stating that below those versions the M ordinate is returned as NaN and per-vertex timestamps are lost silently before any provider code runs
-- [ ] T027 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and record the trajectory provider decision as an ADR under PR-03
+- [ ] T027 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and check it against ADR-0003, which already records the trajectory provider decision, amending the record if the spike contradicts it
 - [ ] T028 [US2] Implement `query/plugins/edr_trajectory.py`: accept the geometry pygeoapi hands over, read the per-vertex M ordinate as the vertex time, and reject a geometry whose M values are absent or NaN with a message naming the version pin
 - [ ] T029 [US2] Implement per-vertex sampling in the provider: for each vertex, interpolate the forecast and uncertainty parameters at that vertex's own position, depth and time
 - [ ] T030 [US2] Assemble the response as a CoverageJSON Trajectory domain whose composite axis carries the per-vertex tuple of time, longitude, latitude and depth, and validate it against the specification in the test suite

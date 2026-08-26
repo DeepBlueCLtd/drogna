@@ -79,6 +79,11 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
         # can be answered by running the same route twice.
         options = provider_def.get('options') or {}
         self.time_method = options.get('time_method', 'linear')
+        # 'null' returns nothing outside the coverage's domain; 'extrapolate' returns a
+        # number. Both are one word apart in the code and indistinguishable from
+        # outside, which is the point: AT-01's reported error depends on the choice, so
+        # the real provider must make it deliberately and say which it made.
+        self.out_of_domain = options.get('out_of_domain', 'null')
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Redeclared so that __init_subclass__ still advertises them. See the module
@@ -95,23 +100,29 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
         handoff = self._record_handoff(geometry, kwargs)
 
         if geometry is None or geometry.geom_type != 'LineString':
-            raise ProviderQueryError(
+            message = (
                 'trajectory requires a LINESTRING coords parameter; received '
                 f'{None if geometry is None else geometry.geom_type}'
             )
+            # pygeoapi returns the class default message unless user_msg is given:
+            # GenericError.message is `self.user_msg if self.user_msg else
+            # self.default_msg`. A diagnostic passed positionally never reaches the
+            # client.
+            raise ProviderQueryError(message, user_msg=message)
 
         m_values = read_m(geometry)
         if any(value is None for value in m_values):
             # The failure SRD FR-51's version pin exists to prevent. Raise rather than
             # return values for an arbitrary time: a structurally valid response
             # carrying wrong times is the outcome the whole spike is designed to catch.
-            raise ProviderQueryError(
+            message = (
                 'no per-vertex M ordinate reached the provider (shapely '
                 f'{shapely.__version__} on GEOS '
                 f"{'.'.join(str(part) for part in shapely.geos_version)}). "
                 'Per-vertex arrival times are unavailable; refusing to answer at a '
                 'single time. See SRD FR-51.'
             )
+            raise ProviderQueryError(message, user_msg=message)
 
         elevations = read_z(geometry)
         longitudes = np.array([vertex[0] for vertex in geometry.coords], dtype=float)
@@ -131,7 +142,9 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
             if not select_properties or name in select_properties
         }
         if not fields:
-            raise ProviderQueryError('no parameters selected')
+            raise ProviderQueryError(
+                'no parameters selected', user_msg='no parameters selected'
+            )
 
         index = xr.DataArray(np.arange(len(longitudes)), dims='vertex')
         indexers = {
@@ -144,8 +157,11 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
                 depths, dims='vertex', coords={'vertex': index}
             )
 
+        interp_kwargs = (
+            {'fill_value': None} if self.out_of_domain == 'extrapolate' else {}
+        )
         sampled = self._data[list(fields)].interp(
-            **indexers, method=self.time_method, kwargs={'fill_value': None}
+            **indexers, method=self.time_method, kwargs=interp_kwargs
         )
 
         ranges = {}
@@ -216,6 +232,7 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
                     'formula. Not a forecast.'
                 ),
                 'time_method': self.time_method,
+                'out_of_domain': self.out_of_domain,
                 'handoff_record': handoff.name,
             },
         }
@@ -233,6 +250,7 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
             'z_field': self.z_field,
             'time_field': self.time_field,
             'time_method': self.time_method,
+            'out_of_domain': self.out_of_domain,
             'kwargs': {key: _jsonable(value) for key, value in kwargs.items()},
         }
         if geometry is not None:
@@ -251,8 +269,9 @@ class SpikeTrajectoryEDRProvider(XarrayEDRProvider):
         # Deterministic, collision-free without a clock: one file per query type per
         # vertex count, overwritten on repeat.
         vertices = 0 if geometry is None else len(geometry.coords)
+        suffix = '' if self.out_of_domain == 'null' else f'-{self.out_of_domain}'
         path = RESULTS_DIR / (
-            f"handoff-{kwargs.get('query_type', 'unknown')}-{vertices}v.json"
+            f"handoff-{kwargs.get('query_type', 'unknown')}-{vertices}v{suffix}.json"
         )
         path.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
         LOGGER.debug(f'recorded provider hand-off to {path}')

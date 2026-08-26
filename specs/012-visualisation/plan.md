@@ -54,27 +54,32 @@ over a layout of eighteen components and the boundaries between them.
 
 ## Constitution Check
 
-*GATE: passed at planning time with one recorded exemption; re-check before
-implementation of each user story.*
+*GATE: passed at planning time; re-check before implementation of each user story.*
 
 | Principle | How this feature complies |
 |---|---|
-| **I. No Wall-Clock Time (non-negotiable)** | Every displayed time, every state transition and every animation that represents the passage of simulation time is driven by the clock service. When the clock is unreachable, displayed time stops and is marked stale rather than falling back to the browser. One exemption exists — the animation frame callback's timestamp, used only to interpolate between two clock samples — and it is recorded in Complexity Tracking below with its marker and its ADR. |
+| **I. No Wall-Clock Time (non-negotiable)** | Every displayed time, every state transition and every animation that represents the passage of simulation time is driven by the clock service. When the clock is unreachable, displayed time stops and is marked stale rather than falling back to the browser. Two exemptions apply, both of them the constitution's own and neither of them a violation: liveness evaluation in real time (ADR-0006) and interpolation between two received clock samples in the render path (ADR-0007). Each is marked `// harness:allow-wallclock` with its ADR named, each is confined to one module, and the gate flags every other use. The render-path exemption is bounded by three rules in FR-013: never extrapolate past the latest sample, every arriving sample snaps the display and discards the interpolation, and no value derived from it leaves the render path. |
 | **II. Seeded Randomness and Deterministic Replay** | The client draws no random numbers for anything an observer can see: no jitter, no randomised layout, no `Math.random` in a shipped path. Layout positions are derived from the static architectural description, so the same scenario renders identically on replay, which is also what makes capture comparable. |
 | **III. Generated Types Only (non-negotiable)** | Every control message shape and every query layer response type comes from `client/src/generated/`. The inspector displays the schema name from the same generated source, so the contract shown and the type used are the same artefact. No hand-written mirror of a payload exists in this feature. |
 | **IV. No Literal Paths or Hosts (non-negotiable)** | Broker URL, query layer base path, topic prefixes, buffer depths and liveness windows arrive as runtime configuration served to the client, following the rule that binds the client as well as the services. |
 | **V. No Tracked Entities (non-negotiable)** | The client renders measurements, forecast and uncertainty fields, sampling recommendations and telemetry. The platform is a position marker; the route is a recommendation over cells and is labelled as one. The forbidden-vocabulary gate covers the client additions. |
 | **VI. Honest Ports** | The client introduces no port and dresses nothing as one. It is a consumer: broker in, query layer in, pixels out. The core-versus-plumbing treatment is where port honesty becomes visible — the display names what is genuinely bespoke rather than implying the whole system is. |
-| **VII. Liveness, Not Configuration (non-negotiable)** | Illumination comes from `ctl/heartbeat` alone, beginning with the simulation clock's heartbeat, which is drogna's first liveness signal (SRD FR-52). Classification changes appearance, never illumination. There is no demo mode, no fixture mode and no populate-for-the-screenshot path; a transit is drawn only for a message genuinely received, and a message addressed to a silent component does not light it. |
+| **VII. Liveness, Not Configuration (non-negotiable)** | Illumination comes from `ctl/heartbeat` alone, beginning with the simulation clock's heartbeat, which is drogna's first liveness signal (SRD FR-52). Liveness windows are evaluated in real time and the simulation time a heartbeat carries is payload (ADR-0006), so pinning the rate to zero for a capture leaves a running system lit instead of greying it out. Classification changes appearance, never illumination. There is no demo mode, no fixture mode and no populate-for-the-screenshot path; a transit is drawn only for a message genuinely received, and a message addressed to a silent component does not light it. |
 | **VIII. Recommendations, Not Decisions** | The route is rendered and labelled a recommendation. There is no control to accept, task, execute or order it, and an automated interaction and vocabulary test asserts as much. Rendering is explicitly permitted by the principle; commanding is not, and the interface offers no way to. |
 | **IX. Ground Truth Is Scored, Not Assumed** | Where telemetry reports that the forecast is not beating its persistence reference, the client says so in plain words with the sample count and both errors beside it, which is the display half of FR-38. Stale statistics are rendered stale. The client never presents a figure more confidently than telemetry stated it. |
 | **X. Default Deny at the Boundary** | The client is served behind the reverse proxy under whatever path policy feature 013 sets. It adds no new exposed path and no direct route to a store. Planned routes and measurement locations are visible here because this is the internal display, not a downstream release; nothing in this feature exports anything. |
 
-## Complexity Tracking
+No violations. Complexity Tracking is therefore empty and omitted.
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| Principle I: the browser animation frame callback's timestamp is read, to interpolate between two simulation-clock samples. Marked `// harness:allow-wallclock frame interpolation only`, confined to one module, and carrying an ADR. | Clock samples arrive at the clock service's publication rate. Rendering only on their arrival makes every motion in the display step at that rate, which at a low rate is a slideshow and makes the loop harder to read, not easier — the opposite of what FR-46 exists for. | Rendering strictly on clock samples was tried first in the design and is the fallback if the exemption ever leaks. It is rejected as the default because the visual smoothness is the point of an animated loop. The exemption is bounded by three rules the ADR records: the frame timestamp may only interpolate between two clock samples already received, it may never extrapolate beyond the latest sample, and no state transition, no displayed timestamp and no data fetch may depend on it. When the clock stops, interpolation stops with it. |
+This feature's Complexity Tracking table previously carried one entry: reading the
+browser's animation frame timestamp to interpolate between two clock samples. That was
+the right way to hold it while it was undecided, and it is now decided. ADR-0007 grants
+the exemption, the constitution carries it, and FR-013 states the three rules that bind
+it. Recording it as a standing violation would misdescribe it: what remains is not a
+debt but a boundary, and the discipline that keeps it a boundary is the third rule —
+that nothing derived from the frame timestamp leaves the render path — which is the one
+that would be broken silently and is therefore asserted by a test (SC-014) rather than
+by review.
 
 ## Project Structure
 

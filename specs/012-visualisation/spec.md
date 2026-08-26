@@ -474,9 +474,10 @@ accept or task the route.
 - Frame scheduling uses the browser's animation frame callback, and its timestamp is
   used solely to interpolate smoothly between two simulation-clock samples. This is no
   longer a violation to be argued: ADR-0007 decides it, the constitution carries the
-  exemption, and FR-013a states the three rules that bound it. It is never a source of
+  exemption, and FR-013 states the three rules that bound it. It is never a source of
   truth for any displayed time or any state transition, and the render-on-clock-samples
-  fallback of FR-013b remains available at the cost of smoothness alone.
+  fallback stated in the same requirement remains available at the cost of smoothness
+  alone.
 - The client's second and last use of host time is liveness evaluation, under ADR-0006.
   Both exemptions concern the boundary between the simulated world and the machine
   displaying it, which is the shape of that boundary rather than a slide; a third

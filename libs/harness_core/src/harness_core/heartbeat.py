@@ -5,11 +5,20 @@ and Constitution VII forbids any substitute: no mocked traffic, no ``enabled: tr
 list of components that ought to exist. A component is lit in the client because a
 message from it arrived within its declared liveness window, and for nothing else.
 
-Two consequences shape this module. The interval is declared in *ticks*, not host
-seconds, so liveness is judged in simulation time: a pinned clock ages nothing, and a
-rate change does not make a working component look dead. And the message carries the
-component's config digest, which is the route by which a participant's digest reaches
-the run manifest without the configuration itself ever leaving the component.
+Cadence is *real time*, and this is the one thing about heartbeats that must not be got
+wrong. ADR-0006: if the interval were measured in simulation time then at rate zero no
+heartbeat would ever be due, every liveness window would expire, and a running system
+would grey out during exactly the capture FR-53 exists to make meaningful. Liveness
+answers "is this process alive?", which is a fact about the host, so the host's clock
+answers it. The simulation time a heartbeat carries is payload, not schedule.
+
+Constitution I carries a narrow named exemption for precisely this, and the marker in
+this module cites ADR-0006. The exemption covers emitting a heartbeat and evaluating a
+liveness window, and nothing else.
+
+The message also carries the component's config digest, which is how a participant's
+digest reaches the run manifest without the configuration itself ever leaving the
+component.
 
 The schema lives beside this module because feature 003 owns
 ``contracts/schemas/heartbeat.schema.json`` and has not been written yet. That feature
@@ -19,7 +28,8 @@ must adopt this shape unchanged; what is published here is validated against it.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import lru_cache
@@ -100,10 +110,11 @@ class MessagePublisher(Protocol):
 
 
 class HeartbeatPublisher:
-    """Publishes a heartbeat every ``interval_ticks`` of simulation time.
+    """Publishes a heartbeat every ``interval_seconds`` of *host* time (ADR-0006).
 
     The pattern every later component copies: hold the component id and config digest,
-    take a tick, decide by tick arithmetic whether one is due, validate, publish.
+    take the current tick, ask whether the real-time interval has elapsed, validate,
+    publish. The host counter is injectable so that a test controls cadence exactly.
     """
 
     def __init__(
@@ -111,32 +122,36 @@ class HeartbeatPublisher:
         publisher: MessagePublisher,
         *,
         component: str,
-        interval_ticks: int,
+        interval_seconds: float,
         config_digest: str | None = None,
         topic: str = HEARTBEAT_TOPIC,
+        monotonic: Callable[[], float] | None = None,
     ) -> None:
-        if interval_ticks < 1:
-            raise ValueError("a heartbeat interval is at least one tick")
+        if interval_seconds <= 0:
+            raise ValueError("a heartbeat interval is a positive number of host seconds")
         self._publisher = publisher
         self._component = component
-        self._interval_ticks = interval_ticks
+        self._interval_seconds = interval_seconds
         self._config_digest = config_digest
         self._topic = topic
+        # harness:allow-wallclock ADR-0006, heartbeat cadence and liveness are real time
+        self._monotonic = monotonic or time.monotonic
         self._last_published: int | None = None
+        self._last_published_at: float | None = None
 
     @property
     def last_published_tick(self) -> int | None:
         return self._last_published
 
-    def due(self, tick: Tick) -> bool:
-        """Whether a heartbeat is due at this tick.
+    def due(self) -> bool:
+        """Whether the real-time interval has elapsed since the last heartbeat.
 
-        Keyed to tick values rather than to a count of received ticks, because in
-        accelerated mode a consumer sees gaps and a count would drift.
+        Deliberately not keyed to ticks: a rate of zero stops simulated time and stops
+        nothing else, so a pinned clock keeps its lit components lit.
         """
-        if self._last_published is None:
+        if self._last_published_at is None:
             return True
-        return tick.index - self._last_published >= self._interval_ticks
+        return self._monotonic() - self._last_published_at >= self._interval_seconds
 
     def publish(
         self,
@@ -158,6 +173,7 @@ class HeartbeatPublisher:
         validate_heartbeat(message)
         self._publisher.publish(self._topic, json.dumps(message, sort_keys=True).encode("utf-8"))
         self._last_published = tick.index
+        self._last_published_at = self._monotonic()
         return message
 
     def maybe_publish(
@@ -167,7 +183,7 @@ class HeartbeatPublisher:
         status: HeartbeatStatus = HeartbeatStatus.OK,
         detail: str = "",
     ) -> Mapping[str, Any] | None:
-        """Publish if the declared interval has elapsed in simulation time."""
-        if not self.due(tick):
+        """Publish if the declared interval has elapsed in host time."""
+        if not self.due():
             return None
         return self.publish(tick, status=status, detail=detail)

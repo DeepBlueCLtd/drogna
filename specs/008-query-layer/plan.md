@@ -183,12 +183,15 @@ tests/
 │   ├── test_coverage_catalogue.py
 │   ├── test_trajectory_validation.py
 │   ├── test_wkt_m_ordinate.py      M survives parsing at the pinned versions
+│   ├── test_sensorthings_options.py    in-scope options answered, out-of-scope refused
+│   ├── test_pygeoapi_version_pin.py    both plugins refuse an untested version
 │   └── test_config_rendering.py
 ├── integration/
 │   ├── test_edr_position_cube.py
 │   ├── test_edr_trajectory.py
 │   ├── test_new_run_servable.py
-│   └── test_sensorthings.py
+│   ├── test_sensorthings.py
+│   └── test_sensorthings_conformance.py  collection metadata and primer agree
 └── acceptance/
     └── test_at01_trajectory.py     AT-01, scored against the ground-truth manifest
 ```

@@ -36,7 +36,7 @@ files in the shared Compose and destination files.
 
 **Purpose**: The service's place in the stack and its pinned version.
 
-- [ ] T001 Create `query/` with the pygeoapi configuration template, the `plugins/` package and `render_config.py`, and pin the pygeoapi version by exact release in the deployment image
+- [ ] T001 Create `query/` with the pygeoapi configuration template, the `plugins/` package and `render_config.py`, and pin the pygeoapi version by exact release in the deployment image, recording that one pin in `query/plugins/pygeoapi_version.py` so both bespoke providers share it (FR-031)
 - [ ] T002 [P] Create `stores/coverage/` with `layout.md`, `validate_layout.py` and an example run manifest
 - [ ] T003 [P] Add `contracts/schemas/config.query.schema.json` covering coverage store root, database connection, public base URL, response limits and heartbeat interval, and add the corresponding files to `config/local/` and `config/droplet/`
 - [ ] T004 Add the query layer service to `deploy/compose.yaml` under the appropriate profile with a health check, taking its configuration path from the destination environment file
@@ -145,38 +145,49 @@ collection resolves to it, and the previous run remains addressable.
 
 ---
 
-## Phase 6: User Story 4 - Observations are readable over SensorThings (Priority: P4)
+## Phase 6: User Story 4 - A bespoke provider serves observations over SensorThings (Priority: P4)
 
-**Goal**: SensorThings Part 1 Sensing over the observation store, read-only, filtered on
-simulation time.
+**Goal**: A SensorThings Part 1 Sensing provider written for this harness, serving a stated
+subset of the standard read-only from the `observations` schema, filtered on simulation time,
+with the parts it does not implement documented rather than discovered.
 
-**Independent Test**: Populate the observation store, walk the entity set, and reconcile
-observation counts against the store.
+**Independent Test**: Populate the observation store, walk the entity set from the service root
+through navigation links alone, reconcile observation counts against the store, and issue an
+excluded query option to confirm it is refused by name.
 
 ### Tests for User Story 4
 
-- [ ] T041 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams and Observations, asserting navigation between them, reconciling the observation count per datastream against the store, and asserting that time filtering is on phenomenon time with no arrival or insertion time exposed or filterable
+- [ ] T041 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams, Observations and FeaturesOfInterest from the service root through navigation links alone, asserting the links resolve in both directions, reconciling the observation count per datastream against the store, and asserting that time filtering is on phenomenon time with no arrival or insertion time exposed or filterable
 - [ ] T042 [P] [US4] Add a case asserting every write operation through the interface fails
+- [ ] T043 [P] [US4] Write `tests/unit/test_sensorthings_options.py` covering the implemented options — `$top`, `$skip` with the next link, `$count`, `$orderby` on phenomenon time, `$filter` on phenomenon time, single-level `$expand` — and asserting that each excluded option in FR-029 is refused with the option named and the conformance statement referenced, never ignored (SC-015)
+- [ ] T044 [P] [US4] Write `tests/unit/test_pygeoapi_version_pin.py` asserting that both bespoke providers refuse to start against a pygeoapi version other than the pinned one, naming the version found and the version expected (SC-016)
+- [ ] T045 [P] [US4] Write `tests/integration/test_sensorthings_conformance.py` asserting that the collection metadata and `docs/standards/` name the same implemented subset and the same absent parts, and that no artefact of this feature claims conformance (SC-014)
 
 ### Implementation for User Story 4
 
-- [ ] T043 [US4] Establish against the pinned pygeoapi version whether the SensorThings entity set can be served from the `observations` schema directly, by a harness-authored provider plugin, or only by a companion implementation; record the finding and, if it is the third, raise an ADR and add a Complexity Tracking entry to `plan.md`
-- [ ] T044 [US4] Implement `query/plugins/sensorthings_provider.py` for the chosen mechanism, projecting the store's rows onto the entity set without a second definition of the observation shape
-- [ ] T045 [US4] Implement entity navigation and the expansion the client needs, bounded by the configured response limits
-- [ ] T046 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
-- [ ] T047 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
+- [ ] T046 [US4] Implement `query/plugins/sensorthings_entities.py`: the entity model — Things, Sensors, ObservedProperties, Datastreams, Observations, FeaturesOfInterest — projected from the store's rows without a second definition of the observation shape, with Locations and HistoricalLocations deliberately absent and the reason recorded beside them (FR-026)
+- [ ] T047 [US4] Implement the resource path grammar in the same module: an entity set, an entity by identifier, and navigation from an entity to a related entity or entity set to the documented depth, with a refusal that names the grammar for anything beyond it (FR-027)
+- [ ] T048 [US4] Implement self links and navigation links on every served entity, one per relationship, so the entity set is walkable from the service root without prior knowledge of the paths (FR-027, SC-013)
+- [ ] T049 [US4] Implement `query/plugins/sensorthings_options.py`: `$top`, `$skip` with a next link, `$count`, `$orderby` and `$filter` restricted to phenomenon time, and single-level `$expand`, each bounded by the configured page size (FR-028, FR-020)
+- [ ] T050 [US4] Implement the refusal path for every option in FR-029, naming the option and pointing at the conformance statement, so an excluded option is never silently ignored nor answered as though applied (FR-029)
+- [ ] T051 [US4] Implement `query/plugins/sensorthings_provider.py` binding the entity model, the path grammar and the options to pygeoapi's provider base class, reading through the select-only role (FR-009)
+- [ ] T052 [US4] Implement `query/plugins/pygeoapi_version.py` as the single shared pin and call it from both bespoke providers at startup, failing loudly with both versions named rather than serving against an untested base class (FR-031)
+- [ ] T053 [US4] Write `query/conformance.md`: the implemented subset, every absent part of the standard with its reason — including Locations and HistoricalLocations, the MQTT subscription extension and the Part 2 Tasking entities — and the plain statement that this interface is not conformant (FR-030)
+- [ ] T054 [US4] Serve the conformance statement in the collection's own metadata, so a reader learns the limits from the interface as well as from the documentation (FR-030)
+- [ ] T055 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
+- [ ] T056 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
 
-**Checkpoint**: Both stores are readable through standards, and nothing is readable any other
-way.
+**Checkpoint**: Both stores are readable through standards, nothing is readable any other way,
+and the harness says exactly how much of SensorThings it implements.
 
 ---
 
 ## Phase 7: Polish
 
-- [ ] T048 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result
-- [ ] T049 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, and where this harness uses each
-- [ ] T050 Run the full quality-gate set over this feature's files and fix what they report
-- [ ] T051 Measure and record the response times for a position query and a hundred-vertex trajectory query on the droplet, and adjust the documented limits to what the droplet can actually serve
+- [ ] T057 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result
+- [ ] T058 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, where this harness uses each, and — carried from `query/conformance.md` so the two cannot disagree — which subset of SensorThings Part 1 drogna implements and which parts are absent (FR-030)
+- [ ] T059 Run the full quality-gate set over this feature's files and fix what they report
+- [ ] T060 Measure and record the response times for a position query, a hundred-vertex trajectory query and a full SensorThings page on the droplet, and adjust the documented limits to what the droplet can actually serve
 
 ---
 
@@ -194,6 +205,9 @@ way.
 - **User Story 3 (Phase 5)**: Depends on User Story 1. Independent of User Stories 2 and 4.
 - **User Story 4 (Phase 6)**: Depends on Foundational and on `007-observation-path` having
   populated the store. Independent of User Stories 1 to 3, and can be worked alongside them.
+  It is a build of comparable weight to User Story 2, not a configuration exercise: the entity
+  model, the path grammar, the navigation links, the query options and the conformance
+  statement are all written here (ADR-0004).
 - **Polish (Phase 7)**: Depends on the stories being delivered.
 
 ### External Dependencies
@@ -221,6 +235,7 @@ quoting them.
 - T008, T009 and T011 are independent of one another.
 - Every test task marked `[P]` within a story can be written together before its
   implementation begins.
+- T041 to T045 are five independent test files and can be written together.
 - User Story 4 is independent of the coverage stories and can be worked alongside them by
   someone else.
 
@@ -253,12 +268,16 @@ is exporting.
 3. User Story 2 — trajectory with per-vertex timestamps, and AT-01 scored.
 4. User Story 3 — new runs servable without a configuration edit, which unblocks the control
    loop closing on its own.
-5. User Story 4 — SensorThings, once its mechanism is established.
+5. User Story 4 — the SensorThings provider: entity model, path grammar, navigation links,
+   the implemented query options, and the conformance statement that says what is absent.
 
 ### Notes
 
 - `[P]` marks different files with no unfinished dependency.
 - Each task is sized to be one coherent commit.
-- One task in this feature is permitted to change the plan: the SensorThings mechanism task may
-  add the feature's only Complexity Tracking entry. It is a decision taken on evidence and is
-  recorded as an ADR rather than settled quietly.
+- This feature carries two bespoke provider plugins against pygeoapi's provider base class,
+  which is two compatibility surfaces against one third-party interface. They share one answer:
+  a single version pin in `query/plugins/pygeoapi_version.py`, checked at startup by both, with
+  a loud failure on an untested version (T052). Nothing here is left for an investigation task
+  to settle; ADR-0003 and ADR-0004 settled both mechanisms, and the plan's Complexity Tracking
+  table is consequently empty.

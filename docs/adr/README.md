@@ -19,3 +19,4 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0008](0008-control-messages-reach-the-client-by-websocket-upgrade.md) | Control messages reach the client by WebSocket upgrade at the proxy | Accepted |
 | [0009](0009-clock-transport-and-lockstep-mode.md) | The clock publishes on the control namespace, and gains a lockstep mode | Accepted |
 | [0010](0010-site-tooling.md) | Tooling for the published site | Accepted |
+| [0011](0011-the-coverage-store-pointer-is-text.md) | The current-run pointer is a text file, not a symlink | Accepted |

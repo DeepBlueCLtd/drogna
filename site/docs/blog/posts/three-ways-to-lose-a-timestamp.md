@@ -68,9 +68,9 @@ billion metres from the sea surface — roughly four and a half times the distan
 the Moon — and what comes back depends entirely on a provider setting that is
 invisible from outside. Configure it to return nulls beyond the edge of its domain
 and the response is full of nulls; configure it to extrapolate and the response is
-full of numbers. Both are HTTP 200. Both are structurally valid CoverageJSON, the
-standard's own response format, with a correctly formed composite axis and correctly
-formed referencing blocks. Nothing in the document says which setting produced it.
+full of numbers. Both are HTTP 200, and both are structurally valid
+CoverageJSON — the standard's own response format — with correctly formed axes and
+referencing blocks. Nothing in the document says which setting produced it.
 
 Nothing raises in any of the three failures. There is no exception, no warning and no
 degraded status. The first symptom is wrong values in a response that looks right.
@@ -92,18 +92,14 @@ from one that has quietly moved the times into the depth axis. The script is lef
 inside the image so the same assertion can be made against a running container the
 day a base image moves.
 
-The two ordinates in that fixture are chosen to be unmistakable for one another. That
-is the entire trick, and it is the only reason the third failure mode is detectable
-at build time rather than in a plausible-looking answer six weeks later.
-
 ## Two other things nobody would guess
 
 pygeoapi decides which query types a provider advertises by reading the subclass's
 own `__dict__`. Subclass the supplied gridded-data provider, add a `trajectory`
 method, and `position` and `cube` disappear from the collection's advertised
 capabilities — silently, because the base class's methods are not the subclass's own.
-There is no registration decorator. Defining a method with the right name is the
-whole mechanism, and redeclaring the two you inherited is the whole fix.
+There is no registration decorator: defining a method with the right name is the whole
+mechanism.
 
 A trajectory query is a GET, and its route travels in the URL. At six decimal places,
 91 vertices is a 4,081-byte request line and works; 92 is 4,125 bytes and is refused

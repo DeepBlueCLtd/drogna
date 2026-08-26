@@ -81,9 +81,7 @@ fastest thing present, so: give the other three the background timescale, and th
 drifting feature should be the only disturbance left.
 
 It is not. Run that world and the shortest timescale sits 14.8 km from the drifting
-feature's centre — a long way, on a domain a couple of hundred kilometres across, and
-comfortably enough for the test to pass or fail on the tolerance rather than on the
-physics.
+feature's centre — a long way on a domain a couple of hundred kilometres across.
 
 Membership and timescale are separate quantities. A feature's weight at a location
 comes from its spatial kernel and its own geometry, and is completely unaffected by
@@ -117,8 +115,8 @@ One more rule earns its place. A timescale shorter than a configured multiple of
 time step — twice, today — is refused when the scenario is authored, before anything
 is written, with the offending ratio in the message so the author can see how far
 under it fell. A field cannot represent decay faster than its own sampling interval,
-and a timescale the field cannot represent does not announce itself. It quietly
-produces a revisit cadence that is wrong.
+and a timescale it cannot represent does not announce itself: it quietly produces a
+revisit cadence that is wrong.
 
 The values in use: three days for the background, thirty-six hours for the thermocline,
 eighteen for the front, twelve for the eddy, six for the drifter. All of them are

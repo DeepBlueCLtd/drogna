@@ -36,6 +36,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "electron-to-chromium": "1.5.391"
+    }
   }
 }

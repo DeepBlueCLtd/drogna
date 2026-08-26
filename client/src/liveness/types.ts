@@ -2,8 +2,8 @@
  * The client's internal vocabulary for what it has heard.
  *
  * These types are the client's own model, not a second declaration of the heartbeat
- * contract (Constitution III). The wire shape is asserted once, at runtime, against
- * `heartbeat.schema.json`; what survives that check is adapted into the shapes here,
+ * contract (Constitution III). The wire shape is asserted once, at runtime, against the
+ * heartbeat schema in contracts; what survives that check is adapted into the shapes here,
  * which carry things the message does not — when it arrived, and how long it is to be
  * believed.
  */

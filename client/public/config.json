@@ -1,0 +1,23 @@
+{
+  "broker": {
+    "url": "ws://localhost:8080/ctl",
+    "client_id": "client_local",
+    "keepalive_seconds": 30,
+    "reconnect_period_seconds": 5
+  },
+  "clock": {
+    "stale_after_seconds": 10,
+    "endpoint": "http://localhost:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot"
+    }
+  },
+  "liveness": {
+    "default_window_seconds": 15,
+    "window_multiplier": 3,
+    "disconnected_is_indeterminate": true
+  },
+  "display": {
+    "frame_interval_ms": 100
+  }
+}

@@ -12,14 +12,8 @@ import type { ComponentNode } from "../layout/components";
 import { describeClock } from "../transport/clock";
 import type { ClockState, ClockView } from "../transport/clock";
 
-import type {
-  ComponentEvidence,
-  ConnectionState,
-  Evidence,
-  Identity,
-  Illumination,
-  LivenessState,
-} from "./types";
+// One line, deliberately: the literal-path gate reads a wrapped import's closing line as a bare string.
+import type { ComponentEvidence, ConnectionState, Evidence, Identity, Illumination, LivenessState } from "./types";
 import { ageSeconds, concurrentIdentities, illuminationFor } from "./window";
 import type { Hearing } from "./window";
 

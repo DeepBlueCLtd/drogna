@@ -5,7 +5,8 @@
  * becomes a single served document reached by one relative bootstrap URL. That URL is
  * the only location named in this client's source; everything else — the broker
  * endpoint, the clock endpoint, the tolerances — arrives inside the document, which is
- * validated against `config.client.schema.json` before any transport opens.
+ * validated against the client configuration schema in contracts before any transport
+ * opens.
  *
  * Nothing in the document can light a component. It says where to listen and how long a
  * heard-from component stays believed. Illumination comes from received heartbeats and

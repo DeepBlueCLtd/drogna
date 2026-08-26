@@ -1,7 +1,7 @@
 # Software Requirements Document
-## Environmental Data Architecture Harness (working title)
+## drogna
 
-**Status:** Draft v0.2 — full rewrite
+**Status:** Draft v0.3 — open questions resolved
 **Author:** Doc
 **Date:** 26 August 2026
 
@@ -33,6 +33,14 @@ data-to-viewer contract, and a public record of how it was built.
 
 - **FR-01** The landing page shall state plainly that this is a learning harness with
   synthetic data and fake numerics, so no viewer mistakes it for a candidate system.
+
+### 1.2 The name
+
+The system is called **drogna**. The word carries no meaning in English and no
+connection to the domain, the customer or the bid, and that emptiness is the point:
+PR-01 requires a name that leaks nothing, and a coined word leaks nothing while
+remaining a unique and unambiguous search term. "Environmental data architecture
+harness" is a description of the thing, not a name for it, and is used only as such.
 
 ---
 
@@ -86,9 +94,21 @@ makes that distinction visible rather than hiding it.
 - **FR-04** Ground-truth parameters shall be written to a **manifest** alongside each
   generated field, so downstream recovery can be scored for error. The manifest also
   records the RNG seed and generator version.
-- **FR-05** Each seeded feature shall carry a decorrelation timescale governing how
-  fast the region loses memory of a measurement. (Whether this is a property of the
-  feature or of the region is an open question; the harness starts with per-feature.)
+- **FR-05** Loss of memory of a measurement shall be governed by a decorrelation
+  timescale evaluated as a field, tau(latitude, longitude, depth, time). The field is
+  *authored* per feature over a domain-wide background value, and *evaluated* per
+  location: a location's tau is the background blended with the contribution of any
+  feature overlapping it. The timescale of a moving feature advects with that feature.
+  Background and per-feature timescales are both ground truth and are recorded in the
+  manifest under FR-04.
+
+*Per-feature alone leaves the background water with no timescale at all, yet FR-08
+requires quiet water to be left alone. A static per-region map gives the background a
+timescale but cannot follow the drifting feature of FR-03. And the planner needs tau
+at every cell it scores (FR-32, FR-34), not only inside features. The field
+formulation is the only one that satisfies all three, and per-feature authoring
+remains the interface a scenario is written in. This decision earns an ADR under
+PR-03.*
 
 ### 3.2 Scenario
 
@@ -99,8 +119,8 @@ makes that distinction visible rather than hiding it.
   alone, since observation age is spatially uniform and therefore carries no
   information.
 - **FR-08** During loiter, uncertainty shall additionally reflect observation age,
-  producing a revisit pattern whose cadence tracks each feature's decorrelation
-  timescale — fast features resampled often, quiet water left alone.
+  producing a revisit pattern whose cadence tracks the local decorrelation timescale
+  of FR-05 — fast features resampled often, quiet water left alone.
 
 ### 3.3 Time
 
@@ -176,9 +196,25 @@ them is retrofittable at acceptable cost.*
   at each point, not conditions at query time.
 - **FR-21** The coverage store shall follow a naming and cataloguing convention such
   that a new model run becomes servable without editing collection configuration.
+- **FR-50** Trajectory queries over the coverage store shall be served by a bespoke
+  pygeoapi EDR provider plugin. No supplied provider implements trajectory: pygeoapi's
+  provider matrix lists `xarray-edr` as position and cube only, and that provider's
+  source defines no trajectory method. The plugin is therefore a planned component
+  sitting behind the coverage output port of §2.1, not a workaround.
+- **FR-51** The deployment shall pin Shapely >= 2.1 built against GEOS >= 3.12. Below
+  those versions the M ordinate of a `LINESTRINGM` or `LINESTRINGZM` is returned as
+  NaN, so per-vertex timestamps are lost silently, before any provider code runs, and
+  FR-20 fails without raising an error. The pin shall carry a comment saying so, and a
+  test shall assert that M survives parsing.
 
-*EDR trajectory support is less battle-tested than position and cube queries. FR-20
-shall be verified by spike before anything else depends on it — see §10.*
+*The standard expresses per-vertex timestamps natively — EDR trajectory `coords` is
+WKT `LINESTRINGM`/`LINESTRINGZM` with M as the vertex time — and the query layer needs
+no change to carry them: pygeoapi parses `coords` with `shapely.wkt.loads` and passes
+the geometry to the provider untouched, leaving all M interpretation to the provider.
+The response shape is CoverageJSON's Trajectory domain, whose composite axis is a
+per-vertex (t, x, y, z) tuple. The §10 spike accordingly narrows from "does this
+work?" to "prove M survives parsing and sample one four-dimensional route"; everything
+after that is a build. This decision earns an ADR under PR-03.*
 
 ### 5.4 Control loop
 
@@ -275,6 +311,21 @@ shall be verified by spike before anything else depends on it — see §10.*
 - **FR-48** The client shall render the uncertainty field decaying and refreshing
   over time.
 - **FR-49** The client shall expose the simulation speed control.
+- **FR-52** The simulation clock shall publish a heartbeat on the control namespace,
+  and the client shall derive that component's illumination from it. This is the
+  harness's first liveness signal and the pattern every later component follows. No
+  mocked or synthesised traffic shall ever drive illumination, since a mock asserts
+  the existence of something that does not exist and so defeats FR-45.
+- **FR-53** Screenshot capture shall pin the clock rate to zero for the duration of a
+  capture, so a before/after pair differs only where the change under evidence
+  differs. Without this every pair differs everywhere and the comparison carries no
+  information.
+
+*FR-52 and FR-53 together settle whether the greyed-out shell needs mocked traffic to
+exercise the Playwright loop: it does not. An all-grey shell yields a screenshot that
+never changes, so the capture pipeline is shown to run but never shown to
+discriminate. One genuinely live component supplies the change, and the clock is
+already first in the delivery order for unrelated reasons.*
 
 ---
 
@@ -350,7 +401,7 @@ shall be verified by spike before anything else depends on it — see §10.*
 
 - **PR-10** Playwright captures screenshots at three distinct moments which do not
   share plumbing: in-session, on demand, when the agent wants the author's visual
-  feedback; before/after pairs evidencing a change within a feature; and curated
+  feedback; before/after pairs evidencing a change within a feature (see FR-53); and curated
   feature-completion shots for the blog. Only the third is a durable artefact.
 
 ---
@@ -374,8 +425,11 @@ before the next begins. Ranked by cost-of-getting-it-wrong-late:
 
 1. **Deterministic replay foundations** — clock, seeded RNG, no wall-clock (FR-09 to
    FR-11). The only thing on this list that cannot be retrofitted.
-2. **EDR trajectory spike** — the load-bearing unknown (FR-20). If per-vertex
-   timestamps fail, the read path and the client's centrepiece both change shape.
+2. **EDR trajectory provider** — the load-bearing unknown, now scoped (FR-20, FR-50,
+   FR-51). Since no supplied provider implements trajectory, this is a build rather
+   than a gamble; the one thing still unproven is that the per-vertex M ordinate
+   survives WKT parsing. If it does not, the read path and the client's centrepiece
+   both change shape.
 3. **The greyed-out shell, live on the droplet** (FR-45) — the feedback surface, the
    always-showable artefact, and the anchor for the Playwright loop.
 4. **Ground-truth manifest** (FR-04) — what turns the harness from toy into
@@ -390,11 +444,15 @@ in scope; none punishes lateness.
 
 ---
 
-## 11. Open questions
+## 11. Resolved questions
 
-- Does the query layer's EDR trajectory implementation handle per-vertex timestamps
-  as FR-20 requires? Spike before committing.
-- Is the decorrelation timescale a property of the seeded feature or of the region?
-- Does the greyed-out shell need any mocked traffic for early Playwright work, or is
-  liveness-driven illumination alone enough to exercise the capture pipeline?
-- What is this thing called?
+| Question | Resolution | Recorded in |
+|---|---|---|
+| Does the query layer's EDR trajectory implementation handle per-vertex timestamps as FR-20 requires? | No supplied provider implements trajectory at all, so a bespoke provider plugin will. The surviving unknown is narrower: whether the M ordinate survives WKT parsing, which a version pin and a test address. | FR-50, FR-51; ADR required |
+| Is the decorrelation timescale a property of the seeded feature or of the region? | Neither exclusively. It is a field, authored per feature over a background and evaluated per location, advecting with a moving feature. | FR-05; ADR required |
+| Does the greyed-out shell need mocked traffic for early Playwright work? | No. The simulation clock's heartbeat is the first real liveness signal, and capture pins the clock rate to zero so comparison stays meaningful. | FR-52, FR-53 |
+| What is this thing called? | drogna. | §1.2 |
+
+Nothing in this document is currently open. Questions are raised in this section as
+they arise and struck from it when they are answered, with the answer landing in a
+requirement rather than staying here.

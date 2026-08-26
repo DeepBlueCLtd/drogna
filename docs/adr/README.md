@@ -10,3 +10,5 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | # | Title | Status |
 |---|---|---|
 | [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Proposed |
+| [0002](0002-decorrelation-timescale-as-a-field.md) | Decorrelation timescale is a field, authored per feature | Accepted |
+| [0003](0003-bespoke-edr-trajectory-provider.md) | Trajectory queries are served by a bespoke pygeoapi provider | Accepted |

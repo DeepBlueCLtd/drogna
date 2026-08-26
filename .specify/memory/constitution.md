@@ -1,4 +1,4 @@
-# Environmental Data Architecture Harness — Constitution
+# drogna Constitution
 
 **Purpose of this document.** These are the non-negotiables of the harness. Every
 spec-kit phase — `specify`, `plan`, `tasks`, `analyze`, `implement` — is checked
@@ -102,7 +102,8 @@ The harness claims exactly the pluggability it has, and no more.
 - Genuine ports, expressed as interfaces with more than one conceivable
   implementation: the **model kernel** (initialisation state in, gridded field out),
   the **coverage output** (NetCDF today, Zarr plausibly later), the **clock**, and
-  the **RNG**.
+  the **RNG**. The bespoke EDR trajectory provider sits behind the coverage output
+  port as a planned component, not a workaround (FR-50).
 - Marginal, wrapped thinly and documented as marginal: **event publication**.
 - Not ports, and not to be dressed as ports: the **observation store** (Postgres is
   not being swapped) and **observation intake** (aspirational, not real).
@@ -111,19 +112,24 @@ The harness claims exactly the pluggability it has, and no more.
 
 *Rationale (SRD §2.1). The documentation does not claim more than the code delivers.*
 
-### VII. Liveness, Not Configuration
+### VII. Liveness, Not Configuration (NON-NEGOTIABLE)
 
 Any display of what exists is driven by observed liveness, never by a configuration
-file listing what ought to exist.
+file listing what ought to exist, and never by mocked traffic.
 
 - The client renders the full component layout from day one with components greyed
   out until they are genuinely alive and heard from.
 - A component is "lit" only because a message from it arrived within its declared
   liveness window. There is no manual override, no `enabled: true` flag, and no
   hardcoded list of live components.
+- **No mocked or synthesised traffic shall ever drive illumination.** A mock asserts
+  the existence of something that does not exist, which is precisely the failure this
+  principle exists to prevent. There is no demo mode, no fixture mode, and no
+  "populate for the screenshot" path. The simulation clock's heartbeat is the first
+  real liveness signal and the pattern every later component follows.
 
-*Rationale (SRD FR-45). The display cannot be permitted to claim a component exists
-when it does not — the whole evidential value of the harness rests on it.*
+*Rationale (SRD FR-45, FR-52). The display cannot be permitted to claim a component
+exists when it does not — the whole evidential value of drogna rests on it.*
 
 ### VIII. Recommendations, Not Decisions
 
@@ -251,4 +257,8 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+**Version**: 1.1.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+
+*1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
+extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
+EDR trajectory provider as sitting behind an existing port (FR-50). Project named.*

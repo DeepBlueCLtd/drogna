@@ -13,8 +13,8 @@ not enthusiasm.
 | # | Feature | SRD anchor | §10 rank |
 |---|---|---|---|
 | 001 | Deterministic replay foundations | C-01, FR-09..FR-11, NFR-04 | 1 |
-| 002 | EDR trajectory spike | FR-20 | 2 |
-| 003 | Component shell client | FR-01, FR-45, C-18 | 3 |
+| 002 | EDR trajectory provider (proof) | FR-20, FR-50, FR-51 | 2 |
+| 003 | Component shell client | FR-01, FR-45, FR-52, C-18 | 3 |
 | 004 | Environment generator | C-02, FR-02..FR-05 | 4 |
 | 005 | Compose deployment | NFR-05..NFR-07 | 5 |
 | 006 | Generated types | NFR-01..NFR-03 | 6 |
@@ -23,18 +23,18 @@ not enthusiasm.
 | 009 | Control loop | C-11..C-14, FR-22..FR-31 | — |
 | 010 | Telemetry and quality | C-16, FR-37, FR-38 | — |
 | 011 | Adaptive planner | C-15, FR-32..FR-36 | below the line |
-| 012 | Visualisation | FR-46..FR-49 | — |
+| 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | — |
 | 013 | Security proxy | C-10, FR-39..FR-42 | below the line |
 | 014 | Offload export | C-17, FR-43, FR-44 | below the line |
 | 015 | Published site | PR-06..PR-09 | below the line |
-| 016 | Visual capture | PR-10 | — |
+| 016 | Visual capture | PR-10, FR-53 | — |
 
 ## Dependency graph
 
 ```mermaid
 graph TD
   F001[001 Deterministic foundations]
-  F002[002 EDR trajectory spike]
+  F002[002 EDR trajectory proof]
   F003[003 Component shell client]
   F004[004 Environment generator]
   F005[005 Compose deployment]
@@ -92,7 +92,7 @@ whose inputs are already satisfied. Everything within a wave can proceed at once
 | Feature | Owns | Why it can start now |
 |---|---|---|
 | 001 Deterministic foundations | `libs/harness_core/`, common config schema, lint gates | Depends on nothing. Everything depends on it, and it is the one thing §10 says cannot be retrofitted. |
-| 002 EDR trajectory spike | `spikes/edr-trajectory/` | Depends on nothing but a pygeoapi container. It is the load-bearing unknown; the sooner it reports, the less rework. |
+| 002 EDR trajectory proof | `spikes/edr-trajectory/` | Depends on nothing but a pygeoapi container. Now a narrow proof rather than an open question; feature 008 builds the provider on its finding. |
 | 003 Component shell client | `client/` | Needs only the heartbeat message shape, which it defines. The feedback surface and the always-showable artefact. |
 | 005 Compose deployment | `deploy/`, `config/local/`, `config/droplet/` | Needs only the list of components, which the SRD already fixes. Drift between local and droplet is cheaper to prevent than to remove. |
 | 006 Generated types | `contracts/openapi/`, `libs/harness_types/`, `client/src/generated/` | The generator chain can be stood up against the schemas that exist; §10 requires it before any message has a second consumer. |
@@ -154,6 +154,15 @@ widest wave and the one where parallel work pays most.
 **Wave 4 exit criterion:** AT-03 and AT-04. The seeded eddy is recoverable with a known
 and reported error, and the whole scenario replays deterministically from its seed.
 
+### Blog and site, pulled forward
+
+PR-08 puts one blog entry per feature after the feature works, and §10 puts the blog
+machinery below the line. The *machinery* has nonetheless been pulled into wave 1, on
+the author's instruction, for one reason: a publishing pipeline that has never
+published is not known to work, and finding that out after fifteen features is worse
+than finding it out now. The MkDocs site, the `gh-pages` workflow and one inaugural
+post ship in wave 1; the per-feature posts still follow their features.
+
 ### Wave 5 — the record
 
 | Feature | Blocked on | Owns |
@@ -169,8 +178,9 @@ line deliberately: it does not punish lateness.
 - **001 before anything that keeps time or draws a random number.** Not a scheduling
   preference; a correctness constraint. A component written against the host clock is
   not cheaply repaired later.
-- **The 002 finding before 008 commits to a read-path shape.** The spike may be cheap
-  and may report in a day, but 008 should not start guessing in the meantime.
+- **The 002 finding before 008 commits to a read-path shape.** Narrower than it was —
+  the question is now only whether the M ordinate survives WKT parsing — but 008's
+  bespoke provider is built against that answer, so it still goes first.
 - **009's four services among themselves.** Monitor, scheduler, model runner and
   publisher form one cycle with one set of invariants. Splitting them across
   simultaneous workers invites four different readings of what "current" means.
@@ -179,7 +189,8 @@ line deliberately: it does not punish lateness.
 
 | Risk | Mitigation |
 |---|---|
-| The EDR trajectory spike reports that per-vertex timestamps are unsupported | The spike's deliverable includes fallback options as first-class outcomes; 008 and 012 both re-plan rather than stall |
+| The M ordinate does not survive WKT parsing at the pinned versions | FR-51 pins Shapely >= 2.1 / GEOS >= 3.12 with the reason inline and a test asserting M survives; below those versions the failure is silent, which is the actual risk |
+| The Shapely / GEOS pin is removed as housekeeping by someone who cannot see why it is there | The pin carries its reason at the pin, ADR-0003 records it, and the test fails loudly if it is lost |
 | The coverage store layout is contested between 008 and 009 | 008 owns it, records it in `stores/coverage/`, and an ADR captures the argument |
 | Parallel workers drift on message shapes | 006 exists precisely to prevent this, and the drift check is a CI gate |
 | The client outgrows one worker | 003 builds the shell and the liveness substrate; 012 adds panels on top and touches no file 003 owns |

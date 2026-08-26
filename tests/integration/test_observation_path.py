@@ -45,6 +45,7 @@ from harness_ingest.subscriber import BrokerEndpoint, PahoSubscriber
 from harness_ingest.validation import RejectionLog
 from harness_ingest.writer import ObservationWriter, StoreTables
 from harness_sensors.__main__ import main as sensors_main
+from harness_types.messages.observation import DrognaObservation
 
 pytestmark = pytest.mark.skipif(
     not support.docker_available(),
@@ -329,3 +330,82 @@ def test_two_runs_from_the_same_root_seed_produce_the_same_store(
     assert service.counters.stored == 0
     assert service.counters.duplicates == published
     assert store_digest(store) == before
+
+
+def test_a_late_arrival_is_stored_on_its_own_time(store: support.Store) -> None:
+    """FR-021: a sensor that reconnected and replayed is stored where the world put it.
+
+    Two batches, written in the opposite order to their simulation times. The store's order
+    is the world's, not the order the writer happened to see them in — and there is no
+    column recording the second, so the arrival order is not recoverable from the store at
+    all.
+    """
+    connection = psycopg.connect(store.dsn("drogna_ingest"))
+    document = support.destination_config("ingest")
+    writer = ObservationWriter(
+        connection,
+        schema=document["ingest"]["store"]["schema"],
+        tables=StoreTables.from_config(document["ingest"]["store"]["tables"]),
+    )
+    try:
+        for identifier, stamp in (
+            ("obs-late-second", "2026-09-01T06:00:00.000000Z"),
+            ("obs-late-first", "2026-09-01T05:00:00.000000Z"),
+        ):
+            message = late_observation(identifier, stamp)
+            writer.write([DrognaObservation.model_validate(message)])
+    finally:
+        connection.close()
+
+    ordered = store.scalar(
+        "SELECT string_agg(id, ',' ORDER BY phenomenon_time) FROM observations.observation "
+        "WHERE id LIKE 'obs-late-%'"
+    )
+    assert ordered == "obs-late-first,obs-late-second"
+
+
+def late_observation(identifier: str, sim_time: str) -> dict[str, Any]:
+    """One observation of the same series, at a stated simulation time."""
+    return {
+        "observation_id": identifier,
+        "scenario_run_id": RUN_ID,
+        "sim_time": sim_time,
+        "tick": 999,
+        "thing_id": "platform-a",
+        "datastream_id": "ds-temperature",
+        "sensor_id": "sensor-temperature",
+        "feature_of_interest_id": "foi-late",
+        "observed_property": "temperature",
+        "result": 11.5,
+        "location": {"latitude": 49.0, "longitude": -4.5, "depth_m": 5.0},
+        "context": {
+            "thing": {"name": "sampling platform A", "description": "A coordinate and a sampler."},
+            "sensor": {
+                "name": "simulated temperature sensor",
+                "description": "Simulated temperature instrument with a seeded noise model.",
+                "encoding_type": "text/plain",
+                "metadata": "Gaussian noise, standard deviation 0.02 degC.",
+            },
+            "observed_property": {
+                "id": "sea_water_temperature",
+                "name": "sea water temperature",
+                "definition": "sea_water_temperature",
+                "description": "Temperature of sea water.",
+            },
+            "datastream": {
+                "name": "temperature at platform A",
+                "description": "Simulated temperature series.",
+                "observation_type": "OM_Measurement",
+                "unit_of_measurement": {
+                    "name": "degree Celsius",
+                    "symbol": "degC",
+                    "definition": "degree_C",
+                },
+            },
+            "feature_of_interest": {
+                "name": "sampling location late",
+                "description": "Where an observation pertains to. Not a location history.",
+                "encoding_type": "application/geo+json",
+            },
+        },
+    }

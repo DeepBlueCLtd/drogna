@@ -1,0 +1,29 @@
+# Build context for the query layer image. See the note in client.Dockerfile.dockerignore.
+#
+# This build reads two files from `deploy/images/` and, once 008-query-layer lands, `query/`.
+# Nothing else.
+
+.git
+.github
+.venv
+.pytest_cache
+.ruff_cache
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/dist
+client
+libs
+services
+site
+specs
+spikes
+docs
+tests
+config
+contracts
+scripts
+deploy/lib
+deploy/seed.d
+deploy/droplet
+deploy/.env

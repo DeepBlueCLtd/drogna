@@ -1,0 +1,287 @@
+/*
+ * The shell's appearance.
+ *
+ * Two rules govern everything here. Every state is carried by a word and a mark before
+ * it is carried by a colour, because these screenshots are printed in greyscale (PR-08).
+ * And the honesty statement is never the thing that gets dropped at a narrow viewport:
+ * it is the first block in the document and it does not collapse.
+ */
+
+:root {
+  --ink: #10141a;
+  --paper: #f7f7f5;
+  --muted: #6b7280;
+  --line: #c9ccd1;
+  --lit: #12303f;
+  --warning: #7a2e1d;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  line-height: 1.45;
+}
+
+#honesty {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.9rem 1.2rem;
+}
+
+.honesty {
+  margin: 0 auto;
+  max-width: 68rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+main {
+  margin: 0 auto;
+  max-width: 68rem;
+  padding: 1.2rem 1.2rem 4rem;
+}
+
+.masthead h1 {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+}
+
+.strapline {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.panels {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  margin: 1.2rem 0;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  padding: 0.8rem 1rem;
+  background: #fff;
+}
+
+.panel.warning {
+  border-color: var(--warning);
+  border-width: 2px;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.panel p,
+.panel li {
+  margin: 0.3rem 0;
+  font-size: 0.92rem;
+}
+
+.panel dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 0.8rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.panel dt {
+  color: var(--muted);
+}
+
+.panel dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  font-weight: 600;
+}
+
+.failure {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--muted);
+}
+
+.diagram {
+  margin: 1.5rem 0 0;
+}
+
+.diagram figcaption {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-bottom: 0.8rem;
+  max-width: 54rem;
+}
+
+.diagram svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+/* Edges: the flow. The loop is drawn heavier, because it is the point of the picture. */
+.edges path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.4;
+}
+
+.edges marker path,
+.edges .loop path {
+  stroke: var(--muted);
+}
+
+.edges .loop path {
+  stroke-width: 2.6;
+  stroke-dasharray: none;
+}
+
+.edges text {
+  fill: var(--muted);
+  font-size: 11px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+#arrow path {
+  fill: var(--muted);
+  stroke: none;
+}
+
+/* Nodes: shape says bespoke or plumbing, fill and word say heard from or not. */
+.node rect {
+  fill: #fff;
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.node text {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  fill: var(--ink);
+}
+
+.node-reference,
+.node-mark {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+.node-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.node-state {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.node-detail {
+  font-size: 10px;
+  fill: var(--muted);
+}
+
+.node.dark rect {
+  fill: #eceded;
+  stroke-dasharray: 4 3;
+}
+
+.node.dark text {
+  fill: var(--muted);
+}
+
+.node.lit rect {
+  fill: var(--lit);
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.node.lit text {
+  fill: #fff;
+}
+
+.node.lit .node-reference,
+.node.lit .node-mark,
+.node.lit .node-detail {
+  fill: #cfd8dc;
+}
+
+.node.indeterminate rect {
+  fill: url(#unknown);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+#unknown path {
+  stroke: var(--muted);
+}
+
+.node.self rect {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 9 4;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0 0;
+  font-size: 0.88rem;
+  max-width: 60rem;
+}
+
+.legend dt {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.legend dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 40rem) {
+  .honesty {
+    font-size: 1rem;
+  }
+
+  .legend,
+  .panel dl {
+    grid-template-columns: 1fr;
+  }
+
+  .diagram svg {
+    /* Below this width the boxes stop being legible; scrolling beats illegibility. */
+    min-width: 46rem;
+  }
+
+  .diagram {
+    overflow-x: auto;
+  }
+}

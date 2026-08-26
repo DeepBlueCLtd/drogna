@@ -49,6 +49,8 @@ x-config-mount: &config-mount
 x-python-build: &python-build
   context: ${HARNESS_BUILD_CONTEXT}
   dockerfile: ${HARNESS_DOCKERFILE_PYTHON}
+  secrets:
+    - proxy_ca
 
 # Every drogna Python image ships a `drogna-healthcheck` console script. It reads
 # HARNESS_CONFIG, checks whatever that component considers healthy, and exits non-zero
@@ -219,6 +221,8 @@ services:
     build:
       context: ${HARNESS_BUILD_CONTEXT}
       dockerfile: ${HARNESS_DOCKERFILE_QUERY}
+      secrets:
+        - proxy_ca
       args:
         HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
     environment:
@@ -406,7 +410,10 @@ services:
     build:
       context: ${HARNESS_BUILD_CONTEXT}
       dockerfile: ${HARNESS_DOCKERFILE_CLIENT}
+      secrets:
+        - proxy_ca
       args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
         HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
         HARNESS_NGINX_TEMPLATE_DIR: ${HARNESS_NGINX_TEMPLATE_DIR}
     # nginx is a third-party image and reads no drogna configuration file. It is told its
@@ -424,6 +431,22 @@ services:
     healthcheck:
       <<: *healthcheck-timing
       test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_CLIENT}"]
+
+# ---------------------------------------------------------------------------------------
+# Build secrets. One, optional, and inert unless a machine supplies it.
+#
+# HARNESS_PROXY_CA_FILE names the certificate authority of a TLS-terminating egress proxy,
+# for the case the bring-up is run inside an ephemeral agent session whose route to the
+# package index is intercepted (SRD NFR-06). It defaults to an empty source, which every
+# image definition treats as "no proxy" and installs exactly as it would on a machine with
+# direct egress. It is a property of the machine rather than of the destination, which is
+# why it is the one value here that does not come from config/<destination>/ — it names no
+# host, is read only during a build, and reaches no running container.
+# ---------------------------------------------------------------------------------------
+
+secrets:
+  proxy_ca:
+    file: ${HARNESS_PROXY_CA_FILE:-/dev/null}
 
 # ---------------------------------------------------------------------------------------
 # Volumes. Every one of these is derived data with a named producing script; see the volume

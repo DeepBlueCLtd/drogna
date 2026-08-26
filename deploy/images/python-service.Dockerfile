@@ -40,10 +40,27 @@ WORKDIR ${HARNESS_APP_ROOT}
 # lock resolved.
 COPY pyproject.toml uv.lock ./
 COPY libs ./libs
-COPY services ./services
 
+# `services/` does not exist yet: every C-01 to C-17 component is still to be written, and
+# a COPY of a missing directory fails the build. Uncomment this line with the first
+# service, and nothing else here changes — the workspace glob in the root pyproject.toml
+# already covers `services/*`, so a new service is a package and a Compose entry.
+#
+# COPY services ./services
+
+# The `proxy_ca` secret is optional and absent in an ordinary build, which then behaves as
+# though this were a plain `uv sync`. It exists because the deployment is expected to be
+# built inside an ephemeral agent session (SRD NFR-06), and such a session reaches the
+# index through a TLS-terminating proxy whose certificate authority the base image does not
+# know. Passing it is `--secret id=proxy_ca,src=<the bundle>`; `deploy/README.md` says
+# where the bundle is found. Nothing about the proxy is written into the image.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --package "${HARNESS_SERVICE}"
+    --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false \
+    sh -c 'if [ -s /tmp/proxy-ca.crt ]; then \
+             cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+             export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt; \
+           fi; \
+           uv sync --frozen --no-dev --package "${HARNESS_SERVICE}"'
 
 # Console scripts from the synchronised environment, including `drogna-healthcheck`, which
 # every image is expected to provide and which the Compose health checks invoke.

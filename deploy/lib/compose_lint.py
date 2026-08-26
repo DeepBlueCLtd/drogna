@@ -76,10 +76,17 @@ def scanned_files(directory: Path) -> list[Path]:
 def address_findings(path: Path, text: str) -> list[str]:
     """Every literal address in one file, as messages naming the line."""
     findings: list[str] = []
+    # A `RUN --mount=...` spans as many lines as its shell command needs, and every one of
+    # them is inside the image being built. Exempting only the line carrying the flag
+    # would report the body of the very construct the exemption exists for, so the
+    # exemption follows the backslash continuations to the end of the command.
+    continuing_in_image = False
     for number, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
         if number == 1 and stripped.startswith("#!"):
             continue
+        in_image = continuing_in_image or bool(_IN_IMAGE_PATH_LINE.search(line))
+        continuing_in_image = in_image and stripped.endswith("\\")
         if _IMAGE_LINE.search(line):
             if ("image:" in line or line.lstrip().startswith("FROM ")) and not _DIGEST.search(line):
                 findings.append(f"{path.name}:{number}: image reference is not pinned by digest")
@@ -96,7 +103,7 @@ def address_findings(path: Path, text: str) -> list[str]:
                     f"{path.name}:{number}: {description} ({match.group(0)!r}); "
                     f"it belongs in the destination configuration: {stripped[:80]}"
                 )
-        if not _IN_IMAGE_PATH_LINE.search(line) and _HOST_OS_PATH_MARKER not in line:
+        if not in_image and _HOST_OS_PATH_MARKER not in line:
             match = _ABSOLUTE_PATH.search(line)
             if match:
                 findings.append(

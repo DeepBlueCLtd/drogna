@@ -1,0 +1,52 @@
+{
+  "name": "drogna-client",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "description": "C-18: the browser client. The whole component layout, dark until a heartbeat says otherwise.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "dependencies": {
+    "@deck.gl/core": "^9.1.0",
+    "@deck.gl/layers": "^9.1.0",
+    "@deck.gl/react": "^9.1.0",
+    "ajv": "^8.17.1",
+    "mqtt": "^5.10.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "8.67.0",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "overrides": {
+      "baseline-browser-mapping": "2.11.13",
+      "caniuse-lite": "1.0.30001809",
+      "electron-to-chromium": "1.5.391",
+      "fast-uri": "3.1.5",
+      "json-with-bigint": "3.5.10",
+      "mjolnir.js": "3.0.1",
+      "picomatch": "4.0.5",
+      "rollup": "4.62.4"
+    }
+  }
+}

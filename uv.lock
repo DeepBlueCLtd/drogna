@@ -241,6 +241,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "harness-core" },
     { name = "harness-env-generator" },
+    { name = "harness-types" },
 ]
 
 [package.dev-dependencies]
@@ -255,6 +256,7 @@ dev = [
 requires-dist = [
     { name = "harness-core", editable = "libs/harness_core" },
     { name = "harness-env-generator", editable = "services/env_generator" },
+    { name = "harness-types", editable = "libs/harness_types" },
 ]
 
 [package.metadata.requires-dev]

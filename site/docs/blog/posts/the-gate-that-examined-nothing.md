@@ -1,5 +1,5 @@
 ---
-date: 2026-08-26
+date: 2026-08-26 16:00:00
 categories:
   - Process
 slug: the-gate-that-examined-nothing
@@ -48,7 +48,7 @@ around it says.
 
 ## A gate that has never failed is not a gate
 
-That sentence is the first line of the test file, and it is there because a lint gate
+That sentence sits at the top of the test file, and it is there because a lint gate
 which has silently stopped matching — a renamed module, a regular expression that no
 longer fires, an exclusion that grew a directory too wide — looks exactly like a clean
 tree. Both print the same thing. The only way to tell them apart is to hand each gate
@@ -62,11 +62,10 @@ The fixtures went where fixtures go, in a directory beside the tests. Two of the
 gates reported them clean.
 
 Not "failed to match the pattern" — clean. Zero findings, exit code zero, a file
-containing `time.time()` and `/var/lib/drogna/observations.db` pronounced free of
-both. The
-wall-clock and literal-path gates treat any path under a directory named `tests` as a
-permitted zone, because the constitution permits test harness setup to read a host
-clock, and because a gate cannot read intent. It is a path rule on purpose: a
+containing `time.time()` and `/var/lib/drogna/observations.db` pronounced free of both.
+The wall-clock and literal-path gates treat any path under a directory named `tests`
+as a permitted zone, because the constitution permits test harness setup to read a
+host clock, and because a gate cannot read intent. It is a path rule on purpose: a
 permitted zone that is hard to describe is a permitted zone that will be abused. The
 fixtures were under a directory named `tests`. They were exempt for being exactly
 what they were.

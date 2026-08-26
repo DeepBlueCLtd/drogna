@@ -1,5 +1,5 @@
 ---
-date: 2026-08-26
+date: 2026-08-26 17:00:00
 categories:
   - Standards
 slug: three-ways-to-lose-a-timestamp

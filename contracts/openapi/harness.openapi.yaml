@@ -1,0 +1,33 @@
+# The harness's own HTTP surface. Hand-written and authoritative, OpenAPI 3.1 — whose
+# schema dialect is JSON Schema 2020-12, which is what makes it possible to reference the
+# message schemas directly instead of transcribing them into a second dialect.
+#
+# What is here is the vocabulary, not a claim about what is served. `paths` is empty
+# because no component in the harness serves HTTP yet: the clock's small control interface
+# is decided (ADR-0009) and not built. The feature that builds it adds its paths here, in
+# the same commit as the code that answers them, and regenerates.
+#
+# The rule for `components/schemas`: every entry is a reference to a master under
+# `contracts/schemas/`, never a shape written out again here. `scripts/generate_types.sh`
+# refuses an inline shape by name, and emits an alias of the type already generated from
+# the master rather than a second definition of it (NFR-02, Constitution III). That is why
+# each key is spelled as the generators spell the type.
+openapi: 3.1.0
+
+info:
+  title: drogna harness HTTP surface
+  version: 0.1.0
+  description: >-
+    HTTP interfaces provided by the harness itself, as distinct from the query layer,
+    whose own emitted specification is vendored separately and never merged with this one.
+    Synthetic data, deliberately fake numerics, for learning purposes only.
+
+paths: {}
+
+components:
+  schemas:
+    # Simulation time as the clock publishes it on the broker. The clock's HTTP interface
+    # answers "what is the time now" with this same shape, which is exactly the case
+    # NFR-02 is about: one definition, referenced from both places.
+    DrognaSimulationTimeSample:
+      $ref: ../schemas/clock.schema.json

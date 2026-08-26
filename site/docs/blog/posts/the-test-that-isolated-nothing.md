@@ -1,5 +1,5 @@
 ---
-date: 2026-08-26
+date: 2026-08-26 14:00:00
 categories:
   - Architecture
 slug: the-test-that-isolated-nothing

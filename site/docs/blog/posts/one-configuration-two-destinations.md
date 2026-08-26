@@ -1,5 +1,5 @@
 ---
-date: 2026-08-26
+date: 2026-08-26 13:00:00
 categories:
   - Architecture
 slug: one-configuration-two-destinations

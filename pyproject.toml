@@ -11,11 +11,13 @@ requires-python = ">=3.11"
 dependencies = [
     "harness-core",
     "harness-env-generator",
+    "harness-types",
 ]
 
 [tool.uv.sources]
 harness-core = { workspace = true }
 harness-env-generator = { workspace = true }
+harness-types = { workspace = true }
 
 [dependency-groups]
 dev = [

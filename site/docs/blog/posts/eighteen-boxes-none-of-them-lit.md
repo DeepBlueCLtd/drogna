@@ -1,5 +1,5 @@
 ---
-date: 2026-08-26
+date: 2026-08-26 15:00:00
 categories:
   - Feature
 slug: eighteen-boxes-none-of-them-lit

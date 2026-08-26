@@ -162,6 +162,26 @@ def _doc(text: str | None, indent: str) -> list[str]:
     return rendered
 
 
+def _is_grouped(rendered: str) -> bool:
+    """Whether the whole expression is one brace or bracket group.
+
+    `{ ... }` and `( ... )` need no parentheses around them; `A | B` does. Told apart by
+    counting depth rather than by looking at the ends, because `{a} | {b}` starts and ends
+    with a brace and is not one group.
+    """
+    if not rendered or rendered[0] not in "{(":
+        return False
+    depth = 0
+    for index, character in enumerate(rendered):
+        if character in "{(":
+            depth += 1
+        elif character in "})":
+            depth -= 1
+            if depth == 0 and index != len(rendered) - 1:
+                return False
+    return depth == 0
+
+
 def _property_name(name: str) -> str:
     if name.isidentifier():
         return name
@@ -232,7 +252,7 @@ class Emitter:
             return "unknown"
         if len(useful) == 1:
             return useful[0]
-        return " & ".join(part if part.startswith("{") else f"({part})" for part in useful)
+        return " & ".join(part if _is_grouped(part) else f"({part})" for part in useful)
 
     def _variant(
         self,
@@ -326,13 +346,16 @@ class Emitter:
     def declaration(self, name: str, schema: Mapping[str, Any], pointer: str) -> str:
         body = self.render(schema, pointer, "")
         lines = _doc(schema.get("description"), "")
-        if body.startswith("{"):
+        # An interface can only be written for a single object literal. A shape that is an
+        # intersection or a union — a base object narrowed by a oneOf, say — is a type
+        # alias, and writing `interface X {...} & (...)` would not even parse.
+        if _is_grouped(body) and body.startswith("{"):
             lines.append(f"export interface {name} {body}")
         else:
             lines.append(f"export type {name} = {body};")
         return "\n".join(lines)
 
-    def emit(self, *, banner: str) -> str:
+    def emit(self) -> str:
         document = self.document
         root = type_name(document["title"])
         declarations = [(root, document, "")]
@@ -350,7 +373,7 @@ class Emitter:
         for name, schema, pointer in declarations:
             self.module.blocks.append(self.declaration(name, schema, pointer))
 
-        parts = [banner]
+        parts: list[str] = []
         if self.module.imports:
             imports = [
                 f"import type {{ {', '.join(sorted(names))} }} from {json.dumps(module)};"
@@ -361,12 +384,11 @@ class Emitter:
         return "\n\n".join(parts) + "\n"
 
 
-def emit_module(
-    document: Mapping[str, Any],
-    *,
-    source: str,
-    resolve,
-    banner: str,
-) -> str:
-    """Render one bundled schema document as one TypeScript module."""
-    return Emitter(document, source=source, resolve=resolve).emit(banner=banner)
+def emit_module(document: Mapping[str, Any], *, source: str, resolve) -> str:
+    """Render one bundled schema document as one TypeScript module.
+
+    The banner is not added here: it is applied to every generated file by the same
+    post-generation step, whichever generator wrote it, so that one rule governs all of
+    them.
+    """
+    return Emitter(document, source=source, resolve=resolve).emit()

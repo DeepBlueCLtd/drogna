@@ -223,8 +223,7 @@ def _resolve_reference(
     entry = documents.get(target)
     if entry is None:
         raise ChainError(
-            f"{where}: reference to {reference!r} does not name a master in "
-            f"{SCHEMA_DIRECTORY}"
+            f"{where}: reference to {reference!r} does not name a master in {SCHEMA_DIRECTORY}"
         )
     other, other_document = entry
     if fragment:
@@ -375,7 +374,7 @@ def generate_python(
         str(output),
         *options,
     ]
-    result = subprocess.run(  # noqa: S603 - fixed command, no shell
+    result = subprocess.run(
         command,
         capture_output=True,
         text=True,
@@ -427,11 +426,11 @@ def generate_typescript(
                 if not name_source:
                     raise GenerationError(f"{master.path}: a bare '#' reference")
                 return Target(type_name(name_source), None)
-            other = by_bundle[
-                Path(os.path.normpath(master.bundle_path.parent / document_part)).relative_to(".")
-                if False
-                else Path(os.path.normpath(str(master.bundle_path.parent / document_part)))
-            ]
+            # References in the bundle are relative to the file that carries them.
+            located = Path(os.path.normpath(str(master.bundle_path.parent / document_part)))
+            other = by_bundle.get(located)
+            if other is None:
+                raise GenerationError(f"{master.path}: reference to {reference!r} is not bundled")
             if not name_source:
                 other_document = bundled[other.bundle_path]
                 name_source = other_document["title"]
@@ -444,12 +443,7 @@ def generate_typescript(
                 module = f"./{module}"
             return Target(type_name(name_source), module)
 
-        text = emit_module(
-            document,
-            source=str(master.path),
-            resolve=resolve,
-            banner=banner(str(master.path), "//"),
-        )
+        text = emit_module(document, source=str(master.path), resolve=resolve)
         generated[master.typescript_path] = normalise(
             text,
             source=str(master.path),

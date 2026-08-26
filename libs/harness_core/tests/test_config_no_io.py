@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from harness_core.config import (
     HARNESS_CONFIG_VARIABLE,
     ConfigInvalidError,
@@ -50,9 +49,7 @@ def test_exactly_one_read_happens_and_it_is_the_config(
     path = "/injected/component.json"
     recorder = IoRecorder({path: json.dumps(document()).encode("utf-8")})
 
-    loaded = load_config(
-        common_config_schema, env={HARNESS_CONFIG_VARIABLE: path}, reader=recorder
-    )
+    loaded = load_config(common_config_schema, env={HARNESS_CONFIG_VARIABLE: path}, reader=recorder)
 
     assert recorder.reads == [path]
     assert loaded.source == path

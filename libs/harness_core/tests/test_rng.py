@@ -7,7 +7,6 @@ import sys
 import textwrap
 
 import pytest
-
 from harness_core import rng
 from harness_core.ports import RandomStreams as RandomStreamsPort
 from harness_core.rng import DERIVATION_RULE, DERIVATION_VERSION, RandomStreams

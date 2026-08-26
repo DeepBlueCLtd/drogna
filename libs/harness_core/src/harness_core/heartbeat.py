@@ -51,6 +51,7 @@ __all__ = [
 HEARTBEAT_TOPIC = "ctl/heartbeat"
 """The control-namespace topic. Sensors publish only under obs/; this is not one."""
 
+# harness:allow-literal-path resource shipped inside this package, not a deployment location
 _SCHEMA_FILE = "heartbeat.schema.json"
 
 

@@ -51,7 +51,8 @@ simulation-minute, whichever comes first. Backpressure demonstrated at five time
 sustainable rate.
 
 **Constraints**: No host-clock reads anywhere in the operational path, including the batch
-flush interval. No entropy in identifiers. No literal hostname, port or path. The ingest
+flush interval. The single exception is heartbeat emission, which is on a real-time cadence
+with the simulation time carried as payload (ADR-0006) and is marked as such. No entropy in identifiers. No literal hostname, port or path. The ingest
 client is the only role with insert permission, enforced by grants. Queue bounded in memory,
 with the broker holding the excess.
 
@@ -65,7 +66,10 @@ instance, two schemas, and a scenario of hours in simulation time compressed int
 - **I. No Wall-Clock Time** — The path's most exposed principle, because every ordinary
   implementation of ingest reaches for the host clock in three places: the observation
   timestamp, the batch flush interval, and the reconnection backoff. All three take the
-  simulation clock instead. Database defaults such as `now()` and `current_timestamp` are
+  simulation clock instead. Heartbeat emission is the one permitted host-clock read, on a
+  real-time cadence with the simulation time carried as payload (ADR-0006), marked
+  `# harness:allow-wallclock` with that ADR as its reason; the exemption covers emitting a
+  heartbeat and nothing else here. Database defaults such as `now()` and `current_timestamp` are
   prohibited in the schema, which is stated in the migration files themselves so nobody adds
   one later out of habit. Broker-assigned timestamps are never used as truth.
 - **II. Seeded Randomness and Deterministic Replay** — Sensor noise comes from

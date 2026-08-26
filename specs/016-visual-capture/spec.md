@@ -167,10 +167,14 @@ made to import another, and confirm it fails.
   whole harness stopped for the next person who looks at it.
 - Two pair captures running at once, each restoring what it believes the previous rate
   to have been.
-- The clock's heartbeat interval measured in simulation time: with the rate pinned to
-  zero, simulation time does not advance, and every component including the clock could
-  fall outside its liveness window and go grey during the very capture meant to evidence
-  illumination.
+- Heartbeat cadence measured in simulation time. With the rate pinned to zero, simulation
+  time does not advance, no heartbeat is ever due, every liveness window expires and every
+  component including the clock greys out during the very capture meant to evidence
+  illumination. This feature's specification found that collision, and ADR-0006 resolves
+  it: cadence and liveness windows are real time, and the simulation time a heartbeat
+  carries is payload rather than schedule. What remains here is the regression case — a
+  component reverting to a simulation-time cadence would put the collision back, and
+  FR-008 is what catches it.
 - An all-grey shell in the earliest days: with no live component, every capture is
   identical and the pipeline is shown to run but never shown to discriminate.
 - A curated capture taken on a machine with different fonts from the one that took the
@@ -209,7 +213,12 @@ made to import another, and confirm it fails.
   and MUST restore the previous rate afterwards, including on failure. (SRD FR-53)
 - **FR-008**: The pair MUST verify that every component lit before the pin is still lit
   in the captured image, and MUST fail the capture otherwise, so a pinned clock cannot
-  produce an all-grey pair that looks like a passing capture. (SRD FR-52, FR-45)
+  produce an all-grey pair that looks like a passing capture. This is no longer a
+  defensive workaround against an undecided question: ADR-0006 decides that heartbeat
+  cadence and liveness windows are real time, so a rate of zero stops simulated time and
+  stops nothing else, and the assertion is kept as a cheap regression test on that
+  decision. It is written to fail loudly rather than to publish a misleading pair.
+  (SRD FR-52, FR-45, FR-53; ADR-0006)
 - **FR-009**: The pair MUST record an environment fingerprint on both sides — browser
   version, container image, viewport, device scale factor, scenario seed, simulation time
   and capture entry-point version — and MUST refuse to produce a diff when the two sides
@@ -342,11 +351,14 @@ capture policy.
 - Pinning the clock stops the whole running system, not one viewer's view of it. The
   harness is a single-viewer demonstration (SRD NFR-06), so this is acceptable; the pair
   mechanism restores the previous rate and reports if it could not.
-- Whether the clock's heartbeat continues while its rate is zero determines whether
-  components stay lit during a capture. This feature does not decide that; it asserts it
-  (FR-008), so that if heartbeats stop the capture fails loudly instead of publishing an
-  all-grey image. If the assertion fails in practice, the resolution belongs to the clock
-  and liveness features, not here.
+- Heartbeats continue while the rate is zero, and components therefore stay lit through a
+  capture. That was an open question when this specification was written and it is now
+  decided: ADR-0006 makes heartbeat cadence and liveness windows real time, with the
+  simulation time a heartbeat carries as payload rather than schedule, and records this
+  feature as where the collision was found. Features 001 and 003 implement the real-time
+  cadence and the real-time liveness window; features 009, 010 and 012 state it for their
+  own components. This feature keeps FR-008 as the regression test on the decision rather
+  than as a hedge against an unknown.
 - SRD §11's third question is answered: the greyed-out shell needs no mocked traffic
   (FR-52). The earliest exercise of the capture pipeline therefore has exactly one live
   component to work with — the simulation clock, which is first in the delivery order

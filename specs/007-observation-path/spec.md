@@ -159,7 +159,7 @@ run-time role and confirm every attempt is refused.
 - **FR-009**: A message failing validation MUST NOT be written, MUST increment a rejection counter, and MUST be retained with its rejection reason up to a documented bound. (SRD FR-17)
 - **FR-010**: The ingest client's queue MUST be bounded. On reaching the bound it MUST cease acknowledging new messages rather than discarding them or growing without limit. (SRD C-05, ingest backpressure)
 - **FR-011**: Queue depth, write rate, rejection count and any broker-side loss MUST be published on `ctl/telemetry`, so degradation is visible without reading logs. (SRD C-05, C-16)
-- **FR-012**: Every long-lived component in this path MUST publish a heartbeat on `ctl/heartbeat` at its declared interval, carrying its component identifier, the simulation time and a status. (repo-layout liveness; Constitution VII)
+- **FR-012**: Every long-lived component in this path MUST publish a heartbeat on `ctl/heartbeat` at its declared interval, carrying its component identifier, the simulation time and a status. The interval is real time and the simulation time carried is payload, not schedule, so a clock rate of zero stops simulated time and stops nothing else; the emission carries the `# harness:allow-wallclock` marker with ADR-0006 as its reason, and every other interval in this path — the batch flush bound included — stays on the simulation clock. (repo-layout liveness; Constitution VII, Constitution I; ADR-0006)
 - **FR-013**: The observation store and the feature store MUST be two schemas, `observations` and `features`, in one Postgres instance with PostGIS. (SRD FR-12)
 - **FR-014**: The feature store MUST be provisioned by script at scenario start and MUST be read-only during a run: run-time roles hold select permission only. (SRD FR-13)
 - **FR-015**: All observation times MUST come from the simulation clock. No broker-assigned timestamp, database default or host clock value may be stored or used as truth. (Constitution I; SRD FR-09)
@@ -197,7 +197,7 @@ run-time role and confirm every attempt is refused.
 - **SC-006**: Under a burst at least five times the sustainable write rate, the ingest queue never exceeds its declared bound and no observation is lost once the burst ends.
 - **SC-007**: The backpressure indicator appears on `ctl/telemetry` within one declared telemetry interval of the queue reaching its bound.
 - **SC-008**: Every invalid message is rejected and retained; the count written to the store is zero.
-- **SC-009**: The wall-clock gate reports zero host-clock reads in `services/sensors/`, `services/ingest/` and the store's migration and provisioning scripts.
+- **SC-009**: The wall-clock gate reports zero unmarked host-clock reads in `services/sensors/`, `services/ingest/` and the store's migration and provisioning scripts. The only marked exemption in either service is heartbeat emission, citing ADR-0006.
 - **SC-010**: Every attempt to write to the `features` schema during a run is refused; the success count is zero.
 - **SC-011**: Sampling stored observations against the generator's field at their own coordinates and simulation times yields differences within the declared sensor noise model, reported as a figure rather than asserted.
 - **SC-012**: The count of stored observations carrying an observed property other than temperature, salinity or pressure is zero, and no sound speed value appears anywhere in the observation store or on an `obs/` topic.

@@ -1,26 +1,20 @@
 #!/usr/bin/env python3
-"""Gate: no component reads time from the operating system (Constitution I, FR-09).
+"""Gate: no unseeded randomness anywhere (Constitution II, FR-11).
 
-Deterministic replay dies the moment one component reads the host clock, and it dies
-quietly — nothing fails, the numbers are simply not the same twice. That is why this is
-a gate and not a review note.
+Every stochastic choice in drogna comes from the run's root seed, through
+``harness_core.rng.rng_for(stream)``. A module-level generator, a global one, or an
+identifier drawn from entropy makes a run unreproducible, and — worse — makes it
+unreproducible without saying so.
 
-Python is checked by syntax tree, so an aliased import (``from time import time as t``)
-is caught along with the obvious spelling. TypeScript and SQL are checked by pattern.
+Flagged: the free functions of ``random`` and ``numpy.random``; constructing a generator
+directly (``random.Random(...)``, ``numpy.random.default_rng(...)``), because even a
+seeded one bypasses the port and so is absent from the manifest; entropy sources
+(``os.urandom``, ``secrets``); and entropy-derived identifiers (``uuid.uuid1``,
+``uuid.uuid4``). In TypeScript, ``Math.random`` and ``crypto.getRandomValues``. In SQL,
+``random()`` and the UUID generators.
 
-Permitted, per Constitution I as amended by ADR-0006 and ADR-0007:
-
-- the clock service's own real-time driver;
-- heartbeat emission and liveness evaluation, which answer "is this process alive?", a
-  question about the host and not about the simulated world;
-- interpolation between received clock samples in the client's render path;
-- log line decoration and process-level metrics;
-- test harness setup.
-
-The first three are marked inline with ``# harness:allow-wallclock <reason>`` and appear
-in the exemption inventory. Test files are recognised by path. Log decoration through the
-logging module involves no call for this gate to see; a component that reaches for the
-clock to build a log line marks it like anything else.
+The one declared exemption zone is ``harness_core.rng`` itself, which is where the
+derivation rule lives and therefore the one place a generator may be constructed.
 """
 
 from __future__ import annotations
@@ -40,69 +34,66 @@ from _gate_lib import (
     TYPESCRIPT_SUFFIXES,
     Finding,
     exempted,
-    is_test_path,
     iter_files,
     marker_index,
     read_text,
     run_gate,
 )
 
-GATE = "wallclock"
+GATE = "seeded-rng"
 
-# Dotted names whose call reads a host clock.
+REQUIRED_ROUTE = "harness_core.rng.rng_for"
+
+# The module that owns the derivation rule, and so the only place a generator is built.
+DECLARED_ZONE = "libs/harness_core/src/harness_core/rng.py"
+
+PROHIBITED_PREFIXES: tuple[str, ...] = (
+    "random.",
+    "numpy.random.",
+    "np.random.",
+    "secrets.",
+)
+
 PROHIBITED_CALLS: frozenset[str] = frozenset(
     {
-        "time.time",
-        "time.time_ns",
-        "time.monotonic",
-        "time.monotonic_ns",
-        "time.perf_counter",
-        "time.perf_counter_ns",
-        "time.process_time",
-        "time.process_time_ns",
-        "time.localtime",
-        "time.gmtime",
-        "time.ctime",
-        "time.asctime",
-        "datetime.now",
-        "datetime.utcnow",
-        "datetime.today",
-        "datetime.datetime.now",
-        "datetime.datetime.utcnow",
-        "datetime.datetime.today",
-        "date.today",
-        "datetime.date.today",
-        "pandas.Timestamp.now",
-        "numpy.datetime64",
+        "os.urandom",
+        "uuid.uuid1",
+        "uuid.uuid4",
+        "uuid4",
+        "uuid1",
+        "numpy.random.default_rng",
+        "numpy.random.Generator",
+        "numpy.random.RandomState",
+        "numpy.random.SeedSequence",
+        "random.Random",
+        "random.SystemRandom",
     }
 )
 
-PROHIBITED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("Date.now", re.compile(r"\bDate\s*\.\s*now\s*\(")),
-    ("new Date()", re.compile(r"\bnew\s+Date\s*\(\s*\)")),
-    ("performance.now", re.compile(r"\bperformance\s*\.\s*now\s*\(")),
-    ("Date.getTime", re.compile(r"\bnew\s+Date\s*\(\s*\)\s*\.\s*getTime")),
+TYPESCRIPT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("Math.random", re.compile(r"\bMath\s*\.\s*random\s*\(")),
+    ("crypto.getRandomValues", re.compile(r"\bcrypto\s*\.\s*getRandomValues\s*\(")),
+    ("crypto.randomUUID", re.compile(r"\bcrypto\s*\.\s*randomUUID\s*\(")),
+    ("uuidv4", re.compile(r"\buuidv4\s*\(")),
 )
 
 SQL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("now()", re.compile(r"\bnow\s*\(\s*\)", re.IGNORECASE)),
-    ("current_timestamp", re.compile(r"\bcurrent_timestamp\b", re.IGNORECASE)),
-    ("current_date", re.compile(r"\bcurrent_date\b", re.IGNORECASE)),
-    ("current_time", re.compile(r"\bcurrent_time\b", re.IGNORECASE)),
-    ("localtimestamp", re.compile(r"\blocaltimestamp\b", re.IGNORECASE)),
-    ("clock_timestamp()", re.compile(r"\bclock_timestamp\s*\(", re.IGNORECASE)),
-    ("statement_timestamp()", re.compile(r"\bstatement_timestamp\s*\(", re.IGNORECASE)),
-    ("transaction_timestamp()", re.compile(r"\btransaction_timestamp\s*\(", re.IGNORECASE)),
+    ("random()", re.compile(r"\brandom\s*\(\s*\)", re.IGNORECASE)),
+    ("gen_random_uuid()", re.compile(r"\bgen_random_uuid\s*\(", re.IGNORECASE)),
+    ("uuid_generate_v4()", re.compile(r"\buuid_generate_v4\s*\(", re.IGNORECASE)),
 )
 
 MESSAGE = (
-    "reads the host clock; simulation time comes from harness_core.clock.Clock, "
-    "which is a subscriber to ctl/clock"
+    f"unseeded or unregistered randomness; draw from {REQUIRED_ROUTE}(stream), "
+    "which derives from the run's root seed and appears in the manifest"
+)
+IDENTIFIER_MESSAGE = (
+    "identifier drawn from entropy; derive it from seed and logical position with "
+    "harness_core.rng.identifier_for or uuid_for"
 )
 
 
 def dotted_name(node: ast.AST) -> str:
-    """The dotted spelling of an attribute or name expression, or an empty string."""
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):
@@ -112,7 +103,6 @@ def dotted_name(node: ast.AST) -> str:
 
 
 def import_aliases(tree: ast.Module) -> dict[str, str]:
-    """Map local names to their origin, so an aliased import is still recognised."""
     aliases: dict[str, str] = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -125,7 +115,6 @@ def import_aliases(tree: ast.Module) -> dict[str, str]:
 
 
 def resolve(name: str, aliases: dict[str, str]) -> str:
-    """Rewrite a dotted call through the file's imports."""
     if not name:
         return name
     head, _, tail = name.partition(".")
@@ -133,6 +122,19 @@ def resolve(name: str, aliases: dict[str, str]) -> str:
     if origin is None:
         return name
     return f"{origin}.{tail}" if tail else origin
+
+
+def is_prohibited(name: str) -> bool:
+    if name in PROHIBITED_CALLS:
+        return True
+    return any(name.startswith(prefix) for prefix in PROHIBITED_PREFIXES)
+
+
+def in_declared_zone(path: Path, root: Path) -> bool:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix() == DECLARED_ZONE
+    except ValueError:
+        return False
 
 
 def check_python(path: Path, text: str) -> Iterable[Finding]:
@@ -150,12 +152,12 @@ def check_python(path: Path, text: str) -> Iterable[Finding]:
             continue
         spelling = dotted_name(node.func)
         resolved = resolve(spelling, aliases)
-        if resolved not in PROHIBITED_CALLS and spelling not in PROHIBITED_CALLS:
+        if not (is_prohibited(resolved) or is_prohibited(spelling)):
             continue
         allowed, marker = exempted(index, node.lineno, GATE)
         if allowed:
             continue
-        message = MESSAGE
+        message = IDENTIFIER_MESSAGE if "uuid" in resolved.lower() else MESSAGE
         if marker is not None and not marker.has_reason:
             message = "exemption marker carries no reason, so it exempts nothing"
         yield Finding(path, node.lineno, GATE, f"{spelling}()", message)
@@ -172,7 +174,7 @@ def check_patterns(
             allowed, marker = exempted(index, number, GATE)
             if allowed:
                 continue
-            message = MESSAGE
+            message = IDENTIFIER_MESSAGE if "uuid" in label.lower() else MESSAGE
             if marker is not None and not marker.has_reason:
                 message = "exemption marker carries no reason, so it exempts nothing"
             yield Finding(path, number, GATE, label, message)
@@ -181,13 +183,13 @@ def check_patterns(
 def check(paths: Sequence[Path], root: Path = REPO_ROOT) -> Iterable[Finding]:
     suffixes = PYTHON_SUFFIXES + TYPESCRIPT_SUFFIXES + SQL_SUFFIXES
     for path in iter_files(paths, gate=GATE, suffixes=suffixes, root=root):
-        if is_test_path(path):
-            continue  # test harness setup is a permitted zone (Constitution I)
+        if in_declared_zone(path, root):
+            continue
         text = read_text(path)
         if path.suffix in PYTHON_SUFFIXES:
             yield from check_python(path, text)
         elif path.suffix in TYPESCRIPT_SUFFIXES:
-            yield from check_patterns(path, text, PROHIBITED_PATTERNS)
+            yield from check_patterns(path, text, TYPESCRIPT_PATTERNS)
         else:
             yield from check_patterns(path, text, SQL_PATTERNS)
 

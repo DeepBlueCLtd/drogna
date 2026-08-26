@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from harness_core.config import (
     EXIT_CONFIG_INVALID,
     EXIT_CONFIG_MALFORMED,

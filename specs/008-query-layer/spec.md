@@ -108,10 +108,9 @@ part of the standard it implements and which parts it does not.
 tests that matter earliest run through EDR. What was once uncertain here is now settled:
 ADR-0004 establishes that pygeoapi's supplied `sensorthings` provider is an HTTP client which
 consumes an external SensorThings service and republishes it as OGC API - Features, so it
-cannot serve the entity set from the observation store and there is no external service to
+cannot serve the entity set from the observation store, and there is no external service to
 point it at. This story is therefore a build of comparable weight to User Story 2 rather than
-an investigation, and it is last because the acceptance tests that matter earliest run through
-EDR, not because it is small.
+an investigation. It is last for the ordering reason alone, not because it is small.
 
 **Independent Test**: Run a scenario to populate the observation store, then walk the entity
 set from the service root through navigation links alone, confirm the entities and the
@@ -171,7 +170,7 @@ to confirm the refusal names the option and points at the conformance statement.
 - **FR-018**: The query layer's configuration MUST contain no literal hostname, port or path; every such value comes from the destination configuration. (Constitution IV; SRD NFR-04, NFR-05)
 - **FR-019**: The query layer MUST emit its own OpenAPI specification, and that specification MUST be the source of the client's HTTP types. (SRD NFR-01)
 - **FR-020**: Response size MUST be bounded, with documented limits for cube extent, trajectory vertex count and SensorThings page size, and refusals that name the limit. (SRD C-09)
-- **FR-021**: The query layer MUST publish a heartbeat on `ctl/heartbeat` so the client lights it from liveness rather than from configuration. (Constitution VII; SRD FR-45)
+- **FR-021**: The query layer MUST publish a heartbeat on `ctl/heartbeat` so the client lights it from liveness rather than from configuration. The cadence is real time and the simulation time the heartbeat carries is payload, not schedule, so a rate of zero leaves the query layer lit. (Constitution VII; SRD FR-45; ADR-0006)
 - **FR-022**: The query layer MUST NOT be polled for freshness. Consumers learn of a new run from `ctl/run-published`, because the query layer has no notification mechanism. This feature therefore provides no freshness endpoint and documents why. (SRD FR-31)
 - **FR-023**: Collections MUST sit under a stable, predictable path prefix, since the reverse proxy's access control operates on path prefix and default-deny. (SRD FR-40, FR-41)
 - **FR-024**: The coverage store layout MUST support atomic publication by the publisher: making a run visible is a single operation and no reader observes a partially written field. This feature defines the layout that makes it possible; the publisher performs it. (SRD FR-30)

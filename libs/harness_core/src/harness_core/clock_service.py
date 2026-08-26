@@ -392,6 +392,7 @@ class ClockSamplePublisher:
 
     def publish(self, tick: Tick) -> Mapping[str, Any]:
         message = tick.as_message()
+        # harness:allow-literal-path packaged schema resource, not a deployment location
         validate_document(message, schema("clock.schema.json"), source=self._topic)
         self._publisher.publish(self._topic, json.dumps(message, sort_keys=True).encode("utf-8"))
         return message

@@ -93,7 +93,9 @@ enumeration of runs in configuration. No freshness endpoint, because freshness t
   filterable, and the provider does not select one. Second, an EDR query with no time
   parameter must not be answered as "now": the default is the current run's valid time as
   recorded in its manifest, resolved from data rather than from a clock. Any use of host time
-  by pygeoapi itself for cache headers or logging is decoration and is permitted.
+  by pygeoapi itself for cache headers or logging is decoration and is permitted, as is the
+  query layer's own heartbeat emission, which is on a real-time cadence with the simulation
+  time carried as payload (ADR-0006).
 - **II. Seeded Randomness and Deterministic Replay** — Run identifiers derive from the root
   seed and the run sequence. Two replays of the same scenario therefore produce the same
   catalogue, which is what allows a replayed run's responses to be compared byte for byte.

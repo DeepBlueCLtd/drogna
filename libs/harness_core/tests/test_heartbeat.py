@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from harness_core.clock import CLOCK_TOPIC, ClockMode, SimInstant, Tick
 from harness_core.clock_service import ClockSamplePublisher
 from harness_core.config import ConfigInvalidError, validate_document

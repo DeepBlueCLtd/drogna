@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from harness_core.clock import ClockMode, ParticipantRole, SimInstant
 from harness_core.clock_service import ClockEngine, ClockSettings
 from harness_core.config import ConfigInvalidError
@@ -109,9 +108,10 @@ def test_it_is_sufficient_to_reconstruct_the_run(
     assert settings.epoch == SimInstant.from_iso(EPOCH_ISO)
     assert settings.mode is ClockMode.LOCKSTEP
     assert engine.tick_for(10).instant.micros == settings.epoch.micros + 1_000_000
-    assert streams.rng_for("alpha.draw").random() == RandomStreams(12345).rng_for(
-        "alpha.draw"
-    ).random()
+    assert (
+        streams.rng_for("alpha.draw").random()
+        == RandomStreams(12345).rng_for("alpha.draw").random()
+    )
 
 
 def test_participants_accumulate_and_the_document_stays_ordered(

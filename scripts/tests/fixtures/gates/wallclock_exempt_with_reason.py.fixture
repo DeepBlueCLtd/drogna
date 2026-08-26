@@ -1,0 +1,7 @@
+"""The heartbeat exemption, marked with its reason."""
+import time
+
+
+def emit_heartbeat():
+    # harness:allow-wallclock ADR-0006 heartbeat cadence is real time
+    return time.monotonic()

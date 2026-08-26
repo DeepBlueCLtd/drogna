@@ -1,0 +1,5 @@
+"""A tracked-entity noun in the data model."""
+
+
+def record(contact):
+    return {"contact": contact}

@@ -149,6 +149,9 @@ toml = [
 name = "drogna-harness"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "harness-core" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -158,6 +161,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "harness-core", editable = "libs/harness_core" }]
 
 [package.metadata.requires-dev]
 dev = [

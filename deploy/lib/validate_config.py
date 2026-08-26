@@ -15,6 +15,7 @@ it, so the fallback can never be more permissive without saying so.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -254,6 +255,35 @@ _SUPPORTED = frozenset(
 )
 
 
+def _registry(schema_dir: Path):
+    """A referencing registry over every schema in `schema_dir`, keyed by `$id`.
+
+    Schemas are also registered under their bare filename, because a `$ref` of
+    `config.common.schema.json#/$defs/component` resolves against the referring
+    schema's `$id` base when it has one and is taken literally when it does not.
+    Registering both spellings means a schema validates whether or not its author
+    gave it an `$id`, rather than failing on a detail no reader would connect to
+    the error.
+    """
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
+
+    resources = []
+    for path in sorted(schema_dir.glob("*.schema.json")):
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            # A malformed schema is reported by the file that uses it, in context,
+            # rather than as an obscure failure while building the registry.
+            continue
+        resource = Resource.from_contents(document, default_specification=DRAFT202012)
+        identifier = document.get("$id")
+        if identifier:
+            resources.append((identifier, resource))
+        resources.append((path.name, resource))
+    return Registry().with_resources(resources)
+
+
 def validate_document(document: Any, schema: dict[str, Any], schema_dir: Path) -> list[str]:
     """Every way `document` fails `schema`, not merely the first."""
     try:
@@ -263,7 +293,12 @@ def validate_document(document: Any, schema: dict[str, Any], schema_dir: Path) -
         _validate(document, schema, schema, schema_dir, "", errors)
         return errors
 
-    validator = jsonschema.Draft202012Validator(schema)
+    # Every configuration schema `$ref`s config.common.schema.json for the sections
+    # shared by all components, so the validator needs a registry able to resolve
+    # those references. Without one, jsonschema raises Unresolvable at the first
+    # `$ref` and the destination cannot be validated at all — which is worse than
+    # the fallback validator below, because it fails loudly on correct config.
+    validator = jsonschema.Draft202012Validator(schema, registry=_registry(schema_dir))
     reported = []
     for error in sorted(validator.iter_errors(document), key=lambda item: list(item.absolute_path)):
         pointer = ".".join(str(part) for part in error.absolute_path) or "<root>"

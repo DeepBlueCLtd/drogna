@@ -1,0 +1,7 @@
+"""A marker with no reason, which must exempt nothing."""
+import time
+
+
+def emit_heartbeat():
+    # harness:allow-wallclock
+    return time.monotonic()

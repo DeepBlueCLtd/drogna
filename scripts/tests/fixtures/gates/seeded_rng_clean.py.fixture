@@ -1,0 +1,6 @@
+"""Perturbation drawn from a seeded generator obtained through the port."""
+from harness_core.rng import rng_for
+
+
+def perturb(value):
+    return value + rng_for("model-runner").random()

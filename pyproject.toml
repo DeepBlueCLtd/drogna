@@ -3,7 +3,17 @@ name = "drogna-harness"
 version = "0.1.0"
 description = "Environmental data architecture harness — synthetic data, fake numerics, learning purposes only"
 requires-python = ">=3.11"
-dependencies = []
+
+# Workspace members are listed here so that `uv sync` installs them into the
+# environment. Without this, `uv sync` resolves the workspace but installs
+# nothing from it, and every test that imports a harness package fails to
+# collect. Add each new library here as it is created.
+dependencies = [
+    "harness-core",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
 
 [dependency-groups]
 dev = [

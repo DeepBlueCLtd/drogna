@@ -3,7 +3,9 @@
 **Status:** Accepted
 **Date:** 26 August 2026
 **Requirements:** SRD FR-50, FR-51 (v0.3); serves FR-20
-**Amended:** 26 August 2026, with measured evidence from the feature 002 spike
+**Amended:** 26 August 2026, twice: first with measured evidence from the feature 002
+spike, then with the spike's full three-mode table once it distinguished the Shapely and
+GEOS versions independently. See `spikes/edr-trajectory/FINDING.md`.
 **Supersedes:** the "spike before committing" position taken in SRD v0.2
 
 ## Context
@@ -51,25 +53,29 @@ the pin explaining why, and a test asserts that the M ordinate survives WKT pars
   per-vertex timestamps are unavailable.
 - **The version pin guards a silent failure and must not be tidied away.** The
   failure below the pin is worse than FR-51 anticipated, and the spike measured it
-  rather than citing it. Running the same WKT through Shapely 2.1.2 on GEOS 3.13.1 and
-  Shapely 2.0.7 on GEOS 3.11.4 produces two distinct silent corruptions below the pin,
-  neither of which raises:
+  rather than citing it. Shapely and GEOS fail independently, giving three modes rather
+  than the one FR-51 names, and none of them raises:
 
-  | Input | At the pin | Below the pin |
+  | Shapely | GEOS | What happens to the M ordinate |
   |---|---|---|
-  | `LINESTRING ZM` | Z and M both recovered intact | M dropped entirely; parsed as `LINESTRING Z`. Depth survives, **vertex time is lost** |
-  | `LINESTRING M` | M recovered intact, no Z | **M's values land in Z**; parsed as `LINESTRING Z`. The vertex timestamp becomes the depth coordinate |
+  | >= 2.1 | < 3.12 | Returned as **NaN**, which is the case FR-51 describes. `shapely.has_m` raises `UnsupportedGEOSVersionError` rather than returning False. |
+  | 2.0.x | >= 3.12 | Not NaN — **absent**. No `include_m` parameter and no `has_m` attribute exist. `LINESTRING M` yields `(x, y)` tuples; `LINESTRING ZM` yields `(x, y, z)` and round-trips out as `LINESTRING Z`. **This is the pygeoapi image as it ships today.** |
+  | 2.0.x | < 3.12 | Worse than either. `LINESTRING M` comes back as a `LINESTRING Z` whose Z values are the timestamps, with `has_z` True — a Unix timestamp silently promoted into the depth axis. |
 
-  The second is the dangerous one. FR-51 describes the M ordinate coming back as NaN,
-  which would at least be recognisable. What actually happens to a `LINESTRINGM` is
-  that a Unix timestamp is silently promoted into the depth axis — so a trajectory
-  query asks for conditions at a depth of roughly 1.8 billion metres, and depending on
-  how the provider clamps out-of-range depths it may return the deepest available level
-  and a structurally valid CoverageJSON response full of wrong numbers.
+  The middle row is the one that would actually have been met, and the one this record
+  originally missed: it is the shipped pygeoapi image, and its failure is absence rather
+  than NaN. A test asserting only "M is not NaN" passes there while the timestamps are
+  already gone. The test must assert that M is recovered *and* that Z is what it should
+  be.
 
-  This is why the pin carries its reason inline, and why the test must assert more than
-  "M is not NaN": it must assert that M is recovered *and* that Z is what it should be.
-  A pin whose purpose is invisible gets removed by someone doing housekeeping.
+  A second version sensitivity, separate from M: the OGC API-EDR specification writes the
+  geometry type without a space, `LINESTRINGZM(...)`. GEOS accepts that spelling from
+  3.12 and rejects it before, with `ParseException: Unknown type: 'LINESTRINGZM'`. That
+  failure at least is loud. Emit `LINESTRING ZM (...)`, which every tested version
+  accepts.
+
+  This is why the pin carries its reason inline. A pin whose purpose is invisible gets
+  removed by someone doing housekeeping.
 - Writing the provider means owning a compatibility surface against pygeoapi's internal
   provider base class. That is accepted: it is the price of the standard being ahead of
   its implementations, and the alternative — stitching one position query per vertex —

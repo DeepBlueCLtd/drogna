@@ -238,7 +238,13 @@ within a bounded span of simulation time.
   simulation time. (SRD FR-22)
 - **FR-003**: The monitor MUST compute the residual between measured and forecast
   **sound speed**, deriving measured sound speed from the observed temperature,
-  salinity and pressure. It MUST NOT define the residual on temperature. (SRD FR-24)
+  salinity and pressure. It MUST NOT define the residual on temperature. The
+  derivation MUST call the single shared sound-speed implementation in
+  `libs/harness_core` — the same one telemetry (SRD FR-37) and the environment
+  generator (SRD FR-02) call — and this feature MUST NOT carry its own copy of the
+  equation. Sound speed is never published, never stored and is not a datastream; it
+  is derived at the point of use, so every consumer gets the same numbers by
+  construction rather than by agreement. (SRD FR-24, §2.2; ADR-0005)
 - **FR-004**: The forecast term of the residual MUST be sampled from the currently
   published forecast field at the observation's latitude, longitude, depth and time,
   through the coverage read port. (SRD FR-24, FR-30)
@@ -299,7 +305,11 @@ within a bounded span of simulation time.
   (SRD FR-29)
 - **FR-020**: The model runner MUST emit the per-cell ensemble spread as an
   uncertainty field alongside the forecast field, on the same grid, in the same run.
-  (SRD FR-29)
+  That field MUST be ensemble spread alone: the model runner MUST NOT combine it with
+  observation age. The planner (feature 011) holds that combination, because it is the
+  only consumer that needs it and because combining it here would make the runner
+  depend on an observation stream it does not otherwise read.
+  (SRD FR-07, FR-08, FR-29; Constitution VI)
 - **FR-021**: The model runner MUST write only into a staging location and MUST NOT
   write into any location a reader can reach. A run in which any member fails MUST be
   marked failed and MUST NOT be offered for publication. (SRD FR-30)
@@ -328,14 +338,21 @@ within a bounded span of simulation time.
   whose path arrives in `HARNESS_CONFIG`, and MUST validate it against its schema
   before any other I/O. (Constitution IV)
 - **FR-028**: All time used for windows, intervals, persistence spans, timeouts and
-  message timestamps MUST come from the simulation clock port. (Constitution I)
+  message timestamps MUST come from the simulation clock port. The one exception is
+  heartbeat cadence, which is real time under FR-030. (Constitution I, ADR-0006)
 - **FR-029**: The four control-namespace message shapes — divergence, run request,
   run started, run published — MUST be defined once as JSON Schema under
   `contracts/schemas/`, and the Python and TypeScript types MUST be generated from
   them. (Constitution III)
 - **FR-030**: Each of the four services MUST publish a heartbeat on `ctl/heartbeat`
-  at its declared interval so the client lights it from liveness alone.
-  (Constitution VII)
+  at its declared interval so the client lights it from liveness alone. That interval
+  MUST be **real time**, and the simulation time the heartbeat carries is payload, not
+  schedule. Liveness answers "is this process alive?", which is a fact about the host
+  and not about the simulated world, so a rate of zero stops simulated time and stops
+  nothing else. Each heartbeat call site carries the `# harness:allow-wallclock`
+  marker with ADR-0006 as its reason; the exemption covers emitting a heartbeat and
+  nothing else in this feature. (Constitution VII, Constitution I, ADR-0006;
+  SRD FR-45, FR-52, FR-53)
 - **FR-031**: No message, field or log emitted by this feature may carry a tracked
   entity, contact, detection or track. The sampling platform appears, if at all, as a
   coordinate. (Constitution V)
@@ -343,8 +360,9 @@ within a bounded span of simulation time.
 ### Key Entities
 
 - **Windowed observation**: a measurement held in the monitor's memory, carrying
-  position, depth, simulation time, the measured quantities, and the derived measured
-  sound speed. Evicted by age or count, never persisted by this feature.
+  position, depth, simulation time, the measured quantities, and the measured sound
+  speed derived from them through the shared implementation. Evicted by age or count,
+  never persisted by this feature, and the derived value never leaves it as data.
 - **Residual sample**: the signed difference between measured and forecast sound
   speed at one observation's four-dimensional position, together with the identifier
   of the forecast run it was scored against.
@@ -399,14 +417,41 @@ within a bounded span of simulation time.
   messages.
 - **SC-011**: A substitute model kernel satisfying the port can be selected by
   configuration with zero source edits outside `services/model_runner/`.
+- **SC-012**: The number of sound-speed implementations reachable from this feature is
+  exactly one, and it is in `libs/harness_core`; a search of `services/monitor/` for a
+  second copy of the equation returns nothing.
+- **SC-013**: With the clock rate pinned to zero for the length of a screenshot
+  capture, all four services continue to publish heartbeats on their real-time cadence
+  and the count of components that fall out of their liveness window is zero.
+- **SC-014**: The wall-clock gate reports zero unmarked host-clock reads across the
+  four services; every marked exemption is a heartbeat emission carrying ADR-0006 as
+  its reason.
 
 ## Assumptions
 
-- The monitor reads the current forecast through the coverage read port rather than
-  through the query layer. The query layer is the external read path; the monitor is
-  internal to the control loop, and routing it through pygeoapi would add a
-  dependency the SRD does not require. Recorded here because the SRD does not state
+- **Settled: the monitor reads the current forecast through the coverage read port,
+  not through the query layer.** The query layer is the external read path; the
+  monitor is inside the boundary SRD §2.2 draws, and the coverage output is a genuine
+  port under Constitution VI while the query layer is plumbing on the other side of
+  the seam. Routing an internal consumer out through pygeoapi and back would add a
+  dependency the SRD does not require and would claim a seam that is not really there.
+  The same reading is recorded in features 010 and 011, which read the persistence
+  reference and the announced uncertainty field through the same port, so all three
+  agree rather than each deciding for itself. Recorded because the SRD does not state
   which side of that boundary the monitor sits on.
+- **Settled: the planner combines ensemble spread with observation age, not this
+  feature.** The model runner publishes the per-cell ensemble spread and nothing more
+  (FR-020). The uncertainty field the planner scores — spread combined with an
+  observation-age term, per SRD FR-07 and FR-08 — is assembled in feature 011, which
+  is the only consumer that needs the combination and the only component already
+  subscribed to observation arrivals for that purpose. Putting it here would make the
+  model runner depend on the observation stream, and putting it in telemetry would
+  give the planner a second producer of its own primary input. Recorded in features
+  010 and 011 as well, in the same terms.
+- Sound speed is derived at the point of use and never stored, per ADR-0005. This
+  feature calls the shared implementation in `libs/harness_core`; there is no
+  fourth datastream to read instead, and none is assumed anywhere in this
+  specification.
 - The default threshold is taken as 1.75 m/s of sound speed, the midpoint of the
   SRD's stated order of 1.5 to 2 m/s, on a sensitivity of roughly 3.5 m/s per degree
   Celsius at the scenario's nominal temperature, salinity and depth.

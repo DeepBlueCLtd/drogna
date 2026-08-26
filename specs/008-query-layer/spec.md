@@ -244,7 +244,7 @@ to confirm the refusal names the option and points at the conformance statement.
   ordinate to the provider; no supplied provider implements trajectory, so this feature writes
   one. The surviving risk is the library version pin of FR-51, and feature 002's spike exists to
   prove M survives parsing and to sample one four-dimensional route before this feature builds
-  on the assumption. The decision earns an ADR under PR-03.
+  on the assumption. The decision itself is recorded as ADR-0003.
 - The coverage store layout is a directory per run under a root given by configuration,
   containing the forecast field, the uncertainty field and the run manifest, with the current
   run indicated by a pointer that can be replaced atomically. The SRD requires the property,

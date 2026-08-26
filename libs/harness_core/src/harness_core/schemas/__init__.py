@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from functools import cache, lru_cache
+from functools import cache
 from importlib import resources
 from typing import Any
 

@@ -1,4 +1,4 @@
-"""The clock port as a client: last tick only, no interpolation, staleness reported."""
+"""The clock port as a subscriber: last sample only, no interpolation, staleness reported."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from harness_core.clock import (
+    BrokerTickSource,
     ClockControlError,
     ClockEndpoint,
     ClockMode,
@@ -32,8 +33,12 @@ def tick(index: int, *, mode: ClockMode = ClockMode.REALTIME, rate: float = 1.0)
     )
 
 
-class FakeTransport:
-    """A clock service that emits exactly the ticks a test lists, then stops."""
+class FakeClock:
+    """A clock service that publishes exactly the samples a test lists, then stops.
+
+    Stands in for both halves of ADR-0009's arrangement: the ctl/clock subscription and
+    the small HTTP command interface.
+    """
 
     def __init__(self, ticks: list[Tick], *, state_tick: Tick | None = None) -> None:
         self._ticks = ticks
@@ -50,19 +55,25 @@ class FakeTransport:
             tick=self._state_tick,
         )
 
-    def ticks(self) -> Iterator[Tick]:
-        yield from self._ticks
+    def messages(self) -> Iterator[Mapping[str, Any]]:
+        """The ctl/clock payloads this clock publishes, as they arrive on the wire."""
+        for sample in self._ticks:
+            yield sample.as_message()
 
-    def control(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    def command(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         self.control_calls.append((operation, dict(payload)))
         return {"accepted": True}
+
+
+def remote(fake: FakeClock, endpoint: ClockEndpoint, **kwargs: Any) -> RemoteClock:
+    """A clock port wired to the fake's subscription and its command interface."""
+    return RemoteClock(BrokerTickSource(fake.messages()), fake, endpoint, **kwargs)
 
 
 def endpoint(**overrides: Any) -> ClockEndpoint:
     base: dict[str, Any] = {
         "endpoint": "https://clock.invalid/",
-        "snapshot_route": "state",
-        "stream_route": "ticks",
+        "snapshot_route": "clock/state",
         "control_route": "control/clock",
     }
     base.update(overrides)
@@ -70,7 +81,7 @@ def endpoint(**overrides: Any) -> ClockEndpoint:
 
 
 def test_it_reports_the_last_tick_received_and_never_interpolates() -> None:
-    clock = RemoteClock(FakeTransport([tick(0), tick(1)]), endpoint())
+    clock = remote(FakeClock([tick(0), tick(1)]), endpoint())
     clock.start()
     clock.receive()
     first = clock.now()
@@ -81,13 +92,13 @@ def test_it_reports_the_last_tick_received_and_never_interpolates() -> None:
 
 
 def test_before_the_first_tick_it_refuses_rather_than_guessing() -> None:
-    clock = RemoteClock(FakeTransport([]), endpoint())
+    clock = remote(FakeClock([]), endpoint())
     with pytest.raises(ClockStaleError, match="no tick has been observed"):
         clock.now()
 
 
 def test_a_joiner_catches_up_from_the_snapshot() -> None:
-    clock = RemoteClock(FakeTransport([tick(11)], state_tick=tick(10)), endpoint())
+    clock = remote(FakeClock([tick(11)], state_tick=tick(10)), endpoint())
     state = clock.start()
     assert state.tick is not None and state.tick.index == 10
     assert clock.tick().index == 10
@@ -95,7 +106,7 @@ def test_a_joiner_catches_up_from_the_snapshot() -> None:
 
 
 def test_an_interrupted_stream_is_reported_stale_with_the_last_tick() -> None:
-    clock = RemoteClock(FakeTransport([tick(0)]), endpoint())
+    clock = remote(FakeClock([tick(0)]), endpoint())
     clock.start()
     clock.receive()
 
@@ -111,7 +122,7 @@ def test_an_interrupted_stream_is_reported_stale_with_the_last_tick() -> None:
 
 
 def test_a_stale_clock_stops_operational_work_rather_than_falling_back_to_host_time() -> None:
-    clock = RemoteClock(FakeTransport([tick(0)]), endpoint())
+    clock = remote(FakeClock([tick(0)]), endpoint())
     clock.start()
     clock.receive()
     with pytest.raises(ClockStaleError):
@@ -124,7 +135,7 @@ def test_a_stale_clock_stops_operational_work_rather_than_falling_back_to_host_t
 
 
 def test_a_gap_is_reported_explicitly_and_not_filled_in() -> None:
-    clock = RemoteClock(FakeTransport([tick(0), tick(7)]), endpoint(stale_after_gap=10))
+    clock = remote(FakeClock([tick(0), tick(7)]), endpoint(stale_after_gap=10))
     clock.start()
     clock.receive()
     received = clock.receive()
@@ -137,7 +148,7 @@ def test_a_gap_is_reported_explicitly_and_not_filled_in() -> None:
 
 
 def test_a_gap_beyond_the_configured_tolerance_is_stale() -> None:
-    clock = RemoteClock(FakeTransport([tick(0), tick(7)]), endpoint(stale_after_gap=2))
+    clock = remote(FakeClock([tick(0), tick(7)]), endpoint(stale_after_gap=2))
     clock.start()
     clock.receive()
     clock.receive()
@@ -150,7 +161,7 @@ def test_a_gap_beyond_the_configured_tolerance_is_stale() -> None:
 
 
 def test_awaiting_a_tick_pulls_until_it_arrives() -> None:
-    clock = RemoteClock(FakeTransport([tick(index) for index in range(6)]), endpoint())
+    clock = remote(FakeClock([tick(index) for index in range(6)]), endpoint())
     clock.start()
     assert clock.await_tick(4).index == 4
     assert clock.await_sim_time(EPOCH.plus_micros(5 * INTERVAL_US)).index == 5
@@ -158,7 +169,7 @@ def test_awaiting_a_tick_pulls_until_it_arrives() -> None:
 
 def test_a_rate_change_does_not_change_the_tick_values_the_port_sees() -> None:
     ticks = [tick(0), tick(1, mode=ClockMode.ACCELERATED, rate=50.0)]
-    clock = RemoteClock(FakeTransport(ticks), endpoint())
+    clock = remote(FakeClock(ticks), endpoint())
     clock.start()
     first = clock.receive()
     second = clock.receive()
@@ -167,33 +178,29 @@ def test_a_rate_change_does_not_change_the_tick_values_the_port_sees() -> None:
 
 
 def test_only_a_registered_lockstep_participant_acknowledges() -> None:
-    observer = RemoteClock(FakeTransport([tick(0)]), endpoint(), participant_id="watcher")
+    observer = remote(FakeClock([tick(0)]), endpoint(), participant_id="watcher")
     observer.start()
     observer.receive()
     with pytest.raises(ClockControlError, match="lockstep participant"):
         observer.acknowledge()
 
-    transport = FakeTransport([tick(0)])
-    participant = RemoteClock(
-        transport, endpoint(), participant_id="alpha", role=ParticipantRole.LOCKSTEP
-    )
+    fake = FakeClock([tick(0)])
+    participant = remote(fake, endpoint(), participant_id="alpha", role=ParticipantRole.LOCKSTEP)
     participant.start()
     participant.receive()
     participant.acknowledge()
 
-    assert ("register", {"participant": "alpha", "role": "lockstep"}) in transport.control_calls
-    assert ("acknowledge", {"participant": "alpha", "tick": 0}) in transport.control_calls
+    assert ("register", {"participant": "alpha", "role": "lockstep"}) in fake.control_calls
+    assert ("acknowledge", {"participant": "alpha", "tick": 0}) in fake.control_calls
 
 
 def test_following_acknowledges_each_tick_and_ends_when_the_stream_does() -> None:
-    transport = FakeTransport([tick(0), tick(1), tick(2)])
-    clock = RemoteClock(
-        transport, endpoint(), participant_id="alpha", role=ParticipantRole.LOCKSTEP
-    )
+    fake = FakeClock([tick(0), tick(1), tick(2)])
+    clock = remote(fake, endpoint(), participant_id="alpha", role=ParticipantRole.LOCKSTEP)
     clock.start()
     observed = [seen.index for seen in clock.follow(acknowledge=True)]
 
     assert observed == [0, 1, 2]
-    acknowledged = [call for call in transport.control_calls if call[0] == "acknowledge"]
+    acknowledged = [call for call in fake.control_calls if call[0] == "acknowledge"]
     assert [call[1]["tick"] for call in acknowledged] == [0, 1, 2]
     assert clock.status().stale is True

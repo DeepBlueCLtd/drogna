@@ -47,10 +47,27 @@ can be worked on without colliding.
 ├── proxy/                          C-10 nginx configuration
 ├── client/                         C-18 React / TS / Deck.gl
 │   └── src/generated/              GENERATED TS types (do not edit)
+├── site/                           the published site: blog + system documentation
+│   ├── mkdocs.yml                  build configuration (ADR-0010)
+│   ├── docs/                       pages and posts
+│   ├── tools/                      site-specific gates
+│   └── build/                      GENERATED output, never committed
 ├── deploy/                         Compose, env templates, provisioning
 ├── scripts/                        lint gates, seeding, codegen, one-command runs
 └── spikes/                         throwaway investigations, dated and reported
 ```
+
+### Why `site/` is a top-level directory
+
+The constitution requires a new top-level directory to be argued for. `site/` earns one
+because the published site is built from sources that are not the repository's
+documentation: `docs/` is written for people reading the repository, `site/docs/` is
+written for people reading a public blog, and PR-01 binds the second far harder than the
+first. Keeping them in one tree would make it easy to publish something that was never
+meant to be published. The separation is the safeguard, and it is cheap.
+
+`site/build/` is generated output. It is never committed, and the existing `build/`
+ignore pattern already covers it.
 
 ## Ownership rule for parallel work
 

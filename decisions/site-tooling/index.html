@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-draft-tooling-for-the-published-site" class="md-skip">
+        <a href="#site-tooling" class="md-skip">
           Skip to content
         </a>
       
@@ -1581,24 +1581,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Site tooling
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1615,80 +1597,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#alternatives-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Alternatives considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#open-points" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Open points
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -1722,69 +1630,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#alternatives-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Alternatives considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#open-points" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Open points
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1800,114 +1645,13 @@
 
 
 
-<h1 id="adr-draft-tooling-for-the-published-site">ADR draft: tooling for the published site<a class="headerlink" href="#adr-draft-tooling-for-the-published-site" title="Permanent link">&para;</a></h1>
-<div class="admonition note">
-<p class="admonition-title">Draft, awaiting promotion</p>
-<p>This is a draft Architecture Decision Record. It sits here rather than in
-<code>docs/adr/</code> because that directory belongs to another feature; it is written
-in ADR form so that it can be numbered and promoted without rewriting.</p>
-</div>
-<p><strong>Status:</strong> Proposed
-<strong>Date:</strong> 26 August 2026
-<strong>Feature:</strong> 015 — published site</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>The requirements put the blog and the system documentation on the <code>gh-pages</code>
-branch, built rather than hand-written, and place a hard constraint on what may
-appear in the published output. Three properties follow from the requirements
-and constrain the choice of tooling:</p>
-<ol>
-<li><strong>Blog and documentation from one tool.</strong> They are one site with one
-   navigation and one search index. Two tools would mean two builds, two themes
-   and two sets of link checking.</li>
-<li><strong>No request to another origin.</strong> The published site must load no stylesheet,
-   font, script or image from anywhere but itself, and carry no analytics. That
-   rules out any default that reaches for a CDN.</li>
-<li><strong>Mathematics.</strong> The algorithm derivations — ensemble spread, advection,
-   informative path planning — will need real notation. A tool that cannot set
-   mathematics forces the derivations into images, which are unsearchable,
-   unselectable and a vocabulary-gate problem of their own.</li>
-</ol>
-<p>A fourth consideration is not a requirement but matters in practice: the browser
-client is a Node toolchain, and giving the site its own separate Node
-dependency tree would put two lockfiles in the repository that have nothing to do
-with each other and would be updated at different times.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>MkDocs with the Material theme and its built-in blog plugin.</strong> Versions are
-pinned, including transitive dependencies, so that a local build and the
-workflow build produce the same output.</p>
-<p>Configuration decisions taken with it:</p>
-<ul>
-<li><code>theme.font: false</code>. Material loads Google Fonts by default; disabling it is
-  what makes the no-external-origin rule hold. System font stacks are used.</li>
-<li>No mermaid, no social cards, no analytics plugin. Each would reintroduce an
-  external request or an external build-time fetch.</li>
-<li><code>pymdownx.arithmatex</code> in generic mode, so that mathematics is emitted in a form
-  a renderer can consume — with the renderer itself deferred; see the open point
-  below.</li>
-<li>Every page carries <code>noindex, nofollow</code>, and a <code>robots.txt</code> says the same. The
-  repository is public but unadvertised, and unadvertised is taken to mean not
-  indexed as well as not promoted.</li>
-<li>Built output goes to <code>site/build/</code>, which the repository's existing ignore
-  rules already cover, so the build never risks being committed beside its
-  source.</li>
-</ul>
-<h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
-<p><strong>Sphinx.</strong> Python, mature, excellent at mathematics and cross-referencing, and
-the standard choice for documentation in this ecosystem. Rejected on the blog:
-it has no first-class blog, the available extensions are thin, and PR-07 asks
-for a proper public blog rather than a documentation section with dates on it.
-The authoring format is also reStructuredText by default, and the documentation
-source is meant to stay plain markdown reviewable in the repository.</p>
-<p><strong>Hugo.</strong> Fast, excellent at blogs, single binary. Rejected on toolchain: it is
-a Go binary to install and version-pin in CI alongside Python and Node, for a
-site that is otherwise pure markdown. Its mathematics support is a theme concern
-rather than a built-in, and its templating is the least pleasant of the
-candidates to modify.</p>
-<p><strong>Jekyll.</strong> The default for GitHub Pages and already what the repository's
-<code>gh-pages</code> branch was rendering. Rejected on the Ruby toolchain — a third
-language runtime for one site — and because building it explicitly rather than
-relying on Pages' own Jekyll is no easier than building MkDocs, while its
-documentation-shaped navigation is weaker.</p>
-<p><strong>Docusaurus / VitePress.</strong> Both are good, both are Node. Rejected on the
-toolchain point above: they would tangle with the client's Node dependencies, or
-require a second isolated one, for no gain over MkDocs Material on a
-markdown-only site.</p>
-<p><strong>Hand-written HTML.</strong> Rejected without much argument. It would work today and
-would be unmaintainable by the fourth blog entry.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<ul>
-<li>The site build adds Python dependencies that are build-time only. It is not a
-  runtime component, so the single-environment-variable configuration contract
-  does not bind it. It still carries no deployment hostname: the site is built
-  with relative URLs and works under any base path.</li>
-<li>The build fails on a broken internal link, an unrecognised link, a dangling
-  anchor or a page missing from the navigation, because <code>--strict</code> is used with
-  link validation raised to warning level. Those are exactly the faults that
-  would otherwise be found by a reader.</li>
-<li>Material is a large dependency with a fast release cadence. The pin is
-  therefore a full transitive pin rather than a floor, and updating it is a
-  deliberate act.</li>
-<li>Jekyll processing on <code>gh-pages</code> would strip the directories Material emits
-  whose names begin with an underscore. The published tree therefore carries a
-  <code>.nojekyll</code> file at its root, and the workflow verifies it is present.</li>
-</ul>
-<h2 id="open-points">Open points<a class="headerlink" href="#open-points" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Mathematics rendering is not yet served.</strong> Arithmatex emits the notation but
-  the renderer that consumes it — MathJax or KaTeX — must be vendored into the
-  repository and served from this origin, not loaded from a CDN. That work is
-  deferred to whichever feature writes the first derivation, which is the first
-  point at which it can be tested against real notation. Until then no page uses
-  mathematical notation, so nothing renders wrongly; it simply is not there yet.</li>
-<li><strong>Diagrams.</strong> Mermaid renders from a third-party script and is therefore
-  excluded. Diagrams will need to be committed SVG, and SVG carrying text is
-  subject to the same vocabulary scanning as page text.</li>
-<li><strong>Screenshots.</strong> Published screenshots belong under <code>site/docs/blog/assets/</code>,
-  named <code>&lt;feature-number&gt;-&lt;slug&gt;.png</code>, committed to the repository, and produced
-  only by the curated capture mechanism that feature 016 owns. Uncommitted
-  capture output never reaches the site. This convention is recorded here so that
-  016 has a fixed target to write into.</li>
-</ul>
+<h1 id="site-tooling">Site tooling<a class="headerlink" href="#site-tooling" title="Permanent link">&para;</a></h1>
+<p>The reasoning behind this site's tooling — one tool for blog and documentation, no
+request to another origin, and real mathematics for the algorithm derivations — is
+recorded as <strong>ADR-0010</strong> in the repository's decision record, alongside every other
+decision that was hard to reverse or genuinely contested.</p>
+<p>It is not reproduced here. A decision recorded twice is a decision that will be
+amended once.</p>
 
 
 

@@ -1,0 +1,5 @@
+"""A literal path, which config exists to carry."""
+
+
+def open_store():
+    return open("/var/lib/drogna/observations.db")

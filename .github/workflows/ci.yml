@@ -1,0 +1,60 @@
+# The constitution's quality gates, run on every change.
+#
+# Gates 3 to 7 of the constitution's Development Workflow are the ones that cannot be
+# checked by reading a diff: they enforce properties that hold across the whole tree.
+# They run here and they fail the build.
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install the workspace
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format
+        run: uv run ruff format --check .
+
+      # Tests come before the gates because the gates' own tests are here: they plant a
+      # violation in a fixture and assert each gate reports it. A gate that has stopped
+      # matching looks exactly like a clean tree, so the gate steps below prove nothing
+      # unless these pass first.
+      - name: Tests
+        run: uv run pytest
+
+      - name: Gate — no wall-clock time (Constitution I)
+        run: uv run python scripts/check_no_wallclock.py
+
+      - name: Gate — seeded randomness (Constitution II)
+        run: uv run python scripts/check_seeded_rng.py
+
+      - name: Gate — no literal paths or hosts (Constitution IV)
+        run: uv run python scripts/check_no_literal_paths.py
+
+      - name: Gate — no tracked-entity vocabulary (Constitution V)
+        run: uv run python scripts/check_forbidden_vocabulary.py

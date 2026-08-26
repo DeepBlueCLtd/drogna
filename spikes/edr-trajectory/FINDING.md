@@ -307,8 +307,8 @@ handling, and add `trajectory` to it.
 
 ```python
 class TrajectoryEDRProvider(XarrayEDRProvider):
-    def position(self, **kwargs): ...    # redeclare, or it stops being advertised
-    def cube(self, **kwargs): ...        # redeclare, or it stops being advertised
+    def position(self, **kwargs): ...  # redeclare, or it stops being advertised
+    def cube(self, **kwargs): ...  # redeclare, or it stops being advertised
 
     def trajectory(self, **kwargs):
         """kwargs: query_type, wkt (a shapely LineString), datetime_,

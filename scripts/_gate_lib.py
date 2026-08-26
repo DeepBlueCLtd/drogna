@@ -85,23 +85,36 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
     "literal-path": ("scripts", "config", "deploy"),
     # Documents that discuss the prohibition necessarily use the words. Code, contracts
     # and configuration are where the data model lives, and that is what is scanned.
+    #
+    # `site` is documentation too, and belongs in this list for the same reason: the
+    # glossary must be able to say what a ship's track is in order to say drogna holds
+    # none, and the landing page must be able to promise no analytics tracking. Note
+    # that this gate enforces Constitution V — the data model holds no tracked entities
+    # — and not PR-01, which forbids customer, project and bid material in the published
+    # output. Those are different prohibitions with different scans, and excluding
+    # `site` here does not exempt it from the second.
+    #
+    # `.claude` and `.specify` are vendored tooling. Scanning them finds spec-kit's
+    # prose about detection and tracking, which says nothing about drogna's data model.
     "forbidden-vocabulary": (
         "scripts",
         "specs",
         "docs",
+        "site",
+        ".claude",
         ".specify",
         "harness-srd.md",
         "README.md",
     ),
     # The inventory lists exemptions that exempt something. A specification quoting the
     # marker is prose, not permission, so the documents are not walked for it.
-    "inventory": ("specs", "docs", ".specify", "harness-srd.md", "README.md"),
+    "inventory": ("specs", "docs", "site", ".claude", ".specify", "harness-srd.md", "README.md"),
 }
 
 GateFunction: TypeAlias = Callable[[Sequence[Path], Path], Iterable["Finding"]]
 
 MARKER_PATTERN = re.compile(r"harness:allow-(?P<gate>[a-z0-9][a-z0-9-]*)(?P<reason>.*)$")
-_COMMENT_PREFIXES = ("#", "//", "--", "/*", "*")
+_COMMENT_PREFIXES = ("#", "//", "--", "/*", "*", "<!--")
 
 
 @dataclass(frozen=True)

@@ -16,7 +16,7 @@ on:
 # Feature branches deliberately do NOT publish. They did once, so that the
 # pipeline could be verified before a merge rather than after one, and it was:
 # the first run replaced the auto-generated Jekyll rendering of the README.
-# Publishing from a feature branch means the public site tracks unmerged work,
+# Publishing from a feature branch means the public site follows unmerged work,
 # so a reader can see a claim about drogna that no longer holds by the time they
 # act on it. Verify a site change with `mkdocs build --strict` locally, or with
 # workflow_dispatch on a branch when the published output itself is in question.

@@ -1,0 +1,153 @@
+# The generator manifest: which tool, at which version, turns which master into which
+# artefact. Constitution III makes the generated trees part of the build, so the tools
+# that write them are part of the contract: `scripts/check_types_drift.sh` compares the
+# committed output byte for byte, and a generator that changed version behind our backs
+# would fail that comparison with a diff nobody's change caused.
+#
+# Every version here is checked against what is actually installed before generation
+# starts. A mismatch stops the run with a message naming both versions, rather than
+# rewriting the tree in a dialect the committed output was not written in.
+#
+# The specification records the generator choice as an assumption. This file is where the
+# assumption is settled, and it settles it differently from the specification's guess in
+# one place — the TypeScript half — for a reason given under [[tool]] below.
+
+[chain]
+generate = "scripts/generate_types.sh"
+check = "scripts/check_types_drift.sh"
+refresh = "scripts/refresh_query_layer_spec.sh"
+
+# ---------------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------------
+
+[[tool]]
+name = "datamodel-code-generator"
+command = "datamodel-codegen"
+version = "0.75.1"
+role = "JSON Schema to Python (Pydantic v2 models)"
+# Chosen because it is the only widely used JSON Schema to Python generator that keeps
+# constraints (minimum, pattern, enum) and descriptions in the model rather than dropping
+# them at the door, and because in directory mode it emits one module per master with
+# real cross-module imports — so a shape shared by two masters is defined once and
+# imported, which is what NFR-02 asks for and what a per-file invocation cannot give.
+#
+# Directory mode is also why generation runs against a bundle rather than against
+# `contracts/schemas/` directly: the bundle is where external references are rewritten to
+# bundle-relative form and where the messages/config split is imposed.
+#
+# The tool is installed without its `[http]` extra. That is deliberate and load-bearing:
+# an unresolvable reference then fails with "install the http extra" instead of quietly
+# fetching a document over the network, which FR-016 forbids and which would make the
+# drift check depend on the internet.
+
+[[tool]]
+name = "black"
+version = "26.5.1"
+role = "formatter invoked by datamodel-code-generator"
+# Formatting is part of the bytes being compared, so the formatter is pinned like a
+# generator. `--formatters black isort` is used in preference to the ruff formatter
+# because datamodel-code-generator shells out to whichever `ruff` is on PATH, which is
+# not necessarily the workspace's; black and isort are its own pinned dependencies,
+# resolved by `uv.lock` and installed by `uv sync --frozen`, so every machine formats
+# identically. The builtin formatter is dependency-free but wraps annotations in
+# parentheses and leaves 300-character lines, which makes a review diff unreadable.
+
+[[tool]]
+name = "isort"
+version = "8.0.1"
+role = "import ordering, invoked by datamodel-code-generator"
+
+[[tool]]
+name = "drogna-schema-to-typescript"
+implementation = "scripts/schema_to_typescript.py"
+version = "1.0"
+role = "JSON Schema to TypeScript"
+# The specification assumed `json-schema-to-typescript` and `openapi-typescript` here.
+# Both are good tools and both are Node packages, and that is the problem: FR-009 says
+# the drift check needs no network fetch and no service, and SC-007 says it passes with
+# networking disabled. A Node generator makes the gate depend on `pnpm install` — a
+# network fetch — inside the Python job that runs every other gate, or else on a second
+# job that has half the chain in it. Neither is a gate anyone would trust.
+#
+# So the TypeScript half is a small emitter in this repository, over the JSON Schema
+# subset the masters actually use. It fails loudly on any construct it does not
+# understand rather than emitting something plausible, which is the property that
+# matters: an emitter that guesses is worse than no emitter, because the wrong type
+# compiles.
+#
+# This is a trade. What is given up is a generator with more users than us; what is
+# bought is a check that runs anywhere Python runs, with nothing to install and nothing
+# to reach. If the OpenAPI half ever needs more than this emitter can do, the honest
+# move is `openapi-typescript` invoked from the client's own toolchain, with the drift
+# check split in two and both halves run in CI — not a Python-only gate that quietly
+# stops examining the TypeScript.
+
+# ---------------------------------------------------------------------------------
+# What is generated from what
+# ---------------------------------------------------------------------------------
+
+[python]
+tool = "datamodel-code-generator"
+target = "libs/harness_types/src/harness_types"
+# Passed to datamodel-codegen. Recorded here rather than in the script so that the whole
+# reason a generated file looks the way it does is in one file.
+#
+#   --disable-timestamp        a timestamp in the output makes every run a diff
+#   --field-constraints        Field(ge=0) rather than the deprecated conint(ge=0)
+#   --use-standard-collections  list[str], not typing.List[str]
+#   --use-union-operator       X | None, not typing.Optional[X]
+#   --target-python-version    the workspace's Python, so StrEnum is available
+options = [
+    "--input-file-type", "jsonschema",
+    "--output-model-type", "pydantic_v2.BaseModel",
+    "--target-python-version", "3.11",
+    "--disable-timestamp",
+    "--field-constraints",
+    "--use-standard-collections",
+    "--use-union-operator",
+    "--formatters", "black", "isort",
+]
+
+[typescript]
+tool = "drogna-schema-to-typescript"
+target = "client/src/generated"
+
+# The bundle: masters copied to a scratch directory, external references rewritten to
+# bundle-relative form, and the two subdirectories imposed. It is a build artefact and is
+# never committed; the documents under `contracts/` remain authoritative.
+[bundle]
+config_prefix = "config."
+config_directory = "config"
+message_directory = "messages"
+
+# ---------------------------------------------------------------------------------
+# Schema copies
+# ---------------------------------------------------------------------------------
+#
+# A component in a container validates its configuration before any other I/O and has no
+# `contracts/` directory to hand, so the schemas it needs travel inside its package. Those
+# copies used to be made by hand; they are an output of this chain now, and the tests that
+# assert each copy is byte-identical to its master are unchanged — they simply cannot fail
+# any more without the drift check failing first.
+#
+# `libs/harness_core/src/harness_core/schemas/heartbeat.schema.json` is deliberately not
+# in this list. That copy has diverged from its master, which has since gained two
+# optional fields, and reconciling it is a change to what harness_core validates — the
+# owning feature's call to make, not this chain's to make silently. It is named here so
+# the omission is a decision on the record rather than an oversight.
+[[copy]]
+source = "contracts/schemas/clock.schema.json"
+target = "libs/harness_core/src/harness_core/schemas/clock.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/env_generator/src/harness_env_generator/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.env_generator.schema.json"
+target = "services/env_generator/src/harness_env_generator/schemas/config.env_generator.schema.json"
+
+[[copy]]
+source = "contracts/schemas/manifest.schema.json"
+target = "services/env_generator/src/harness_env_generator/schemas/manifest.schema.json"

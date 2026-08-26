@@ -22,13 +22,22 @@ time comes from the shared simulation clock service (C-01) via the clock port.
   `performance.now`, SQL `now()`, `current_timestamp`, broker-assigned timestamps
   used as truth.
 - Permitted only in: log line decoration, process-level metrics, test harness setup,
-  the clock service's own real-time driver, and **heartbeat emission and liveness
-  evaluation** (ADR-0006). The last of these is narrow and stays narrow: it covers
+  the clock service's own real-time driver, **heartbeat emission and liveness
+  evaluation** (ADR-0006), and **interpolation between received clock samples in the
+  client's render path** (ADR-0007). The last of these is narrow and stays narrow: it covers
   emitting a heartbeat on a real-time interval and evaluating a liveness window. It
   does not cover timestamping an observation, scheduling a model run, ageing an
   uncertainty field, or anything else. Liveness answers "is this process alive?",
   which is a fact about the host and not about the simulated world, and deterministic
-  replay is untouched because no operational output depends on heartbeat timing.
+  replay is untouched because no operational output depends on heartbeat timing. The
+  render-path exemption is bounded the same way: it may interpolate between two
+  received samples but never extrapolate past the latest one, every arriving sample
+  snaps the display and discards the interpolation, and no value derived from it
+  leaves the render path.
+- Both exemptions concern the boundary between the simulated world and the machine
+  displaying it. That is the shape of the boundary, not a slide. A third request is
+  evidence the principle is being eroded and must be argued on its own merits, never
+  by analogy to these two.
 - Enforced by an automated lint gate (`scripts/check_no_wallclock.py`) that runs in
   CI and fails the build. Any exemption is an inline `# harness:allow-wallclock
   <reason>` marker, and every marker is reviewed.
@@ -266,7 +275,7 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+**Version**: 1.3.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
 
 *1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
 extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
@@ -276,3 +285,7 @@ EDR trajectory provider as sitting behind an existing port (FR-50). Project name
 evaluation (ADR-0006), without which FR-53's rate-zero capture greys out a running
 system. Principle VI records the bespoke SensorThings provider (ADR-0004) and the
 obligation to state which subset of a standard is actually implemented.*
+
+*1.3.0 — Principle I gains a second bounded exemption for interpolating between
+received clock samples in the client's render path (ADR-0007), with the rule that a
+third such request is evidence of erosion rather than precedent.*

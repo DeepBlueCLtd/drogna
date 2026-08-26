@@ -15,3 +15,4 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0004](0004-bespoke-sensorthings-provider.md) | SensorThings is served by a bespoke pygeoapi provider | Accepted |
 | [0005](0005-sound-speed-is-derived-not-stored.md) | Sound speed is derived at the point of use, not stored | Accepted |
 | [0006](0006-heartbeat-cadence-is-real-time.md) | Heartbeat cadence and liveness windows are real time | Accepted |
+| [0007](0007-host-time-for-display-smoothing.md) | Host time may smooth the display between clock samples | Accepted |

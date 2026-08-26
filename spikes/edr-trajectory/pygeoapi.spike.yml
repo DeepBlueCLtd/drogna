@@ -1,0 +1,128 @@
+# pygeoapi configuration for the EDR trajectory spike.
+#
+# SPIKE CODE. Throwaway. Literal paths, hostname and port on purpose; this file does
+# not follow drogna's single-environment-variable config contract (Constitution IV),
+# as argued in specs/002-edr-trajectory-spike/plan.md Complexity Tracking. The real
+# query-layer configuration is written by feature 008 and looks nothing like this.
+#
+# The provider is selected by dotted path. That is the whole registration mechanism:
+# pygeoapi's load_plugin() splits `name` on the last dot and imports the class, so a
+# bespoke provider needs no entry in pygeoapi's plugin registry, only to be importable
+# (PYTHONPATH=/spike here).
+
+server:
+  bind:
+    host: 0.0.0.0
+    port: 80
+  url: http://localhost:80
+  mimetype: application/json; charset=UTF-8
+  encoding: utf-8
+  language: en-GB
+  cors: true
+  pretty_print: true
+  templates:
+    path: /pygeoapi/pygeoapi/templates
+    static: /pygeoapi/pygeoapi/static
+  map:
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+    attribution: OpenStreetMap contributors
+
+logging:
+  level: DEBUG
+
+metadata:
+  identification:
+    title: drogna EDR trajectory spike
+    description: >-
+      SYNTHETIC DATA. A throwaway pygeoapi instance serving one analytic coverage,
+      used to establish whether per-vertex arrival times survive an OGC API-EDR
+      trajectory query. Not a system, not a prototype, and not real data.
+    keywords:
+      - spike
+      - synthetic
+    keywords_type: theme
+    terms_of_service: https://creativecommons.org/licenses/by/4.0/
+    url: https://example.invalid/drogna-spike
+  license:
+    name: CC-BY 4.0 license
+    url: https://creativecommons.org/licenses/by/4.0/
+  provider:
+    name: drogna spike
+    url: https://example.invalid/drogna-spike
+  contact:
+    name: drogna
+    email: nobody@example.invalid
+    role: pointOfContact
+
+resources:
+  spike_coverage:
+    type: collection
+    title: Synthetic four-dimensional coverage (spike fixture)
+    description: >-
+      SYNTHETIC. One analytic parameter varying in longitude, latitude, depth and
+      time, generated from a fixed seed. Fake numerics.
+    keywords:
+      - synthetic
+      - spike
+    extents:
+      spatial:
+        bbox: [-4.0, 48.0, 1.0, 53.0]
+        crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+      temporal:
+        begin: 2026-09-01T00:00:00Z
+        end: 2026-09-02T12:00:00Z
+    links:
+      - type: text/html
+        rel: canonical
+        title: the spike's own finding
+        href: https://example.invalid/drogna-spike/FINDING.md
+        hreflang: en-GB
+    providers:
+      - type: edr
+        name: provider_stub.SpikeTrajectoryEDRProvider
+        data: /spike/fixture/spike_coverage.nc
+        x_field: lon
+        y_field: lat
+        z_field: depth
+        time_field: time
+        format:
+          name: NetCDF
+          mimetype: application/x-netcdf
+        options:
+          time_method: linear
+
+  # The same fixture through the supplied provider, so the finding can quote what
+  # pygeoapi offers out of the box rather than asserting it.
+  spike_coverage_stock:
+    type: collection
+    title: Synthetic four-dimensional coverage (stock xarray-edr provider)
+    description: >-
+      SYNTHETIC. The same fixture served by pygeoapi's supplied xarray-edr provider,
+      present only so the collection's advertised query types can be captured.
+    keywords:
+      - synthetic
+      - spike
+    extents:
+      spatial:
+        bbox: [-4.0, 48.0, 1.0, 53.0]
+        crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+      temporal:
+        begin: 2026-09-01T00:00:00Z
+        end: 2026-09-02T12:00:00Z
+    links:
+      - type: text/html
+        rel: canonical
+        title: the spike's own finding
+        href: https://example.invalid/drogna-spike/FINDING.md
+        hreflang: en-GB
+    providers:
+      - type: edr
+        name: xarray-edr
+        data: /spike/fixture/spike_coverage.nc
+        x_field: lon
+        y_field: lat
+        z_field: depth
+        time_field: time
+        format:
+          name: NetCDF
+          mimetype: application/x-netcdf

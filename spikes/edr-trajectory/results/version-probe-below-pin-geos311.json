@@ -109,6 +109,12 @@
       ],
       "wkt_round_trip": "LINESTRING Z (-3.6 48.4 1788220800, -2.55 49.45 1788226668, -1.5 50.5 1788232536, 0.6 52.6 1788238404)",
       "m_matches_input": false
+    },
+    "LINESTRINGZM (no space)": {
+      "label": "LINESTRINGZM (no space)",
+      "wkt_in": "LINESTRINGZM(-3.60 48.40 -5.0 1788220800, -2.55 49.45 -100.0 1788226668, -1.50 50.50 -220.0 1788232536, 0.60 52.60 -380.0 1788238404)",
+      "parsed": false,
+      "error": "GEOSException: ParseException: Unknown type: 'LINESTRINGZM'"
     }
   },
   "vertical_convention": {

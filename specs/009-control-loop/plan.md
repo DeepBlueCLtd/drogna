@@ -24,8 +24,11 @@ identifier from seeded generators. AT-02 scores against this feature.
 manifest, event publication wrapper) from feature 001; `harness_types` generated
 Python types from feature 006; an MQTT client library for broker access; `numpy` for
 grid arithmetic and ensemble statistics; the NetCDF writer behind the coverage output
-port for field emission; `gsw` or an equivalent published sound-speed formulation for
-the temperature/salinity/pressure to sound-speed computation.
+port for field emission; and the shared sound-speed derivation in `harness_core`,
+which this feature calls and does not reimplement (ADR-0005). That derivation wraps
+`gsw` or an equivalent published formulation; the choice and its validity range are
+documented in `docs/algorithms/`, and the environment generator and telemetry call the
+same function, so the three cannot disagree about what a sound speed is.
 
 **Storage**: Coverage store (C-08), NetCDF files under the layout and catalogue
 convention in `stores/coverage/`, written to staging and moved into the catalogued
@@ -64,13 +67,13 @@ generator produces.
 
 | Principle | How this feature complies |
 |---|---|
-| **I. No Wall-Clock Time** | Every window bound, persistence span, minimum interval, outstanding timeout, message timestamp and field valid-time comes from `harness_core.clock.Clock`. The lint gate covers all four service packages. The only permitted appearance of host time is log-line decoration. |
+| **I. No Wall-Clock Time** | Every window bound, persistence span, minimum interval, outstanding timeout, message timestamp and field valid-time comes from `harness_core.clock.Clock`. The lint gate covers all four service packages. Host time appears in exactly two permitted places: log-line decoration, and heartbeat emission under ADR-0006, which is marked `# harness:allow-wallclock` with that ADR as its reason. The exemption stays narrow — it covers emitting a heartbeat, and not timestamping an observation, scheduling a run or ageing anything. |
 | **II. Seeded Randomness and Deterministic Replay** | Ensemble perturbations and kernel noise draw from `harness_core.rng.rng_for(stream)` with one derived stream per ensemble member. Run identifiers derive from root seed plus logical run ordinal, never from entropy. SC-010 asserts byte-identical replay. |
 | **III. Generated Types Only** | `divergence`, `run-request`, `run-started` and `run-published` are defined once as JSON Schema under `contracts/schemas/`, with `$id` of the documented form. Python types come from `libs/harness_types/`, TypeScript from `client/src/generated/`. Neither is hand-written; the drift check covers them. |
 | **IV. No Literal Paths or Hosts** | Each service reads one config file named by `HARNESS_CONFIG` and validates it against `contracts/schemas/config.<component>.schema.json` before any I/O. Staging and catalogue locations, broker URL, topic prefixes, thresholds and intervals are all config. |
 | **V. No Tracked Entities** | The data model here is observations, residuals, divergence, run requests, forecast fields and uncertainty fields. No contact, detection or track appears; the sampling platform is a coordinate on an observation. The forbidden-vocabulary gate covers the four packages and the four schemas. |
 | **VI. Honest Ports** | The model kernel is a genuine port and is expressed as one: initialisation state in, gridded field out, with a second implementation (the test double) proving it. The coverage output is a genuine port and the publisher writes through it. Event publication is wrapped thinly and documented as marginal. The restart catch-up query uses the observation store client directly and is **not** dressed as a port, per §2.1. |
-| **VII. Liveness, Not Configuration** | All four services publish heartbeats on `ctl/heartbeat` carrying component id, simulation time and status. Nothing in this feature tells the client what exists. |
+| **VII. Liveness, Not Configuration** | All four services publish heartbeats on `ctl/heartbeat` carrying component id, simulation time and status. The cadence is real time and the simulation time carried is payload, not schedule (ADR-0006), so pinning the clock rate to zero for a screenshot capture leaves a running component lit rather than greying out a system that is plainly alive. Nothing in this feature tells the client what exists. |
 | **VIII. Recommendations, Not Decisions** | Not touched directly: the scheduler decides whether to spend compute, which is an internal resource decision, not advice to a human. No output of this feature is addressed to an operator. |
 | **IX. Ground Truth Is Scored, Not Assumed** | The kernel advects features whose parameters come from the generator's ground-truth manifest, so the run's error against truth is computable. This feature emits the residuals; feature 010 turns them into reported skill against persistence. Nothing here asserts accuracy without a figure. |
 | **X. Default Deny at the Boundary** | Not owned here. The publisher writes into the coverage store under the catalogue convention; whether a collection is exposed is decided at the proxy by feature 013. The publisher does not open any path. |
@@ -106,8 +109,8 @@ services/monitor/                          C-11
 │   ├── __init__.py
 │   ├── config.py                          load + validate against schema
 │   ├── window.py                          bounded rolling window, eviction
-│   ├── sound_speed.py                     T/S/P to sound speed
-│   ├── residual.py                        measured vs forecast sampling
+│   ├── residual.py                        measured vs forecast sampling, calling
+│   │                                      harness_core's shared sound speed (ADR-0005)
 │   ├── persistence.py                     spatial and temporal persistence rules
 │   ├── catchup.py                         restart catch-up / warm-up
 │   ├── publish.py                         ctl/divergence, ctl/telemetry, heartbeat

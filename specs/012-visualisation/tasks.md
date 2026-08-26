@@ -138,8 +138,11 @@ acknowledgement.
   `client/src/controls/__tests__/rateState.test.ts`.
 - [ ] T018 [P] [US2] Test for a rate of zero as a legitimate rate: simulation time
   stops, time-driven animation stops, the display says paused, and the state is
-  distinguishable from disconnected, in
-  `client/src/controls/__tests__/pinnedRate.test.ts`.
+  distinguishable from disconnected. In the same file, assert that components lit
+  before the pin stay lit through it, because liveness windows are real time and the
+  heartbeats keep arriving (ADR-0006, SC-015), and that nothing host-derived — an age
+  since last heartbeat, say — is rendered, so the frame-to-frame output stays stable
+  while pinned. In `client/src/controls/__tests__/pinnedRate.test.ts`.
 - [ ] T019 [P] [US2] Test asserting the acknowledged rate is readable from outside the
   React tree so a capture can wait for the pin to take effect, and that the rendered
   output does not change between frames while pinned, in
@@ -157,9 +160,12 @@ acknowledgement.
 - [ ] T023 [US2] Implement capture readiness: expose the acknowledged rate and the
   pinned state where the capture path can read them, in
   `client/src/controls/captureReadiness.ts`.
-- [ ] T024 [US2] Implement the frame-interpolation module: interpolate between two
-  received clock samples only, never extrapolate beyond the latest, stop when the clock
-  stops, carrying the `harness:allow-wallclock` marker and referencing its ADR, in
+- [ ] T024 [US2] Implement the frame-interpolation module against ADR-0007's three
+  rules: interpolate only between two received clock samples, never extrapolate beyond
+  the latest, snap to every arriving sample and discard the interpolation rather than
+  blending it, and hold at the last sample when arrival stops. Carry the
+  `// harness:allow-wallclock` marker naming ADR-0007, keep the read in this one
+  module, and keep the render-on-clock-samples path selectable as the fallback, in
   `client/src/controls/rateState.ts` and the animation hook it exposes.
 
 **Checkpoint**: the loop can be slowed to watch a single cycle, sped up to watch hours
@@ -281,11 +287,16 @@ conditions shown against the EDR trajectory response for each vertex's timestamp
 ## Phase 8: Polish & Cross-Cutting
 
 - [ ] T042 [P] Run the wall-clock, literal-path, generated-types-drift and
-  forbidden-vocabulary gates over the client additions, and confirm the only
-  `harness:allow-wallclock` marker in the client is the frame-interpolation one.
-- [ ] T043 Write the ADR for the frame-interpolation exemption in `docs/adr/`,
-  recording the three bounding rules from the plan's Complexity Tracking table and the
-  render-on-clock-samples fallback.
+  forbidden-vocabulary gates over the client additions, and confirm that the client
+  carries exactly two `harness:allow-wallclock` markers — liveness evaluation naming
+  ADR-0006 and frame interpolation naming ADR-0007 — and no third (SC-013).
+- [ ] T043 Write the escape test for ADR-0007's third rule: assert that no value
+  derived from the animation frame timestamp reaches a query, an outgoing message, a
+  recorded observation, a screenshot's recorded time or any other test's assertion —
+  by instrumenting the interpolated clock so any value that leaves the render path is
+  detectable — in `client/src/controls/__tests__/interpolationDoesNotEscape.test.ts`
+  (SC-014). This is the rule that would otherwise be broken silently: the other two
+  show up as a wrong picture, this one shows up as a wrong number somewhere else.
 - [ ] T044 [P] Long-session test asserting the client's memory footprint is stable to
   within 10% over an hour of demonstration at the maximum supported rate, in
   `client/src/data/__tests__/longSession.test.ts`.
@@ -377,5 +388,7 @@ field.
   but a received heartbeat may light a component, and nothing but a received message
   may draw a transit. A convenience fixture that lights something during development is
   a constitution violation, not a shortcut.
-- The frame-interpolation exemption is the only permitted use of host time in the
-  client. Any second use is a defect.
+- Two uses of host time are permitted in the client and no more: liveness evaluation
+  (ADR-0006) and frame interpolation (ADR-0007). Both concern the boundary between the
+  simulated world and the machine displaying it. A third is a defect until it is argued
+  on its own merits, never by analogy to these two.

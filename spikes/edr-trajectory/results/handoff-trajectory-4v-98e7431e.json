@@ -1,0 +1,80 @@
+{
+  "geometry": {
+    "coords_tuples": [
+      [
+        -3.5,
+        48.5,
+        -25.0,
+        1788220800.0
+      ],
+      [
+        -2.16667,
+        49.83333,
+        -25.0,
+        1788256800.0
+      ],
+      [
+        -0.83333,
+        51.16667,
+        -25.0,
+        1788292800.0
+      ],
+      [
+        0.5,
+        52.5,
+        -25.0,
+        1788328800.0
+      ]
+    ],
+    "geom_type": "LineString",
+    "m_recovered": [
+      1788220800.0,
+      1788256800.0,
+      1788292800.0,
+      1788328800.0
+    ],
+    "vertex_count": 4,
+    "wkt_as_received": "LINESTRING ZM (-3.5 48.5 -25 1788220800, -2.16667 49.83333 -25 1788256800, -0.83333 51.16667 -25 1788292800, 0.5 52.5 -25 1788328800)",
+    "z_recovered": [
+      -25.0,
+      -25.0,
+      -25.0,
+      -25.0
+    ]
+  },
+  "geos_version": "3.13.1",
+  "kwargs": {
+    "bbox": null,
+    "corridor_height": null,
+    "corridor_width": null,
+    "crs_transform_spec": null,
+    "datetime_": null,
+    "format_": "json",
+    "height_units": null,
+    "instance": null,
+    "limit": 10,
+    "location_id": null,
+    "query_type": "trajectory",
+    "select_properties": [],
+    "width_units": null,
+    "within": null,
+    "within_units": null,
+    "wkt": {
+      "__geometry__": "LINESTRING ZM (-3.5 48.5 -25 1788220800, -2.16667 49.83333 -25 1788256800, -0.83333 51.16667 -25 1788292800, 0.5 52.5 -25 1788328800)"
+    },
+    "z": null
+  },
+  "out_of_domain": "null",
+  "provider_class": "provider_stub.SpikeTrajectoryEDRProvider",
+  "query_types_advertised": [
+    "position",
+    "cube",
+    "trajectory"
+  ],
+  "shapely_version": "2.1.2",
+  "time_field": "time",
+  "time_method": "linear",
+  "x_field": "lon",
+  "y_field": "lat",
+  "z_field": "depth"
+}

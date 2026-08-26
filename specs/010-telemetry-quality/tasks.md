@@ -148,8 +148,11 @@ errors are known by construction; check the published score by hand.
 ### Implementation for User Story 2
 
 - [ ] T020 [US2] Implement the persistence reference: capture at publication
-  boundaries through the coverage read port, hold constant, expose values for scoring,
-  in `services/telemetry/src/harness_telemetry/persistence_reference.py`.
+  boundaries through the coverage read port — not through the query layer — hold
+  constant, and expose values for scoring, deriving the reference sound speed by
+  calling `harness_core`'s shared implementation rather than any local copy of the
+  equation (ADR-0005), in
+  `services/telemetry/src/harness_telemetry/persistence_reference.py`.
 - [ ] T021 [US2] Implement the mean-square error pair, the skill score, the state
   determination and the plain-language statement that accompanies
   `not-beating-persistence`, in `services/telemetry/src/harness_telemetry/skill.py`.
@@ -199,7 +202,10 @@ stale within the configured window.
 - [ ] T027 [P] Add the telemetry service to the Compose configuration with its config
   file mount, following the shape feature 005 fixed.
 - [ ] T028 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
-  lint gates over the package and fix anything they surface.
+  lint gates over the package and fix anything they surface, confirming that the only
+  surviving `# harness:allow-wallclock` marker is the heartbeat emission citing
+  ADR-0006, and that a search of the package for a second sound-speed implementation
+  returns nothing (SC-010).
 - [ ] T029 [P] Add C-16 to the component reference in `docs/architecture/`, naming
   silent degradation as the failure mode it owns, and record the skill-score formula,
   the persistence-reference definition and the incremental moment arithmetic in
@@ -207,6 +213,11 @@ stale within the configured window.
 - [ ] T030 Replay test asserting an identical ordered sequence of telemetry messages
   with identical payloads across two runs from the same manifest, in
   `services/telemetry/tests/test_replay.py`.
+- [ ] T031 [P] Test that with the clock rate pinned to zero for longer than the
+  declared liveness window, telemetry's heartbeat continues on its real-time cadence
+  carrying an unchanging simulation time, while statistics publication — which is on
+  simulation time — correctly stops (SC-011, ADR-0006), in
+  `services/telemetry/tests/test_heartbeat_under_rate_zero.py`.
 
 ---
 

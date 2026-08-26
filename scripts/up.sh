@@ -38,7 +38,7 @@ fi
 
 wait_timeout="$(
   python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["runtime"]["wait_timeout_seconds"])' \
-    "config/${destination}/deployment.json"
+    "${DROGNA_ROOT}/config/${destination}/deployment.json"
 )"
 
 step "Starting; images are built where they are missing, which can take some minutes"
@@ -52,5 +52,5 @@ if ! compose up --detach --build --wait --wait-timeout "${wait_timeout}"; then
 fi
 
 step "Up after $(elapsed)"
-compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Health}}'
+compose ps
 printf '\nThis destination advertises %s\n' "$(public_url)"

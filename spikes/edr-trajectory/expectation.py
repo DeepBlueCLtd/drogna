@@ -33,7 +33,6 @@ as a decision the build must confirm against the specification text rather than 
 from __future__ import annotations
 
 import numpy as np
-
 from make_fixture import (
     DISCRIMINATING_FACTOR,
     T0,
@@ -60,12 +59,12 @@ ROUTE_STEP_HOURS = 1.63
 # vertex shares it.
 QUERY_TIME = T0
 
-EPOCH = np.datetime64('1970-01-01T00:00:00')
+EPOCH = np.datetime64("1970-01-01T00:00:00")
 
 
 def epoch_seconds(times: np.ndarray) -> np.ndarray:
-    delta = np.asarray(times, dtype='datetime64[ns]') - EPOCH.astype('datetime64[ns]')
-    return delta / np.timedelta64(1, 's')
+    delta = np.asarray(times, dtype="datetime64[ns]") - EPOCH.astype("datetime64[ns]")
+    return delta / np.timedelta64(1, "s")
 
 
 def route() -> dict[str, np.ndarray]:
@@ -73,77 +72,74 @@ def route() -> dict[str, np.ndarray]:
     fraction = np.linspace(0.0, 1.0, N_VERTICES)
     offsets = ROUTE_FIRST_OFFSET_HOURS + ROUTE_STEP_HOURS * np.arange(N_VERTICES)
     return {
-        'lon': ROUTE_LON[0] + fraction * (ROUTE_LON[1] - ROUTE_LON[0]),
-        'lat': ROUTE_LAT[0] + fraction * (ROUTE_LAT[1] - ROUTE_LAT[0]),
-        'depth': ROUTE_DEPTH[0] + fraction * (ROUTE_DEPTH[1] - ROUTE_DEPTH[0]),
-        'time': T0.astype('datetime64[ns]')
-        + (offsets * 3600.0 * 1e9).astype('timedelta64[ns]'),
-        'offset_hours': offsets,
+        "lon": ROUTE_LON[0] + fraction * (ROUTE_LON[1] - ROUTE_LON[0]),
+        "lat": ROUTE_LAT[0] + fraction * (ROUTE_LAT[1] - ROUTE_LAT[0]),
+        "depth": ROUTE_DEPTH[0] + fraction * (ROUTE_DEPTH[1] - ROUTE_DEPTH[0]),
+        "time": T0.astype("datetime64[ns]") + (offsets * 3600.0 * 1e9).astype("timedelta64[ns]"),
+        "offset_hours": offsets,
     }
 
 
 def wkt_linestring_zm(vertices: dict[str, np.ndarray] | None = None) -> str:
     """The route as EDR `coords`: WKT LINESTRING ZM, Z elevation, M epoch seconds."""
     vertices = vertices or route()
-    seconds = epoch_seconds(vertices['time'])
+    seconds = epoch_seconds(vertices["time"])
     parts = [
-        '{lon:.6f} {lat:.6f} {z:.6f} {m:.0f}'.format(
-            lon=lon, lat=lat, z=-depth, m=second
-        )
+        f"{lon:.6f} {lat:.6f} {-depth:.6f} {second:.0f}"
         for lon, lat, depth, second in zip(
-            vertices['lon'], vertices['lat'], vertices['depth'], seconds
+            vertices["lon"],
+            vertices["lat"],
+            vertices["depth"],
+            seconds,
+            strict=True,
         )
     ]
-    return 'LINESTRING ZM (' + ', '.join(parts) + ')'
+    return "LINESTRING ZM (" + ", ".join(parts) + ")"
 
 
 def wkt_linestring_m(vertices: dict[str, np.ndarray] | None = None) -> str:
     """The same route without a vertical component: WKT LINESTRING M."""
     vertices = vertices or route()
-    seconds = epoch_seconds(vertices['time'])
+    seconds = epoch_seconds(vertices["time"])
     parts = [
-        '{lon:.6f} {lat:.6f} {m:.0f}'.format(lon=lon, lat=lat, m=second)
-        for lon, lat, second in zip(vertices['lon'], vertices['lat'], seconds)
+        f"{lon:.6f} {lat:.6f} {second:.0f}"
+        for lon, lat, second in zip(vertices["lon"], vertices["lat"], seconds, strict=True)
     ]
-    return 'LINESTRING M (' + ', '.join(parts) + ')'
+    return "LINESTRING M (" + ", ".join(parts) + ")"
 
 
 def hypotheses(vertices: dict[str, np.ndarray] | None = None) -> dict[str, np.ndarray]:
     """The analytic values under per-vertex and single-time evaluation."""
     vertices = vertices or route()
     coeffs = coefficients()
-    per_vertex_hours = hours_since_t0(vertices['time'])
+    per_vertex_hours = hours_since_t0(vertices["time"])
     query_hours = hours_since_t0(np.array([QUERY_TIME]))[0]
     first_vertex_hours = per_vertex_hours[0]
 
     def evaluate(hours) -> np.ndarray:
-        return theta(
-            vertices['lon'], vertices['lat'], vertices['depth'], hours, coeffs
-        )
+        return theta(vertices["lon"], vertices["lat"], vertices["depth"], hours, coeffs)
 
     return {
-        'per_vertex': evaluate(per_vertex_hours),
-        'single_time_query': evaluate(np.full_like(per_vertex_hours, query_hours)),
-        'single_time_first_vertex': evaluate(
-            np.full_like(per_vertex_hours, first_vertex_hours)
-        ),
+        "per_vertex": evaluate(per_vertex_hours),
+        "single_time_query": evaluate(np.full_like(per_vertex_hours, query_hours)),
+        "single_time_first_vertex": evaluate(np.full_like(per_vertex_hours, first_vertex_hours)),
     }
 
 
 def separation(vertices: dict[str, np.ndarray] | None = None) -> dict[str, float]:
     """How far apart the hypotheses are, in units of the fixture's tolerance."""
     values = hypotheses(vertices)
-    gap_query = np.abs(values['per_vertex'] - values['single_time_query'])
-    gap_first = np.abs(values['per_vertex'] - values['single_time_first_vertex'])
+    gap_query = np.abs(values["per_vertex"] - values["single_time_query"])
+    gap_first = np.abs(values["per_vertex"] - values["single_time_first_vertex"])
     return {
-        'tolerance_degC': TOLERANCE,
-        'required_factor': DISCRIMINATING_FACTOR,
-        'min_gap_query_degC': float(gap_query.min()),
-        'min_gap_query_in_tolerances': float(gap_query.min() / TOLERANCE),
-        'min_gap_first_vertex_degC': float(gap_first.min()),
+        "tolerance_degC": TOLERANCE,
+        "required_factor": DISCRIMINATING_FACTOR,
+        "min_gap_query_degC": float(gap_query.min()),
+        "min_gap_query_in_tolerances": float(gap_query.min() / TOLERANCE),
+        "min_gap_first_vertex_degC": float(gap_first.min()),
         # Vertex 0 is at the first vertex's time by definition, so this gap is zero
         # there. Reported for completeness; the discriminator is the query-time gap.
-        'min_gap_first_vertex_excluding_v0_degC': float(gap_first[1:].min()),
+        "min_gap_first_vertex_excluding_v0_degC": float(gap_first[1:].min()),
     }
 
 
@@ -151,28 +147,26 @@ def as_records() -> list[dict]:
     """One row per vertex, for printing and for the captured evidence files."""
     vertices = route()
     values = hypotheses(vertices)
-    seconds = epoch_seconds(vertices['time'])
+    seconds = epoch_seconds(vertices["time"])
     return [
         {
-            'index': index,
-            'lon': float(vertices['lon'][index]),
-            'lat': float(vertices['lat'][index]),
-            'depth_m': float(vertices['depth'][index]),
-            'wkt_z_elevation_m': float(-vertices['depth'][index]),
-            'time': str(vertices['time'][index]),
-            'm_epoch_seconds': float(seconds[index]),
-            'offset_hours_from_origin': float(vertices['offset_hours'][index]),
-            'expected_per_vertex': float(values['per_vertex'][index]),
-            'expected_single_time_query': float(values['single_time_query'][index]),
-            'expected_single_time_first_vertex': float(
-                values['single_time_first_vertex'][index]
-            ),
+            "index": index,
+            "lon": float(vertices["lon"][index]),
+            "lat": float(vertices["lat"][index]),
+            "depth_m": float(vertices["depth"][index]),
+            "wkt_z_elevation_m": float(-vertices["depth"][index]),
+            "time": str(vertices["time"][index]),
+            "m_epoch_seconds": float(seconds[index]),
+            "offset_hours_from_origin": float(vertices["offset_hours"][index]),
+            "expected_per_vertex": float(values["per_vertex"][index]),
+            "expected_single_time_query": float(values["single_time_query"][index]),
+            "expected_single_time_first_vertex": float(values["single_time_first_vertex"][index]),
         }
         for index in range(N_VERTICES)
     ]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import json
 
     print(wkt_linestring_zm())
@@ -181,7 +175,7 @@ if __name__ == '__main__':
     print()
     for record in as_records():
         print(
-            '{index:2d}  lon {lon:7.3f}  lat {lat:7.3f}  depth {depth_m:7.2f}  '
-            '{time}  per-vertex {expected_per_vertex:8.4f}  '
-            'single-time {expected_single_time_query:8.4f}'.format(**record)
+            "{index:2d}  lon {lon:7.3f}  lat {lat:7.3f}  depth {depth_m:7.2f}  "
+            "{time}  per-vertex {expected_per_vertex:8.4f}  "
+            "single-time {expected_single_time_query:8.4f}".format(**record)
         )

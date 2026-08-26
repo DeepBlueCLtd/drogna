@@ -89,11 +89,12 @@ one `ctl/divergence` carrying its evidence.
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Unit tests for the sound-speed computation against published
-  reference values, and for the residual being defined on sound speed — a case where
-  temperature diverges but salinity compensates raises nothing — in
-  `services/monitor/tests/test_sound_speed.py` and
-  `services/monitor/tests/test_residual.py`.
+- [ ] T008 [P] [US1] Unit tests for the residual being defined on sound speed — a
+  case where temperature diverges but salinity compensates raises nothing — and for
+  the monitor calling `harness_core`'s shared sound-speed derivation rather than any
+  local copy of the equation (ADR-0005), in `services/monitor/tests/test_residual.py`.
+  Scoring the derivation itself against published reference values belongs beside the
+  shared implementation, not here, because there is only one of it.
 - [ ] T009 [P] [US1] Unit test for the rolling window: eviction by simulation-time
   span, eviction by sample count, and shed counting under overload, in
   `services/monitor/tests/test_window.py`.
@@ -107,10 +108,14 @@ one `ctl/divergence` carrying its evidence.
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement the sound-speed computation and the residual against the
-  current forecast, sampled through the coverage read port at the observation's
-  four-dimensional position, in `services/monitor/src/harness_monitor/sound_speed.py`
-  and `services/monitor/src/harness_monitor/residual.py`.
+- [ ] T012 [US1] Implement the residual against the current forecast, sampled through
+  the coverage read port at the observation's four-dimensional position and derived by
+  calling `harness_core`'s shared sound-speed implementation, in
+  `services/monitor/src/harness_monitor/residual.py`. Where that shared implementation
+  does not yet exist, contribute it to `libs/harness_core` additively, with its
+  formulation and validity range written up in `docs/algorithms/`, so telemetry and the
+  environment generator call the same function (ADR-0005). The monitor holds no copy of
+  the equation, and there is no stored sound-speed datastream to read instead.
 - [ ] T013 [P] [US1] Implement the bounded rolling window with simulation-time
   eviction and shed counters in `services/monitor/src/harness_monitor/window.py`.
 - [ ] T014 [US1] Implement the spatial and temporal persistence rules and evidence
@@ -119,7 +124,10 @@ one `ctl/divergence` carrying its evidence.
   `services/monitor/src/harness_monitor/catchup.py`.
 - [ ] T016 [US1] Implement divergence publication on `ctl/divergence`, residual
   summaries on `ctl/telemetry`, and the heartbeat carrying `warming` / `scoring` /
-  `no-forecast`, in `services/monitor/src/harness_monitor/publish.py`.
+  `no-forecast`, in `services/monitor/src/harness_monitor/publish.py`. The heartbeat
+  fires on a real-time interval and carries the current simulation time as payload,
+  marked `# harness:allow-wallclock` with ADR-0006 as its reason; every other interval
+  in the service stays on the simulation clock.
 - [ ] T017 [US1] Wire config loading and validation, the `obs/#` subscription loop and
   the `ctl/run-published` subscription that swaps the field being scored, in
   `services/monitor/src/harness_monitor/config.py` and
@@ -291,14 +299,23 @@ within the configured simulation-time budget, reproducible from the manifest.
 ## Phase 8: Polish & Cross-Cutting
 
 - [ ] T044 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
-  lint gates over all four packages and fix anything they surface.
+  lint gates over all four packages and fix anything they surface, confirming that
+  every surviving `# harness:allow-wallclock` marker is a heartbeat emission citing
+  ADR-0006 and that nothing else in the four services reads host time (SC-014).
 - [ ] T045 [P] Add the four components to the component reference in
   `docs/architecture/`, naming the failure mode each owns, and write the
   ensemble-spread and advection derivations in `docs/algorithms/`, which PR-09
-  requires and this feature is where the mathematics lands. Record an ADR if the
-  sound-speed formulation departs from the published reference the tests score
-  against, or if atomic visibility cannot be achieved by a single rename on the
-  deployment's volume.
+  requires and this feature is where the mathematics lands. The sound-speed
+  formulation is written up there too, beside the shared implementation it documents,
+  per ADR-0005. Record an ADR if atomic visibility cannot be achieved by a single
+  rename on the deployment's volume.
+- [ ] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
+  with the clock rate pinned to zero for longer than every declared liveness window,
+  all four services keep publishing heartbeats on their real-time cadence, each
+  carrying the same unchanging simulation time, and no component falls out of its
+  liveness window (SC-013, ADR-0006). This is the regression test on the decision that
+  a rate of zero stops simulated time and stops nothing else, and it is what makes
+  feature 016's rate-zero capture meaningful.
 
 ---
 
@@ -330,8 +347,8 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 - Contract and unit tests are written first and must fail before implementation.
 - Config loading precedes anything that reads config.
-- Pure computation — sound speed, window, persistence, advection, spread — precedes
-  the service wiring that uses it.
+- Pure computation — the shared sound-speed derivation, window, persistence,
+  advection, spread — precedes the service wiring that uses it.
 - Service wiring precedes integration tests involving the broker.
 
 ### Parallel Opportunities
@@ -361,8 +378,8 @@ Task: "Contract tests in tests/integration/test_control_schemas.py"
 
 Phase 1, Phase 2, then US1. A monitor that scores a live observation stream against a
 fixed field and raises justified divergence is demonstrable on its own and exercises
-the sound-speed computation, the window and the persistence rules — the three pieces
-most likely to be wrong.
+the shared sound-speed derivation, the window and the persistence rules — the three
+pieces most likely to be wrong.
 
 ### Incremental delivery
 

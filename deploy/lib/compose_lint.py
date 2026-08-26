@@ -38,12 +38,21 @@ _LOOPBACK_NAME = re.compile(r"\blocalhost\b", re.IGNORECASE)
 _IPV4 = re.compile(r"(?<![\w.])\d{1,3}(?:\.\d{1,3}){3}(?![\w.])")
 _URL = re.compile(r"\b[a-z][a-z0-9+.-]*://[A-Za-z0-9_.\-\[]")
 _PORT = re.compile(r"(?<=[\w\].]):(\d{2,5})(?!\w)")
+# The pseudo-filesystems /dev and /proc are left out deliberately: `>/dev/null` is not a
+# deployment choice, and no destination will ever want it to be one.
 _ABSOLUTE_PATH = re.compile(
-    r"(?<![\w$.{/])/(?:usr|etc|var|opt|home|srv|root|tmp|mnt|dev|bin|sbin|lib|proc)(?![\w])"
+    r"(?<![\w$.{/])/(?:usr|etc|var|opt|home|srv|root|tmp|mnt|bin|sbin|lib)(?![\w])"
 )
 
 _IMAGE_LINE = re.compile(r"(^\s*image:|^\s*FROM\s|--from=)")
 _IN_IMAGE_PATH_LINE = re.compile(r"(--from=|--mount=)")
+
+# A location belonging to the host operating system — where systemd keeps unit files, where
+# apt keeps keyrings — is not a deployment choice, and putting it in a destination's
+# configuration would pretend that it were. A line carrying this marker is exempt from the
+# absolute-path rule and carries its reason, in the manner of the constitution's
+# wall-clock marker. Every marker is meant to be read in review.
+_HOST_OS_PATH_MARKER = "harness:host-os-path"
 _DIGEST = re.compile(r"@sha256:[0-9a-f]{64}")
 
 
@@ -69,6 +78,8 @@ def address_findings(path: Path, text: str) -> list[str]:
     findings: list[str] = []
     for number, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
+        if number == 1 and stripped.startswith("#!"):
+            continue
         if _IMAGE_LINE.search(line):
             if ("image:" in line or line.lstrip().startswith("FROM ")) and not _DIGEST.search(line):
                 findings.append(f"{path.name}:{number}: image reference is not pinned by digest")
@@ -85,7 +96,7 @@ def address_findings(path: Path, text: str) -> list[str]:
                     f"{path.name}:{number}: {description} ({match.group(0)!r}); "
                     f"it belongs in the destination configuration: {stripped[:80]}"
                 )
-        if not _IN_IMAGE_PATH_LINE.search(line):
+        if not _IN_IMAGE_PATH_LINE.search(line) and _HOST_OS_PATH_MARKER not in line:
             match = _ABSOLUTE_PATH.search(line)
             if match:
                 findings.append(

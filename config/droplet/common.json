@@ -7,7 +7,6 @@
     "endpoint": "http://clock:8090",
     "routes": {
       "snapshot": "/clock/snapshot",
-      "stream": "/clock/stream",
       "control": "/clock/control"
     },
     "mode": "accelerated",

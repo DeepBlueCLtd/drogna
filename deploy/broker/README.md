@@ -90,17 +90,25 @@ checked the SUBACK would pass against a broker enforcing nothing.
 one line per role, with the password hashed by `mosquitto_passwd`.
 
 ```sh
-docker run --rm -v "$PWD/deploy/broker:/work" <the pinned broker image> \
-  mosquitto_passwd -c -b /work/passwd drogna_sensor "$SENSOR_SECRET"
-# then, without -c, one line per remaining role
-chmod 0644 deploy/broker/passwd
+docker run --rm -v "$PWD/deploy/broker:/work" <the pinned broker image> sh -c '
+  mosquitto_passwd -c -b /work/passwd drogna_sensor "$SENSOR_SECRET" &&
+  mosquitto_passwd    -b /work/passwd drogna_ingest "$INGEST_SECRET" &&
+  mosquitto_passwd    -b /work/passwd drogna_control "$CONTROL_SECRET" &&
+  mosquitto_passwd    -b /work/passwd drogna_viewer "$VIEWER_SECRET" &&
+  chown 1883:1883 /work/passwd && chmod 0600 /work/passwd'
 ```
 
-The mode matters: the broker runs as its own unprivileged user and the directory is mounted
-read-only, so it cannot take ownership of a file it cannot read. Mosquitto warns that a
-world-readable credential file will be refused by a future version; the image is pinned by
-digest, so the warning is a note for whoever changes the pin, not a problem today. Where the
-deploying user can, `chown 1883:1883` and `chmod 0640` removes it.
+**Create the file with its final owner and mode inside the container, and do not touch it
+from the host afterwards.** The container writes as root; a deploying user who is not root
+then cannot change the mode of a file they do not own, and the attempt fails with
+`Operation not permitted`. Doing all of it in the one place also gives the file the
+ownership Mosquitto asks for, which removes its warning about a credential file it will
+refuse to load in a future version.
+
+The directory matters too. The broker runs as its own unprivileged user, so it needs to be
+able to traverse the mounted configuration directory and read `mosquitto.conf` and `acl` —
+0755 on the directory and 0644 on those two files. They are not secrets; the credential
+file is, and it is the one with the restrictive mode.
 
 A missing credential file stops the broker rather than opening it, which is the failure we
 want: `allow_anonymous` is `false`, and a broker that cannot read its password file refuses

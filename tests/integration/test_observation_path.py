@@ -47,10 +47,7 @@ from harness_ingest.writer import ObservationWriter, StoreTables
 from harness_sensors.__main__ import main as sensors_main
 from harness_types.messages.observation import DrognaObservation
 
-pytestmark = pytest.mark.skipif(
-    not support.docker_available(),
-    reason="no container runtime is reachable: the broker and the store in these tests are real",
-)
+pytestmark = support.skip_without_containers()
 
 ROOT_SEED = 20260826
 RUN_ID = "run-0001"
@@ -208,11 +205,28 @@ def store_digest(store: support.Store) -> str:
     return hashlib.sha256(rows.encode("utf-8")).hexdigest()
 
 
+@pytest.fixture(scope="module")
+def scenario(
+    tmp_path_factory: pytest.TempPathFactory,
+    broker: support.Broker,
+    store: support.Store,
+    world: Path,
+) -> tuple[int, IngestService]:
+    """One scenario, run once, for every test below that needs a store with something in it.
+
+    A fixture rather than a first test that fills the store for the ones after it. Tests
+    that depend on each other's side effects report the wrong failure when the first one
+    breaks: the count assertions fail with an empty store and a reader has to work out
+    which of them was the real problem.
+    """
+    return run_scenario(tmp_path_factory.mktemp("scenario"), broker, store, world)
+
+
 def test_every_published_observation_is_stored_exactly_once(
-    tmp_path: Path, broker: support.Broker, store: support.Store, world: Path
+    scenario: tuple[int, IngestService], store: support.Store
 ) -> None:
     """SC-001: the counts reconcile, with zero duplicates and zero losses."""
-    published, service = run_scenario(tmp_path, broker, store, world)
+    published, service = scenario
     assert service.counters.received == published
     assert service.counters.stored == published
     assert service.counters.duplicates == 0
@@ -222,7 +236,7 @@ def test_every_published_observation_is_stored_exactly_once(
 
 
 def test_the_entities_the_observations_refer_to_are_stored_once_each(
-    store: support.Store,
+    scenario: tuple[int, IngestService], store: support.Store
 ) -> None:
     """The store is a function of the traffic: what the sensors published is what is here."""
     assert int(store.scalar("SELECT count(*) FROM observations.thing")) == 1
@@ -232,7 +246,7 @@ def test_the_entities_the_observations_refer_to_are_stored_once_each(
 
 
 def test_the_store_holds_the_three_measured_quantities_and_no_fourth(
-    store: support.Store,
+    scenario: tuple[int, IngestService], store: support.Store
 ) -> None:
     """SC-012: no sound speed anywhere in the store, because it is derived at the point of use."""
     properties = store.scalar(
@@ -250,7 +264,7 @@ def test_the_store_holds_the_three_measured_quantities_and_no_fourth(
 
 
 def test_observations_are_ordered_by_simulation_time_and_carry_no_other(
-    store: support.Store,
+    scenario: tuple[int, IngestService], store: support.Store
 ) -> None:
     """FR-021: the store orders on the time the sample was taken, and holds no arrival time."""
     columns = store.scalar(
@@ -268,7 +282,7 @@ def test_observations_are_ordered_by_simulation_time_and_carry_no_other(
 
 
 def test_a_stored_value_matches_the_generated_field_within_the_declared_noise(
-    store: support.Store, world: Path
+    scenario: tuple[int, IngestService], store: support.Store, world: Path
 ) -> None:
     """SC-011, reported as a figure: the difference is the sensor's noise and nothing else."""
     document = support.destination_config("sensors")
@@ -321,7 +335,11 @@ def test_a_stored_value_matches_the_generated_field_within_the_declared_noise(
 
 
 def test_two_runs_from_the_same_root_seed_produce_the_same_store(
-    tmp_path: Path, broker: support.Broker, store: support.Store, world: Path
+    scenario: tuple[int, IngestService],
+    tmp_path: Path,
+    broker: support.Broker,
+    store: support.Store,
+    world: Path,
 ) -> None:
     """SC-002, and FR-017 at the same time: redelivery of a stored identifier is a no-op."""
     before = store_digest(store)
@@ -332,7 +350,9 @@ def test_two_runs_from_the_same_root_seed_produce_the_same_store(
     assert store_digest(store) == before
 
 
-def test_a_late_arrival_is_stored_on_its_own_time(store: support.Store) -> None:
+def test_a_late_arrival_is_stored_on_its_own_time(
+    scenario: tuple[int, IngestService], store: support.Store
+) -> None:
     """FR-021: a sensor that reconnected and replayed is stored where the world put it.
 
     Two batches, written in the opposite order to their simulation times. The store's order

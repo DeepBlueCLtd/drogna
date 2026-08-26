@@ -31,10 +31,7 @@ from harness_ingest.telemetry import TelemetryPublisher
 from harness_ingest.validation import RejectionLog
 from harness_ingest.writer import ObservationWriter, StoreTables
 
-pytestmark = pytest.mark.skipif(
-    not support.docker_available(),
-    reason="no container runtime is reachable: the broker and the store in these tests are real",
-)
+pytestmark = support.skip_without_containers()
 
 RUN_ID = "run-burst"
 EPOCH = SimInstant.from_iso("2026-09-01T00:00:00.000000Z")

@@ -17,10 +17,7 @@ from pathlib import Path
 import observation_path as support
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    not support.docker_available(),
-    reason="no container runtime is reachable: the store in these tests is a real one",
-)
+pytestmark = support.skip_without_containers()
 
 RUNTIME_ROLES = ("drogna_ingest", "drogna_read", "drogna_telemetry")
 

@@ -23,10 +23,7 @@ from pathlib import Path
 import observation_path as support
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    not support.docker_available(),
-    reason="no container runtime is reachable: the broker in these tests is a real one",
-)
+pytestmark = support.skip_without_containers()
 
 CLOCK_SAMPLE = '{"run_id": "run-0001", "tick": 1, "sim_time": "2026-09-01T00:00:00.000000Z"}'
 

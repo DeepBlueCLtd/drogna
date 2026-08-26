@@ -169,6 +169,20 @@ def requires_docker() -> None:
         pytest.skip(skip_reason())
 
 
+def skip_without_containers() -> Any:
+    """The module-level mark these tests carry: skip with the reason, never fail, never pass.
+
+    The reason names what was actually missing — no client, an unreachable daemon, an image
+    that cannot be pulled, a bind mount a container cannot write to. A run that skips
+    twenty-seven tests should say why in a line somebody can act on, rather than leaving
+    them to guess which of four things their machine lacks.
+    """
+    support = container_support()
+    return pytest.mark.skipif(
+        not support.usable, reason=skip_reason() or "a container runtime is available"
+    )
+
+
 def _run(command: Sequence[str], *, check: bool = True, stdin: bytes | None = None):
     result = subprocess.run(list(command), input=stdin, capture_output=True)
     if check and result.returncode != 0:

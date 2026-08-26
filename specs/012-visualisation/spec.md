@@ -269,19 +269,18 @@ accept or task the route.
 
 - **FR-009**: The client MUST derive the simulation clock component's illumination
   from the clock's heartbeat on the control namespace. That heartbeat is drogna's first
-  liveness signal and the pattern every later component follows. (SRD FR-52)
-- **FR-010**: Liveness windows MUST be evaluated in **real time**. The simulation time
-  a heartbeat carries is payload, not schedule: liveness answers "is this process
-  alive?", which is a fact about the host and not about the simulated world. A rate of
-  zero therefore leaves every live component lit, which is what a screenshot capture at
-  rate zero requires (SRD FR-53) and what an observer would expect, since pausing the
-  simulated world does not kill the processes simulating it. The evaluation carries the
-  `// harness:allow-wallclock` marker with ADR-0006 as its reason, and illumination is
-  the only thing it may drive: the client MUST NOT display an elapsed time since a
-  component was last heard from, or any other host-derived quantity, so a rate-zero
-  capture is stable between frames. (Constitution I, Constitution VII, ADR-0006;
-  SRD FR-45, FR-52, FR-53)
-- **FR-010a**: No mocked, synthesised or fixture-sourced traffic may drive illumination
+  liveness signal and the pattern every later component follows. Liveness windows MUST
+  be evaluated in **real time**: the simulation time a heartbeat carries is payload,
+  not schedule, because liveness answers "is this process alive?", which is a fact
+  about the host and not about the simulated world. A rate of zero therefore leaves
+  every live component lit, which is what a capture at rate zero requires (SRD FR-53)
+  and what an observer would expect, since pausing the simulated world does not kill
+  the processes simulating it. The evaluation carries the `// harness:allow-wallclock`
+  marker with ADR-0006 as its reason, and illumination is the only thing it may drive:
+  the client MUST NOT display an elapsed time since a component was last heard from, or
+  any other host-derived quantity, so a rate-zero capture is stable between frames.
+  (SRD FR-52, FR-45, FR-53; Constitution I, Constitution VII, ADR-0006)
+- **FR-010**: No mocked, synthesised or fixture-sourced traffic may drive illumination
   or a transit. The client MUST contain no demo mode, no fixture mode and no
   populate-for-the-screenshot path, because a mock asserts the existence of something
   that does not exist and so defeats FR-45. (SRD FR-52, Constitution VII)
@@ -295,23 +294,21 @@ accept or task the route.
 - **FR-013**: Every time the client displays MUST be simulation time obtained from the
   clock service. When the clock service is unreachable, displayed time MUST stop and
   be marked stale, and MUST NOT continue to advance from the browser's clock.
-  (Constitution I)
-- **FR-013a**: The client MAY read the browser's animation frame timestamp for the sole
-  purpose of interpolating between two received simulation clock samples for display,
-  under three binding rules. First, it MUST NOT extrapolate past the most recent
-  sample, so the display cannot invent a simulation time the clock has not reached.
-  Second, every arriving sample is authoritative and snaps the display to it: the
-  interpolation is discarded on arrival rather than blended, so error cannot
-  accumulate. Third, no value derived from it may leave the render path — not to a
-  query, not into a message, not into a recorded observation, not into a screenshot's
-  recorded time, and not into a test assertion. The read carries the
-  `// harness:allow-wallclock` marker with ADR-0007 as its reason and is confined to
-  one module. (Constitution I, ADR-0007; SRD FR-46 to FR-48)
-- **FR-013b**: Rendering on clock samples alone MUST remain a supported mode, so that
-  dropping interpolation costs smoothness and nothing else if the three rules of
-  FR-013a ever become hard to hold. If sample arrival stops, the display MUST hold at
-  the last sample rather than drifting forward; a rate of zero is therefore
-  indistinguishable from a paused display, which is correct. (ADR-0007)
+  The client MAY read the browser's animation frame timestamp for the sole purpose of
+  interpolating between two received simulation clock samples for display, under three
+  binding rules. First, it MUST NOT extrapolate past the most recent sample, so the
+  display cannot invent a simulation time the clock has not reached. Second, every
+  arriving sample is authoritative and snaps the display to it: the interpolation is
+  discarded on arrival rather than blended, so error cannot accumulate. Third, no value
+  derived from it may leave the render path — not to a query, not into a message, not
+  into a recorded observation, not into a screenshot's recorded time, and not into a
+  test assertion. The read carries the `// harness:allow-wallclock` marker with
+  ADR-0007 as its reason and is confined to one module. Rendering on clock samples
+  alone remains a supported mode, so dropping interpolation costs smoothness and
+  nothing else if those three rules ever become hard to hold; and if sample arrival
+  stops, the display holds at the last sample rather than drifting forward, which makes
+  a rate of zero indistinguishable from a paused display, correctly.
+  (Constitution I, ADR-0007; SRD FR-46 to FR-48)
 - **FR-014**: A rate of zero MUST be a legitimate rate. Setting it pins the clock:
   simulation time stops, every time-driven animation stops, and the display says paused
   rather than showing an error or a disconnection. (SRD FR-49, FR-53)

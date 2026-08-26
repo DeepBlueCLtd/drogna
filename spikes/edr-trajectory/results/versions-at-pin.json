@@ -1,0 +1,5 @@
+{
+  "pygeoapi_version": "0.25.dev0",
+  "shapely_version": "2.1.2",
+  "geos_version": "3.13.1"
+}

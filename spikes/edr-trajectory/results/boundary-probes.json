@@ -1,0 +1,310 @@
+{
+  "returning_null_outside_the_domain": {
+    "outside_horizontal_domain": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-9.0%2043.0%20-10%201788224400.0%2C%206.0%2058.0%20-10%201788228000.0%29&f=json",
+      "status": 200,
+      "values": [
+        null,
+        null
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T01:00:00Z",
+          -9.0,
+          43.0,
+          10.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          6.0,
+          58.0,
+          10.0
+        ]
+      ]
+    },
+    "below_deepest_level": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-900.0%201788224400.0%2C%20-1.0%2051.0%20-1300.0%201788228000.0%29&f=json",
+      "status": 200,
+      "values": [
+        null,
+        null
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T01:00:00Z",
+          -2.0,
+          50.0,
+          900.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          -1.0,
+          51.0,
+          1300.0
+        ]
+      ]
+    },
+    "beyond_last_time_step": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788436800.0%2C%20-1.0%2051.0%20-10%201788440400.0%29&f=json",
+      "status": 200,
+      "values": [
+        null,
+        null
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-03T12:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-03T13:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ]
+      ]
+    },
+    "non_monotonic_times": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788256800.0%2C%20-1.0%2051.0%20-10%201788228000.0%2C%20-0.5%2051.5%20-10%201788292800.0%29&f=json",
+      "status": 200,
+      "values": [
+        6.994909733310765,
+        9.814217269000075,
+        2.9848559462559052
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T10:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ],
+        [
+          "2026-09-01T20:00:00Z",
+          -0.5,
+          51.5,
+          10.0
+        ]
+      ]
+    },
+    "repeated_vertex": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788235200.0%2C%20-2.0%2050.0%20-10%201788235200.0%2C%20-1.0%2051.0%20-10%201788249600.0%29&f=json",
+      "status": 200,
+      "values": [
+        9.130150892708276,
+        9.130150892708276,
+        7.5879099971289445
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T08:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ]
+      ]
+    },
+    "above_the_surface": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20250%201788235200.0%2C%20-1.0%2051.0%20300%201788249600.0%29&f=json",
+      "status": 200,
+      "values": [
+        null,
+        null
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          -250.0
+        ],
+        [
+          "2026-09-01T08:00:00Z",
+          -1.0,
+          51.0,
+          -300.0
+        ]
+      ]
+    }
+  },
+  "extrapolating_outside_the_domain": {
+    "outside_horizontal_domain": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-9.0%2043.0%20-10%201788224400.0%2C%206.0%2058.0%20-10%201788228000.0%29&f=json",
+      "status": 200,
+      "values": [
+        10.28529241240608,
+        9.620452531115006
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T01:00:00Z",
+          -9.0,
+          43.0,
+          10.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          6.0,
+          58.0,
+          10.0
+        ]
+      ]
+    },
+    "below_deepest_level": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-900.0%201788224400.0%2C%20-1.0%2051.0%20-1300.0%201788228000.0%29&f=json",
+      "status": 200,
+      "values": [
+        2.2942135778072412,
+        -0.18736418742201266
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T01:00:00Z",
+          -2.0,
+          50.0,
+          900.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          -1.0,
+          51.0,
+          1300.0
+        ]
+      ]
+    },
+    "beyond_last_time_step": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788436800.0%2C%20-1.0%2051.0%20-10%201788440400.0%29&f=json",
+      "status": 200,
+      "values": [
+        -10.798766595001815,
+        -12.07780423773269
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-03T12:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-03T13:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ]
+      ]
+    },
+    "non_monotonic_times": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788256800.0%2C%20-1.0%2051.0%20-10%201788228000.0%2C%20-0.5%2051.5%20-10%201788292800.0%29&f=json",
+      "status": 200,
+      "values": [
+        6.994909733310765,
+        9.814217269000075,
+        2.9848559462559052
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T10:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T02:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ],
+        [
+          "2026-09-01T20:00:00Z",
+          -0.5,
+          51.5,
+          10.0
+        ]
+      ]
+    },
+    "repeated_vertex": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20-10%201788235200.0%2C%20-2.0%2050.0%20-10%201788235200.0%2C%20-1.0%2051.0%20-10%201788249600.0%29&f=json",
+      "status": 200,
+      "values": [
+        9.130150892708276,
+        9.130150892708276,
+        7.5879099971289445
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          10.0
+        ],
+        [
+          "2026-09-01T08:00:00Z",
+          -1.0,
+          51.0,
+          10.0
+        ]
+      ]
+    },
+    "above_the_surface": {
+      "request_url": "http://pygeoapi:80/collections/spike_coverage_extrapolate/trajectory?coords=LINESTRING%20ZM%20%28-2.0%2050.0%20250%201788235200.0%2C%20-1.0%2051.0%20300%201788249600.0%29&f=json",
+      "status": 200,
+      "values": [
+        11.43905544618687,
+        9.991390812238109
+      ],
+      "body_excerpt": null,
+      "composite": [
+        [
+          "2026-09-01T04:00:00Z",
+          -2.0,
+          50.0,
+          -250.0
+        ],
+        [
+          "2026-09-01T08:00:00Z",
+          -1.0,
+          51.0,
+          -300.0
+        ]
+      ]
+    }
+  }
+}

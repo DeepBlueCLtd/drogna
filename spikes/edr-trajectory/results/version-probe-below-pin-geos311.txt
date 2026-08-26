@@ -1,0 +1,27 @@
+EDR trajectory M-ordinate probe
+  shapely 2.0.7  GEOS 3.11.4  meets FR-51 pin: NO
+
+  LINESTRING ZM
+    exception raised   : False
+    geom_type          : LineString
+    has_z / has_m      : True / has_m absent (shapely < 2.1)
+    M expected         : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M recovered        : [None, None, None, None]
+    M matches input    : False
+    Z recovered        : [-5.0, -100.0, -220.0, -380.0]
+    WKT round trip     : LINESTRING Z (-3.6 48.4 -5, -2.55 49.45 -100, -1.5 50.5 -220, 0.6 52.6 -380)
+
+  LINESTRING M
+    exception raised   : False
+    geom_type          : LineString
+    has_z / has_m      : True / has_m absent (shapely < 2.1)
+    M expected         : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M recovered        : [None, None, None, None]
+    M matches input    : False
+    Z recovered        : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    WKT round trip     : LINESTRING Z (-3.6 48.4 1788220800, -2.55 49.45 1788226668, -1.5 50.5 1788232536, 0.6 52.6 1788238404)
+
+  LINESTRINGZM (no space)
+    parse failed: GEOSException: ParseException: Unknown type: 'LINESTRINGZM'
+
+FR-51 assertion FAILED: Shapely 2.0.7 on GEOS 3.11.4 is below the FR-51 pin (Shapely >= 2.1, GEOS >= 3.12). The M ordinate of an EDR trajectory is lost silently at this combination.

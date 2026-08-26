@@ -1,0 +1,33 @@
+{
+  "fixture_matches_analytic_form": {
+    "max_abs_error_degC": 0.0,
+    "tolerance_degC": 1e-06,
+    "shape": [
+      13,
+      7,
+      21,
+      21
+    ],
+    "bytes": 342037,
+    "declares_synthetic": "true",
+    "conventions": "CF-1.8"
+  },
+  "interpolation_exact_at_vertices": {
+    "max_abs_error_degC": 3.552713678800501e-15,
+    "tolerance_degC": 1e-06
+  },
+  "vertices_between_time_steps": {
+    "time_step_hours": 3,
+    "closest_approach_to_a_step_hours": 0.05999999999999872,
+    "query_time": "2026-09-01T00:00:00"
+  },
+  "hypotheses_separated": {
+    "tolerance_degC": 1e-06,
+    "required_factor": 10,
+    "min_gap_query_degC": 0.4973838448599288,
+    "min_gap_query_in_tolerances": 497383.8448599288,
+    "min_gap_first_vertex_degC": 0.0,
+    "min_gap_first_vertex_excluding_v0_degC": 0.5459592044494954
+  }
+}
+SELFCHECK PASSED: the fixture can distinguish the two hypotheses.

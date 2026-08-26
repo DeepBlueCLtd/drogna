@@ -1,0 +1,34 @@
+EDR trajectory M-ordinate probe
+  shapely 2.1.2  GEOS 3.13.1  meets FR-51 pin: YES
+
+  LINESTRING ZM
+    exception raised   : False
+    geom_type          : LineString
+    has_z / has_m      : True / True
+    M expected         : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M recovered        : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M matches input    : True
+    Z recovered        : [-5.0, -100.0, -220.0, -380.0]
+    WKT round trip     : LINESTRING ZM (-3.6 48.4 -5 1788220800, -2.55 49.45 -100 1788226668, -1.5 50.5 -220 1788232536, 0.6 52.6 -380 1788238404)
+
+  LINESTRING M
+    exception raised   : False
+    geom_type          : LineString
+    has_z / has_m      : False / True
+    M expected         : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M recovered        : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M matches input    : True
+    Z recovered        : [None, None, None, None]
+    WKT round trip     : LINESTRING M (-3.6 48.4 1788220800, -2.55 49.45 1788226668, -1.5 50.5 1788232536, 0.6 52.6 1788238404)
+
+  LINESTRINGZM (no space)
+    exception raised   : False
+    geom_type          : LineString
+    has_z / has_m      : True / True
+    M expected         : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M recovered        : [1788220800.0, 1788226668.0, 1788232536.0, 1788238404.0]
+    M matches input    : True
+    Z recovered        : [-5.0, -100.0, -220.0, -380.0]
+    WKT round trip     : LINESTRING ZM (-3.6 48.4 -5 1788220800, -2.55 49.45 -100 1788226668, -1.5 50.5 -220 1788232536, 0.6 52.6 -380 1788238404)
+
+FR-51 assertion PASSED: every per-vertex M ordinate survived parsing.

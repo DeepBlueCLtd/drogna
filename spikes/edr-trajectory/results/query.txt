@@ -1,0 +1,45 @@
+==============================================================================
+drogna EDR trajectory spike — one four-dimensional route
+==============================================================================
+fixture seed              : 20260826
+advertised query types    : {'bespoke': ['cube', 'position', 'trajectory'], 'stock-xarray-edr': ['cube', 'position']}
+
+request                   : http://pygeoapi:80/collections/spike_coverage/trajectory?coords=LINESTRING%20ZM%20%28-3.600000%2048.400000%20-5.000000%201788226200%2C%20-3.378947%204...
+status                    : 200
+domain type               : Trajectory
+well-formed Trajectory    : True
+
+tolerance                 : 1e-06 degC
+max error vs per-vertex   : 2.696e-08 degC
+max error vs single-time  : 1.284e+01 degC
+max error vs nearest step : 5.269e-01 degC
+
+  idx    returned   per-vertex  single-time  nearest-step
+    0    10.10540    10.10540     10.60279      10.60279
+    1     9.34781     9.34781     10.39618       9.39135
+    2     8.58911     8.58911     10.19941       8.16962
+    3     7.82931     7.82931     10.01248       7.96255
+    4     7.06841     7.06841      9.83538       6.73030
+    5     6.30640     6.30640      9.66812       6.53284
+    6     5.54330     5.54330      9.51070       5.29006
+    7     4.77909     4.77909      9.36311       5.10221
+    8     4.01379     4.01379      9.22536       3.84891
+    9     3.24738     3.24738      9.09744       3.67067
+   10     2.47987     2.47987      8.97936       2.40684
+   11     1.71126     1.71126      8.87111       2.23820
+   12     0.94154     0.94154      8.77271       0.96385
+   13     0.17073     0.17073      8.68413      -0.32079
+   14    -0.60119    -0.60119      8.60540      -0.48005
+   15    -1.37420    -1.37420      8.53650      -1.77522
+   16    -2.14832    -2.14832      8.47743      -1.92487
+   17    -2.92354    -2.92354      8.42820      -3.23056
+   18    -3.69987    -3.69987      8.38881      -3.37060
+   19    -4.47729    -4.47729      8.35925      -4.68682
+
+hand-off recorded         : True
+every vertex identical    : True
+provider saw shapely      : 2.1.2 / GEOS 3.13.1
+
+same request below the pin: HTTP 500
+
+results written to /spike/results

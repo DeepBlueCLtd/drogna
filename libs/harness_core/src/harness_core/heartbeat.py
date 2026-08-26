@@ -85,6 +85,11 @@ class Heartbeat:
     run_id: str | None = None
     config_digest: str | None = None
     detail: str = ""
+    # Declared by the sender because only the sender knows its own cadence: the receiver
+    # holds no table of expected intervals, and a component that declares neither is
+    # judged against the receiver's default tolerance (ADR-0006). Both are host seconds.
+    heartbeat_interval_seconds: float | None = None
+    liveness_window_seconds: float | None = None
 
     def as_message(self) -> dict[str, Any]:
         message: dict[str, Any] = {
@@ -98,6 +103,10 @@ class Heartbeat:
             message["config_digest"] = self.config_digest
         if self.detail:
             message["detail"] = self.detail
+        if self.heartbeat_interval_seconds is not None:
+            message["heartbeat_interval_seconds"] = self.heartbeat_interval_seconds
+        if self.liveness_window_seconds is not None:
+            message["liveness_window_seconds"] = self.liveness_window_seconds
         return message
 
 
@@ -124,6 +133,8 @@ class HeartbeatPublisher:
         config_digest: str | None = None,
         topic: str = HEARTBEAT_TOPIC,
         monotonic: Callable[[], float] | None = None,
+        declare_interval: bool = True,
+        liveness_window_seconds: float | None = None,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError("a heartbeat interval is a positive number of host seconds")
@@ -136,6 +147,15 @@ class HeartbeatPublisher:
         self._monotonic = monotonic or time.monotonic
         self._last_published: int | None = None
         self._last_published_at: float | None = None
+        # The client reads both declarations and falls back to its own tolerance without
+        # them, so a component that publishes its cadence is judged on its own terms.
+        # Declaring the interval is the default because the publisher already knows it and
+        # a component that heartbeats slowly should not have to be special-cased by the
+        # receiver to avoid looking dead.
+        self._declared_interval = interval_seconds if declare_interval else None
+        if liveness_window_seconds is not None and liveness_window_seconds <= 0:
+            raise ValueError("a liveness window is a positive number of host seconds")
+        self._liveness_window_seconds = liveness_window_seconds
 
     @property
     def last_published_tick(self) -> int | None:
@@ -166,6 +186,8 @@ class HeartbeatPublisher:
             run_id=tick.run_id,
             config_digest=self._config_digest,
             detail=detail,
+            heartbeat_interval_seconds=self._declared_interval,
+            liveness_window_seconds=self._liveness_window_seconds,
         )
         message = heartbeat.as_message()
         validate_heartbeat(message)

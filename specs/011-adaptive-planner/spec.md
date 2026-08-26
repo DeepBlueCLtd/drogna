@@ -381,14 +381,26 @@ or an explicit statement that none occurs within the horizon.
   and records it in the manifest. The planner reads it and interpolates it to its own
   planning cells; it does not author its own blend of feature and background
   timescales. Recorded here because the SRD says what tau is without naming the
-  component that evaluates it.
-- The uncertainty the planner works over combines the ensemble spread published by
-  the model runner (SRD FR-29) with an observation-age term the planner maintains from
+  component that evaluates it. ADR-0002 makes the same split binding: authoring and
+  evaluation are different shapes, and consumers see only the evaluated field.
+- **Settled: the planner reads the forecast and uncertainty fields through the
+  coverage read port, not the query layer.** The monitor and telemetry do the same, and
+  features 009 and 010 record it from their side. The coverage output is a genuine port
+  under Constitution VI; the query layer is the external read path, plumbing on the far
+  side of the seam, and SRD §2.2 keeps that distinction visible rather than hiding it.
+  The planner learns that a new field exists from the announcement on the control
+  namespace (SRD FR-31) and reads it through the port; nothing polls the query layer
+  for freshness.
+- **Settled: the planner combines ensemble spread with observation age.** The
+  uncertainty the planner works over combines the ensemble spread published by the
+  model runner (SRD FR-29) with an observation-age term the planner maintains from
   observation arrivals, per SRD FR-07 and FR-08. The SRD does not say which component
-  combines those two terms; the planner is chosen because it is the only consumer that
-  needs the combination, and putting it in the model runner would make the runner
-  depend on the observation stream it does not otherwise read. Recorded here rather
-  than fixed silently.
+  combines those two terms. The planner is chosen because it is the only consumer that
+  needs the combination: putting it in the model runner would make the runner depend on
+  an observation stream it does not otherwise read, and putting it in telemetry would
+  give the planner a second producer of its primary input. Features 009 and 010 record
+  the same decision from their side — 009's model runner publishes spread alone, and
+  telemetry produces no uncertainty field at all.
 - The planner subscribes to `obs/#` for measurement arrivals, in the same manner as
   the monitor, and keeps only the last-informed simulation time per planning cell. It
   does not query the observation store.

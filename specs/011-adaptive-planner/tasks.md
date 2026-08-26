@@ -8,7 +8,8 @@ description: "Task list for 011-adaptive-planner"
 **Input**: Design documents from `/specs/011-adaptive-planner/`
 
 **Prerequisites**: `spec.md`, `plan.md`. Feature 001 (clock, RNG, config loader),
-feature 004 (ground-truth manifest with decorrelation timescales), feature 006 (type
+feature 004 (ground-truth manifest, including the decorrelation timescale field tau
+and its evaluation at an arbitrary location), feature 006 (type
 generation chain), feature 007 (observation message shape) and feature 009's
 uncertainty field and `ctl/run-published` announcement must be in place. The value
 function, collapse model, selection and projection are all testable against
@@ -72,9 +73,11 @@ uncertainty state that every story computes over.
   in `services/planner/src/harness_planner/cells.py` and
   `services/planner/tests/test_cells.py`.
 - [ ] T008 Implement the uncertainty state — ensemble spread combined with an
-  observation-age term, last-informed simulation time per cell, regrowth at the
-  decorrelation rate — plus its unit test covering cold arrival (spread alone) and
-  loiter (spread plus age), in
+  observation-age term, last-informed simulation time per cell, and regrowth at tau
+  evaluated per planning cell from the generator's decorrelation timescale field
+  (background water included, moving features advected) — plus its unit test covering
+  cold arrival (spread alone), loiter (spread plus age), a background-water cell and a
+  cell a moving feature has drifted across, in
   `services/planner/src/harness_planner/uncertainty_state.py` and
   `services/planner/tests/test_uncertainty_state.py`.
 
@@ -112,8 +115,8 @@ than the naive sum.
   operation, in `services/planner/src/harness_planner/config.py`.
 - [ ] T013 [P] [US1] Implement the sensing footprint model with configured decay
   lengths in `services/planner/src/harness_planner/sensing.py`.
-- [ ] T014 [US1] Implement simulated collapse along a traversal and regrowth by
-  decorrelation timescale in `services/planner/src/harness_planner/collapse.py`.
+- [ ] T014 [US1] Implement simulated collapse along a traversal and regrowth at the
+  cell's tau in `services/planner/src/harness_planner/collapse.py`.
 - [ ] T015 [US1] Implement the collapse-aware route value as the sum of marginal
   reductions in traversal order, in `services/planner/src/harness_planner/value.py`.
 
@@ -217,8 +220,9 @@ values, and every region in the domain appears in the report.
 ### Tests for User Story 4
 
 - [ ] T029 [P] [US4] Unit test asserting projected crossing times match analytically
-  derived times to within one projection step, and that a just-sampled region's
-  crossing time moves later consistently with collapse and regrowth, in
+  derived times to within one projection step, that a just-sampled region's crossing
+  time moves later consistently with collapse and regrowth, and that the tau values
+  used match the generator's ground-truth field at sampled cells, in
   `services/planner/tests/test_projection.py`.
 - [ ] T030 [P] [US4] Test asserting 100% region coverage in every projection report,
   with an explicit no-crossing-within-horizon state rather than omission, in
@@ -277,8 +281,8 @@ region.
 
 ### Story Dependencies
 
-- **US1** depends on nothing outside this feature except the ground-truth manifest's
-  decorrelation timescales; it is testable on hand-built fields.
+- **US1** depends on nothing outside this feature except the manifest's decorrelation
+  timescale field; it is testable on hand-built fields.
 - **US2** depends on US1 and on the plan contract.
 - **US3** depends on US2 and on feature 009's `ctl/run-published`.
 - **US4** depends on Phase 2, and on US2 only for publication.

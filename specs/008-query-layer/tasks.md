@@ -75,17 +75,16 @@ cube, validate the responses and compare against the field.
 ### Tests for User Story 1
 
 - [ ] T013 [P] [US1] Write `tests/integration/test_edr_position_cube.py` validating responses against the CoverageJSON specification for both query types
-- [ ] T014 [P] [US1] Add a case comparing returned values against the generator's field at the same coordinates and reporting the difference as a figure against the declared interpolation tolerance
-- [ ] T015 [P] [US1] Add cases for a point outside the domain and for a cube exceeding the size limit, asserting each is refused with the extent or the limit named
+- [ ] T014 [P] [US1] Add two cases to `tests/integration/test_edr_position_cube.py`: one comparing returned values against the generator's field at the same coordinates and reporting the difference as a figure against the declared interpolation tolerance, and one asserting that a point outside the domain and a cube exceeding the size limit are each refused with the extent or the limit named
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement `query/plugins/edr_coverage.py` as an EDR provider reading a run's NetCDF files, exposing forecast parameters and the uncertainty parameter together in one collection
-- [ ] T017 [US1] Implement position query handling with linear interpolation in space and time, and document the boundary behaviour where a query falls on a grid node or between time steps
-- [ ] T018 [US1] Implement cube query handling with the configured extent limit and a refusal that names the limit
-- [ ] T019 [US1] Implement the no-time-parameter default as the current run's valid time taken from its manifest, never from a clock
-- [ ] T020 [US1] Grant and verify the query layer's select-only database role, asserting that every write attempt fails
-- [ ] T021 [US1] Write `query/README.md` describing the collections, the path space, the response limits, and why there is no freshness endpoint
+- [ ] T015 [US1] Implement `query/plugins/edr_coverage.py` as an EDR provider reading a run's NetCDF files, exposing forecast parameters and the uncertainty parameter together in one collection
+- [ ] T016 [US1] Implement position query handling with linear interpolation in space and time, and document the boundary behaviour where a query falls on a grid node or between time steps
+- [ ] T017 [US1] Implement cube query handling with the configured extent limit and a refusal that names the limit
+- [ ] T018 [US1] Implement the no-time-parameter default as the current run's valid time taken from its manifest, never from a clock
+- [ ] T019 [US1] Grant and verify the query layer's select-only database role, asserting that every write attempt fails
+- [ ] T020 [US1] Write `query/README.md` describing the collections, the path space, the response limits, and why there is no freshness endpoint
 
 **Checkpoint**: The coverage store is readable through a standard interface.
 
@@ -101,23 +100,23 @@ vertex against the manifest; shift one vertex's time and see only that vertex ch
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Write `tests/integration/test_edr_trajectory.py` asserting each vertex is answered for its own time
-- [ ] T023 [P] [US2] Add a case asserting that changing one vertex's time changes that vertex's values and no other's
-- [ ] T024 [P] [US2] Write `tests/unit/test_trajectory_validation.py` covering non-monotonic vertex times, out-of-extent vertices and an over-long vertex list, each refused with the specific cause named
-- [ ] T025 [P] [US2] Write `tests/unit/test_wkt_m_ordinate.py` asserting that parsing a `LINESTRINGZM` yields finite M values at the pinned Shapely and GEOS versions, so a version regression fails loudly rather than losing per-vertex times in silence
-- [ ] T026 [P] [US2] Write `tests/acceptance/test_at01_trajectory.py` scoring a four-dimensional route against the generator's ground-truth manifest and reporting the error rather than asserting recovery
+- [ ] T021 [P] [US2] Write `tests/integration/test_edr_trajectory.py` asserting each vertex is answered for its own time
+- [ ] T022 [P] [US2] Add a case asserting that changing one vertex's time changes that vertex's values and no other's
+- [ ] T023 [P] [US2] Write `tests/unit/test_trajectory_validation.py` covering non-monotonic vertex times, out-of-extent vertices and an over-long vertex list, each refused with the specific cause named
+- [ ] T024 [P] [US2] Write `tests/unit/test_wkt_m_ordinate.py` asserting that parsing a `LINESTRINGZM` yields finite M values at the pinned Shapely and GEOS versions, so a version regression fails loudly rather than losing per-vertex times in silence
+- [ ] T025 [P] [US2] Write `tests/acceptance/test_at01_trajectory.py` scoring a four-dimensional route against the generator's ground-truth manifest and reporting the error rather than asserting recovery
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Pin Shapely 2.1 or later built against GEOS 3.12 or later in the query layer's image and workspace, with a comment stating that below those versions the M ordinate is returned as NaN and per-vertex timestamps are lost silently before any provider code runs
-- [ ] T028 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and record the trajectory provider decision as an ADR under PR-03
-- [ ] T029 [US2] Implement `query/plugins/edr_trajectory.py`: accept the geometry pygeoapi hands over, read the per-vertex M ordinate as the vertex time, and reject a geometry whose M values are absent or NaN with a message naming the version pin
-- [ ] T030 [US2] Implement per-vertex sampling in the provider: for each vertex, interpolate the forecast and uncertainty parameters at that vertex's own position, depth and time
-- [ ] T031 [US2] Assemble the response as a CoverageJSON Trajectory domain whose composite axis carries the per-vertex tuple of time, longitude, latitude and depth, and validate it against the specification in the test suite
-- [ ] T032 [US2] Register the plugin as the trajectory-capable provider for the coverage collections, so position, cube and trajectory are served by one collection rather than by two that could disagree
-- [ ] T033 [US2] Implement trajectory request validation: increasing time order, extent checks, vertex count limit, each refusal naming the offending vertex or the limit
-- [ ] T034 [US2] Ensure no silent extrapolation: out-of-range vertices are declined explicitly in the response, with the declining documented in `query/README.md`
-- [ ] T035 [US2] Record the measured interpolation error against ground truth in `query/README.md`, as a figure with the grid spacing beside it
+- [ ] T026 [US2] Pin Shapely 2.1 or later built against GEOS 3.12 or later in the query layer's image and workspace, with a comment stating that below those versions the M ordinate is returned as NaN and per-vertex timestamps are lost silently before any provider code runs
+- [ ] T027 [US2] Take the groundwork from `specs/002-edr-trajectory-spike/` — the proof that M survives parsing and the sampled four-dimensional route — and record the trajectory provider decision as an ADR under PR-03
+- [ ] T028 [US2] Implement `query/plugins/edr_trajectory.py`: accept the geometry pygeoapi hands over, read the per-vertex M ordinate as the vertex time, and reject a geometry whose M values are absent or NaN with a message naming the version pin
+- [ ] T029 [US2] Implement per-vertex sampling in the provider: for each vertex, interpolate the forecast and uncertainty parameters at that vertex's own position, depth and time
+- [ ] T030 [US2] Assemble the response as a CoverageJSON Trajectory domain whose composite axis carries the per-vertex tuple of time, longitude, latitude and depth, and validate it against the specification in the test suite
+- [ ] T031 [US2] Register the plugin as the trajectory-capable provider for the coverage collections, so position, cube and trajectory are served by one collection rather than by two that could disagree
+- [ ] T032 [US2] Implement trajectory request validation: increasing time order, extent checks, vertex count limit, each refusal naming the offending vertex or the limit
+- [ ] T033 [US2] Ensure no silent extrapolation: out-of-range vertices are declined explicitly in the response, with the declining documented in `query/README.md`
+- [ ] T034 [US2] Record the measured interpolation error against ground truth in `query/README.md`, as a figure with the grid spacing beside it
 
 **Checkpoint**: The client's centrepiece has an interface, and AT-01 is scored.
 
@@ -132,18 +131,15 @@ collection resolves to it, and the previous run remains addressable.
 
 ### Tests for User Story 3
 
-- [ ] T036 [P] [US3] Write `tests/integration/test_new_run_servable.py` asserting a newly appearing run is served with no configuration edit and no manual restart
-- [ ] T037 [P] [US3] Add a case asserting a partially written run is never served, and a case asserting a superseded run remains addressable by its own identifier
-- [ ] T038 [P] [US3] Add a case asserting that two current pointers cause a refusal to resolve, with the conflict reported rather than one chosen
-- [ ] T039 [P] [US3] Add a case asserting that replaying a scenario from its seed produces identical run identifiers
+- [ ] T035 [P] [US3] Write `tests/integration/test_new_run_servable.py` asserting that a newly appearing run is served with no configuration edit and no manual restart, that a partially written run is never served, that a superseded run remains addressable by its own identifier, that two current pointers cause a refusal to resolve with the conflict reported, and that replaying a scenario from its seed produces identical run identifiers
 
 ### Implementation for User Story 3
 
-- [ ] T040 [US3] Implement `query/plugins/coverage_catalogue.py` resolving the run set from the store layout at request time, with no run enumerated in configuration
-- [ ] T041 [US3] Implement completeness checking so only runs with forecast field, uncertainty field and a valid manifest are catalogued
-- [ ] T042 [US3] Implement current-run resolution from the pointer, refusing to resolve on conflict and reporting it
-- [ ] T043 [US3] Bound the catalogue's cost per request — cache with invalidation keyed on the store's own state, never on an interval measured by the host clock
-- [ ] T044 [US3] Document in `query/README.md` and `stores/coverage/layout.md` the contract the publisher must honour for a run to become servable, in enough detail that the control loop feature needs no conversation about it
+- [ ] T036 [US3] Implement `query/plugins/coverage_catalogue.py` resolving the run set from the store layout at request time, with no run enumerated in configuration
+- [ ] T037 [US3] Implement completeness checking so only runs with forecast field, uncertainty field and a valid manifest are catalogued
+- [ ] T038 [US3] Implement current-run resolution from the pointer, refusing to resolve on conflict and reporting it
+- [ ] T039 [US3] Bound the catalogue's cost per request — cache with invalidation keyed on the store's own state, never on an interval measured by the host clock
+- [ ] T040 [US3] Document in `query/README.md` and `stores/coverage/layout.md` the contract the publisher must honour for a run to become servable, in enough detail that the control loop feature needs no conversation about it
 
 **Checkpoint**: The sense → decide → act → publish cycle can close without an operator.
 
@@ -159,18 +155,16 @@ observation counts against the store.
 
 ### Tests for User Story 4
 
-- [ ] T045 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams and Observations and asserting navigation between them
-- [ ] T046 [P] [US4] Add a case reconciling the observation count per datastream against the store
-- [ ] T047 [P] [US4] Add a case asserting time filtering is on phenomenon time and that no arrival or insertion time is exposed or filterable
-- [ ] T048 [P] [US4] Add a case asserting every write operation through the interface fails
+- [ ] T041 [P] [US4] Write `tests/integration/test_sensorthings.py` walking Things, Sensors, ObservedProperties, Datastreams and Observations, asserting navigation between them, reconciling the observation count per datastream against the store, and asserting that time filtering is on phenomenon time with no arrival or insertion time exposed or filterable
+- [ ] T042 [P] [US4] Add a case asserting every write operation through the interface fails
 
 ### Implementation for User Story 4
 
-- [ ] T049 [US4] Establish against the pinned pygeoapi version whether the SensorThings entity set can be served from the `observations` schema directly, by a harness-authored provider plugin, or only by a companion implementation; record the finding and, if it is the third, raise an ADR and add a Complexity Tracking entry to `plan.md`
-- [ ] T050 [US4] Implement `query/plugins/sensorthings_provider.py` for the chosen mechanism, projecting the store's rows onto the entity set without a second definition of the observation shape
-- [ ] T051 [US4] Implement entity navigation and the expansion the client needs, bounded by the configured response limits
-- [ ] T052 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
-- [ ] T053 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
+- [ ] T043 [US4] Establish against the pinned pygeoapi version whether the SensorThings entity set can be served from the `observations` schema directly, by a harness-authored provider plugin, or only by a companion implementation; record the finding and, if it is the third, raise an ADR and add a Complexity Tracking entry to `plan.md`
+- [ ] T044 [US4] Implement `query/plugins/sensorthings_provider.py` for the chosen mechanism, projecting the store's rows onto the entity set without a second definition of the observation shape
+- [ ] T045 [US4] Implement entity navigation and the expansion the client needs, bounded by the configured response limits
+- [ ] T046 [US4] Place the SensorThings collections under the same stable path prefix as the rest, so prefix-based default-deny remains viable, and document the resulting path space
+- [ ] T047 [US4] Add SensorThings collection metadata that states plainly that the data is synthetic, and run the forbidden-vocabulary gate over it, since this text is public-facing
 
 **Checkpoint**: Both stores are readable through standards, and nothing is readable any other
 way.
@@ -179,10 +173,10 @@ way.
 
 ## Phase 7: Polish
 
-- [ ] T054 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result
-- [ ] T055 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, and where this harness uses each
-- [ ] T056 Run the full quality-gate set over this feature's files and fix what they report
-- [ ] T057 Measure and record the response times for a position query and a hundred-vertex trajectory query on the droplet, and adjust the documented limits to what the droplet can actually serve
+- [ ] T048 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result
+- [ ] T049 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, and where this harness uses each
+- [ ] T050 Run the full quality-gate set over this feature's files and fix what they report
+- [ ] T051 Measure and record the response times for a position query and a hundred-vertex trajectory query on the droplet, and adjust the documented limits to what the droplet can actually serve
 
 ---
 

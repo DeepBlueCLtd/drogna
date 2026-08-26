@@ -15,6 +15,16 @@ site_dir: build
 
 use_directory_urls: true
 
+# Raised above the defaults so that `--strict` fails the build on a broken
+# internal link, a dangling anchor, a page missing from the navigation, or a
+# link written as absolute when it should be relative. Those are exactly the
+# faults that otherwise reach a reader.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
 theme:
   name: material
   custom_dir: overrides

@@ -166,6 +166,7 @@ def values_for(
         "HARNESS_CONFIG_DIR": paths["config_dir"],
         "HARNESS_COVERAGE_ROOT": paths["coverage_root"],
         "HARNESS_STATIC_ROOT": paths["static_root"],
+        "HARNESS_NGINX_TEMPLATE_DIR": paths["nginx_template_dir"],
         "HARNESS_BROKER_CONFIG_DIR": paths["broker_config_dir"],
         "HARNESS_BROKER_DATA_DIR": paths["broker_data_dir"],
         "HARNESS_DATABASE_DATA_DIR": paths["database_data_dir"],

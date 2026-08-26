@@ -348,13 +348,16 @@ class RealTimeDriver:
             if tick is not None:
                 emitted += 1
                 continue
-            if self._engine.emission_interval_seconds() is None:
+            interval = self._engine.emission_interval_seconds()
+            if interval is None:
                 return emitted  # pinned or paused: nothing is due
             if self._engine.stall() is None:
                 return emitted
             deadline = self._engine.settings.lockstep_deadline_seconds
             if deadline is None or self.deadline_passed():
-                # Without a deadline there is nothing to wait for that this loop can
-                # observe, so it reports rather than spins. The tick is not skipped.
+                # Without a deadline there is nothing this loop can wait for, so it
+                # reports rather than spins. Either way the tick is not skipped.
                 return emitted
+            # Acknowledgements arrive from elsewhere; wait a poll interval for them.
+            self._sleep(min(interval, deadline))
         return emitted

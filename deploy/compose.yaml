@@ -244,6 +244,8 @@ services:
     <<: *runtime
     profiles: [edge, full]
     image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    # As with the client: nginx is configured through its own interface, from values the
+    # destination configuration supplies. The path policy itself belongs to 013.
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PROXY}
       HARNESS_PORT_PROXY: ${HARNESS_PORT_PROXY}
@@ -406,9 +408,15 @@ services:
       dockerfile: ${HARNESS_DOCKERFILE_CLIENT}
       args:
         HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
+        HARNESS_NGINX_TEMPLATE_DIR: ${HARNESS_NGINX_TEMPLATE_DIR}
+    # nginx is a third-party image and reads no drogna configuration file. It is told its
+    # listen port and its document root the way its own published interface expects, and
+    # both values still come from the destination configuration. See deploy/README.md,
+    # "The one meaningful environment variable, and its exceptions".
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_CLIENT}
       HARNESS_PORT_CLIENT: ${HARNESS_PORT_CLIENT}
+      HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
     volumes:
       - *config-mount
     ports:

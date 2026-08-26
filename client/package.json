@@ -2,6 +2,7 @@
   "name": "drogna-client",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
   "type": "module",
   "description": "C-18: the browser client. The whole component layout, dark until a heartbeat says otherwise.",
   "scripts": {

@@ -148,9 +148,7 @@ class Front(Feature):
         north = self.plane.north_km(latitude, self.anchor_latitude)
         return east * self._normal_east + north * self._normal_north
 
-    def membership(
-        self, latitude: float, longitude: float, depth_m: float, time_s: float
-    ) -> float:
+    def membership(self, latitude: float, longitude: float, depth_m: float, time_s: float) -> float:
         del time_s  # a front does not move; its position is ground truth for the whole axis
         offset = self.cross_front_km(latitude, longitude)
         return tanh_envelope(offset, self.sharpness_km) * depth_decay(depth_m, self.depth_scale_m)

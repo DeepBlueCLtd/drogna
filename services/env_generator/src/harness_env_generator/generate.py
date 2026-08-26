@@ -19,7 +19,7 @@ check. A refusal therefore leaves no file behind at all, which is what SC-008 as
 from __future__ import annotations
 
 from array import array
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -52,6 +52,8 @@ _SYNTHETIC = (
     "advice. The manifest named in this file records every parameter that produced it."
 )
 _TITLE = "drogna synthetic environment field"
+_PROGRESS_INTERVAL = 4096
+"""Points between progress calls. The caller decides whether a heartbeat is due."""
 _SUMMARY = (
     "Temperature, salinity and pressure over latitude, longitude, depth and time, with "
     "sound speed derived from them and the decorrelation timescale evaluated as a field."
@@ -75,6 +77,7 @@ def generate(
     root_seed: int,
     sim_time: str,
     tick: int,
+    progress: Callable[[], None] | None = None,
 ) -> GeneratedWorld:
     """Produce one world from a validated configuration document."""
     section = document["env_generator"]
@@ -113,12 +116,18 @@ def generate(
     validate_manifest(draft, manifest_schema, source=manifest_name)
 
     evaluator = Evaluator.from_manifest(draft)
-    columns, magnitudes, outside = _sweep(evaluator, world)
+    columns, magnitudes, outside = _sweep(evaluator, world, progress)
 
     payload = encode_netcdf(
         _dimensions(world),
-        _global_attributes(document, world, run_id=run_id, config_digest=config_digest,
-                           manifest_name=manifest_name, sim_time=sim_time),
+        _global_attributes(
+            document,
+            world,
+            run_id=run_id,
+            config_digest=config_digest,
+            manifest_name=manifest_name,
+            sim_time=sim_time,
+        ),
         _variables(world, columns),
     )
     field_digest = digest_of(payload)
@@ -129,7 +138,7 @@ def generate(
 
 
 def _sweep(
-    evaluator: Evaluator, world: Any
+    evaluator: Evaluator, world: Any, progress: Callable[[], None] | None = None
 ) -> tuple[dict[str, array], dict[str, float], dict[str, Any]]:
     """Fill every variable over the grid, checking bounds and the equation's range as it goes."""
     typecode, _, _ = STORED_DTYPES[world.stored_dtype]
@@ -138,7 +147,9 @@ def _sweep(
     outside_count = 0
     first_outside: dict[str, float] | None = None
 
-    for latitude, longitude, depth_m, time_s in world.grid.points():
+    for index, (latitude, longitude, depth_m, time_s) in enumerate(world.grid.points()):
+        if progress is not None and index % _PROGRESS_INTERVAL == 0:
+            progress()
         truth = evaluator.at(latitude, longitude, depth_m, time_s)
         point = {
             "latitude": latitude,

@@ -80,9 +80,7 @@ class Feature(ABC):
         """What this feature adds to the background at a point."""
 
     @abstractmethod
-    def membership(
-        self, latitude: float, longitude: float, depth_m: float, time_s: float
-    ) -> float:
+    def membership(self, latitude: float, longitude: float, depth_m: float, time_s: float) -> float:
         """How much of this point belongs to the feature, between zero and one."""
 
     @abstractmethod

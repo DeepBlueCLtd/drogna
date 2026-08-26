@@ -27,6 +27,7 @@ so that a comparison claiming byte-identity is not quietly excluding half the fi
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import struct
@@ -149,9 +150,7 @@ class NetcdfVariable:
 def _encode_variable(
     variable: NetcdfVariable, dimension_ids: Mapping[str, int], vsize: int, begin: int
 ) -> bytes:
-    identifiers = b"".join(
-        struct.pack(">I", dimension_ids[name]) for name in variable.dimensions
-    )
+    identifiers = b"".join(struct.pack(">I", dimension_ids[name]) for name in variable.dimensions)
     return (
         _encode_name(variable.name)
         + struct.pack(">I", len(variable.dimensions))
@@ -279,7 +278,5 @@ def _write_durably(path: str, payload: bytes) -> None:
 
 
 def _remove_if_present(path: str) -> None:
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.remove(path)
-    except FileNotFoundError:
-        pass

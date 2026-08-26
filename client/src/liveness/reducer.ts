@@ -4,8 +4,9 @@
  * This is the design centre of the client and the place Constitution VII is either kept
  * or lost. Its signature admits two things — evidence adapted from a validated heartbeat,
  * and a count of what was refused — and nothing else. There is no configuration
- * parameter, no list of components, no flag and no seeded state, so there is no way to
- * assert that a component exists other than by a message from it having arrived. The
+ * parameter, no list of components, no flag and no state planted at startup, so there
+ * is no way to assert that a component exists other than by a message from it having
+ * arrived. The
  * unit tests hold that shut: a configuration document cannot be passed to these
  * functions at all, which is a stronger guarantee than passing one and asserting it is
  * ignored.

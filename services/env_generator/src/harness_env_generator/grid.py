@@ -130,7 +130,9 @@ class TimeAxis:
         return self.start_offset_seconds + self.step_seconds * (self.count - 1)
 
     def values(self) -> list[float]:
-        return [self.start_offset_seconds + self.step_seconds * index for index in range(self.count)]
+        return [
+            self.start_offset_seconds + self.step_seconds * index for index in range(self.count)
+        ]
 
     def contains(self, value: float) -> bool:
         return self.minimum <= value <= self.maximum

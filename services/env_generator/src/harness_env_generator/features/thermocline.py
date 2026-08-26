@@ -104,9 +104,7 @@ class Thermocline(Feature):
     def characteristic_scale(self) -> tuple[float, str]:
         return self.thickness_m, "m"
 
-    def membership(
-        self, latitude: float, longitude: float, depth_m: float, time_s: float
-    ) -> float:
+    def membership(self, latitude: float, longitude: float, depth_m: float, time_s: float) -> float:
         del latitude, longitude, time_s  # horizontally uniform, and it does not move
         return tanh_envelope(depth_m - self.depth_m, self.thickness_m)
 

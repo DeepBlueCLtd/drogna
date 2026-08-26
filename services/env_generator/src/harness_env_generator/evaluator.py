@@ -228,9 +228,7 @@ class Evaluator:
             # Range checking is off because the generator checks the whole field once and
             # records the answer in the manifest, rather than raising per point.
             sound_speed_m_s=sound_speed(temperature, salinity, depth_m, check_range=False),
-            decorrelation_timescale_s=self.timescale.evaluate(
-                latitude, longitude, depth_m, time_s
-            ),
+            decorrelation_timescale_s=self.timescale.evaluate(latitude, longitude, depth_m, time_s),
         )
 
     def timescale_at(

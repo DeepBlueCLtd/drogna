@@ -32,6 +32,12 @@ function compiler(): InstanceType<typeof AjvConstructor> {
 
 const ajv = compiler();
 
+// The schemas annotate locations with `format: uri` to say what they are for. The client
+// does not police URL syntax — the transport will fail loudly on an address it cannot
+// reach, which is a better report than a validator's — so the format is registered as
+// accepting anything rather than left to produce a warning on every compile.
+ajv.addFormat("uri", () => true);
+
 export const validateHeartbeat: ValidateFunction = ajv.compile(heartbeatSchema);
 export const validateClockSample: ValidateFunction = ajv.compile(clockSchema);
 export const validateClientConfig: ValidateFunction = ajv.compile(configSchema);

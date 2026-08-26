@@ -72,16 +72,11 @@ class Eddy(Feature):
         north_km = draws.symmetric(f"{identifier}.centre_north_km", centre_km)
         east_km = draws.symmetric(f"{identifier}.centre_east_km", centre_km)
         radius = float(section["radius_km"]) * (
-            1.0
-            + draws.symmetric(
-                f"{identifier}.radius_fraction", float(jitter["radius_fraction"])
-            )
+            1.0 + draws.symmetric(f"{identifier}.radius_fraction", float(jitter["radius_fraction"]))
         )
         strength = float(section["strength_c"]) * (
             1.0
-            + draws.symmetric(
-                f"{identifier}.strength_fraction", float(jitter["strength_fraction"])
-            )
+            + draws.symmetric(f"{identifier}.strength_fraction", float(jitter["strength_fraction"]))
         )
         timescale = float(section["timescale_seconds"]) * (
             1.0
@@ -151,9 +146,7 @@ class Eddy(Feature):
         north = self.plane.north_km(latitude, centre_latitude)
         return math.hypot(east, north)
 
-    def membership(
-        self, latitude: float, longitude: float, depth_m: float, time_s: float
-    ) -> float:
+    def membership(self, latitude: float, longitude: float, depth_m: float, time_s: float) -> float:
         horizontal = gaussian(self.distance_km(latitude, longitude, time_s), self.radius_km)
         vertical = gaussian(depth_m - self.depth_centre_m, self.depth_half_thickness_m)
         return horizontal * vertical

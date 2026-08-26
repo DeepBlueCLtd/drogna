@@ -90,7 +90,9 @@ missing from the document would be missing from the field as well.
 """
 
 _MANIFEST_FORMAT = "json"
-_TOLERANCE_BASIS = "one unit in the last place of the stored width, at the variable's largest magnitude"
+_TOLERANCE_BASIS = (
+    "one unit in the last place of the stored width, at the variable's largest magnitude"
+)
 _TOLERANCE_DESCRIPTION = (
     "The evaluator computes in double precision and the field stores the configured "
     "width, so the whole of the disagreement between them is the rounding of the final "
@@ -208,7 +210,9 @@ def _refuse_timescales_below_floor(world: World) -> None:
     candidates: list[tuple[str, float]] = [
         ("the domain background", world.timescale.background_seconds)
     ]
-    candidates.extend((f"feature {feature.id!r}", feature.timescale_seconds) for feature in world.features)
+    candidates.extend(
+        (f"feature {feature.id!r}", feature.timescale_seconds) for feature in world.features
+    )
     for name, timescale in candidates:
         ratio = timescale / step
         if ratio >= floor:
@@ -321,7 +325,9 @@ def _resolution(feature: Feature, grid: Grid) -> dict[str, Any]:
     }
 
 
-def validate_manifest(document: Mapping[str, Any], schema: Mapping[str, Any], *, source: str) -> None:
+def validate_manifest(
+    document: Mapping[str, Any], schema: Mapping[str, Any], *, source: str
+) -> None:
     """Validate before writing. A manifest that would not validate never replaces one that did."""
     validate_document(document, schema, source=source)
 

@@ -10,10 +10,12 @@ requires-python = ">=3.11"
 # collect. Add each new library here as it is created.
 dependencies = [
     "harness-core",
+    "harness-env-generator",
 ]
 
 [tool.uv.sources]
 harness-core = { workspace = true }
+harness-env-generator = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -38,4 +40,16 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "DTZ"]
 
 [tool.pytest.ini_options]
 testpaths = ["libs", "services", "tests"]
-addopts = "-q"
+# importlib import mode lets two packages each have a tests/test_manifest.py without
+# colliding. Under the default prepend mode pytest inserts each test directory on
+# sys.path and imports by bare module name, so the second test_manifest.py it meets is
+# refused as a duplicate of the first. Every service will have a test_config.py and a
+# test_manifest.py, so the alternative is a naming convention that grows uglier with
+# each component added, to work around an import mode nobody chose deliberately.
+addopts = "-q --import-mode=importlib"
+# Each package's tests import their shared helpers from a `support` module beside them,
+# so each test directory must be importable. Under the default import mode pytest did
+# this implicitly; importlib mode does not, and doing it explicitly is better anyway —
+# the helpers are imported because they are on the path on purpose, not because pytest
+# happened to put them there.
+pythonpath = ["services/env_generator/tests"]

@@ -5,8 +5,7 @@
  * document is fetched second, and the transport opens third and only if the document
  * validated. A page that could not reach its configuration still draws the complete
  * layout, still carries the honesty statement, and says plainly that it is hearing
- * nothing — rather than showing a blank screen, which would be a worse lie than any
- * mock.
+ * nothing — rather than showing a blank screen, which would be the worse lie of the two.
  *
  * Received messages are folded into state as they arrive; drawing is throttled to the
  * frame budget. At a high clock rate the frame rate degrades and the truth does not: the

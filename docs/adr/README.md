@@ -20,3 +20,4 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0009](0009-clock-transport-and-lockstep-mode.md) | The clock publishes on the control namespace, and gains a lockstep mode | Accepted |
 | [0010](0010-site-tooling.md) | Tooling for the published site | Accepted |
 | [0011](0011-the-coverage-store-pointer-is-text.md) | The current-run pointer is a text file, not a symlink | Accepted |
+| [0012](0012-sensors-may-read-the-clock-and-nothing-else.md) | Sensors may read the clock, and nothing else on the control branch | Accepted |

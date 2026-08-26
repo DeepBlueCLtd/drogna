@@ -41,12 +41,14 @@ WORKDIR ${HARNESS_APP_ROOT}
 COPY pyproject.toml uv.lock ./
 COPY libs ./libs
 
-# `services/` does not exist yet: every C-01 to C-17 component is still to be written, and
-# a COPY of a missing directory fails the build. Uncomment this line with the first
-# service, and nothing else here changes — the workspace glob in the root pyproject.toml
-# already covers `services/*`, so a new service is a package and a Compose entry.
-#
-# COPY services ./services
+# `services/` was absent when this image was written, and a COPY of a missing directory
+# fails the build, so this line waited. Eight components live there now — the clock, the
+# environment generator, the sensors, the ingest client, the monitor, the scheduler, the
+# model runner and the publisher — and until this was uncommented no Python service image
+# could build at all. Nothing else here changed: the workspace glob in the root
+# pyproject.toml already covers `services/*`, so a new service is a package and a Compose
+# entry and nothing more.
+COPY services ./services
 
 # The `proxy_ca` secret is optional and absent in an ordinary build, which then behaves as
 # though this were a plain `uv sync`. It exists because the deployment is expected to be

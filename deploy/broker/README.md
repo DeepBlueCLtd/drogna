@@ -56,23 +56,15 @@ no block can do nothing once it has authenticated.
 
 ### The one exception, and why it is here
 
-FR-14 as written gives sensors **no** subscription to `ctl/` at all. ADR-0009 then decided
-that simulation time reaches every component by subscription to `ctl/clock`, the browser
-included. The two cannot both hold literally: a component that cannot receive a clock sample
-has no simulation time, and a component with no simulation time can only pace itself on the
-host clock, which Constitution I forbids outright.
+The sensor and ingest roles may read `ctl/clock`, which FR-14's wording would refuse them.
+Two requirements conflict there — a component with no clock sample can only pace itself on
+the host clock, which Constitution I forbids — and the decision, with what it costs the
+two-broker fallback, is **ADR-0012**. It is not restated here: a decision recorded twice is
+a decision that will be amended once.
 
-So the sensor and ingest roles are given exactly one control topic to read — the time — and
-are refused every other, in both directions. What FR-14 is defending is that a sensor cannot
-read the control loop and cannot forge a control event, and both of those still hold
-exactly. The property to test is therefore not that a sensor's subscription to `ctl/#` is
-refused; it is that subscribing to `ctl/#` delivers it the clock and nothing else, which is
-what `tests/integration/test_topic_isolation.py` asserts.
-
-This is a departure from the specification's wording and is recorded here rather than left
-for a reader to find in a rule. If it is judged wrong, the alternative is a clock transport
-that is not the control namespace, which is ADR-0009's decision to revisit and not this
-feature's to make quietly.
+What follows from it for these lists is only this. The property to test is not that a
+sensor's subscription to `ctl/#` is refused; it is that subscribing to `ctl/#` delivers the
+clock and nothing else.
 
 ### A mechanical detail that decides how the lists are tested
 

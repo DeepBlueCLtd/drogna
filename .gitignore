@@ -20,6 +20,12 @@ data/
 *.nc
 *.zarr/
 
+# The broker's password file is generated from per-role secrets at deploy time and is
+# never a tracked artefact. No such file exists today; this is here so that the first run
+# that produces one cannot quietly commit it.
+deploy/broker/passwd
+deploy/broker/**/passwd
+
 # Local config produced from templates
 config/local/*.local.json
 *.env

@@ -1,0 +1,428 @@
+# The single Compose configuration for drogna. One file, every service, two destinations.
+#
+# Nothing in this file is written literally. Every hostname, port, path, limit, tag and
+# profile arrives by interpolation from the environment file that the run scripts generate
+# from `deploy/env.template` and the destination's `config/<destination>/deployment.json`.
+# If you find yourself typing a number or a path here, it belongs in the destination
+# configuration and its schema instead (Constitution IV, SRD NFR-05).
+#
+# A service listed here is not a claim that the component exists. Profiles decide what runs
+# at a destination; heartbeats, and nothing else, decide what the client shows as alive
+# (Constitution VII, SRD FR-45). `deploy/README.md` says which services are live today.
+
+name: ${HARNESS_PROJECT_NAME}
+
+# ---------------------------------------------------------------------------------------
+# Shared fragments. Every service merges x-runtime; anything it does not merge is a
+# deliberate exception with a comment saying why.
+# ---------------------------------------------------------------------------------------
+
+x-runtime: &runtime
+  restart: ${HARNESS_RESTART_POLICY}
+  logging:
+    driver: ${HARNESS_LOG_DRIVER}
+    options:
+      max-size: ${HARNESS_LOG_MAX_SIZE}
+      max-file: ${HARNESS_LOG_MAX_FILES}
+  deploy:
+    resources:
+      limits:
+        memory: ${HARNESS_LIMIT_MEMORY}
+        cpus: ${HARNESS_LIMIT_CPUS}
+
+x-healthcheck-timing: &healthcheck-timing
+  interval: ${HARNESS_HEALTHCHECK_INTERVAL}
+  timeout: ${HARNESS_HEALTHCHECK_TIMEOUT}
+  retries: ${HARNESS_HEALTHCHECK_RETRIES}
+  start_period: ${HARNESS_HEALTHCHECK_START_PERIOD}
+
+# The destination's configuration directory, read-only. A container may read every file in
+# it and is told which one is its own by HARNESS_CONFIG.
+x-config-mount: &config-mount
+  type: bind
+  source: ${HARNESS_CONFIG_HOST_DIR}
+  target: ${HARNESS_CONFIG_DIR}
+  read_only: true
+
+# Build context is the repository root for every image: the uv workspace lock and the
+# client sources both sit above `deploy/`.
+x-python-build: &python-build
+  context: ${HARNESS_BUILD_CONTEXT}
+  dockerfile: ${HARNESS_DOCKERFILE_PYTHON}
+
+# Every drogna Python image ships a `drogna-healthcheck` console script. It reads
+# HARNESS_CONFIG, checks whatever that component considers healthy, and exits non-zero
+# otherwise. The convention is owned by 001-deterministic-foundations.
+x-python-healthcheck: &python-healthcheck
+  <<: *healthcheck-timing
+  test: ["CMD", "drogna-healthcheck"]
+
+services:
+
+  # C-01 simulation clock. The first component to be genuinely alive, and the source of
+  # the first heartbeat (SRD FR-52).
+  clock:
+    <<: *runtime
+    profiles: [foundation, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_clock
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_CLOCK}
+    volumes:
+      - *config-mount
+    ports:
+      - ${HARNESS_PUBLISH_CLOCK}
+    healthcheck: *python-healthcheck
+
+  # C-02 environment generator.
+  generator:
+    <<: *runtime
+    profiles: [generator, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_env_generator
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_GENERATOR}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+    depends_on:
+      clock:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-03 broker. Its configuration and access control lists live in `deploy/broker/` and
+  # are owned by 007-observation-path; this file supplies only the mount and the ports.
+  broker:
+    <<: *runtime
+    profiles: [broker, full]
+    image: eclipse-mosquitto:2.0.22@sha256:212f89e1eaeb2c322d6441b64396e3346026674db8fa9c27beac293405c32b3c
+    volumes:
+      - type: bind
+        source: ${HARNESS_BROKER_CONFIG_HOST_DIR}
+        target: ${HARNESS_BROKER_CONFIG_DIR}
+        read_only: true
+      - type: volume
+        source: broker-data
+        target: ${HARNESS_BROKER_DATA_DIR}
+    ports:
+      - ${HARNESS_PUBLISH_BROKER}
+    healthcheck:
+      <<: *healthcheck-timing
+      # A process check, not a connect check. A connect check needs credentials that the
+      # access control lists in `deploy/broker/` will define; tighten this to a
+      # mosquitto_sub on the $$SYS branch when 007-observation-path lands them.
+      test: ["CMD-SHELL", "pidof mosquitto"]
+
+  # C-04 simulated sensors.
+  sensors:
+    <<: *runtime
+    profiles: [observation, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_sensors
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_SENSORS}
+    volumes:
+      - *config-mount
+    depends_on:
+      broker:
+        condition: service_healthy
+      clock:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-05 ingest client, the single ingestion seam.
+  ingest:
+    <<: *runtime
+    profiles: [observation, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_ingest
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_INGEST}
+    volumes:
+      - *config-mount
+    depends_on:
+      broker:
+        condition: service_healthy
+      observations:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-06 observation store, and the host of C-07's `features` schema. One Postgres
+  # instance carrying two schemas, per the constitution's technology constraints.
+  observations:
+    <<: *runtime
+    profiles: [core, full]
+    image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
+    deploy:
+      resources:
+        limits:
+          memory: ${HARNESS_LIMIT_MEMORY_OBSERVATIONS}
+          cpus: ${HARNESS_LIMIT_CPUS_OBSERVATIONS}
+    # Postgres is configured by its published environment interface rather than by
+    # HARNESS_CONFIG; it is a third-party image and reads no drogna configuration file.
+    # Every value below still comes from the destination configuration.
+    environment:
+      POSTGRES_DB: ${HARNESS_DATABASE_NAME}
+      POSTGRES_USER: ${HARNESS_DATABASE_USER}
+      POSTGRES_PASSWORD: ${HARNESS_DATABASE_PASSWORD}
+      PGDATA: ${HARNESS_DATABASE_DATA_DIR}
+    volumes:
+      - type: volume
+        source: observations-data
+        target: ${HARNESS_DATABASE_DATA_DIR}
+    ports:
+      - ${HARNESS_PUBLISH_OBSERVATIONS}
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD-SHELL", "pg_isready -U ${HARNESS_DATABASE_USER} -d ${HARNESS_DATABASE_NAME}"]
+
+  # C-07 feature store. Static spatial reference, provisioned by script at scenario start
+  # and read-only thereafter, so it is a one-shot job rather than a long-lived service.
+  features-provisioner:
+    <<: *runtime
+    profiles: [provisioning, full]
+    restart: "no"
+    labels:
+      harness.lifecycle: one-shot
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_features
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_FEATURES}
+    volumes:
+      - *config-mount
+    depends_on:
+      observations:
+        condition: service_healthy
+
+  # C-09 query layer. C-08, the coverage store, is the `coverage-data` volume this service
+  # reads; it has no process of its own.
+  query:
+    <<: *runtime
+    profiles: [query, full]
+    build:
+      context: ${HARNESS_BUILD_CONTEXT}
+      dockerfile: ${HARNESS_DOCKERFILE_QUERY}
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_QUERY}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
+    ports:
+      - ${HARNESS_PUBLISH_QUERY}
+    depends_on:
+      observations:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_QUERY}"]
+
+  # C-10 reverse proxy. Default deny at the boundary; its configuration is owned by
+  # 013-security-proxy.
+  proxy:
+    <<: *runtime
+    profiles: [edge, full]
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PROXY}
+      HARNESS_PORT_PROXY: ${HARNESS_PORT_PROXY}
+    volumes:
+      - *config-mount
+    ports:
+      - ${HARNESS_PUBLISH_PROXY}
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_PROXY}"]
+
+  # C-11 monitor.
+  monitor:
+    <<: *runtime
+    profiles: [control, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_monitor
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_MONITOR}
+    volumes:
+      - *config-mount
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-12 scheduler.
+  scheduler:
+    <<: *runtime
+    profiles: [control, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_scheduler
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_SCHEDULER}
+    volumes:
+      - *config-mount
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-13 model runner.
+  model-runner:
+    <<: *runtime
+    profiles: [control, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_model_runner
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_MODEL_RUNNER}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-14 publisher. Makes completed runs visible atomically.
+  publisher:
+    <<: *runtime
+    profiles: [control, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_publisher
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PUBLISHER}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-15 planner. Emits recommendations; commands nothing (Constitution VIII).
+  planner:
+    <<: *runtime
+    profiles: [planning, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_planner
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PLANNER}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-16 telemetry.
+  telemetry:
+    <<: *runtime
+    profiles: [telemetry, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_telemetry
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_TELEMETRY}
+    volumes:
+      - *config-mount
+    ports:
+      - ${HARNESS_PUBLISH_TELEMETRY}
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-17 offload packager.
+  offload:
+    <<: *runtime
+    profiles: [offload, full]
+    build:
+      <<: *python-build
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+        HARNESS_SERVICE: harness_offload
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_OFFLOAD}
+    volumes:
+      - *config-mount
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck: *python-healthcheck
+
+  # C-18 browser client. Static assets built from `client/` and served by nginx.
+  client:
+    <<: *runtime
+    profiles: [shell, full]
+    build:
+      context: ${HARNESS_BUILD_CONTEXT}
+      dockerfile: ${HARNESS_DOCKERFILE_CLIENT}
+      args:
+        HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_CLIENT}
+      HARNESS_PORT_CLIENT: ${HARNESS_PORT_CLIENT}
+    volumes:
+      - *config-mount
+    ports:
+      - ${HARNESS_PUBLISH_CLIENT}
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_CLIENT}"]
+
+# ---------------------------------------------------------------------------------------
+# Volumes. Every one of these is derived data with a named producing script; see the volume
+# table in `deploy/README.md`. Nothing here survives `scripts/reset.sh`, by design.
+# ---------------------------------------------------------------------------------------
+
+volumes:
+  observations-data:
+  broker-data:
+  coverage-data:

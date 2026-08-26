@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/heartbeat.schema.json",
+  "title": "drogna component heartbeat",
+  "description": "The message every long-lived component publishes on ctl/heartbeat at its declared interval, and the only thing that lights a component in the client (FR-45, FR-52). The clock service publishes the first one, so this shape is settled here; feature 003 owns contracts/schemas/heartbeat.schema.json and must adopt it unchanged. Note what is absent: no host timestamp. Liveness is judged in simulation time, so a paused clock ages nothing and a rate change does not make a healthy component look dead.",
+  "type": "object",
+  "required": ["component", "sim_time", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The component id, matching config /component/id."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time of the heartbeat, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "The tick index the component had observed when it published. Present wherever the component holds a tick."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["starting", "ok", "degraded", "stalled", "stopping"],
+      "description": "degraded and stalled are how a component says it is alive but not working, rather than going quiet and being read as dead."
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "The run this component is part of, matching the run manifest."
+    },
+    "config_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 of the configuration the component was started from. This is how a participant's digest reaches the run manifest: never the configuration itself."
+    },
+    "detail": {
+      "type": "string",
+      "description": "One line for a human. Never a substitute for status."
+    }
+  }
+}

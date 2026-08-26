@@ -219,7 +219,7 @@ manifests field for field.
 - **FR-008**: The clock service MUST publish a heartbeat on `ctl/heartbeat` carrying its component
   id, the simulation time and a status, at its declared interval. This is drogna's first liveness
   signal and the pattern every later component follows. (SRD FR-52, FR-45)
-- **FR-009**: The clock service's real-time driver MUST be the only code in the repository that
+- **FR-009**: The clock service's real-time driver MUST be the only code in drogna that
   reads a host clock for an operational purpose, and MUST carry an inline
   `# harness:allow-wallclock` marker. (Constitution I; SRD FR-09)
 - **FR-010**: In `lockstep` mode the clock service MUST emit tick `n+1` only after every registered
@@ -355,7 +355,7 @@ manifests field for field.
   modes (FR-10). Lockstep is how AT-04 is made achievable rather than aspirational, and it is
   recorded here as a design choice rather than an SRD requirement.
 - Byte-identical replay is claimed for lockstep mode, one code version and one set of container
-  images. In `accelerated` mode the harness claims reproducibility of drawn values but not of
+  images. In `accelerated` mode drogna claims reproducibility of drawn values but not of
   interleaving, and says so rather than overclaiming.
 - The default tick interval is 100 ms of simulation time; the default simulation epoch and rate
   bounds come from config. No default is embedded in source.

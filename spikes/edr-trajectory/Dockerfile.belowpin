@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+# A deliberately out-of-date Shapely and GEOS, so the failure the FR-51 pin prevents
+# can be demonstrated rather than cited.
+#
+# SPIKE CODE. Throwaway.
+#
+# Shapely 2.0.7 wheels bundle GEOS 3.11, which is below both halves of the pin. At this
+# combination `LINESTRING M (x y m, ...)` parses without complaint and comes back as a
+# *Z* geometry whose Z values are the timestamps.
+FROM python:3.11-slim
+
+RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false \
+    sh -c 'if [ -s /tmp/proxy-ca.crt ]; then \
+             cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+             export PIP_CERT=/etc/ssl/certs/ca-certificates.crt; \
+           fi; \
+           pip3 install --no-cache-dir "shapely==2.0.7"' \
+    && python3 -c "import shapely; print('shapely', shapely.__version__, 'geos', shapely.geos_version)"

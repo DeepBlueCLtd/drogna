@@ -30,9 +30,10 @@ import io
 import re
 import sys
 import tokenize
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeAlias
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -91,6 +92,8 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
         "README.md",
     ),
 }
+
+GateFunction: TypeAlias = Callable[[Sequence[Path], Path], Iterable["Finding"]]
 
 MARKER_PATTERN = re.compile(r"harness:allow-(?P<gate>[a-z0-9][a-z0-9-]*)(?P<reason>.*)$")
 _COMMENT_PREFIXES = ("#", "//", "--", "/*", "*")
@@ -296,7 +299,7 @@ def parse_arguments(gate: str, argv: Sequence[str] | None = None) -> argparse.Na
 
 def run_gate(
     gate: str,
-    check: "GateFunction",
+    check: GateFunction,
     argv: Sequence[str] | None = None,
     *,
     root: Path = REPO_ROOT,

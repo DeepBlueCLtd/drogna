@@ -138,8 +138,11 @@ acknowledgement.
   `client/src/controls/__tests__/rateState.test.ts`.
 - [ ] T018 [P] [US2] Test for a rate of zero as a legitimate rate: simulation time
   stops, time-driven animation stops, the display says paused, and the state is
-  distinguishable from disconnected, in
-  `client/src/controls/__tests__/pinnedRate.test.ts`.
+  distinguishable from disconnected. In the same file, assert that components lit
+  before the pin stay lit through it, because liveness windows are real time and the
+  heartbeats keep arriving (ADR-0006, SC-015), and that nothing host-derived — an age
+  since last heartbeat, say — is rendered, so the frame-to-frame output stays stable
+  while pinned. In `client/src/controls/__tests__/pinnedRate.test.ts`.
 - [ ] T019 [P] [US2] Test asserting the acknowledged rate is readable from outside the
   React tree so a capture can wait for the pin to take effect, and that the rendered
   output does not change between frames while pinned, in

@@ -118,7 +118,10 @@ def grid() -> dict[str, np.ndarray]:
         'lon': np.linspace(LON0, LON1, N_LON),
         'lat': np.linspace(LAT0, LAT1, N_LAT),
         'depth': DEPTHS.copy(),
-        'time': T0 + np.arange(N_TIME) * np.timedelta64(TIME_STEP_HOURS, 'h'),
+        'time': (
+            T0.astype('datetime64[ns]')
+            + np.arange(N_TIME) * np.timedelta64(TIME_STEP_HOURS, 'h')
+        ),
     }
 
 

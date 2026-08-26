@@ -1,0 +1,16 @@
+# Expanded at container start-up by the nginx image's own template mechanism. Both
+# substitutions come from the destination configuration by way of the Compose file; nothing
+# here is a choice this file makes.
+
+server {
+    listen ${HARNESS_PORT_CLIENT};
+    server_name _;
+
+    root ${HARNESS_STATIC_ROOT};
+    index index.html;
+
+    # A single-page client: unknown paths are the client's own routes, not missing files.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

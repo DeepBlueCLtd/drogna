@@ -78,7 +78,7 @@ services:
     healthcheck: *python-healthcheck
 
   # C-02 environment generator.
-  generator:
+  env-generator:
     <<: *runtime
     profiles: [generator, full]
     build:
@@ -87,7 +87,7 @@ services:
         HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
         HARNESS_SERVICE: harness_env_generator
     environment:
-      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_GENERATOR}
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_ENV_GENERATOR}
     volumes:
       - *config-mount
       - type: volume
@@ -192,7 +192,7 @@ services:
 
   # C-07 feature store. Static spatial reference, provisioned by script at scenario start
   # and read-only thereafter, so it is a one-shot job rather than a long-lived service.
-  features-provisioner:
+  features:
     <<: *runtime
     profiles: [provisioning, full]
     restart: "no"
@@ -244,6 +244,8 @@ services:
     <<: *runtime
     profiles: [edge, full]
     image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    # As with the client: nginx is configured through its own interface, from values the
+    # destination configuration supplies. The path policy itself belongs to 013.
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PROXY}
       HARNESS_PORT_PROXY: ${HARNESS_PORT_PROXY}
@@ -406,9 +408,15 @@ services:
       dockerfile: ${HARNESS_DOCKERFILE_CLIENT}
       args:
         HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
+        HARNESS_NGINX_TEMPLATE_DIR: ${HARNESS_NGINX_TEMPLATE_DIR}
+    # nginx is a third-party image and reads no drogna configuration file. It is told its
+    # listen port and its document root the way its own published interface expects, and
+    # both values still come from the destination configuration. See deploy/README.md,
+    # "The one meaningful environment variable, and its exceptions".
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_CLIENT}
       HARNESS_PORT_CLIENT: ${HARNESS_PORT_CLIENT}
+      HARNESS_STATIC_ROOT: ${HARNESS_STATIC_ROOT}
     volumes:
       - *config-mount
     ports:

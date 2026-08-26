@@ -1,0 +1,7 @@
+Screenshots published with blog entries live in this directory.
+
+Naming: <feature-number>-<slug>.png, for example 003-shell-all-dark.png.
+
+Only the curated feature-completion captures that feature 016 produces are
+committed here. In-session and before/after captures are not durable artefacts
+and must never be added.

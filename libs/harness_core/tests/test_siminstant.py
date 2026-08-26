@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from harness_core.clock import ClockMode, SimInstant, Tick, tick_at
 
 EPOCH_ISO = "2026-01-01T00:00:00.000000Z"

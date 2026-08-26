@@ -1,0 +1,17 @@
+# Python dependencies of the query layer image (C-09).
+
+pygeoapi==0.20.0
+
+# Shapely 2.1 or later, built against GEOS 3.12 or later.
+#
+# Below those versions the M ordinate of a LINESTRINGM or LINESTRINGZM is returned as NaN.
+# pygeoapi parses an EDR trajectory's `coords` with shapely.wkt.loads before any provider
+# code runs, so the per-vertex timestamps FR-20 depends on are lost silently: nothing
+# raises, the times simply become NaN, and the trajectory response is wrong in a way that
+# looks like a modelling error rather than a parsing one. Feature 002 and feature 008 each
+# carry a test asserting that M survives parsing; this pin is what makes those tests pass.
+# Do not relax it without running them. (SRD FR-51.)
+#
+# The published Shapely wheels bundle GEOS, so the wheel for 2.1 satisfies both halves of
+# the requirement. A source build must be checked against the installed GEOS separately.
+shapely>=2.1

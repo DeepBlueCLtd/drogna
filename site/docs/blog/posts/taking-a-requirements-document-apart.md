@@ -24,30 +24,25 @@ recorded.
 
 <!-- more -->
 
-This is what came out of doing it to a document specifying eighteen components,
-fifty-three functional requirements and four acceptance tests, for a system that
-generates a synthetic ocean, samples it, notices when its forecast has started
-disagreeing with the samples, and recomputes.
+The document in question specifies eighteen components, fifty-three functional
+requirements and four acceptance tests, for a system that generates a synthetic
+ocean, samples it, notices when its forecast starts disagreeing with the samples,
+and recomputes.
 
 ## The ordering criterion is the decision
 
-The document ranks its own delivery priorities, and says explicitly what it ranks
-them by: **cost of getting it wrong late**. Not size, not enthusiasm, not what
-would demo well.
+It ranks its own delivery priorities, and says what it ranks them by: **cost of
+getting it wrong late**. Not size, not enthusiasm, not what would demo well.
 
-That inverts the obvious ordering twice over: things cheap to build and cheap to
-fix go last even when they are the fun part, and things expensive to retrofit go
-first even when they are dull and produce nothing anyone can look at.
-
-Top of the list is deterministic replay — a shared simulation clock, seeded
-random number generators, and a hard prohibition on any component asking the
-operating system what time it is. It is first because retrofitting it is not a
-refactor. It is an audit of every line that ever asked what time it is,
-including the ones inside libraries and the ones that took a timestamp from the
-message broker's delivery metadata rather than from a function call, and so do
-not look like time at all. A run that cannot be replayed from its seed cannot be
-scored, and scoring is the only thing separating this from a demonstration that
-asserts its own success.
+Top of that list is deterministic replay — a shared simulation clock, seeded
+random number generators, and a prohibition on any component asking the operating
+system what time it is. It produces nothing anyone can look at. It is first
+because retrofitting it is not a refactor: it is an audit of every line that ever
+asked what time it is, including the ones inside libraries and the ones that took
+a timestamp from the message broker's delivery metadata rather than from a
+function call, and so do not look like time at all. A run that cannot be replayed
+from its seed cannot be scored, and scoring is the only thing separating this
+from a demonstration that asserts its own success.
 
 Bottom of the list, explicitly below the line, is the blog machinery. Which is
 what got built first. I will come back to that.
@@ -58,8 +53,8 @@ Alongside the requirements sits a constitution: ten principles, each a rule with
 a rationale. It is a fashionable artefact and usually a useless one, because a
 principle nobody can violate loudly is a principle everybody violates quietly.
 
-The useful question is not whether the principles are good. It is: *for each one,
-what happens when it is broken?* That sorts the ten into three groups.
+The useful question is not whether the principles are good, but *what happens
+when each is broken*. That sorts the ten into three groups.
 
 **Five have a script that fails the build.** No wall-clock time. Seeded
 randomness. Generated types only, with a drift check that regenerates and diffs.
@@ -69,9 +64,7 @@ escape hatch: an inline marker that must state a reason, reviewed like any other
 line.
 
 **Two are checked by acceptance tests instead**, because what they forbid is a
-property of behaviour rather than of source: that recovery error is reported
-rather than asserted, and that nothing is exposed at the boundary which was not
-deliberately released.
+property of behaviour rather than of source.
 
 **Three cannot be automated at all.** Honest ports; liveness rather than
 configuration; recommendations rather than decisions.
@@ -82,10 +75,10 @@ pluggability it has and no more. A table marks every boundary genuine port,
 marginal, or not a port, and the observation store is marked *not a port* with
 the reason: Postgres is not being swapped. The reflex — mine, certainly — is to
 wrap the database in an interface anyway, because it looks tidy. That interface
-would have exactly one implementation and would make every call site harder to
-read in exchange for a flexibility nobody intends to use. No script will catch
-it. What the constitution does is make adding it require a written argument in a
-named place. That is a smaller claim than enforcement, and it is the true one.
+would have exactly one implementation and would buy a flexibility nobody intends
+to use. No script will catch it. What the constitution does is make adding it
+require a written argument in a named place. That is a smaller claim than
+enforcement, and it is the true one.
 
 ## What can actually run at the same time
 
@@ -105,8 +98,8 @@ The exit criterion for that wave is deliberately unimpressive: the client render
 all eighteen components greyed out, lit only by real heartbeats, of which there
 are none. It looks like a broken application. It is the only honest picture of a
 system with nothing running, and the rule producing it — a component is lit only
-because a message from it arrived — is worth more than a demo would be. The day
-a display can claim a component exists when it does not, the whole thing stops
+because a message from it arrived — matters more than a demo would. The day a
+display can claim a component exists when it does not, the whole thing stops
 being evidence of anything.
 
 ## The document moved while I was reading it
@@ -125,12 +118,12 @@ wrong. No supplied provider implements trajectory queries at all, so the spike
 into an unknown became a build.
 
 One narrow unknown survived, and it is a good one. The standard carries
-per-vertex time as the M ordinate of a WKT `LINESTRINGM`, which is a genuinely
-elegant fit. Below a certain version of the geometry library — and of the C
-library underneath *that* — M parses as NaN. The timestamps do not error. They
-vanish, silently, before any application code runs, and the query returns a
-plausible wrong answer. What remains is a version pin with a comment explaining
-itself, and a test asserting that M survives parsing.
+per-vertex time as the M ordinate of a WKT `LINESTRINGM`, which is an elegant
+fit. Below a certain version of the geometry library — and of the C library
+underneath *that* — M parses as NaN. The timestamps do not error. They vanish,
+silently, before any application code runs, and the query returns a plausible
+wrong answer. What remains is a version pin with a comment explaining itself, and
+a test asserting that M survives parsing.
 
 The specs had already been written against the older document, and had to be
 revised. The sequence was not clean, and pretending otherwise would make this
@@ -150,10 +143,10 @@ so:
 > answer landing in a requirement rather than staying here.
 
 An open questions section that only grows is a list of things everyone has agreed
-to stop thinking about. One that empties is a queue. The whole difference is the
-rule about where the answer may live, and it works because a requirement is
-something implementations get checked against, whereas an answer in an appendix
-is something people remember differently.
+to stop thinking about. One that empties is a queue. The difference is the rule
+about where the answer may live, and it works because a requirement is something
+implementations get checked against, whereas an answer in an appendix is
+something people remember differently.
 
 Nothing described here runs yet: sixteen features specified, a constitution
 written, a graph drawn, no service existing. This site is the first thing built,

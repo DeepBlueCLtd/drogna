@@ -1,0 +1,104 @@
+# Publishes the site to the gh-pages branch.
+#
+# gh-pages is machine-owned. Nothing is hand-edited there; anything that is will
+# be overwritten by the next run of this workflow.
+#
+# Fork pull requests cannot publish, because there is no pull_request trigger at
+# all. Only pushes to branches in this repository, and manual dispatch, run it.
+name: Publish site
+
+on:
+  push:
+    branches:
+      - main
+      # Feature branches publish too, so that the pipeline can be verified
+      # before a merge rather than after one.
+      - 'claude/**'
+  workflow_dispatch:
+
+permissions:
+  # Writing the gh-pages branch is the only permission this job needs.
+  contents: write
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # ghp-import commits onto gh-pages, so the branch history is needed.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: site/requirements.txt
+
+      - name: Install pinned site tooling
+        run: python -m pip install -r site/requirements.txt
+
+      - name: Build the site
+        # The same command a person runs locally. --strict turns every warning
+        # into a failure: a broken internal link, a dangling anchor or a page
+        # missing from the navigation stops the publication.
+        run: mkdocs build --strict --config-file site/mkdocs.yml
+
+      - name: Gate — no external sub-resources
+        # PR-01: the published site must fetch nothing from another origin.
+        run: python site/tools/check_no_external_resources.py site/build
+
+      - name: Gate — the landing page carries the FR-01 statement
+        run: |
+          set -euo pipefail
+          index="site/build/index.html"
+          test -f "$index"
+          grep -qi "learning harness" "$index"
+          grep -qi "synthetic" "$index"
+          grep -qi "fake" "$index"
+          echo "Landing page statement present."
+
+      - name: Gate — indexing is declined
+        run: |
+          set -euo pipefail
+          grep -qi 'name="robots"' site/build/index.html
+          grep -qi 'Disallow: /' site/build/robots.txt
+          echo "noindex meta and robots.txt present."
+
+      - name: Disable Jekyll processing
+        # GitHub Pages runs Jekyll over a branch-served site by default, and
+        # Jekyll strips directories whose names begin with an underscore —
+        # which is several of the ones the theme emits. .nojekyll turns that off.
+        run: |
+          set -euo pipefail
+          touch site/build/.nojekyll
+          test -f site/build/.nojekyll
+
+      - name: Deploy to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # ghp-import pushes the directory that the gates just passed, byte for
+        # byte. `mkdocs gh-deploy` would rebuild first, which would mean the
+        # artefact that was checked is not the artefact that is published.
+        #   -n add .nojekyll   -p push   -f force   -m message
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ghp-import --no-jekyll --push --force \
+            --branch gh-pages \
+            --message "Publish site from ${GITHUB_SHA} [skip ci]" \
+            site/build
+
+      - name: Verify .nojekyll reached the published branch
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages
+          git ls-tree --name-only origin/gh-pages | grep -qx '.nojekyll'
+          echo ".nojekyll is present in the published tree."

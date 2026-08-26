@@ -30,17 +30,29 @@ deployed library versions; SRD FR-51 pins Shapely 2.1 or later against GEOS 3.12
 below which M is returned as NaN and per-vertex timestamps are lost silently, and feature 002's
 spike proves it before this feature builds on it.
 
-One implementation choice is genuinely open and is settled by evidence rather than guessed at:
-whether SensorThings Part 1 can be served from the `observations` schema by pygeoapi, by a
-plugin, or only by a companion implementation. The first task of that story establishes it, and
-the third answer would need an ADR.
+SensorThings is a build as well, and for the same kind of reason. pygeoapi ships a provider
+named `sensorthings`, but it is an HTTP client: it queries an external SensorThings service,
+transforms the entities it receives and republishes them as OGC API - Features. It consumes
+SensorThings rather than providing it, and drogna has a Postgres observation store and no
+external service to point it at. ADR-0004 therefore decides a bespoke provider plugin serving
+the Part 1 (Sensing) entity set from the `observations` schema, and obliges this feature to
+state plainly which subset of the standard it implements. It is not conformant, and the
+specification says which parts are absent and why, on the collection itself and in the
+standards primer.
+
+This feature therefore carries **two** bespoke provider plugins written against pygeoapi's
+provider base class. That is two compatibility surfaces against the same third-party interface,
+and they share one answer: both are pinned to the same pygeoapi version, and both fail loudly
+at startup on a version they have not been tested against rather than serving from an untested
+base class. The pin is one value, not two, so the two plugins cannot drift apart.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11 for pygeoapi plugins and the catalogue resolver;
 configuration in YAML generated from the destination configuration.
 
-**Primary Dependencies**: pygeoapi as the query layer, pinned by exact version; Shapely 2.1 or
+**Primary Dependencies**: pygeoapi as the query layer, pinned by one exact version shared by
+both bespoke provider plugins and checked at startup; Shapely 2.1 or
 later built against GEOS 3.12 or later, pinned with the reason in a comment, because below those
 versions the M ordinate is lost in parsing; `xarray` and `netCDF4` for reading coverage files;
 `covjson-pydantic` or the equivalent shape check for validating CoverageJSON responses in tests;
@@ -57,8 +69,8 @@ generator's ground-truth manifest.
 
 **Target Platform**: A container under the single Compose configuration, on both destinations.
 
-**Project Type**: A configured third-party service plus harness-authored plugins, and a
-filesystem layout convention.
+**Project Type**: A configured third-party service plus two harness-authored provider plugins,
+and a filesystem layout convention.
 
 **Performance Goals**: A position query answered in under two hundred milliseconds and a
 hundred-vertex trajectory query in under two seconds on the droplet's resource envelope, with
@@ -111,15 +123,26 @@ enumeration of runs in configuration. No freshness endpoint, because freshness t
   implement access control; it guarantees the property that makes the proxy feature's approach
   workable, and adding a collection must not change the shape of the path space.
 
-The provider plugin deserves a word under Principle VI, since a plugin can look like an
-abstraction added for its own sake. It is not: no supplied provider implements trajectory, so
-the plugin is the implementation rather than a layer over one, and it sits behind the coverage
-output port the constitution already recognises as genuine.
+Both provider plugins deserve a word under Principle VI, since a plugin can look like an
+abstraction added for its own sake. Neither is: no supplied provider implements EDR trajectory
+and no supplied provider serves the SensorThings entity set from a store of one's own, so in
+each case the plugin is the implementation rather than a layer over one. The trajectory
+provider sits behind the coverage output port the constitution already recognises as genuine
+(ADR-0003); the SensorThings provider is recorded in Principle VI by name (ADR-0004). Where a
+standard is ahead of its implementations, drogna writes the adapter rather than bending the
+architecture around the gap.
 
-No violations at planning time. One is possible: if SensorThings Part 1 cannot be served by
-pygeoapi or by a plugin, a companion implementation behind the same path prefix would depart
-from the constitution's technology section, and would require an ADR and an entry in the table
-below. The table is empty until that evidence exists.
+Principle VI's second half binds this feature harder than the first. The harness claims exactly
+the pluggability and exactly the conformance it has. The SensorThings interface implements a
+subset of Part 1 and is not conformant; FR-028 and FR-029 say which query options are in scope
+and which are out by decision, FR-030 requires both to be documented on the collection and in
+the standards primer, and SC-014 checks the two accounts agree. A harness that overstates its
+conformance is worth less as evidence than one that states a small conformance accurately.
+
+No violations. Complexity Tracking is therefore empty and omitted. The possibility this plan
+previously reserved — a companion SensorThings implementation behind the same path prefix,
+departing from the constitution's technology section — is closed by ADR-0004: one query layer,
+one observation store schema under our control, two plugins.
 
 ## Project Structure
 
@@ -142,8 +165,12 @@ query/                              C-09
 │   ├── coverage_catalogue.py       resolves runs from the store layout at request time
 │   ├── edr_coverage.py             EDR provider over a run's NetCDF files
 │   ├── edr_trajectory.py           the bespoke trajectory provider, per-vertex M ordinate
-│   └── sensorthings_provider.py    SensorThings Part 1 over the observations schema
+│   ├── sensorthings_provider.py    SensorThings Part 1 subset over the observations schema
+│   ├── sensorthings_entities.py    the entity model, path grammar and navigation links
+│   ├── sensorthings_options.py     the implemented query options; refusals for the rest
+│   └── pygeoapi_version.py         the shared version pin, checked at startup by both plugins
 ├── render_config.py                template plus destination configuration to config file
+├── conformance.md                  the implemented subset, the absent parts, and why
 └── README.md                       collections, path space, and why there is no freshness endpoint
 
 stores/coverage/                    C-08

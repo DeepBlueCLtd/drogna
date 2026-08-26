@@ -28,6 +28,7 @@ can be worked on without colliding.
 │   ├── harness_core/               clock, RNG, config loader, manifest, ports
 │   └── harness_types/              GENERATED Python types (do not edit)
 ├── services/
+│   ├── clock/                      C-01
 │   ├── env_generator/              C-02
 │   ├── sensors/                    C-04
 │   ├── ingest/                     C-05
@@ -63,8 +64,9 @@ feature that first needs the shape, and are additive.
 - Python packages: `snake_case`, importable as `harness_core`, `harness_<service>`.
 - Message topic namespaces: `obs/#` for observation traffic, `ctl/#` for control
   events. Sensors may publish only under `obs/`. ACLs enforce this.
-- Control topics in use: `ctl/divergence`, `ctl/run-request`, `ctl/run-started`,
-  `ctl/run-published`, `ctl/plan`, `ctl/heartbeat`, `ctl/telemetry`.
+- Control topics in use: `ctl/clock`, `ctl/divergence`, `ctl/run-request`,
+  `ctl/run-started`, `ctl/run-published`, `ctl/plan`, `ctl/heartbeat`, `ctl/telemetry`.
+  The list is extended by the feature that first needs a topic, not treated as closed.
 - Observation topics: `obs/<thing-id>/<datastream-id>`.
 - JSON Schema files are named for the message: `contracts/schemas/<topic-noun>.schema.json`,
   with `$id` of the form `https://schemas.harness.invalid/<name>.schema.json`.
@@ -98,6 +100,15 @@ shapes are defined once in `contracts/schemas/config.common.schema.json` and `$r
 Obtain time from `harness_core.clock.Clock` and randomness from
 `harness_core.rng.rng_for(stream)`. Both are ports; both are constructed from config.
 Nothing else is permitted (Constitution I and II).
+
+The clock port is a *client* of the clock service (C-01), which publishes time samples
+on `ctl/clock` and exposes a small HTTP interface for rate control and startup catch-up
+only. The port must not interpolate between samples: doing so would smuggle host time
+back into every component. See ADR-0009.
+
+Sound speed is derived, never measured and never stored. There is one implementation, in
+`libs/harness_core`, called by the environment generator, the monitor and telemetry. See
+ADR-0005.
 
 ## Liveness
 

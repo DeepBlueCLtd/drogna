@@ -51,7 +51,7 @@ destination files.
 
 **Critical**: No user story work begins until this phase is complete.
 
-- [ ] T005 Author `contracts/schemas/observation.schema.json`: SensorThings vocabulary for one observation — thing, datastream, observed property, sensor, feature of interest, phenomenon time as a simulation-clock instant, result, location, depth — forbidding unknown properties, carrying a title, a description and at least one example, and obeying the identifier convention
+- [ ] T005 Author `contracts/schemas/observation.schema.json`: SensorThings vocabulary for one observation — thing, datastream, observed property, sensor, feature of interest, phenomenon time as a simulation-clock instant, result, location, depth — forbidding unknown properties, carrying a title, a description and at least one example, and obeying the identifier convention. The observed property is an enumeration of exactly temperature, salinity and pressure, with a comment naming ADR-0005 as the reason sound speed is absent
 - [ ] T006 Run `scripts/generate_types.sh` and commit the generated Python and TypeScript observation types, confirming the drift check passes
 - [ ] T007 Write the first migration in `stores/observations/migrations/` creating the `observations` schema and its observation table, keyed by the deterministic observation identifier, with a PostGIS geography point, a depth, a phenomenon time column that has no default, and an index on phenomenon time, carrying a comment block stating that no column may take a `now()` or `current_timestamp` default and why
 - [ ] T008 [P] Write `stores/observations/roles.sql` granting insert to the ingest role alone and select to the query layer and telemetry roles, and `stores/features/roles.sql` granting select only to every run-time role with write permission held solely by the provisioning role
@@ -186,7 +186,7 @@ as every run-time role.
 ## Phase 8: Polish
 
 - [ ] T045 [P] Write `docs/architecture/observation-path.md` describing the path end to end, the two failure modes and how each is bounded
-- [ ] T046 [P] Record an ADR for the decision that sound speed is derived downstream rather than published or derived at ingest, naming the alternative and its consequences
+- [ ] T046 [P] Add a case to the schema tests asserting that an observation carrying a sound-speed observed property is rejected, and that the enumeration is exactly temperature, salinity and pressure, so a fourth datastream cannot arrive without amending ADR-0005 (FR-023, FR-024, SC-012)
 - [ ] T047 Run the full quality-gate set over this feature's files — lint, format, wall-clock gate, seeded-RNG gate, drift check, literal-path gate, forbidden-vocabulary gate — and fix what they report
 - [ ] T048 Walk the edge cases in `spec.md` deliberately: broker absent at start, store absent mid-batch, duplicate delivery, out-of-order arrival, process death mid-batch; confirm each behaves as specified and record what was learned
 
@@ -222,8 +222,10 @@ as every run-time role.
 ### Downstream Consumers
 
 - `008-query-layer` reads the `observations` schema with a select-only role.
-- `009-control-loop` subscribes to `obs/#` directly and derives sound speed; it does not query
-  the store during normal operation.
+- `009-control-loop` subscribes to `obs/#` directly and derives sound speed at the point of use
+  through the shared implementation in `libs/harness_core` (ADR-0005); it does not query the
+  store during normal operation, and it does not read a stored sound speed, because there is
+  none.
 - `010-telemetry-quality` consumes `ctl/telemetry`.
 
 ### Within Each User Story

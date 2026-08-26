@@ -28,6 +28,7 @@
     "config_dir": "/etc/drogna",
     "coverage_root": "/var/lib/drogna/coverage",
     "static_root": "/usr/share/nginx/html",
+    "nginx_template_dir": "/etc/nginx/templates",
     "broker_config_dir": "/mosquitto/config",
     "broker_data_dir": "/mosquitto/data",
     "database_data_dir": "/var/lib/postgresql/data"

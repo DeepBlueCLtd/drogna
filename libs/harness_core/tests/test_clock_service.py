@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from harness_core.clock import ClockControlError, ClockMode, ParticipantRole, SimInstant, Tick
 from harness_core.clock_service import ClockEngine, ClockSettings, RealTimeDriver
 
@@ -232,7 +231,12 @@ def test_the_driver_paces_emission_without_touching_tick_values() -> None:
 
     assert [tick.index for tick in emitted] == [0, 1, 2, 3]
     epoch = SimInstant.from_iso(EPOCH_ISO)
-    assert [tick.instant.micros - epoch.micros for tick in emitted] == [0, 100_000, 200_000, 300_000]
+    assert [tick.instant.micros - epoch.micros for tick in emitted] == [
+        0,
+        100_000,
+        200_000,
+        300_000,
+    ]
     # 100 ms of simulation time at rate 2 is 50 ms of host time between emissions.
     assert host.slept == [pytest.approx(0.05)] * 3
 

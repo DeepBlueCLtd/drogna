@@ -95,6 +95,14 @@ instance, two schemas, and a scenario of hours in simulation time compressed int
   carrying component identifier, simulation time and status. A service that cannot reach the
   broker publishes nothing and is correctly greyed out rather than falsely lit.
 
+ADR-0005 constrains the message definition this feature owns and is recorded here so the
+constraint is not rediscovered downstream. The store holds measured quantities only:
+temperature, salinity and pressure, as three Datastreams. Sound speed is derived at the point
+of use by the single implementation in `libs/harness_core` and is never published or stored, so
+the observed-property enumeration in `contracts/schemas/observation.schema.json` is closed at
+three. A derived value stored beside its inputs is a second source of truth that can disagree
+with them after a change to the equation, and there would be no way to tell which was right.
+
 No violations. Complexity Tracking is therefore empty and omitted.
 
 ## Project Structure

@@ -129,6 +129,7 @@
         "config_dir",
         "coverage_root",
         "static_root",
+        "nginx_template_dir",
         "broker_config_dir",
         "broker_data_dir",
         "database_data_dir"

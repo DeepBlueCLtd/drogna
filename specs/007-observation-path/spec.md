@@ -170,6 +170,8 @@ run-time role and confirm every attempt is refused.
 - **FR-020**: The stored data model MUST admit environmental measurements only. No entity, contact, detection or track, and no field that would serve as one. The simulated vessel appears as a sampling platform and a coordinate. (Constitution V; SRD §1.1)
 - **FR-021**: Observations MUST be ordered and queried by simulation time, not by arrival order or insertion order, and out-of-order arrival MUST be stored on its own time. (Constitution I)
 - **FR-022**: Store schema changes MUST be expressed as migrations under `stores/observations/`, applied by script, so a fresh instance and a migrated one agree. (SRD NFR-07)
+- **FR-023**: Sensors MUST publish temperature, salinity and pressure only, as three SensorThings Datastreams. Sound speed MUST NOT be published, MUST NOT be stored, and is not a datastream. It is derived at the point of use by a single shared implementation in `libs/harness_core`, called by the monitor (SRD FR-24), by telemetry (SRD FR-37) and by the environment generator (SRD FR-02). The observation store therefore holds measured quantities only. (ADR-0005; SRD FR-02, FR-16, FR-24, §2.2)
+- **FR-024**: The observation message schema MUST admit exactly those three observed properties, so a fourth datastream cannot be introduced by a publisher without amending ADR-0005. A derived value stored beside its inputs would be a second source of truth that can disagree with them after a change to the equation. (ADR-0005; Constitution III)
 
 ### Key Entities
 
@@ -198,18 +200,19 @@ run-time role and confirm every attempt is refused.
 - **SC-009**: The wall-clock gate reports zero host-clock reads in `services/sensors/`, `services/ingest/` and the store's migration and provisioning scripts.
 - **SC-010**: Every attempt to write to the `features` schema during a run is refused; the success count is zero.
 - **SC-011**: Sampling stored observations against the generator's field at their own coordinates and simulation times yields differences within the declared sensor noise model, reported as a figure rather than asserted.
+- **SC-012**: The count of stored observations carrying an observed property other than temperature, salinity or pressure is zero, and no sound speed value appears anywhere in the observation store or on an `obs/` topic.
 
 ## Assumptions
 
 - The broker is Mosquitto, since the constitution fixes MQTT but not the implementation, and
   Mosquitto's file-based access control lists make FR-004 straightforwardly testable. The
   configuration lives under `deploy/broker/` and is owned by this feature.
-- Sound speed is derived, not published. Sensors publish temperature, salinity and pressure;
-  the sound speed computation named in SRD §2.2 as bespoke core logic belongs to the control
-  loop feature, which derives it from the observations it hears. The observation store
-  therefore holds measured quantities only. This is an interpretation of SRD FR-02 and FR-24
-  read together, and if the control loop feature concludes otherwise, the change is a fourth
-  datastream and a derivation step at ingest.
+- Sound speed is derived, not published. This is no longer this feature's interpretation to
+  make: ADR-0005 settles it, and FR-023 and FR-024 above state it as a requirement. Sensors
+  publish the three measured quantities; the sound speed computation named in SRD §2.2 as
+  bespoke core logic has one implementation, in `libs/harness_core`, and its consumers call it
+  rather than carrying their own copy of the equation. The chosen formulation and its validity
+  range are documented in `docs/algorithms/`, not left implicit in a function body.
 - Messages are published at quality of service level 1, at-least-once, with duplicate
   suppression resting on the deterministic observation identifier rather than on the broker.
   Level 2 is available if level 1 proves troublesome, and is a configuration value.

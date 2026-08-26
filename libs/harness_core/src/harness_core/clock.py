@@ -30,8 +30,14 @@ from urllib.request import Request, urlopen
 
 from harness_core.ports import Clock  # re-exported: components name harness_core.clock.Clock
 
+CLOCK_TOPIC = "ctl/clock"
+"""Simulation time is published here, on the control namespace of the broker (ADR-0009)."""
+
 __all__ = [
+    "CLOCK_TOPIC",
+    "BrokerTickSource",
     "Clock",
+    "ClockControl",
     "ClockControlError",
     "ClockEndpoint",
     "ClockError",
@@ -39,7 +45,7 @@ __all__ = [
     "ClockStaleError",
     "ClockState",
     "ClockStatus",
-    "HttpTickTransport",
+    "HttpClockControl",
     "ManualClock",
     "Participant",
     "ParticipantRole",
@@ -47,7 +53,7 @@ __all__ = [
     "SimInstant",
     "Tick",
     "TickNotReachedError",
-    "TickTransport",
+    "TickSource",
     "tick_at",
 ]
 
@@ -385,39 +391,70 @@ class ManualClock:
         return self.tick()
 
 
-class TickTransport:
-    """What :class:`RemoteClock` needs of the network. Implemented by :class:`HttpTickTransport`.
+class TickSource:
+    """Where ticks come from: a subscription to ``ctl/clock`` on the broker.
 
-    Declared as a class rather than a Protocol so tests can subclass it, and so the
-    docstrings that bind an implementation sit in one place.
+    ADR-0009: the clock publishes simulation time on the control namespace, and
+    consumers — the browser included — receive time by subscribing. There is one
+    transport for control traffic. Declared as a class rather than a Protocol so that a
+    test can subclass it and so the rules that bind an implementation sit in one place.
+    """
+
+    def ticks(self) -> Iterator[Tick]:
+        """Yield ticks as the clock publishes them. Ends when the subscription drops."""
+        raise NotImplementedError
+
+
+class ClockControl:
+    """The clock's small HTTP interface: the two things a subscription cannot do.
+
+    Setting the rate is a command from the browser (FR-10). Asking what the time is now
+    is for a component starting up or catching up after a restart. It is not a way to
+    read time in a loop: a component polling this is doing the wrong thing and should be
+    subscribing (ADR-0009).
     """
 
     def snapshot(self) -> ClockState:
-        """Fetch the current clock state, for joining mid-run."""
+        """What the time is now, for a component that has just started or restarted."""
         raise NotImplementedError
+
+    def command(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Send a command. Refusals are raised as :class:`ClockControlError`."""
+        raise NotImplementedError
+
+
+class BrokerTickSource(TickSource):
+    """Ticks from ``ctl/clock`` messages, decoded and checked for order.
+
+    Takes an iterable of raw payloads rather than a broker client, so the component owns
+    its own subscription and this class stays testable without a broker. A payload that
+    is not a clock sample is a fault in the sender, and is raised rather than skipped.
+    """
+
+    def __init__(self, messages: Iterable[bytes | str | Mapping[str, Any]]) -> None:
+        self._messages = messages
 
     def ticks(self) -> Iterator[Tick]:
-        """Yield ticks as the service emits them. Ends when the stream is interrupted."""
-        raise NotImplementedError
-
-    def control(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
-        """Send a control request. Refusals are raised as :class:`ClockControlError`."""
-        raise NotImplementedError
+        for message in self._messages:
+            if isinstance(message, Mapping):
+                payload: Mapping[str, Any] = message
+            else:
+                raw = message.decode("utf-8") if isinstance(message, bytes) else message
+                payload = json.loads(raw)
+            yield Tick.from_message(payload)
 
 
 @dataclass(frozen=True)
 class ClockEndpoint:
-    """Where the clock service is and how it is addressed.
+    """Where the clock's HTTP interface is, and how it is addressed.
 
     Every field arrives from the ``clock`` section of the component's config file. No
-    URL, host, port or route appears in this module's source: the routes are part of
-    the clock's published interface, so they are configuration, not code
-    (Constitution IV).
+    URL, host, port or route appears in this module's source: the routes are part of the
+    clock's published interface, so they are configuration, not code (Constitution IV).
     """
 
     endpoint: str
     snapshot_route: str
-    stream_route: str
     control_route: str
     stale_after_gap: int = 0
     timeout_seconds: float | None = None
@@ -425,17 +462,13 @@ class ClockEndpoint:
     @classmethod
     def from_config(cls, section: Mapping[str, Any]) -> ClockEndpoint:
         routes = section["routes"]
+        timeout = section.get("timeout_seconds")
         return cls(
             endpoint=str(section["endpoint"]),
             snapshot_route=str(routes["snapshot"]),
-            stream_route=str(routes["stream"]),
             control_route=str(routes["control"]),
             stale_after_gap=int(section.get("stale_after_gap", 0)),
-            timeout_seconds=(
-                None
-                if section.get("timeout_seconds") is None
-                else float(section["timeout_seconds"])
-            ),
+            timeout_seconds=None if timeout is None else float(timeout),
         )
 
     def url_for(self, route: str) -> str:
@@ -445,11 +478,8 @@ class ClockEndpoint:
 Opener = Callable[[Request], IO[bytes]]
 
 
-class HttpTickTransport(TickTransport):
-    """The clock service over HTTP: a snapshot request, a server-sent event stream, and control.
-
-    The opener is injectable so tests exercise the parsing without a socket.
-    """
+class HttpClockControl(ClockControl):
+    """The clock's HTTP interface over urllib. The opener is injectable for tests."""
 
     def __init__(self, endpoint: ClockEndpoint, *, opener: Opener | None = None) -> None:
         self._endpoint = endpoint
@@ -465,12 +495,7 @@ class HttpTickTransport(TickTransport):
         with self._opener(request) as response:
             return ClockState.from_message(json.loads(response.read().decode("utf-8")))
 
-    def ticks(self) -> Iterator[Tick]:
-        request = Request(self._endpoint.url_for(self._endpoint.stream_route))
-        with self._opener(request) as response:
-            yield from _parse_server_sent_events(response)
-
-    def control(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    def command(self, operation: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         body = json.dumps({"operation": operation, **payload}).encode("utf-8")
         request = Request(
             self._endpoint.url_for(self._endpoint.control_route),
@@ -483,45 +508,31 @@ class HttpTickTransport(TickTransport):
         return json.loads(raw) if raw else {}
 
 
-def _parse_server_sent_events(stream: Iterable[bytes]) -> Iterator[Tick]:
-    """Yield a tick per complete server-sent event. Partial events at EOF are dropped."""
-    data: list[str] = []
-    for raw_line in stream:
-        line = raw_line.decode("utf-8").rstrip("\n").rstrip("\r")
-        if line.startswith(":"):
-            continue
-        if line == "":
-            if data:
-                yield Tick.from_message(json.loads("\n".join(data)))
-                data = []
-            continue
-        prefix, _, value = line.partition(":")
-        if prefix == "data":
-            data.append(value.lstrip())
-
-
 class RemoteClock:
-    """The clock port as a client of the clock service.
+    """The clock port as a subscriber to ``ctl/clock``, with commands over HTTP.
 
-    It holds the last tick it was given and nothing else. Between ticks ``now()``
-    returns the same instant, because interpolating would be computing simulation time
-    locally, which FR-003 forbids and which would reintroduce host time by the back
-    door.
+    It holds the last tick it was given and nothing else. Between ticks ``now()`` returns
+    the same instant, because interpolating would be computing simulation time locally,
+    which ADR-0009 forbids in the port and which would reintroduce host time by the back
+    door. The one exemption in drogna is the client's render path (ADR-0007), which never
+    produces an operational value.
 
-    Staleness is detected structurally — the stream ended, or a tick index arrived with
-    a gap larger than the configured tolerance — never by comparing against a host
+    Staleness is detected structurally — the subscription ended, or a tick index arrived
+    with a gap larger than the configured tolerance — never by comparing against a host
     clock, which the port has no access to.
     """
 
     def __init__(
         self,
-        transport: TickTransport,
+        source: TickSource,
+        control: ClockControl | None = None,
         endpoint: ClockEndpoint | None = None,
         *,
         participant_id: str | None = None,
         role: ParticipantRole = ParticipantRole.OBSERVER,
     ) -> None:
-        self._transport = transport
+        self._source = source
+        self._control = control
         self._stale_after_gap = 0 if endpoint is None else endpoint.stale_after_gap
         self._participant_id = participant_id
         self._role = role
@@ -536,22 +547,36 @@ class RemoteClock:
     def participant_id(self) -> str | None:
         return self._participant_id
 
-    def start(self) -> ClockState:
-        """Take a snapshot, register if this component is a participant, and open the stream."""
-        state = self._transport.snapshot()
-        self._state = state
-        if state.tick is not None:
-            self._last = state.tick
-        if self._participant_id is not None:
-            self._transport.control(
-                "register", {"participant": self._participant_id, "role": self._role.value}
+    def _require_control(self) -> ClockControl:
+        if self._control is None:
+            raise ClockControlError(
+                "this clock port has no command interface configured; "
+                "it can subscribe to time but not command the clock"
             )
-        self._stream = self._transport.ticks()
+        return self._control
+
+    def start(self) -> ClockState | None:
+        """Catch up from the snapshot if there is one, register, and open the subscription.
+
+        The snapshot is the startup and restart path only. Time after that arrives by
+        subscription.
+        """
+        state = None
+        if self._control is not None:
+            state = self._control.snapshot()
+            self._state = state
+            if state.tick is not None:
+                self._last = state.tick
+            if self._participant_id is not None:
+                self._control.command(
+                    "register", {"participant": self._participant_id, "role": self._role.value}
+                )
+        self._stream = self._source.ticks()
         return state
 
     def _require_stream(self) -> Iterator[Tick]:
         if self._stream is None:
-            self._stream = self._transport.ticks()
+            self._stream = self._source.ticks()
         return self._stream
 
     def _mark_stale(self, reason: str, gap: int = 0) -> None:
@@ -560,21 +585,21 @@ class RemoteClock:
         self._gap = gap
 
     def receive(self) -> Tick:
-        """Take the next tick from the stream, or report the clock stale."""
+        """Take the next tick from the subscription, or report the clock stale."""
         stream = self._require_stream()
         try:
             tick = next(stream)
         except StopIteration:
-            self._mark_stale("tick stream ended")
+            self._mark_stale("clock subscription ended")
             raise ClockStaleError(
-                "tick stream ended; no operational work may proceed",
+                "clock subscription ended; no operational work may proceed",
                 last_tick=self._last,
                 gap=0,
             ) from None
         except OSError as exc:
-            self._mark_stale(f"tick stream failed: {exc}")
+            self._mark_stale(f"clock subscription failed: {exc}")
             raise ClockStaleError(
-                f"tick stream failed: {exc}; no operational work may proceed",
+                f"clock subscription failed: {exc}; no operational work may proceed",
                 last_tick=self._last,
                 gap=0,
             ) from exc
@@ -646,13 +671,13 @@ class RemoteClock:
                 f"this clock is registered as {self._role.value}"
             )
         tick_index = self.tick().index if index is None else index
-        self._transport.control(
+        self._require_control().command(
             "acknowledge", {"participant": self._participant_id, "tick": tick_index}
         )
 
     def set_rate(self, rate: float) -> Mapping[str, Any]:
-        """Ask the service to change rate. A rate of zero pins the clock (FR-53)."""
-        return self._transport.control("set_rate", {"rate": rate})
+        """Ask the clock to change rate. A rate of zero pins it (FR-53)."""
+        return self._require_control().command("set_rate", {"rate": rate})
 
     def set_mode(self, mode: ClockMode) -> Mapping[str, Any]:
-        return self._transport.control("set_mode", {"mode": mode.value})
+        return self._require_control().command("set_mode", {"mode": mode.value})

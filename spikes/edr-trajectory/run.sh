@@ -14,6 +14,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 COMPOSE="docker compose -f compose.spike.yml"
 
+# Compose v5 drives builds through buildx bake, which refuses to read a secret file
+# from outside the build context unless the entitlement is granted, and gives no way to
+# pass the flag through. Both settings below are about reading one CA bundle at build
+# time on this machine; neither weakens TLS verification anywhere.
+export COMPOSE_BAKE=0
+export BUILDX_BAKE_ENTITLEMENTS_FS=0
+
 # A build behind a TLS-terminating egress proxy needs that proxy's CA to reach PyPI.
 # Without one, an empty secret is passed and the certificate store is left alone.
 if [[ -z "${DROGNA_SPIKE_CA_FILE:-}" ]]; then

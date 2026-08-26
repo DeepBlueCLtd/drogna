@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from harness_core.clock import ClockMode, ManualClock, SimInstant, TickNotReachedError
 from harness_core.ports import Clock
 

@@ -6,13 +6,12 @@ from collections.abc import Iterator, Mapping
 from typing import Any
 
 import pytest
-
 from harness_core.clock import (
     ClockControlError,
     ClockEndpoint,
     ClockMode,
-    ClockState,
     ClockStaleError,
+    ClockState,
     ParticipantRole,
     RemoteClock,
     SimInstant,

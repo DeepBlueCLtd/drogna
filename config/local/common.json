@@ -1,10 +1,18 @@
 {
-  "component": "common",
+  "component": {
+    "id": "common",
+    "description": "Values every component at this destination shares. A component's own file overrides what it needs to."
+  },
   "clock": {
     "endpoint": "http://clock:8090",
-    "mode": "simulated",
-    "start_instant": "2026-01-01T00:00:00Z",
-    "rate": 1.0
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "stream": "/clock/stream",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 4,
+    "timeout_seconds": 5.0
   },
   "seed": {
     "root": 20260826,
@@ -12,7 +20,8 @@
   },
   "broker": {
     "url": "mqtt://broker:1883",
-    "client_id": "common"
+    "client_id": "common",
+    "keepalive_seconds": 30
   },
   "logging": {
     "level": "INFO"

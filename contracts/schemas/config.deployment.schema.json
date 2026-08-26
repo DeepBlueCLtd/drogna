@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.deployment.schema.json",
   "title": "Destination deployment values",
-  "description": "The values that distinguish one destination from another. Every hostname, port, path, resource limit and profile the Compose configuration needs is declared here, so that deploy/compose.yaml can hold none of them. This file is read by the deployment scripts, not by a component at runtime, which is why it carries no clock, seed, broker or logging section: those belong to the per-component files beside it and are defined by config.common.schema.json.",
+  "description": "The values that distinguish one destination from another. Every hostname, port, path, resource limit and profile the Compose configuration needs is declared here, so that deploy/compose.yaml can hold none of them. This file is read by the deployment scripts, not by a component at runtime, which is why it carries no clock, seed, broker or logging section: those belong to the per-component files beside it and are defined by config.common.schema.json, whose component definition this schema references.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,10 @@
     "seeding"
   ],
   "properties": {
-    "component": {"const": "deployment"},
+    "component": {
+      "$ref": "config.common.schema.json#/$defs/component",
+      "description": "Component identity, taken from the shared definition so that the shape has one home. This file is read by the deployment scripts rather than by a running process, which is why it carries no clock, seed, broker or logging section."
+    },
     "destination": {
       "type": "string",
       "minLength": 1,
@@ -35,11 +38,16 @@
     "profiles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["active"],
+      "required": [
+        "active"
+      ],
       "properties": {
         "active": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Compose profiles started at this destination. A profile says what runs here today. It says nothing about which components the client shows as alive, which is decided by heartbeats alone."
         }
       }
@@ -56,27 +64,66 @@
         "wait_timeout_seconds"
       ],
       "properties": {
-        "restart_policy": {"enum": ["no", "always", "on-failure", "unless-stopped"]},
-        "log_driver": {"type": "string", "minLength": 1},
-        "log_max_size": {"type": "string", "minLength": 1},
-        "log_max_files": {"type": "string", "minLength": 1},
+        "restart_policy": {
+          "enum": [
+            "no",
+            "always",
+            "on-failure",
+            "unless-stopped"
+          ]
+        },
+        "log_driver": {
+          "type": "string",
+          "minLength": 1
+        },
+        "log_max_size": {
+          "type": "string",
+          "minLength": 1
+        },
+        "log_max_files": {
+          "type": "string",
+          "minLength": 1
+        },
         "healthcheck": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["interval", "timeout", "retries", "start_period"],
+          "required": [
+            "interval",
+            "timeout",
+            "retries",
+            "start_period"
+          ],
           "properties": {
-            "interval": {"type": "string", "minLength": 1},
-            "timeout": {"type": "string", "minLength": 1},
-            "retries": {"type": "integer", "minimum": 1},
-            "start_period": {"type": "string", "minLength": 1}
+            "interval": {
+              "type": "string",
+              "minLength": 1
+            },
+            "timeout": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "start_period": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
-        "wait_timeout_seconds": {"type": "integer", "minimum": 1}
+        "wait_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "container_paths": {
       "type": "object",
-      "additionalProperties": {"type": "string", "minLength": 1},
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
       "required": [
         "app_root",
         "config_dir",
@@ -90,19 +137,29 @@
     },
     "host_paths": {
       "type": "object",
-      "additionalProperties": {"type": "string", "minLength": 1},
-      "required": ["runtime_dir", "broker_config_dir"],
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "required": [
+        "runtime_dir",
+        "broker_config_dir"
+      ],
       "description": "Paths on the host, relative to the repository root. Absolute host paths are deliberately not accepted: they would tie a destination to one machine."
     },
     "network": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["publish"],
+      "required": [
+        "publish"
+      ],
       "properties": {
         "publish": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": {"$ref": "#/$defs/publishedPort"},
+          "additionalProperties": {
+            "$ref": "#/$defs/publishedPort"
+          },
           "description": "One entry per service that publishes a port to the host. A service absent from this map publishes nothing and is reachable only on the internal network."
         }
       }
@@ -110,75 +167,142 @@
     "public_url": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scheme", "host", "port", "base_path"],
+      "required": [
+        "scheme",
+        "host",
+        "port",
+        "base_path"
+      ],
       "properties": {
-        "scheme": {"enum": ["http", "https"]},
-        "host": {"type": "string", "minLength": 1},
-        "port": {"$ref": "#/$defs/port"},
-        "base_path": {"type": "string", "pattern": "^/"}
+        "scheme": {
+          "enum": [
+            "http",
+            "https"
+          ]
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "$ref": "#/$defs/port"
+        },
+        "base_path": {
+          "type": "string",
+          "pattern": "^/"
+        }
       },
       "description": "The address a person types to reach this destination. The run scripts print it; nothing in the stack resolves it."
     },
     "tls": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["terminate", "hostname"],
+      "required": [
+        "terminate",
+        "hostname"
+      ],
       "properties": {
-        "terminate": {"type": "boolean"},
-        "hostname": {"type": "string"}
+        "terminate": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": "string"
+        }
       },
       "description": "Whether this destination terminates TLS, and at what name. The reverse proxy feature (C-10) consumes this; this feature only carries it."
     },
     "database": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "user"],
+      "required": [
+        "name",
+        "user"
+      ],
       "properties": {
-        "name": {"type": "string", "minLength": 1},
-        "user": {"type": "string", "minLength": 1}
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "user": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "description": "Database name and role. The password is not here and never will be: it is generated into the untracked environment file at deploy time."
     },
     "resources": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/resourceLimit"},
-      "required": ["default"],
+      "additionalProperties": {
+        "$ref": "#/$defs/resourceLimit"
+      },
+      "required": [
+        "default"
+      ],
       "description": "Memory and CPU ceilings. 'default' applies to every service; a key named for a service overrides it for that service."
     },
     "seeding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["record_filename", "artefact_dirname"],
+      "required": [
+        "record_filename",
+        "artefact_dirname"
+      ],
       "properties": {
-        "record_filename": {"type": "string", "minLength": 1},
-        "artefact_dirname": {"type": "string", "minLength": 1}
+        "record_filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artefact_dirname": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   },
   "$defs": {
-    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
     "publishedPort": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["bind", "host_port", "container_port"],
+      "required": [
+        "bind",
+        "host_port",
+        "container_port"
+      ],
       "properties": {
-        "bind": {"type": "string", "minLength": 1},
-        "host_port": {"$ref": "#/$defs/port"},
-        "container_port": {"$ref": "#/$defs/port"}
+        "bind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "host_port": {
+          "$ref": "#/$defs/port"
+        },
+        "container_port": {
+          "$ref": "#/$defs/port"
+        }
       }
     },
     "resourceLimit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["memory", "cpus"],
+      "required": [
+        "memory",
+        "cpus"
+      ],
       "properties": {
-        "memory": {"type": "string", "minLength": 1},
-        "cpus": {"type": "string", "minLength": 1}
+        "memory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cpus": {
+          "type": "string",
+          "minLength": 1
+        }
       }
-    },
-    "sharedComponentSections": {
-      "$comment": "Not applied to this file. Recorded so that the shared shape has exactly one definition: if a deployment file ever grows a clock, seed, broker or logging section it takes it from here rather than restating it. The schema is owned by 001-deterministic-foundations.",
-      "$ref": "config.common.schema.json"
     }
   }
 }

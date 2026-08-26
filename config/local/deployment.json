@@ -1,9 +1,14 @@
 {
-  "component": "deployment",
+  "component": {
+    "id": "deployment",
+    "description": "Destination deployment values; read by the deployment scripts, not by a running component."
+  },
   "destination": "local",
   "project_name": "drogna",
   "profiles": {
-    "active": ["core"]
+    "active": [
+      "core"
+    ]
   },
   "runtime": {
     "restart_policy": "no",
@@ -33,13 +38,41 @@
   },
   "network": {
     "publish": {
-      "clock": {"bind": "127.0.0.1", "host_port": 8090, "container_port": 8090},
-      "broker": {"bind": "127.0.0.1", "host_port": 1883, "container_port": 1883},
-      "observations": {"bind": "127.0.0.1", "host_port": 5432, "container_port": 5432},
-      "query": {"bind": "127.0.0.1", "host_port": 8082, "container_port": 8080},
-      "proxy": {"bind": "127.0.0.1", "host_port": 8081, "container_port": 8080},
-      "client": {"bind": "127.0.0.1", "host_port": 8080, "container_port": 8080},
-      "telemetry": {"bind": "127.0.0.1", "host_port": 8091, "container_port": 8091}
+      "clock": {
+        "bind": "127.0.0.1",
+        "host_port": 8090,
+        "container_port": 8090
+      },
+      "broker": {
+        "bind": "127.0.0.1",
+        "host_port": 1883,
+        "container_port": 1883
+      },
+      "observations": {
+        "bind": "127.0.0.1",
+        "host_port": 5432,
+        "container_port": 5432
+      },
+      "query": {
+        "bind": "127.0.0.1",
+        "host_port": 8082,
+        "container_port": 8080
+      },
+      "proxy": {
+        "bind": "127.0.0.1",
+        "host_port": 8081,
+        "container_port": 8080
+      },
+      "client": {
+        "bind": "127.0.0.1",
+        "host_port": 8080,
+        "container_port": 8080
+      },
+      "telemetry": {
+        "bind": "127.0.0.1",
+        "host_port": 8091,
+        "container_port": 8091
+      }
     }
   },
   "public_url": {
@@ -57,8 +90,14 @@
     "user": "drogna"
   },
   "resources": {
-    "default": {"memory": "512m", "cpus": "1.0"},
-    "observations": {"memory": "1g", "cpus": "1.0"}
+    "default": {
+      "memory": "512m",
+      "cpus": "1.0"
+    },
+    "observations": {
+      "memory": "1g",
+      "cpus": "1.0"
+    }
   },
   "seeding": {
     "record_filename": "seeding-record.json",

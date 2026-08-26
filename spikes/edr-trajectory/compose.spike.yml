@@ -1,0 +1,80 @@
+# The EDR trajectory spike, as two pygeoapi instances and two throwaway tool images.
+#
+# SPIKE CODE. Throwaway. Literal ports, paths and image tags on purpose; this file is
+# not part of drogna's Compose configuration and never runs on the droplet
+# (Constitution IV and X; see specs/002-edr-trajectory-spike/plan.md).
+#
+# Both servers run the same fixture, the same configuration and the same throwaway
+# provider. The only difference between them is the Shapely and GEOS version, which is
+# the whole experiment.
+#
+# Use ./run.sh rather than driving this file directly; it materialises the fixture and
+# passes a proxy CA through to the builds if the machine has one.
+
+name: drogna-edr-spike
+
+x-common: &common
+  volumes:
+    - ./:/spike
+  environment:
+    PYGEOAPI_CONFIG: /spike/pygeoapi.spike.yml
+    PYGEOAPI_OPENAPI: /tmp/spike.openapi.yml
+    PYTHONPATH: /spike
+    PYTHONDONTWRITEBYTECODE: '1'
+
+services:
+  # At the FR-51 pin: Shapely 2.1 on GEOS 3.13.
+  pygeoapi:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile.pinned
+      secrets:
+        - proxy_ca
+    image: drogna-spike/pygeoapi-pinned:local
+    ports:
+      - '127.0.0.1:5001:80'
+
+  # Below the pin: the published pygeoapi image as it ships, Shapely 2.0.3 on GEOS
+  # 3.12.1. Pinned by digest so the finding names something reproducible.
+  pygeoapi-below-pin:
+    <<: *common
+    image: geopython/pygeoapi@sha256:03305eb4f958c6a3c0cbeb89ae5a1010184050d990c61f6cf7e9ed7c0cbb3269
+    ports:
+      - '127.0.0.1:5002:80'
+
+  # Fixture generation, self-check and query driving, at the pin.
+  tools:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile.pinned
+      secrets:
+        - proxy_ca
+    image: drogna-spike/pygeoapi-pinned:local
+    entrypoint: ['python3']
+    working_dir: /spike
+    profiles: ['tools']
+
+  # The version probe alone, at a Shapely and GEOS pair below the pin.
+  probe-below-pin:
+    build:
+      context: .
+      dockerfile: Dockerfile.belowpin
+      secrets:
+        - proxy_ca
+    image: drogna-spike/shapely-below-pin:local
+    volumes:
+      - ./:/spike
+    environment:
+      PYTHONPATH: /spike
+      PYTHONDONTWRITEBYTECODE: '1'
+    entrypoint: ['python3']
+    working_dir: /spike
+    profiles: ['tools']
+
+secrets:
+  # Optional. run.sh points this at a proxy CA bundle when the machine has one, and at
+  # /dev/null when it does not; the Dockerfiles treat an empty secret as "no CA".
+  proxy_ca:
+    file: ${DROGNA_SPIKE_CA_FILE:-/dev/null}

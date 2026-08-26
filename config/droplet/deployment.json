@@ -1,5 +1,8 @@
 {
-  "component": "deployment",
+  "component": {
+    "id": "deployment",
+    "description": "Destination deployment values; read by the deployment scripts, not by a running component."
+  },
   "destination": "droplet",
   "project_name": "drogna",
   "profiles": {

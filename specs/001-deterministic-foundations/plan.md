@@ -6,9 +6,9 @@
 
 ## Summary
 
-Deliver the three properties the SRD says cannot be retrofitted: a single simulation clock, seeded
-randomness recorded in a run manifest, and configuration that arrives by name and is validated
-before anything else happens. The clock is both a network service (C-01, so the browser can control
+Deliver the three properties the SRD says cannot be retrofitted, and on which the rest of drogna
+rests: a single simulation clock, seeded randomness recorded in a run manifest, and configuration
+that arrives by name and is validated before anything else happens. The clock is both a network service (C-01, so the browser can control
 the rate and every process shares one sense of time) and an in-process port (`harness_core.clock`,
 so components depend on an interface rather than on a transport). Randomness comes from
 `harness_core.rng.rng_for(stream)`, derived from the run's root seed by a versioned rule. All of it
@@ -19,7 +19,7 @@ The design decision that makes replay achievable rather than merely intended: si
 quantised, so the value of tick `n` is fixed by the epoch and the tick interval and is unaffected
 by the rate; and a `lockstep` mode advances the clock only when every registered participant has
 acknowledged the current tick, which removes scheduling nondeterminism from the tick-to-work
-mapping. Real-time and accelerated modes remain free-running, and the harness claims less for them.
+mapping. Real-time and accelerated modes remain free-running, and drogna claims less for them.
 
 ## Technical Context
 

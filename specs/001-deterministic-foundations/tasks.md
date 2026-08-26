@@ -219,7 +219,7 @@ different sequences from a different root; reconstruction from the manifest alon
       print the exemption inventory, and take gates from a registry list so later features append
       rather than edit.
 - [ ] T040 [US4] Run the gates over the tree produced by stories 1 to 3 and remove every finding;
-      the only surviving operational exemption is the clock service's real-time driver.
+      the only surviving operational exemption in drogna is the clock service's real-time driver.
 
 **Checkpoint**: the principles are enforced without relying on anyone remembering them.
 
@@ -315,7 +315,7 @@ Task: "libs/harness_core/tests/test_remote_clock.py — no interpolation, stalen
 
 ## Implementation Strategy
 
-1. Phases 1 and 2, then User Story 1 alone. At that point the harness has a clock service, a clock
+1. Phases 1 and 2, then User Story 1 alone. At that point drogna has a clock service, a clock
    port and rate control, which is demonstrable and is the prerequisite of every other feature.
 2. Add User Story 2, and the startup contract is settled for every component that follows.
 3. Add User Story 3, and runs become describable and reproducible in their choices.

@@ -373,6 +373,24 @@ class Emitter:
         for name, schema, pointer in declarations:
             self.module.blocks.append(self.declaration(name, schema, pointer))
 
+        # A locally declared name that is also imported produces TypeScript that does not
+        # compile — "Import declaration conflicts with local declaration" — and it does so
+        # for a reason worth reporting rather than papering over: two different shapes have
+        # been given one name. It happened once, when a configuration schema defined
+        # `observed_property` as an object while referencing a message schema's
+        # `observed_property` string enum. The emitter wrote both, said nothing, and the
+        # build failed a language away from the cause. Raise here, naming both sides, so
+        # the master is corrected rather than the output.
+        imported = {name for names in self.module.imports.values() for name in names}
+        declared = {name for name, _, _ in declarations}
+        collisions = sorted(imported & declared)
+        if collisions:
+            raise GenerationError(
+                f"{self.source}: {', '.join(collisions)} is both imported and declared here. "
+                "Two different shapes share one name; rename the local definition in the "
+                "master so the generated module can distinguish them."
+            )
+
         parts: list[str] = []
         if self.module.imports:
             imports = [

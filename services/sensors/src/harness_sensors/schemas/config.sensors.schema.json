@@ -152,7 +152,7 @@
         },
         "name": { "type": "string", "description": "Short name for a reader." },
         "description": { "type": "string", "description": "One line saying what the series is." },
-        "observed_property": { "$ref": "#/$defs/observed_property" },
+        "observed_property": { "$ref": "#/$defs/observed_property_configuration" },
         "observation_type": {
           "type": "string",
           "description": "SensorThings observationType. Every series here is a measurement."
@@ -208,7 +208,7 @@
         }
       }
     },
-    "observed_property": {
+    "observed_property_configuration": {
       "title": "Observed property configuration",
       "description": "The quantity, named as both the query layer and the coverage store name it. The measured spelling is one of exactly three; there is no fourth, by ADR-0005.",
       "type": "object",

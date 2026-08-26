@@ -158,7 +158,7 @@ class Noise(BaseModel):
     )
 
 
-class ObservedProperty(BaseModel):
+class ObservedPropertyConfiguration(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -189,7 +189,7 @@ class Datastream(BaseModel):
     )
     name: str = Field(..., description='Short name for a reader.')
     description: str = Field(..., description='One line saying what the series is.')
-    observed_property: ObservedProperty
+    observed_property: ObservedPropertyConfiguration
     observation_type: str = Field(
         ...,
         description='SensorThings observationType. Every series here is a measurement.',

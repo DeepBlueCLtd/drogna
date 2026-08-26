@@ -100,7 +100,7 @@ export interface Datastream {
   name: string;
   /** One line saying what the series is. */
   description: string;
-  observed_property: ObservedProperty;
+  observed_property: ObservedPropertyConfiguration;
   /** SensorThings observationType. Every series here is a measurement. */
   observation_type: string;
   unit_of_measurement: {
@@ -143,7 +143,7 @@ export interface Datastream {
 /**
  * The quantity, named as both the query layer and the coverage store name it. The measured spelling is one of exactly three; there is no fourth, by ADR-0005.
  */
-export interface ObservedProperty {
+export interface ObservedPropertyConfiguration {
   /** Which of the three quantities this series carries, as it appears on the wire. */
   measured: ObservedProperty;
   /** The CF-style name, for example sea_water_temperature. */

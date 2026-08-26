@@ -158,8 +158,10 @@ and that no statistic reports a stale value as fresh at any point.
 
 - **FR-001**: The telemetry component MUST derive its residual statistics from the
   forecast-measurement residuals the monitor has already computed, received as
-  messages on the control namespace. It MUST NOT recompute residuals, query the
-  observation store, or request anything from the query layer. (SRD FR-37)
+  messages on the control namespace. It MUST NOT recompute those residuals, query the
+  observation store, or request anything from the query layer. The persistence
+  comparison of FR-006 is a different measurement against a different field, not a
+  recomputation of the monitor's residual. (SRD FR-37)
 - **FR-002**: Telemetry MUST maintain running statistics of those residuals — sample
   count, mean (bias), root-mean-square, minimum and maximum — at scenario level and
   at region level. (SRD FR-37)
@@ -174,7 +176,14 @@ and that no statistic reports a stale value as fresh at any point.
 - **FR-006**: Telemetry MUST maintain a persistence reference — the forecast field
   that was current immediately before the latest publication, held constant — and
   MUST score arriving measurements against both it and the current forecast.
-  (SRD FR-38)
+  Where that scoring requires a sound speed, telemetry MUST obtain it by calling the
+  single shared implementation in `libs/harness_core` — the same one the monitor
+  (SRD FR-24) and the environment generator (SRD FR-02) call — and MUST NOT carry its
+  own copy of the equation. There is no stored sound-speed datastream to read instead:
+  sound speed is derived at the point of use, never published and never stored. The
+  measured value comes from the monitor's residual report; the reference value is
+  derived from the persistence field's temperature, salinity and pressure sampled
+  through the coverage read port. (SRD FR-38, §2.2; ADR-0005)
 - **FR-007**: Forecast skill MUST be published as a score derived from the model and
   persistence mean-square errors by a stated formula, accompanied by both errors and
   the sample count, so that the score is recomputable by a reader. (SRD FR-38,
@@ -206,10 +215,17 @@ and that no statistic reports a stale value as fresh at any point.
   `contracts/schemas/config.telemetry.schema.json` before any other I/O.
   (Constitution IV)
 - **FR-016**: All intervals, windows and message timestamps MUST come from the
-  simulation clock port. (Constitution I)
+  simulation clock port — the publication interval and the staleness window included,
+  so message rate stays bounded under clock acceleration. The one exception is
+  heartbeat cadence, which is real time under FR-017. (Constitution I, ADR-0006)
 - **FR-017**: Telemetry MUST publish a heartbeat on `ctl/heartbeat` carrying its
   component identifier, the simulation time and one of `warming`, `reporting` or
-  `no-forecast`. (Constitution VII)
+  `no-forecast`. The cadence MUST be **real time**, and the simulation time the
+  heartbeat carries is payload, not schedule: liveness answers "is this process
+  alive?", which is a fact about the host, so a rate of zero stops simulated time and
+  leaves telemetry lit. The emission carries the `# harness:allow-wallclock` marker
+  with ADR-0006 as its reason, and the exemption covers nothing else in this
+  component. (Constitution VII, Constitution I, ADR-0006; SRD FR-45, FR-52, FR-53)
 - **FR-018**: No telemetry message may carry a tracked entity, contact, detection or
   track. Regions are described geographically or by grid index. (Constitution V)
 
@@ -258,9 +274,37 @@ and that no statistic reports a stale value as fresh at any point.
   ordered sequence of telemetry messages with identical payloads.
 - **SC-009**: Telemetry message rate stays bounded across the full range of clock
   acceleration, varying by no more than the ratio of configured intervals.
+- **SC-010**: The number of sound-speed implementations reachable from
+  `services/telemetry/` is exactly one, and it is in `libs/harness_core`.
+- **SC-011**: With the clock rate pinned to zero for longer than the declared liveness
+  window, telemetry's heartbeat continues on its real-time cadence and the count of
+  intervals in which it falls out of that window is zero. Statistics publication,
+  which is on simulation time, correctly stops.
 
 ## Assumptions
 
+- **Settled: telemetry reads the persistence reference through the coverage read
+  port, not through the query layer** — the same reading feature 009's monitor takes
+  for the current forecast, and feature 011's planner takes for the announced
+  uncertainty field. The query layer is the external read path; these three components
+  are inside the boundary SRD §2.2 draws, and the coverage output is a genuine port
+  under Constitution VI while the query layer is plumbing on the far side of the seam.
+  Routing an internal consumer out through pygeoapi and back would add a dependency
+  the SRD does not require and claim a seam that is not there. FR-001 and SC-003 hold
+  telemetry to zero requests to the query layer, which is the same statement seen from
+  the other side.
+- **Settled: telemetry does not combine ensemble spread with observation age.** That
+  combination — the uncertainty field the planner scores, per SRD FR-07 and FR-08 —
+  belongs to feature 011's planner, which is the only consumer that needs it and the
+  only component already subscribed to observation arrivals for the purpose. Feature
+  009's model runner publishes ensemble spread alone. Telemetry reports on forecast
+  quality and produces no uncertainty field at all; giving the planner a second
+  producer of its primary input would be worse than either alternative. The same
+  settlement is recorded in features 009 and 011.
+- Sound speed is derived at the point of use and never stored, per ADR-0005. Telemetry
+  calls the shared implementation in `libs/harness_core` for the persistence
+  comparison and holds no copy of the equation; nothing in this specification assumes
+  a stored sound-speed datastream.
 - The residual reports and scheduler decision records that telemetry consumes are
   produced by feature 009's monitor and scheduler. This feature owns the shape they
   are published in — `contracts/schemas/telemetry.schema.json` — even though feature

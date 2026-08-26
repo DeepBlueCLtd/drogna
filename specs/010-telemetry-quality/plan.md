@@ -58,12 +58,12 @@ region.
 
 | Principle | How this feature complies |
 |---|---|
-| **I. No Wall-Clock Time** | The publication interval, the staleness window, every `last_updated` field and every covered-window bound come from `harness_core.clock.Clock`. Freshness is a simulation-time property, which is the only reading that survives clock acceleration. |
+| **I. No Wall-Clock Time** | The publication interval, the staleness window, every `last_updated` field and every covered-window bound come from `harness_core.clock.Clock`. Freshness is a simulation-time property, which is the only reading that survives clock acceleration. The single exception is heartbeat emission, which is on a real-time cadence with the simulation time carried as payload (ADR-0006), marked `# harness:allow-wallclock` with that ADR as its reason. It covers the heartbeat and nothing else: ageing a statistic towards `stale` stays on the simulation clock. |
 | **II. Seeded Randomness and Deterministic Replay** | Telemetry draws no random numbers. Its determinism obligation is that the same input stream yields the same output messages, asserted by SC-008. Any identifier it emits derives from the run and component identifiers it received, never from entropy. |
 | **III. Generated Types Only** | `contracts/schemas/telemetry.schema.json` is the single definition of every `ctl/telemetry` payload, discriminated by `kind`. Python types come from `libs/harness_types/`, TypeScript from `client/src/generated/`. The producers in feature 009 validate against the same file. |
 | **IV. No Literal Paths or Hosts** | One config file named by `HARNESS_CONFIG`, validated against `contracts/schemas/config.telemetry.schema.json` before any I/O. Intervals, minimum sample counts, staleness window, region definitions and topic prefixes all arrive from it. |
 | **V. No Tracked Entities** | The data model is residuals, aggregates, mean-square errors and skill scores. Regions are geographic or grid-indexed. Nothing here names or implies a contact, detection or track. |
-| **VI. Honest Ports** | Telemetry introduces no ports. It consumes the clock port and the event publication wrapper that already exist, and reads the persistence reference through the existing coverage read port. Wrapping the broker a second time, or abstracting "a statistics sink", would be interface-for-its-own-sake and is not done. |
+| **VI. Honest Ports** | Telemetry introduces no ports. It consumes the clock port and the event publication wrapper that already exist, and reads the persistence reference through the existing coverage read port — the same route feature 009's monitor and feature 011's planner take, because all three are inside the boundary and the query layer is the external read path. It also consumes, rather than reimplements, the shared sound-speed derivation in `harness_core` (ADR-0005). Wrapping the broker a second time, or abstracting "a statistics sink", would be interface-for-its-own-sake and is not done. |
 | **VII. Liveness, Not Configuration** | Explicitly guarded: FR-012 forbids telemetry from publishing any list of components that ought to exist. Telemetry emits its own heartbeat and nothing else about what is running. The client lights components from heartbeats alone. |
 | **VIII. Recommendations, Not Decisions** | Telemetry reports and does not advise. It emits no recommendation and, by FR-013, nothing the scheduler consumes; it cannot become a second trigger path into the control loop. |
 | **IX. Ground Truth Is Scored, Not Assumed** | This is the principle the feature exists to serve. Skill is always against a persistence reference; the score is published with both mean-square errors and the sample count so it is recomputable; below the minimum sample count no score is published at all; and a losing score is published as computed, with the plain-language statement attached. |
@@ -122,7 +122,9 @@ the additions are additive and follow the shape fixed by
 `config.common.schema.json`. It adds two named files to `tests/integration/`, a
 shared directory where ownership is per file. It creates no new top-level directory.
 
-It consumes, and does not modify: `libs/harness_core/` from feature 001;
+It consumes, and does not modify: `libs/harness_core/` from feature 001, including the
+shared sound-speed derivation that ADR-0005 places there and that this feature calls for
+the persistence comparison;
 `libs/harness_types/` and `client/src/generated/` from feature 006, which regenerate
 from the schema added here; the residual reports and scheduler decision records
 produced by feature 009's monitor and scheduler; and the coverage read port used to

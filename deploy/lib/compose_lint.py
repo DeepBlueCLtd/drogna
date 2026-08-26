@@ -44,6 +44,13 @@ _ABSOLUTE_PATH = re.compile(
 
 _IMAGE_LINE = re.compile(r"(^\s*image:|^\s*FROM\s|--from=)")
 _IN_IMAGE_PATH_LINE = re.compile(r"(--from=|--mount=)")
+
+# A location belonging to the host operating system — where systemd keeps unit files, where
+# apt keeps keyrings — is not a deployment choice, and putting it in a destination's
+# configuration would pretend that it were. A line carrying this marker is exempt from the
+# absolute-path rule and carries its reason, in the manner of the constitution's
+# wall-clock marker. Every marker is meant to be read in review.
+_HOST_OS_PATH_MARKER = "harness:host-os-path"
 _DIGEST = re.compile(r"@sha256:[0-9a-f]{64}")
 
 
@@ -85,7 +92,7 @@ def address_findings(path: Path, text: str) -> list[str]:
                     f"{path.name}:{number}: {description} ({match.group(0)!r}); "
                     f"it belongs in the destination configuration: {stripped[:80]}"
                 )
-        if not _IN_IMAGE_PATH_LINE.search(line):
+        if not _IN_IMAGE_PATH_LINE.search(line) and _HOST_OS_PATH_MARKER not in line:
             match = _ABSOLUTE_PATH.search(line)
             if match:
                 findings.append(

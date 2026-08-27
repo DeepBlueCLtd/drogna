@@ -22,6 +22,8 @@ PATH and skips loudly without them, so what skips here runs in CI (CLAUDE.md).
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 import time
@@ -292,3 +294,90 @@ def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:
     with pytest.raises(ConfigurationError) as raised:
         render_credentials.write_proxy_credentials("local", values, scratch)
     assert render_credentials.PROXY_SECRET in str(raised.value)
+
+
+NOBODY_UID = 65534
+NOBODY_GID = 65534
+
+
+def _can_write_a_password_file() -> bool:
+    """Either tool will do: the host binary, or the pinned image through a runtime."""
+    return bool(shutil.which("mosquitto_passwd") or shutil.which("docker"))
+
+
+@pytest.mark.skipif(
+    os.getuid() != 0 or not _can_write_a_password_file(),
+    reason=(
+        "reproducing this needs a deployer who does not own the file, so it needs a "
+        "privileged process able to drop privileges, and a way to write a password file"
+    ),
+)
+def test_a_second_render_does_not_need_to_own_the_file_it_replaces(scratch: Path) -> None:
+    """A bring-up is not a one-off, and this file stops belonging to whoever deploys.
+
+    `_restrict` gives the password file to the broker's user, which is the whole point of
+    it. The consequence is that the next render cannot open that file for writing, and the
+    renderer used to truncate it in place:
+
+        PermissionError: [Errno 13] Permission denied: '.../deploy/broker/passwd'
+        error: could not render the configuration or the broker password file for local
+
+    That is a worse failure than the one the chown fixed. A broker that cannot read its
+    password file is one container failing to start; a render that cannot rewrite it stops
+    the bring-up before any container is created, and CI reported nothing running at all.
+
+    The second render happens in a forked child that has dropped to a user owning neither
+    the file nor anything else, because that is the only way to reproduce it: root is
+    refused nothing, and neither is a bind mount that does not enforce ownership, which is
+    why this reached CI twice. Only the one error is failed on — anything else the child
+    meets here, such as having no privilege left to run the chown itself, is this
+    environment rather than this bug.
+    """
+    shutil.copy2(REPO_ROOT / "deploy" / "compose.yaml", scratch / "deploy" / "compose.yaml")
+
+    first = render_credentials.write_password_file(VALUES, scratch)
+    assert first.stat().st_uid == render_credentials.BROKER_UID, (
+        "the file must already belong to the broker, or there is nothing here to reproduce"
+    )
+    # The directory is the deployer's, as a checkout is; the file inside it is not.
+    os.chown(first.parent, NOBODY_UID, NOBODY_GID)
+    # pytest hands out a tmp root at 0700, so without this the child cannot traverse to the
+    # file at all and the test would report the wrong denial — on the directory, not on the
+    # password file, which is a different fault wearing the same errno.
+    for ancestor in [first.parent, *first.parent.parents]:
+        if ancestor == Path(ancestor.root):
+            break
+        os.chmod(ancestor, 0o755)
+
+    read_fd, write_fd = os.pipe()
+    child = os.fork()
+    if child == 0:  # pragma: no cover - the assertions run in the parent
+        os.close(read_fd)
+        message = b""
+        try:
+            os.setgroups([])
+            os.setgid(NOBODY_GID)
+            os.setuid(NOBODY_UID)
+            try:
+                render_credentials.write_password_file(VALUES, scratch)
+            except PermissionError as error:
+                message = f"PermissionError: {error}".encode()
+            except Exception:  # anything else the child meets here is not the bug
+                pass
+        except Exception as error:
+            message = f"could not drop privileges: {error}".encode()
+        os.write(write_fd, message)
+        os.close(write_fd)
+        os._exit(0)
+
+    os.close(write_fd)
+    reported = os.read(read_fd, 4096).decode()
+    os.close(read_fd)
+    os.waitpid(child, 0)
+
+    assert "PermissionError" not in reported, (
+        "the second render tried to open a file it no longer owns: "
+        + reported
+        + ". It must remove and recreate it — unlinking is a permission on the directory, "
+        "which the deployer still has, and truncating is one on the file, which it does not"
+    )

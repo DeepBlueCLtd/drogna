@@ -214,6 +214,17 @@ def write_password_file(values: dict[str, str], root: Path | None = None) -> Pat
         )
     target.parent.mkdir(parents=True, exist_ok=True)
     command, seen_at = _passwd_command(target, root)
+    # Removed and recreated, never truncated. `_restrict` below gives this file to the
+    # broker's user, so from the second bring-up onwards the deploying user does not own it
+    # and cannot open it for writing — but can still unlink it, because that is a permission
+    # on the directory. Truncating in place worked exactly once:
+    #
+    #     PermissionError: [Errno 13] Permission denied: '.../deploy/broker/passwd'
+    #     error: could not render the configuration or the broker password file for local
+    #
+    # and then stopped the render before any container was created, which is a worse failure
+    # than the one the chown fixed: nothing started at all.
+    target.unlink(missing_ok=True)
     target.write_text("", encoding="utf-8")
     for role, variable in ROLE_SECRETS.items():
         result = subprocess.run(
@@ -245,42 +256,51 @@ def _restrict(target: Path, command: list[str], root: Path | None = None) -> Non
     not root, cannot give a file away, and cannot change the mode of a file the
     containerised tool wrote as root. The container is root and can do both.
     """
+    # Both routes are tried, because a `docker` on PATH is not a daemon that answers and the
+    # two failures are indistinguishable from here. A machine with the client installed and
+    # nothing listening reported the client's own connection error as though the file could
+    # not be secured at all, and stopped the render — where the host could have done the job
+    # itself in one syscall.
+    detail = ""
     runtime = shutil.which("docker")
     if runtime is not None:
         seen_at = str(Path("/work") / target.name)
-        result = subprocess.run(
-            [
-                runtime,
-                "run",
-                "--rm",
-                "-v",
-                f"{target.parent}:/work",
-                broker_image(root),
-                "sh",
-                "-c",
-                f"chown {BROKER_UID}:{BROKER_GID} {seen_at} && chmod 0600 {seen_at}",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode == 0:
-            return
-        detail = result.stderr.strip() or result.stdout.strip()
-    else:
-        # No runtime, so the host binary wrote the file and the host has to finish it. Only
-        # root can hand a file to another user; anyone else gets the mode right and the
-        # owner wrong, which is the failure this function exists to prevent, so it is
-        # reported rather than left to the broker to discover.
         try:
-            os.chown(target, BROKER_UID, BROKER_GID)
-            target.chmod(0o600)
-            return
-        except OSError as error:
-            detail = (
-                f"{error}. No container runtime was available, and only root can give a "
-                f"file to uid {BROKER_UID}"
+            result = subprocess.run(
+                [
+                    runtime,
+                    "run",
+                    "--rm",
+                    "-v",
+                    f"{target.parent}:/work",
+                    broker_image(root),
+                    "sh",
+                    "-c",
+                    f"chown {BROKER_UID}:{BROKER_GID} {seen_at} && chmod 0600 {seen_at}",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
             )
+            if result.returncode == 0:
+                return
+            detail = result.stderr.strip() or result.stdout.strip()
+        except (OSError, ConfigurationError) as error:
+            # No compose file to read the image pin out of, or the client could not be run.
+            detail = str(error)
+
+    # The host itself. Only root can hand a file to another user; anyone else gets the mode
+    # right and the owner wrong, which is the failure this function exists to prevent, so it
+    # is reported rather than left to the broker to discover.
+    try:
+        os.chown(target, BROKER_UID, BROKER_GID)
+        target.chmod(0o600)
+        return
+    except OSError as error:
+        detail = (
+            f"{detail + '; and ' if detail else ''}{error}. Only root can give a file to "
+            f"uid {BROKER_UID}, and no container runtime did it either"
+        )
     raise ConfigurationError(
         f"the broker password file was written but could not be given the owner and mode "
         f"the broker needs: {detail}. A credential file the broker cannot read, or one "

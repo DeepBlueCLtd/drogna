@@ -49,8 +49,23 @@ require_docker() {
 
 py() { python3 "${DROGNA_LIB_DIR}/$1" "${@:2}"; }
 
+# DROGNA_PROFILES overrides the destination's profiles.active for one invocation. It exists
+# for the capture workflow, which needs the clock, the broker and the client running in order
+# to photograph a shell with anything lit, and which is not a destination and should not have
+# to become one to say so.
+#
+# It is deliberately an override and not a second source of truth: unset, every command here
+# runs exactly what profiles.active names, and nothing reads this variable except the line
+# below. `deploy/README.md` says what a profile means and what it does not, and none of that
+# changes — a profile still describes what runs, and illumination is still driven by
+# heartbeats and by nothing else.
 compose() {
-  docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  if [ -n "${DROGNA_PROFILES:-}" ]; then
+    COMPOSE_PROFILES="${DROGNA_PROFILES}" \
+      docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  else
+    docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  fi
 }
 
 # The database password is generated once and then reused, so that a second bring-up does

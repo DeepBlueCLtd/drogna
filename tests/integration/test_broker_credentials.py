@@ -209,3 +209,36 @@ def test_a_component_authenticates_with_what_the_render_produced(scratch: Path) 
         process.terminate()
         process.wait(timeout=10)
         log.close()
+
+
+def test_the_password_tool_falls_back_to_the_pinned_image(monkeypatch: Any) -> None:
+    """CI has no mosquitto clients and does have a container runtime; both must work.
+
+    The first version of this required `mosquitto_passwd` on PATH and failed five bring-up
+    tests on the runner, which does not carry it. `deploy/broker/README.md` documents the
+    containerised form and `scripts/up.sh` calls `require_docker` before any of this, so the
+    fallback is always available where a bring-up happens.
+    """
+    seen: dict[str, str] = {}
+
+    def fake_which(name: str) -> str | None:
+        seen[name] = name
+        return "/usr/bin/docker" if name == "docker" else None
+
+    monkeypatch.setattr(render_credentials.shutil, "which", fake_which)
+    command, seen_at = render_credentials._passwd_command(Path("/tmp/broker/passwd"), None)
+
+    assert command[0].endswith("docker")
+    assert "run" in command and "--rm" in command
+    assert command[-1] == "mosquitto_passwd"
+    assert str(seen_at) == "/work/passwd", "the container sees the file at its mounted path"
+    pinned = render_credentials.broker_image()
+    assert pinned in command, "the tool must come from the image that will read the file"
+    assert "@sha256:" in pinned, "the broker image is pinned by digest and this reads that pin"
+
+
+def test_no_runtime_and_no_binary_is_a_refusal(monkeypatch: Any) -> None:
+    monkeypatch.setattr(render_credentials.shutil, "which", lambda name: None)
+    with pytest.raises(ConfigurationError) as raised:
+        render_credentials._passwd_command(Path("/tmp/broker/passwd"), None)
+    assert "Nothing was written" in str(raised.value)

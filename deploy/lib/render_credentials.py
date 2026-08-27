@@ -42,6 +42,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import compose_document
 from destination import ConfigurationError, destination_dir, repository_root
 
 __all__ = [
@@ -128,33 +129,73 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
     return target_dir
 
 
+def broker_image(root: Path | None = None) -> str:
+    """The broker image `deploy/compose.yaml` pins, read rather than repeated.
+
+    The same build has to hash the passwords and check them, so the tool that writes the
+    file is taken from the image that will read it. A second spelling of the image here
+    would be a pin that could fall behind the one Compose uses.
+    """
+    base = root or repository_root()
+    text = (base / "deploy" / "compose.yaml").read_text(encoding="utf-8")
+    blocks = compose_document.service_blocks(text)
+    for line in blocks.get("broker", "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("image:"):
+            return stripped.split(":", 1)[1].strip()
+    raise ConfigurationError(
+        "deploy/compose.yaml declares no image for the broker service, so the tool that "
+        "writes the password file cannot be taken from the image that reads it"
+    )
+
+
+def _passwd_command(target: Path, root: Path | None) -> tuple[list[str], Path]:
+    """How to run `mosquitto_passwd`, and the path it will see the file at.
+
+    The binary where a host has it, and the pinned broker image where it does not. Both are
+    the same tool; neither invents a hashing scheme. `deploy/broker/README.md` documents the
+    containerised form, and `scripts/up.sh` calls `require_docker` before any of this, so a
+    bring-up always has one of the two — which is what makes this a fallback rather than a
+    second mechanism.
+    """
+    tool = shutil.which("mosquitto_passwd")
+    if tool is not None:
+        return [tool], target
+    runtime = shutil.which("docker")
+    if runtime is None:
+        raise ConfigurationError(
+            "neither mosquitto_passwd nor docker is available, so the broker's password "
+            "file cannot be produced by the tool that will read it. Install the mosquitto "
+            "clients, or a container runtime. Nothing was written"
+        )
+    mount = f"{target.parent}:/work"
+    return (
+        [runtime, "run", "--rm", "-v", mount, broker_image(root), "mosquitto_passwd"],
+        Path("/work") / target.name,
+    )
+
+
 def write_password_file(values: dict[str, str], root: Path | None = None) -> Path:
     """Produce the broker's password file from the same values the URLs were rendered from.
 
-    `mosquitto_passwd` hashes them; nothing here invents a hashing scheme. Where the binary
-    is absent this raises rather than writing a file the broker will reject, because a
-    broker that cannot read its password file refuses to start and the error would surface
-    a long way from the cause.
+    `mosquitto_passwd` hashes them; nothing here invents a hashing scheme. It runs as a host
+    binary where there is one and inside the pinned broker image where there is not, because
+    a deploying host is not required to carry the mosquitto clients and is required to carry
+    a container runtime.
     """
     base = root or repository_root()
     target = base / "deploy" / "broker" / "passwd"
-    tool = shutil.which("mosquitto_passwd")
-    if tool is None:
-        raise ConfigurationError(
-            "mosquitto_passwd is not on PATH, so the broker's password file cannot be "
-            "produced. Install the mosquitto clients, or run the containerised form "
-            "deploy/broker/README.md records. Nothing was written"
-        )
     missing = sorted(name for name in SECRET_NAMES if not values.get(name))
     if missing:
         raise ConfigurationError(
             "no value for broker secret(s) " + ", ".join(missing) + "; nothing was written"
         )
     target.parent.mkdir(parents=True, exist_ok=True)
+    command, seen_at = _passwd_command(target, root)
     target.write_text("", encoding="utf-8")
     for role, variable in ROLE_SECRETS.items():
         result = subprocess.run(
-            [tool, "-b", str(target), role, values[variable]],
+            [*command, "-b", str(seen_at), role, values[variable]],
             capture_output=True,
             text=True,
             check=False,
@@ -164,8 +205,36 @@ def write_password_file(values: dict[str, str], root: Path | None = None) -> Pat
                 f"mosquitto_passwd refused the entry for {role}: "
                 f"{result.stderr.strip() or result.stdout.strip()}"
             )
-    target.chmod(0o600)
+    _restrict(target, command)
     return target
+
+
+def _restrict(target: Path, command: list[str]) -> None:
+    """Make the credential file readable by its owner alone, from wherever it is reachable.
+
+    `deploy/broker/README.md` records the trap this avoids, and it is a real one: the
+    containerised tool writes as root, so a deploying user who is not root then cannot
+    change the mode of a file they do not own and the attempt fails with `Operation not
+    permitted`. Where that happens the mode is set from inside the container instead, which
+    is the form the README documents.
+    """
+    try:
+        target.chmod(0o600)
+        return
+    except PermissionError:
+        pass
+    if command[0].endswith("docker"):
+        runner = [*command[:-1], "chmod", "0600", str(Path("/work") / target.name)]
+        result = subprocess.run(runner, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return
+        detail = result.stderr.strip() or result.stdout.strip()
+    else:
+        detail = "no container runtime was used, so there is no second way to set the mode"
+    raise ConfigurationError(
+        f"the broker password file was written but its mode could not be restricted: "
+        f"{detail}. A world-readable credential file is not left in place silently"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

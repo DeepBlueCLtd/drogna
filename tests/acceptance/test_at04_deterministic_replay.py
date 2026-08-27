@@ -14,12 +14,14 @@ it being capable of failing, and it is the one that gives the other three their 
 a generator that ignored its seed entirely would satisfy every "same seed, same output"
 assertion perfectly.
 
-**Scope.** Today drogna's stochastic surface is the environment generator, so that is
-what this covers. AT-04 is a claim about the whole scenario, and it is not yet the whole
-scenario: the control loop, the sensors and the ingest path each add stochastic
-behaviour as they land, and each must be brought under this test rather than trusted to
-inherit its result. The gaps are named at the end of this module so they are visible
-rather than implied, and this file is the place they close.
+**Scope.** What this module covers is the environment generator. AT-04 is a claim about
+the whole scenario and this is not yet the whole scenario: the control loop, the sensors
+and the ingest path each add stochastic behaviour of their own, and each is now built and
+replayed by a test in its own package — which is not the same thing as being replayed
+*together*, in lockstep, from one seed. Each must be brought under this test rather than
+trusted to inherit its result. The gaps are named at the end of this module, with where
+each is checked today, so they are visible rather than implied, and this file is the place
+they close.
 
 Note also that replay determinism here is reproducibility of *values*. Reproducibility of
 *interleaving* between concurrently running components is a stronger claim and is what
@@ -100,14 +102,24 @@ def test_the_manifest_records_what_a_replay_needs() -> None:
     assert manifest["generator"]["version"]
 
 
-# Components whose stochastic behaviour is not yet under this test, because they are not
-# yet built. Each is a hole in AT-04 until it is added here, and naming them is the
-# difference between a known gap and an overlooked one.
+# Components whose stochastic behaviour is not under *this* test. All four are built now,
+# and each has a replay test of its own; what none of them has is a place in a single
+# replay of the whole scenario, which is what AT-04 claims. So each entry names the
+# component, the draw that would have to match, and where that draw is checked today.
+# Naming them is the difference between a known gap and an overlooked one, and this file
+# is still the place they close.
 NOT_YET_COVERED = (
-    "C-04 simulated sensors — measurement noise and sampling jitter",
-    "C-05 ingest client — batching order under backpressure",
-    "C-13 model runner — ensemble member perturbation",
-    "C-15 planner — seeded randomised restarts in route selection",
+    "C-04 simulated sensors — measurement noise; replayed per array in "
+    "services/sensors/tests/test_sensor.py, and over a whole survey in "
+    "tests/acceptance/test_at03_eddy_recovery.py, but not in lockstep with anything else",
+    "C-05 ingest client — batching order under backpressure; the batcher's bounds are "
+    "advanced deterministically in services/ingest/tests/test_batcher.py, but the order a "
+    "loaded path emits in is not replayed anywhere",
+    "C-13 model runner — ensemble member perturbation; replayed in "
+    "services/model_runner/tests/test_determinism.py and again through the loop in "
+    "tests/acceptance/test_at_02_threshold_breach_triggers_run.py, not here",
+    "C-15 planner — seeded randomised restarts in route selection; replayed in "
+    "services/planner/tests/test_replay.py, not here",
 )
 
 

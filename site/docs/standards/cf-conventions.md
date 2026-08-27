@@ -20,7 +20,6 @@ drogna stores its forecast and uncertainty fields as CF-conforming NetCDF, and t
 [profiles](../glossary.md#profile) the same way. This page is about the export, because
 the export is the file that leaves.
 
-
 ## Standard names are a controlled vocabulary
 
 `units` says a number is in degrees Celsius. `standard_name` says *what* is in degrees
@@ -40,7 +39,6 @@ there is common and wrong, and it is the sort of wrong that a reader silently ac
 
 [Sound speed](../glossary.md#sound-speed) is **not** exported and is not one of the three.
 It is derived at the point of
-
 use from temperature, salinity and depth by the single implementation in `harness_core`
 (ADR-0005). A derived value shipped
 beside its inputs is a second source of truth that can disagree with them after a change to
@@ -56,7 +54,6 @@ profile, a path of points, and the combinations of those.
 What the packager has is a series of vertical profiles taken at successive positions along
 a sampling path. That is `trajectoryProfile` exactly: a
 [trajectory](../glossary.md#trajectory) of profiles. Choosing
-
 `profile` alone would throw away the ordering, which is the only thing that makes the
 profiles a path rather than a bag of positions. Choosing a gridded representation would
 claim a regularity the sampling does not have.

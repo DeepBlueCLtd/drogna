@@ -17,7 +17,7 @@ place, so that it is a decision rather than an accident of implementation:
 term appears in that page's own prose, then a link to the term's glossary anchor must
 appear on that page **at or before** the term's first appearance in prose.
 
-Four scoping decisions come with it, each with its reason:
+Five scoping decisions come with it, each with its reason:
 
 - **Prose only.** Text inside ``code``, ``pre`` and headings does not count as a use, and
   neither does anything outside the page's ``article`` element. A term in a file name, a
@@ -30,11 +30,76 @@ Four scoping decisions come with it, each with its reason:
   very first occurrence carry the link would fail such a page for word order.
 - **The glossary itself is exempt from the second rule.** It defines the terms; its
   internal cross-references are relative anchors on the same page.
+- **A page the site publishes verbatim from a record it did not author is out of scope
+  for the second rule.** The argument is below, because it is the one most easily
+  mistaken for an excuse.
 
 Ambiguity is handled by declared phrases rather than by weakening the match.
 ``front matter``, ``coverage table`` and ``in front of`` are the glossary's words in a
 different sense, and they are listed in :data:`TERMS` beside the term they belong to —
 one place a reviewer can read — rather than by markers scattered through the pages.
+
+A declared phrase excludes the occurrence it matches and nothing else, which is right for
+``front matter`` — a page may discuss both front matter and an ocean front, a sentence
+apart. It is wrong for a page whose *subject* is the other sense. ``profile`` is the case
+that forced the distinction: one blog entry is about Compose profiles, names them as such
+once, and then says ``profile`` six more times meaning what it established. Excluding
+those six by quoting the entry's wording would be a per-page dodge written to look like a
+declaration, and linking any of them to the glossary would send a reader after a vertical
+profile of the water column. So a phrase may instead be declared in
+``Term.establishes_other_sense``: it excludes its own occurrence *and* the term's bare
+uses after it on that page. Three properties keep it from being a way out of a finding:
+
+- It is opt-in per phrase. ``front matter`` is not one, so a genuine ``front`` after it
+  is still a finding — the control the existing tests already assert.
+- It suppresses only what follows it. A use before the phrase is checked as ever.
+- Its blind spot is real, is named here, and is printed on every run: a page that
+  establishes the other sense and *then* uses the glossary's sense is not checked for
+  that term past that point. It is a debt, not an exemption, and the printed line names
+  the page and the phrase so that it can be argued with.
+
+Pages the site does not author
+------------------------------
+
+The build publishes the repository's decision records: ``site/hooks/publish_adrs.py``
+reads ``docs/adr/`` and emits one page per record plus an index, and the records are
+reproduced **verbatim** — nothing is written back into the site source, so there is no
+page anyone could edit instead of the record. On the first run of this gate against the
+real site, twelve of its thirty-three findings were on those pages.
+
+They are out of scope for the first-use rule, and the reason is not that they were
+inconvenient to fix. It is that there is nowhere to make the fix that is not the record
+itself. A decision record is a historical document: it says what was decided, when, and
+what was rejected, and it is cited by number. Editing thirteen of them to carry links to
+a glossary on a site that did not exist when most of them were written would change the
+record in order to satisfy a presentation rule of the thing quoting it, and the reason
+those pages are worth publishing at all is that they are the record rather than a
+retelling of it. The first-use rule is a rule about pages this project writes for
+readers of this site; it cannot bind prose written for a different purpose and
+reproduced under a note saying where it came from.
+
+What is given up is real and should be said: a reader who arrives at a record from a
+search engine meets ``decorrelation timescale`` with no way to its definition. The
+remedy that does not touch the records is for the publishing hook to render a glossary
+pointer alongside the note it already renders under each record's heading. That is a
+change to the hook and to nobody's record, and it is left open rather than done here.
+
+The exclusion is computed, never listed, so that widening it costs something:
+
+- :func:`generated_record_pages` reads ``adrs`` from the documentation manifest —
+  ``published``, ``source`` and ``destination``, the same entry ``check_adr.py`` and the
+  hook read. No manifest, or ``published: false``, and **nothing** is excluded.
+- It then matches built pages against the record files actually on disk. A page is out
+  of scope only if a record of that name exists in the manifest's ``source`` directory.
+  Adding a page to the exclusion therefore means adding a decision record, which is an
+  act nobody performs by accident.
+- The premise — that the site authors nothing in that area — is checked rather than
+  assumed. If the directory holding the record pages contains any other page, the
+  exclusion does not apply at all and the gate says why. A hand-written page smuggled in
+  beside the records does not inherit their exemption; it takes the exemption away.
+- Whatever it excluded is printed on every run, in the same spirit in which
+  ``check_blog.py`` prints its screenshot allowances: an exclusion nobody can see is an
+  exemption, and an exclusion printed on every run is a scope a reviewer can dispute.
 
 Usage::
 
@@ -65,6 +130,20 @@ EXIT_CANNOT_RUN = 2
 UNDEFINED = "glossary-term-undefined"
 UNLINKED = "glossary-first-use-unlinked"
 
+# Not findings. Two things the gate did rather than two things it found, printed on every
+# run so that the scope of a clean run is visible in the same transcript as the run.
+OTHER_SENSE = "glossary-other-sense"
+NOT_AUTHORED = "glossary-not-authored-here"
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The name a decision record's file carries, as `publish_adrs.py` and `check_adr.py` both
+# spell it. A built page is out of scope only if a file of this shape exists to have
+# generated it.
+RECORD_STEM = re.compile(r"^\d{4}-[a-z0-9-]+$")
+
+BUILT_PAGE = "index" + ".html"
+
 
 @dataclass(frozen=True)
 class Term:
@@ -74,11 +153,23 @@ class Term:
     spellings that count as a use of the concept in prose; the first is also the spelling
     a finding names. ``excluded`` are phrases in which a form is the same word in a
     different sense, listed here rather than exempted page by page.
+
+    ``establishes_other_sense`` is the stronger form of ``excluded``, described in the
+    module docstring: such a phrase excludes its own occurrence and governs the term's
+    bare uses after it on the same page. It is for a page whose subject is the other
+    sense, and it is opt-in per phrase precisely because it is capable of hiding a
+    genuine use.
     """
 
     anchor: str
     forms: tuple[str, ...]
     excluded: tuple[str, ...] = field(default=())
+    establishes_other_sense: tuple[str, ...] = field(default=())
+
+    @property
+    def not_the_term(self) -> tuple[str, ...]:
+        """Every declared phrase in which a form is not this concept."""
+        return self.excluded + self.establishes_other_sense
 
 
 # The source list, seeded from the oceanographic and standards vocabulary the requirements
@@ -117,8 +208,14 @@ TERMS: tuple[Term, ...] = (
         ),
     ),
     Term("trajectory", ("trajectory", "trajectories")),
-    # A Compose profile decides which services start; it is not a vertical profile.
-    Term("profile", ("profile", "profiles"), excluded=("compose profile", "compose profiles")),
+    # A Compose profile decides which services start; it is not a vertical profile. The
+    # deployment entry names them once and then abbreviates, which is what the second
+    # form is for: see the module docstring, and the line the gate prints for it.
+    Term(
+        "profile",
+        ("profile", "profiles"),
+        establishes_other_sense=("compose profile", "compose profiles"),
+    ),
     Term(
         "discrete-sampling-geometry",
         ("discrete sampling geometry", "discrete sampling geometries"),
@@ -305,23 +402,56 @@ def find_glossary(root: Path) -> Path | None:
     return None
 
 
-def _uses(text: str, term: Term) -> int | None:
-    """Offset of the first genuine use of ``term`` in ``text``, or None."""
+def _other_sense(text: str, term: Term) -> tuple[int, str] | None:
+    """Where the page first establishes the term's other sense, and with which phrase.
+
+    Everything after this offset is read in that sense. Only phrases the term declares as
+    sense-establishing count; an ordinary excluded phrase governs its own occurrence and
+    nothing else.
+    """
+    earliest: tuple[int, str] | None = None
+    for phrase in term.establishes_other_sense:
+        match = _pattern((phrase,)).search(text)
+        if match is None:
+            continue
+        if earliest is None or match.end() < earliest[0]:
+            earliest = (match.end(), phrase)
+    return earliest
+
+
+def _uses(text: str, term: Term, established: int | None = None) -> int | None:
+    """Offset of the first genuine use of ``term`` in ``text``, or None.
+
+    ``established`` is the offset from which the page's own other sense governs, as
+    :func:`_other_sense` found it. A use at or after it is that other sense; a use before
+    it is checked exactly as it always was.
+    """
     blocked = [
         (match.start(), match.end())
-        for phrase in term.excluded
+        for phrase in term.not_the_term
         for match in re.finditer(_pattern((phrase,)), text)
     ]
     for match in _pattern(term.forms).finditer(text):
         if any(start <= match.start() and match.end() <= end for start, end in blocked):
             continue
+        if established is not None and match.start() >= established:
+            return None
         return match.start()
     return None
 
 
-def findings(root: Path, terms: tuple[Term, ...]) -> list[str]:
-    """Both directions, in one list, in path order."""
+def findings(
+    root: Path,
+    terms: tuple[Term, ...],
+    out_of_scope: frozenset[str] = frozenset(),
+) -> tuple[list[str], list[str]]:
+    """Both directions, in one list, in path order — and what the gate decided not to check.
+
+    The second list is not findings. It is the pages and terms this run read in a declared
+    other sense, one line each, so that a clean run says what it did not look at.
+    """
     out: list[str] = []
+    notes: list[str] = []
 
     glossary = find_glossary(root)
     if glossary is None:  # pragma: no cover - handled as exit 2 by main
@@ -341,7 +471,7 @@ def findings(root: Path, terms: tuple[Term, ...]) -> list[str]:
 
     for path in sorted(root.rglob("*.html")):
         relative = path.relative_to(root).as_posix()
-        if path == glossary:
+        if path == glossary or relative in out_of_scope:
             continue
         reader = ArticleReader(_page_dir(relative), glossary_names)
         reader.feed(path.read_text(encoding="utf-8"))
@@ -351,7 +481,18 @@ def findings(root: Path, terms: tuple[Term, ...]) -> list[str]:
         for term in terms:
             if term.anchor not in headings.anchors:
                 continue  # already reported as undefined; do not report it twice per page
-            first = _uses(text, term)
+            established = _other_sense(text, term)
+            first = _uses(text, term, established[0] if established else None)
+            if established is not None and first is None and _uses(text, term) is not None:
+                # The declared sense suppressed a use that would otherwise have been a
+                # finding. That is the whole of what this mechanism can hide, so it is
+                # said out loud, on the page it happened on, on every run.
+                notes.append(
+                    f"{relative}:-: {OTHER_SENSE}: "
+                    f"{term.forms[0]!r} is read as {established[1]!r} from that phrase "
+                    "onwards on this page; a use of the glossary's own sense after it "
+                    "is not checked here"
+                )
             if first is None:
                 continue
             linked = reader.links.get(term.anchor)
@@ -370,7 +511,23 @@ def findings(root: Path, terms: tuple[Term, ...]) -> list[str]:
                     f"{term.forms[0]!r} is used here before the page's link to "
                     f"#{term.anchor}; the first use is the one that has to link"
                 )
-    return out
+    return out, notes
+
+
+def _document(manifest: Path) -> dict:
+    """The manifest, or an empty mapping if there is none to read."""
+    if not manifest.is_file():
+        return {}
+    # Imported inside the function rather than at module scope: the gate must run with
+    # nothing installed when there is no manifest, and PyYAML is needed only when there is.
+    try:
+        import yaml
+    except ModuleNotFoundError as error:  # pragma: no cover - environment-dependent
+        raise RuntimeError(
+            f"{manifest} exists but PyYAML is not installed, so it cannot be read"
+        ) from error
+    loaded = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def load_terms(manifest: Path) -> tuple[Term, ...]:
@@ -381,18 +538,7 @@ def load_terms(manifest: Path) -> tuple[Term, ...]:
     source list and this module's copy stops being the authority. Until then the list
     above is it, and this function says which was used by returning it either way.
     """
-    if not manifest.is_file():
-        return TERMS
-    # Imported inside the function rather than at module scope: the gate must run with
-    # nothing installed when there is no manifest, and PyYAML is needed only when there is.
-    try:
-        import yaml
-    except ModuleNotFoundError as error:  # pragma: no cover - environment-dependent
-        raise RuntimeError(
-            f"{manifest} exists but PyYAML is not installed, so its glossary list cannot be read"
-        ) from error
-    document = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
-    declared = document.get("glossary")
+    declared = _document(manifest).get("glossary")
     if not declared:
         return TERMS
     return tuple(
@@ -400,8 +546,101 @@ def load_terms(manifest: Path) -> tuple[Term, ...]:
             anchor=str(entry["anchor"]),
             forms=tuple(str(form) for form in entry["forms"]),
             excluded=tuple(str(phrase) for phrase in entry.get("excluded", ())),
+            establishes_other_sense=tuple(
+                str(phrase) for phrase in entry.get("establishes_other_sense", ())
+            ),
         )
         for entry in declared
+    )
+
+
+@dataclass(frozen=True)
+class NotAuthoredHere:
+    """The built pages the site publishes verbatim from records it does not author.
+
+    ``paths`` are relative built paths out of scope for the first-use rule. ``note`` is
+    what the gate prints about them, and is never empty when ``paths`` is not: an
+    exclusion nobody can see is an exemption.
+    """
+
+    paths: frozenset[str] = frozenset()
+    note: str = ""
+
+
+def generated_record_pages(root: Path, manifest: Path, repo_root: Path) -> NotAuthoredHere:
+    """The decision-record pages the build generates, read out of the manifest and the tree.
+
+    Nothing here is a list of paths. The manifest says whether records are published and
+    where they come from; the record files on disk say which pages may exist; the built
+    tree says where they landed. Every one of the three has to agree before a page is out
+    of scope, and the module docstring argues why these pages are.
+    """
+    adrs = _document(manifest).get("adrs")
+    if not isinstance(adrs, dict) or not adrs.get("published"):
+        return NotAuthoredHere()
+    source = str(adrs.get("source") or "").strip()
+    destination = str(adrs.get("destination") or "").strip().strip("/")
+    if not source or not destination:
+        return NotAuthoredHere()
+
+    stems = {
+        path.stem for path in (repo_root / source).glob("*.md") if RECORD_STEM.match(path.stem)
+    }
+    if not stems:
+        return NotAuthoredHere()
+
+    area = root / destination
+    if not area.is_dir():
+        return NotAuthoredHere()
+
+    pages: dict[str, Path] = {}
+    for path in sorted(area.rglob("*.html")):
+        stem = path.parent.name if path.name == BUILT_PAGE else path.stem
+        if stem in stems:
+            pages[path.relative_to(root).as_posix()] = (
+                path.parent.parent if path.name == BUILT_PAGE else path.parent
+            )
+    if not pages:
+        return NotAuthoredHere()
+
+    directories = set(pages.values())
+    if len(directories) != 1:
+        return NotAuthoredHere(
+            note=f"{GATE}: {NOT_AUTHORED}: the records published from {source} are spread "
+            f"across {len(directories)} directories of the build, which is not the one "
+            "place this gate knows how to reason about; every page is checked"
+        )
+    directory = directories.pop()
+
+    # The generated index of the records is generated from them too — it is their own
+    # headings in a table — and it lives at the root of the same directory.
+    index = directory / BUILT_PAGE
+    excluded = set(pages)
+    if index.is_file():
+        excluded.add(index.relative_to(root).as_posix())
+
+    # The premise, checked rather than assumed: the site authors nothing in there. A
+    # hand-written page beside the records does not inherit their exemption. It ends it.
+    intruders = sorted(
+        path.relative_to(root).as_posix()
+        for path in directory.rglob("*.html")
+        if path.relative_to(root).as_posix() not in excluded
+    )
+    if intruders:
+        return NotAuthoredHere(
+            note=f"{GATE}: {NOT_AUTHORED}: {directory.relative_to(root).as_posix()} holds "
+            f"{len(intruders)} page(s) that no record in {source} generated, starting with "
+            f"{intruders[0]}, so the records there are no longer the only thing published "
+            "verbatim and nothing in that directory is out of scope; every page is checked"
+        )
+
+    return NotAuthoredHere(
+        paths=frozenset(excluded),
+        note=f"{GATE}: {NOT_AUTHORED}: {len(excluded)} page(s) under "
+        f"{directory.relative_to(root).as_posix()}/ are generated verbatim from the "
+        f"{len(stems)} record(s) in {source} and are out of scope for the first-use rule; "
+        "the argument is in this gate's docstring and the remedy that does not edit a "
+        "record is a glossary pointer rendered by the publishing hook",
     )
 
 
@@ -414,6 +653,12 @@ def main(argv: list[str] | None = None) -> int:
         # harness:allow-literal-path the gate runner's contract fixes this default
         default=Path("docs") / "manifest.yaml",
         help="the documentation manifest, if one exists",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=REPO_ROOT,
+        help="the tree the built site was built from; the real one unless a test says otherwise",
     )
     arguments = parser.parse_args(argv)
 
@@ -430,11 +675,18 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_CANNOT_RUN
     try:
         terms = load_terms(arguments.manifest)
+        not_authored = generated_record_pages(root, arguments.manifest, arguments.repo_root)
     except RuntimeError as error:
         print(f"{GATE}: cannot run: {error}", file=sys.stdout)
         return EXIT_CANNOT_RUN
 
-    found = findings(root, terms)
+    found, notes = findings(root, terms, not_authored.paths)
+    # What the run did not look at is printed before what it found, so that a clean run
+    # and a dirty one both say what their scope was.
+    if not_authored.note:
+        print(not_authored.note)
+    for line in notes:
+        print(line)
     for line in found:
         print(line)
     print(f"{GATE}: {len(found)} findings")

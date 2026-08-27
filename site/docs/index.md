@@ -60,7 +60,6 @@ reason: a publishing pipeline that has never run is not a publishing pipeline.
 - The [algorithm derivations](algorithms/index.md) — the mathematics that is not
   obvious: [ensemble spread](glossary.md#ensemble-spread), advection,
   informative path planning.
-
 - The [standards primers](standards/index.md) — SensorThings, OGC API-EDR, CF
   conventions and CoverageJSON, for readers who have not met them.
 - The [glossary](glossary.md) — start here if the vocabulary is unfamiliar. Half

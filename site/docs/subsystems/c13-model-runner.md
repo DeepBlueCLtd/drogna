@@ -16,7 +16,6 @@ title: C-13 Model runner
 
 **Responsibility:** analytic [advection](../glossary.md#advection) and noise; ensemble
 member runs.
-
 **Owns the failure mode of:** being irreplaceable.
 
 ## What it does

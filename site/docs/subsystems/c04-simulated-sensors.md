@@ -11,11 +11,10 @@ title: C-04 Simulated sensors
     - **Covered by:** `services/sensors/tests/`,
       `tests/integration/test_observation_path.py` and
       `tests/integration/test_topic_isolation.py`
-    - **Not present:** the published message carries no quality flag.
-      `contracts/schemas/observation.schema.json` declares none and the store has no
-      column for one; the requirements list quality flagging among the bespoke logic,
-      and nothing in the tree has yet decided what a flag would mean here. It is
-      recorded as open rather than quietly dropped
+    - **Not present:** the published message carries no quality flag, and that is
+      decided rather than pending. `contracts/schemas/observation.schema.json` declares
+      none and the store has no column for one, because whether a reading is acceptable
+      is judged at the ingestion seam and not carried on the row — **ADR-0014**
 
 **Responsibility:** publish observations in SensorThings vocabulary.
 
@@ -43,10 +42,15 @@ the recovery error meaningful. Each instrument declares its noise model, and the
 declaration is stored beside the readings so a value can be scored against the
 field it was drawn from.
 
-Quality flagging belongs here too and is not here yet. The requirements list it
-among the bespoke logic, and nothing has yet decided what a flag would mean for
-an instrument whose error is drawn from a distribution the harness itself chose.
-It is written down as an open question rather than quietly dropped.
+Quality flagging is not here, and that is settled rather than pending. The
+requirements name it among the bespoke logic, and what it amounts to in drogna is
+the judgement made one component downstream: the
+[ingest client](c05-ingest-client.md) either accepts a message or refuses it,
+counts the refusal and keeps it with the reason. A flag on the row would be the
+opposite arrangement, and the number it carried would be knowable in advance,
+because an instrument's error is a draw from a distribution the harness itself
+declares. The reasoning, and the alternative it rejects, are **ADR-0014** in the
+[decision records](../decisions/adr/index.md).
 
 ## The vessel
 

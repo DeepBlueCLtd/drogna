@@ -69,8 +69,9 @@ Conductivity is the interesting one. It is not itself of much direct interest;
 it is measured because [salinity](#salinity) can be derived from it together with
 temperature and pressure. In drogna the CTD is simulated: the
 [sensors](subsystems/c04-simulated-sensors.md) sample the generated field at the
-vessel's position and publish readings with instrument noise and quality flags
-added.
+vessel's position and publish readings with instrument noise added. No quality
+flag is added, and none is carried: whether a reading is acceptable is judged at
+the ingestion seam rather than recorded on the reading (ADR-0014).
 
 ## Datastream
 

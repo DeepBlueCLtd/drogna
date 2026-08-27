@@ -51,8 +51,7 @@ its neighbour. The three columns after it say where to go and look.
 | [C-10](c10-reverse-proxy.md) | Reverse proxy | TLS, authentication, path policy | Accidental exposure | Built | `proxy/` | 013 |
 | [C-11](c11-monitor.md) | Monitor | Detect forecast divergence from observations | Over-sensitivity | Built | `services/monitor/` | 009 |
 | [C-12](c12-scheduler.md) | Scheduler | Decide whether a model run is warranted | Thrashing | Built | `services/scheduler/` | 009 |
-| [C-13](c13-model-runner.md) | Model runner | Analytic [advection](../glossary.md#advection) and noise, ensemble members |
- Being irreplaceable | Built | `services/model_runner/` | 009 |
+| [C-13](c13-model-runner.md) | Model runner | Analytic [advection](../glossary.md#advection) and noise, ensemble members | Being irreplaceable | Built | `services/model_runner/` | 009 |
 | [C-14](c14-publisher.md) | Publisher | Make completed runs visible atomically; announce | Partial visibility | Built | `services/publisher/` | 009 |
 | [C-15](c15-planner.md) | Planner | Adaptive sampling recommendations | Crossing into tactical advice | Built | `services/planner/` | 011 |
 | [C-16](c16-telemetry.md) | Telemetry | Health and forecast-skill indicators | Silent degradation | Built | `services/telemetry/` | 010 |
@@ -65,13 +64,15 @@ The components are not equal in interest. Inside the boundary sits the genuinely
 bespoke logic: residual and divergence rules, scheduling policy,
 [sound speed](../glossary.md#sound-speed) computation, quality flagging, the
 uncertainty and planning mathematics. Outside
-
 it sits well-chosen plumbing: the broker, the query layer, the proxy, the stores.
 
-That list is the requirements document's, and one item on it has no code behind
-it: nothing flags the quality of a reading, and no message or column carries a
-flag. The [simulated sensors](c04-simulated-sensors.md) page says where that
-would start and why it has not.
+That list is the requirements document's, and one item on it takes a different
+form here from the one the phrase suggests. Nothing flags the quality of a
+reading, and no message or column carries a flag; the judgement is made at the
+ingestion seam instead, where a reading that fails its contract is refused and
+counted rather than stored with a mark against it. That is a decision and not a
+gap — the [simulated sensors](c04-simulated-sensors.md) page says what it means
+in practice, and **ADR-0014** says why, and what would bring the field back.
 
 The distinction matters because the plumbing is where a project can spend
 unlimited effort on nothing. The design intent is that the visualisation makes

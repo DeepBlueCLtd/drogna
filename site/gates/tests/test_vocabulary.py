@@ -167,10 +167,25 @@ def test_the_inherited_prose_ruling_is_still_in_force() -> None:
 
 @pytest.fixture(scope="module")
 def seeded() -> list[gate.Finding]:
-    """The gate's verdict on the fixture, read once. Every image costs an OCR pass."""
+    """The gate's verdict on the fixture, read once. Every image costs an OCR pass.
+
+    The fixture carries four images, so the gate refuses to report on it at all without an
+    engine — it will not call a site clean when it could not read part of it. That refusal
+    is the correct behaviour and is asserted by test_no_engine_is_a_refusal_to_run; here it
+    means this fixture cannot be built, so every test drawing on it skips with the reason
+    rather than failing. Both halves of the gate are exercised wherever an engine exists,
+    and CI installs one.
+    """
+    if ENGINE is None:
+        pytest.skip(
+            "no OCR engine on PATH, so the gate refuses to read the seeded fixture at all "
+            "— it carries four images and will not report on a tree it could not read in "
+            "full. `apt-get install -y tesseract-ocr` makes this run, and CI installs it."
+        )
     return gate.findings(SEEDED, ENGINE)
 
 
+@needs_engine
 def test_the_fixture_fails_the_gate_and_names_the_file_and_the_term() -> None:
     result = run("--site", str(SEEDED))
     assert result.returncode == 1, result.stdout + result.stderr

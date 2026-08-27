@@ -29,9 +29,12 @@ unit and the instrument that produced it. It is the punishing write path — man
 small inserts arriving continuously — as opposed to the read-mostly reference
 data next door.
 
-There is no quality flag on a stored reading. That is an absence rather than a
-decision, and it is recorded on the
-[simulated sensors](c04-simulated-sensors.md) page where it starts.
+There is no quality flag on a stored reading, and that is a decision rather than
+an absence. A reading that fails its contract is refused at ingestion and
+counted, so what reaches a row has already been judged; a flag would record on
+every row a question that was answered before the row existed. **ADR-0014** sets
+this out, and the [simulated sensors](c04-simulated-sensors.md) page says what it
+means where the readings are produced.
 
 ## Why it shares an instance with the feature store
 

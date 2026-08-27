@@ -9,7 +9,6 @@ title: C-09 Query layer
     - **Code:** `query/` — the pygeoapi configuration template, and the bespoke plugins
       under `query/plugins/`: the [trajectory](../glossary.md#trajectory) provider, the
       position and cube provider,
-
       the CoverageJSON encoder, the run catalogue and the SensorThings provider
     - **Delivered by:** `specs/008-query-layer`, after the spike recorded in
       `specs/002-edr-trajectory-spike` and `spikes/edr-trajectory/`
@@ -38,7 +37,6 @@ The interesting query is the four-dimensional one: given a planned route with a
 timestamp at every vertex, return the conditions forecast for the *moment of
 arrival* at each point, not the conditions at query time. That is a
 [trajectory](../glossary.md#trajectory) query in EDR terms, and it is the
-
 client's centrepiece.
 
 It also turned out to be the load-bearing unknown. No supplied pygeoapi provider

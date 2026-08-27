@@ -15,7 +15,6 @@ title: C-02 Environment generator
     - **Not present:** no check reconstructs a fully composed value — background plus
       four anomalies, plus pressure, plus [sound speed](../glossary.md#sound-speed) —
       from the manifest's documented
-
       forms alone; the pieces are each reconstructed separately
 
 **Responsibility:** synthetic four-dimensional fields plus a ground-truth manifest.

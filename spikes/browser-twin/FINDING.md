@@ -1,0 +1,292 @@
+# Finding: a browser-hosted twin, and where its boundary actually is
+
+**The question.** Downstream browser visualisation is where a lot of effort is going to
+go once the internals settle. Can that work be developed, demonstrated and — the part
+that matters — *verified*, without standing up eleven services, a broker and a Postgres?
+Specifically: can the harness's subsystems be reimplemented as JavaScript components
+running in the browser, driving the existing client, without Constitution VII being
+quietly abandoned along the way?
+
+**The answer.** Yes, and the constitution is not the obstacle. The obstacle is one
+boundary, and this spike found it by running into it rather than by reasoning about it:
+**the component twins cannot live inside `client/src`.** The client's own tests forbid it,
+for a reason better than the one that would have put them there. Everything else works,
+and the evidence is in `results/`.
+
+---
+
+## What was proved, and how to see it
+
+`./run.sh` grafts a candidate transport into `client/src/transport/`, a clock component
+into `client/twin/`, and a test into `client/tests/`; applies a 15-line change to
+`client/src/transport/mqtt.ts`; runs the client's suite, typecheck, lint and the three
+constitution gates that read TypeScript; plants a violation and watches the
+no-mocked-traffic test catch it; then restores the tree. It refuses to start if any file
+it would touch differs from HEAD.
+
+```
+client suite with candidate present:       PASS   (47 files, 454 tests; 446 before)
+typecheck:                                 PASS
+lint:                                      PASS
+constitution gates over client/src:        PASS   (wallclock, literal-path, vocabulary)
+no-mocked-traffic test, violation planted:  CAUGHT
+no-mocked-traffic test, violation removed:  PASS
+```
+
+The eight new tests are the load-bearing part. They do not construct a heartbeat and hand
+it to the reducer — `tests/heartbeats.ts` already does that, and FR-023 is explicit that
+feeding a value to a pure function is testing a function. They **run a clock component**,
+which computes its own output and posts it to a real `BroadcastChannel`; the client then
+does everything it does against a live deployment — picks its connector from the URL in
+the configuration document, subscribes to the control namespace, validates each arrival
+against the generated contract, folds it through the liveness reducer — and the shell view
+is asked what is lit. The chain asserted is: nothing was lit; a component ran; that
+component is lit; nothing else is. Faking any link leaves the last assertion passing and
+the third failing.
+
+The planted violation is in `results/gate-caught-violation.txt`, named and caught:
+
+```
+client/src/transport/bus.ts contains a mock: expected true to be false
+```
+
+---
+
+## F1 — The transport seam already exists
+
+`openControlSubscription(config, sink, connect = connectOverWebSocket)` already takes its
+connector as an injected third argument with a default. Choosing that default from the URL
+scheme in the served document is the entire change, and it is in
+`candidate/mqtt.patch`: 41 lines including context and the comment explaining itself.
+
+Nothing about liveness changes with the choice. Either branch, a component is lit because
+a message from it arrived, and neither branch can manufacture one. The choice comes from
+the configuration document, which is the client's one permitted source of deployment
+knowledge — not from a build flag, a query parameter, or a literal in the file. Those
+three are precisely what `tests/no-mock.test.ts` greps for, and the candidate passes.
+
+## F2 — `BroadcastChannel` is the nearest thing the platform has to a broker
+
+A browser cannot serve itself a WebSocket, so `transport/mqtt.ts` is unreachable with no
+backend. `BroadcastChannel` is the substitute, and it is a better one than it looks:
+same-origin, many-to-many, asynchronous, crossing worker boundaries without shared memory,
+and — importantly — **not delivering to the context that posted**. A component in a worker
+publishes, the page receives, and neither holds a reference to the other. That decoupling
+is not a nicety. A fabric that delivered synchronously would make the interleaving of
+components a fiction, and "where it misbehaves together" would become theatre.
+
+What it does not have: retention, quality of service, wildcard topic matching, and any
+ordering guarantee between two publishers in different contexts. The control namespace
+uses none of them — every topic in `data/topics.ts` is a literal and the client subscribes
+read-only — so the subset is sufficient. Constitution VI obliges us to state which subset
+of a standard is implemented; that sentence is already in `candidate/bus.ts` and belongs
+in the feature.
+
+The missing ordering guarantee is worth keeping rather than papering over. AT-02 asserts
+the four run messages arrive in order. A fabric that does not promise it is a fabric that
+will occasionally show us what the client does when the promise breaks.
+
+## F3 — The client must not contain the components, and its own tests say so twice
+
+This is the finding. The first run failed like this:
+
+```
+FAIL tests/no-mock.test.ts > the client's source > never publishes on the broker
+  client/src/twin/clockTwin.ts publishes
+FAIL tests/loop/noSynthesisedTraffic.test.ts > never publishes on the broker
+  client/src/twin/clockTwin.ts publishes
+```
+
+Both tests scan every `.ts`/`.tsx` file under `client/src` for `/\.publish\s*\(/`. The
+client receives and never sends, structurally, and that property is checked by looking —
+which is the only way to check an absence. A component twin publishes by definition, so a
+twin under `client/src` breaks it.
+
+The right response is not to relax the scan. It is to accept what the scan is telling us:
+**a component is a component, not a mode of the page that draws it.** The twin is a sibling
+of the client — its own package, built to worker bundles — and the client stays exactly as
+honest as it is today, with one extra way for messages to reach it and no way at all to
+originate them.
+
+Note what *did* pass: `bus.ts`, in `client/src/transport/`, has no `.publish(` in it and no
+`postMessage` on the subscribing path. The seam falls in exactly the right place. The
+transport belongs to the client; the components do not.
+
+## F4 — Constitution VII survives; the honesty problem is elsewhere
+
+A JavaScript clock that computes tick *n*, publishes it, and thereby lights the clock box
+has asserted nothing that is not true. Something was running, it spoke, and the page
+believed it because it heard it. That is Principle VII's mechanism working, not being
+circumvented. There is no list of what ought to exist, no `enabled: true`, no prepared
+state, and no path that draws without an arrival.
+
+The failure VII exists to prevent is nonetheless available here, one level up: a viewer
+looking at a lit diagram infers *"the harness is running"*, and in the twin what is running
+is eight JavaScript components and no Python at all. Per-component truth does not add up to
+a true page.
+
+The mitigation chosen for this is a visual treatment distinct enough that no image of the
+twin is mistakable for an image of the real client — which survives cropping and
+screenshotting in a way a banner does not. Two consequences worth budgeting:
+
+- **It should be read from the served document, not from a build.** A `provenance` section
+  in `config.client.schema.json` naming which implementation this deployment is running
+  keeps Constitution IV whole and keeps the twin from needing a build flag. Illumination
+  still comes from heartbeats alone; the document says only how to *draw* what arrives.
+  This is the one point a reviewer will push on and it wants an ADR of its own.
+- **It invalidates 016's committed captures.** A new visual treatment changes pixels. The
+  curated images under the published-screenshot location were taken against the current
+  one, and the pair mechanism refuses a diff across incomparable halves by design. Budget
+  a re-curation.
+
+## F5 — Determinism is nearly free, and it is the whole verification argument
+
+`contracts/schemas/clock.schema.json` says it outright: *"The value of tick n is epoch +
+n \* tick_interval and is unaffected by rate."* So the content of every time sample is a
+pure function of the tick index; host time decides only *when* a tick is emitted, never
+what it says. The candidate twin is written that way — `simTimeOf(scenario, tick)` — and
+its `step()` takes the instant as an argument rather than reading a timer, which is the
+shape every other module in this client already takes.
+
+A twin driven by a step count rather than a wall-clock timer is therefore **fully
+deterministic**, and that is the answer to the question that prompted this spike.
+
+Today, `scripts/capture/pair/` needs a running scenario, pins the clock to zero for the
+duration, and refuses to produce a diff when the two halves came from different scenario
+seeds. It is careful, and it is expensive: verifying a change to a downstream
+visualisation means the whole stack up, twice. A deterministic twin makes the input to a
+visualisation reproducible with nothing running — same scenario, same step count, same
+pixels — and does it *without* the property that makes the current mechanism trustworthy
+being given up, because the images still come from messages that were genuinely computed
+and genuinely received.
+
+That is a stronger case for building this than the demonstration case, and it is the one
+to lead with.
+
+## F6 — The wire, unproven: a service worker
+
+Not attempted here, and the second-riskiest unknown after the one this spike closed.
+
+What is known and favourable: `query.collectionsUrl`, `query.trajectoryPath`,
+`clock.snapshotUrl` and `clock.controlUrl` all come from the served document, so pointing
+them at same-origin paths a service worker answers is invisible to the client's HTTP code.
+DevTools then shows a genuine `GET`, a genuine status code and genuine CoverageJSON, which
+is what the standards audience came for and what an in-page handler cannot give them.
+
+What is unknown and wants proving before a feature commits to it:
+
+- registration scope on a GitHub Pages project path (path-scoped; expected to work, unverified);
+- the first-load race — the worker must be active before the client's first fetch, which
+  means `clients.claim()` and a bootstrap that waits on `navigator.serviceWorker.ready`
+  *before* the transport opens, which is a change to the sequencing FR-019 pins;
+- private windows and browsers with site data blocked, where registration fails and the
+  page must say so rather than appearing to be connected;
+- 016's Playwright captures, which must not photograph a page whose worker has not warmed —
+  and `check_no_fixed_sleep.py` forbids solving that with a delay.
+
+Recommend this as the next spike, before the feature is specified.
+
+## F7 — Environment data: a committed slice, with an obligation attached
+
+A coarse subset exported from a genuine generated field, shipped as an asset, is the
+chosen source. It is authentically the real generator's output, which is worth more than a
+JavaScript reimplementation of the feature authoring would be.
+
+The obligation nobody has budgeted: it is an artefact reaching a public site, so
+Constitution X applies and `scripts/check_leakage.py --bundle` has to cover it. Today that
+gate runs over the committed corpus under `tests/leakage/fixtures/`; a published field
+slice is a new class of released artefact and needs adding to what the gate is pointed at.
+It also needs a provenance record in 016's existing style — scenario seed, generator
+version, simulation time, extent — or a year from now nobody will know which run it came
+from.
+
+Its fixed extent is a real limitation and should be stated on the page rather than
+discovered: a trajectory query outside the slice must return a proper EDR error, not a
+plausible-looking answer.
+
+## F8 — Which components to build first
+
+Asked to recommend rather than be told, so, by what each teaches against what it costs:
+
+**Build as bus components (the loop).** C-01 clock, C-04 simulated sensors, C-05 ingest,
+C-11 divergence monitor, C-12 scheduler, C-13 model runner, C-14 publisher, C-15 planner.
+These eight are the sense → decide → act → publish cycle and the whole of the temporal
+story. C-13's numerics can be as cheap as the contract allows; what it must get right is
+that it takes time and that the time varies.
+
+**Build as a service worker, not a bus component.** C-09 query layer. It answers HTTP,
+which is the point of it (F6).
+
+**Genuinely alive for free.** C-03 broker — the bus *is* the broker's stand-in here, so the
+bus implementation publishing its own heartbeat is a true statement rather than a
+courtesy. C-18 client already lights itself.
+
+**Leave honestly dark, and say why on the page.** C-02 environment generator (its output
+ships as an asset, so nothing is running), C-06/C-07/C-08 stores, C-10 proxy, C-16
+telemetry, C-17 offload packager. The client already renders a dark box correctly; eight of
+eighteen dark is an honest picture of a browser-hosted deployment, and a page that
+explains which eight teaches more than one that glows uniformly.
+
+## F9 — Misbehaviour: put the faults on the components, never on the page
+
+All three mechanisms were asked for — a fault panel, honest emergence, curated set-pieces —
+and they compose, with one design rule that keeps them constitutional:
+
+**A fault control must make a component behave badly. It must never make the page draw
+badly.** Suppressing a component's heartbeats is honest: absence is absence, and the box
+greys out because nothing arrived. Making a component report `degraded` is honest: the
+schema has that status because a component alive and not working needs to say so.
+Fabricating a degraded heartbeat in the page is not honest and is exactly what VII
+forbids. The rule is testable by the scan that already exists — the fault controls live in
+the twin package, the page keeps its empty `.publish(` scan, and F3's boundary does the
+enforcing for free.
+
+Honest emergence needs real concurrency, which means the components run in workers rather
+than in one page loop. That is the same requirement F2 already argued for, from a different
+direction, which is usually a sign it is right.
+
+Curated set-pieces are then just named scenarios plus a step count, and F5 makes them
+replay identically.
+
+## F10 — Cost, against the feature-sized envelope
+
+| Piece | Shape |
+|---|---|
+| Bus transport, connector selection, schema amendment | Done and proven. Hours. |
+| Worker host, component lifecycle, fault controls | A few days. New, but small and well-bounded. |
+| Eight component twins at schema fidelity | The bulk of it. Each is a message loop and a rule, not an algorithm. |
+| Service worker query layer + committed slice + leakage coverage | A few days, **after** F6 is proved. |
+| Provenance section, visual treatment, re-curation of 016's captures | A couple of days, mostly re-capture. |
+| Deterministic capture path, joined to `scripts/capture/pair/` | A couple of days, and the piece that pays for the rest. |
+
+Comparable to feature 012. Two ADRs at least: the in-page fabric as a second control
+transport, and provenance in the served document.
+
+## What could still sink it
+
+- **F6 is unproven.** If the service worker cannot be made reliable under Playwright
+  without a fixed delay, the standards half of the value goes and the loop half remains.
+- **Drift.** Two implementations of eight components will diverge, and schema conformance
+  will not catch a behavioural divergence. Mitigation to specify with the feature: record
+  the real services' control traffic from an acceptance run and assert the twins produce
+  the same topic ordering — AT-02 already asserts an ordering, so the assertion exists and
+  wants a second subject.
+- **The twin becoming the thing that gets demonstrated.** If it is easier to run, it will
+  be what people see, and then the real system's failures stop being observed. Worth a
+  sentence in the feature's non-goals, and worth keeping the published captures coming from
+  the real stack even after the twin exists.
+
+## Recommendation
+
+Build it, as a feature, in two stages with a genuine stop point between them.
+
+**Stage one — the loop, no HTTP.** Bus transport, worker host, the eight loop components,
+provenance and the visual treatment, deterministic step-driven scenarios wired into the
+pair capture. This delivers the verification value in full, delivers the temporal story for
+the colleague and the blog reader, and needs nothing that is currently unproven.
+
+**Stage two — the wire.** Only after a service-worker spike answers F6. Query layer,
+committed field slice, leakage coverage, the request/response panel.
+
+Stop after stage one if F6 comes back badly. Stage one is worth having on its own, which is
+the property a two-stage plan needs and usually does not have.

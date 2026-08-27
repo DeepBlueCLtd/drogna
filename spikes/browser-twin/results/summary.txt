@@ -1,0 +1,6 @@
+client suite with candidate present:      PASS
+typecheck:                                PASS
+lint:                                     PASS
+constitution gates over client/src:       PASS
+no-mocked-traffic test, violation planted: CAUGHT (correct)
+no-mocked-traffic test, violation removed: PASS

@@ -1,0 +1,33 @@
+
+ RUN  v2.1.9 client
+
+ ❯ tests/no-mock.test.ts (6 tests | 1 failed) 19ms
+   × the client's source > contains nothing that could light a node without a heartbeat 14ms
+     → client/src/transport/bus.ts contains a mock: expected true to be false // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/no-mock.test.ts > the client's source > contains nothing that could light a node without a heartbeat
+AssertionError: client/src/transport/bus.ts contains a mock: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/no-mock.test.ts:66:64
+     64|       const text = readFileSync(path, "utf8");
+     65|       for (const [what, pattern] of FORBIDDEN) {
+     66|         expect(pattern.test(text), `${path} contains ${what}`).toBe(fa…
+       |                                                                ^
+     67|       }
+     68|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  17:25:55
+   Duration  724ms (transform 164ms, setup 0ms, collect 416ms, tests 19ms, environment 0ms, prepare 60ms)
+

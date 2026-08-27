@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 client
+
+ ✓ tests/no-mock.test.ts (6 tests) 16ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  17:25:56
+   Duration  673ms (transform 145ms, setup 0ms, collect 389ms, tests 16ms, environment 0ms, prepare 54ms)
+

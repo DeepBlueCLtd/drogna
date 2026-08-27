@@ -1751,6 +1751,68 @@
     <div class="md-post__meta md-meta">
       <ul class="md-meta__list">
         <li class="md-meta__item">
+          <time datetime="2026-08-27 09:00:00+00:00">August 27, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Feature</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              5 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="the-mean-of-magnitudes"><a class="toclink" href="../../the-mean-of-magnitudes/">The mean of magnitudes</a></h2>
+<p>drogna's telemetry component exists to answer one question: is the forecast any
+good? It answers it by comparing what the model predicted against what the sensors
+measured, and — crucially — against what you would have got by assuming nothing
+changed. That last comparison is the one that matters. A forecast that beats
+<em>persistence</em> has earned its compute; one that does not is an expensive way of
+saying "much as before".</p>
+<p>To do that it consumes what the monitor already publishes. And the monitor
+publishes this:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"residual-summary"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scored"</span><span class="p">:</span><span class="w"> </span><span class="mi">1184</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"exceeding"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"outside_domain"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"shed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"mean_absolute_m_per_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.37</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>A count, and a mean of the magnitudes. It is a perfectly sensible thing to
+publish. It answers "how wrong are we, roughly?" in one number, it costs nothing
+to compute, and it is what almost anyone would write.</p>
+<p>It also makes three of the four figures telemetry needs impossible to compute, and
+neither component contains anything that would tell you so.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../the-mean-of-magnitudes/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
           <time datetime="2026-08-26 15:00:00+00:00">August 26, 2026</time></li>
         
           <li class="md-meta__item">

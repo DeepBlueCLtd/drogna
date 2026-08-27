@@ -1,0 +1,18 @@
+{
+  "image": "003-shell-all-dark.png",
+  "seed": 20260826,
+  "simTime": "not heard",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 2,
+  "entryPointVersion": "1.0.0",
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "clockPinned": "no clock answered: no ctl/clock sample had arrived, so there was no rate to pin and simulated time was not advancing",
+  "litComponents": [],
+  "caption": "The component shell as the client draws it with nothing running: every component box dark and labelled NOT HEARD FROM, above a line reading 0 of 18 components heard from within the window each declared."
+}

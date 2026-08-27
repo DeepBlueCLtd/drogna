@@ -1873,10 +1873,13 @@ that is the finished state of it.</p>
 <!-- more -->
 
 <figure>
-<img alt="The component shell: eighteen boxes arranged as a flow chart with a loop in it, every one of them greyed out and labelled NOT HEARD FROM. A line above the diagram reads: 0 of 18 components heard from within the window each declared." src="../assets/shell-all-dark.png" />
+<img alt="The top of the component shell: a heading, a line reading 0 of 18 components heard from within the window each declared, and three panels reporting that no time sample has arrived, that the page is not connected to the broker, and that nothing has been heard from under an id the drawing does not know. Below them the component flow chart begins: two full rows of ten boxes — environment generator, simulated sensors, ingest client, monitor, scheduler, simulation clock, broker, observation store, publisher, model runner — every one of them grey and labelled NOT HEARD FROM, with the monitor-scheduler-model-runner-publisher loop drawn between them. A third row — browser client, drawn with a dashed outline, reverse proxy, query layer, coverage store — is cut off by the lower edge of the frame." src="../assets/003-shell-all-dark.png" />
 
-<figcaption>The component shell, served from the built client. Nothing was
-running.</figcaption>
+<figcaption>The component shell, served from the client. Nothing was running. This is
+the blog's fixed capture viewport rather than the whole page: the last row of the
+drawing — telemetry, feature store, planner, offload packager — and the legend that
+explains the four states are below the fold. They are dark too. None of the eighteen
+has been heard from.</figcaption>
 </figure>
 <p>Eighteen boxes: every component drogna intends to have, arranged as the flow chart the
 architecture actually is, with its loop — monitor, scheduler, model runner, publisher,

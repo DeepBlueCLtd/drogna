@@ -6,15 +6,15 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A learning harness for an environmental data architecture. Synthetic data, deliberately fake numerics, built to be understood rather than deployed.">
+        <meta name="description" content="A component published a count and a mean of its errors. Downstream needed a bias, an RMS and a skill score. None of the three survives that summary, and nothing in either component would have said so.">
       
       
       
       
-        <link rel="prev" href="../ogc-api-edr/">
+        <link rel="prev" href="../a-runner-with-no-list/">
       
       
-        <link rel="next" href="../coveragejson/">
+        <link rel="next" href="../two-ways-to-compare-nothing/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>CF conventions - drogna</title>
+        <title>The mean of magnitudes - drogna</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cf-conventions" class="md-skip">
+        <a href="#the-mean-of-magnitudes" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CF conventions
+              The mean of magnitudes
             
           </span>
         </div>
@@ -203,7 +203,9 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -254,6 +256,8 @@
       
   
   
+    
+  
   
   
     
@@ -276,15 +280,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../blog/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -308,7 +312,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -383,7 +387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/archive/2026/" class="md-nav__link">
+      <a href="../archive/2026/" class="md-nav__link">
         
   
   
@@ -480,7 +484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/architecture/" class="md-nav__link">
+      <a href="../category/architecture/" class="md-nav__link">
         
   
   
@@ -510,7 +514,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/feature/" class="md-nav__link">
+      <a href="../category/feature/" class="md-nav__link">
         
   
   
@@ -540,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/process/" class="md-nav__link">
+      <a href="../category/process/" class="md-nav__link">
         
   
   
@@ -570,7 +574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/standards/" class="md-nav__link">
+      <a href="../category/standards/" class="md-nav__link">
         
   
   
@@ -1388,8 +1392,6 @@
       
   
   
-    
-  
   
   
     
@@ -1416,15 +1418,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../standards/" class="md-nav__link ">
               
   
   
@@ -1448,7 +1450,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1468,7 +1470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sensorthings/" class="md-nav__link">
+      <a href="../../standards/sensorthings/" class="md-nav__link">
         
   
   
@@ -1496,7 +1498,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ogc-api-edr/" class="md-nav__link">
+      <a href="../../standards/ogc-api-edr/" class="md-nav__link">
         
   
   
@@ -1521,37 +1523,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CF conventions
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../standards/cf-conventions/" class="md-nav__link">
         
   
   
@@ -1567,125 +1542,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#standard-names-are-a-controlled-vocabulary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Standard names are a controlled vocabulary
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-trajectoryprofile-is-the-geometry-that-fits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why trajectoryProfile is the geometry that fits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ragged-not-rectangular" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ragged, not rectangular
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-vertical-axis-says-which-way-is-down" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The vertical axis says which way is down
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#time-is-referenced-to-the-simulation-epoch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Time is referenced to the simulation epoch
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-the-export-emits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the export emits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-the-export-deliberately-does-not-emit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the export deliberately does not emit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#a-worked-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        A worked example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-question-drogna-needs-it-to-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The question drogna needs it to answer
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1698,7 +1554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../coveragejson/" class="md-nav__link">
+      <a href="../../standards/coveragejson/" class="md-nav__link">
         
   
   
@@ -1852,6 +1708,8 @@
             
             
               
+                
+              
               <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
@@ -1871,10 +1729,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#standard-names-are-a-controlled-vocabulary" class="md-nav__link">
+  <a href="#what-does-not-survive" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Standard names are a controlled vocabulary
+        What does not survive
       
     </span>
   </a>
@@ -1882,10 +1740,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-trajectoryprofile-is-the-geometry-that-fits" class="md-nav__link">
+  <a href="#the-interesting-part-is-that-nothing-breaks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why trajectoryProfile is the geometry that fits
+        The interesting part is that nothing breaks
       
     </span>
   </a>
@@ -1893,76 +1751,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ragged-not-rectangular" class="md-nav__link">
+  <a href="#whose-bug-is-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ragged, not rectangular
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-vertical-axis-says-which-way-is-down" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The vertical axis says which way is down
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#time-is-referenced-to-the-simulation-epoch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Time is referenced to the simulation epoch
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-the-export-emits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the export emits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-the-export-deliberately-does-not-emit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the export deliberately does not emit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#a-worked-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        A worked example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-question-drogna-needs-it-to-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The question drogna needs it to answer
+        Whose bug is it?
       
     </span>
   </a>
@@ -1978,274 +1770,210 @@
             
           
           
-            <div class="md-content" data-md-component="content">
-              
-              <article class="md-content__inner md-typeset">
-                
-                  
-
-
-
-<h1 id="cf-conventions">CF conventions<a class="headerlink" href="#cf-conventions" title="Permanent link">&para;</a></h1>
-<p>The Climate and Forecast conventions are a set of rules for what goes inside a NetCDF file
-so that a reader who did not write it can understand it. NetCDF gives you arrays with names
-and attributes; CF tells you which attributes to write, and what they must mean, so that
-the file describes itself.</p>
-<p>A file whose meaning depends on documentation held somewhere else is a file that will
-eventually be misread — because the documentation is on a wiki that moved, or because the
-person who reads the file in three years is not the person the documentation was written
-for. CF is the mechanism by which units, coordinate definitions and variable meanings
-travel with the data.</p>
-<p>drogna stores its forecast and uncertainty fields as CF-conforming NetCDF, and the
-<a href="../../subsystems/c17-offload-packager/">offload packager</a> exports a run's profiles the same
-way. This page is about the export, because the export is the file that leaves.</p>
-<h2 id="standard-names-are-a-controlled-vocabulary">Standard names are a controlled vocabulary<a class="headerlink" href="#standard-names-are-a-controlled-vocabulary" title="Permanent link">&para;</a></h2>
-<p><code>units</code> says a number is in degrees Celsius. <code>standard_name</code> says <em>what</em> is in degrees
-Celsius, drawn from a published table rather than invented at the keyboard. That is the
-difference between a file a program can interpret and a file a person has to.</p>
-<p>The export carries three quantities and every one of them has a standard name:</p>
-<table>
-<thead>
-<tr>
-<th>variable</th>
-<th><code>standard_name</code></th>
-<th><code>units</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>sea_water_temperature</code></td>
-<td><code>sea_water_temperature</code></td>
-<td><code>degree_Celsius</code></td>
-</tr>
-<tr>
-<td><code>sea_water_practical_salinity</code></td>
-<td><code>sea_water_practical_salinity</code></td>
-<td><code>1</code></td>
-</tr>
-<tr>
-<td><code>sea_water_pressure</code></td>
-<td><code>sea_water_pressure</code></td>
-<td><code>dbar</code></td>
-</tr>
-</tbody>
-</table>
-<p>Practical salinity's unit is <code>1</code> because it is a ratio and has no dimension. Writing <code>psu</code>
-there is common and wrong, and it is the sort of wrong that a reader silently accepts.</p>
-<p>Sound speed is <strong>not</strong> exported and is not one of the three. It is derived at the point of
-use from temperature, salinity and depth by the single implementation in <code>harness_core</code>
-(ADR-0005). A derived value shipped
-beside its inputs is a second source of truth that can disagree with them after a change to
-the equation, and nothing in the file would say which was right.</p>
-<h2 id="why-trajectoryprofile-is-the-geometry-that-fits">Why <code>trajectoryProfile</code> is the geometry that fits<a class="headerlink" href="#why-trajectoryprofile-is-the-geometry-that-fits" title="Permanent link">&para;</a></h2>
-<p>Most of CF assumes a grid. The
-<a href="../../glossary/#discrete-sampling-geometry">discrete sampling geometries</a> are the part of
-CF for data that is not one: a single point, a time series at a fixed point, a vertical
-profile, a path of points, and the combinations of those.</p>
-<p>What the packager has is a series of vertical profiles taken at successive positions along
-a sampling path. That is <code>trajectoryProfile</code> exactly: a trajectory of profiles. Choosing
-<code>profile</code> alone would throw away the ordering, which is the only thing that makes the
-profiles a path rather than a bag of positions. Choosing a gridded representation would
-claim a regularity the sampling does not have.</p>
-<p><strong>The trajectory in the file is an ordering of measurements and nothing else.</strong> It carries
-no identity between profiles, no heading, no speed and no platform. drogna's data model
-admits no tracked entity of any kind, and the word "trajectory" here is CF's term for the
-shape of the array, not a claim about anything moving through the water. That is worth
-saying plainly, because "trajectory" is a word a reader can arrive at with the wrong
-expectation.</p>
-<h2 id="ragged-not-rectangular">Ragged, not rectangular<a class="headerlink" href="#ragged-not-rectangular" title="Permanent link">&para;</a></h2>
-<p>Profiles differ in length: bathymetry truncates the deeper ones, so a five-level profile
-and a one-level profile sit side by side in the same bundle.</p>
-<p>A rectangular <code>profile × level</code> array would need a fill value everywhere the seabed came
-first. A fill value is a number. A reader who misses the <code>_FillValue</code> attribute reads it as
-a measurement, and the reading looks entirely plausible — a temperature of −999 is obvious,
-but a temperature of 0.0 in a padded row is not.</p>
-<p>So the export uses CF's <strong>contiguous ragged array representation</strong>. Every level is stored
-once, end to end, along a single sample dimension <code>obs</code>, and a <code>row_size</code> variable gives
-the number of levels in each profile. A reader walks the rows by taking <code>row_size[0]</code>
-values, then the next <code>row_size[1]</code>, and so on. Nothing is padded because there is nothing
-to pad, and the sum of the row sizes equals the length of <code>obs</code> — which is the property
-that makes the representation readable at all, and which the conformance check asserts.</p>
-<h2 id="the-vertical-axis-says-which-way-is-down">The vertical axis says which way is down<a class="headerlink" href="#the-vertical-axis-says-which-way-is-down" title="Permanent link">&para;</a></h2>
-<p><code>depth</code> carries <code>positive = "down"</code>.</p>
-<p>Without it a reader has to guess the direction of the vertical axis. Half of them will
-guess the other way, and the plot they produce will look like a perfectly reasonable
-profile that happens to be upside down. Nothing about the numbers gives it away. The
-attribute costs eleven characters and removes the whole class of error.</p>
-<h2 id="time-is-referenced-to-the-simulation-epoch">Time is referenced to the simulation epoch<a class="headerlink" href="#time-is-referenced-to-the-simulation-epoch" title="Permanent link">&para;</a></h2>
-<p>A CF time coordinate is a number plus a units string giving the reference instant — so the
-epoch is <em>data</em>, not convention. That makes the units string the one place a host clock can
-reach the numbers in a file while looking like metadata.</p>
-<p>drogna's exports are referenced to the run's simulation epoch, taken from the run manifest:</p>
-<div class="highlight"><pre><span></span><code>time:units = "seconds since 2026-09-01T00:00:00.000000Z"
-</code></pre></div>
-<p>Every value on the axis is an offset in simulation seconds from that instant. No host clock
-value appears anywhere in an exported file, which is Constitution I applied at the one place
-it is easiest to break by accident.</p>
-<h2 id="what-the-export-emits">What the export emits<a class="headerlink" href="#what-the-export-emits" title="Permanent link">&para;</a></h2>
-<p>Dimensions: <code>trajectory</code>, <code>profile</code>, <code>obs</code>.</p>
-<table>
-<thead>
-<tr>
-<th>variable</th>
-<th>dimension</th>
-<th>what it is</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>trajectory</code></td>
-<td><code>trajectory</code></td>
-<td>instance variable, <code>cf_role = "trajectory_id"</code></td>
-</tr>
-<tr>
-<td><code>profile</code></td>
-<td><code>profile</code></td>
-<td>instance variable, <code>cf_role = "profile_id"</code></td>
-</tr>
-<tr>
-<td><code>trajectory_index</code></td>
-<td><code>profile</code></td>
-<td>which path each profile belongs to; <code>instance_dimension</code></td>
-</tr>
-<tr>
-<td><code>row_size</code></td>
-<td><code>profile</code></td>
-<td>levels in each profile; <code>sample_dimension = "obs"</code></td>
-</tr>
-<tr>
-<td><code>time</code></td>
-<td><code>profile</code></td>
-<td>simulation seconds since the epoch; <code>axis = "T"</code></td>
-</tr>
-<tr>
-<td><code>latitude</code></td>
-<td><code>profile</code></td>
-<td>degrees north, WGS 84; <code>axis = "Y"</code></td>
-</tr>
-<tr>
-<td><code>longitude</code></td>
-<td><code>profile</code></td>
-<td>degrees east, WGS 84; <code>axis = "X"</code></td>
-</tr>
-<tr>
-<td><code>depth</code></td>
-<td><code>obs</code></td>
-<td>metres below the surface; <code>axis = "Z"</code>, <code>positive = "down"</code></td>
-</tr>
-<tr>
-<td>the three data variables</td>
-<td><code>obs</code></td>
-<td>with <code>standard_name</code>, <code>units</code> and <code>coordinates</code></td>
-</tr>
-</tbody>
-</table>
-<p>Global attributes: <code>Conventions</code>, <code>featureType</code>, <code>title</code>, <code>summary</code>, <code>format_version</code>,
-<code>bundle_id</code>, <code>run_reference</code>, <code>time_coverage_start</code>, <code>time_coverage_end</code>.</p>
-<p>The per-variable attributes are these nine and no others. <code>standard_name</code> and <code>units</code> say
-what a number is and what it is in; <code>long_name</code> says it in words where CF has no standard
-name for the quantity; <code>axis</code> marks a coordinate as one of the four axes; <code>positive</code> gives
-the vertical axis its direction; <code>cf_role</code> marks an instance variable as the identifier of
-a trajectory or a profile; <code>coordinates</code> attaches a data variable to the coordinates that
-locate it; <code>sample_dimension</code> tells a reader which dimension <code>row_size</code> counts along; and
-<code>instance_dimension</code> tells it which dimension <code>trajectory_index</code> indexes into.</p>
-<p><code>run_reference</code> is an opaque derivation of the run manifest's digest. It is enough to tie
-two bundles to one run for somebody who holds the manifest, and useless to somebody who
-does not.</p>
-<p>That list is the whole of it. The attribute allow-list in the packager's configuration
-holds exactly these names plus the per-variable ones above, and it is applied at write time
-— so an attribute not on the list cannot be written and then removed later, because there
-is no later.</p>
-<h2 id="what-the-export-deliberately-does-not-emit">What the export deliberately does not emit<a class="headerlink" href="#what-the-export-deliberately-does-not-emit" title="Permanent link">&para;</a></h2>
-<p>CF suggests four global attributes that a well-behaved producer might write. The export
-writes none of them, and this is the section that says so rather than leaving the absence
-to be read as an oversight.</p>
-<table>
-<thead>
-<tr>
-<th>attribute</th>
-<th>why not</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>history</code></td>
-<td>CF's own suggestion is a line per processing step naming the command that ran. That is a command line, a program path and usually an input path — three of the things SRD FR-42 names, in one attribute. It also carries the host time at which the file was written, in a file produced by a component forbidden to read a host clock.</td>
-</tr>
-<tr>
-<td><code>source</code></td>
-<td>The method of production: in practice the name of the model, the machine or the instrument. The instrument is a sensor identifier by another name.</td>
-</tr>
-<tr>
-<td><code>comment</code></td>
-<td>Free text with no defined content, which is the shape of every accidental disclosure. There is nothing an export needs to say here that it cannot say in a field with a meaning.</td>
-</tr>
-<tr>
-<td><code>institution</code></td>
-<td>Where the data was produced — an organisation, and by implication a deployment and the people in it.</td>
-</tr>
-</tbody>
-</table>
-<p>SRD FR-42 names provenance metadata in exported files as an explicit leakage path. This is
-the producer side of that: the file is safe to hand on because of what was never written,
-not because of what was stripped afterwards. A stripping pass is a pass that has a day it
-does not run.</p>
-<p>Nothing about the instrument survives into the export either. A recorded observation
-carries a thing, a sensor, a datastream and a feature of interest; the packager reads the
-position, the depth, the instant and the value, and the other four never enter its model of
-a profile. What cannot be reached cannot leak.</p>
-<h2 id="a-worked-example">A worked example<a class="headerlink" href="#a-worked-example" title="Permanent link">&para;</a></h2>
-<p>This opens a produced bundle and prints one profile. It is run in CI against a bundle the
-packager wrote, so the primer cannot drift from the file.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">harness_core.netcdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_netcdf</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">first_profile</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Read the first profile out of a bundle and render it as depth against temperature."""</span>
-    <span class="n">document</span> <span class="o">=</span> <span class="n">read_netcdf</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">document</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s2">"row_size"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
-    <span class="n">depths</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s2">"depth"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
-    <span class="n">temperatures</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s2">"sea_water_temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
-    <span class="n">units</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="s2">"units"</span><span class="p">]</span>
-
-    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"time axis: </span><span class="si">{</span><span class="n">units</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"depth_m  temperature_degC"</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">depths</span><span class="p">[</span><span class="n">level</span><span class="p">]</span><span class="si">:</span><span class="s2">7.1f</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">temperatures</span><span class="p">[</span><span class="n">level</span><span class="p">]</span><span class="si">:</span><span class="s2">17.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">lines</span>
-</code></pre></div>
-<p>Reading the row sizes first is the whole of the ragged representation in three lines: the
-first profile is the first <code>row_size[0]</code> values of every variable on <code>obs</code>, the second is
-the next <code>row_size[1]</code>, and no index arithmetic beyond that is needed.</p>
-<p>The reader used here is drogna's own, because drogna writes the classic NetCDF format
-directly rather than through a NetCDF library — the file must be byte-identical between two
-runs of a scenario, and the usual writers stamp a creation time and a library version into
-every file they produce. Any CF-aware tool reads the same bytes; <code>xarray.open_dataset</code> over
-this file gives the same three columns.</p>
-<h2 id="the-question-drogna-needs-it-to-answer">The question drogna needs it to answer<a class="headerlink" href="#the-question-drogna-needs-it-to-answer" title="Permanent link">&para;</a></h2>
-<p>Whether an exported file can be handed to someone with no knowledge of the system that
-produced it and be read correctly, using ordinary tools, with no accompanying explanation.
-That is the only test of self-description that means anything — and the corollary is that
-the file must also say nothing about the system that produced it, which is the other half
-of this page.</p>
-
-
-
-
-
-
-
-  
-  
-
-
-
-
-
-
-                
-              </article>
+  <div class="md-content md-content--post" data-md-component="content">
+    <div class="md-sidebar md-sidebar--post" data-md-component="sidebar" data-md-type="navigation">
+      <div class="md-sidebar__scrollwrap">
+        <div class="md-sidebar__inner md-post">
+          <nav class="md-nav md-nav--primary">
+            <div class="md-post__back">
+              <div class="md-nav__title md-nav__container">
+                <a href="../" class="md-nav__link">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+                  <span class="md-ellipsis">
+                    Back to index
+                  </span>
+                </a>
+              </div>
             </div>
+            
+            <ul class="md-post__meta md-nav__list">
+              <li class="md-nav__item md-nav__item--section">
+                <div class="md-post__title">
+                  <span class="md-ellipsis">
+                    Metadata
+                  </span>
+                </div>
+                <nav class="md-nav">
+                  <ul class="md-nav__list">
+                    <li class="md-nav__item">
+                      <div class="md-nav__link">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 19H5V8h14m-3-7v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1m-1 11h-5v5h5z"/></svg>
+                        <time datetime="2026-08-27 09:00:00+00:00" class="md-ellipsis">August 27, 2026</time>
+                      </div>
+                    </li>
+                    
+                    
+                      <li class="md-nav__item">
+                        <div class="md-nav__link">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 3v15h3V3zm3 2 4 13 3-1-4-13zM5 5v13h3V5zM3 19v2h18v-2z"/></svg>
+                          <span class="md-ellipsis">
+                            in
+                            
+                              <a href="../category/feature/">Feature</a></span>
+                        </div>
+                      </li>
+                    
+                    
+                      
+                      <li class="md-nav__item">
+                        <div class="md-nav__link">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 20a8 8 0 0 0 8-8 8 8 0 0 0-8-8 8 8 0 0 0-8 8 8 8 0 0 0 8 8m0-18a10 10 0 0 1 10 10 10 10 0 0 1-10 10C6.47 22 2 17.5 2 12A10 10 0 0 1 12 2m.5 5v5.25l4.5 2.67-.75 1.23L11 13V7z"/></svg>
+                          <span class="md-ellipsis">
+                            
+                              5 min read
+                            
+                          </span>
+                        </div>
+                      </li>
+                    
+                  </ul>
+                </nav>
+              </li>
+            </ul>
+            
+          </nav>
           
+        </div>
+      </div>
+    </div>
+    <article class="md-content__inner md-typeset">
+      
+        
+  
+
+
+
+
+<h1 id="the-mean-of-magnitudes">The mean of magnitudes<a class="headerlink" href="#the-mean-of-magnitudes" title="Permanent link">&para;</a></h1>
+<p>drogna's telemetry component exists to answer one question: is the forecast any
+good? It answers it by comparing what the model predicted against what the sensors
+measured, and — crucially — against what you would have got by assuming nothing
+changed. That last comparison is the one that matters. A forecast that beats
+<em>persistence</em> has earned its compute; one that does not is an expensive way of
+saying "much as before".</p>
+<p>To do that it consumes what the monitor already publishes. And the monitor
+publishes this:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"residual-summary"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scored"</span><span class="p">:</span><span class="w"> </span><span class="mi">1184</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"exceeding"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"outside_domain"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"shed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"mean_absolute_m_per_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.37</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>A count, and a mean of the magnitudes. It is a perfectly sensible thing to
+publish. It answers "how wrong are we, roughly?" in one number, it costs nothing
+to compute, and it is what almost anyone would write.</p>
+<p>It also makes three of the four figures telemetry needs impossible to compute, and
+neither component contains anything that would tell you so.</p>
+<!-- more -->
+
+<h2 id="what-does-not-survive">What does not survive<a class="headerlink" href="#what-does-not-survive" title="Permanent link">&para;</a></h2>
+<p><strong>Bias is gone, and it went first.</strong> Bias is the <em>signed</em> mean: it tells you the
+forecast runs warm or runs cold. <code>mean_absolute_m_per_s</code> is the mean of <code>|r|</code>, and
+the absolute value is applied before the averaging. A forecast that is 1.4 m/s too
+warm everywhere and a forecast that is 1.4 m/s too warm in half the domain and 1.4
+too cold in the other half produce the identical number here. The first has a bias
+of +1.4 and is a calibration error you could correct in an afternoon. The second
+has a bias of 0 and is a structural problem. The summary cannot distinguish them,
+because the sign was discarded at the point of measurement and there is no
+arrangement of downstream arithmetic that brings it back.</p>
+<p><strong>RMS is gone, for a different and more fundamental reason.</strong> Root-mean-square
+needs the second moment — the mean of <code>r²</code> — and you cannot recover a second moment
+from a first. This is not a limitation of the format; it is that the mapping is
+not injective. Infinitely many error distributions share a mean absolute value and
+have wildly different RMS. Averaging is lossy in the way that matters: it is a
+projection, and what it projects away does not come back.</p>
+<p><strong>Skill is gone, and it was never close.</strong> The skill score is</p>
+<div class="highlight"><pre><span></span><code>skill = 1 − MSE(model) / MSE(persistence)
+</code></pre></div>
+<p>which needs two mean-squared errors, so it inherits the RMS problem twice over.
+Worse, it needs the <em>persistence</em> error, which means scoring each measurement
+against the reference field — the field that was current just before the latest
+forecast landed. That is a per-measurement operation. A summary has already thrown
+away the individual measurements, so there is nothing left to score.</p>
+<p>Of the four things telemetry wanted, exactly one survives the summary: the count.
+And the mean magnitude itself, which is a real number about a real thing, just not
+any of the ones being asked for.</p>
+<h2 id="the-interesting-part-is-that-nothing-breaks">The interesting part is that nothing breaks<a class="headerlink" href="#the-interesting-part-is-that-nothing-breaks" title="Permanent link">&para;</a></h2>
+<p>Here is what makes this worth writing down rather than just fixing.</p>
+<p>If nobody notices, the system works. The monitor publishes correctly. Telemetry
+receives correctly. The schema validates. Every test passes. A skill score appears
+on a dashboard, and it is a number, and it is wrong — not wrong in the sense of
+miscalculated, but wrong in the sense that no calculation could have produced it
+from the available inputs, so whatever produced it was reaching for a value that
+was not there.</p>
+<p>That is the failure mode drogna is arranged against, and it is why the
+constitution has a principle that ground truth is <em>scored, not assumed</em>. The
+component could have divided the numbers it had and published something. It would
+have looked exactly like the truth.</p>
+<p>Instead the accumulator carries this:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Basis</span><span class="p">(</span><span class="n">StrEnum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Which inputs an aggregate was built from, and so which figures it can support."""</span>
+
+    <span class="n">NONE</span> <span class="o">=</span> <span class="s2">"none"</span>
+    <span class="n">SAMPLES</span> <span class="o">=</span> <span class="s2">"samples"</span>
+    <span class="n">SUMMARIES</span> <span class="o">=</span> <span class="s2">"summaries"</span>
+    <span class="n">MIXED</span> <span class="o">=</span> <span class="s2">"mixed"</span>
+</code></pre></div>
+<p>Four states, and the whole design is in the docstring's second clause. An aggregate
+knows what it was built from, and therefore what it is entitled to claim. Fed
+per-measurement samples, it reports <code>samples</code> and every figure is available. Fed
+summaries, it reports <code>summaries</code>, publishes the count and the mean magnitude, and
+returns <strong>null</strong> for bias, RMS and extremes — not zero, not a placeholder, not a
+best guess. Null, with a state saying why.</p>
+<p><code>MIXED</code> is the state that shows the design was taken seriously. If a scope receives
+some samples and some summaries, the aggregate is neither one thing nor the other,
+and pretending otherwise would be the same error in miniature. It says so.</p>
+<p>A test pins the behaviour, and it is the sort of test that only gets written if
+somebody decided the gap mattered:</p>
+<div class="highlight"><pre><span></span><code>test_a_summary_yields_a_count_and_a_mean_magnitude_and_null_moments
+</code></pre></div>
+<h2 id="whose-bug-is-it">Whose bug is it?<a class="headerlink" href="#whose-bug-is-it" title="Permanent link">&para;</a></h2>
+<p>Nobody's, which is the point.</p>
+<p>The monitor's summary is not wrong. Reset at each forecast-run boundary, a count
+and a mean magnitude is a reasonable thing for a component to say about itself, and
+it was designed before anything downstream wanted a bias. The telemetry
+component's requirements are not wrong either. What is wrong is the seam, and the
+seam is invisible from either end: the monitor cannot see what will be asked of its
+output, and telemetry cannot see that what it is receiving is a projection rather
+than a sample.</p>
+<p>Summarising is a design decision about <em>which questions remain answerable</em>, and it
+is almost always made implicitly, by whoever writes the producer, at a moment when
+the consumer does not exist yet. <code>mean(|r|)</code> versus <code>sum(r)</code>, <code>sum(r²)</code> and <code>n</code> is
+three numbers against one, and the second set answers every question the first does
+plus bias, plus RMS, plus everything derived from them. The cost is two more floats
+per summary. That is the entire trade, and it is invisible unless someone states it.</p>
+<p>So the contract now carries the shape for the day the monitor emits it:</p>
+<div class="highlight"><pre><span></span><code>residual-sample: position, depth, signed residual, measured sound speed, run id
+</code></pre></div>
+<p>Signed, and per-measurement. Until then, half of one user story and the whole of
+another are exercised from fixtures rather than from live traffic — and that
+sentence is in the feature's report, in the schema description, and now here,
+rather than being quietly true and unmentioned.</p>
+<p>The number is not available yet. The system says so. That is the feature working.</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+  
+
+
+
+      
+    </article>
+  </div>
+
           
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
@@ -2262,10 +1990,12 @@ of this page.</p>
   
     
       
+        
+      
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../ogc-api-edr/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OGC API-EDR">
+          <a href="../a-runner-with-no-list/" class="md-footer__link md-footer__link--prev" aria-label="Previous: A runner with no list">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2275,20 +2005,20 @@ of this page.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                OGC API-EDR
+                A runner with no list
               </div>
             </div>
           </a>
         
         
           
-          <a href="../coveragejson/" class="md-footer__link md-footer__link--next" aria-label="Next: CoverageJSON">
+          <a href="../two-ways-to-compare-nothing/" class="md-footer__link md-footer__link--next" aria-label="Next: Two ways to compare nothing">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                CoverageJSON
+                Two ways to compare nothing
               </div>
             </div>
             <div class="md-footer__button md-icon">

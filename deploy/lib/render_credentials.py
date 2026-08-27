@@ -214,6 +214,12 @@ def write_password_file(values: dict[str, str], root: Path | None = None) -> Pat
         )
     target.parent.mkdir(parents=True, exist_ok=True)
     command, seen_at = _passwd_command(target, root)
+    # Removed rather than truncated, and that is the whole of what makes a second bring-up
+    # converge. The file this function last wrote belongs to uid 1883 with mode 0600, so the
+    # deploying user cannot open it for writing — `PermissionError: [Errno 13]` on the very
+    # next run, from the fix that made the first run work. Unlinking needs write permission
+    # on the directory, which the deploying user has, and not on the file, which it does not.
+    target.unlink(missing_ok=True)
     target.write_text("", encoding="utf-8")
     for role, variable in ROLE_SECRETS.items():
         result = subprocess.run(

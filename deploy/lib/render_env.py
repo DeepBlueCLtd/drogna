@@ -183,10 +183,20 @@ def values_for(
     paths = deployment["container_paths"]
     host_paths = deployment["host_paths"]
     resources = deployment["resources"]
-    # The rendered tree, not the tracked one. The tracked files carry the role and no
-    # secret; a component needs both, and the broker refuses anonymous clients. See
-    # deploy/lib/render_credentials.py and ADR-0016.
-    config_host_dir = render_credentials.rendered_dir(destination, root)
+    # Two directories, deliberately, and they answer different questions.
+    #
+    # `mounted_config_dir` is what a container reads, and it is the rendered tree: the
+    # tracked files carry the role and no secret, a component needs both, and the broker
+    # refuses anonymous clients (deploy/lib/render_credentials.py, ADR-0016).
+    #
+    # `declared_config_dir` is what this renderer reads to find each component's health
+    # port and path, and it is the tracked tree. Those declarations are identical in both —
+    # the render rewrites one field and nothing else — and reading them from the tracked
+    # side removes an ordering hazard that would otherwise be real: on a first bring-up the
+    # rendered tree does not exist yet, so every health declaration would silently come back
+    # absent and every service would be waited on with the wrong check.
+    mounted_config_dir = render_credentials.rendered_dir(destination, root)
+    declared_config_dir = destination_dir(destination, root)
 
     values: dict[str, str] = {
         "HARNESS_PROJECT_NAME": deployment["project_name"],
@@ -214,7 +224,7 @@ def values_for(
         "HARNESS_BROKER_CONFIG_DIR": paths["broker_config_dir"],
         "HARNESS_BROKER_DATA_DIR": paths["broker_data_dir"],
         "HARNESS_DATABASE_DATA_DIR": paths["database_data_dir"],
-        "HARNESS_CONFIG_HOST_DIR": str(config_host_dir),
+        "HARNESS_CONFIG_HOST_DIR": str(mounted_config_dir),
         "HARNESS_BROKER_CONFIG_HOST_DIR": str(root / host_paths["broker_config_dir"]),
         "HARNESS_RUNTIME_HOST_DIR": str(root / host_paths["runtime_dir"]),
         "HARNESS_PUBLIC_URL": _public_url(deployment),
@@ -229,7 +239,7 @@ def values_for(
         values[f"HARNESS_LIMIT_MEMORY_{suffix}"] = limit["memory"]
         values[f"HARNESS_LIMIT_CPUS_{suffix}"] = limit["cpus"]
     values.update(_publish_values(deployment))
-    values.update(_health_urls(deployment, config_host_dir))
+    values.update(_health_urls(deployment, declared_config_dir))
     values.update(resolve_secrets(read_env_file(env_path(root)), secrets))
     return values
 

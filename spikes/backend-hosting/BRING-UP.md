@@ -27,25 +27,43 @@ usually work. Nothing in it has been executed.
 Re-run step 4 if the checkout ever moves — the unit carries the path it was provisioned
 with, which is why the unit file itself holds no path.
 
-### Five things that will surprise you, all of them checked
+### Things that will surprise you, all of them checked against the tree
 
-1. **The first bring-up starts one container.** `profiles.active` at the droplet is
-   `["core"]`, which is the observation store and nothing else. So the first run tests
-   provisioning, Compose plumbing and the health-wait — not the harness. That is a good
-   first run to have, and it is not a demonstration. Adding profiles is a values edit.
-2. **Seeding currently does nothing, and says so.** `deploy/seed.d/` contains only its
+> **Re-checked on 27 August 2026 after `main` was merged into this branch**, which widened
+> `profiles.active` from `["core"]` to
+> `["core", "broker", "foundation", "query", "edge", "shell"]` at **both** destinations.
+> Two of these items were written when one container started and have been rewritten;
+> the first of them has gone from a trap laid for later to a bring-up that will fail.
+
+1. **The droplet's first bring-up will fail at the proxy, on today's tree.** `edge` is now
+   an active profile and `config/droplet/proxy.json` has `tls.enabled: true` naming
+   `/etc/drogna/tls/drogna.invalid.crt` and its key. The configuration directory is mounted
+   from `config/droplet/`, and **there is no `config/droplet/tls/`** — checked. So
+   `render_config.py` emits the `ssl_certificate` directives, `entrypoint.sh` runs
+   `nginx -t`, and the container fails rather than serving. That is the designed behaviour
+   — the schema says a destination that terminates with no material is "a render failure
+   rather than a listener that quietly serves plaintext" — but it means **the certificate
+   is now a precondition of the first bring-up, not a later concern**. The local
+   destination is unaffected: `tls.enabled` is `false` there, so no directives are emitted.
+2. **The client will be started, and it is configured for somebody else's machine.**
+   `shell` is active too, so the client image builds and runs — and there is still no
+   `config/<destination>/client.json`, so it serves the bundled `public/config.json`
+   naming `localhost:8081` and `localhost:8090`. Locally those are the right addresses and
+   it works. At the droplet they are the viewer's own machine, and the page loads with
+   every component dark. See the other document for why that failure is silent.
+3. **Seeding still does nothing, and says so.** `deploy/seed.d/` contains only its
    `README.md`, so `seed.sh` runs zero steps and logs that the record it writes "is of a
    stack with nothing in it, which is the truth about the components built so far".
-3. **`drogna.invalid` is deliberately unusable.** Nothing in the stack resolves
-   `public_url` — the run scripts only print it — so `core` comes up whatever it says. It
-   has to be real before the proxy is ever enabled.
-4. **The certificate is a trap laid for later.** `tls.terminate` is `true` and
-   `proxy.tls.certificate` names a file nothing in the repository creates. While `edge` is
-   out of the active profiles this costs nothing. The moment `edge` joins them, the proxy's
-   entrypoint runs `nginx -t` and fails loudly rather than serving. Loud is the right
-   behaviour; plan the certificate before the profile.
+4. **`drogna.invalid` is deliberately unusable.** Nothing in the stack resolves
+   `public_url` — the run scripts only print it. But it is also `tls.hostname` and the
+   proxy's `server_name`, so it stops being cosmetic the moment item 1 is addressed.
 5. **A cold build can take fifteen minutes on two cores**, and `run_droplet.sh` prints a
-   warning about it because a silent build stage reads as a hang.
+   warning about it because a silent build stage reads as a hang. With six profiles active
+   rather than one, expect the upper end of that.
+6. **`deploy/README.md` is out of date about the client**, which matters here because it is
+   the document this runbook sends you to. Its manifest still says C-18 is "declared, not
+   built … because `client/` does not exist yet". `client/` exists, has its own CI job, and
+   is now in an active profile. The record disagrees with the tree; the tree is right.
 
 ---
 

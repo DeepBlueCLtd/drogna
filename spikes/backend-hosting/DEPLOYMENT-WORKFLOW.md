@@ -6,6 +6,9 @@
 design. Both are recorded at the end with what survives them.
 **Status**: a proposal to be argued with. If the shape is agreed it becomes `specs/017-*`,
 and that is the durable artefact, not this.
+**Re-checked against the tree on 27 August 2026**, after `main` was merged into this branch.
+Three claims moved and are corrected in place: the active profiles, the certificate's
+urgency, and the shape of the credential. The rest were re-verified and stand.
 
 ---
 
@@ -175,6 +178,13 @@ Exempting the upgrade location is not the escape: the template says plainly that
 per-location authentication's failure mode is a location without it, "and that is the one
 failure this component exists to prevent".
 
+**Since this was written, `main` gave `credentials` a third key.** It is now
+`{realm, file, user}`, and `deploy/lib/render_credentials.py` substitutes each role's secret
+into the configuration it writes under `deploy/.runtime/config/` — the mechanism ADR-0016
+describes. That is the broker's credential path rather than the proxy's, but it is the same
+idea and the same file, so the proposal below should be read as an addition to it rather
+than as a replacement for anything.
+
 **So: `credentials.enabled`, a boolean, mirroring `tls.enabled` exactly.** That flag is
 already the repository's idiom for a facility a destination does not use — `tls.enabled` is
 required at both destinations and is `false` locally because the local one has no
@@ -312,12 +322,17 @@ defaulted into.
 5. **`credentials.enabled`**, mirroring `tls.enabled`: `true` locally, `false` at the
    droplet, plus the `X-Robots-Tag` header there. Watch `test_request_matrix.py` still
    assert the 401 at the destination that keeps the credential.
-6. **`profiles.active` at the droplet.**
-7. **Images built in CI and pushed to a registry.**
-8. **The deploy-on-`main` workflow**, its credential, and its health report.
-9. **`scripts/reload.sh`**, and rehearse a rollback once.
-10. **Whenever wanted, not before**: a domain and a certificate; and the clock upstream, which
-   arrives with model triggers rather than separately.
+6. ~~`profiles.active` at the droplet.~~ **Done on `main`** — it is now
+   `["core", "broker", "foundation", "query", "edge", "shell"]` at both destinations. Which
+   promotes the next item from optional to blocking.
+7. **A certificate at the droplet, before the first bring-up rather than after it.**
+   `edge` being active with `tls.enabled: true` and no `config/droplet/tls/` means the
+   proxy fails `nginx -t` and the bring-up fails with it. See `BRING-UP.md`, item 1.
+8. **Images built in CI and pushed to a registry.**
+9. **The deploy-on-`main` workflow**, its credential, and its health report.
+10. **`scripts/reload.sh`**, and rehearse a rollback once.
+11. **Whenever wanted, not before**: a domain, and the clock upstream, which arrives with
+    model triggers rather than separately.
 
 ---
 
@@ -326,6 +341,15 @@ defaulted into.
 **One environment per pull request** — a generated destination per number, a front door, a
 capacity cap, a reaper. Not rejected, made unnecessary: sequencing the two halves removes the
 problem it solved.
+
+`spikes/container-size/FINDING.md`, written independently on the same day, asked the same
+question from the other end — whether the container could be made small enough to host a
+stack per pull request — and reached the same arithmetic from measurement rather than from
+reading configuration: *"the `full` profile declares 7168 MB of memory ceilings against a
+4096 MB host"*. It adds what this document could not, having measured nothing: that image
+bytes are close to irrelevant to the question, because two stacks from the same sources
+share every layer and pay for the image once, while each pays in full for memory, a host
+port and seven volumes. Two routes, one number; that is worth more than either alone.
 
 **The client published to GitHub Pages.** Dropped on evidence rather than preference:
 `http://deepbluecltd.github.io/drogna/` answers `301` to `https` — checked with curl — and a

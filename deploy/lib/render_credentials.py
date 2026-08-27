@@ -31,6 +31,7 @@ were previously described in a README and produced by nothing.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -51,19 +52,27 @@ __all__ = [
     "render_destination",
     "rendered_dir",
     "write_password_file",
+    "write_proxy_credentials",
 ]
 
-# The four roles `deploy/broker/acl` defines, and the environment variable carrying each
-# one's secret. Adding a role means adding a block to the access control list and a line
-# here; there is no fifth place.
+# The proxy's credential is not a broker role and has no access control list to take a name
+# from, so the identity is declared per destination in proxy.credentials.user and the secret
+# is generated beside the broker's.
+PROXY_SECRET = "HARNESS_PROXY_SECRET"
+
+# The roles `deploy/broker/acl` defines, and the environment variable carrying each one's
+# secret. Adding a role means adding a block to the access control list and a line here,
+# and nowhere else: deploy/env.template and deploy/lib/common.sh derive their names from
+# this mapping rather than repeating it.
 ROLE_SECRETS: dict[str, str] = {
     "drogna_sensor": "HARNESS_BROKER_SECRET_SENSOR",
     "drogna_ingest": "HARNESS_BROKER_SECRET_INGEST",
     "drogna_control": "HARNESS_BROKER_SECRET_CONTROL",
     "drogna_viewer": "HARNESS_BROKER_SECRET_VIEWER",
+    "drogna_query": "HARNESS_BROKER_SECRET_QUERY",
 }
 
-SECRET_NAMES: tuple[str, ...] = tuple(ROLE_SECRETS.values())
+SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)
 
 _RUNTIME_CONFIG_DIRNAME = "config"
 
@@ -237,22 +246,98 @@ def _restrict(target: Path, command: list[str]) -> None:
     )
 
 
+def write_proxy_credentials(
+    destination: str, values: dict[str, str], root: Path | None = None
+) -> Path:
+    """Produce the file the proxy's `auth_basic_user_file` names, from tracked configuration.
+
+    ADR-0016 recorded this as a sibling of the broker's credential gap and it failed worse.
+    nginx does not resolve `auth_basic_user_file` when it loads its configuration, so a
+    missing file did not stop the proxy: it started, reported healthy, and answered 500 to
+    anything behind that location. A credential that is absent should be absent loudly.
+
+    The identity comes from `proxy.credentials.user` and the location from
+    `proxy.credentials.file`, both tracked, because neither is a secret. The secret comes
+    from the environment and reaches this file alone.
+
+    The hash is apr1, which nginx has always accepted, produced by `openssl` rather than by
+    anything here: this module invents no hashing scheme, exactly as it invents none for the
+    broker. The salt is derived from the secret rather than drawn, so that a second render
+    of an unchanged secret produces an unchanged file — and since the secret is generated per
+    installation, the salt still differs between installations, which is what a salt is for.
+    """
+    base = root or repository_root()
+    document = json.loads(
+        (destination_dir(destination, base) / "proxy.json").read_text(encoding="utf-8")
+    )
+    credentials = document["proxy"]["credentials"]
+    user = str(credentials["user"])
+    # The configuration names a container path under the directory Compose mounts the
+    # rendered configuration at, so the file belongs in the rendered tree beside the
+    # documents it sits with. Written after render_destination, which clears that directory.
+    target = rendered_dir(destination, base) / Path(str(credentials["file"])).name
+    secret = values.get(PROXY_SECRET, "")
+    if not secret:
+        raise ConfigurationError(
+            f"no value for {PROXY_SECRET}, so the proxy would start with no credential file "
+            "and answer 500 behind its authenticated location rather than refusing to start"
+        )
+    tool = shutil.which("openssl")
+    if tool is None:
+        raise ConfigurationError(
+            "openssl is not on PATH, so the proxy credential cannot be hashed. Nothing was "
+            "written: a missing credential file is quieter than a bad one and both are wrong"
+        )
+    salt = hashlib.sha256(f"{user}:{secret}".encode()).hexdigest()[:8]
+    result = subprocess.run(
+        [tool, "passwd", "-apr1", "-salt", salt, secret],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise ConfigurationError(
+            f"openssl refused to hash the proxy credential: "
+            f"{result.stderr.strip() or result.stdout.strip()}"
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"{user}:{result.stdout.strip()}\n", encoding="utf-8")
+    target.chmod(0o600)
+    return target
+
+
 def main(argv: list[str] | None = None) -> int:
     """Render one destination's configuration and the broker's password file."""
 
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("destination")
+    parser.add_argument("destination", nargs="?")
+    parser.add_argument(
+        "--secret-names",
+        action="store_true",
+        help=(
+            "print the environment variable carrying each role's secret, one per line, so "
+            "that the shell that generates them does not repeat the list"
+        ),
+    )
     arguments = parser.parse_args(argv)
+    if arguments.secret_names:
+        for name in SECRET_NAMES:
+            print(name)
+        return 0
+    if arguments.destination is None:
+        parser.error("a destination is required unless --secret-names is given")
 
     values = {name: os.environ.get(name, "") for name in SECRET_NAMES}
     try:
         rendered = render_destination(arguments.destination, values)
         password_file = write_password_file(values)
+        proxy_file = write_proxy_credentials(arguments.destination, values)
     except ConfigurationError as failure:
         print(str(failure), file=sys.stderr)
         return 2
     print(rendered)
     print(password_file)
+    print(proxy_file)
     return 0
 
 

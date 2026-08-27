@@ -38,7 +38,15 @@ CONFIG_ROOT = REPO_ROOT / "config"
 
 # The roles `deploy/broker/acl` defines. A URL naming anything else is a URL naming a role
 # the broker will refuse, which is worse than naming none: it looks settled.
-ROLES = frozenset({"drogna_sensor", "drogna_ingest", "drogna_control", "drogna_viewer"})
+ROLES = frozenset(
+    {
+        "drogna_sensor",
+        "drogna_ingest",
+        "drogna_control",
+        "drogna_viewer",
+        "drogna_query",
+    }
+)
 
 # Components whose broker URL still names no role, and why. Shrinking this list is the
 # work; adding to it fails the test.
@@ -46,17 +54,6 @@ OUTSTANDING: dict[str, str] = {
     "common": (
         "shared defaults, read by every component. A role here would be the wrong role for "
         "all but one of them, and the per-component file is where the identity belongs"
-    ),
-    "features": (
-        "C-07 is a store. `deploy/broker/acl` lists the control components as C-01 and C-11 "
-        "to C-17 and does not place a store among them; whether the feature store is a "
-        "broker client at all is unsettled, and its configuration carrying a broker section "
-        "is the evidence that it is unsettled rather than that it is one"
-    ),
-    "query": (
-        "C-09 serves reads and is named in no role block. Giving it `drogna_control` would "
-        "grant a read-only surface write access to the whole control namespace, which is "
-        "the cross-contamination C-03 owns as its failure mode"
     ),
 }
 

@@ -91,6 +91,27 @@ user drogna_control
 topic readwrite ctl/#
 topic read obs/#
 
+# --- the query layer (C-09) --------------------------------------------------------------
+#
+# One write and nothing else. C-09 serves reads over HTTP and touches the broker for exactly
+# one purpose: `query/plugins/heartbeat.py` announces that it is alive, so that its box in
+# the shell is lit by a message rather than by a configuration file saying it exists. It
+# subscribes to nothing — freshness reaches it through the query path, not the control
+# branch — so it is given no read rule at all.
+#
+# It is a role of its own rather than `drogna_control`, which carries `readwrite ctl/#`.
+# Handing a read-only query surface write access to the whole control namespace would let
+# the component that answers questions raise a divergence event or command a model run,
+# which is the cross-contamination C-03 owns as its failure mode. It is not `drogna_viewer`
+# either: that identity has no write rule by design (ADR-0008) and giving it one would
+# quietly grant the browser a voice.
+#
+# Added 27 August 2026, when the tracked broker URLs first named the roles they authenticate
+# as and this component turned out to name none that fitted (ADR-0016).
+
+user drogna_query
+topic write ctl/heartbeat
+
 # --- the browser (C-18), through the proxy's upgrade location ---------------------------
 #
 # ADR-0008: subscribe-only on the control namespace, incapable of publishing anywhere, and

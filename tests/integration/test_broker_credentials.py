@@ -39,13 +39,11 @@ import render_credentials  # noqa: E402
 from destination import ConfigurationError  # noqa: E402
 
 # Fixed rather than drawn: Constitution II, and a test whose credentials differ per run
-# cannot be compared with the run before it.
-VALUES = {
-    "HARNESS_BROKER_SECRET_SENSOR": "secret-for-the-sensor-role",
-    "HARNESS_BROKER_SECRET_INGEST": "secret-for-the-ingest-role",
-    "HARNESS_BROKER_SECRET_CONTROL": "secret-for-the-control-role",
-    "HARNESS_BROKER_SECRET_VIEWER": "secret-for-the-viewer-role",
-}
+# cannot be compared with the run before it. Derived from SECRET_NAMES rather than
+# listed, because a role added to the access control list and forgotten here would make
+# every test in this file fail on the renderer's refusal rather than on its subject —
+# which is exactly what happened when the query layer gained a role.
+VALUES = {name: f"secret-for-{name.lower()}" for name in render_credentials.SECRET_NAMES}
 
 
 def _rendered(tmp_path: Path) -> Path:
@@ -70,11 +68,11 @@ def scratch(tmp_path: Path) -> Path:
 def test_the_render_puts_the_role_secret_into_the_url(scratch: Path) -> None:
     directory = render_credentials.render_destination("local", VALUES, scratch)
     document = json.loads((directory / "clock.json").read_text(encoding="utf-8"))
-    assert document["broker"]["url"] == (
-        "mqtt://drogna_control:secret-for-the-control-role@broker:1883"
-    )
+    control = VALUES[render_credentials.ROLE_SECRETS["drogna_control"]]
+    assert document["broker"]["url"] == f"mqtt://drogna_control:{control}@broker:1883"
     sensors = json.loads((directory / "sensors.json").read_text(encoding="utf-8"))
-    assert sensors["broker"]["url"].startswith("mqtt://drogna_sensor:secret-for-the-sensor-")
+    sensor = VALUES[render_credentials.ROLE_SECRETS["drogna_sensor"]]
+    assert sensors["broker"]["url"] == f"mqtt://drogna_sensor:{sensor}@broker:1883"
 
 
 def test_nothing_but_the_broker_url_changes(scratch: Path) -> None:
@@ -192,7 +190,7 @@ def test_a_component_authenticates_with_what_the_render_produced(scratch: Path) 
         section["url"] = section["url"].replace("@broker:1883", f"@127.0.0.1:{port}")
         endpoint = BrokerEndpoint.from_config(section)
         assert endpoint.username == "drogna_control"
-        assert endpoint.password == VALUES["HARNESS_BROKER_SECRET_CONTROL"]
+        assert endpoint.password == VALUES[render_credentials.ROLE_SECRETS["drogna_control"]]
 
         assert str(_connect(port, endpoint.username, endpoint.password)) == "Success", (
             "the rendered credentials were refused; the URL and the password file are "
@@ -242,3 +240,55 @@ def test_no_runtime_and_no_binary_is_a_refusal(monkeypatch: Any) -> None:
     with pytest.raises(ConfigurationError) as raised:
         render_credentials._passwd_command(Path("/tmp/broker/passwd"), None)
     assert "Nothing was written" in str(raised.value)
+
+
+# --- the proxy's credential, the sibling gap ADR-0016 recorded -------------------------
+
+
+def _verifies(entry: str, secret: str) -> bool:
+    """Recompute the hash from the salt the file carries and compare. openssl's own check."""
+    import subprocess as sp
+
+    _, _, digest = entry.partition(":")
+    salt = digest.split("$")[2]
+    produced = sp.run(
+        ["openssl", "passwd", "-apr1", "-salt", salt, secret],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return produced == digest.strip()
+
+
+def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
+    values = dict(VALUES)
+    values[render_credentials.PROXY_SECRET] = "secret-for-the-reader"
+    render_credentials.render_destination("local", values, scratch)
+    written = render_credentials.write_proxy_credentials("local", values, scratch)
+
+    entry = written.read_text(encoding="utf-8").strip()
+    tracked = json.loads(
+        (REPO_ROOT / "config" / "local" / "proxy.json").read_text(encoding="utf-8")
+    )
+    user = tracked["proxy"]["credentials"]["user"]
+    assert entry.startswith(f"{user}:"), "the file must name the identity the configuration does"
+    assert "$apr1$" in entry, "nginx is given an apr1 hash, not a plaintext secret"
+    assert "secret-for-the-reader" not in entry, "the secret itself must not reach the file"
+    assert _verifies(entry, "secret-for-the-reader"), (
+        "the hash does not verify against the secret it was made from, so nginx would "
+        "refuse every reader"
+    )
+    assert not _verifies(entry, "not-the-secret"), (
+        "a wrong secret verified, so this test proves nothing about the right one"
+    )
+    assert written.stat().st_mode & 0o077 == 0, "a credential file is readable by its owner alone"
+
+
+def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:
+    """Absent, this file used to be missing silently and nginx answered 500 behind it."""
+    values = dict(VALUES)
+    values[render_credentials.PROXY_SECRET] = ""
+    render_credentials.render_destination("local", values, scratch)
+    with pytest.raises(ConfigurationError) as raised:
+        render_credentials.write_proxy_credentials("local", values, scratch)
+    assert render_credentials.PROXY_SECRET in str(raised.value)

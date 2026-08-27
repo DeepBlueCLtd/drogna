@@ -46,10 +46,11 @@ sensor needs no rule here and gains no permission.
 
 | Role | May publish | May subscribe |
 |---|---|---|
-| `drogna_sensor` | `obs/#` | `ctl/clock` only |
+| `drogna_sensor` | `obs/#`, `ctl/heartbeat` | `ctl/clock` only |
 | `drogna_ingest` | `ctl/heartbeat`, `ctl/telemetry` | `obs/#`, `ctl/clock` |
 | `drogna_control` | `ctl/#` | `ctl/#`, `obs/#` |
 | `drogna_viewer` | nothing at all | `ctl/#` |
+| `drogna_query` | `ctl/heartbeat` only | nothing at all |
 
 Mosquitto denies by default, so an omission is a denial rather than a hole, and a role with
 no block can do nothing once it has authenticated.

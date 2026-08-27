@@ -108,6 +108,23 @@ jobs:
       - name: Build the client
         run: pnpm build
 
+      # scripts/up.sh validates the destination's configuration before it starts anything,
+      # and that validation is Python: it reads the schemas under contracts/ through
+      # jsonschema and referencing. This job had only Node, so the very first thing the
+      # bring-up did was fail on `ModuleNotFoundError: No module named 'referencing'` — in
+      # well under a second, which is what made three rounds of diagnosis look like a
+      # working-directory problem and then a rendering problem.
+      #
+      # The same two steps ci.yml uses, so the workspace is installed the one way.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install the workspace
+        working-directory: ${{ github.workspace }}
+        run: uv sync --frozen
+
       # Bring the harness up, rather than serving the client on its own.
       #
       # Until now this job served the built client with `vite preview` and nothing else, and

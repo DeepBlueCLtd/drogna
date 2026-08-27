@@ -87,14 +87,19 @@ ensure_secrets() {
   # password file is written from these values, and presenting new ones to a broker whose
   # file was written from the old ones refuses every component. Reset regenerates them,
   # because reset removes the password file too.
-  for role in SENSOR INGEST CONTROL VIEWER; do
-    local name="HARNESS_BROKER_SECRET_${role}"
+  # The role list comes from render_credentials.ROLE_SECRETS, which is derived from the
+  # access control list's blocks. Repeating it here is how a role gets added to the broker
+  # and silently never given a secret, so it is read rather than typed.
+  local names
+  names="$(python3 "${DROGNA_LIB_DIR}/render_credentials.py" --secret-names)" ||
+    fail "could not read the broker role list from render_credentials.py"
+  for name in ${names}; do
     if [ -f "${DROGNA_ENV_FILE}" ] && [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
       eval "${name}=\"$(sed -n "s/^${name}=\\(.*\\)$/\\1/p" "${DROGNA_ENV_FILE}" | tail -n 1)\""
     fi
     if [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
       eval "${name}=\"$(python3 -c 'import secrets; print(secrets.token_hex(24))')\""
-      log "generated a broker secret for ${role} into the untracked environment file"
+      log "generated ${name} into the untracked environment file"
     fi
     eval "export ${name}"
   done

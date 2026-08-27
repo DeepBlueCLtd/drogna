@@ -54,7 +54,7 @@ sensor needs no rule here and gains no permission.
 Mosquitto denies by default, so an omission is a denial rather than a hole, and a role with
 no block can do nothing once it has authenticated.
 
-### The one exception, and why it is here
+### The two exceptions, and why they are here
 
 The sensor and ingest roles may read `ctl/clock`, which FR-14's wording would refuse them.
 Two requirements conflict there — a component with no clock sample can only pace itself on
@@ -62,9 +62,17 @@ the host clock, which Constitution I forbids — and the decision, with what it 
 two-broker fallback, is **ADR-0012**. It is not restated here: a decision recorded twice is
 a decision that will be amended once.
 
-What follows from it for these lists is only this. The property to test is not that a
+The sensor role may also write `ctl/heartbeat`, which the same wording would refuse. Without
+it the heartbeat is denied at the broker — silently, the client's return code being zero for
+a message it accepted locally — so C-04 announces itself to nobody and can never light its
+box in the shell. The decision, and why the forgery objection that had kept it out is not
+held anywhere else in this file, is **ADR-0015**.
+
+What follows from them for these lists is only this. The property to test is not that a
 sensor's subscription to `ctl/#` is refused; it is that subscribing to `ctl/#` delivers the
-clock and nothing else.
+clock and nothing else. And on the write side it is not that the sensor role is refused
+`ctl/`; it is that it is granted exactly `ctl/heartbeat` and refused every other control
+topic by name.
 
 ### A mechanical detail that decides how the lists are tested
 

@@ -183,3 +183,56 @@ adrs:
 # having been looked for.
 
 acknowledged_hostnames: []
+
+# ---------------------------------------------------------------------------
+# The blog's screenshot allowance (FR-015)
+# ---------------------------------------------------------------------------
+#
+# FR-015 asks every entry to carry a screenshot, on the reasoning that an entry shows the
+# feature working rather than asserting that it does. It is a good rule and it stays as it
+# is. But seven of the ten entries published on 27 August 2026 have no image, and the reason
+# differs entry by entry: some describe work with no visual surface at all, and some describe
+# work that could be shown and has not been.
+#
+# So each is listed with its own reason rather than under one sentence covering all seven.
+# `site/gates/check_blog.py` prints every line below on every run, which is what makes this a
+# debt rather than an exemption — an allowance nobody can see is just a rule that stopped
+# applying.
+#
+# What ends an allowance: the entry gains an image, and its line here is deleted. What must
+# not happen is a line being added without a reason, or this block growing quietly. Adding an
+# entry is a decision about FR-015 and belongs in a commit message that says so.
+
+blog:
+  screenshot_allowance:
+    recorded: 2026-08-27
+    entries:
+      a-runner-with-no-list: >-
+        The gates runner reads a list from a file and runs what it names. Its whole subject
+        is that nothing in the runner names a gate, which is a property of a text file and a
+        loop. There is no screen, and the evidence a reader wants is the runner's own output,
+        which the entry quotes.
+      the-gate-that-examined-nothing: >-
+        A gate reporting a file of deliberate violations as clean. The finding is the
+        difference between two command outputs and the entry quotes both; a photograph of a
+        terminal would carry less than the text already does.
+      one-configuration-two-destinations: >-
+        One configuration document rendered for two destinations. The subject is the diff
+        between two rendered files, which the entry shows inline. No component is running in
+        the situation being described.
+      three-ways-to-lose-a-timestamp: >-
+        A spike about how a timestamp is lost between a query and its encoding. The evidence
+        is three request-and-response pairs, quoted in full. This one could gain an image the
+        day the client draws a trajectory, which it does not yet — C-18 has no map surface.
+      the-test-that-isolated-nothing: >-
+        A test that passed because it compared nothing. Shown by the test source and its
+        output before and after; the environment generator writes a NetCDF file and has no
+        display of its own.
+      the-mean-of-magnitudes: >-
+        A seam found in telemetry: a mean of magnitudes answers a different question from the
+        magnitude of a mean. The subject is arithmetic and the entry works it through. The
+        telemetry service publishes indicators the client does not yet render.
+      taking-a-requirements-document-apart: >-
+        How the requirements document was decomposed into features. It is about a document
+        and its structure, and the thing to look at is the specification tree, which the
+        entry lists. This is the one entry whose subject is not a running component at all.

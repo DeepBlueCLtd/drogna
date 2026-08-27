@@ -104,22 +104,37 @@ def feature_directories(repo_root: Path) -> list[str]:
     )
 
 
-def allowance(manifest_path: Path) -> tuple[set[str], str]:
-    """The recorded screenshot allowance: the entries it covers, and how it reads."""
+def allowance(manifest_path: Path) -> tuple[dict[str, str], str]:
+    """The recorded screenshot allowance: the entries it covers, each with its own reason.
+
+    ``entries`` is a mapping of slug to the reason that slug carries no image. It was a bare
+    list until 27 August 2026, when the first seven allowances were recorded and one shared
+    sentence turned out to be the wrong shape: the seven do not have the same reason, and a
+    blanket sentence covering all of them is the thing an allowance is supposed not to be. A
+    list is still accepted, and an entry in one reads as having no reason of its own, which
+    the manifest gate reports.
+    """
     if not manifest_path.is_file():
-        return set(), ""
+        return {}, ""
     loaded = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(loaded, dict):
-        return set(), ""
+        return {}, ""
     recorded = loaded.get("blog", {})
     if not isinstance(recorded, dict):
-        return set(), ""
+        return {}, ""
     entry = recorded.get("screenshot_allowance", {})
     if not isinstance(entry, dict):
-        return set(), ""
-    slugs = {str(slug) for slug in entry.get("entries", []) or []}
-    note = f"recorded {entry.get('recorded', 'undated')}: {entry.get('reason', 'no reason given')}"
-    return slugs, note
+        return {}, ""
+    listed = entry.get("entries") or {}
+    if isinstance(listed, dict):
+        reasons = {str(slug): str(reason).strip() for slug, reason in listed.items()}
+    else:
+        reasons = {str(slug): "" for slug in listed}
+    note = f"recorded {entry.get('recorded', 'undated')}"
+    shared = str(entry.get("reason", "")).strip()
+    if shared:
+        note = f"{note}: {shared}"
+    return reasons, note
 
 
 def image_targets(text: str) -> list[tuple[int, str]]:
@@ -183,7 +198,8 @@ def check_entry(
     images = image_targets(text)
     if not images:
         if slug in allowed:
-            allowances.append(f"{relative}:-: screenshot-allowance: {note}")
+            because = allowed[slug] or "no reason of its own recorded, which is a debt too"
+            allowances.append(f"{relative}:-: screenshot-allowance: {note} — {because}")
         else:
             findings.append(
                 Finding(

@@ -60,4 +60,19 @@ sensitivity; it is a statement about what the data model admits, which is
 environmental measurements, forecast fields, uncertainty fields, sampling
 recommendations and system telemetry, and nothing else.
 
+## How it announces itself, and the rule that nearly stopped it
+
+The sensors publish observations on the observation branch and one control message: a
+heartbeat, which is the only reason a box for this component can be lit in the
+[browser client](c18-browser-client.md). Until 27 August 2026 the broker's access control
+list refused that heartbeat, giving this role a write on the observation branch and nothing
+else — so the component announced itself to nobody and could never light, however it was
+wired. It was refused silently, too: the broker denies the publish while the client library
+still reports success, so the component believed it had been heard.
+
+**ADR-0015** grants the role that one topic and says why the objection that had kept it out
+— that a sensor could then forge a heartbeat — was not a property the list held anywhere
+else. Every other control topic is still refused to this role, each named individually so
+that a rule which widened would be caught by the topic it let through.
+
 **Requirements:** FR-16, FR-17. **Feature:** 007.

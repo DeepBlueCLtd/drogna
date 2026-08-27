@@ -71,22 +71,29 @@ def test_the_sensors_publish_observations_and_a_heartbeat_through_a_real_broker(
 
 
 @lb.skip_without_broker()
-def test_the_sensor_heartbeat_is_refused_by_the_access_control_list(
+def test_the_sensor_announces_itself_and_the_broker_lets_it(
     broker: lb.LocalBroker, tmp_path: Path
 ) -> None:
-    """A finding, recorded as a test rather than left to be discovered again.
+    """The decision ADR-0015 took, asserted against a real broker and its real rules.
 
-    ``deploy/broker/acl`` gives ``drogna_sensor`` ``topic write obs/#`` and nothing else, so
-    the heartbeat this component publishes on ``ctl/heartbeat`` is refused at the broker. It
-    is refused silently: Mosquitto denies the publish and the client's local return code is
-    still zero, so the component reports success and the message reaches nobody. C-04 is
-    therefore a component that cannot light its box in the shell however it is wired.
+    Until 27 August 2026 this test asserted the opposite. ``deploy/broker/acl`` gave
+    ``drogna_sensor`` ``topic write obs/#`` and nothing else, so the heartbeat this component
+    publishes on ``ctl/heartbeat`` was refused — and refused silently, because Mosquitto
+    denies the publish while the client's local return code stays zero. The component
+    reported success, nothing heard anything, and C-04 could not light its box in the shell
+    however it was wired.
 
-    Nothing here changes that. Wiring the other nine components did not cause it and fixing
-    it is a decision about the access control list — either the sensor role gains
-    ``topic write ctl/heartbeat``, or heartbeats stop being a thing sensors publish — which
-    belongs to whoever owns FR-14 and ADR-0012 rather than to this work. This test fails the
-    day that decision is taken, which is the point of writing it down.
+    The old test carried its own replacement instruction: it failed the day the decision was
+    taken. ADR-0015 took it, on the grounds that the forgery objection the ACL made was not
+    held anywhere else — ``drogna_control`` carries ``readwrite ctl/#``, so nine components
+    could already forge any heartbeat including a sensor's — while the cost was a permanent
+    untruth in the one display whose purpose is that a box lights only when something was
+    genuinely heard from.
+
+    What is asserted here is the grant, and nothing wider than the grant. That the branch is
+    still closed to this role in every other direction is
+    ``tests/integration/test_topic_isolation.py``'s job, and it checks each refused topic by
+    name against a running broker.
     """
     document = lb.component_configuration(COMPONENT, tmp_path, broker=broker, role=lb.SENSOR_ROLE)
     document["sensors"]["sampling"]["maximum_samples"] = 1
@@ -104,7 +111,9 @@ def test_the_sensor_heartbeat_is_refused_by_the_access_control_list(
         )
         collected = watcher.wait_for(1)
 
-    assert collected.components(HEARTBEAT_TOPIC) == set(), (
-        "the sensor heartbeat now reaches the broker; deploy/broker/acl must have gained a "
-        "write rule for drogna_sensor on ctl/heartbeat, so delete this test and say so"
+    assert collected.components(HEARTBEAT_TOPIC) == {COMPONENT}, (
+        "the sensor heartbeat did not reach the broker. deploy/broker/acl must give "
+        "drogna_sensor `topic write ctl/heartbeat` (ADR-0015); without it Mosquitto denies "
+        "the publish, the client's return code is still zero, and C-04 stays dark while "
+        "believing it announced itself"
     )

@@ -149,6 +149,7 @@ So the runner takes `--registry PATH`, and its tests use it:
 ```python
 DIRTY = "python3 -c 'print(\"probe: 1 violation(s).\"); raise SystemExit(1)'"
 
+
 def test_a_failing_gate_fails_the_run(tmp_path: Path) -> None:
     """The assertion the rest depend on: the runner can report a failure."""
     result = run("--registry", registry(tmp_path, f"probe|{DIRTY}"), "--no-inventory")

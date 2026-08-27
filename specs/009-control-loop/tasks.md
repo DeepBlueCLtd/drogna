@@ -370,10 +370,14 @@ passed, because no test crossed. These tasks are the repair and what it uncovere
   `contracts/schemas/coverage-run-manifest.schema.json`, which Constitution III requires and
   `stores/coverage/layout.md` records as an outstanding gap. Its absence is why the shape is
   stated twice, in the publisher that writes it and the catalogue that reads it.
-- [ ] T056 [US4] Put staging on the volume the coverage store is on. Both destinations name
+- [x] T056 [US4] Put staging on the volume the coverage store is on. Both destinations name
   a staging directory that no Compose volume mounts, so the model runner writes into its own
   container and the publisher sees nothing; and a move between volumes is a copy, which the
   publisher refuses rather than performing non-atomically. This belongs with T042.
+  Done: staging is `staging/` inside the coverage store, named by
+  `query.coverage_store.staging_dirname`, recorded in `stores/coverage/layout.md` and
+  admitted at the store root by `stores/coverage/validate_layout.py`. The model runner and
+  the publisher mount `coverage-data` writable; every other reader mounts it read-only.
 
 ---
 

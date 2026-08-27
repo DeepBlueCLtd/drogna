@@ -15,9 +15,13 @@
  * a comparability field would therefore refuse every pair the mechanism can produce. So it
  * is recorded on both sides, reported in the difference summary, and left out of the
  * refusal — while the run identifier, which is what says the two halves came from the same
- * seeded run at all, is a comparability field and does refuse. FR-009 names simulation
- * time among the fields a fingerprint carries and this carries it; what it cannot also be
- * is a field whose difference refuses, without contradicting FR-007.
+ * seeded run at all, is a comparability field and does refuse.
+ *
+ * FR-009 now says this outright: it names the two field sets separately and records that
+ * refusing on simulation time would be unsatisfiable rather than merely strict. This
+ * comment used to argue the case, because the requirement then read as though simulated
+ * time ought to refuse and the code deliberately did not. The argument was accepted and
+ * the specification amended, so what is left here is a description rather than a defence.
  *
  * Pure. No browser, no filesystem, no clock. That is what lets the fingerprint tests
  * exercise every refusal without a running client, which is the only way the refusals get

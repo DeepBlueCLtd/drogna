@@ -60,9 +60,17 @@ interface over the transport without one is the exact move Constitution VI forbi
   exists to avoid, and resolve the standard-name table over the network, which FR-016
   forbids. `conformance.py` checks every rule the primer says the file follows, and a test
   asserts the primer and the check agree. See the module docstring for the argument.
-- **The Compose service mounts the coverage store read-only** and does not yet mount a
-  staging area or a ledger directory. `deploy/` belongs to feature 005; the two volumes this
-  component needs are a task for whoever next touches it.
+- **The recorded run this packages has no writer yet.** The source directory is the run
+  store: the clock writes `run-manifest.json` into it and this component reads that plus an
+  observation stream beside it, one JSON document per line. Nothing writes that stream
+  today, so the packager reads a manifest and finds no observations. The gap is real and is
+  recorded here rather than papered over with a fixture; what is now true is that when
+  something does write it, the two components are looking at the same directory on the same
+  volume. The Compose service mounts the run store read-only, its own staging and ledger
+  volume writable, and the released surface read-only — the last so that FR-42 is enforced
+  by the platform and not only by the startup check in `config.py`. It no longer mounts the
+  coverage store: this component names no directory inside it, and the read-only mount it
+  carried was a guess that nothing was comparing against the configuration.
 
 ## The primer
 

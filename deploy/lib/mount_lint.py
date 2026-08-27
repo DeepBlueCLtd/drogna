@@ -2,10 +2,13 @@
 """Every container directory a component names must be somewhere the deployment mounts.
 
 A component reads its directories from the file named by HARNESS_CONFIG (Constitution IV),
-and the deployment decides what is mounted where. Nothing has been comparing the two, and
-they had drifted apart almost completely: of the fifteen container directories the local
-destination's component configurations name, fourteen were under no declared container path
-and so under no volume.
+and the deployment decides what is mounted where. Nothing was comparing the two, and they
+had drifted apart almost completely: of the fifteen container directories the local
+destination's component configurations named, fourteen were under no declared container path
+and so under no volume. They are all under one now — one named volume per store, mounted at
+the container path ``deployment.container_paths`` declares for it — and this check is
+registered in ``scripts/gates.registry`` for both destinations so that the fifteenth cannot
+appear quietly.
 
 The failure this prevents is quiet in the worst way. A directory that is not mounted still
 *exists* inside a container — it is created on the container's own writable layer — so a

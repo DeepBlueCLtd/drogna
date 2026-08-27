@@ -325,16 +325,51 @@ def _write_upstream(directory: Path, collections: Sequence[str], documents: Sequ
     directory.chmod(0o755)
 
 
+def _container_diagnosis(container: str) -> str:
+    """Why a container is not answering, in the words of the container itself.
+
+    Without this the timeout below says only that nothing answered, which is true of a
+    configuration nginx rejected, an image that exited immediately, a port that was never
+    published and a process still starting — four different faults with one symptom. On a
+    machine with no Docker daemon these tests skip, so this message may be the only account
+    anyone gets of a failure that happens elsewhere. It is worth the twenty lines.
+    """
+    parts: list[str] = []
+    state = _run(
+        ["docker", "inspect", "-f", "{{.State.Status}} exit={{.State.ExitCode}}", container],
+        check=False,
+    )
+    parts.append(f"  state: {state.stdout.decode('utf-8', errors='replace').strip() or 'unknown'}")
+    logs = _run(["docker", "logs", "--tail", "40", container], check=False)
+    combined = logs.stdout.decode("utf-8", errors="replace")
+    combined += logs.stderr.decode("utf-8", errors="replace")
+    lines = [line for line in combined.splitlines() if line.strip()]
+    if lines:
+        parts.append("  last lines of its log:")
+        parts.extend(f"    {line}" for line in lines[-40:])
+    else:
+        parts.append("  it wrote nothing to its log at all")
+    return "\n".join(parts)
+
+
 def _wait_for(boundary: Boundary, path: str) -> None:
     deadline = time.monotonic() + _READY_TIMEOUT  # harness:allow-wallclock test harness setup
+    last: str | None = None
     while time.monotonic() < deadline:  # harness:allow-wallclock test harness setup
         try:
             if boundary.request(path, clearance=None).status in (401, 404, 200):
                 return
-        except OSError:
-            pass
+        except OSError as error:
+            last = f"{type(error).__name__}: {error}"
         time.sleep(0.25)  # harness:allow-wallclock test harness setup; waiting on a container
-    raise RuntimeError(f"the proxy never answered on {path}")
+    raise RuntimeError(
+        f"the proxy never answered on {path} within {_READY_TIMEOUT:.0f}s.\n"
+        f"  last error from the client: {last or 'none — it answered, with an unexpected status'}\n"
+        f"proxy container {boundary.proxy_container}:\n"
+        f"{_container_diagnosis(boundary.proxy_container)}\n"
+        f"upstream container {boundary.upstream_container}:\n"
+        f"{_container_diagnosis(boundary.upstream_container)}"
+    )
 
 
 def _published_port(container: str, port: int) -> int:
@@ -370,7 +405,22 @@ def start_boundary(
     proxy_directory = tmp_path / "proxy"
     proxy_directory.mkdir(parents=True, exist_ok=True)
     settled = json.loads(json.dumps(document))
-    settled["proxy"]["upstream"]["query"]["url"] = f"http://{upstream_container}:8080"
+    # Every upstream is repointed at the stub, not just the one the tests read through.
+    #
+    # nginx resolves a literal host in `proxy_pass` when it *starts*, not when a request
+    # arrives, and it refuses to start if the name does not resolve. The control-namespace
+    # location names the broker, which has no container on this network — so leaving that
+    # upstream at its configured value killed nginx before it served anything, and every
+    # case in the matrix failed with the boundary never answering. Nothing here requests
+    # the upgrade path itself; what is asserted about it is that `/ctl/anything` is
+    # refused, which falls to `location /` and never reaches this upstream.
+    #
+    # Written as a loop over whatever upstreams the document declares, so that an upstream
+    # added later is settled by having been declared rather than by someone remembering
+    # this. That is the mistake being fixed, and it is worth not making it twice.
+    for upstream in settled["proxy"]["upstream"].values():
+        if isinstance(upstream, dict) and "url" in upstream:
+            upstream["url"] = f"http://{upstream_container}:8080"
     settled["proxy"]["upstream"]["query"]["collection_path"] = COLLECTION_PATH
     settled["proxy"]["credentials"]["file"] = "/etc/drogna/proxy.htpasswd"
     settled["proxy"]["tls"]["enabled"] = False

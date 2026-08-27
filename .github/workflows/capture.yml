@@ -133,7 +133,7 @@ jobs:
       - name: Bring the harness up
         id: stack
         continue-on-error: true
-        working-directory: .
+        working-directory: ${{ github.workspace }}
         env:
           # Reasoned from deploy/compose.yaml rather than observed. The client needs the
           # proxy, because its broker URL is the proxy's upgrade location (ADR-0008); the
@@ -146,8 +146,14 @@ jobs:
 
       - name: Say what came up
         if: always()
-        working-directory: .
+        working-directory: ${{ github.workspace }}
         run: |
+          # Where this ran and what the bring-up concluded, stated rather than inferred.
+          # Two rounds were spent guessing at a step that failed in under a second, and a
+          # step that reports its own working directory would have answered it at once.
+          echo "working directory: $(pwd)"
+          echo "bring-up outcome: ${{ steps.stack.outcome }}"
+          echo
           if [ "${{ steps.stack.outcome }}" = "success" ]; then
             echo "The stack is up. Services and their state:"
           else
@@ -253,7 +259,7 @@ jobs:
       # rather than a second spelling of it.
       - name: Take the harness down
         if: always()
-        working-directory: .
+        working-directory: ${{ github.workspace }}
         run: ./scripts/down.sh local || true
 
       # The retention period is declared here and in the capture configuration, and they say

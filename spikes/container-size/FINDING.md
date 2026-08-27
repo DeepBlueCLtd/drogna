@@ -310,6 +310,18 @@ configuration rather than a fact about the software.
 
 ## 6. Fewer containers
 
+**Decided, 27 August 2026: not pursued.** The service count stays as it is. The reason is
+§5b — a running stack holds 84 MiB against 2560 MiB of ceilings, and a `full` stack is
+about 460 MiB rather than the 7168 MiB it declares, so there is no resource problem for
+consolidation to solve. Consolidating would have been a simplification bought with the
+pinned Postgres digest, the architecture the Compose file exists to demonstrate, and — for
+the one-process variant — the honesty of the liveness display. None of that was worth
+paying for a saving that turned out not to be needed.
+
+The options are left below rather than deleted, because the decision rests on a
+measurement, and a measurement can move. If the seventeen-service stack ever does outgrow
+its host, option 3 is where to start, and it is the one that costs least.
+
 Three options, in increasing order of what they cost:
 
 1. **Use the profiles that already exist.** The droplet runs `core` today — one service.
@@ -390,6 +402,9 @@ fixed, because this spike changes nothing.
 ## Handover
 
 In the order the evidence supports, cheapest first:
+
+*Section 6 is decided and closed: the service count stays as it is (§6). The rows below
+are about image bytes and configuration, which that decision does not touch.*
 
 | Do this | Worth | Costs |
 |---|---|---|

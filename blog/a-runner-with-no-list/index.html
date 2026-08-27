@@ -1974,6 +1974,7 @@ gates say is worse than no runner, because it looks like assurance.</p>
 <p>So the runner takes <code>--registry PATH</code>, and its tests use it:</p>
 <div class="highlight"><pre><span></span><code><span class="n">DIRTY</span> <span class="o">=</span> <span class="s2">"python3 -c 'print(</span><span class="se">\"</span><span class="s2">probe: 1 violation(s).</span><span class="se">\"</span><span class="s2">); raise SystemExit(1)'"</span>
 
+
 <span class="k">def</span><span class="w"> </span><span class="nf">test_a_failing_gate_fails_the_run</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""The assertion the rest depend on: the runner can report a failure."""</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="s2">"--registry"</span><span class="p">,</span> <span class="n">registry</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"probe|</span><span class="si">{</span><span class="n">DIRTY</span><span class="si">}</span><span class="s2">"</span><span class="p">),</span> <span class="s2">"--no-inventory"</span><span class="p">)</span>

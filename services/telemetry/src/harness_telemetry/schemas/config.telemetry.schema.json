@@ -159,7 +159,7 @@
           "columns": 16
         },
         "coverage": {
-          "root_directory": "/data/coverage",
+          "root_directory": "/var/lib/drogna/coverage",
           "current_pointer": "current",
           "runs_dirname": "runs",
           "forecast_file": "forecast.nc"

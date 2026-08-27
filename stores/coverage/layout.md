@@ -15,6 +15,8 @@ harness would be demonstrating something other than what it claims.
 ```text
 <root>/
 ├── current                       the pointer: one run identifier, one line
+├── staging/                      runs being assembled; never catalogued, never served
+│   └── run-000002-3c5d9275107d/
 └── runs/
     ├── run-000000-7f80b47c7b91/
     │   ├── forecast.nc           the forecast field, CF-conventions NetCDF
@@ -24,6 +26,11 @@ harness would be demonstrating something other than what it claims.
         └── ...
 ```
 
+Those three names — and nothing else — are what the root holds.
+`stores/coverage/validate_layout.py` reports anything else at the root as a fault, because a
+stray file there is either a half-finished operation nobody cleaned up or a second writer
+nobody knew about.
+
 Every name in that tree except the run identifiers is a configuration value, under
 `query.coverage_store` in `config/<destination>/query.json`. The names above are the values
 both destinations carry, and the destination parity check is what keeps them the same. They
@@ -32,6 +39,22 @@ component source; they are nevertheless a convention, and a destination that cha
 would no longer be running the same system.
 
 `<root>` is `query.coverage_store.root`. The query layer mounts it read-only.
+
+## Why staging is inside the store
+
+The model runner writes a run into `staging/` and the publisher makes it visible by renaming
+it into `runs/`. A rename is indivisible only within one filesystem: between two volumes it
+is a copy, which is not, and the publisher refuses it rather than performing it
+non-atomically. So `staging/` is a directory of this store and shares its volume. It is not
+tidier to give it a volume of its own — it is a deployment in which nothing can ever be
+published, and the failure appears only when a run is first published rather than when the
+deployment starts.
+
+The consequence for the deployment is that the coverage volume is mounted **writable** in
+the model runner and the publisher, and read-only everywhere else: the query layer, the
+monitor, the planner and telemetry all read published fields and write nothing.
+`deploy/lib/mount_lint.py` is the gate that keeps every directory named here under a path
+the deployment actually mounts.
 
 ## Run identifiers
 

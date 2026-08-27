@@ -1,0 +1,15 @@
+# The coupling that is argued for rather than merely present. The marker carries a reason
+# and the reason is what a reviewer reads in the exemption inventory.
+[project]
+name = "probe-borrower"
+version = "0.1.0"
+description = "A stand-in component whose borrowing has been argued"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    # harness:allow-service-dependency the lender authors this and has no library home yet
+    "probe-lender",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe_borrower"]

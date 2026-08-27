@@ -28,8 +28,9 @@ step at a time.
 
 The **coverage output is a genuine port** under Constitution VI: NetCDF today, plausibly
 Zarr later, and this component is one of its consumers alongside the environment generator
-and the model runner. The encoder itself is `harness_core.netcdf.encode_netcdf` — one
-implementation, three consumers, no second copy.
+and the model runner. The encoder itself is `harness_core.netcdf.encode_netcdf` and the
+reader beside it is `harness_core.netcdf.read_netcdf` — one implementation of each, several
+consumers, and no second copy inside this package.
 
 The **clock is a genuine port**, with three implementations already.
 
@@ -42,13 +43,18 @@ interface over the transport without one is the exact move Constitution VI forbi
 
 ## Loose ends, recorded rather than hidden
 
-- **The classic-format reader is still in a service.** `encode_netcdf` moved to
-  `harness_core` when this package became its third consumer. The corresponding reader,
-  `harness_monitor.netcdf.read_netcdf`, did not move, so this package depends on
-  `harness-monitor` to read back the file it has just written. There are three readers of
-  this format in the repository — the monitor's, the query layer's and, transitively, this
-  one — where there is now exactly one writer. Moving the reader beside the encoder is the
-  obvious next step and belongs to whichever feature next touches the monitor.
+- **The query layer still has its own reader.** `encode_netcdf` moved to `harness_core`
+  when this package became its third consumer, and `read_netcdf` followed it out of the
+  divergence monitor once this package's conformance check and the planner's spread reader
+  were both importing it across a service boundary. This package now reads and writes the
+  format through `harness_core.netcdf` and depends on no service to do it, which is what
+  `scripts/check_service_dependencies.py` enforces from here on. What remains is
+  `query/plugins/netcdf_reader.py`: a second parser, kept deliberately, because the query
+  layer's image installs pygeoapi and cannot carry the workspace packages. That is a
+  dependency argument rather than an oversight, and it is recorded in that module's
+  docstring — but it does mean two parsers can still disagree about a file the writer
+  produces, and the primer example in `site/docs/standards/cf-conventions.md` is run in CI
+  partly to keep them honest.
 - **The CF conformance check is written here rather than taken off the shelf.** The
   standard checkers read through a NetCDF library, which is the dependency the writer
   exists to avoid, and resolve the standard-name table over the network, which FR-016

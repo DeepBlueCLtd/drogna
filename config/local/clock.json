@@ -48,7 +48,7 @@
       "code_dirty": true
     },
     "manifest": {
-      "directory": "/data/run",
+      "directory": "/var/lib/drogna/run",
       "file": "run-manifest.json"
     }
   }

@@ -56,10 +56,10 @@ from pathlib import Path
 from typing import Any
 
 from harness_core.clock import ClockMode, ManualClock, SimInstant
+from harness_core.netcdf import read_netcdf
 from harness_core.rng import configure_run
 from harness_env_generator.evaluator import Evaluator
 from harness_env_generator.features.kernels import LocalPlane, gaussian
-from harness_monitor.netcdf import read_netcdf
 from harness_sensors.sensor import Instrument, Platform, Position, SensorArray
 
 __all__ = [

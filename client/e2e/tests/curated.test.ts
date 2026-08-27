@@ -18,11 +18,14 @@
  * **A provenance record beside each.** With no path, no hostname and no user name in it,
  * which `provenance.test.ts` checks the writer for and this checks the committed files for.
  *
- * **One named exception, which cannot grow.** `shell-all-dark.png` was taken by hand before
- * this feature existed: it is a full-page capture at a different size and it has no
- * provenance record, because one cannot honestly be written for a shot nobody recorded. It
- * is listed below by name. A second unprovenanced image fails this test, which is the point
- * of listing the first rather than filtering by shape.
+ * **No exceptions.** There was one: `shell-all-dark.png`, taken by hand before this feature
+ * existed — full-page, at a different size, with no provenance record, because one cannot
+ * honestly be written for a shot nobody recorded. It was carried here as a named list of
+ * one rather than as a filter by shape, so that removing it would be the fix and adding to
+ * it would need an argument. It has since been re-taken through the curated mechanism as
+ * `003-shell-all-dark.png`, with a record, and the list is gone rather than empty: every
+ * image in the published location is now held to every check below, and an image without a
+ * provenance record fails the second test whatever it is called.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -36,14 +39,6 @@ import { loadCaptureConfigFrom } from "../shared/config";
 const repositoryRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const capture = loadCaptureConfigFrom(join("config", "local", ["capture", "json"].join(".")));
 const published = join(repositoryRoot, capture.area("published"));
-
-/**
- * Images in the published location that predate this feature's convention.
- *
- * Not a filter and not a pattern: a list of names. Debt, recorded, so that removing an
- * entry is the fix and adding one needs an argument.
- */
-const PREDATING_THE_CONVENTION = ["shell-all-dark.png"];
 
 /** A PNG's pixel dimensions, from its IHDR chunk. Twenty-four bytes, no dependency. */
 function dimensions(path: string): { width: number; height: number } {
@@ -62,7 +57,7 @@ describe("the published-screenshot location", () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
-  it("holds exactly the images that predate the convention, and no more", () => {
+  it("holds no image without a provenance record", () => {
     const unprovenanced = images.filter(
       (name) => !readdirSync(published).includes(`${name.replace(/\.png$/, "")}.provenance.json`),
     );
@@ -71,14 +66,11 @@ describe("the published-screenshot location", () => {
       "an image in the published-screenshot location has no provenance record. Either it " +
         "was produced by the curated mechanism, in which case its record was left behind, " +
         "or it was added by hand, in which case nobody can take it again (FR-016).",
-    ).toEqual([...PREDATING_THE_CONVENTION].sort());
+    ).toEqual([]);
   });
 
   it("names each curated image <feature-number>-<slug>.png", () => {
     for (const name of images) {
-      if (PREDATING_THE_CONVENTION.includes(name)) {
-        continue;
-      }
       expect(name, `${name} does not follow feature 015's naming convention`).toMatch(
         /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.png$/,
       );
@@ -87,14 +79,12 @@ describe("the published-screenshot location", () => {
 });
 
 describe("every curated image", () => {
-  const curated = images.filter((name) => !PREDATING_THE_CONVENTION.includes(name));
-
   it("has the same dimensions as every other, at the configured viewport and scale", () => {
     const expected = {
       width: capture.viewport.width * capture.viewport.deviceScaleFactor,
       height: capture.viewport.height * capture.viewport.deviceScaleFactor,
     };
-    for (const name of curated) {
+    for (const name of images) {
       expect(
         dimensions(join(published, name)),
         `${name} is not ${expected.width}x${expected.height}. One fixed viewport and one ` +
@@ -109,13 +99,13 @@ describe("every curated image", () => {
 
   it("is within the size budget a repository can keep for ever", () => {
     const budget = capture.section<{ maximum_bytes: number }>("curated").maximum_bytes;
-    for (const name of curated) {
+    for (const name of images) {
       expect(readFileSync(join(published, name)).length, `${name}`).toBeLessThanOrEqual(budget);
     }
   });
 
   it("has a provenance record that records the same viewport and scale factor it was taken at", () => {
-    for (const name of curated) {
+    for (const name of images) {
       const record = JSON.parse(
         readFileSync(join(published, `${name.replace(/\.png$/, "")}.provenance.json`), "utf8"),
       ) as Record<string, unknown>;
@@ -131,7 +121,7 @@ describe("every curated image", () => {
   });
 
   it("has a provenance record containing no path, hostname or user name", () => {
-    for (const name of curated) {
+    for (const name of images) {
       const path = join(published, `${name.replace(/\.png$/, "")}.provenance.json`);
       const record = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
       expect(leaks(record), `${name}'s provenance record`).toEqual([]);

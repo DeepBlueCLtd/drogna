@@ -33,7 +33,7 @@
       "description": "A simulated sampling platform. A coordinate and a sampler."
     },
     "field": {
-      "directory": "/data/environment",
+      "directory": "/var/lib/drogna/environment",
       "manifest_file": "environment.manifest.json"
     },
     "sampling": {

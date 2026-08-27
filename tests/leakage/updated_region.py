@@ -45,12 +45,14 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
-# The one classic-NetCDF reader in this repository. It lives under `query/` because the
-# query layer was the first component to need it; a second decoder here would be a second
-# opinion about a file format, which is how two readers come to disagree about what a
-# coverage says. It belongs beside `harness_core.netcdf`, which is where the *encoder* moved
-# when it acquired a third consumer, and moving it is feature 008's call rather than this
-# one's.
+# The query layer's own classic-NetCDF reader, used here rather than copied: a third decoder
+# would be a third opinion about a file format, which is how readers come to disagree about
+# what a coverage says. It is not the same reader as `harness_core.netcdf.read_netcdf` — the
+# encoder moved to harness_core when it acquired a third consumer and the reader followed it
+# out of the monitor — and it stays separate for a stated reason: the query layer's image
+# installs pygeoapi, which pins a Pydantic major version this workspace cannot carry, so a
+# plugin that imported a workspace package would not run in the image it ships in. This
+# scanner reads what the query layer serves, so it reads it the way the query layer does.
 if str(REPOSITORY_ROOT / "query") not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT / "query"))
 

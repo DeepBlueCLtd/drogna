@@ -76,6 +76,34 @@ others. Where two features need the same file, the earlier-numbered feature owns
 and the later one consumes it. Shared additions to `contracts/` are made by the
 feature that first needs the shape, and are additive.
 
+## Dependency direction
+
+`libs/` is imported by anything. `services/` is imported by nothing. A package under
+`services/` is one of the harness's C-numbers, and what makes it a component rather than a
+module is that nothing else in the repository is built on top of it: the moment one service
+imports another, the imported one has consumers it cannot see and private details that have
+quietly become somebody else's contract.
+
+Where two components need the same shape, the shape moves to `libs/` — or to `stores/`,
+where it is about a store's layout rather than about code. This has happened twice and both
+times the shape sat inside a service for a while first: `encode_netcdf` in the environment
+generator until three components wrote NetCDF, and `read_netcdf` in the divergence monitor
+until the offload packager and the planner were both reaching across a boundary for it.
+Both are in `harness_core.netcdf` now.
+
+`scripts/check_service_dependencies.py` is the gate. It reports a dependency declared in a
+service's `pyproject.toml` on another service, and — the worse case — an import across a
+service boundary that no `pyproject.toml` records, which resolves at run time only because
+the workspace installs every member. A coupling that is genuinely right carries
+`# harness:allow-service-dependency <reason>` on the dependency line and appears in the
+exemption inventory. The four that exist today all borrow a *decision* rather than a
+mechanism: the environment generator's evaluator, taken by the planner (ADR-0002's one
+evaluation of the decorrelation timescale) and by the sensors (a sensor samples the field
+the generator authored); the generator's account of what a stored field is — its widths, its
+CF version, its digest spelling — taken by the model runner; and the monitor's coverage read
+port, taken by telemetry. Each is a shape with one author and no library home yet, and the
+inventory is the list of work outstanding rather than a list of permissions granted.
+
 ## Naming and identifiers
 
 - Python packages: `snake_case`, importable as `harness_core`, `harness_<service>`.

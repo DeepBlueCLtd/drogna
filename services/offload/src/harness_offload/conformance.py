@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 
-from harness_monitor.netcdf import NetcdfError, NetcdfFile, read_netcdf
+from harness_core.netcdf import NetcdfError, NetcdfFile, read_netcdf
 
 from harness_offload.attributes import offending_value
 from harness_offload.version import CONVENTIONS, FEATURE_TYPE

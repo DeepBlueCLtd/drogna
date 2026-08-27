@@ -1,5 +1,5 @@
 {
-  "image": "016-three-mechanisms-one-browser.png",
+  "image": "003-shell-all-dark.png",
   "seed": 20260826,
   "simTime": "not heard",
   "viewport": {
@@ -14,5 +14,5 @@
   },
   "clockPinned": "no clock answered: no ctl/clock sample had arrived, so there was no rate to pin and simulated time was not advancing",
   "litComponents": [],
-  "caption": "The component shell at the fixed blog viewport, every one of the eighteen components dark because nothing has been heard from."
+  "caption": "The component shell as the client draws it with nothing running: every component box dark and labelled NOT HEARD FROM, above a line reading 0 of 18 components heard from within the window each declared."
 }

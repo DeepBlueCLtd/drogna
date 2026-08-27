@@ -28,7 +28,7 @@
   },
   "offload": {
     "source": {
-      "directory": "/var/lib/drogna/runs/current",
+      "directory": "/var/lib/drogna/run",
       "observations_file": "observations.jsonl",
       "run_manifest_file": "run-manifest.json"
     },

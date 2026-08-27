@@ -149,12 +149,12 @@ unmitigated pair from committed fixtures; assert both bounds.
 - [ ] T036 [P] [US4] Create `tests/leakage/fixtures/unmitigated_pair/` as a deliberate control — the same run with the whole-domain rewrite disabled, so only cells near recent measurements are refreshed. Document it as deliberately leaky.
 - [ ] T037 [P] [US4] Write `tests/leakage/test_updated_region.py` asserting the mitigated statistic is at or below the chance bound *and* the unmitigated statistic is at or above the detection bound, failing the run if the control is not detected (FR-016).
 - [ ] T038 [P] [US4] Add inconclusive-case tests: an empty change mask, a pair of products on different grids, a pair with different variable sets, and a run whose measurement geometry does not span more than the identification radius. Each must fail as inconclusive, never pass (FR-017).
-- [ ] T039 [P] [US4] Add a case in which an age-driven variable is present in the released set, asserting the statistic rises above the chance bound and the test fails (FR-014, spec US4 scenario 3).
+- [ ] T039 [P] [US4] Add a case in which an age-driven variable is present in the released set, asserting the *worst* statistic rises above the detection bound and names `observation_age`, while the union stays below the chance bound — a union-only gate would pass this pair (FR-014, FR-015, spec US4 scenario 3, ADR-0013).
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] Implement the change mask in `tests/leakage/updated_region.py`: cells whose released value differs by more than the configured quantisation step, computed per released variable and unioned (FR-015).
-- [ ] T041 [US4] Implement the recovery statistic: rasterise the measurement geometry to the product grid, buffer it by the identification radius, and score how well mask membership predicts buffered-geometry membership. Report the figure, the bounds and the cell counts on both sides (FR-015).
+- [ ] T040 [US4] Implement the change mask in `tests/leakage/updated_region.py`: cells whose released value differs by more than the configured quantisation step, computed per released variable, then scored both as a union and per variable, with the worst acted on and its variable named (FR-015, ADR-0013).
+- [ ] T041 [US4] Implement the recovery statistic: rasterise the measurement geometry to the product grid, buffer it by the identification radius, and score how well mask membership predicts buffered-geometry membership. Report every figure — the union and each variable — the variable the worst came from, the bounds and the cell counts on both sides (FR-015, FR-016).
 - [ ] T042 [US4] Add the inconclusive detection: empty mask, mismatched grid or variable set, and insufficient geometry span, each returning an explicit inconclusive outcome that the test treats as failure (FR-017).
 
 **Checkpoint**: Both leakage paths named in SRD FR-42 are held by tests that can fail.
@@ -249,3 +249,37 @@ gate (US4). Nothing later weakens anything earlier.
 - The template emits no protocol-upgrade location. If the client is later required to
   reach the broker through this proxy, that is a change to FR-021 and to the SRD, not a
   configuration tweak.
+
+---
+
+## Outcome
+
+### The leakage statistic is scored per released variable, not only over the union — settled
+
+**Resolved 2026-08-27. This is no longer a deviation: FR-015 and FR-016 were amended to
+require what `tests/leakage/updated_region.py` builds.**
+
+T040 was written against an FR-015 that spoke of "the change mask" in the singular. The
+implementation computes a mask per released variable, scores the union *and* each variable on
+its own, and acts on the worst — recorded in the module docstring as "a deliberate
+strengthening of FR-015 rather than a reading of it".
+
+The strengthening was right and the requirement was wrong. `tests/leakage/fixtures/age_driven_pair/`
+is the measurement: the union scores **0.105**, below the 0.15 chance bound, while
+`observation_age` alone scores **1.000**, above the 0.6 detection bound. A whole-domain
+rewrite masks nearly every cell and drowns an age-driven field that is the buffered sampling
+geometry exactly. A union-only gate reports that pair as mitigated. US4 scenario 3 already
+required it to fail, so the singular wording contradicted this feature's own acceptance
+scenario before it contradicted the code.
+
+FR-015 now requires the per-variable masks, the union, a statistic for each, and the worst as
+the figure the gate acts on; FR-016 asserts both bounds against that worst figure and requires
+the age-driven control to be held by a committed fixture. The reason is written up in
+`docs/adr/0013-leakage-is-scored-per-released-variable.md`, which is where a future
+"simplification" back to one mask is meant to be stopped — a requirement weaker than its
+implementation is what invites that simplification, and this gate sits on Constitution X.
+
+The property is held by `test_an_age_driven_variable_is_recovered_even_when_the_union_is_not`
+in `tests/leakage/test_updated_region.py`, which asserts the union is *below* the chance bound
+in the same breath as asserting the worst is above the detection bound: the test fails if the
+per-variable scoring is removed, and it fails for the right reason.

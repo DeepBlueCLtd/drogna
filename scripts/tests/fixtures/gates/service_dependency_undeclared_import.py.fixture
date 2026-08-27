@@ -1,0 +1,15 @@
+"""A module inside one service that imports another, with no dependency declared anywhere.
+
+This resolves at run time only because the workspace installs every member, which is what
+makes it worse than the declared kind: the coupling is real and nothing records it.
+"""
+
+from __future__ import annotations
+
+from probe_lender.evaluator import Evaluator
+
+__all__ = ["evaluate"]
+
+
+def evaluate() -> Evaluator:
+    return Evaluator()

@@ -75,6 +75,11 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_CLOCK}
     volumes:
       - *config-mount
+      # The run manifest is the record a run can be replayed from, so it outlives the
+      # container that wrote it. Writable: this is the only service that writes here.
+      - type: volume
+        source: run-data
+        target: ${HARNESS_RUN_ROOT}
     ports:
       - ${HARNESS_PUBLISH_CLOCK}
     healthcheck: *python-healthcheck
@@ -92,9 +97,13 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_ENV_GENERATOR}
     volumes:
       - *config-mount
+      # The environment store, and the coverage store is not mounted here: this component
+      # names no directory inside it. It carried a writable coverage mount for a wave, which
+      # was neither used nor noticed, because nothing was comparing what a component names
+      # with what the deployment mounts.
       - type: volume
-        source: coverage-data
-        target: ${HARNESS_COVERAGE_ROOT}
+        source: environment-data
+        target: ${HARNESS_ENVIRONMENT_ROOT}
     depends_on:
       clock:
         condition: service_healthy
@@ -136,6 +145,11 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_SENSORS}
     volumes:
       - *config-mount
+      # Samples the generated field and writes nothing back to it.
+      - type: volume
+        source: environment-data
+        target: ${HARNESS_ENVIRONMENT_ROOT}
+        read_only: true
     depends_on:
       broker:
         condition: service_healthy
@@ -287,6 +301,12 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_MONITOR}
     volumes:
       - *config-mount
+      # The coverage read port: resolve the current pointer, read that run's forecast.
+      # Read-only, because scoring observations against a field never writes one.
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
     depends_on:
       broker:
         condition: service_healthy
@@ -323,6 +343,15 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_MODEL_RUNNER}
     volumes:
       - *config-mount
+      # Ground truth is read and never written by the runner; the generator owns it.
+      - type: volume
+        source: environment-data
+        target: ${HARNESS_ENVIRONMENT_ROOT}
+        read_only: true
+      # Writable, and the coverage store rather than a staging volume of its own: the
+      # runner writes a run into staging and the publisher makes it visible with a rename,
+      # and a rename between two volumes is a copy, which the publisher refuses rather than
+      # performing non-atomically. Staging therefore sits inside this store.
       - type: volume
         source: coverage-data
         target: ${HARNESS_COVERAGE_ROOT}
@@ -344,6 +373,9 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PUBLISHER}
     volumes:
       - *config-mount
+      # Both ends of the publication step — the staging area it reads and the catalogue and
+      # pointer it writes — are inside this one volume, which is what makes the step a
+      # rename rather than a copy.
       - type: volume
         source: coverage-data
         target: ${HARNESS_COVERAGE_ROOT}
@@ -365,9 +397,15 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PLANNER}
     volumes:
       - *config-mount
+      # Reads the published uncertainty field and the environment manifest. It recommends
+      # and decides nothing (Constitution VIII), and it writes to neither store.
       - type: volume
         source: coverage-data
         target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
+      - type: volume
+        source: environment-data
+        target: ${HARNESS_ENVIRONMENT_ROOT}
         read_only: true
     depends_on:
       broker:
@@ -399,10 +437,12 @@ services:
     volumes:
       - *config-mount
       # The persistence reference is a published forecast field, read through the coverage
-      # read port at publication boundaries and nowhere else.
+      # read port at publication boundaries and nowhere else. Read-only for that reason:
+      # reading is the whole of what this component does with the store.
       - type: volume
         source: coverage-data
         target: ${HARNESS_COVERAGE_ROOT}
+        read_only: true
     ports:
       - ${HARNESS_PUBLISH_TELEMETRY}
     depends_on:
@@ -423,9 +463,25 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_OFFLOAD}
     volumes:
       - *config-mount
+      # The recorded run it packages: the clock's run manifest and the observation stream.
+      # Read-only — a packager that could rewrite its own source could not be replayed
+      # against it. The coverage store is not mounted here; this component names no
+      # directory inside it, and the read-only mount it used to carry was a guess.
       - type: volume
-        source: coverage-data
-        target: ${HARNESS_COVERAGE_ROOT}
+        source: run-data
+        target: ${HARNESS_RUN_ROOT}
+        read_only: true
+      # Its own durable state: staging bundles and the write-ahead ledger, one volume so
+      # that a ledger can never outlive the bundles it accounts for.
+      - type: volume
+        source: offload-data
+        target: ${HARNESS_OFFLOAD_ROOT}
+      # The released surface, read-only. Bundles hold point observations, which SRD FR-42
+      # withholds from what is released; the packager's own configuration refuses a staging
+      # area inside this directory, and this mount is the platform enforcing the same rule.
+      - type: volume
+        source: released-data
+        target: ${HARNESS_RELEASED_ROOT}
         read_only: true
     depends_on:
       broker:
@@ -486,3 +542,7 @@ volumes:
   observations-data:
   broker-data:
   coverage-data:
+  environment-data:
+  run-data:
+  offload-data:
+  released-data:

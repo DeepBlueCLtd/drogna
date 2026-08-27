@@ -16,20 +16,13 @@ dependencies = [
     # last consequence forbids the authored per-feature representation reaching a
     # consumer. Evaluating it here from the manifest's per-feature entries would be
     # exactly that leak, so the planner calls the one evaluation there is.
+    # harness:allow-service-dependency ADR-0002 gives the timescale one evaluation, and it is C-02's
     "harness-env-generator",
-    # C-11's package, for the coverage read port and nothing else. The read side of the
-    # coverage output port has one implementation in this repository and it lives there;
-    # a second NetCDF reader here would be a second implementation of a read that already
-    # exists. The port's honest home is libs/harness_core or stores/coverage, and moving
-    # it is the owning feature's call rather than this one's. Feature 010 recorded the
-    # same borrowing from its side.
-    "harness-monitor",
 ]
 
 [tool.uv.sources]
 harness-core = { workspace = true }
 harness-env-generator = { workspace = true }
-harness-monitor = { workspace = true }
 harness-types = { workspace = true }
 
 [build-system]

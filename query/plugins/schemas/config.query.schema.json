@@ -110,6 +110,7 @@
       "required": [
         "root",
         "runs_dirname",
+        "staging_dirname",
         "current_pointer",
         "forecast_file",
         "uncertainty_file",
@@ -126,6 +127,10 @@
         "runs_dirname": {
           "type": "string",
           "description": "Directory beneath the root holding one directory per run."
+        },
+        "staging_dirname": {
+          "type": "string",
+          "description": "Directory beneath the root a run is assembled in before it is visible. It is inside the store, and therefore on the store's volume, because the publisher makes a run visible by renaming it out of here into runs_dirname and a rename between two volumes is a copy, which is not indivisible. Nothing beneath it is ever catalogued or served."
         },
         "current_pointer": {
           "type": "string",

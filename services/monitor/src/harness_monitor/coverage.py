@@ -25,9 +25,8 @@ from pathlib import Path
 from typing import Protocol
 
 from harness_core.clock import SimInstant
+from harness_core.netcdf import NetcdfError, read_netcdf
 from harness_core.soundspeed import sound_speed
-
-from harness_monitor.netcdf import NetcdfError, read_netcdf
 
 __all__ = [
     "FORECAST_AXES",

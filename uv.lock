@@ -435,14 +435,12 @@ version = "0.1.0"
 source = { editable = "services/offload" }
 dependencies = [
     { name = "harness-core" },
-    { name = "harness-monitor" },
     { name = "harness-types" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "harness-core", editable = "libs/harness_core" },
-    { name = "harness-monitor", editable = "services/monitor" },
     { name = "harness-types", editable = "libs/harness_types" },
 ]
 
@@ -454,7 +452,6 @@ dependencies = [
     { name = "h3" },
     { name = "harness-core" },
     { name = "harness-env-generator" },
-    { name = "harness-monitor" },
     { name = "harness-types" },
 ]
 
@@ -463,7 +460,6 @@ requires-dist = [
     { name = "h3", specifier = ">=4.0" },
     { name = "harness-core", editable = "libs/harness_core" },
     { name = "harness-env-generator", editable = "services/env_generator" },
-    { name = "harness-monitor", editable = "services/monitor" },
     { name = "harness-types", editable = "libs/harness_types" },
 ]
 

@@ -6,10 +6,12 @@ requires-python = ">=3.11"
 dependencies = [
     "harness-core",
     "harness-types",
-    # For the NetCDF classic encoder in harness_env_generator.writer, which is the one
-    # implementation of that format in the repository. A second copy here would be the
-    # duplication ADR-0005 argues against in the neighbouring case, so the import stands
-    # until the encoder moves to a shared library, at which point one line changes.
+    # C-02's package, for what a *field* is and nothing else: CONVENTIONS, STORED_DTYPES
+    # and digest_of. The encoder itself is no longer borrowed — it is in harness_core with
+    # the reader — but the stored widths, the CF version this repository targets and the
+    # digest spelling a manifest records are decisions the generator makes about fields,
+    # and a second opinion about them here would put two answers in one coverage store.
+    # harness:allow-service-dependency C-02 authors what a stored field is; no library home yet
     "harness-env-generator",
 ]
 

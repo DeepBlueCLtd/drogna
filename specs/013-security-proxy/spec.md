@@ -248,13 +248,33 @@ power to fail.
   variables. Any variable not on that list MUST be absent from released artefacts.
   (SRD FR-42)
 - **FR-015**: The updated-region leakage test MUST compute, from two successive
-  released products for the same collection on the same grid, the change mask of cells
-  whose released value differs by more than the released quantisation step, and MUST
-  report a recovery statistic of that mask against the measurement locations recorded
-  in the run manifest, buffered by the configured identification radius. (SRD FR-42)
-- **FR-016**: The updated-region leakage test MUST assert both bounds: the mitigated
-  bundle at or below the chance bound, and an unmitigated control at or above the
-  detection bound. A run in which the control is not detected MUST fail. (SRD FR-42)
+  released products for the same collection on the same grid, a change mask **per
+  released variable** — the cells whose released value for that variable differs by more
+  than the released quantisation step — and MUST report a recovery statistic against the
+  measurement locations recorded for the interval in the run manifest, buffered by the
+  configured identification radius, **for the union of those masks and for each
+  variable's mask on its own**. The figure the test acts on MUST be the **worst** of
+  them, and the report MUST name which variable it came from. (SRD FR-42)
+
+  The per-variable scoring is the requirement, not an embellishment of it, and a
+  union-only test is not a weaker version of this — it is a test that passes the case
+  this feature exists to catch. A whole-domain rewrite produces a mask covering nearly
+  every cell and scoring at chance; a field driven by observation age produces a mask
+  that is the buffered sampling geometry exactly. Union them and the first swamps the
+  second. The committed control in `tests/leakage/fixtures/age_driven_pair/` measures it:
+  the union scores 0.105, below the 0.15 chance bound, while `observation_age` alone
+  scores 1.000, above the 0.6 detection bound. A test reading only the union would report
+  that pair as mitigated. US4 scenario 3 already requires it to fail, so the union-only
+  reading contradicts this feature's own acceptance scenario as well as being weaker than
+  the code. Any future simplification back to a single mask MUST be treated as a
+  regression in the gate and MUST be refused, which is what the control fixture is
+  committed for.
+- **FR-016**: The updated-region leakage test MUST assert both bounds against the worst
+  statistic FR-015 defines: the mitigated bundle at or below the chance bound, and an
+  unmitigated control at or above the detection bound. A run in which the control is not
+  detected MUST fail. A released set containing an age-driven variable MUST be detected by
+  this same route even when the union of the masks is at chance, and a committed control
+  fixture MUST hold that property. (SRD FR-42)
 - **FR-017**: The updated-region leakage test MUST report a comparison as inconclusive,
   and fail, when the change mask is empty, when the measurement locations in the
   interval do not span more than the identification radius, or when the two products
@@ -311,9 +331,11 @@ power to fail.
   differences.
 - **SC-004**: The provenance scanner reports zero hits on a clean bundle and flags the
   leaky control fixture on every CI run; both results are reproducible from a seed.
-- **SC-005**: The recovery statistic for the mitigated bundle is at or below the chance
-  bound and the unmitigated control is at or above the detection bound, with both
-  figures printed in the leakage report rather than asserted silently.
+- **SC-005**: The worst recovery statistic — over the union and over every released
+  variable on its own — is at or below the chance bound for the mitigated bundle and at
+  or above the detection bound for the unmitigated control, with every figure, the
+  variable each came from, and the cell counts behind them printed in the leakage report
+  rather than asserted silently.
 - **SC-006**: No file under the proxy directory contains a literal hostname, port, path
   or credential, verified by the repository's literal-path gate.
 - **SC-007**: `docs/adr/0001-binary-access.md` exists, carries the four required
@@ -357,3 +379,31 @@ power to fail.
 - nginx access and error logs are written with the host clock. This is log line
   decoration, which Constitution I permits; no operational decision in this feature
   reads a host clock.
+
+## Amendments
+
+*2026-08-27 — FR-015 and FR-016 now require the per-variable scoring that was already
+built.* FR-015 originally asked for "the change mask" in the singular and a recovery
+statistic "of that mask". `tests/leakage/updated_region.py` computes a mask per released
+variable, scores the union *and* each variable separately, and acts on the worst. That was
+recorded as a deliberate strengthening rather than a reading of the requirement, and it was
+the right call: `tests/leakage/fixtures/age_driven_pair/` scores 0.105 on the union and
+1.000 on `observation_age` alone, so a union-only gate passes a released set carrying a map
+of the sampling geometry. It also contradicted US4 scenario 3, which already required that
+case to fail. The requirement was the loose artefact, not the code.
+
+The amendment is deliberately written to close the door rather than merely to describe the
+present state. A requirement weaker than its implementation is an invitation to a future
+simplification that looks like tidying and is a silent removal of a gate, and this gate sits
+on Constitution X. The decision is recorded in
+`docs/adr/0013-leakage-is-scored-per-released-variable.md`, because it generalises past
+this feature: any statistic offered as evidence that a boundary is holding is now expected
+to be reported per released variable, with the worst acted on.
+
+*Not settled here: where the measurement geometry lives.* FR-015 says the measurement
+locations come from the run manifest. `contracts/schemas/run-manifest.schema.json` is closed
+and carries seeds, clock configuration, participants and digests — no geometry — so
+`load_geometry` reads the document the bundle carries beside its products and fails loudly
+on a missing field. That divergence is real, is documented at the function, and is left
+outstanding rather than blessed by a quiet edit here: it belongs to whoever owns the
+manifest schema (feature 004) and the bundle shape (feature 014), not to this amendment.

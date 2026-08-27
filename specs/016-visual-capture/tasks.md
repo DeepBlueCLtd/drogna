@@ -95,7 +95,7 @@ change is empty three times running.
 ### Implementation for User Story 2
 
 - [x] T022 [US2] Write `client/e2e/pair.config.ts`: its own output directory under the branch-scoped area, no retries — a retry that succeeds after a failure is a comparability hazard, not a rescue.
-- [x] T023 [US2] Implement `scripts/capture/pair/fingerprint.mjs`: gather browser version, container image, viewport, device scale factor, scenario seed, simulation time and entry-point version, and compare two fingerprints field by field (FR-009).
+- [x] T023 [US2] Implement `scripts/capture/pair/fingerprint.mjs`: gather browser version, container image, viewport, device scale factor, scenario seed, run identifier, simulation time, run display, lit set and entry-point version, and compare two fingerprints over the comparability fields alone, recording the rest (FR-009).
 - [x] T024 [US2] Implement clock pinning in `scripts/capture/pair/run.mjs`: set the rate to zero through the client's own rate control, capture, restore the previous rate, and restore it on every failure path (FR-007).
 - [x] T025 [US2] Add the lit-component check around the pin, so a pinned clock cannot produce an all-grey pair that looks like a passing capture, and name ADR-0006 in the failure message so whoever meets it knows which decision has been broken (FR-008).
 - [x] T026 [US2] Implement `scripts/capture/pair/diff.mjs`: refuse to diff when the fingerprints differ, otherwise produce the difference image and a summary of what changed (FR-009, FR-011).
@@ -252,9 +252,11 @@ demonstrable without the next.
 
 ## Outcome
 
-What was built, and the three places the result differs from what the tasks assumed. Each
-is a decision rather than an omission, and each is recorded here because a task list marked
-complete with an unstated deviation behind it is worse than one left unmarked.
+What was built, and the places the result differs from what the tasks assumed. Each is a
+decision rather than an omission, and each is recorded here because a task list marked
+complete with an unstated deviation behind it is worse than one left unmarked. One of them
+— simulation time in the fingerprint — has since been settled by amending FR-009, and is
+kept below with the amendment recorded rather than deleted.
 
 ### The clock, and what could be demonstrated without one
 
@@ -299,15 +301,31 @@ asserts structurally that the restore and the lock release are inside the `final
 the rate is read before anything is asked of the clock. That assertion was seen to fail with
 the restore moved out of the `finally`.
 
-### Simulation time is recorded, not refused on
+### Simulation time is recorded, not refused on — settled, FR-009 amended
 
-FR-009 lists simulation time among the fingerprint fields and asks that a diff be refused
-when the two sides differ. Read literally against FR-007 — which restores the previous rate
-after *each* capture, so the simulation runs between the halves — that would refuse every
-pair the mechanism can produce. Simulation time is therefore recorded on both sides and
-reported in the summary, and the run identifier, which is what says the two halves came from
-the same seeded run, is the comparability field that refuses. The argument is written out in
-`scripts/capture/pair/fingerprint.mjs` and in `scripts/capture/README.md`.
+**Resolved 2026-08-27. This is no longer a deviation: the specification says what the code
+does.**
+
+FR-009 as first written listed simulation time among the fingerprint fields and asked that a
+diff be refused when the two sides differ. Read literally against FR-007 — which restores the
+previous rate after *each* capture, so the simulation runs between the halves — that would
+refuse every pair the mechanism can produce, including the no-change pair FR-011 requires to
+succeed with an empty difference. The requirement was therefore impossible rather than merely
+strict, and the implementation was right to depart from it.
+
+FR-009 now separates the fingerprint's two parts explicitly: comparability fields, which
+refuse, and recorded fields, which are reported and do not. Simulation time, the clock's run
+display and the lit set are recorded; the run identifier — which is what says the two halves
+came from the same seeded run rather than two runs of one seed — is the comparability field
+that refuses in its place. The lit set is excluded for its own reason: it is the change under
+evidence in the canonical grey-to-lit pair.
+
+The argument is in `specs/016-visual-capture/spec.md` under FR-009 and Amendments, in
+`scripts/capture/pair/fingerprint.mjs`, and in `scripts/capture/README.md`. It is held by
+tests in `client/e2e/tests/fingerprint.test.ts`: one case per comparability field, a check
+that no comparability field is left without a case, and two cases asserting that halves at
+different simulated times and with different lit sets are *not* refused. No ADR: the decision
+begins and ends inside the pair mechanism's fingerprint.
 
 ### One image in the published location predates the convention
 

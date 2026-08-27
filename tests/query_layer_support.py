@@ -254,6 +254,7 @@ def layout_for(root: Path) -> StoreLayout:
     return StoreLayout(
         root=root,
         runs_dirname="runs",
+        staging_dirname="staging",
         current_pointer="current",
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",

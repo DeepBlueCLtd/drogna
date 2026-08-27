@@ -188,10 +188,11 @@ stale within the configured window.
 - [x] T025 [US3] Implement the freshness state machine and last-update tracking in
   simulation time, in `services/telemetry/src/harness_telemetry/freshness.py`.
 - [x] T026 [US3] Attach freshness state and last-update time to every published
-  statistic and skill message, and implement the restart behaviour — report `warming`,
-  publish nothing until the minimum sample count is reached again, reconstruct nothing
-  from the store — in `services/telemetry/src/harness_telemetry/publish.py` and
-  `service.py`.
+  statistic and skill message, and implement the restart behaviour — report `warming` on
+  the heartbeat and in the `state` field of every statistics message, publish no skill
+  score until the minimum sample count is reached again, keep publishing the statistics
+  themselves with their sample count, reconstruct nothing from the store — in
+  `services/telemetry/src/harness_telemetry/publish.py` and `service.py`.
 
 **Checkpoint**: a dead input reads as dead. Silent degradation has nowhere to hide.
 
@@ -292,3 +293,39 @@ show on the first day telemetry exists.
 - Commit after each task or coherent group.
 - The rule that no figure is ever suppressed or defaulted applies to every task in
   this feature; a test that passes by hiding a number is a defect.
+
+---
+
+## Outcome
+
+### What "publishes nothing" while warming meant — settled
+
+**Resolved 2026-08-27. This is no longer a deviation: the specification was amended to say
+what the implementation does.**
+
+T026 was written from the restart edge case, which said telemetry "reports `warming` and
+publishes nothing until the configured minimum sample count is reached again". The
+implementation read that as **publishes no skill score**, and continues to publish the
+residual-statistics message carrying `state: warming` and the sample count the figures were
+computed from.
+
+The implementation is right and the wording was wrong, for three reasons and not one.
+
+1. **FR-011 forbids it.** Withholding an aggregate because its sample count is unflattering
+   is the suppression that requirement exists to prevent. A statistic is an aggregate of
+   measurements that were taken; a skill score is a claim about how well the model is doing.
+   Only the second can be unearned by a low count.
+2. **The contract had already decided.** `residual-statistics.state` in
+   `contracts/schemas/telemetry.schema.json` enumerates `warming`. A state that is never
+   published is a state the schema would not need, and the schema's own description ties it
+   to a restart.
+3. **Absence is not a report.** Reporting a state by sending no message is
+   indistinguishable at the receiver from the process having died, which is the one
+   distinction Constitution VII makes the control namespace responsible for. SC-006 was
+   already written about the skill score alone.
+
+The edge case, FR-009 and SC-006 in `specs/010-telemetry-quality/spec.md` now say this
+explicitly, and the reasoning is recorded there under Amendments. No ADR was written: the
+contradiction was between two requirements of this one feature, telemetry's state vocabulary
+is already documented in `docs/algorithms/forecast-skill.md`, and nothing outside this
+component changes.

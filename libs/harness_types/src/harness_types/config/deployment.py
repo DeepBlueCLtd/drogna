@@ -155,7 +155,7 @@ class DestinationDeploymentValues(BaseModel):
     runtime: Runtime
     container_paths: dict[str, ContainerPaths] = Field(
         ...,
-        description='Paths inside containers. Every one of these reaches an image as a build argument or an environment variable, never as a literal in a Dockerfile or in the Compose file.',
+        description="Paths inside containers. Every one of these reaches an image as a build argument or an environment variable, never as a literal in a Dockerfile or in the Compose file. coverage_root, environment_root, run_root, offload_root and released_root are the deployment's five stores: a named volume is mounted at each, and every container directory a component configuration names has to sit under one of them or nothing mounts it. That is checked by deploy/lib/mount_lint.py, which is a registered gate.",
     )
     host_paths: dict[str, HostPaths] = Field(
         ...,

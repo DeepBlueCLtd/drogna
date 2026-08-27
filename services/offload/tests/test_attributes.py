@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 from harness_core.clock import SimInstant
-from harness_monitor.netcdf import read_netcdf
+from harness_core.netcdf import read_netcdf
 from harness_offload.attributes import NEVER_EMITTED, DisallowedAttributeError, checked
 from harness_offload.profiles import profiles_from_observations
 from harness_offload.writer import ExportInputs, encode_bundle

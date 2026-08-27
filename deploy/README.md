@@ -262,7 +262,7 @@ alive.** That is heartbeats, always.
 | C-05 ingest client | `ingest` | `observation` | Declared, not built. |
 | C-06 observation store | `observations` | `core` | **Live.** Verified from this checkout: starts, reports healthy, survives down and up. |
 | C-07 feature store | `features` | `provisioning` | Declared as a one-shot provisioning job against the same database instance. Not built. |
-| C-08 coverage store | — | — | Not a service. It is the `coverage-data` volume, read by the query layer and written by the generator, model runner and publisher. |
+| C-08 coverage store | — | — | Not a service. It is the `coverage-data` volume, written by the model runner into the staging area inside it and made visible by the publisher, and read by the query layer, the monitor, the planner and telemetry. |
 | C-09 query layer | `query` | `query` | Declared, not built. Its image does build, and asserts the Shapely and GEOS bound described below as it does so; but the pygeoapi configuration and the trajectory provider it would serve belong to 008-query-layer and do not exist. |
 | C-10 reverse proxy | `proxy` | `edge` | Declared, not built. |
 | C-11 monitor | `monitor` | `control` | Declared, not built. |
@@ -288,14 +288,37 @@ Every volume holds derived data, every one has a script that fills it, and remov
 them loses nothing that cannot be made again. That is what makes an instance disposable
 (SRD NFR-07).
 
-| Volume | Filled by | What removing it loses |
-|---|---|---|
-| `observations-data` | The database's own initialisation, then the seeding steps for the observation and feature schemas, run by `scripts/seed.sh`. | Every stored observation and the static spatial reference. Both are reproduced by seeding from the same root seed. |
-| `broker-data` | The broker's own persistence, filled at run time by the messages that pass through it. | Retained messages and subscription state. Nothing that a running stack does not produce again within its own liveness windows. |
-| `coverage-data` | The environment generator and the model runner, and made visible by the publisher; all run by `scripts/seed.sh` once those components exist. | Every stored field. Reproduced by seeding from the same root seed. |
+One volume per store, named for the store, mounted at the container path
+`deployment.container_paths` declares for it. A component reads its directories from its own
+configuration file, so the two halves can drift apart in silence — and had, almost
+completely: fourteen of the fifteen container directories the component configurations named
+were under no declared path and so under no volume. `deploy/lib/mount_lint.py` compares them
+and is a registered gate.
 
-There is no fourth volume, and no volume holds anything a script cannot produce. If one
-ever does, the volume is wrong, not the rule.
+| Volume | Filled by | Read by | What removing it loses |
+|---|---|---|---|
+| `observations-data` | The database's own initialisation, then the seeding steps for the observation and feature schemas, run by `scripts/seed.sh`. | The query layer, through the database. | Every stored observation and the static spatial reference. Both are reproduced by seeding from the same root seed. |
+| `broker-data` | The broker's own persistence, filled at run time by the messages that pass through it. | The broker. | Retained messages and subscription state. Nothing that a running stack does not produce again within its own liveness windows. |
+| `coverage-data` | The model runner, into the staging area inside it; made visible by the publisher, which renames a staged run into the catalogue and replaces the current pointer. | The query layer, the monitor, the planner and telemetry, all read-only. | Every published field. Reproduced by seeding from the same root seed. |
+| `environment-data` | The environment generator: the synthetic field and its manifest. | The model runner, the planner and the sensors, all read-only. | The generated world. Reproduced from the same root seed. |
+| `run-data` | The clock, which writes the run manifest a run can be replayed from. | The offload packager, read-only. | The record of the run in progress. A new run writes a new manifest. |
+| `offload-data` | The offload packager: its staging bundles and its write-ahead ledger, one volume so a ledger can never outlive the bundles it accounts for. | Nobody else. | Bundles not yet transferred, and the ledger accounting for them. |
+| `released-data` | Nothing yet. It is the released surface, and it is mounted read-only into the one component that must never write there. | The released read path, when there is one. | Nothing today. |
+
+Staging is a directory inside `coverage-data` rather than a volume of its own, and that is
+load-bearing. The publisher makes a run visible by renaming it out of staging into the
+catalogue; a rename between two volumes is a copy, which is not indivisible, and the
+publisher refuses it rather than performing it non-atomically. Splitting the two would
+therefore not be a tidier layout — it would be a deployment in which nothing could ever be
+published.
+
+`released-data` is mounted read-only wherever it is mounted at all. Bundles hold point
+observations, which SRD FR-42 withholds from what is released; the packager already refuses
+to start with a staging area inside the released directory, and the read-only mount is the
+platform enforcing the same rule rather than trusting a check.
+
+No volume holds anything a script cannot produce. If one ever does, the volume is wrong, not
+the rule.
 
 ---
 

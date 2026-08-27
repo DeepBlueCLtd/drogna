@@ -72,6 +72,7 @@ class StoreLayout:
 
     root: Path
     runs_dirname: str
+    staging_dirname: str
     current_pointer: str
     forecast_file: str
     uncertainty_file: str
@@ -83,6 +84,7 @@ class StoreLayout:
         return cls(
             root=Path(str(section["root"])),
             runs_dirname=str(section["runs_dirname"]),
+            staging_dirname=str(section["staging_dirname"]),
             current_pointer=str(section["current_pointer"]),
             forecast_file=str(section["forecast_file"]),
             uncertainty_file=str(section["uncertainty_file"]),
@@ -93,6 +95,18 @@ class StoreLayout:
     @property
     def runs_directory(self) -> Path:
         return self.root / self.runs_dirname
+
+    @property
+    def staging_directory(self) -> Path:
+        """Where a run is assembled before it is visible. Inside the store, deliberately.
+
+        The publisher makes a run visible by renaming it out of here into
+        :attr:`runs_directory`. A rename between two volumes is a copy and a copy is not
+        indivisible, so staging is a directory of this store rather than a store of its
+        own: putting it on a volume of its own would be a deployment in which nothing
+        could ever be published. Nothing beneath it is catalogued or served.
+        """
+        return self.root / self.staging_dirname
 
     @property
     def pointer_path(self) -> Path:

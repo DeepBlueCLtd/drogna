@@ -4,24 +4,19 @@ version = "0.1.0"
 description = "C-17: the offload packager, which owns the failure mode of premature eviction"
 requires-python = ">=3.11"
 dependencies = [
-    # For `encode_netcdf`, the one NetCDF encoder in the repository. It lived in the
-    # environment generator until this package became its third consumer, after the model
-    # runner; feature 009 reported that it belonged in harness_core, and packaging a run
-    # is what made that the cheaper of the two options. There is no second encoder here.
+    # For `encode_netcdf` and `read_netcdf`, the one NetCDF encoder in the repository and
+    # the one reader that matches it. The encoder lived in the environment generator until
+    # this package became its third consumer, after the model runner; the reader lived in
+    # the divergence monitor until this package's conformance check and the planner's
+    # spread reader each imported it across a service boundary. Both are in harness_core
+    # now and this package reaches neither through another service.
     "harness-core",
     "harness-types",
-    # For `read_netcdf` in harness_monitor.netcdf, the one reader of the classic format
-    # inside a service package. The conformance check and the attribute scan read back the
-    # file they have just written, and a second parser here would be the duplication the
-    # encoder note argues against. That the reader still lives in a service rather than in
-    # harness_core beside the encoder is a loose end, recorded in this package's README.
-    "harness-monitor",
 ]
 
 [tool.uv.sources]
 harness-core = { workspace = true }
 harness-types = { workspace = true }
-harness-monitor = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

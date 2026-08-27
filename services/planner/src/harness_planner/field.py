@@ -37,8 +37,8 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from harness_core.clock import SimInstant
+from harness_core.netcdf import NetcdfError, read_netcdf
 from harness_env_generator.evaluator import Evaluator
-from harness_monitor.netcdf import NetcdfError, read_netcdf
 
 from harness_planner.cells import CellGeometry, GridBounds, PlanningCell
 

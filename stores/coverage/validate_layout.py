@@ -56,13 +56,13 @@ def check_store(layout: StoreLayout) -> list[str]:
     for run_id, reason in catalogue.incomplete():
         faults.append(f"{run_id} is not catalogued: {reason}")
 
+    permitted = {layout.runs_dirname, layout.staging_dirname, layout.current_pointer}
     for name in sorted(path.name for path in layout.root.iterdir()):
-        if name not in {layout.runs_dirname, layout.current_pointer} and not name.endswith(
-            layout.partial_suffix
-        ):
+        if name not in permitted and not name.endswith(layout.partial_suffix):
             faults.append(
                 f"{name} is at the store root and the layout has no place for it; the root "
-                f"holds {layout.runs_dirname} and {layout.current_pointer} and nothing else"
+                f"holds {layout.runs_dirname}, {layout.staging_dirname} and "
+                f"{layout.current_pointer} and nothing else"
             )
 
     try:

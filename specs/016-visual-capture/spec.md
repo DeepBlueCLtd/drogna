@@ -219,10 +219,34 @@ made to import another, and confirm it fails.
   stops nothing else, and the assertion is kept as a cheap regression test on that
   decision. It is written to fail loudly rather than to publish a misleading pair.
   (SRD FR-52, FR-45, FR-53; ADR-0006)
-- **FR-009**: The pair MUST record an environment fingerprint on both sides — browser
-  version, container image, viewport, device scale factor, scenario seed, simulation time
-  and capture entry-point version — and MUST refuse to produce a diff when the two sides
-  differ, naming the field. (SRD FR-53)
+- **FR-009**: The pair MUST record an environment fingerprint on both sides carrying the
+  browser name, version and Playwright version, the container image, the viewport width,
+  height and device scale factor, the scenario seed, the run identifier, the capture
+  environment, the capture entry-point version, the simulation time, the clock's run
+  display and the set of lit components. The fingerprint has two parts and they are not
+  the same list.
+  - **Comparability fields** — browser name, version and Playwright version, container
+    image, viewport width, height and device scale factor, scenario seed, run identifier,
+    capture environment and capture entry-point version — MUST be compared field by field,
+    and the mechanism MUST refuse to produce a diff when any of them differs, naming the
+    field and both values.
+  - **Recorded fields** — simulation time, the clock's run display and the lit components
+    — MUST be recorded on both sides and reported in the difference summary, and MUST NOT
+    be grounds for refusal.
+
+  Simulation time cannot be a comparability field, and the naive reading of this
+  requirement is impossible rather than merely undesirable. FR-007 pins the rate to zero
+  for the duration of *each* capture and restores the previous rate afterwards, so the
+  simulation runs between the two halves and simulated time necessarily differs across
+  them. Refusing on that difference would refuse every pair this mechanism can produce,
+  including the no-change pair FR-011 requires to succeed with an empty difference. What
+  was actually wanted — evidence that the two halves came from the same seeded run rather
+  than from two runs of the same seed — is the run identifier, which is a comparability
+  field and does refuse. The lit set is excluded for a second and independent reason: it
+  is the change under evidence as often as not, and the canonical first pair is the
+  simulation clock going from grey to lit (US2 scenario 3), so a mechanism that refused on
+  it could never evidence the one transition it was built for. Adding a comparability
+  field makes the refusal stricter and needs no argument; removing one does. (SRD FR-53)
 - **FR-010**: Both halves of a pair MUST be captured in the same environment. A pair with
   one half captured locally and one in CI MUST be refused. (SRD FR-53)
 - **FR-011**: A pair captured across no change MUST produce an empty difference, on
@@ -274,7 +298,9 @@ made to import another, and confirm it fails.
 - **Curated image**: one published picture of a finished feature, with a provenance
   record. Lifetime: permanent. Storage: committed under the location feature 015 defines.
   Gate: the author's review and the site's publication gates.
-- **Environment fingerprint**: what must match for two captures to be comparable.
+- **Environment fingerprint**: what was true of each half. Two parts: the fields that
+  must match for the two to be comparable at all, and the fields that are recorded and
+  reported but never refused on (FR-009).
 - **Provenance record**: what must be known to take a curated shot again.
 - **Application knowledge library**: selectors, page objects and the readiness signal.
   The only thing the three mechanisms share.
@@ -374,3 +400,18 @@ capture policy.
   visible rather than a source of unexplained diffs.
 - `contracts/schemas/config.capture.schema.json` is added additively by this feature, per
   the ownership rule in `docs/architecture/repo-layout.md`.
+
+## Amendments
+
+*2026-08-27 — FR-009 separated comparability fields from recorded fields.* As originally
+written, FR-009 named simulation time among the fingerprint fields and then asked that a
+diff be refused whenever "the two sides differ", which reads as making every named field a
+comparability field. That reading is not merely strict, it is unsatisfiable: FR-007
+restores the previous rate after each capture, so simulated time advances between the two
+halves of every pair, and a mechanism honouring both requirements at once would refuse
+every pair it could ever produce — including the no-change pair FR-011 requires to
+succeed. The implementation in `scripts/capture/pair/fingerprint.mjs` records simulation
+time on both sides and refuses on the run identifier instead, which is the check the
+requirement was reaching for. FR-009 now says that, and names the lit set as the second
+recorded-not-refused field for its own reason. No behaviour changed; the requirement was
+brought into line with what FR-007 makes possible.

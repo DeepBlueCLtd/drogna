@@ -169,7 +169,7 @@ This opens a produced bundle and prints one profile. It is run in CI against a b
 packager wrote, so the primer cannot drift from the file.
 
 ```python
-from harness_monitor.netcdf import read_netcdf
+from harness_core.netcdf import read_netcdf
 
 
 def first_profile(payload: bytes) -> list[str]:

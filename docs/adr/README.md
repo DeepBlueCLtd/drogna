@@ -21,3 +21,4 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0010](0010-site-tooling.md) | Tooling for the published site | Accepted |
 | [0011](0011-the-coverage-store-pointer-is-text.md) | The current-run pointer is a text file, not a symlink | Accepted |
 | [0012](0012-sensors-may-read-the-clock-and-nothing-else.md) | Sensors may read the clock, and nothing else on the control branch | Accepted |
+| [0013](0013-leakage-is-scored-per-released-variable.md) | A leakage statistic is scored per released variable, and the worst one is the answer | Accepted |

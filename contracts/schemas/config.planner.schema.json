@@ -443,13 +443,13 @@
           "shortlist": 3
         },
         "coverage": {
-          "root_directory": "/data/coverage",
+          "root_directory": "/var/lib/drogna/coverage",
           "current_pointer": "current",
           "runs_dirname": "runs",
           "uncertainty_file": "uncertainty.nc"
         },
         "environment": {
-          "directory": "/data/environment",
+          "directory": "/var/lib/drogna/environment",
           "manifest_file": "environment.manifest.json"
         }
       }

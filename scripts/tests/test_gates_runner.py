@@ -118,13 +118,21 @@ def test_an_unknown_option_is_refused(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("line", REGISTRY.read_text(encoding="utf-8").splitlines())
 def test_every_registered_gate_names_a_command_that_exists(line: str) -> None:
-    """A registry entry pointing at a deleted script would run nothing and say so quietly."""
+    """A registry entry pointing at a deleted script would run nothing and say so quietly.
+
+    Any repository-relative script the command names is checked, not only one under
+    `scripts/`: a gate may live beside the thing it lints — `deploy/lib/mount_lint.py`
+    reads the Compose file and the deployment documents — and a rule that only looked in
+    one directory would silently stop checking the ones that do not.
+    """
     if not line.strip() or line.lstrip().startswith("#"):
         pytest.skip("not a gate line")
     label, _, command = line.partition("|")
     assert command.strip(), f"{label}: no command"
-    script = next(word for word in command.split() if "scripts/" in word)
-    assert (ROOT / script).exists(), f"{label}: {script} does not exist"
+    named = [word for word in command.split() if "/" in word and word.endswith((".py", ".sh"))]
+    assert named, f"{label}: the command names no script: {command.strip()}"
+    for script in named:
+        assert (ROOT / script).exists(), f"{label}: {script} does not exist"
 
 
 def test_the_registry_covers_every_gate_in_the_scripts_directory() -> None:

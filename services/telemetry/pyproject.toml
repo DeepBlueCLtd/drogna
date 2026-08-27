@@ -6,12 +6,15 @@ requires-python = ">=3.11"
 dependencies = [
     "harness-core",
     "harness-types",
-    # C-11's package, for the coverage read port and nothing else. The read side of the
-    # coverage output port has one implementation in this repository and it lives there;
-    # a second NetCDF reader here would be a second implementation of a read that already
-    # exists, which is the argument ADR-0005 makes about sound speed applied to a file
-    # format. The port's honest home is libs/harness_core or stores/coverage, and moving
-    # it is the owning feature's call rather than this one's.
+    # C-11's package, for the coverage read port and nothing else — StoredForecasts and
+    # the ForecastField it yields. Not for the NetCDF reader: read_netcdf is in
+    # harness_core.netcdf beside the encoder and this package does not go through the
+    # monitor to reach a file format. What is borrowed is a decision about *coverage
+    # fields* — which axes and variables one carries, how it is sampled, how sound speed
+    # is derived from it (ADR-0005) — and the monitor is where that decision is made. The
+    # port's honest home is libs/harness_core or stores/coverage, and moving it is the
+    # owning feature's call rather than this one's.
+    # harness:allow-service-dependency the coverage read port has one implementation, C-11's
     "harness-monitor",
 ]
 

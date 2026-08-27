@@ -9,11 +9,16 @@ constitution allows one. Read [FINDING.md](FINDING.md).
 
 ## And then: what is *in* it
 
-[PER-PR-ENVIRONMENTS.md](PER-PR-ENVIRONMENTS.md) is the follow-on, written 27 August 2026
-after a second interview. The hosting finding settled where the backend lives; that document
-settles what is in it — a review environment per pull request, generated from one input,
-sharing the droplet under a capacity ceiling. It is a proposal to be argued with rather than
-a specification, and it becomes `specs/017-*` if the shape is agreed.
+[DEPLOYMENT-WORKFLOW.md](DEPLOYMENT-WORKFLOW.md) is the follow-on. The hosting finding
+settled where the backend lives; that document settles how it is kept current and how a
+feature is developed around it — deployment on push to `main`, a feature's two halves as two
+pull requests with the backend first, and combined work done locally. It supersedes a
+per-pull-request environment design written earlier the same day, and records why.
+
+It is also where the one blocker lives: the deployed browser client would serve a
+configuration document naming `localhost`, so "the front end connects to the updated
+backend" cannot be true until a destination serves one of its own. It is a proposal to be
+argued with rather than a specification, and it becomes `specs/017-*` if the shape is agreed.
 
 ## This is a desk spike
 

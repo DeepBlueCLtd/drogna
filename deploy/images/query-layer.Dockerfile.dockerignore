@@ -1,7 +1,13 @@
 # Build context for the query layer image. See the note in client.Dockerfile.dockerignore.
 #
-# This build reads two files from `deploy/images/` and, once 008-query-layer lands, `query/`.
-# Nothing else.
+# This build reads two files from `deploy/images/`, `query/`, and `libs/harness_core` — the
+# clock, configuration and heartbeat shapes the query layer's plugins import.
+#
+# The `!libs/harness_core` line below is load-bearing and easy to lose. `libs` is excluded
+# because the query layer needs one package out of it and not the rest, and Docker takes the
+# last matching pattern, so the exception has to follow the exclusion. Without it the build
+# fails at the COPY with `"/libs/harness_core": not found`, which is what it did from the day
+# that COPY was added until the day anything first tried to build this image.
 
 .git
 .github
@@ -14,6 +20,7 @@
 **/dist
 client
 libs
+!libs/harness_core
 services
 site
 specs

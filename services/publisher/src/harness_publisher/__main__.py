@@ -1,9 +1,12 @@
 """The publisher as a process: configuration, then time, then whatever is waiting in staging.
 
 Constitution IV's order, as everywhere: one environment variable names the configuration and
-that file is validated before the staging directory is looked at. The broker client is
-injected; with none supplied nothing is announced and the component says so, because a
-component that published to a stub would light itself in the client without being real.
+that file is validated before the staging directory is looked at. The broker client may be
+injected, and where it is not this component builds one from the ``broker`` section of its
+own configuration; where the configuration names none, nothing is announced and the
+component says so, because a component that published to a stub would light itself in the
+client without being real. A named broker that cannot be reached is reported in full on
+stderr and the staged runs are still taken, which is work that does not need a broker.
 """
 
 from __future__ import annotations
@@ -12,6 +15,10 @@ import sys
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -52,7 +59,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     stderr: Any = None,
 ) -> int:
     """Publish everything waiting in staging. Returns the process exit code."""
@@ -69,20 +76,28 @@ def main(
         print(f"{PUBLISHER_NAME}: no simulation time is available ({exc})", file=out)
         return _NO_CLOCK
 
-    if publisher is None:
-        print(
-            f"{PUBLISHER_NAME}: no publisher was supplied, so no run is announced and "
-            "nothing lights up. That is truthful, not a degradation",
-            file=out,
-        )
-
-    service = PublisherService(
-        settings, clock=active_clock, publisher=publisher, config_digest=config.digest
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=PUBLISHER_NAME, report=out
     )
-    service.beat(force=True)
-    for run_id in service.waiting():
-        service.take(run_id)
-        service.beat()
+
+    try:
+        if publisher is None:
+            print(
+                f"{PUBLISHER_NAME}: no publisher was supplied, so no run is announced and "
+                "nothing lights up. That is truthful, not a degradation",
+                file=out,
+            )
+
+        service = PublisherService(
+            settings, clock=active_clock, publisher=publisher, config_digest=config.digest
+        )
+        service.beat(force=True)
+        for run_id in service.waiting():
+            service.take(run_id)
+            service.beat()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

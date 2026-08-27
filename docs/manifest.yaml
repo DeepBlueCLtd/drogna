@@ -150,7 +150,9 @@ components: {}
 # rendering the records and says so on the index instead. Flipping it changes the
 # published site. `site/gates/check_adr.py` checks the build against it in both
 # directions, and the gate here checks the shallow half — that a manifest saying
-# "published" is not contradicted by an empty destination.
+# "published" is not contradicted by a `source` holding no record to publish. It does
+# not check `destination`: the records are rendered into the build and never written
+# back into the source, so there would be nothing there to find.
 
 adrs:
   published: true

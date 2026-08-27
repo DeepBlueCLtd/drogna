@@ -1,0 +1,12 @@
+// The same capture, waiting on something the application produced. A gate that rejected
+// this would be a gate people turned off.
+import { test } from "@playwright/test";
+
+test("photograph the shell", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector('[data-testid="component-diagram"]', { timeout: 15000 });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
+  await page.screenshot({ path: "shell.png" });
+});

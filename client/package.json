@@ -12,7 +12,11 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+    "typecheck:capture": "tsc --noEmit -p e2e/tsconfig.json",
+    "capture:glance": "node ../scripts/capture/glance/run.mjs",
+    "capture:pair": "node ../scripts/capture/pair/run.mjs",
+    "capture:curate": "node ../scripts/capture/curate/run.mjs",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run typecheck:capture && pnpm run test && pnpm run build"
   },
   "dependencies": {
     "@deck.gl/core": "^9.1.0",
@@ -25,10 +29,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
+    "@playwright/test": "1.56.1",
+    "@types/node": "22.20.0",
+    "@types/pngjs": "6.0.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "eslint": "^9.13.0",
+    "pixelmatch": "7.1.0",
+    "pngjs": "7.0.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "8.67.0",
     "vite": "^5.4.10",

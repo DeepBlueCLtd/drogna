@@ -33,3 +33,10 @@ Constitution X — no leakage in a released artefact|uv run python scripts/check
 # packager's own code path, so what is checked is what the writer produces today rather than
 # a file that was conforming on the day it was committed.
 SRD FR-43 — exports conform to the CF version they declare|uv run python scripts/check_cf_conformance.py
+
+# Feature 016 asks that no capture path wait on a fixed delay (FR-019, SC-011). It is a
+# constitution rule in spirit rather than in letter — a sleep is a host-clock dependency in
+# a different hat — and it is registered here rather than folded into the wall-clock gate
+# because it scans two directories rather than the tree, and because the wall-clock gate's
+# permitted zones include test paths, which is exactly where a capture path lives.
+016-visual-capture FR-19 — no fixed sleep in a capture path|uv run python scripts/check_no_fixed_sleep.py

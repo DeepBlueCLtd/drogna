@@ -90,3 +90,12 @@ jobs:
 
       - name: Tests
         run: pnpm test
+
+      # Feature 016 owns `client/e2e/`, which is type-checked against its own tsconfig
+      # because the capture tooling runs in node rather than in a browser and needs node's
+      # types, which the client itself deliberately does not have. Appended here rather
+      # than folded into the step above so that a capture failure and a client failure are
+      # told apart by their step name. The capture *specs* need a browser and a running
+      # client and are in `.github/workflows/capture.yml`; this step needs neither.
+      - name: Capture tooling types
+        run: pnpm run typecheck:capture

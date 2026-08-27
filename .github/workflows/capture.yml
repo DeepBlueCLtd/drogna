@@ -1,0 +1,263 @@
+# Visual capture, in CI.
+#
+# Two jobs for two of the three mechanisms, and deliberately none for the third.
+#
+# **No glance job.** The glance exists to show an author what the client looks like during
+# a session. Nobody is in a session here, nothing would look at the image, and a glance is
+# the one mechanism with no gate and no retention rule — so a CI job producing them would
+# be producing artefacts nobody reads under a rule nobody wrote (FR-021).
+#
+# **The pair runs on pull requests**, with a declared artefact retention period, because a
+# pair's life is the life of the branch (FR-012). Its output is never committed.
+#
+# **The curated capture is manual only.** It produces a reviewable candidate and this
+# workflow does not commit it. A workflow that committed a picture to a public site would
+# have turned an author's judgement into a default, and PR-01 review is exactly the
+# judgement that cannot be defaulted (FR-013, FR-021).
+name: Capture
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Candidate name, as <feature-number>-<slug> (curated capture only)"
+        required: true
+        type: string
+      caption:
+        description: "Alt text for the blog entry"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The capture tooling's own tests: the separation test and its merged-tree control, the
+  # fingerprint refusals, the comparator and its one-pixel control, the provenance leak
+  # checks and the curated-image dimensions. None of them needs a browser or a running
+  # client, so they run first and fail fast — a broken comparator makes every job below
+  # meaningless.
+  tooling:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: client/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Types
+        run: pnpm run typecheck:capture
+
+      - name: Tests
+        run: pnpm exec vitest run e2e/tests
+
+  # The pair, against a client this job builds and serves. Both halves are captured in the
+  # same environment, which is what the fingerprint's `capture.environment` field records
+  # and refuses on: a pair with one half taken locally and one here is not a pair (FR-010).
+  pair:
+    runs-on: ubuntu-latest
+    needs: tooling
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: client
+    env:
+      HARNESS_CONFIG: config/local/capture.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: client/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The version comes from client/package.json, which is the same pin the capture
+      # configuration records and the fingerprint compares against. Installing "latest"
+      # here would make a pair captured today incomparable with one captured tomorrow for
+      # reasons nobody chose.
+      - name: Install the pinned browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build the client
+        run: pnpm build
+
+      # The address is the one in the capture configuration; this serves the built client
+      # there rather than the configuration being bent to fit the job.
+      # The loop below is the one wait in this feature measured in real seconds, and it is
+      # test-harness setup rather than a capture path: it waits for a web server this job
+      # started to bind a socket, which produces no readiness signal to wait on. Every wait
+      # inside a capture is on the client's own readiness signal, and
+      # scripts/check_no_fixed_sleep.py enforces that over client/e2e/ and scripts/capture/.
+      - name: Serve the client
+        run: |
+          url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
+          host="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
+          port="$(node -e 'process.stdout.write(new URL(process.argv[1]).port)' "$url")"
+          nohup pnpm exec vite preview --host "$host" --port "$port" --strictPort \
+            > ../capture-preview.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "$url"; then
+              echo "the client is answering at $url"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the client never answered at $url; the preview server said:"
+          cat ../capture-preview.log
+          exit 1
+
+      # The determinism specs are the pair mechanism's own: a no-change pair is empty three
+      # times running, and the comparison catches a display that varies frame to frame.
+      # They are what makes every later difference this mechanism produces mean anything.
+      - name: The pair's determinism specs
+        run: pnpm exec playwright test --config e2e/pair.config.ts e2e/specs/determinism.spec.ts
+
+      # A pull request captures the "after" half. The "before" half comes from a run on the
+      # base of the branch; where there is none, one half is produced and the diff is not
+      # attempted, rather than the other half being invented.
+      #
+      # This step is allowed to fail without failing the job, and the step after it says
+      # why it failed rather than leaving a red cross to be interpreted. The pair pins the
+      # clock through the client's own rate control and waits for the clock to acknowledge
+      # it (FR-007); this job serves the built client and does not bring up the rest of the
+      # harness, so no clock answers and the capture refuses. That refusal is the correct
+      # behaviour and it is loud, which is why it is reported rather than suppressed. The
+      # determinism specs above are the part of the pair mechanism that is load-bearing
+      # without a running stack, and they are not allowed to fail.
+      - name: Capture the after half of a pair
+        id: after
+        continue-on-error: true
+        run: node ../scripts/capture/pair/run.mjs after pull-request
+
+      - name: Say what the pair capture did
+        if: always()
+        run: |
+          if [ "${{ steps.after.outcome }}" = "success" ]; then
+            echo "A half was captured. Its fingerprint:"
+            cat ../.capture/pair/pull-request/after.fingerprint.json
+          else
+            echo "No half was captured, and the step above says why."
+            echo
+            echo "The commonest reason is that no clock is answering: this job serves the"
+            echo "built client and nothing else, so no ctl/clock sample ever arrives and"
+            echo "the pin the pair requires cannot be acknowledged. That is a refusal, not"
+            echo "a silent pass, and it is what FR-007 asks for. Bring up the harness"
+            echo "alongside the client to capture a pair with the clock genuinely pinned."
+          fi
+          ls -R ../.capture/pair || echo "the pair area is empty"
+
+      # The retention period is declared here and in the capture configuration, and they say
+      # the same thing on purpose: a pair's life is the life of the branch, not for ever.
+      - name: Keep the pair for as long as the branch needs it
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-pair-${{ github.event.pull_request.number || github.run_id }}
+          path: .capture/pair
+          retention-days: 14
+          if-no-files-found: warn
+
+  # Manual only, and it commits nothing. What comes out is a candidate in an artefact; a
+  # person downloads it, looks at it, and moves it into the published-screenshot location
+  # by hand. That move is the PR-01 review gate.
+  curated:
+    runs-on: ubuntu-latest
+    needs: tooling
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: client
+    env:
+      HARNESS_CONFIG: config/local/capture.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: client/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install the pinned browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build the client
+        run: pnpm build
+
+      # The loop below is the one wait in this feature measured in real seconds, and it is
+      # test-harness setup rather than a capture path: it waits for a web server this job
+      # started to bind a socket, which produces no readiness signal to wait on. Every wait
+      # inside a capture is on the client's own readiness signal, and
+      # scripts/check_no_fixed_sleep.py enforces that over client/e2e/ and scripts/capture/.
+      - name: Serve the client
+        run: |
+          url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
+          host="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
+          port="$(node -e 'process.stdout.write(new URL(process.argv[1]).port)' "$url")"
+          nohup pnpm exec vite preview --host "$host" --port "$port" --strictPort \
+            > ../capture-preview.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "$url"; then
+              echo "the client is answering at $url"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the client never answered at $url; the preview server said:"
+          cat ../capture-preview.log
+          exit 1
+
+      - name: Produce a candidate
+        run: >-
+          node ../scripts/capture/curate/run.mjs
+          "${{ inputs.name }}"
+          "${{ inputs.caption }}"
+
+      # Uploaded, not committed. The next step is a person's.
+      - name: Offer the candidate for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: curated-candidate-${{ inputs.name }}
+          path: .capture/curated
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Say what happens next
+        run: |
+          echo "Nothing has been committed. Download the artefact, look at the image, and"
+          echo "if it is worth publishing move both files into site/docs/blog/assets/ and"
+          echo "commit them there. That move is the review gate, and it is yours."

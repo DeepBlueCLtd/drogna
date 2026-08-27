@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from harness_types.config.capture import DrognaVisualCaptureConfiguration
 from harness_types.config.client import DrognaBrowserClientRuntimeConfiguration
 from harness_types.config.clock import DrognaClockConfiguration
 from harness_types.config.common import DrognaCommonConfigurationSections
@@ -82,6 +83,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "bundle-manifest.schema.json": DrognaBundleManifest,
     "offload-receipt.schema.json": DrognaOffloadReceipt,
     "offload-telemetry.schema.json": DrognaOffloadTelemetry,
+    "config.capture.schema.json": DrognaVisualCaptureConfiguration,
 }
 
 CLOCK_SAMPLE: dict[str, Any] = {

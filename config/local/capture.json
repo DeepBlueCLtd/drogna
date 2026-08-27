@@ -1,0 +1,40 @@
+{
+  "client": {
+    "url": "http://127.0.0.1:8080",
+    "readiness_timeout_ms": 15000,
+    "stable_frames": 12,
+    "maximum_frames": 900
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "browser": {
+    "name": "chromium",
+    "playwright_version": "1.56.1",
+    "container_image": ""
+  },
+  "areas": {
+    "glance": ".capture/glance",
+    "pair": ".capture/pair",
+    "curated_review": ".capture/curated",
+    "published": "site/docs/blog/assets"
+  },
+  "scenario": {
+    "seed": 20260826
+  },
+  "pair": {
+    "retention_days": 14,
+    "difference_threshold": 0.05,
+    "maximum_differing_pixels": 0
+  },
+  "curated": {
+    "maximum_bytes": 2000000,
+    "pin_clock": true,
+    "masked_selectors": [
+      "[data-testid=\"configuration-failure\"]",
+      "[data-testid=\"rate-unavailable\"]"
+    ]
+  }
+}

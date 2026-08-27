@@ -168,18 +168,44 @@ jobs:
       # than a capture path. Every wait inside a capture is on the client's own readiness
       # signal, and scripts/check_no_fixed_sleep.py enforces that over client/e2e/ and
       # scripts/capture/.
-      - name: Wait for the client to answer where the capture configuration says it is
-        continue-on-error: true
+      # A client must be answering whatever the stack did, because the determinism specs
+      # below are the part of the pair mechanism that is load-bearing *without* a running
+      # stack and they are not allowed to fail. Serving the client from the stack alone made
+      # them depend on the stack coming up, and the first run proved it: the bring-up failed,
+      # the specs could not reach a client, and the job went red for a reason that had
+      # nothing to do with the comparator they exist to prove.
+      #
+      # So: the stack's client where there is one, and `vite preview` where there is not.
+      # The pair capture further down still refuses without a clock — that refusal is the
+      # honest outcome and is reported rather than suppressed — but the comparator is
+      # exercised either way, exactly as it was before the stack existed here.
+      - name: Make sure a client is answering, from the stack or from a preview
         run: |
           url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
           for _ in $(seq 1 60); do
             if curl -fsS -o /dev/null "$url"; then
-              echo "the client is answering at $url"
+              echo "the stack is serving the client at $url"
               exit 0
             fi
             sleep 1
           done
-          echo "the client never answered at $url"
+
+          echo "the stack is not serving a client at $url; falling back to a preview so the"
+          echo "determinism specs still run. The pair capture will refuse, because a preview"
+          echo "has no clock behind it, and that refusal is the correct outcome."
+          host="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
+          port="$(node -e 'process.stdout.write(new URL(process.argv[1]).port)' "$url")"
+          nohup pnpm exec vite preview --host "$host" --port "$port" --strictPort \
+            > ../capture-preview.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "$url"; then
+              echo "the preview is serving the client at $url"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "neither the stack nor a preview answered at $url; the preview said:"
+          cat ../capture-preview.log
           exit 1
 
       # The determinism specs are the pair mechanism's own: a no-change pair is empty three

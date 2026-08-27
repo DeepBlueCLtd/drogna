@@ -15,9 +15,9 @@ feature is developed around it — deployment on push to `main`, a feature's two
 pull requests with the backend first, and combined work done locally. It supersedes a
 per-pull-request environment design written earlier the same day, and records why.
 
-It is also where the one blocker lives: the deployed browser client would serve a
-configuration document naming `localhost`, so "the front end connects to the updated
-backend" cannot be true until a destination serves one of its own. It is a proposal to be
+It is also where the wall lives: the client is to be published to GitHub Pages, which
+serves it over HTTPS and will not let it speak `http` to anything. So a domain name and a
+certificate are on the critical path rather than at the end of it. It is a proposal to be
 argued with rather than a specification, and it becomes `specs/017-*` if the shape is agreed.
 
 ## This is a desk spike

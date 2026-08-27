@@ -4,19 +4,34 @@ title: C-06 Observation store
 
 # C-06 Observation store
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `stores/observations/` — the migration, the grants in `roles.sql`, and
+      `apply.py`, which orders them and emits a digest guard after each so an edited
+      migration stops a run rather than leaving two instances quietly disagreeing
+    - **Delivered by:** `specs/007-observation-path`
+    - **Covered by:** `tests/integration/test_observation_path.py`, which provisions a
+      PostGIS container through the store's own tooling and reconciles the counts; it
+      skips without a container runtime
+    - **Not present:** nothing applies the provisioning at scenario start —
+      `deploy/seed.d/` holds no steps yet, so `scripts/seed.sh` runs none and
+      provisioning is a deliberate invocation. There is also no quality-flag column, for
+      the reason given on the [simulated sensors](c04-simulated-sensors.md) page
 
 **Responsibility:** persist point observations.
 
 ## What it does
 
 Postgres with PostGIS, holding point observations: position, depth, simulation
-time, [observed property](../glossary.md#observed-property), value, unit,
-quality flag, and the [datastream](../glossary.md#datastream) the reading
-belongs to. It is the punishing write path — many small inserts arriving
-continuously — as opposed to the read-mostly reference data next door.
+time, value, and the [datastream](../glossary.md#datastream) the reading belongs
+to, which carries the [observed property](../glossary.md#observed-property), the
+unit and the instrument that produced it. It is the punishing write path — many
+small inserts arriving continuously — as opposed to the read-mostly reference
+data next door.
+
+There is no quality flag on a stored reading. That is an absence rather than a
+decision, and it is recorded on the
+[simulated sensors](c04-simulated-sensors.md) page where it starts.
 
 ## Why it shares an instance with the feature store
 

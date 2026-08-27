@@ -4,9 +4,19 @@ title: C-01 Simulation clock
 
 # C-01 Simulation clock
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/clock/`, with the clock port every other component reads
+      through in `libs/harness_core/clock.py`
+    - **Delivered by:** `specs/001-deterministic-foundations`
+    - **Covered by:** `services/clock/tests/`,
+      `tests/integration/test_clock_liveness.py` and
+      `tests/integration/test_heartbeat_under_rate_zero.py`; the wall-clock prohibition
+      below is the gate `scripts/check_no_wallclock.py`
+    - **Not present:** the lockstep barrier is implemented and unit-tested, but the
+      replay acceptance test scores the environment generator reproducing its own values
+      rather than two components advancing in lockstep, so the stronger claim rests on
+      unit tests alone
 
 **Responsibility:** single source of time, rate-controllable.
 **Owns the failure mode of:** hidden wall-clock dependencies.

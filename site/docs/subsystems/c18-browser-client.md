@@ -4,9 +4,22 @@ title: C-18 Browser client
 
 # C-18 Browser client
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! warning "Status: partly built"
+
+    - **Code:** `client/src/` — the component diagram and its layout, the liveness
+      reducer and its windows, the speed control, the arrival-time control, the
+      trajectory query, and the route and uncertainty layer data
+    - **Delivered by:** `specs/003-component-shell-client`, extended by
+      `specs/012-visualisation`; the capture harness under `client/e2e/` by
+      `specs/016-visual-capture`
+    - **Covered by:** `client/tests/`, including `no-mock.test.ts` for the rule below
+      and `recorded.test.ts` against recorded broker traffic, plus the end-to-end
+      specifications in `client/e2e/`
+    - **Not present:** there is no map surface. The route and uncertainty layers exist
+      as data, accessors and downsampling with a stated resolution, and are tested as
+      such, but no Deck.gl layer object is constructed and nothing renders the forecast
+      volume — the component diagram was delivered without a map base, so there is
+      nothing yet to put a layer on
 
 **Responsibility:** visualisation and control.
 
@@ -31,10 +44,12 @@ that does not exist, which is precisely the failure this rule exists to prevent.
 There is no demo mode, no fixture mode, and no path that populates the display
 for a screenshot.
 
-The consequence, on day one, is a screen on which nothing is lit. That looks
-like a broken application and is the only honest picture of a system with
-nothing running. The first thing that lights it is the simulation clock's
-heartbeat, and every later component follows the same pattern.
+The consequence, on day one, was a screen on which nothing was lit. That looked
+like a broken application and was the only honest picture of a system with
+nothing running. The first thing to light it was the simulation clock's
+heartbeat, and every component since has lit the same way — which is why a
+component that is running against a stack that is not shows nothing, still, and
+correctly.
 
 ## Making the core visible
 

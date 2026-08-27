@@ -4,9 +4,15 @@ title: C-13 Model runner
 
 # C-13 Model runner
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/model_runner/` — `kernel.py` is the port, `analytic_kernel.py`
+      the implementation behind it, and `ensemble.py` the perturbed members and their
+      spread
+    - **Delivered by:** `specs/009-control-loop`
+    - **Covered by:** `services/model_runner/tests/`, including `test_kernel_port.py`
+      for the boundary and `test_member_failure.py` for a member that dies, plus
+      `tests/integration/test_runner_publisher_handoff.py`
 
 **Responsibility:** analytic advection and noise; ensemble member runs.
 **Owns the failure mode of:** being irreplaceable.

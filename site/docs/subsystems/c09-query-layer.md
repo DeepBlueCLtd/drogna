@@ -4,9 +4,20 @@ title: C-09 Query layer
 
 # C-09 Query layer
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `query/` — the pygeoapi configuration template, and the bespoke plugins
+      under `query/plugins/`: the trajectory provider, the position and cube provider,
+      the CoverageJSON encoder, the run catalogue and the SensorThings provider
+    - **Delivered by:** `specs/008-query-layer`, after the spike recorded in
+      `specs/002-edr-trajectory-spike` and `spikes/edr-trajectory/`
+    - **Covered by:** `tests/integration/test_edr_trajectory.py`,
+      `test_edr_position_cube.py`, `test_sensorthings.py`,
+      `tests/unit/test_wkt_m_ordinate.py` — the M-ordinate assertion described below —
+      and `tests/acceptance/test_at01_trajectory.py`
+    - **Not present:** SensorThings Part 1 is served as a declared subset.
+      `query/conformance.md` lists what is absent and why, including the MQTT
+      subscription extension and query options inside an expansion
 
 **Responsibility:** SensorThings and EDR read access.
 
@@ -29,9 +40,10 @@ client's centrepiece.
 
 It also turned out to be the load-bearing unknown. No supplied pygeoapi provider
 implements trajectory queries: the provider matrix lists the relevant provider
-as position and cube only, and its source defines no trajectory method. So this
-is a build, not a configuration exercise — a bespoke EDR provider plugin sitting
-behind the coverage output port.
+as position and cube only, and its source defines no trajectory method. So it
+was a build and not a configuration exercise, and the bespoke EDR provider
+plugin that came out of it sits behind the coverage output port in
+`query/plugins/`.
 
 ## The version pin that matters
 

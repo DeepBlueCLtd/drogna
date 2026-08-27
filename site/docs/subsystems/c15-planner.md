@@ -4,9 +4,18 @@ title: C-15 Planner
 
 # C-15 Planner
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/planner/` — `value.py`, `collapse.py` for the simulated
+      collapse of uncertainty along a route, `select.py` for the prize-collecting
+      selection, `projection.py` for the forward growth, and `commitment.py` for the
+      receding horizon
+    - **Delivered by:** `specs/011-adaptive-planner`
+    - **Covered by:** `services/planner/tests/`, including `test_optimality_gap.py` and
+      `test_selection_determinism.py`, plus
+      `tests/integration/test_planner_replans_on_new_field.py` and
+      `tests/integration/test_plan_carries_no_instruction.py`, which asserts the
+      boundary described below rather than trusting it
 
 **Responsibility:** adaptive sampling recommendations.
 **Owns the failure mode of:** crossing into tactical advice.

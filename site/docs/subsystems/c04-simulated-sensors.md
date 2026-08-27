@@ -4,9 +4,18 @@ title: C-04 Simulated sensors
 
 # C-04 Simulated sensors
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/sensors/`
+    - **Delivered by:** `specs/007-observation-path`
+    - **Covered by:** `services/sensors/tests/`,
+      `tests/integration/test_observation_path.py` and
+      `tests/integration/test_topic_isolation.py`
+    - **Not present:** the published message carries no quality flag.
+      `contracts/schemas/observation.schema.json` declares none and the store has no
+      column for one; the requirements list quality flagging among the bespoke logic,
+      and nothing in the tree has yet decided what a flag would mean here. It is
+      recorded as open rather than quietly dropped
 
 **Responsibility:** publish observations in SensorThings vocabulary.
 
@@ -27,10 +36,17 @@ store, and then translated again at the query layer, and the translation is
 where the meaning goes missing. Publishing in the vocabulary the read path
 already speaks means there is one data dictionary, not three.
 
-Sampling error, instrument noise and quality flags are added here rather than
-in the generator, because that is where they belong: the generator produces the
-ocean, the sensor produces an imperfect view of it. Keeping the two apart is
-what makes the recovery error meaningful.
+Sampling error and instrument noise are added here rather than in the
+generator, because that is where they belong: the generator produces the ocean,
+the sensor produces an imperfect view of it. Keeping the two apart is what makes
+the recovery error meaningful. Each instrument declares its noise model, and the
+declaration is stored beside the readings so a value can be scored against the
+field it was drawn from.
+
+Quality flagging belongs here too and is not here yet. The requirements list it
+among the bespoke logic, and nothing has yet decided what a flag would mean for
+an instrument whose error is drawn from a distribution the harness itself chose.
+It is written down as an open question rather than quietly dropped.
 
 ## The vessel
 

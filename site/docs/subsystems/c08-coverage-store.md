@@ -4,9 +4,23 @@ title: C-08 Coverage store
 
 # C-08 Coverage store
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `stores/coverage/` — `layout.md` is the normative convention and
+      `validate_layout.py` enforces it; the files are written by `services/publisher/`
+      and read through `query/plugins/coverage_catalogue.py` and
+      `services/monitor/src/harness_monitor/coverage.py`
+    - **Delivered by:** `specs/008-query-layer`, with the writing half in
+      `specs/009-control-loop`
+    - **Covered by:** `tests/unit/test_coverage_catalogue.py`,
+      `tests/integration/test_coverage_store_seam.py` and
+      `tests/integration/test_new_run_servable.py`, which publishes a run and asserts it
+      is servable with no configuration edit
+    - **Not present:** the run manifest's shape is stated normatively in `layout.md` and
+      enforced by code, but it has no master under `contracts/schemas/` as a
+      generated-types source, which is why the shape is written down twice — in the
+      publisher that writes it and the catalogue that reads it. `layout.md` records this
+      as an outstanding gap
 
 **Responsibility:** gridded forecast and uncertainty fields.
 

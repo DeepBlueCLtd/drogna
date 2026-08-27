@@ -66,3 +66,50 @@ own ACL with the viewer credential rendered into `client.json` (A), or should th
 be served from behind the proxy so that one Basic challenge covers page and socket alike
 (B)? A is a small change I can make in an hour; B is a topology change and I would want
 your word before touching `public_url`.
+
+## 2026-08-27T23:45 — update: main settled the MQTT half; the HTTP Basic half stands
+
+**Where**: as above, plus `config/*/client.json` on `origin/main`
+
+**What I found**: I branched from `2b72634` and worked from that. While I was working, PR
+#20 landed `1a7d66a`, "Name the viewer role in the client's broker URL, which main is
+failing without" — so the second of the two layers in the entry above was being fixed by
+somebody else at roughly the same time I was writing it up. I rebased onto it.
+
+That also explains a failure I had to check before trusting: `uv run pytest` on my branch
+reported `test_every_broker_url_names_a_role_or_is_a_listed_exception` red for
+`droplet/client, local/client`. It was not mine, and it was not `main` being broken
+either — it was `main` at the commit I branched from, whose CI run *did* fail, fixed an
+hour later by the commit above. Worth stating plainly because a red test on a branch that
+did not cause it is exactly the kind of thing an unattended run rationalises.
+
+So the MQTT half is settled. The rendered `client.json` now carries
+`ws://drogna_viewer:<secret>@localhost:8081/ctl`, with the secret injected by the render
+and absent from every tracked file, and mqtt.js takes its username and password from
+there.
+
+**The HTTP Basic half is unchanged, and I have direct evidence for it now rather than an
+argument.** With the stack up, the client rendered with its viewer credential, and the
+mount fault fixed, the client still reports "0 of 18 components heard from" — and the
+proxy's own access log says why:
+
+    172.18.0.1 GET /ctl status=401 rule=allow-upgrade
+
+The request reaches the right location, under the right rule, and is refused at the
+access phase before the upgrade happens. The MQTT credential in the URL is not the
+credential being asked for; nginx wants HTTP Basic, and the browser's `WebSocket`
+constructor has nowhere to put one.
+
+**What I did**: appended this rather than editing the entry above, since these files are
+append-only and the first entry was true when written. Option A in that entry — render
+the viewer credential into the URL — has now happened on its own and was *not* sufficient,
+which is worth knowing: it removes A from the list rather than resolving the question.
+What remains is B, serving the client from behind the proxy so page and socket share an
+origin, or exempting `/ctl` from `auth_basic` and letting the broker's ACL be the boundary
+for the control namespace. Both change the exposure boundary; neither is mine.
+
+**What I need from you**: the question narrows to one. Should `/ctl` keep `auth_basic`
+— in which case the client has to be served from behind the proxy, and `public_url` moves
+off `:8080` — or should the control namespace be authenticated by the broker's ACL alone,
+with ADR-0001 amended to say that clearance is binary for the released prefix and
+delegated for the control upgrade?

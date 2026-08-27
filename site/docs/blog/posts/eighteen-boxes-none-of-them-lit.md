@@ -104,7 +104,8 @@ be resolved.
 
 The boxes have two shapes. Square corners mark bespoke components — logic written for
 drogna because it could not be had off the shelf: the divergence rules, the scheduling
-policy, the sound speed and uncertainty mathematics, the quality flagging. Round
+policy, the [sound speed](../../glossary.md#sound-speed) and uncertainty mathematics,
+the quality flagging. Round
 corners mark plumbing: a broker, two stores, a query layer, a reverse proxy, and the
 scaffolding around them.
 

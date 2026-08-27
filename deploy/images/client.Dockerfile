@@ -17,7 +17,20 @@ WORKDIR ${HARNESS_APP_ROOT}
 
 RUN corepack enable
 
-COPY client ./
+# The repository's own layout, reproduced, and that is the whole reason for the extra
+# directory. `client/src/contracts/schemas.ts` imports the boundary schemas by relative path
+# — `../../../contracts/schemas/...` — because Constitution III admits one definition of a
+# shape and the client reads the master rather than a copy. Those three steps land on the
+# repository root, so the build needs `client/` to sit beside `contracts/` exactly as it
+# does in the tree.
+#
+# Flattening `client/` into the working directory removed one of those levels, so the import
+# resolved to a directory nothing had copied and the bundle failed with "Could not resolve
+# ../../../contracts/schemas/clock.schema.json". Nothing caught it because this image had
+# never been built: no destination started the client until the profiles were promoted.
+COPY contracts/schemas ./contracts/schemas
+COPY client ./client
+WORKDIR ${HARNESS_APP_ROOT}/client
 
 # The `proxy_ca` secret is optional and absent in an ordinary build, exactly as in the
 # other two image definitions and for the same reason: a build inside an ephemeral agent
@@ -37,7 +50,7 @@ ARG HARNESS_APP_ROOT
 ARG HARNESS_STATIC_ROOT
 ARG HARNESS_NGINX_TEMPLATE_DIR
 
-COPY --from=build ${HARNESS_APP_ROOT}/dist ${HARNESS_STATIC_ROOT}
+COPY --from=build ${HARNESS_APP_ROOT}/client/dist ${HARNESS_STATIC_ROOT}
 COPY deploy/images/client-nginx.conf.template ${HARNESS_NGINX_TEMPLATE_DIR}/client.conf.template
 
 # The nginx image expands the templates above at start-up, substituting the environment the

@@ -19,7 +19,7 @@
     "stream": "offload"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_control@broker:1883",
     "client_id": "offload",
     "keepalive_seconds": 30
   },

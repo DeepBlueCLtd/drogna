@@ -69,8 +69,9 @@ Conductivity is the interesting one. It is not itself of much direct interest;
 it is measured because [salinity](#salinity) can be derived from it together with
 temperature and pressure. In drogna the CTD is simulated: the
 [sensors](subsystems/c04-simulated-sensors.md) sample the generated field at the
-vessel's position and publish readings with instrument noise and quality flags
-added.
+vessel's position and publish readings with instrument noise added. No quality
+flag is added, and none is carried: whether a reading is acceptable is judged at
+the ingestion seam rather than recorded on the reading (ADR-0014).
 
 ## Datastream
 
@@ -150,6 +151,27 @@ somewhere in between, which may be all you can say.
 One of the four features seeded into drogna's synthetic environment is a front
 of known position and sharpness, recorded in the ground-truth manifest.
 
+## H3
+
+A way of chopping the surface of the globe into cells and giving every cell a
+name. The cells are hexagons, they come in sixteen resolutions from continent-sized
+down to a few square metres, and a cell's name is a short string that also encodes
+which coarser cell contains it.
+
+Hexagons are the point. On a square grid a cell has four neighbours that share an
+edge and four that share only a corner, and those two kinds of neighbour are
+different distances away — so any calculation in which a cell's value depends on
+its neighbours has to decide what to do about the difference, and every choice is
+a fudge. Every neighbour of a hexagon is the same distance away, which removes the
+question.
+
+drogna indexes the horizontal for [planning](subsystems/c15-planner.md) at H3
+resolution 6 — cells of about 36 square kilometres, some 7 km corner to corner —
+and indexes depth separately in bands,
+because the vertical correlation structure is nothing like the horizontal one. A
+[thermocline](#thermocline) can make two depths a few metres apart nearly
+independent, which no horizontal index would ever say about two points 3 km apart.
+
 ## Mesoscale eddy
 
 A rotating, coherent body of water — typically tens to a few hundred kilometres
@@ -178,6 +200,28 @@ Keeping these three separate is what allows two different instruments measuring
 the same property to be compared, and what allows a query to ask for temperature
 without knowing what measured it.
 
+## Orienteering
+
+The route-choosing problem in which each place worth visiting carries a prize, each
+leg of the journey costs something, and there is a budget. You are not required to
+visit everything; you are trying to collect as much prize as the budget affords.
+The name comes from the sport, and the family it belongs to is called
+*prize-collecting*.
+
+It is worth naming because of what it is *not*. The travelling-salesman problem
+asks for the cheapest order in which to visit **every** stop. That is a different
+question with a different answer, and asking it of a sampling problem produces long
+routes that visit low-value water because the formulation obliged them to. Under an
+orienteering formulation most candidates are deliberately left unvisited, and the
+count of what was considered against what was chosen is what prize-collecting looks
+like from outside.
+
+drogna's [planner](subsystems/c15-planner.md) is an orienteering problem in which
+the prize at a cell is the uncertainty a visit would remove, the cost is time, and
+the budget is seconds. The prizes are not fixed: visiting one cell reduces the prize
+at its neighbours, which is the whole difficulty. See the
+[informative path planning derivation](algorithms/informative-path-planning.md).
+
 ## Persistence forecast
 
 The forecast that says nothing changes: conditions at time t + h will be exactly
@@ -191,6 +235,26 @@ earning its compute, whatever its absolute error looks like.
 drogna's [telemetry](subsystems/c16-telemetry.md) always reports forecast skill
 against persistence, and the client displays it that way, specifically so that a
 model cannot look useful by being merely plausible.
+
+## Profile
+
+A set of measurements taken down through the water column at one horizontal
+position: temperature at 5 m, 10 m, 20 m and so on, at one place, at more or less
+one moment.
+
+It is the shape of data a [CTD](#ctd) produces on a single cast, and it is the
+counterpart of a [trajectory](#trajectory), which moves horizontally instead. The
+distinction matters because the two answer different questions. A surface reading
+tells you nothing about where the [thermocline](#thermocline) is; a profile finds it
+immediately. Almost everything that makes [sound speed](#sound-speed) interesting
+is a vertical structure, so a system that only samples the surface is sampling the
+least informative part of the water.
+
+In the [CF conventions](standards/cf-conventions.md) a profile is one of the
+[discrete sampling geometries](#discrete-sampling-geometry), and a series of
+profiles taken at successive positions along a path is a
+[trajectoryProfile](#trajectoryprofile) — which is precisely what drogna's
+*arrive cold, then loiter* scenario produces.
 
 ## Salinity
 
@@ -234,6 +298,30 @@ of collecting.
 
 drogna seeds a thermocline at a known depth as one of its four ground-truth
 features.
+
+## Trajectory
+
+A path through space and time: an ordered list of positions, each with the moment
+it is reached. Four numbers per point — time, longitude, latitude, depth — and the
+order is part of the meaning.
+
+The word carries two related but distinct senses here, and confusing them is the
+most common mistake on this material.
+
+- **A trajectory query**, in [OGC API-EDR](standards/ogc-api-edr.md), asks *what
+  will conditions be along this path, at the moment of arrival at each point*. The
+  path is the question. Nothing has been measured; the answer is forecast values
+  sampled along a line that may be entirely hypothetical.
+- **A trajectory dataset**, in the [CF conventions](standards/cf-conventions.md),
+  is data that *was collected* along a path — one of the
+  [discrete sampling geometries](#discrete-sampling-geometry). The path is the
+  answer.
+
+drogna does both, and they meet in the [query layer](subsystems/c09-query-layer.md):
+a trajectory query over the [coverage store](subsystems/c08-coverage-store.md)
+returns a [CoverageJSON](#coveragejson) trajectory domain, whose composite axis is
+one (time, longitude, latitude, depth) tuple per vertex. See the
+[CoverageJSON primer](standards/coveragejson.md).
 
 ## trajectoryProfile
 

@@ -4,9 +4,21 @@ title: C-10 Reverse proxy
 
 # C-10 Reverse proxy
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `proxy/` — `policy.py` for path normalisation, `render_config.py`, and
+      the nginx templates it renders; the two leakage checks are `tests/leakage/`, run
+      as a gate by `scripts/check_leakage.py`
+    - **Delivered by:** `specs/013-security-proxy`
+    - **Covered by:** `proxy/tests/`, `tests/integration/test_request_matrix.py`,
+      `tests/unit/test_client_reaches_the_proxy.py`, and the leakage corpus under
+      `tests/leakage/fixtures/`, which carries controls so a run reporting nothing has
+      been shown to be capable of reporting something
+    - **Not present:** the second of the two leaks below is scored against a measurement
+      geometry that no component in the harness yet writes. The contract for it exists
+      in `contracts/schemas/run-manifest.schema.json` and the gate refuses loudly rather
+      than defaulting when it is missing, but today only the committed fixtures supply
+      one
 
 **Responsibility:** TLS, authentication, path policy.
 **Owns the failure mode of:** accidental exposure.

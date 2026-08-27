@@ -4,10 +4,14 @@ The order in :func:`main` is the order Constitution IV requires. One environment
 names the configuration; that file is read and validated before the clock is reached,
 before the coverage store is looked at, and before a single message is consumed.
 
-The broker client is injected. There is no MQTT client in this repository yet — the
-observation path that will bring one is feature 007 — and a component with no broker
-configured does not invent one and does not publish to a stub. It says so on stderr and
-publishes nothing, so nothing lights up in the client, which is true (Constitution VII).
+The broker client may be injected, and where it is not this component builds one from the
+``broker`` section of its own configuration — ``harness_core.broker`` is the wrapping, and
+the endpoint and credentials appear in no literal here. A component whose configuration
+names no broker does not invent one and does not publish to a stub: it says so on stderr
+and publishes nothing, so nothing lights up in the client, which is true (Constitution
+VII). A named broker that cannot be reached is reported in full on stderr and the monitor
+carries on with nothing to publish to, so silence never has two possible causes: stderr
+says which one this is.
 """
 
 from __future__ import annotations
@@ -17,6 +21,10 @@ from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -59,7 +67,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     forecasts: ForecastSource | None = None,
     catchup: CatchupQuery | None = None,
     messages: Iterable[tuple[str, bytes]] = (),
@@ -80,27 +88,35 @@ def main(
         return _NO_CLOCK
 
     source = forecasts if forecasts is not None else _forecasts_from(settings)
-    if publisher is None:
-        print(
-            f"{MONITOR_NAME}: no publisher was supplied, so no divergence and no heartbeat "
-            "is published and nothing lights up. That is truthful, not a degradation",
-            file=out,
-        )
-
-    service = MonitorService(
-        settings,
-        clock=active_clock,
-        forecasts=source,
-        publisher=publisher,
-        config_digest=config.digest,
-        catchup=catchup,
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=MONITOR_NAME, report=out
     )
-    service.start()
-    service.beat(force=True)
-    for topic, payload in messages:
-        service.handle(topic, payload)
-        service.beat()
-    service.report()
+
+    try:
+        if publisher is None:
+            print(
+                f"{MONITOR_NAME}: no publisher was supplied, so no divergence and no heartbeat "
+                "is published and nothing lights up. That is truthful, not a degradation",
+                file=out,
+            )
+
+        service = MonitorService(
+            settings,
+            clock=active_clock,
+            forecasts=source,
+            publisher=publisher,
+            config_digest=config.digest,
+            catchup=catchup,
+        )
+        service.start()
+        service.beat(force=True)
+        for topic, payload in messages:
+            service.handle(topic, payload)
+            service.beat()
+        service.report()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

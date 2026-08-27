@@ -41,8 +41,25 @@ wait_timeout="$(
     "${DROGNA_ROOT}/config/${destination}/deployment.json"
 )"
 
-step "Starting; images are built where they are missing, which can take some minutes"
-if ! compose up --detach --build --wait --wait-timeout "${wait_timeout}"; then
+# Building and waiting are separated because they are bounded by different things, and
+# conflating them made runtime.wait_timeout_seconds mean whichever of the two happened to
+# take longer. `compose up --build --wait --wait-timeout` spends the timeout on the build
+# as well as on the health checks, so a first bring-up on a machine with no layer cache —
+# four images here — exhausted it before a single container existed and then reported that
+# not every service had become healthy. Nothing had become anything; there was nothing to
+# be healthy yet.
+#
+# The timeout is a statement about how long a component may take to come up, which is a
+# property of the component. How long an image takes to build is a property of the machine
+# and its cache, and belongs under no deadline this file sets.
+step "Building images where they are missing, which can take some minutes"
+if ! compose build; then
+  printf '\nerror: an image could not be built; nothing was started.\n' >&2
+  exit 1
+fi
+
+step "Starting, and waiting up to ${wait_timeout}s for every service to report healthy"
+if ! compose up --detach --wait --wait-timeout "${wait_timeout}"; then
   printf '\nerror: not every service became healthy within %ss. What the stack reports:\n' \
     "${wait_timeout}" >&2
   report_unhealthy

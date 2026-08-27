@@ -222,8 +222,28 @@ coverage table shows which features have entries and which do not.
 - **FR-013**: Every oceanographic or standards-specific term MUST appear in the glossary,
   and its first use on a page MUST link there. The build MUST report a term used but not
   defined. (SRD PR-09)
-- **FR-014**: The site MUST publish exactly one blog entry per feature that works, and an
-  entry MUST NOT be published for a feature that does not exist. (SRD PR-08)
+- **FR-014**: The site MUST publish **at least one** blog entry for every feature that
+  works, and an entry MUST NOT be published for a feature that does not exist. (SRD PR-08)
+
+  **Amended 27 August 2026.** This read "exactly one" until the coverage table was
+  generated and reported that `001-deterministic-foundations` has two entries —
+  `a-runner-with-no-list` and `the-gate-that-examined-nothing`. Both name that feature in
+  their front matter and both describe work done inside it, so neither is the "occasional
+  entry about the process itself" that `site/docs/blog/index.md` separately licenses.
+
+  Going back to the source settled it rather than the count did. SRD PR-08 reads "One blog
+  entry per feature, written after the feature works, including screenshots" — a statement
+  of cadence, that each feature earns an entry. "Exactly" was this document's tightening
+  and the SRD does not support it. Read as a cap it forbids writing down the second thing a
+  feature taught, which is the opposite of what a blog kept as a learning record is for:
+  feature 001 produced both a runner that names no gate and a gate that examined nothing,
+  and there is no version of "pick one" that leaves the record honest.
+
+  The two halves that carry the requirement's weight are unchanged. Coverage is the point,
+  and FR-016's generated table is what makes a feature with no entry visible; publication
+  for a feature that does not exist is refused by `site/gates/check_blog.py`, which
+  resolves the front matter against `specs/`. Neither property depended on the cap, which
+  is why nothing enforced it.
 - **FR-015**: Every blog entry MUST carry front matter naming the feature directory it
   describes and MUST include at least one screenshot. (SRD PR-08)
 - **FR-016**: The site MUST publish a coverage table of features against entries, so the

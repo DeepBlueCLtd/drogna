@@ -30,10 +30,12 @@ from plugins.sensorthings_provider import conformance_statement  # noqa: E402
 CONFORMANCE_URL = "https://drogna.invalid/query/conformance"
 DOCUMENT = REPO_ROOT / "query" / "conformance.md"
 
-# The primer PR-09 promises. It lives under docs/, which this feature does not own, so it is
-# checked when it is there and reported as absent when it is not — rather than asserted into
-# existence by a test that would pass over a document nobody wrote.
-PRIMER = REPO_ROOT / "docs" / "standards" / "edr-and-sensorthings.md"
+# The primer PR-09 promises. Feature 008 left this pointing at docs/standards/, a path it did
+# not own and nobody wrote, so the check skipped for as long as the primer did not exist.
+# Feature 015 wrote it, and it lives on the published site rather than in the repository's
+# docs/ — which is architecture notes and decision records. This is the path it is actually
+# at, so the check now runs instead of skipping.
+PRIMER = REPO_ROOT / "site" / "docs" / "standards" / "sensorthings.md"
 
 # How the out-of-scope keys that are not literal option names read in prose. The served
 # statement carries the key; the documentation carries the sentence. Both must be there.

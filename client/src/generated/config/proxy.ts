@@ -54,6 +54,10 @@ export interface DrognaReverseProxyConfiguration {
       realm: string;
       /** Location of the credential file the proxy reads. Untracked, produced at deploy time. */
       file: string;
+      /**
+       * The identity a reader authenticates as. Tracked, because a name is not a secret; the secret is generated at deploy time and reaches the credential file alone.
+       */
+      user: string;
     };
     /**
      * The two upstreams this proxy is willing to reach, both by service name on the internal network. Neither is published to a host: reaching them is what the proxy is for.

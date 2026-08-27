@@ -230,6 +230,38 @@ Three other per-stack costs, none of them size:
   currently reads as two destinations that must differ only in values. That gate's
   behaviour under N destinations was not examined here.
 
+## 5a. A note on the question behind the question
+
+**Open cross-reference, added 27 August 2026 after this spike was written.** PR #15
+(`spikes/backend-hosting/`, open, not merged) records an agreed model in which the backend
+deploys **only on push to `main`**, a feature needing both halves is two pull requests with
+the backend first, and combined work happens locally. It says so explicitly: it supersedes
+a per-pull-request environment design written earlier the same day, because sequencing the
+halves removes the problem that design existed to solve.
+
+If that model holds, the premise of §5 — several stacks on one droplet — is not a
+requirement any more, and this document should be read for §1 to §4, §6 and §7 rather than
+for §5.
+
+Two things are worth carrying across even so.
+
+The first is corroboration. That design independently derived "seventeen services at this
+destination's own ceilings is 7.0 GiB and 13 CPUs on a 2 vCPU / 4 GiB machine, so capacity
+today is one environment, or none while the demonstration shares the box", and named the
+size-reduction spike as the thing that would raise the number. Two derivations, arrived at
+separately, agree: 7.0 GiB there, 7168 MB here.
+
+The second is that they disagree about what the number *means*, and this spike is the one
+holding the measurement. The capacity conflict is largely an artefact of the ceilings
+rather than of the deployment: every component measures 26–39 MB to load against a `384m`
+default. So "capacity today is one environment, or none" is what the configuration
+declares, not what the components need. That does not resurrect the per-pull-request
+design — sequencing removes its problem whatever the capacity is — but it does mean the
+capacity figure should not be cited as a constraint on anything else without §5 beside it.
+
+Whether that model is adopted is not this spike's call, and nothing here is written on the
+assumption that it has been.
+
 ## 6. Fewer containers
 
 Three options, in increasing order of what they cost:

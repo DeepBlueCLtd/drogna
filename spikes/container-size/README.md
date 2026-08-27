@@ -6,6 +6,8 @@ services and fewer containers?
 
 **The question behind it**, which is the one the answer is written against: can the
 droplet host one stack per open pull request, so several can be reviewed at once?
+(PR #15, open and unmerged, records an agreed model that supersedes that requirement.
+§5a of the finding says what survives either way.)
 
 **The answer**: yes, but almost none of the saving is where the question points. Image
 bytes are paid once and shared between stacks; memory, ports and volumes are paid per

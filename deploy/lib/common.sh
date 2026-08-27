@@ -138,16 +138,11 @@ public_url() {
   sed -n 's/^HARNESS_PUBLIC_URL=\(.*\)$/\1/p' "${DROGNA_ENV_FILE}" | tail -n 1
 }
 
+# --all is what makes an exited container visible: `compose ps` without it lists only what
+# is still up, so a container that crashed reads exactly like one that was never created.
+# The judgement itself lives in deploy/lib/service_states.py, where it can be tested without
+# a container runtime — see its docstring for the three false lines that put it there.
 report_unhealthy() {
-  local service
-  for service in $(active_services); do
-    local state
-    state="$(compose ps --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null |
-      awk -v want="${service}" '$1 == want { print $2" "$3 }')"
-    case "${state}" in
-      *healthy*|*running*|*exited*) ;;
-      "") printf '  %s: no container was created\n' "${service}" >&2 ;;
-      *) printf '  %s: %s\n' "${service}" "${state}" >&2 ;;
-    esac
-  done
+  compose ps --all --format json 2>/dev/null |
+    python3 "${DROGNA_LIB_DIR}/service_states.py" $(active_services) >&2
 }

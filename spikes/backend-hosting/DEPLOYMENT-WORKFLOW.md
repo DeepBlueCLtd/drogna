@@ -1,0 +1,389 @@
+# Plan: one origin on the droplet, and deployment on main
+
+**Date**: 27 August 2026
+**Follows**: [FINDING.md](FINDING.md), which settled where the backend lives.
+**Supersedes**: a per-pull-request environment design, and a published-to-Pages client
+design. Both are recorded at the end with what survives them.
+**Status**: a proposal to be argued with. If the shape is agreed it becomes `specs/017-*`,
+and that is the durable artefact, not this.
+**Re-checked against the tree on 27 August 2026**, after `main` was merged into this branch.
+Three claims moved and are corrected in place: the active profiles, the certificate's
+urgency, and the shape of the credential. The rest were re-verified and stand.
+
+---
+
+## The model
+
+1. **The backend deploys only on push to `main`.** No environment per pull request.
+2. **A feature needing both halves is two pull requests, backend first.** The front end is
+   developed against a backend that is already live.
+3. **Combined development happens locally**, where a session can update a container in place.
+4. **The client is served from the droplet**, behind the same proxy as the API, on one origin.
+5. **Security is not a real concern.** drogna is a toy.
+6. **Later**: open OGC API-EDR querying to the page, and probably model triggers from it.
+
+## What point 4 removes
+
+Everything the last two versions of this plan were blocked on:
+
+| Gone | Because |
+|---|---|
+| The mixed-content wall | One origin. No `https` page fetching `http` anything. |
+| CORS | Same origin. No preflight, no allowlist, no header on the boundary. |
+| **A certificate as a precondition** | Plain `http` works end to end. TLS becomes polish. |
+| **A domain name as the blocking item** | An IP address serves a toy perfectly well. |
+| Publishing the client to `gh-pages` | And with it the `ghp-import --force` collision, and the amendment the no-external-resources gate would have needed. |
+
+The domain and the certificate move from *critical path* to *when somebody feels like it*.
+Nothing in this plan waits on either. Worth checking once that nothing the client uses needs
+a secure context — WebGL and WebSockets do not — but `http` should be fine, at the price of
+a browser calling it Not Secure, which for a demonstration harness that says it is fake on
+its own landing page is not much of a price.
+
+---
+
+## "The Compose file already provides for it" is not the same as "it works"
+
+Three things are missing, and the middle one is the only real design decision.
+
+### 1. The proxy does not serve the client, and its schema says it will not
+
+`config/droplet/proxy.json` names two upstreams, `query` and `control_websocket`. The
+schema is `additionalProperties: false`, `required: [query, control_websocket]`, and
+describes itself as *"the **two** upstreams this proxy is willing to reach"*. There is no
+`client` upstream and no location that would reach one; the client container publishes to
+loopback and nothing forwards to it.
+
+So this is a deliberate widening of the exposure boundary's declared shape, touching
+`proxy/schemas/config.proxy.schema.json`, `proxy/templates/harness.conf.template`,
+`proxy/policy.py`, `proxy/render_config.py`, both destinations' `proxy.json`, and the
+request matrix in `tests/integration/test_request_matrix.py`. That is the work in this plan.
+It is not large, but it is the exposure boundary, and the proxy's README is emphatic that
+policy lives in the template and nowhere else.
+
+### 2. Where the SPA lives in the URL space
+
+`location /` is, in the template's own words, *"the whole of the default deny (FR-001)"*.
+Two ways to serve a page:
+
+- **At `/`.** The client's nginx does `try_files $uri $uri/ /index.html`, so every
+  unmatched path returns the application with 200. That is uniform — released, unreleased
+  and nonexistent paths all answer identically, which is what FR-006 actually asks for —
+  but it redefines the default deny from *refuse* to *serve the app*, and that is a change
+  to a security property rather than a configuration choice.
+- **Under a prefix** — `/app`, decided below — alongside `/released` and `/ctl`. One
+  admitted location, named in `proxy.json`, with `location /` untouched.
+
+**Recommend the prefix.** It leaves alone the single line the whole default deny rests on,
+and it puts serving the UI in the same idiom as everything else the boundary admits: the
+proxy README's *"Releasing is an act"* becomes true of the page as well. If `/` is wanted
+later, that is an argument to have on its own, with FR-001 and FR-006 in front of you.
+
+> **Do not add a redirect from `/` to the prefix.** `return 301` executes in nginx's
+> **rewrite** phase, which runs before the **access** phase where `auth_basic` lives — the
+> exact trap the template documents at length in choosing `try_files` over `return 404`. A
+> redirect at `/` answers before any credential is examined, and tells an uncleared caller
+> that something is there. This is not hypothetical under the decision below: the credential
+> stays enabled at the **local** destination, where `test_request_matrix.py` asserts the
+> uniform 401, so a redirect at `/` would break that test — which is the gate working.
+
+### 3. The bundle must not assume it is at the root
+
+`client/vite.config.ts` sets no `base`, so assets emit as `/assets/…` — absolute, at the
+root, straight into the deny. The obvious fix is to pass the prefix into the image as a
+build argument from destination configuration. **There is a better one:**
+
+```ts
+base: "./"
+```
+
+Relative asset URLs. No build argument, no prefix baked into an image, no path written down
+anywhere — the bundle works under any prefix, or none, and Constitution IV is satisfied
+rather than negotiated with. It also makes the assets consistent with the one relative URL
+the client already has, `./config.json`.
+
+That is safe **only because the client has no path-based routing**, which I checked rather
+than assumed: no `history`, `pushState`, `useNavigate` or router anywhere in `client/src`,
+and no router in `package.json` — the dependencies are deck.gl, ajv, mqtt, react and
+react-dom. `src/route/` is the *geographic* route (`RouteLayer`, `trajectoryQuery`), not URL
+routing.
+
+**Record the condition with the decision.** If path routing is ever added, a relative `base`
+and a relative `./config.json` both break at depth — from `/app/some/route`, `./config.json`
+resolves to `/app/some/config.json` — unless the document emits a `<base href>`. And
+`deploy/images/client-nginx.conf.template` already carries `try_files … /index.html` with a
+comment about "the client's own routes", anticipating routing that does not yet exist. So
+this is a live trap with a note already written beside it, not a hypothetical.
+
+---
+
+## The client configuration document
+
+Still needed, and still per destination. `broker.url` is `format: uri` and must be absolute —
+the schema's own description says it is *"the WebSocket URL of the proxy's upgrade location.
+Not the broker's own port: everything stays behind one reverse proxy under one policy"*,
+which is exactly the topology this plan adopts.
+
+1. Add `config/<destination>/client.json` at both destinations, against the schema that
+   already exists in `contracts/schemas/`. Parity then stops a third destination forgetting it.
+2. The client container mounts the destination configuration read-only already; its nginx
+   serves that file at the bootstrap URL in preference to the bundled one.
+3. `client/public/config.json` becomes openly a development fixture and says so — today it
+   names `localhost:8081` and `localhost:8090`, which are `config/local/deployment.json`'s
+   published proxy and clock.
+4. **Add a gate**: a service whose Compose entry names `HARNESS_CONFIG_PATH_<X>` has a
+   configuration file at every destination, or is listed as deliberately having none. One
+   appended line in `scripts/gates.registry`. Watch it fail on `client.json` first.
+
+Checked before calling this a gap rather than a decision: `specs/003` ticks T007 for the
+client *fetching* the document; nothing in 003 or 005 covers anything *serving* one.
+
+The failure it prevents is silent. The document is *valid*, so it is adopted and transports
+open against whatever it names; point it at `localhost` from a served page and nothing
+arrives, so nothing is heard from, so every component stays dark — correct under
+Constitution VII and indistinguishable from a healthy client in front of a dead backend.
+
+### The clock is not reachable from a browser, and that is survivable
+
+The clock publishes on loopback and is not a proxy upstream, so `clock.snapshot` and
+`clock.control` have no route in. Both are optional in the schema, deliberately: without
+them the page waits for the first `ctl/clock` subscription sample instead of asking at
+startup, and the rate control renders as unavailable **with a reason** rather than hiding
+(FR-012, ADR-0009). So the served page works, with a blank moment at load and no speed
+control.
+
+That is the first thing to fix when point 6 arrives. **Model triggers make the clock a third
+upstream**, and the schema's "two upstreams" sentence becomes three. Worth knowing now that
+the trigger work and the clock work are the same change.
+
+---
+
+## Decided: the credential stays in the design, and the droplet turns it off
+
+Delegated on 27 August 2026, and decided against my own earlier recommendation. I had said
+keep it. The reason for changing is not that security stopped mattering — it is a failure
+mode particular to this client.
+
+**Basic authentication and the MQTT-over-WebSocket upgrade are an untestable pairing here.**
+`mqtt.js` in a browser cannot set an `Authorization` header, so whether the credential
+reaches the `/ctl` handshake depends entirely on whether the browser attaches its cached
+credentials to a WebSocket upgrade. That behaviour is browser-dependent, has changed over
+time, and cannot be checked from this container. If it does not happen, the upgrade is
+answered 401, no heartbeat arrives, and **every component stays dark** — which is correct
+under Constitution VII and is indistinguishable from a backend that is down. That is the
+third time in these documents that the same silent failure shape has appeared, and it is
+not worth risking for a property the owner has said is not a priority.
+
+Exempting the upgrade location is not the escape: the template says plainly that
+per-location authentication's failure mode is a location without it, "and that is the one
+failure this component exists to prevent".
+
+**Since this was written, `main` gave `credentials` a third key.** It is now
+`{realm, file, user}`, and `deploy/lib/render_credentials.py` substitutes each role's secret
+into the configuration it writes under `deploy/.runtime/config/` — the mechanism ADR-0016
+describes. That is the broker's credential path rather than the proxy's, but it is the same
+idea and the same file, so the proposal below should be read as an addition to it rather
+than as a replacement for anything.
+
+**So: `credentials.enabled`, a boolean, mirroring `tls.enabled` exactly.** That flag is
+already the repository's idiom for a facility a destination does not use — `tls.enabled` is
+required at both destinations and is `false` locally because the local one has no
+certificate. Add the same to `credentials`, and then:
+
+| Destination | `credentials.enabled` | Why |
+|---|---|---|
+| `local` | `true` | Keeps the credential exercised. `tests/integration/test_request_matrix.py` asserts a `401` and the presence of `WWW-Authenticate`; deleting the mechanism would leave those assertions with no subject. |
+| `droplet` | `false` | No prompt, no untestable dependency between a credential and whether the display works at all. |
+
+Parity holds — the same key at both destinations, differing in value, which is what a
+destination is for. The mechanism is not deleted, it is not exercised at one destination,
+and the local one goes on demonstrating it.
+
+**Correcting something I said earlier: no ADR amendment is owed.** I claimed one was.
+Reading ADR-0001 properly, it decides **binary rather than tiered** — its rejected
+alternative is response filtering per caller, and its stated costs are a format-aware
+boundary and a user model that is state. "Everyone is cleared" is still binary, still
+stateless, and still needs no user model. Nothing in the decision changes.
+
+What is genuinely lost is the site's *unadvertised* property, which is discretion rather
+than security. The proportionate replacement costs one line and adds no policy axis:
+`add_header X-Robots-Tag "noindex, nofollow" always;` at the droplet, matching what the
+published site already does with its `robots.txt` and `noindex` meta tag. It gates nothing;
+it just declines to be indexed.
+
+The release policy stays. The default-deny location, the released prefix, the
+collections and variables in `proxy.released`, the `try_files`-not-`return` reasoning: that
+is Constitution X, ADR-0001 and ADR-0013, and it is the behaviour the harness exists to
+demonstrate. Removing it would delete features 013 and 014 rather than relax a setting.
+
+---
+
+## Deployment on push to `main`
+
+- A workflow on `push` to `main`, in a concurrency group that does **not** cancel in
+  progress, so two merges deploy in order rather than race.
+- It runs `scripts/run_droplet.sh` over SSH — already the one command, already converging.
+- It waits for health and fails loudly with `report_unhealthy`'s output rather than
+  reporting a green deploy of a broken droplet.
+- **Images come from a registry.** Under deploy-on-main this decides whether a merge takes
+  one minute or fifteen on a two-CPU box that is also serving the demonstration.
+
+`profiles.active` at the droplet is `["core"]` today — the observation store alone. Serving
+a page needs at least `core`, `query`, `edge` and `shell`, and lighting the components needs
+`broker`, `foundation`, `observation` and `control` as well. That is values in
+`config/droplet/deployment.json`, not code.
+
+**What this costs**: a backend change is no longer seen running before it merges. Three
+things make that tolerable and should be built rather than assumed — pre-merge verification
+in both halves, which has its own section below; the deploy reports its own failure; and
+rollback is checking out the previous commit and running the same command, which
+deterministic seeding makes safe. Rehearse that once on purpose.
+
+---
+
+## Combined development locally
+
+Mostly present. `run_local.sh` is the one exercised path and `up.sh` converges over a
+running stack. The missing case is rebuilding **one** service: `common.sh` already exposes a
+`compose()` bound to the rendered environment and `up.sh` already preflights only services
+that are not running, so a thin `scripts/reload.sh <service> [destination]` running
+`compose up --detach --build <service>` is the whole of it, leaving the seeding record alone.
+
+---
+
+## Pre-merge verification: both halves, and the CI half already exists
+
+`main` is the first place a backend change runs, so what stands in for watching it run
+before merging had to be decided rather than arrived at. The answer is both: a developer
+brings it up locally, and CI brings it up and tests it.
+
+**The CI half is already there, and I had implied it was not.**
+`tests/integration/test_compose_bringup.py` runs on every pull request — `ci.yml` runs a
+bare `uv run pytest` with nothing deselected — against the runner's real container runtime,
+and it is a good test. It asserts that a bring-up from nothing reaches health, that a second
+bring-up converges rather than failing, that the active profile starts exactly its services
+and no others, that the advertised address comes from configuration, and that an occupied
+port fails before anything starts. It skips loudly where no runtime is reachable, which is
+why it does nothing in an agent container and everything on the runner.
+
+**What is thin is its subject, not the test.** `profiles.active` is `["core"]` at *both*
+destinations, so what it brings up is the observation store: one container. Every assertion
+above is true of one container.
+
+So the work is in this order:
+
+1. **Widen `profiles.active` as components land.** This is the whole of making the existing
+   check mean something, and it is values rather than code. A test that brings up one
+   container on every pull request is not a weak test — it is a strong test of a small
+   thing, and the way to strengthen it is to give it more to look at.
+2. **Exercise the droplet's own values in CI**, so a configuration-only fault — a bad port
+   map, a missing configuration file, a directory nobody mounted — is caught before it
+   reaches the box rather than on it.
+3. **Write the developer step down where a reviewer sees it.** There is no
+   `.github/pull_request_template.md` in this repository today; a backend pull request
+   saying which profiles were brought up locally and what was observed is the cheapest
+   possible evidence that the local half happened, and its absence is the cheapest possible
+   signal that it did not.
+
+### The obstacle in (2), which is not a copy-paste
+
+Running the existing bring-up against `config/droplet` is **not** a matter of passing a
+different destination name. That destination binds the proxy to `0.0.0.0:443` and sets
+`tls.terminate: true` against certificate material that nothing in the repository creates —
+so a straight run on a runner asks for a privileged port and a certificate that is not
+there.
+
+Two honest ways out, and the choice is a real one:
+
+- **A third destination** whose *shape* is the droplet's — same files, same keys, which
+  parity already enforces — with values a runner can satisfy: loopback binds, no TLS
+  termination. It exercises everything about the droplet except the two values that differ,
+  and those two are exactly the ones that cannot be exercised anywhere but the droplet.
+- **Accept that the droplet's values are only ever exercised on the droplet**, and lean on
+  `validate_config.py` and the parity check, which already run at every bring-up and would
+  catch a malformed or divergent destination without starting anything.
+
+The first is more coverage and one more directory to keep in step; the second is honest
+about what a runner can and cannot stand in for. This is worth deciding when the work is
+specified rather than now, and it is recorded here so that it is decided rather than
+defaulted into.
+
+---
+
+## The order to build it in
+
+1. **Bring the droplet up by hand**, and correct the paragraph in `deploy/README.md` that
+   says nobody ever has. Unchanged, and still first.
+2. **`config/<destination>/client.json`, and the gate that would have caught its absence.**
+3. **`base: "./"` in `client/vite.config.ts`**, with a test asserting the built bundle
+   contains no root-absolute asset path.
+4. **The proxy's client upstream and its `/app` location** — schema, template, policy, both
+   destinations, and request-matrix cases including "the deny still denies".
+5. **`credentials.enabled`**, mirroring `tls.enabled`: `true` locally, `false` at the
+   droplet, plus the `X-Robots-Tag` header there. Watch `test_request_matrix.py` still
+   assert the 401 at the destination that keeps the credential.
+6. ~~`profiles.active` at the droplet.~~ **Done on `main`** — it is now
+   `["core", "broker", "foundation", "query", "edge", "shell"]` at both destinations. Which
+   promotes the next item from optional to blocking.
+7. **A certificate at the droplet, before the first bring-up rather than after it.**
+   `edge` being active with `tls.enabled: true` and no `config/droplet/tls/` means the
+   proxy fails `nginx -t` and the bring-up fails with it. See `BRING-UP.md`, item 1.
+8. **Images built in CI and pushed to a registry.**
+9. **The deploy-on-`main` workflow**, its credential, and its health report.
+10. **`scripts/reload.sh`**, and rehearse a rollback once.
+11. **Whenever wanted, not before**: a domain, and the clock upstream, which arrives with
+    model triggers rather than separately.
+
+---
+
+## What was dropped, and why
+
+**One environment per pull request** — a generated destination per number, a front door, a
+capacity cap, a reaper. Not rejected, made unnecessary: sequencing the two halves removes the
+problem it solved.
+
+`spikes/container-size/FINDING.md`, written independently on the same day, asked the same
+question from the other end — whether the container could be made small enough to host a
+stack per pull request — and reached the same arithmetic from measurement rather than from
+reading configuration: *"the `full` profile declares 7168 MB of memory ceilings against a
+4096 MB host"*. It adds what this document could not, having measured nothing: that image
+bytes are close to irrelevant to the question, because two stacks from the same sources
+share every layer and pay for the image once, while each pays in full for memory, a host
+port and seven volumes. Two routes, one number; that is worth more than either alone.
+
+**The client published to GitHub Pages.** Dropped on evidence rather than preference:
+`http://deepbluecltd.github.io/drogna/` answers `301` to `https` — checked with curl — and a
+page served over HTTPS may not `fetch` or open a WebSocket to `http://`. Active mixed content
+is blocked outright by every current browser, with no override, and it is not enforced at
+this project's end, so "toy, no security needed" cannot dismiss it. Serving from the droplet
+was the alternative in that document and is now the plan.
+
+Findings from both that are facts about the repository rather than about those designs:
+
+- **One environment file per checkout, not per destination.** `env_path()` in
+  `deploy/lib/render_env.py` takes only the repository root and `common.sh` pins
+  `deploy/.env`, so two destinations cannot be up on one host at once — the second
+  overwrites the first's values, database password included.
+- **Publishing cannot be switched off.** Probed with `docker compose config`: an empty
+  `ports` value fails with `invalid proto:`, and parity forces all seven `network.publish`
+  keys at every destination.
+- **`pages.yml` publishes with `ghp-import --force`**, replacing the whole branch. Any second
+  publisher to `gh-pages` would silently delete the site and look fine doing it.
+- **`site/tools/check_no_external_resources.py` is syntactic** — `src`, `<link href>`,
+  `url()`, `@import`. It does not see a runtime `fetch`, so it would have reported clean on
+  exactly the thing its own docstring forbids.
+
+---
+
+## Open questions
+
+1. ~~What is the prefix called?~~ **Decided: `/app`**, delegated 27 August 2026. It goes in
+   `proxy.json` beside `released.prefix` and `control.upgrade_prefix`. Chosen over `/ui` and
+   `/shell` for being the least surprising to somebody who has never read this repository —
+   `shell` in particular already means something else here, the static shell of C-18.
+2. ~~Keep the credential, or drop it?~~ **Decided: kept in the design, off at the droplet**,
+   delegated the same day. See above; the reasoning is the WebSocket upgrade, not security.
+3. ~~Is `scripts/run_local.sh` the whole of pre-merge backend verification?~~ **Decided:
+   no — both halves**, 27 August 2026. The developer brings it up locally before asking for
+   review, *and* CI brings it up and tests it. See below; the second half already exists and
+   is thinner than it looks.

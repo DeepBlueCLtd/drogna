@@ -106,3 +106,58 @@ def test_every_copied_path_exists_in_the_tree() -> None:
             if not (REPO_ROOT / source).exists():
                 missing.append(f"{dockerfile.name} copies {source!r}, which is not in the tree")
     assert not missing, "\n".join(missing)
+
+
+# --- the half a COPY line cannot see ---------------------------------------------------
+
+_ESCAPING_IMPORT = re.compile(
+    r"""^\s*(?:import[^"']*from\s*|import\s*)["'](?P<target>(?:\.\./)+[^"']+)["']""",
+    re.MULTILINE,
+)
+
+
+def test_the_client_build_context_carries_what_its_sources_import() -> None:
+    """A source-level import can leave the package, and no COPY line mentions it.
+
+    `client/src/contracts/schemas.ts` imports the boundary schemas as
+    `../../../contracts/schemas/...`, because Constitution III admits one definition of a
+    shape and the client reads the master rather than a copy. Nothing in
+    `client.Dockerfile` names `contracts` for that to happen — the bundler resolves it — so
+    the check above called the image consistent while its build could not complete:
+
+        Could not resolve "../../../contracts/schemas/clock.schema.json"
+
+    This walks the client's sources for imports that climb out of `client/`, resolves each
+    against the repository root, and asserts the build context still contains the directory
+    they land in. It is the same question as the COPY check, asked of the other half of the
+    build.
+    """
+    client_src = REPO_ROOT / "client" / "src"
+    ignore = IMAGES / "client.Dockerfile.dockerignore"
+    excluded, excepted = _patterns(ignore)
+
+    findings: list[str] = []
+    for source in sorted(client_src.rglob("*.ts")) + sorted(client_src.rglob("*.tsx")):
+        for match in _ESCAPING_IMPORT.finditer(source.read_text(encoding="utf-8")):
+            target = (source.parent / match.group("target")).resolve()
+            try:
+                relative = target.relative_to(REPO_ROOT)
+            except ValueError:
+                continue  # resolves outside the repository; not a build-context question
+            if relative.parts[0] == "client":
+                continue  # still inside the package the image copies
+            top = relative.parts[0]
+            if top not in excluded:
+                continue
+            reinstated = any(
+                str(Path(*relative.parts[: depth + 1])) in excepted
+                for depth in range(len(relative.parts))
+            )
+            if not reinstated:
+                findings.append(
+                    f"{source.relative_to(REPO_ROOT)} imports {match.group('target')!r}, "
+                    f"which lands in {relative}, and {ignore.name} excludes {top!r} with no "
+                    "exception for it. The bundle cannot resolve it and the image fails to "
+                    "build"
+                )
+    assert not findings, "\n".join(sorted(set(findings)))

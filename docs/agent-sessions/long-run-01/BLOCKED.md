@@ -113,3 +113,53 @@ for the control namespace. Both change the exposure boundary; neither is mine.
 off `:8080` — or should the control namespace be authenticated by the broker's ACL alone,
 with ADR-0001 amended to say that clearance is binary for the released prefix and
 delegated for the control upgrade?
+
+## 2026-08-28T01:30 — building `services/features` needs `stores/` inside the image, which is not a local change
+
+**Where**: `deploy/images/python-service.Dockerfile`, root `pyproject.toml`,
+`deploy/compose.yaml`; follows the DECISIONS entry of 01:10
+
+**What I found**: Having established *why* `services/features` has to exist — the feature
+store's provisioning needs `harness_core` and a destination is promised a bare interpreter
+— I went to build it, and found the reason it was never built.
+
+The one-shot would apply what `stores/features/provision.py` emits. It cannot reach it.
+`deploy/images/python-service.Dockerfile` copies `pyproject.toml`, `uv.lock`, `libs/` and
+`services/`, and nothing else. `stores/` is not copied — it is not excluded either, it is
+simply never named — so nothing under it exists in any Python service image. And
+`stores/features/` is not a workspace package: `[tool.uv.workspace] members` is
+`["libs/*", "services/*"]`, so `uv sync --package harness-features` would not install it
+even if it were on the context.
+
+Every way out is wider than the task:
+
+- **`COPY stores ./stores` in the shared Dockerfile.** One line, and it changes the image
+  every Python service is built from — eleven of them carrying store provisioning code they
+  have no business holding. It is also the file `CLAUDE.md` warns about twice: a `COPY`
+  added later does not update the per-image ignore file, and that has cost this repository
+  two rounds already.
+- **Add `stores/*` to the workspace members.** Changes the shape of the workspace for
+  everything that resolves it, and root `pyproject.toml` is one of the append-only shared
+  files.
+- **Move the seeded content generation into `libs/`,** which is where `CLAUDE.md` says a
+  shape belongs once it has consumers across a boundary — and it names two previous cases.
+  Probably the right answer, and it is a refactor of a component with passing integration
+  tests, done unattended, at one in the morning, with nobody to check the judgement.
+
+**Options**: pick one and do it, or stop. The issue authorises "building it", and I do not
+think that authorisation was written with these three in view — the note it rests on says
+the missing piece is "a few lines of `psql`", which is true of the observation store and
+not of this one.
+
+**What I did**: stopped, and moved to item 3. The half that was unambiguous is committed
+and working: the observation store is provisioned by `deploy/seed.d/010-observations.sh`,
+watched converging and watched refusing. `deploy/compose.yaml` is untouched, so the `full`
+profile is exactly as broken as it was — no worse, and now with a reason on record rather
+than a missing directory.
+
+**What I need from you**: which of the three? My recommendation is the third — move the
+content generation into `libs/harness_features` and leave `stores/features/provision.py` as
+a thin CLI over it, because it is the only one that does not put store code into ten
+unrelated images or reshape the workspace, and because it is the move `CLAUDE.md` already
+prescribes for exactly this situation. But it is a refactor across a boundary and I would
+rather you said so than assume it.

@@ -1,0 +1,41 @@
+diff --git a/client/src/transport/mqtt.ts b/client/src/transport/mqtt.ts
+index bbc3bfd..f9c6c2d 100644
+--- a/client/src/transport/mqtt.ts
++++ b/client/src/transport/mqtt.ts
+@@ -21,6 +21,8 @@ import type { RuntimeConfig } from "../config/runtime";
+ import { CONTROL_TOPICS } from "../data/topics";
+ import type { ConnectionState } from "../liveness/types";
+ 
++import { connectOverBus, isBusUrl } from "./bus";
++
+ // The topic list moved to `data/topics.ts` when feature 012 extended the subscription
+ // beyond the first two; the names are re-exported here so that a reader who comes to the
+ // transport looking for what it listens to still finds it.
+@@ -71,10 +73,26 @@ const connectOverWebSocket: Connector = async (url, options) => {
+   return mqtt.connect(url, options) as unknown as BrokerClient;
+ };
+ 
++/**
++ * The connector the served document asks for.
++ *
++ * One client, two places a message can come from. A deployment with a broker behind it
++ * serves a WebSocket URL and nothing here changes; a page with its components running in
++ * the browser serves a bus URL and the same subscription code receives from the in-page
++ * fabric instead. The choice is made from the document, which is the client's one
++ * permitted source of deployment knowledge (Constitution IV), and never from a build
++ * flag, a query parameter or a literal in this file.
++ *
++ * Nothing about liveness changes with the choice. Either way a component is lit because
++ * a message from it arrived, and neither branch can manufacture one.
++ */
++const chooseConnector: Connector = (url, options) =>
++  isBusUrl(url) ? connectOverBus(url, options) : connectOverWebSocket(url, options);
++
+ export function openControlSubscription(
+   config: RuntimeConfig,
+   sink: ControlSink,
+-  connect: Connector = connectOverWebSocket,
++  connect: Connector = chooseConnector,
+ ): ControlSubscription {
+   const options: ConnectionOptions = {
+     clientId: config.broker.clientId,

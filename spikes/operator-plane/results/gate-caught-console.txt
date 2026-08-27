@@ -1,0 +1,33 @@
+
+ RUN  v2.1.9 client
+
+ ❯ tests/no-mock.test.ts (6 tests | 1 failed) 14ms
+   × the client's source > contains nothing that could light a node without a heartbeat 8ms
+     → client/src/console/faultConsole.ts contains a demo mode: expected true to be false // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/no-mock.test.ts > the client's source > contains nothing that could light a node without a heartbeat
+AssertionError: client/src/console/faultConsole.ts contains a demo mode: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/no-mock.test.ts:66:64
+     64|       const text = readFileSync(path, "utf8");
+     65|       for (const [what, pattern] of FORBIDDEN) {
+     66|         expect(pattern.test(text), `${path} contains ${what}`).toBe(fa…
+       |                                                                ^
+     67|       }
+     68|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  19:27:41
+   Duration  665ms (transform 147ms, setup 0ms, collect 362ms, tests 14ms, environment 0ms, prepare 55ms)
+

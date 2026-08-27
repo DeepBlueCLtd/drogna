@@ -1,0 +1,9 @@
+component end, impairment reaches a validated heartbeat:  PASS
+display end, four provocations distinguishable:           PASS
+harness_core suite with the candidate present:            PASS
+client suite with the candidate present:                  PASS
+ruff check and format:                                    PASS
+all constitution gates:                                   PASS
+Constitution I, host clock planted:                       CAUGHT (correct)
+no-mocked-traffic, console planted:                       CAUGHT (correct)
+both green again once the plants are removed:             PASS

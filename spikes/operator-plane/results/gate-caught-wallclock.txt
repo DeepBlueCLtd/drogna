@@ -1,0 +1,2 @@
+libs/harness_core/src/harness_core/fault.py:175: [wallclock] time.time() — reads the host clock; simulation time comes from harness_core.clock.Clock, which is a subscriber to ctl/clock
+wallclock: 1 violation(s). Fix them, or mark a genuine exemption inline with a reason.

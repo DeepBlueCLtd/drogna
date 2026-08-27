@@ -1,0 +1,14 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 e2e/spike/worker.spec.ts:47:3 › a preview with its components in the page › the worker's scope is the directory it was served from (149ms)
+  ✓  2 e2e/spike/worker.spec.ts:56:3 › a preview with its components in the page › one preview's worker cannot answer for another, or for the site root (165ms)
+  ✓  3 e2e/spike/worker.spec.ts:75:3 › a preview with its components in the page › the first visit races, and waiting on the controller is what settles it (108ms)
+  ✓  4 e2e/spike/worker.spec.ts:102:3 › a preview with its components in the page › a return visit is controlled from its very first request (154ms)
+  ✓  5 e2e/spike/worker.spec.ts:114:3 › a preview with its components in the page › the bootstrap document comes from the origin, not from the worker (104ms)
+  ✓  6 e2e/spike/worker.spec.ts:123:3 › a preview with its components in the page › the responses are real network responses, attributed to the worker (107ms)
+  ✓  7 e2e/spike/worker.spec.ts:144:3 › a preview with its components in the page › it answers EDR shapes, and refuses rather than inventing one (114ms)
+  ✓  8 e2e/spike/worker.spec.ts:164:3 › a preview with its components in the page › the clock is reachable, and answers with the rate in force (113ms)
+  ✓  9 e2e/spike/worker.spec.ts:180:3 › a browser that will not run a worker › the page reports that it has no query layer rather than appearing to have one (78ms)
+
+  9 passed (2.1s)

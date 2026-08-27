@@ -1,0 +1,57 @@
+
+ RUN  v2.1.9 client
+
+ ✓ tests/route/arrivalConditions.test.ts (18 tests) 10ms
+ ✓ tests/controls/interpolationDoesNotEscape.test.ts (9 tests) 17ms
+ ✓ e2e/tests/separation.test.ts (7 tests) 29ms
+ ✓ tests/controls/pinnedRate.test.tsx (14 tests) 25ms
+ ✓ tests/busTransport.test.ts (8 tests) 26ms
+ ✓ e2e/tests/noSynthesisedTraffic.test.ts (14 tests) 39ms
+ ✓ tests/loop/rendering.test.tsx (14 tests) 25ms
+ ✓ tests/route/noInstruction.test.tsx (8 tests) 10ms
+ ✓ tests/controls/clockUnreachable.test.ts (15 tests) 9ms
+ ✓ e2e/tests/curated.test.ts (7 tests) 14ms
+ ✓ tests/bootstrap.test.ts (12 tests) 16ms
+ ✓ tests/inspector/inspector.test.ts (11 tests) 10ms
+ ✓ tests/controls/rateState.test.ts (13 tests) 8ms
+ ✓ tests/loop/transits.test.ts (11 tests) 14ms
+ ✓ tests/loop/coalesce.test.ts (11 tests) 13ms
+ ✓ e2e/tests/difference.test.ts (6 tests) 33ms
+ ✓ tests/loop/noSynthesisedTraffic.test.ts (8 tests) 27ms
+ ✓ e2e/tests/fingerprint.test.ts (15 tests) 17ms
+ ✓ tests/uncertainty/decayFromProjection.test.ts (13 tests) 8ms
+ ✓ tests/uncertainty/qualityStatement.test.tsx (13 tests) 8ms
+ ✓ tests/controls/captureReadiness.test.ts (11 tests) 14ms
+ ✓ tests/uncertainty/refresh.test.ts (13 tests) 6ms
+ ✓ tests/uncertainty/downsample.test.ts (12 tests) 227ms
+ ✓ tests/legibility/classification.test.ts (12 tests) 15ms
+ ✓ e2e/tests/restore.test.ts (7 tests) 5ms
+ ✓ tests/legibility/bespokeDetail.test.tsx (8 tests) 24ms
+ ✓ tests/no-mock.test.ts (6 tests) 15ms
+ ✓ tests/route/emptyRoute.test.tsx (11 tests) 14ms
+ ✓ tests/route/routeLayer.test.ts (15 tests) 7ms
+ ✓ tests/loop/cycle.test.ts (8 tests) 10ms
+ ✓ tests/data/longSession.test.ts (6 tests) 1075ms
+   ✓ a long session > retains the same number of objects after ten thousand cycles as after one thousand 369ms
+ ✓ tests/transport.test.ts (6 tests) 6ms
+ ✓ tests/diagram.test.tsx (9 tests) 27ms
+ ✓ tests/clockstate.test.ts (9 tests) 13ms
+ ✓ e2e/tests/provenance.test.ts (12 tests) 9ms
+ ✓ tests/reducer.test.ts (9 tests) 6ms
+ ✓ e2e/tests/captureConfig.test.ts (9 tests) 201ms
+ ✓ tests/recorded.test.ts (6 tests) 8ms
+ ✓ tests/data/buffers.test.ts (7 tests) 20ms
+ ✓ tests/window.test.ts (10 tests) 7ms
+ ✓ tests/layout.test.tsx (6 tests) 13ms
+ ✓ tests/validation.test.ts (8 tests) 5ms
+ ✓ tests/loop/disconnected.test.ts (6 tests) 6ms
+ ✓ tests/ordering.test.ts (4 tests) 5ms
+ ✓ tests/generated-types.test.ts (4 tests) 4ms
+ ✓ tests/unmapped.test.ts (4 tests) 5ms
+ ✓ tests/control.test.ts (9 tests) 12ms
+
+ Test Files  47 passed (47)
+      Tests  454 passed (454)
+   Start at  17:25:35
+   Duration  8.38s (transform 1.22s, setup 0ms, collect 9.50s, tests 2.12s, environment 10ms, prepare 3.22s)
+

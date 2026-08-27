@@ -1,0 +1,20 @@
+{
+  "broker": { "url": "bus://control", "client_id": "preview" },
+  "clock": {
+    "stale_after_seconds": 30,
+    "endpoint": "./clock",
+    "routes": { "snapshot": "/snapshot", "control": "/rate" }
+  },
+  "query": {
+    "endpoint": "./query",
+    "collections_path": "/collections",
+    "trajectory_path": "/trajectory",
+    "route_parameters": ["sea_water_temperature"]
+  },
+  "liveness": {
+    "default_window_seconds": 15,
+    "window_multiplier": 3,
+    "disconnected_is_indeterminate": true
+  },
+  "display": { "frame_interval_ms": 100, "interpolate_between_samples": false }
+}

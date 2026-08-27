@@ -1,0 +1,5 @@
+worker specs (scope, race, wire, blocked):  PASS
+specs typecheck:                            PASS
+fixed-sleep gate over the specs:            PASS
+fixed-sleep gate, delay planted:            CAUGHT (correct)
+fixed-sleep gate, delay removed:            PASS

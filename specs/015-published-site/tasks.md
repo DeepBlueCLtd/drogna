@@ -27,10 +27,29 @@ and `.github/workflows/pages.yml`. No task touches anything else.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create `site/` with `mkdocs.yml`, `theme/`, `blog/` and `gates/`, and add MkDocs, the Material theme and its blog plugin to the `uv` workspace as a development group.
-- [ ] T002 Configure MkDocs Material in `site/mkdocs.yml`: navigation, the documentation root pointed at `docs/`, the blog plugin over `site/blog/`, and the site name `drogna` set once in a single key (FR-020).
-- [ ] T003 [P] Vendor every theme asset — fonts, stylesheets, scripts, diagram renderer — into `site/theme/` so that nothing is fetched from another origin at page load (FR-007).
+- [~] T001 Create `site/` with `mkdocs.yml`, `theme/`, `blog/` and `gates/`, and add MkDocs, the Material theme and its blog plugin to the `uv` workspace as a development group.
+  **Partial**: `site/` carries `mkdocs.yml`, and `theme/` and `blog/` exist under other names —
+  `site/overrides/` for the theme override and `site/docs/blog/` for the blog. There is no
+  `site/gates/`: the one gate that exists is `site/tools/check_no_external_resources.py`. The
+  tooling is not in the `uv` workspace either; it is pinned transitively in
+  `site/requirements.txt` and installed with pip, which ADR-0010 records as a deliberate
+  choice — the site build is build-time tooling and the workspace's configuration contract
+  does not bind it.
+- [x] T002 Configure MkDocs Material in `site/mkdocs.yml`: navigation, the documentation root pointed at `docs/`, the blog plugin over `site/blog/`, and the site name `drogna` set once in a single key (FR-020).
+- [~] T003 [P] Vendor every theme asset — fonts, stylesheets, scripts, diagram renderer — into `site/theme/` so that nothing is fetched from another origin at page load (FR-007).
+  **Partial**: nothing is vendored into a `site/theme/`, and there is no such directory. The
+  property the task exists for does hold and is gated: `theme.font: false` stops Material's
+  Google Fonts fetch, Material's own stylesheets and scripts are emitted into the build, and
+  mermaid, social cards and analytics are all excluded (ADR-0010).
+  `site/tools/check_no_external_resources.py` reports zero findings over the built tree. Two
+  assets are not vendored because they are not present at all: there is no diagram renderer,
+  and ADR-0010 records the mathematics renderer as an open point — `pymdownx.arithmatex` emits
+  notation in generic mode with nothing served to render it, so no page may use notation yet.
 - [ ] T004 [P] Write `docs/manifest.yaml` listing the pages PR-09 requires, each with a minimum length that distinguishes a page from a stub, and an explicit entry recording whether ADRs are published (FR-011, FR-021).
+  **Not done**: there is no `docs/manifest.yaml`, or a manifest under any other name. Nothing
+  declares which pages are required, how long a page must be before it stops counting as a
+  stub, or whether ADRs are published — which is why T023, T026, T035 and T036 have nothing to
+  check themselves against.
 
 **Checkpoint**: The generator runs and produces an empty but complete shell.
 
@@ -40,9 +59,18 @@ and `.github/workflows/pages.yml`. No task touches anything else.
 
 **Purpose**: The build command and the gate runner, which every story depends on.
 
-- [ ] T005 Write the single documented build command as a workspace script, taking the base URL as a parameter with no default hostname, and confirm the same invocation works locally and in CI (FR-002, SC-001).
+- [~] T005 Write the single documented build command as a workspace script, taking the base URL as a parameter with no default hostname, and confirm the same invocation works locally and in CI (FR-002, SC-001).
+  **Partial**: one build command is documented, in `site/README.md`, and the workflow runs
+  exactly it: `mkdocs build --strict --config-file site/mkdocs.yml`. It is not a workspace
+  script and it takes no base URL parameter. The no-default-hostname half is met another way —
+  `site/mkdocs.yml` sets no `site_url` and the site is built with relative URLs, so it serves
+  correctly from any base path.
 - [ ] T006 Implement `site/gates/run_gates.py` as the single entry point: discover gates, run them all, report every failure rather than stopping at the first, exit non-zero on any (FR-004).
+  **Not done**: there is no `site/gates/run_gates.py` and no `site/gates/` directory. The
+  publication gates are four separate steps in `.github/workflows/pages.yml`, so a run stops at
+  the first failure rather than reporting every one.
 - [ ] T007 [P] Write `site/gates/tests/test_run_gates.py` asserting that a failing gate produces a non-zero exit and that all gates run even when one fails.
+  **Not done**: follows T006. There is no gate runner to test.
 
 **Checkpoint**: A build, and a place for gates to live.
 
@@ -58,17 +86,40 @@ then run the workflow on a branch and confirm the same output is pushed.
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Write `site/gates/tests/test_landing_page.py` asserting the built landing page carries the learning-harness, synthetic-data, fake-numerics statement before any other content (FR-003).
-- [ ] T009 [P] [US1] Write `site/gates/check_external_refs.py` and its test: parse built HTML, CSS and JavaScript for any sub-resource reference to another origin, and fail on any hit while permitting outbound hyperlinks (FR-007, SC-004).
+- [~] T008 [P] [US1] Write `site/gates/tests/test_landing_page.py` asserting the built landing page carries the learning-harness, synthetic-data, fake-numerics statement before any other content (FR-003).
+  **Partial**: the assertion exists, as the workflow step "Gate — the landing page carries the
+  FR-01 statement", which greps the built `index.html` for "learning harness", "synthetic" and
+  "fake". There is no `site/gates/tests/test_landing_page.py`, and nothing asserts the
+  statement comes *before* any other content: `site/docs/index.md` does put it first, by
+  authoring rather than by a check.
+- [~] T009 [P] [US1] Write `site/gates/check_external_refs.py` and its test: parse built HTML, CSS and JavaScript for any sub-resource reference to another origin, and fail on any hit while permitting outbound hyperlinks (FR-007, SC-004).
+  **Partial**: the gate exists as `site/tools/check_no_external_resources.py` and does what the
+  task describes — it reads built HTML, CSS, JavaScript, SVG and XML, looks only at the
+  attributes and directives that cause a browser to fetch, permits outbound hyperlinks, and
+  runs in the workflow before anything is pushed. Its test does not exist. No fixture carries a
+  deliberate external reference, so this gate has never been watched failing on the thing it
+  describes, which is the one habit `CLAUDE.md` says is not optional.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Write `docs/index.md`: the FR-01 statement first, then what the harness is, what it is not, and where to start reading (FR-003).
-- [ ] T011 [US1] Write `.github/workflows/pages.yml`: trigger on merge to `develop`, build, run the gate entry point, and push the built output to `gh-pages` only if every gate passed (FR-001, FR-004).
-- [ ] T012 [US1] Restrict the workflow so a pull request from a fork cannot reach the publishing job, and record the restriction in the workflow itself as a comment naming PR-01 (FR-009).
-- [ ] T013 [US1] Add `robots.txt` generation declining indexing, and a test asserting it is present in the built output (FR-008).
-- [ ] T014 [US1] Document in `docs/index.md` and in the workflow that `gh-pages` is machine-written and that hand edits are overwritten by the next publication (FR-001).
-- [ ] T015 [US1] Run the workflow on a throwaway branch publishing to a throwaway target, confirm the output matches a local build byte-for-byte, and record the check in the workflow's notes.
+- [x] T010 [US1] Write `docs/index.md`: the FR-01 statement first, then what the harness is, what it is not, and where to start reading (FR-003).
+- [~] T011 [US1] Write `.github/workflows/pages.yml`: trigger on merge to `develop`, build, run the gate entry point, and push the built output to `gh-pages` only if every gate passed (FR-001, FR-004).
+  **Partial**: `.github/workflows/pages.yml` exists, builds, and pushes to `gh-pages` only
+  after every gate step has passed. Two differences from the task as written: it triggers on
+  push to `main`, this repository having no `develop` branch, and there is no gate entry point
+  to run (T006), so the gates are four inline workflow steps instead.
+- [x] T012 [US1] Restrict the workflow so a pull request from a fork cannot reach the publishing job, and record the restriction in the workflow itself as a comment naming PR-01 (FR-009).
+- [~] T013 [US1] Add `robots.txt` generation declining indexing, and a test asserting it is present in the built output (FR-008).
+  **Partial**: `site/docs/robots.txt` declines indexing and `site/overrides/main.html` puts
+  `noindex, nofollow` on every page. Neither is generated — the file is committed and copied
+  into the build — and the presence assertion is the workflow's indexing grep step rather than
+  a test.
+- [x] T014 [US1] Document in `docs/index.md` and in the workflow that `gh-pages` is machine-written and that hand edits are overwritten by the next publication (FR-001).
+- [~] T015 [US1] Run the workflow on a throwaway branch publishing to a throwaway target, confirm the output matches a local build byte-for-byte, and record the check in the workflow's notes.
+  **Partial**: the workflow's header comment records that feature branches published once, so
+  the pipeline could be verified before a merge rather than after one, and what that first run
+  replaced. It does not record a byte-for-byte comparison of the published output against a
+  local build, which is the check this task asks for.
 
 **Checkpoint**: A published site that states what it is, produced only by machine.
 
@@ -85,15 +136,36 @@ seeded fixture and confirm it fails and names the file.
 ### Tests for User Story 2
 
 - [ ] T016 [P] [US2] Create `site/gates/fixtures/seeded_violation/` containing a page with a forbidden term and an image with the same term rendered into it. Document in a README that the fixture is a deliberate control (FR-006).
+  **Not done**: there is no `site/gates/fixtures/seeded_violation/`. Nothing in the tree carries
+  a deliberate PR-01 violation, so there is no control in front of the vocabulary gate — which
+  this feature's own notes call the difference between a pass and a gate that has quietly
+  stopped running.
 - [ ] T017 [P] [US2] Write `site/gates/tests/test_vocabulary.py` asserting zero findings on the real built site and a named failure on the seeded fixture, for both the text path and the image path (FR-005, FR-006, SC-003).
+  **Not done**: follows T016 and T019. There is no vocabulary gate over the built site, and no
+  fixture to point one at.
 - [ ] T018 [P] [US2] Add a test asserting that a screenshot showing an address bar, a filesystem path or an email address fails the gate (spec edge cases).
+  **Not done**: no gate reads published images at all, so nothing examines a screenshot for an
+  address bar, a filesystem path or an email address.
 
 ### Implementation for User Story 2
 
 - [ ] T019 [US2] Implement `site/gates/check_vocabulary.py`: walk built HTML, CSS, JavaScript and assets, invoke the repository's existing forbidden-vocabulary rule set rather than restating the rules, and report file and term on any hit (FR-005).
+  **Not done**: there is no `site/gates/check_vocabulary.py`. The repository's own
+  `scripts/check_forbidden_vocabulary.py` does cover `site/docs/*.md`, because `.md` is in its
+  `TEXT_SUFFIXES`, so the *source* is scanned on every build. Nothing scans the built artefact,
+  its assets, or anything the theme emits into it.
 - [ ] T020 [US2] Add image text extraction to the vocabulary gate, applying the same rules to text found inside published images (FR-005).
+  **Not done**: no text is extracted from published images by anything.
+  `site/docs/blog/assets/003-shell-all-dark.png` has never been read by a gate; only its
+  alt text and its provenance sidecar are text a scanner would see.
 - [ ] T021 [US2] Add the droplet-URL rule: any deployment hostname in built output is a finding that must be acknowledged explicitly in the manifest rather than passing silently (spec edge cases).
+  **Not done**: no rule looks for a deployment hostname in built output, and there is no
+  manifest in which to acknowledge one. The source side is not covered either:
+  `scripts/check_no_literal_paths.py` scans Python, TypeScript and SQL, and `.md` is not in its
+  suffix list.
 - [ ] T022 [US2] Wire the vocabulary gate into `run_gates.py` ahead of the publish step and confirm on a deliberately failed run that nothing is pushed (FR-004, SC-009).
+  **Not done**: follows T006 and T019 — there is no gate runner and no vocabulary gate to wire
+  into it.
 
 **Checkpoint**: Nothing can reach the public branch carrying what PR-01 forbids.
 
@@ -110,22 +182,82 @@ component identifier is accounted for.
 ### Tests for User Story 3
 
 - [ ] T023 [P] [US3] Write `site/gates/check_manifest.py` and its test: every page named in `docs/manifest.yaml` exists and exceeds its minimum length; a missing or stub page fails, named (FR-011, SC-002).
-- [ ] T024 [P] [US3] Write `site/gates/check_links.py` and its test: zero broken internal links, and a link to a repository file that is not published counts as broken (FR-019, SC-005).
+  **Not done**: no `site/gates/check_manifest.py`, and no manifest for it to read (T004). A
+  required page that quietly became a stub would fail nothing — and several have (T029 to
+  T034).
+- [~] T024 [P] [US3] Write `site/gates/check_links.py` and its test: zero broken internal links, and a link to a repository file that is not published counts as broken (FR-019, SC-005).
+  **Partial**: the property is held, by `mkdocs build --strict` with `validation` raised so that
+  an omitted file, an absolute link, an unrecognised link or a dangling anchor is an error —
+  including a link to a repository file that is not published, which is the case this task
+  singles out. There is no `site/gates/check_links.py` and no test of it.
 - [ ] T025 [P] [US3] Write `site/gates/check_glossary.py` and its test: every term in the glossary source list has a definition, every first use on a page links to it, and both directions are reported (FR-013, SC-007).
+  **Not done**: no `site/gates/check_glossary.py`. Nothing checks that a glossary term has a
+  definition or that a first use links to it. T027's four missing entries are the evidence that
+  this gate would have found something on its first run.
 - [ ] T026 [P] [US3] Add a subsystem coverage test asserting every component identifier from C-01 to C-18 has a page or an explicit not-yet-built entry (FR-012, SC-006).
+  **Not done**: no subsystem coverage test. All eighteen pages happen to exist and are in the
+  navigation, but nothing asserts it, and nothing would notice a C-number that acquired no
+  page.
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Write `docs/glossary.md`, seeded from the oceanographic and standards vocabulary in the SRD: sound speed, thermocline, front, mesoscale eddy, decorrelation timescale, ensemble spread, persistence reference, advection, coverage, trajectory, profile, discrete sampling geometry, orienteering, H3.
+- [~] T027 [US3] Write `docs/glossary.md`, seeded from the oceanographic and standards vocabulary in the SRD: sound speed, thermocline, front, mesoscale eddy, decorrelation timescale, ensemble spread, persistence reference, advection, coverage, trajectory, profile, discrete sampling geometry, orienteering, H3.
+  **Partial**: `site/docs/glossary.md` exists with sixteen entries and covers ten of the
+  fourteen terms this task seeds it from. Four have no entry: **trajectory**, **profile**,
+  **orienteering** and **H3**. The last two are used on
+  `site/docs/algorithms/informative-path-planning.md` and
+  `site/docs/subsystems/c15-planner.md` with no definition to link to, which is exactly what
+  T025's gate would have reported had it been written.
 - [ ] T028 [US3] Write `docs/architecture/overview.md`: the control loop as a flow with a loop in it, command-query separation, and the port accounting from SRD §2.1 reproduced honestly, including the boundaries that are not ports (FR-010, Constitution VI).
-- [ ] T029 [US3] [P] Write the subsystem pages for the components that exist, one per identifier, each stating what it does, why it exists and what failure mode it owns; write explicit not-yet-built entries for the rest (FR-010, FR-012).
-- [ ] T030 [US3] [P] Write `docs/algorithms/ensemble-spread.md`: what the spread is, how it is computed from perturbed members, and why it is the whole uncertainty story during cold arrival (SRD FR-07, FR-29).
-- [ ] T031 [US3] [P] Write `docs/algorithms/advection.md`: the analytic advection of the seeded features, what noise is added, and what the model deliberately does not do (SRD FR-28).
-- [ ] T032 [US3] [P] Write `docs/algorithms/informative-path-planning.md`: uncertainty collapse along a candidate route, diminishing returns, and why the problem is treated as prize-collecting under a budget rather than as a tour (SRD FR-32, FR-35).
-- [ ] T033 [US3] [P] Write `docs/standards/sensorthings.md` and `docs/standards/api-edr.md`: what each standard is for, the parts used here, and the parts deliberately not used (SRD FR-16, FR-19, FR-20).
-- [ ] T034 [US3] [P] Write `docs/standards/coveragejson.md`: what a coverage is before how it is encoded, and how a trajectory response with per-vertex timestamps appears in it (SRD FR-19, FR-20).
-- [ ] T035 [US3] Add `docs/standards/cf-conventions.md` to the navigation and the manifest, consuming the page feature 014 authors rather than writing it here.
+  **Not done**: there is no architecture overview page anywhere on the site.
+  `docs/architecture/` holds `delivery-plan.md` and `repo-layout.md`, neither of which is this,
+  and the navigation has no such entry. The control loop drawn as a flow with a loop in it,
+  command–query separation, and the port accounting from SRD §2.1 including the boundaries that
+  are not ports, appear on no published page.
+- [~] T029 [US3] [P] Write the subsystem pages for the components that exist, one per identifier, each stating what it does, why it exists and what failure mode it owns; write explicit not-yet-built entries for the rest (FR-010, FR-012).
+  **Partial, and the stalest thing in this feature.** All eighteen subsystem pages exist, are
+  in the navigation, and each states what the component does, why it exists and what failure
+  mode it owns. But every one of the eighteen opens with `Status: not yet built` — "No code for
+  this component exists. What follows is intent taken from the requirements, not a description
+  of anything running." That was true when they were written and is now false for all eighteen.
+  The published site therefore tells a reader that none of the harness exists. The half not
+  done is the one in this feature's own dependency note: "Each page states what exists rather
+  than what is planned, and is revised as components land."
+- [~] T030 [US3] [P] Write `docs/algorithms/ensemble-spread.md`: what the spread is, how it is computed from perturbed members, and why it is the whole uncertainty story during cold arrival (SRD FR-07, FR-29).
+  **Partial**: `site/docs/algorithms/ensemble-spread.md` exists and is in the navigation, but it
+  is an explicit stub — it opens with "Stub — the derivation is not written" and lists the
+  questions the derivation will have to answer instead of answering them. It also states that
+  the model runner does not exist, which is no longer true. The mathematics renderer ADR-0010
+  leaves open is the blocker behind it: a derivation needs notation and nothing serves it.
+- [~] T031 [US3] [P] Write `docs/algorithms/advection.md`: the analytic advection of the seeded features, what noise is added, and what the model deliberately does not do (SRD FR-28).
+  **Partial**: `site/docs/algorithms/advection.md` is an explicit stub in the same shape as
+  T030 — what the derivation will cover, not the derivation.
+- [~] T032 [US3] [P] Write `docs/algorithms/informative-path-planning.md`: uncertainty collapse along a candidate route, diminishing returns, and why the problem is treated as prize-collecting under a budget rather than as a tour (SRD FR-32, FR-35).
+  **Partial**: `site/docs/algorithms/informative-path-planning.md` is an explicit stub in the
+  same shape as T030. It is also where "orienteering" is used without the glossary entry T027
+  should have given it.
+- [~] T033 [US3] [P] Write `docs/standards/sensorthings.md` and `docs/standards/api-edr.md`: what each standard is for, the parts used here, and the parts deliberately not used (SRD FR-16, FR-19, FR-20).
+  **Partial**: one of the two is written. `site/docs/standards/ogc-api-edr.md` is a full primer
+  — the closed list of query shapes and why a closed list stands in for a query language, what
+  happens to a query once it is inside pygeoapi 0.20.0, and the parts of the standard
+  deliberately not used. `site/docs/standards/sensorthings.md` is an explicit stub listing what
+  the primer will cover.
+- [~] T034 [US3] [P] Write `docs/standards/coveragejson.md`: what a coverage is before how it is encoded, and how a trajectory response with per-vertex timestamps appears in it (SRD FR-19, FR-20).
+  **Partial**: `site/docs/standards/coveragejson.md` is an explicit stub. What a coverage is
+  before how it is encoded, and how a trajectory response with per-vertex timestamps appears in
+  it, are both named as things the primer will cover rather than covered.
+- [~] T035 [US3] Add `docs/standards/cf-conventions.md` to the navigation and the manifest, consuming the page feature 014 authors rather than writing it here.
+  **Partial**: `site/docs/standards/cf-conventions.md` was authored by feature 014 and consumed
+  here rather than rewritten, which is what this task asks for, and it is in the navigation.
+  There is no manifest to add it to (T004), so the expected-and-absent entry this feature's
+  dependency note describes never existed either.
 - [ ] T036 [US3] Publish `docs/adr/` under the documentation area per the manifest's recorded decision, with an index listing each record's status, and assert no published page carries a standing open-questions list (FR-021, FR-022, SC-010).
+  **Not done**: `docs/adr/` is not published. Thirteen records live there and none of them
+  appears on the site. `site/docs/decisions/` holds one seventy-word page about the site
+  tooling, and `site/README.md` describes that directory as "ADR drafts awaiting promotion to
+  `docs/adr/`" — the opposite direction to this task. There is no index of records and their
+  statuses, and since FR-021 asks for the publish-or-not question to be an explicit manifest
+  entry, the decision is not recorded either way (T004).
 
 **Checkpoint**: A reader can understand the system from the site alone, and a gap in it
 is a build failure.
@@ -143,23 +275,45 @@ its screenshots, its front matter validates, and the coverage table's totals are
 ### Tests for User Story 4
 
 - [ ] T037 [P] [US4] Write `site/gates/check_blog.py` and its test: front matter names an existing feature directory, carries a date, and the entry references at least one committed screenshot; an entry naming a nonexistent feature fails the build (FR-014, FR-015, SC-008).
+  **Not done**: no `site/gates/check_blog.py`. The convention it would check is being followed
+  by hand — every one of the nine posts carries a `date`, a `slug` and a `feature:` naming a
+  real `specs/` directory — but nothing enforces it, and an entry naming a feature that does
+  not exist would publish.
 - [ ] T038 [P] [US4] Add a coverage table test asserting the published totals match the counted sets of features and entries (FR-016).
+  **Not done**: follows T042. There is no coverage table to test.
 - [ ] T039 [P] [US4] Add a glossary-linking test for blog entries, on the same terms as documentation pages, since the blog's reader is assumed to know less (FR-017, FR-013).
+  **Not done**: no glossary-linking test for blog entries, or for anything else (T025).
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] Define the published screenshot location and naming convention at `site/blog/posts/images/NNN-slug/`, document that images are committed, and record the contract feature 016's curated mechanism writes against (FR-018).
-- [ ] T041 [US4] Write the entry template and an authoring note stating the audience: a general technical reader who has not read the SRD, problem before solution, learning stated plainly including what did not work (FR-017).
-- [ ] T042 [US4] Write `site/blog/index.md` and generate the coverage table of features against entries at build time (FR-016).
-- [ ] T043 [US4] Write the first entry for a feature that works, exercising the whole path end to end including committed screenshots from feature 016 (FR-014, FR-015).
+- [x] T040 [US4] Define the published screenshot location and naming convention at `site/blog/posts/images/NNN-slug/`, document that images are committed, and record the contract feature 016's curated mechanism writes against (FR-018).
+- [~] T041 [US4] Write the entry template and an authoring note stating the audience: a general technical reader who has not read the SRD, problem before solution, learning stated plainly including what did not work (FR-017).
+  **Partial**: the audience is stated, in `site/docs/blog/index.md` — a general technical reader
+  who has not read the requirements document and has no reason to care about oceanography, with
+  terms linked to the glossary. There is no entry template, and no authoring note covering
+  problem-before-solution or stating the learning plainly including what did not work. The nine
+  entries follow that shape by hand.
+- [~] T042 [US4] Write `site/blog/index.md` and generate the coverage table of features against entries at build time (FR-016).
+  **Partial**: `site/docs/blog/index.md` exists. It carries no coverage table of features
+  against entries, generated at build time or otherwise, so the gap FR-016 exists to make
+  visible is not visible: nine entries cover eight of sixteen features (001, 002, 003, 004,
+  005, 010, 015, 016) and nothing on the site says which eight or how many.
+- [x] T043 [US4] Write the first entry for a feature that works, exercising the whole path end to end including committed screenshots from feature 016 (FR-014, FR-015).
 
 ---
 
 ## Phase 7: Polish and Cross-Cutting Concerns
 
 - [ ] T044 [P] Add a build-time size budget for published images and fail the build when an image exceeds it, so the repository does not accumulate screenshots.
+  **Not done**: no size budget on published images and no build-time check of one. One image is
+  committed, `site/docs/blog/assets/003-shell-all-dark.png` at 380 KB, and nothing bounds the
+  next.
 - [ ] T045 [P] Add the whole gate suite to the pull-request workflow in report-only mode, so a contributor sees a failure before merge rather than at publication.
-- [ ] T046 Record in `site/README.md` that `docs/` is source and `site/` is presentation, who owns which page, and that `gh-pages` is machine-written.
+  **Not done**: `.github/workflows/ci.yml` runs the Python suite, the client suite and
+  `./scripts/gates.sh`; it runs no site gate. `pages.yml` has no `pull_request` trigger by
+  design (T012), so no site gate runs on a pull request in any mode. A contributor sees a site
+  failure on the publishing run after merge.
+- [x] T046 Record in `site/README.md` that `docs/` is source and `site/` is presentation, who owns which page, and that `gh-pages` is machine-written.
 
 ---
 
@@ -246,3 +400,72 @@ because a missing page is declared rather than hidden.
   discipline: a resolved question is found as a requirement or an ADR.
 - The blog's audience is stated in the authoring note, not implied. An entry that would
   need the SRD beside it to make sense has not met PR-07.
+
+---
+
+## Outcome
+
+### Reconciled against the tree, 2026-08-27
+
+**7 of 46 ticked, 19 partial, 20 not done.** This file claimed nothing had been done. The
+site is real, is live, and is published only by machine — but this feature is the least
+finished of the sixteen, and the previous record was closer to the truth here than anywhere
+else. Every mark below was checked against a path or against the check that covers the
+behaviour.
+
+**Where the site stands.** US1 is delivered: `site/` builds with MkDocs Material,
+`.github/workflows/pages.yml` publishes to `gh-pages` on a push to `main` and nowhere else,
+the landing page carries the FR-01 statement first, indexing is declined twice over, and no
+page fetches anything from another origin — `site/tools/check_no_external_resources.py`
+reports zero findings over the built tree and runs before every push. US3's shape is there:
+eighteen subsystem pages, four algorithm pages, five standards pages, a glossary and a blog
+with nine entries and one committed screenshot.
+
+**The two things a reader should know before trusting the published site.**
+
+1. **Every subsystem page says the component does not exist.** All eighteen open with
+   `Status: not yet built` — "No code for this component exists." That was true the day they
+   were written and is false for all eighteen now. A reader arriving at the site is told the
+   harness has not been built. This is T029, and it is the single most misleading thing in
+   the repository.
+2. **Four of the five derivation and primer pages are explicit stubs.** Ensemble spread,
+   advection, informative path planning and SensorThings each say so in a warning admonition
+   at the top and then list what the page will cover. Only `ogc-api-edr.md` and
+   `cf-conventions.md` are written, and the second was authored by feature 014.
+
+**US2 does not exist at all.** There is no `site/gates/` directory, no gate runner, no
+vocabulary gate over the built artefact, no image text extraction, no droplet-URL rule, and
+no seeded violation fixture. Nine tasks — T006, T007, T016 to T022 — have nothing behind
+them. The source is covered by the repository's own
+`scripts/check_forbidden_vocabulary.py`, which scans `site/docs/*.md` because `.md` is in
+its suffix list; the built output, its assets and everything the theme emits are scanned by
+nothing. The one gate that does exist has no test and no control, so it has never been
+watched failing.
+
+**The manifest is the keystone that was never laid.** `docs/manifest.yaml` does not exist
+(T004), so there is no declaration of which pages are required, no minimum length that
+separates a page from a stub, and no recorded decision on whether ADRs are published. Four
+further tasks depend on it and are open for that reason. Had it existed, the stub pages above
+would have failed the build the day a component landed, which is exactly what FR-011 and
+SC-002 were for.
+
+**`docs/adr/` is not published** (T036). Thirteen records, none of them on the site.
+`site/README.md` describes `site/docs/decisions/` as "ADR drafts awaiting promotion to
+`docs/adr/`", which is the opposite direction to the task.
+
+**Paths that moved, where the tick or the reason is about the thing rather than the
+spelling.** The documentation source is `site/docs/`, not the repository's `docs/`, which is
+ADRs and architecture notes; the theme override is `site/overrides/`, not `site/theme/`; the
+blog is `site/docs/blog/`, not `site/blog/`; the EDR primer is `standards/ogc-api-edr.md`,
+not `api-edr.md`; and published screenshots are `site/docs/blog/assets/<feature>-<slug>.png`
+rather than `site/blog/posts/images/NNN-slug/`. T040's convention is the one that matters,
+because feature 016 writes against it: it is recorded in `site/README.md` and in ADR-0010's
+open points, and `003-shell-all-dark.png` carries the `.provenance.json` sidecar that 016
+established. That image predates the provenance convention and was re-taken under it, which
+is why the sidecar exists beside a file older than the mechanism that now produces it.
+
+**Blog entries written by other features.** Nine entries are published and only one of them
+belongs to this feature — `taking-a-requirements-document-apart`, whose front matter names
+`specs/015-published-site`. The rest were written by the features they describe, under the
+convention T040 and T041 set. They are evidence that the convention works, not that this
+feature's tasks were done; T037 to T039 gate none of them.

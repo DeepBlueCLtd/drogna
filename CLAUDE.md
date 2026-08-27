@@ -21,7 +21,22 @@ reason a fresh session can pick this up without archaeology.
 | What does a store look like on disk? | `stores/coverage/layout.md` |
 
 `tasks.md` files record unticked work with the reason it is unticked. An unticked task
-with an explanation is a decision, not an oversight — read it before redoing the work.
+**with an explanation** is a decision, not an oversight — read it before redoing the work.
+
+An unticked task with *no* explanation means nobody maintained the file, and it says
+nothing about whether the work exists. Six features finished with their task lists
+essentially untouched — 002, 003, 004, 005, 013 and 015 — leaving 248 of 252 tasks
+unticked, including the whole of the security proxy. Reconciled against the tree on
+27 August 2026: **196 were done, 33 partly done, and 23 genuinely outstanding.** So the
+file was wrong about roughly nine tasks in ten, and right about twenty-three — which is
+why it had to be checked rather than either trusted or discarded.
+
+The lesson is the one to carry: **the tree is the authority and the record is a claim
+about it.** Where the two disagree, check the tree, then fix the record. A task list that
+has stopped being maintained is worse than no task list, because it is read as evidence.
+
+The cheapest guard is to tick as you go, and to write the reason at the moment you decide
+not to do something — the reason is the part that cannot be reconstructed later.
 
 ## Commands
 

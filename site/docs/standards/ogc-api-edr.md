@@ -48,6 +48,10 @@ shapes, and it is a path segment in the URL rather than a parameter.
 | `locations` | Named places the collection can be asked about. | Not served |
 | `instances` | The versions of a collection. For drogna, the model runs. | Served |
 
+Two of the five drogna does not serve turn out to be less available than the
+table suggests, for reasons that have nothing to do with drogna: see [the
+difference between the nine](#the-difference-between-the-nine-in-full).
+
 Trajectory is the one drogna exists to exercise: given a planned route with a
 timestamp at every vertex, return the conditions forecast for the *moment of
 arrival* at each point, rather than the conditions at query time. For anything
@@ -278,6 +282,188 @@ it naively would answer a twenty-vertex route with ten values and HTTP 200 —
 precisely the class of failure this component is arranged to avoid. drogna's
 provider ignores it and bounds routes by a configured vertex count instead,
 refusing rather than truncating.
+
+### The difference between the nine, in full
+
+The figure above shows one handler serving every query type. That raises a fair
+question: if there is one handler, what actually makes a `cube` query different
+from a `trajectory` one?
+
+The answer is smaller than the standard makes it look. Between the nine query
+types there are exactly **three conditionals** in the whole of
+`api/environmental_data_retrieval.py`, and everything else every query type
+receives is identical. The figure below is the full accounting; the prose after it
+says the same things.
+
+<figure>
+<div style="overflow-x:auto">
+<svg class="edrq" viewBox="0 0 900 522" role="img" aria-labelledby="edrq-title edrq-desc" preserveAspectRatio="xMidYMid meet" style="width:100%;min-width:800px;height:auto">
+<title id="edrq-title">What pygeoapi parses for each EDR query type, and what it does not</title>
+<desc id="edrq-desc">A table drawn as a grid, nine rows and six columns, showing what pygeoapi 0.20.0 parses for each OGC API-EDR query type before it calls a provider. The columns are: coords, which is passed to shapely.wkt.loads; bbox; within and within-units; location_id taken from the path; and the parameters common to every query type, namely datetime, z, parameter-name and limit. position, radius, area, trajectory and corridor all require coords. radius alone also reads within and within-units. cube does not read coords at all and requires bbox instead. locations does not read coords either, reads bbox optionally, and takes a location_id from the path. Every one of those receives the common parameters. Two rows are marked as losing something. corridor is routed and its coords are parsed, but corridor-width, corridor-height, their units and the two resolution parameters are not read anywhere in the release, so the parameters that make a corridor a corridor never reach the provider. items is worse: no EDR route is registered for it at all in any of the three web frameworks pygeoapi ships, so the whole query type is unreachable; the /items path that does exist belongs to the Features API, not to EDR. trajectory is marked with an M badge: it is the only query type whose coords carry a per-vertex time, and whether that time survives shapely.wkt.loads depends on the installed Shapely and GEOS versions. instances is answered by a different function entirely, before any of this parsing runs. Of the nine, drogna serves four: position, cube, trajectory and instances.</desc>
+<style>
+svg.edrq { color: var(--md-default-fg-color--light); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+svg.edrq .row { fill: var(--md-code-bg-color); stroke: none; }
+svg.edrq .rowalt { fill: none; stroke: none; }
+svg.edrq .warn { fill: var(--md-code-bg-color); stroke: var(--md-accent-fg-color); stroke-width: 2; }
+svg.edrq .grid { stroke: var(--md-default-fg-color--lighter); stroke-width: 1; }
+svg.edrq .t { fill: var(--md-default-fg-color); font-size: 12px; }
+svg.edrq .qt { fill: var(--md-default-fg-color); font-size: 13px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+svg.edrq .sub { fill: var(--md-default-fg-color--light); font-size: 9.5px; }
+svg.edrq .s { fill: var(--md-default-fg-color--light); font-size: 10.5px; }
+svg.edrq .hd { fill: var(--md-default-fg-color); font-size: 10.5px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+svg.edrq .hs { fill: var(--md-default-fg-color--light); font-size: 9px; }
+svg.edrq .lbl { fill: var(--md-default-fg-color--light); font-size: 10px; letter-spacing: 0.09em; }
+svg.edrq .dim { fill: var(--md-default-fg-color--light); font-size: 12px; }
+svg.edrq .dot { fill: var(--md-default-bg-color); stroke: var(--md-accent-fg-color); stroke-width: 2; }
+svg.edrq .dotl { fill: var(--md-default-fg-color); font-size: 9px; font-weight: 700; }
+</style>
+<text class="lbl" x="24" y="26">PYGEOAPI 0.20.0 · WHAT REACHES THE PROVIDER, BY QUERY TYPE</text>
+<text class="s" x="24" y="44">One handler serves every routed query type. These five conditionals are the whole of the difference between them.</text>
+<text class="hd" x="192" y="62" text-anchor="middle">coords</text>
+<text class="hs" x="192" y="74" text-anchor="middle">shapely.wkt.loads</text>
+<text class="hd" x="276" y="62" text-anchor="middle">bbox</text>
+<text class="hd" x="360" y="62" text-anchor="middle">within</text>
+<text class="hs" x="360" y="74" text-anchor="middle">within-units</text>
+<text class="hd" x="444" y="62" text-anchor="middle">location_id</text>
+<text class="hs" x="444" y="74" text-anchor="middle">from the path</text>
+<text class="hd" x="528" y="62" text-anchor="middle">common</text>
+<text class="hs" x="528" y="74" text-anchor="middle">datetime · z · limit</text>
+<text class="hs" x="528" y="85" text-anchor="middle">parameter-name</text>
+<text class="hd" x="584" y="62">what never arrives</text>
+<text class="hs" x="584" y="74">of what this query type is defined by</text>
+<line class="grid" x1="24" y1="98" x2="876" y2="98"/>
+<rect class="row" x="24" y="100" width="852" height="34" rx="3"/>
+<text class="qt" x="34" y="116">position</text>
+<text class="sub" x="34" y="129">served</text>
+<text class="t" x="192" y="120" text-anchor="middle">required</text>
+<text class="dim" x="276" y="120" text-anchor="middle">—</text>
+<text class="dim" x="360" y="120" text-anchor="middle">—</text>
+<text class="dim" x="444" y="120" text-anchor="middle">—</text>
+<text class="t" x="528" y="120" text-anchor="middle">✓</text>
+<text class="s" x="584" y="114">—</text>
+<line class="grid" x1="24" y1="136" x2="876" y2="136"/>
+<text class="qt" x="34" y="154">radius</text>
+<text class="sub" x="34" y="167">not advertised</text>
+<text class="t" x="192" y="158" text-anchor="middle">required</text>
+<text class="dim" x="276" y="158" text-anchor="middle">—</text>
+<text class="t" x="360" y="158" text-anchor="middle">✓</text>
+<text class="dim" x="444" y="158" text-anchor="middle">—</text>
+<text class="t" x="528" y="158" text-anchor="middle">✓</text>
+<text class="s" x="584" y="152">—</text>
+<line class="grid" x1="24" y1="174" x2="876" y2="174"/>
+<rect class="row" x="24" y="176" width="852" height="34" rx="3"/>
+<text class="qt" x="34" y="192">area</text>
+<text class="sub" x="34" y="205">not advertised</text>
+<text class="t" x="192" y="196" text-anchor="middle">required</text>
+<text class="dim" x="276" y="196" text-anchor="middle">—</text>
+<text class="dim" x="360" y="196" text-anchor="middle">—</text>
+<text class="dim" x="444" y="196" text-anchor="middle">—</text>
+<text class="t" x="528" y="196" text-anchor="middle">✓</text>
+<text class="s" x="584" y="190">—</text>
+<line class="grid" x1="24" y1="212" x2="876" y2="212"/>
+<text class="qt" x="34" y="230">cube</text>
+<text class="sub" x="34" y="243">served</text>
+<text class="t" x="192" y="234" text-anchor="middle">not read</text>
+<text class="t" x="276" y="234" text-anchor="middle">required</text>
+<text class="dim" x="360" y="234" text-anchor="middle">—</text>
+<text class="dim" x="444" y="234" text-anchor="middle">—</text>
+<text class="t" x="528" y="234" text-anchor="middle">✓</text>
+<text class="s" x="584" y="228">—</text>
+<line class="grid" x1="24" y1="250" x2="876" y2="250"/>
+<rect class="row" x="24" y="252" width="852" height="34" rx="3"/>
+<text class="qt" x="34" y="268">trajectory</text>
+<text class="sub" x="34" y="281">served</text>
+<text class="t" x="192" y="272" text-anchor="middle">required</text>
+<text class="dim" x="276" y="272" text-anchor="middle">—</text>
+<text class="dim" x="360" y="272" text-anchor="middle">—</text>
+<text class="dim" x="444" y="272" text-anchor="middle">—</text>
+<text class="t" x="528" y="272" text-anchor="middle">✓</text>
+<circle class="dot" cx="192" cy="286" r="7.5"/>
+<text class="dotl" x="192" y="289" text-anchor="middle">M</text>
+<text class="s" x="584" y="266">nothing — but the M ordinate inside</text>
+<text class="s" x="584" y="278">coords may not survive the parse</text>
+<line class="grid" x1="24" y1="288" x2="876" y2="288"/>
+<rect class="warn" x="24" y="290" width="852" height="34" rx="4"/>
+<text class="qt" x="34" y="306">corridor</text>
+<text class="sub" x="34" y="319">not advertised</text>
+<text class="t" x="192" y="310" text-anchor="middle">required</text>
+<text class="dim" x="276" y="310" text-anchor="middle">—</text>
+<text class="dim" x="360" y="310" text-anchor="middle">—</text>
+<text class="dim" x="444" y="310" text-anchor="middle">—</text>
+<text class="t" x="528" y="310" text-anchor="middle">✓</text>
+<text class="s" x="584" y="304">corridor-width, corridor-height, their</text>
+<text class="s" x="584" y="316">units, resolution-x, resolution-z</text>
+<line class="grid" x1="24" y1="326" x2="876" y2="326"/>
+<rect class="warn" x="24" y="328" width="852" height="34" rx="4"/>
+<text class="qt" x="34" y="344">items</text>
+<text class="sub" x="34" y="357">not advertised</text>
+<text class="dim" x="360" y="348" text-anchor="middle">no route — nothing is parsed</text>
+<text class="s" x="584" y="342">everything — no EDR route is registered</text>
+<text class="s" x="584" y="354">for this query type at all</text>
+<line class="grid" x1="24" y1="364" x2="876" y2="364"/>
+<text class="qt" x="34" y="382">locations</text>
+<text class="sub" x="34" y="395">not advertised</text>
+<text class="t" x="192" y="386" text-anchor="middle">not read</text>
+<text class="t" x="276" y="386" text-anchor="middle">optional</text>
+<text class="dim" x="360" y="386" text-anchor="middle">—</text>
+<text class="t" x="444" y="386" text-anchor="middle">✓</text>
+<text class="t" x="528" y="386" text-anchor="middle">✓</text>
+<text class="s" x="584" y="380">—</text>
+<line class="grid" x1="24" y1="402" x2="876" y2="402"/>
+<rect class="row" x="24" y="404" width="852" height="34" rx="3"/>
+<text class="qt" x="34" y="420">instances</text>
+<text class="sub" x="34" y="433">served</text>
+<text class="dim" x="360" y="424" text-anchor="middle">not parsed here at all</text>
+<text class="s" x="584" y="418">nothing — it is answered by a different</text>
+<text class="s" x="584" y="430">function, before any of the above</text>
+<line class="grid" x1="24" y1="440" x2="876" y2="440"/>
+<text class="s" x="24" y="466">Every routed query type also receives datetime validated against the collection's extent, parameter-name validated against the</text>
+<text class="s" x="24" y="481">provider's fields, z passed through unexamined, and limit — which counts records, defaults to ten, and is not a vertex bound.</text>
+</svg>
+</div>
+<figcaption>What pygeoapi 0.20.0 parses for each EDR query type before calling a provider: five conditionals, of which three are the whole difference between the nine. Two query types lose something on the way, and one of those never arrives at all.</figcaption>
+</figure>
+
+The three conditionals are these. `bbox` is validated only for `cube` and
+`locations`, and is required for `cube`. `coords` is passed to
+`shapely.wkt.loads` for every query type *except* those same two, and is required
+— a `position` query without `coords` is a 400, and so is an `area` one. `within`
+and `within-units` are read only for `radius`. That is the entire difference.
+Everything else — `datetime` validated against the collection's extent,
+`parameter-name` validated against the provider's fields, `z` passed through
+unexamined, `limit` defaulting to ten — every routed query type gets the same.
+
+`instances` is not in that accounting because it never reaches it: the route
+handler notices an instances path and calls a different function before any
+parameter parsing runs.
+
+Two of the nine come out worse than the others, and both are worth knowing about
+before designing around them.
+
+**`corridor` is routed but disarmed.** The standard defines a corridor as a
+trajectory swept into a volume, and the parameters that do the sweeping are
+`corridor-width`, `corridor-height`, their two unit parameters, and
+`resolution-x` and `resolution-z`. None of those strings appears anywhere in
+pygeoapi 0.20.0 outside the route declarations and the list of query type names.
+They are not parsed, not validated, and not placed in the dispatch dict. A
+provider answering a `corridor` query receives a parsed `LINESTRING` and no width
+— which is to say it receives a `trajectory` query wearing a different name.
+
+**`items` has no route.** `EDR_QUERY_TYPES` in `provider/base_edr.py` lists nine
+names, and the EDR route tables in all three web frameworks pygeoapi ships —
+Flask, Starlette and Django — declare eight of them. `items` is absent from every
+one. The `/collections/{id}/items` path that does exist belongs to the Features
+API and dispatches to the Features interface, so a provider that advertises EDR
+`items` and implements the method will find that nothing can call it. The query
+type can be advertised in the collection metadata and remain unreachable, and
+nothing anywhere reports the discrepancy.
+
+Neither of these affects drogna, which serves four query types and advertises
+exactly those four. They are recorded because the reason drogna serves so few is
+easy to misread as timidity, and it is not: `position` and `cube` are supplied by
+the `xarray-edr` provider, `trajectory` and `instances` are the two this project
+exists to write, and of the five it does not serve, one cannot be reached at all
+and another cannot be answered correctly by anybody.
 
 ### How a provider says what it can answer
 

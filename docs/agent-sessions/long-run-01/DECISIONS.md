@@ -112,3 +112,60 @@ I will watch it fail against the current code first.
 answers 500 rather than data. Is a 500 from the query layer on an unseeded collection the
 intended answer, or should an empty-but-valid collection answer 200 with no coverage? I
 have not touched it either way.
+
+## 2026-08-27T22:50 — item 1's twenty open tasks were eighteen done and two outstanding
+
+**Where**: `specs/015-published-site/tasks.md`
+
+**What I found**: Issue #19 puts `015-published-site` first, "20 open tasks, the largest
+coherent block", and says "`site/` exists and has content; the gates are what is missing."
+The gates are not missing. `site/gates/` holds seven gates and their tests — 5,303 lines —
+and `tasks.md` says beside them, in as many words, "there is no `site/gates/run_gates.py`
+and no `site/gates/` directory."
+
+Rather than count files I ran the thing. Built the site with the pinned toolchain
+(`mkdocs build --strict`, clean), then `site/gates/run_gates.py --site site/build`:
+seven gates ran, six reported zero findings, and the seventh refused to report anything
+because no OCR engine was on PATH. It exited 2 and said so — the runner treats
+could-not-run as its own outcome and does not let it pass for clean, which is why the gap
+was visible at all. `site/gates/tests/`: 160 tests, all passing.
+
+That left the image half of the vocabulary gate unproven here, which by this repository's
+own standard means it was worth nothing. I installed `tesseract-ocr` — the same package
+`pages.yml` and `ci.yml` install — and pointed the gate at
+`site/gates/fixtures/seeded_violation/`. All sixteen expected findings fired, the four
+image controls among them: an address bar, a host path and an email address read out of
+published PNGs, and two tracked-entity terms out of a third.
+`check_deployment_hostnames.py` against the same fixture reported its two. Then back at
+the real built site: zero. So the gate has now been seen both catching and clearing, on
+this machine, which it never had been.
+
+Eighteen of the twenty are done. Two are not, and their notes are accurate:
+
+- **T044**, a build-time size budget for published images. Nothing bounds them.
+- **T045**, the gate suite on the pull-request workflow in report-only mode. `ci.yml` runs
+  the Python suite, the client suite and `scripts/gates.sh`, and no site gate; `pages.yml`
+  has no `pull_request` trigger by design (T012). So a site fault is first seen on the
+  publishing run *after* merge.
+
+**Options**:
+- A. Tick the eighteen with the evidence for each, leave the two, and do the two.
+- B. Leave the record alone and just do the two. Cheaper now, and it leaves a file that
+  says the gates do not exist sitting next to the gates — which is the exact failure
+  `CLAUDE.md` describes, where an unmaintained task list is read as evidence.
+- C. Delete the stale notes without replacing them. Loses the reason each task was
+  considered done, which is the part that cannot be reconstructed later.
+
+**What I did**: A. Each ticked task carries a one-line note saying what was checked and,
+where the old note was wrong about a *location* rather than about existence, what it had
+been looking at — T004 looked for the manifest under `site/docs/` when it is at the
+repository root, and T028 looked for the architecture overview under `docs/architecture/`
+rather than `site/docs/architecture/`. Two entries out of eighteen were wrong that way,
+and the rest simply predated the work.
+
+The assumption is that the tree is right and the record is a claim about it, per
+`CLAUDE.md`; I have not amended a single spec to match an implementation, only the task
+list, and only where I ran something and watched the answer.
+
+**What I need from you**: nothing on 015. Going on to T044 and T045, which are the real
+remainder.

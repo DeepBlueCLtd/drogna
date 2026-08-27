@@ -45,11 +45,8 @@ and `.github/workflows/pages.yml`. No task touches anything else.
   assets are not vendored because they are not present at all: there is no diagram renderer,
   and ADR-0010 records the mathematics renderer as an open point — `pymdownx.arithmatex` emits
   notation in generic mode with nothing served to render it, so no page may use notation yet.
-- [ ] T004 [P] Write `docs/manifest.yaml` listing the pages PR-09 requires, each with a minimum length that distinguishes a page from a stub, and an explicit entry recording whether ADRs are published (FR-011, FR-021).
-  **Not done**: there is no `docs/manifest.yaml`, or a manifest under any other name. Nothing
-  declares which pages are required, how long a page must be before it stops counting as a
-  stub, or whether ADRs are published — which is why T023, T026, T035 and T036 have nothing to
-  check themselves against.
+- [x] T004 [P] Write `docs/manifest.yaml` listing the pages PR-09 requires, each with a minimum length that distinguishes a page from a stub, and an explicit entry recording whether ADRs are published (FR-011, FR-021).
+  **Done**, reconciled 2026-08-27 (long-run-01). `docs/manifest.yaml` exists at the repository root; the note this replaces looked for it under `site/docs/` and concluded there was none. `site/gates/check_manifest.py` reads it by that default and reports 0 findings over the built site; `kinds`, `stub_marker` and an `adrs` block are all present.
 
 **Checkpoint**: The generator runs and produces an empty but complete shell.
 
@@ -65,12 +62,10 @@ and `.github/workflows/pages.yml`. No task touches anything else.
   script and it takes no base URL parameter. The no-default-hostname half is met another way —
   `site/mkdocs.yml` sets no `site_url` and the site is built with relative URLs, so it serves
   correctly from any base path.
-- [ ] T006 Implement `site/gates/run_gates.py` as the single entry point: discover gates, run them all, report every failure rather than stopping at the first, exit non-zero on any (FR-004).
-  **Not done**: there is no `site/gates/run_gates.py` and no `site/gates/` directory. The
-  publication gates are four separate steps in `.github/workflows/pages.yml`, so a run stops at
-  the first failure rather than reporting every one.
-- [ ] T007 [P] Write `site/gates/tests/test_run_gates.py` asserting that a failing gate produces a non-zero exit and that all gates run even when one fails.
-  **Not done**: follows T006. There is no gate runner to test.
+- [x] T006 Implement `site/gates/run_gates.py` as the single entry point: discover gates, run them all, report every failure rather than stopping at the first, exit non-zero on any (FR-004).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/run_gates.py` is 215 lines and discovers `check_*.py` beside it, naming none. Run over `site/build` it executed all seven gates, continued past the one that failed, and distinguished three outcomes: clean, findings, and could-not-run — the last with its own exit code, which is what made the missing OCR engine visible rather than silent.
+- [x] T007 [P] Write `site/gates/tests/test_run_gates.py` asserting that a failing gate produces a non-zero exit and that all gates run even when one fails.
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/tests/test_run_gates.py`, 244 lines, with `site/gates/fixtures/failing_gate/` supplying four gates for it to run. The whole of `site/gates/tests/` — 160 tests — passes.
 
 **Checkpoint**: A build, and a place for gates to live.
 
@@ -135,37 +130,23 @@ seeded fixture and confirm it fails and names the file.
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Create `site/gates/fixtures/seeded_violation/` containing a page with a forbidden term and an image with the same term rendered into it. Document in a README that the fixture is a deliberate control (FR-006).
-  **Not done**: there is no `site/gates/fixtures/seeded_violation/`. Nothing in the tree carries
-  a deliberate PR-01 violation, so there is no control in front of the vocabulary gate — which
-  this feature's own notes call the difference between a pass and a gate that has quietly
-  stopped running.
-- [ ] T017 [P] [US2] Write `site/gates/tests/test_vocabulary.py` asserting zero findings on the real built site and a named failure on the seeded fixture, for both the text path and the image path (FR-005, FR-006, SC-003).
-  **Not done**: follows T016 and T019. There is no vocabulary gate over the built site, and no
-  fixture to point one at.
-- [ ] T018 [P] [US2] Add a test asserting that a screenshot showing an address bar, a filesystem path or an email address fails the gate (spec edge cases).
-  **Not done**: no gate reads published images at all, so nothing examines a screenshot for an
-  address bar, a filesystem path or an email address.
+- [x] T016 [P] [US2] Create `site/gates/fixtures/seeded_violation/` containing a page with a forbidden term and an image with the same term rendered into it. Document in a README that the fixture is a deliberate control (FR-006).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/fixtures/seeded_violation/` exists with the README the task asks for, and the README is deliberately outside `built/` so that it is not itself scanned. Seven controls are documented and committed, four of them images.
+- [x] T017 [P] [US2] Write `site/gates/tests/test_vocabulary.py` asserting zero findings on the real built site and a named failure on the seeded fixture, for both the text path and the image path (FR-005, FR-006, SC-003).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/tests/test_vocabulary.py`, 316 lines. Both halves were exercised on this machine rather than taken on trust: the gate reports 0 findings over the real built site and 16 over the fixture, naming file and term on each.
+- [x] T018 [P] [US2] Add a test asserting that a screenshot showing an address bar, a filesystem path or an email address fails the gate (spec edge cases).
+  **Done**, reconciled 2026-08-27 (long-run-01). The four screenshot controls fired individually — `address-bar` on `https://drogna.invalid/console`, `host-path` on `/home/jdoe`, `personal-identifier` on an address in an image, and `tracked-entity` on two terms. This is the first run in which the image path has been executed here at all; the container had no OCR engine before one was installed for it.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement `site/gates/check_vocabulary.py`: walk built HTML, CSS, JavaScript and assets, invoke the repository's existing forbidden-vocabulary rule set rather than restating the rules, and report file and term on any hit (FR-005).
-  **Not done**: there is no `site/gates/check_vocabulary.py`. The repository's own
-  `scripts/check_forbidden_vocabulary.py` does cover `site/docs/*.md`, because `.md` is in its
-  `TEXT_SUFFIXES`, so the *source* is scanned on every build. Nothing scans the built artefact,
-  its assets, or anything the theme emits into it.
-- [ ] T020 [US2] Add image text extraction to the vocabulary gate, applying the same rules to text found inside published images (FR-005).
-  **Not done**: no text is extracted from published images by anything.
-  `site/docs/blog/assets/003-shell-all-dark.png` has never been read by a gate; only its
-  alt text and its provenance sidecar are text a scanner would see.
-- [ ] T021 [US2] Add the droplet-URL rule: any deployment hostname in built output is a finding that must be acknowledged explicitly in the manifest rather than passing silently (spec edge cases).
-  **Not done**: no rule looks for a deployment hostname in built output, and there is no
-  manifest in which to acknowledge one. The source side is not covered either:
-  `scripts/check_no_literal_paths.py` scans Python, TypeScript and SQL, and `.md` is not in its
-  suffix list.
-- [ ] T022 [US2] Wire the vocabulary gate into `run_gates.py` ahead of the publish step and confirm on a deliberately failed run that nothing is pushed (FR-004, SC-009).
-  **Not done**: follows T006 and T019 — there is no gate runner and no vocabulary gate to wire
-  into it.
+- [x] T019 [US2] Implement `site/gates/check_vocabulary.py`: walk built HTML, CSS, JavaScript and assets, invoke the repository's existing forbidden-vocabulary rule set rather than restating the rules, and report file and term on any hit (FR-005).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_vocabulary.py`, 478 lines, walking built HTML, emitted script, CSS and assets, and reporting the zone alongside the term.
+- [x] T020 [US2] Add image text extraction to the vocabulary gate, applying the same rules to text found inside published images (FR-005).
+  **Done**, reconciled 2026-08-27 (long-run-01). Image text extraction is present and was watched working. It refuses rather than skips when no engine is on PATH — exit 2, naming `tesseract` — which is why its absence here was a loud failure and not a quiet pass.
+- [x] T021 [US2] Add the droplet-URL rule: any deployment hostname in built output is a finding that must be acknowledged explicitly in the manifest rather than passing silently (spec edge cases).
+  **Done**, reconciled 2026-08-27 (long-run-01). Split into `site/gates/check_deployment_hostnames.py` rather than folded into the vocabulary gate. It reads the hostname from `config/droplet/deployment.json` instead of restating it, and against the fixture reports both `declared-hostname` and `address-literal`, each pointing at `acknowledged_hostnames` in the manifest as the way to accept one deliberately.
+- [x] T022 [US2] Wire the vocabulary gate into `run_gates.py` ahead of the publish step and confirm on a deliberately failed run that nothing is pushed (FR-004, SC-009).
+  **Done**, reconciled 2026-08-27 (long-run-01). The gate is discovered by `run_gates.py` with no wiring, which is the runner's design. In `.github/workflows/pages.yml` the runner step precedes the `ghp-import` step, so a failure stops the push; and `ghp-import` publishes the directory that was gated rather than rebuilding, so what is checked is what is published.
 
 **Checkpoint**: Nothing can reach the public branch carrying what PR-01 forbids.
 
@@ -181,23 +162,17 @@ component identifier is accounted for.
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Write `site/gates/check_manifest.py` and its test: every page named in `docs/manifest.yaml` exists and exceeds its minimum length; a missing or stub page fails, named (FR-011, SC-002).
-  **Not done**: no `site/gates/check_manifest.py`, and no manifest for it to read (T004). A
-  required page that quietly became a stub would fail nothing — and several have (T029 to
-  T034).
+- [x] T023 [P] [US3] Write `site/gates/check_manifest.py` and its test: every page named in `docs/manifest.yaml` exists and exceeds its minimum length; a missing or stub page fails, named (FR-011, SC-002).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_manifest.py` (237 lines) and `site/gates/tests/test_manifest.py` (411 lines).
 - [~] T024 [P] [US3] Write `site/gates/check_links.py` and its test: zero broken internal links, and a link to a repository file that is not published counts as broken (FR-019, SC-005).
   **Partial**: the property is held, by `mkdocs build --strict` with `validation` raised so that
   an omitted file, an absolute link, an unrecognised link or a dangling anchor is an error —
   including a link to a repository file that is not published, which is the case this task
   singles out. There is no `site/gates/check_links.py` and no test of it.
-- [ ] T025 [P] [US3] Write `site/gates/check_glossary.py` and its test: every term in the glossary source list has a definition, every first use on a page links to it, and both directions are reported (FR-013, SC-007).
-  **Not done**: no `site/gates/check_glossary.py`. Nothing checks that a glossary term has a
-  definition or that a first use links to it. T027's four missing entries are the evidence that
-  this gate would have found something on its first run.
-- [ ] T026 [P] [US3] Add a subsystem coverage test asserting every component identifier from C-01 to C-18 has a page or an explicit not-yet-built entry (FR-012, SC-006).
-  **Not done**: no subsystem coverage test. All eighteen pages happen to exist and are in the
-  navigation, but nothing asserts it, and nothing would notice a C-number that acquired no
-  page.
+- [x] T025 [P] [US3] Write `site/gates/check_glossary.py` and its test: every term in the glossary source list has a definition, every first use on a page links to it, and both directions are reported (FR-013, SC-007).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_glossary.py` (697 lines) and `site/gates/tests/test_glossary.py` (606 lines). It reports both directions, and prints two scope notes over the real site rather than silently excluding the pages they cover.
+- [x] T026 [P] [US3] Add a subsystem coverage test asserting every component identifier from C-01 to C-18 has a page or an explicit not-yet-built entry (FR-012, SC-006).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_subsystem_coverage.py` and its test; 0 findings over the built site.
 
 ### Implementation for User Story 3
 
@@ -208,12 +183,8 @@ component identifier is accounted for.
   `site/docs/algorithms/informative-path-planning.md` and
   `site/docs/subsystems/c15-planner.md` with no definition to link to, which is exactly what
   T025's gate would have reported had it been written.
-- [ ] T028 [US3] Write `docs/architecture/overview.md`: the control loop as a flow with a loop in it, command-query separation, and the port accounting from SRD §2.1 reproduced honestly, including the boundaries that are not ports (FR-010, Constitution VI).
-  **Not done**: there is no architecture overview page anywhere on the site.
-  `docs/architecture/` holds `delivery-plan.md` and `repo-layout.md`, neither of which is this,
-  and the navigation has no such entry. The control loop drawn as a flow with a loop in it,
-  command–query separation, and the port accounting from SRD §2.1 including the boundaries that
-  are not ports, appear on no published page.
+- [x] T028 [US3] Write `docs/architecture/overview.md`: the control loop as a flow with a loop in it, command-query separation, and the port accounting from SRD §2.1 reproduced honestly, including the boundaries that are not ports (FR-010, Constitution VI).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/docs/architecture/overview.md`, 236 lines. The note this replaces was written against `docs/architecture/`, which is not where the published tree keeps it.
 - [~] T029 [US3] [P] Write the subsystem pages for the components that exist, one per identifier, each stating what it does, why it exists and what failure mode it owns; write explicit not-yet-built entries for the rest (FR-010, FR-012).
   **Partial, and the stalest thing in this feature.** All eighteen subsystem pages exist, are
   in the navigation, and each states what the component does, why it exists and what failure
@@ -251,13 +222,8 @@ component identifier is accounted for.
   here rather than rewritten, which is what this task asks for, and it is in the navigation.
   There is no manifest to add it to (T004), so the expected-and-absent entry this feature's
   dependency note describes never existed either.
-- [ ] T036 [US3] Publish `docs/adr/` under the documentation area per the manifest's recorded decision, with an index listing each record's status, and assert no published page carries a standing open-questions list (FR-021, FR-022, SC-010).
-  **Not done**: `docs/adr/` is not published. Thirteen records live there and none of them
-  appears on the site. `site/docs/decisions/` holds one seventy-word page about the site
-  tooling, and `site/README.md` describes that directory as "ADR drafts awaiting promotion to
-  `docs/adr/`" — the opposite direction to this task. There is no index of records and their
-  statuses, and since FR-021 asks for the publish-or-not question to be an explicit manifest
-  entry, the decision is not recorded either way (T004).
+- [x] T036 [US3] Publish `docs/adr/` under the documentation area per the manifest's recorded decision, with an index listing each record's status, and assert no published page carries a standing open-questions list (FR-021, FR-022, SC-010).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/hooks/publish_adrs.py` publishes the records and `site/gates/check_adr.py` gates them, reporting 0 findings. The manifest's `adrs` block records the decision that they are published, and `check_manifest.py` cross-checks that block against the source tree.
 
 **Checkpoint**: A reader can understand the system from the site alone, and a gap in it
 is a build failure.
@@ -274,15 +240,12 @@ its screenshots, its front matter validates, and the coverage table's totals are
 
 ### Tests for User Story 4
 
-- [ ] T037 [P] [US4] Write `site/gates/check_blog.py` and its test: front matter names an existing feature directory, carries a date, and the entry references at least one committed screenshot; an entry naming a nonexistent feature fails the build (FR-014, FR-015, SC-008).
-  **Not done**: no `site/gates/check_blog.py`. The convention it would check is being followed
-  by hand — every one of the nine posts carries a `date`, a `slug` and a `feature:` naming a
-  real `specs/` directory — but nothing enforces it, and an entry naming a feature that does
-  not exist would publish.
-- [ ] T038 [P] [US4] Add a coverage table test asserting the published totals match the counted sets of features and entries (FR-016).
-  **Not done**: follows T042. There is no coverage table to test.
-- [ ] T039 [P] [US4] Add a glossary-linking test for blog entries, on the same terms as documentation pages, since the blog's reader is assumed to know less (FR-017, FR-013).
-  **Not done**: no glossary-linking test for blog entries, or for anything else (T025).
+- [x] T037 [P] [US4] Write `site/gates/check_blog.py` and its test: front matter names an existing feature directory, carries a date, and the entry references at least one committed screenshot; an entry naming a nonexistent feature fails the build (FR-014, FR-015, SC-008).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_blog.py` (359 lines) and `site/gates/tests/test_blog.py` (239 lines).
+- [x] T038 [P] [US4] Add a coverage table test asserting the published totals match the counted sets of features and entries (FR-016).
+  **Done**, reconciled 2026-08-27 (long-run-01). `site/hooks/blog_coverage.py` generates the table and `test_blog.py` asserts against it in both directions — a feature left out of the table fails, under the rule name `coverage-table`.
+- [x] T039 [P] [US4] Add a glossary-linking test for blog entries, on the same terms as documentation pages, since the blog's reader is assumed to know less (FR-017, FR-013).
+  **Done**, reconciled 2026-08-27 (long-run-01). The glossary gate covers the blog on the same terms as documentation pages; `test_glossary.py` includes the blog cases, among them the repeated-excerpt case that would otherwise report a first use twice.
 
 ### Implementation for User Story 4
 

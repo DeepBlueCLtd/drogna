@@ -19,7 +19,7 @@
     "stream": "model_runner"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_control@broker:1883",
     "client_id": "model_runner",
     "keepalive_seconds": 30
   },

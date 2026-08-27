@@ -5,6 +5,11 @@ description = "Shared harness foundations: clock port, RNG port, config loader, 
 requires-python = ">=3.11"
 dependencies = [
     "jsonschema>=4.21",
+    # The broker client. Event publication is the one seam the constitution calls marginal
+    # rather than a port, so it is wrapped thinly and harness_core.broker is the wrapping.
+    # It is here rather than in a service because every component publishes, and a shared
+    # shape inside a service acquires consumers across a boundary (check_service_dependencies).
+    "paho-mqtt>=2.1",
 ]
 
 [project.scripts]

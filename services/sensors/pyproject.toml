@@ -13,9 +13,6 @@ dependencies = [
     # environment, and the ground truth AT-03 scores against would no longer be one thing.
     # harness:allow-service-dependency a sensor samples the field C-02 authored, not a second one
     "harness-env-generator",
-    # The broker client. Event publication is the one seam the constitution calls
-    # marginal rather than a port, so it is wrapped thinly and this is the wrapping.
-    "paho-mqtt>=2.1",
 ]
 
 [tool.uv.sources]

@@ -111,7 +111,8 @@ features while they were still open. Then it was revised and answered them. Two
 of the sixteen features changed shape.
 
 The bigger change was to what had been a spike: whether the off-the-shelf query
-layer handles per-vertex timestamps on a trajectory query — give it a planned
+layer handles per-vertex timestamps on a
+[trajectory](../../glossary.md#trajectory) query — give it a planned
 route with a time at every waypoint, get back the conditions forecast for the
 moment of arrival at each one. The answer turned out to be that the question was
 wrong. No supplied provider implements trajectory queries at all, so the spike

@@ -1,0 +1,82 @@
+destination: droplet
+active profile(s): core
+host memory assumed: 4096 MB
+
+Declared memory ceiling of one stack, by profile
+  profile        services   ceiling   stacks that fit
+  broker                1      384 M                10
+  control               4     1536 M                 2
+  core                  1     1024 M                 4
+  edge                  1      384 M                10
+  foundation            1      384 M                10
+  full                 17     7168 M                 0
+  generator             1      384 M                10
+  observation           2      768 M                 5
+  offload               1      384 M                10
+  planning              1      384 M                10
+  provisioning          1      384 M                10
+  query                 1      384 M                10
+  shell                 1      384 M                10
+  telemetry             1      384 M                10
+
+What a second stack duplicates, and what it does not
+  images pulled (2), shared between stacks by digest — paid once:
+    eclipse-mosquitto:2.0.22
+    postgis/postgis:16-3.4
+  images built (15), shared between stacks when the sources match —
+    a per-pull-request stack rebuilds only the layers its diff invalidates:
+    client, clock, env-generator, features, ingest, model-runner, monitor, offload, planner, proxy, publisher, query, scheduler, sensors, telemetry
+
+Host ports one stack claims, every one of which collides with a second stack
+  broker         127.0.0.1:1883 -> 1883
+  client         127.0.0.1:8080 -> 8080
+  clock          127.0.0.1:8090 -> 8090
+  observations   127.0.0.1:5432 -> 5432
+  proxy          0.0.0.0:443 -> 8080
+  query          127.0.0.1:8082 -> 8080
+  telemetry      127.0.0.1:8091 -> 8091
+
+Named volumes one stack claims; Compose prefixes them with the project name,
+so a distinct HARNESS_PROJECT_NAME gives each stack its own set — and its own disk:
+  observations-data, broker-data, coverage-data, environment-data, run-data, offload-data, released-data
+destination: local
+active profile(s): core
+host memory assumed: 4096 MB
+
+Declared memory ceiling of one stack, by profile
+  profile        services   ceiling   stacks that fit
+  broker                1      512 M                 8
+  control               4     2048 M                 2
+  core                  1     1024 M                 4
+  edge                  1      512 M                 8
+  foundation            1      512 M                 8
+  full                 17     9216 M                 0
+  generator             1      512 M                 8
+  observation           2     1024 M                 4
+  offload               1      512 M                 8
+  planning              1      512 M                 8
+  provisioning          1      512 M                 8
+  query                 1      512 M                 8
+  shell                 1      512 M                 8
+  telemetry             1      512 M                 8
+
+What a second stack duplicates, and what it does not
+  images pulled (2), shared between stacks by digest — paid once:
+    eclipse-mosquitto:2.0.22
+    postgis/postgis:16-3.4
+  images built (15), shared between stacks when the sources match —
+    a per-pull-request stack rebuilds only the layers its diff invalidates:
+    client, clock, env-generator, features, ingest, model-runner, monitor, offload, planner, proxy, publisher, query, scheduler, sensors, telemetry
+
+Host ports one stack claims, every one of which collides with a second stack
+  broker         127.0.0.1:1883 -> 1883
+  client         127.0.0.1:8080 -> 8080
+  clock          127.0.0.1:8090 -> 8090
+  observations   127.0.0.1:5432 -> 5432
+  proxy          127.0.0.1:8081 -> 8080
+  query          127.0.0.1:8082 -> 8080
+  telemetry      127.0.0.1:8091 -> 8091
+
+Named volumes one stack claims; Compose prefixes them with the project name,
+so a distinct HARNESS_PROJECT_NAME gives each stack its own set — and its own disk:
+  observations-data, broker-data, coverage-data, environment-data, run-data, offload-data, released-data

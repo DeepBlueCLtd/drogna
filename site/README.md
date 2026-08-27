@@ -51,6 +51,9 @@ site/
 ├── mkdocs.yml          site configuration, theme, navigation
 ├── requirements.txt    fully pinned build environment
 ├── overrides/          theme overrides (the noindex meta tag)
+├── hooks/              build-time page generation (see below)
+├── authoring/          the blog entry template and authoring note; not published
+├── gates/              publication gates run over the built site
 ├── tools/              publication gates that are not part of mkdocs
 └── docs/
     ├── index.md        landing page — carries the FR-01 statement
@@ -60,8 +63,40 @@ site/
     ├── algorithms/     derivations (stubs)
     ├── standards/      primers (stubs)
     ├── glossary.md
-    └── decisions/      ADR drafts awaiting promotion to docs/adr/
+    └── decisions/      pages about decisions; the records in docs/adr/ are
+                        published beneath this path at build time
 ```
+
+## Pages that are generated at build time
+
+Two pages are not written by hand. Both are produced by MkDocs hooks named in
+`mkdocs.yml`, which need no plugin and therefore no addition to the pinned
+`requirements.txt`, and neither writes anything back into `docs/`: the generated
+pages exist only in the built output, so there is no file anyone could mistake
+for a source and no second copy to drift.
+
+- **The decision records**, by `hooks/publish_adrs.py`. The records live in
+  `docs/adr/`; the direction of travel is *out of* the repository record and
+  into the site, never the other way. Each record is published at
+  `decisions/adr/<number>-<slug>/`, and the index at `decisions/adr/` lists every
+  record with the status read out of the record itself rather than retyped.
+  Whether they are published at all is the entry `adrs.published` in
+  `docs/manifest.yaml` — a recorded decision (FR-021), which the hook reads and
+  `gates/check_adr.py` checks the build against in both directions.
+- **The blog's coverage table**, by `hooks/blog_coverage.py`, which replaces a
+  marker in `docs/blog/index.md` with a table of every feature directory against
+  the entries whose front matter names it. Features with no entry get a row
+  saying so, because the gap is what the table is for.
+
+Adding a decision record, or an entry, or a feature, changes both pages with no
+edit to either.
+
+## Writing a blog entry
+
+`authoring/blog-entry-template.md` is the template and `authoring/README.md` is
+the authoring note. They sit outside `docs/` deliberately: anything under
+`docs/blog/posts/` is published as an entry, and a template published as an entry
+is an entry about nothing.
 
 ## Conventions
 

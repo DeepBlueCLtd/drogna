@@ -13,7 +13,8 @@ description: >-
 # The test that isolated nothing
 
 You measured the temperature at a spot in the ocean an hour ago. How much is that
-measurement worth now? In water that is churning through a sharp front, very little.
+measurement worth now? In water that is churning through a sharp
+[front](../../glossary.md#front), very little.
 In quiet water a hundred metres down, a great deal. The quantity governing that decay
 is the
 [decorrelation timescale](../../glossary.md#decorrelation-timescale), and drogna needs
@@ -24,7 +25,8 @@ and quiet water gets left alone.
 
 The obvious place to put such a number is on the thing that makes the water
 interesting. drogna's synthetic ocean is built by seeding four features into a
-background — an eddy, a front, a thermocline and one feature that drifts — so give
+background — an eddy, a front, a [thermocline](../../glossary.md#thermocline) and one
+feature that drifts — so give
 each of them a timescale. An eddy decorrelates faster than open water; the model
 matches the intuition; it is trivial to record in the ground-truth manifest.
 

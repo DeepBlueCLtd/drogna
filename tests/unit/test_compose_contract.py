@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "deploy" / "lib"))
 
 import compose_document  # noqa: E402
 import compose_lint  # noqa: E402
+import render_credentials  # noqa: E402
 import render_env  # noqa: E402
 from destination import COMPOSE_FILENAME, deploy_dir  # noqa: E402
 
@@ -85,10 +86,16 @@ def test_each_service_has_a_name_for_its_configuration_file_in_the_environment()
 def test_the_environment_template_and_the_renderer_agree() -> None:
     """A name with no value, or a value with no name, is an error rather than an empty
     string quietly reaching a container. Rendering is what proves the two sides agree."""
+    supplied = {"HARNESS_DATABASE_PASSWORD": "x" * 8}
+    supplied.update({variable: "y" * 8 for variable in render_credentials.SECRET_NAMES})
     for name in ("local", "droplet"):
-        text = render_env.render(name, REPOSITORY_ROOT, {"HARNESS_DATABASE_PASSWORD": "x" * 8})
+        text = render_env.render(name, REPOSITORY_ROOT, supplied)
         assert "COMPOSE_PROFILES=" in text
-        assert f"HARNESS_CONFIG_HOST_DIR={REPOSITORY_ROOT}/config/{name}" in text
+        # The rendered tree, not the tracked one. A container reads configuration carrying
+        # the broker secret, which no tracked file may hold; deploy/lib/render_credentials.py
+        # writes it and ADR-0016 says why the mount had to move.
+        assert f"HARNESS_CONFIG_HOST_DIR={REPOSITORY_ROOT}/deploy/.runtime/config/{name}" in text
+        assert f"HARNESS_CONFIG_HOST_DIR={REPOSITORY_ROOT}/config/{name}\n" not in text
 
 
 def test_the_secret_never_reaches_a_tracked_file() -> None:

@@ -4,9 +4,18 @@ title: C-14 Publisher
 
 # C-14 Publisher
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/publisher/` — `atomic.py` for the single visible step,
+      `catalogue.py` for the current-run pointer, `manifest.py` for the run manifest and
+      `publish.py` for the announcement
+    - **Delivered by:** `specs/009-control-loop`
+    - **Covered by:** `services/publisher/tests/`,
+      `tests/integration/test_publication_atomicity.py` and
+      `tests/integration/test_new_run_servable.py`
+    - **Not present:** the run manifest it writes has no schema master, and records no
+      run sequence — see the [coverage store](c08-coverage-store.md) and the
+      [scheduler](c12-scheduler.md)
 
 **Responsibility:** make completed runs visible atomically; announce them.
 **Owns the failure mode of:** partial visibility.

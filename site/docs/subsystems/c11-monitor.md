@@ -4,9 +4,17 @@ title: C-11 Monitor
 
 # C-11 Monitor
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/monitor/` — the residual, the persistence rule, the window,
+      the warm-up and the coverage read port each in their own module
+    - **Delivered by:** `specs/009-control-loop`
+    - **Covered by:** `services/monitor/tests/`,
+      `tests/integration/test_monitor_warmup.py`,
+      `tests/integration/test_monitor_scheduler_handoff.py` and
+      `tests/acceptance/test_at_02_threshold_breach_triggers_run.py`. The threshold
+      quoted below is `monitor.residual.threshold_m_per_s` in
+      `config/local/monitor.json`, which is 1.75 today
 
 **Responsibility:** detect forecast divergence from observations.
 **Owns the failure mode of:** over-sensitivity.

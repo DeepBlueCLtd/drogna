@@ -4,9 +4,18 @@ title: C-02 Environment generator
 
 # C-02 Environment generator
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/env_generator/` — the four features, the background, the
+      composition, the manifest writer and the timescale field each in their own module
+    - **Delivered by:** `specs/004-environment-generator`
+    - **Covered by:** `services/env_generator/tests/` and
+      `tests/acceptance/test_at03_eddy_recovery.py`, which scores a recovered eddy
+      against the seeded parameters in the manifest
+    - **Not present:** no check reconstructs a fully composed value — background plus
+      four anomalies, plus pressure, plus [sound speed](../glossary.md#sound-speed) —
+      from the manifest's documented
+      forms alone; the pieces are each reconstructed separately
 
 **Responsibility:** synthetic four-dimensional fields plus a ground-truth manifest.
 **Owns the failure mode of:** unverifiable truth.

@@ -2,9 +2,11 @@
 
 The order in :func:`main` is Constitution IV's: one environment variable names the
 configuration; that file is validated before the clock is reached and before the
-ground-truth manifest is opened. The broker client is injected, as everywhere else here; a
-component with no broker configured publishes nothing and says so rather than publishing to
-a stub that would light it in the client (Constitution VII).
+ground-truth manifest is opened. The broker client may be injected, and where it is not this
+component builds one from the ``broker`` section of its own configuration. A component whose
+configuration names no broker publishes nothing and says so rather than publishing to a stub
+that would light it in the client (Constitution VII); a named broker that cannot be reached
+is reported in full on stderr and this component carries on with nothing to publish to.
 """
 
 from __future__ import annotations
@@ -15,6 +17,10 @@ from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -56,7 +62,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     ground_truth: Mapping[str, Any] | None = None,
     messages: Iterable[tuple[str, bytes]] = (),
     stderr: Any = None,
@@ -89,24 +95,32 @@ def main(
             )
             return _NO_GROUND_TRUTH
 
-    if publisher is None:
-        print(
-            f"{RUNNER_NAME}: no publisher was supplied, so nothing is announced and nothing "
-            "lights up. That is truthful, not a degradation",
-            file=out,
-        )
-
-    service = ModelRunnerService(
-        settings,
-        clock=active_clock,
-        ground_truth=truth,
-        publisher=publisher,
-        config_digest=config.digest,
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=RUNNER_NAME, report=out
     )
-    service.beat(force=True)
-    for topic, payload in messages:
-        service.handle(topic, payload)
-        service.beat()
+
+    try:
+        if publisher is None:
+            print(
+                f"{RUNNER_NAME}: no publisher was supplied, so nothing is announced and nothing "
+                "lights up. That is truthful, not a degradation",
+                file=out,
+            )
+
+        service = ModelRunnerService(
+            settings,
+            clock=active_clock,
+            ground_truth=truth,
+            publisher=publisher,
+            config_digest=config.digest,
+        )
+        service.beat(force=True)
+        for topic, payload in messages:
+            service.handle(topic, payload)
+            service.beat()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

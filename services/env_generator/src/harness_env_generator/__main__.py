@@ -12,10 +12,13 @@ not a stream, so it takes the clock's snapshot at startup and subscribes to noth
 instant becomes the time origin of the field's time axis and the ``generated_at`` of the
 manifest, and it is simulation time. There is no host clock anywhere in this component.
 
-The heartbeat publisher is injected. Where none is supplied the generator publishes nothing
-and says so on stderr: a component with no broker configured does not invent one and does
-not publish to a stub, because a stub would light a component in the shell that is not
-really there (Constitution VII).
+The heartbeat publisher may be injected, and where it is not the generator builds one from
+the ``broker`` section of its own configuration. Where the configuration names no broker it
+publishes nothing and says so on stderr: a component with no broker configured does not
+invent one and does not publish to a stub, because a stub would light a component in the
+shell that is not really there (Constitution VII). A named broker that cannot be reached is
+reported in full on stderr and the world is still generated, so the two cases are told apart
+by what stderr says rather than by whether the component did its work.
 """
 
 from __future__ import annotations
@@ -24,6 +27,10 @@ import sys
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -74,7 +81,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     stderr: Any = None,
 ) -> int:
     """Generate one world. Returns the process exit code."""
@@ -98,46 +105,54 @@ def main(
         print(f"{COMPONENT}: no simulation time is available ({exc})", file=out)
         return GeneratorError.exit_code
 
-    heartbeat = GeneratorHeartbeat(
-        publisher,
-        component=str(document["component"]["id"]),
-        interval_seconds=float(
-            document["component"].get("heartbeat_interval_seconds", _DEFAULT_HEARTBEAT_SECONDS)
-        ),
-        config_digest=config.digest,
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=COMPONENT, report=out
     )
-    if not heartbeat.publishing:
-        print(
-            f"{COMPONENT}: no heartbeat publisher was supplied, so nothing is published and "
-            "nothing lights up. That is truthful, not a degradation",
-            file=out,
-        )
-    heartbeat.starting(tick)
 
     try:
-        world = generate(
-            document,
-            run_id=tick.run_id,
+        heartbeat = GeneratorHeartbeat(
+            publisher,
+            component=str(document["component"]["id"]),
+            interval_seconds=float(
+                document["component"].get("heartbeat_interval_seconds", _DEFAULT_HEARTBEAT_SECONDS)
+            ),
             config_digest=config.digest,
-            root_seed=int(document["seed"]["root"]),
-            sim_time=tick.instant.iso(),
-            tick=tick.index,
-            progress=lambda: heartbeat.working(tick, "sweeping the grid"),
         )
-    except GeneratorError as exc:
-        print(f"{COMPONENT}: {exc}", file=out)
-        heartbeat.stopping(tick, "refused")
-        return exc.exit_code
+        if not heartbeat.publishing:
+            print(
+                f"{COMPONENT}: no heartbeat publisher was supplied, so nothing is published and "
+                "nothing lights up. That is truthful, not a degradation",
+                file=out,
+            )
+        heartbeat.starting(tick)
 
-    output = section["output"]
-    writer = FieldWriter(
-        str(output["directory"]),
-        field_name=str(output["field_file"]),
-        manifest_name=str(output["manifest_file"]),
-    )
-    field_path, manifest_path = writer.publish(world.field_payload, serialise(world.manifest))
-    print(f"{COMPONENT}: wrote {field_path} and {manifest_path}", file=out)
-    heartbeat.stopping(tick, "finished")
+        try:
+            world = generate(
+                document,
+                run_id=tick.run_id,
+                config_digest=config.digest,
+                root_seed=int(document["seed"]["root"]),
+                sim_time=tick.instant.iso(),
+                tick=tick.index,
+                progress=lambda: heartbeat.working(tick, "sweeping the grid"),
+            )
+        except GeneratorError as exc:
+            print(f"{COMPONENT}: {exc}", file=out)
+            heartbeat.stopping(tick, "refused")
+            return exc.exit_code
+
+        output = section["output"]
+        writer = FieldWriter(
+            str(output["directory"]),
+            field_name=str(output["field_file"]),
+            manifest_name=str(output["manifest_file"]),
+        )
+        field_path, manifest_path = writer.publish(world.field_payload, serialise(world.manifest))
+        print(f"{COMPONENT}: wrote {field_path} and {manifest_path}", file=out)
+        heartbeat.stopping(tick, "finished")
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

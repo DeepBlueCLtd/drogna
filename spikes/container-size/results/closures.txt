@@ -1,0 +1,36 @@
+Per-service closure — what one image of eleven installs
+  (site-packages of `uv sync --frozen --no-dev --package <service>`)
+
+  harness-clock                10 M
+  harness-env-generator         3 M
+  harness-sensors              11 M
+  harness-ingest               30 M
+  harness-model-runner         10 M
+  harness-monitor              10 M
+  harness-scheduler            10 M
+  harness-publisher            10 M
+  harness-planner              13 M
+  harness-telemetry            10 M
+  harness-offload              10 M
+
+  eleven closures             127 M   <- eleven images, summed
+  one closure                  33 M   <- one image, whole workspace
+
+Query layer closure — pygeoapi 0.20.0 and the FR-51 Shapely pin
+
+  as installed                284 M
+
+    rasterio.libs              59 M
+    rasterio                   48 M
+    babel                      33 M
+    numpy                      31 M
+    numpy.libs                 28 M
+    pyproj                     19 M
+    sqlalchemy                 14 M
+    pyproj.libs                13 M
+    pydantic                    8 M
+    shapely.libs                6 M
+    shapely                     5 M
+    yaml                        3 M
+
+  trimmed                     165 M   <- rasterio and SQLAlchemy removed

@@ -5,10 +5,13 @@ names the configuration; that file is read and validated — and its two cross-f
 invariants checked — before the clock is reached, before the staging area is looked at, and
 before a single byte is written or sent.
 
-The broker client is injected. A component with no broker configured does not invent one
-and does not publish to a stub, so nothing lights up in the client that is not really there
-(Constitution VII). The same is true of the clock: without one there is no simulation time,
-and a packager with no simulation time would have to reach for a host clock to write a
+The broker client may be injected, and where it is not this component builds one from the
+``broker`` section of its own configuration. A component whose configuration names no broker
+does not invent one and does not publish to a stub, so nothing lights up in the client that
+is not really there (Constitution VII); a named broker that cannot be reached is reported
+in full on stderr and the packager carries on transferring bundles, which is work that does
+not need a broker. The clock is different: without one there is no simulation
+time, and a packager with no simulation time would have to reach for a host clock to write a
 ledger record, which is the one thing this component may not do.
 
 The first cycle runs with recovery. Every subsequent cycle does not, because recovery is
@@ -22,6 +25,10 @@ import sys
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -75,7 +82,7 @@ def main(
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
     destination: Destination | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     stderr: Any = None,
     cycles: int = 1,
 ) -> int:
@@ -96,16 +103,30 @@ def main(
             print(f"{PACKAGER_NAME}: no simulation clock ({exc})", file=stream)
             return _NO_CLOCK
 
-    packager = Packager(
-        PackagerSettings.from_config(config.document),
-        clock=clock,
-        destination=destination or _destination_from(config.document),
-        telemetry=OffloadTelemetry(publisher=publisher),
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=PACKAGER_NAME, report=stream
     )
-    for index in range(max(cycles, 1)):
-        report = packager.cycle(recover=index == 0)
-        for failure in report.failures:
-            print(f"{PACKAGER_NAME}: {failure}", file=stream)
+    if publisher is None:
+        print(
+            f"{PACKAGER_NAME}: no publisher was supplied, so nothing is announced and "
+            "nothing lights up. That is truthful, not a degradation",
+            file=stream,
+        )
+
+    try:
+        packager = Packager(
+            PackagerSettings.from_config(config.document),
+            clock=clock,
+            destination=destination or _destination_from(config.document),
+            telemetry=OffloadTelemetry(publisher=publisher),
+        )
+        for index in range(max(cycles, 1)):
+            report = packager.cycle(recover=index == 0)
+            for failure in report.failures:
+                print(f"{PACKAGER_NAME}: {failure}", file=stream)
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

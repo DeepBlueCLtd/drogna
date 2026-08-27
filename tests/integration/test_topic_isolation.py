@@ -71,9 +71,24 @@ def test_a_sensor_may_publish_on_the_observation_branch(broker: support.Broker) 
     assert b"Not authorized" not in result.stderr
 
 
-def test_a_sensor_may_not_publish_a_control_event(broker: support.Broker) -> None:
-    """A sensor that could publish here could forge a heartbeat or a run request."""
-    for topic in ("ctl/heartbeat", "ctl/telemetry", "ctl/run-request", "ctl/clock", "ctl/plan"):
+def test_a_sensor_may_announce_itself_and_nothing_more(broker: support.Broker) -> None:
+    """ADR-0015: one named write on the control branch, and the branch closed otherwise.
+
+    ``ctl/heartbeat`` left this list on 27 August 2026. A sensor refused it is a sensor that
+    cannot light its box in the shell however it is wired, and the refusal was silent — the
+    broker denied the publish while the client's return code stayed zero. The forgery
+    objection that had kept it out is not held anywhere else: ``drogna_control`` carries
+    ``readwrite ctl/#``, so nine components could already forge any heartbeat.
+
+    Every other control topic is still refused, and each is named rather than covered by a
+    wildcard, so a rule that widened would be reported here by the topic it let through.
+    """
+    allowed = broker.publish("drogna_sensor", "ctl/heartbeat", "{}")
+    assert b"Not authorized" not in allowed.stderr, (
+        "a sensor may announce itself on ctl/heartbeat (ADR-0015); deploy/broker/acl has "
+        "lost the write rule for drogna_sensor"
+    )
+    for topic in ("ctl/telemetry", "ctl/run-request", "ctl/clock", "ctl/plan"):
         result = broker.publish("drogna_sensor", topic, "{}")
         assert b"Not authorized" in result.stderr, f"{topic} was not refused"
 

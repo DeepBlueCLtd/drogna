@@ -12,12 +12,17 @@ its root seed, its clock configuration and the tick it had reached from the mani
 refuses to start if a manifest is present but cannot be read. Refusing is right: a clock
 that silently rewound time would corrupt every consumer that had keyed work to a tick.
 
-The broker client is injected. There is no MQTT client in this repository yet — the
-observation path that brings one is feature 007 — and a component with no broker configured
-does not invent one and does not publish to a stub. It says so on stderr and publishes
-nothing, so nothing lights up in the client, which is true (Constitution VII). The moment a
-publisher is supplied, this component is the first thing in drogna to light a box in the
-shell, and every later component follows the same three lines.
+The broker client may be injected, and where it is not this component builds one from its
+own configuration: ``harness_core.broker`` is the wrapping, and the endpoint and the
+credentials come from the ``broker`` section and appear in no literal here. A configuration
+that names no broker is the one case that publishes nothing — it says so on stderr rather
+than inventing a client or publishing to a stub, so nothing lights up in the client, which
+is true (Constitution VII).
+
+A named broker that cannot be reached is reported in full on stderr and the clock carries
+on: the snapshot and control routes still answer, so a stack whose broker arrives late is
+not one whose clock refused to start. What it does not do is pretend — nothing is published
+and nothing lights up until there is somewhere real to publish to.
 """
 
 from __future__ import annotations
@@ -27,6 +32,10 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock_service import ClockEngine
 from harness_core.config import ConfigError
 from harness_core.heartbeat import MessagePublisher
@@ -46,7 +55,7 @@ _DEFAULT_HEARTBEAT_SECONDS = 5.0
 def main(
     *,
     env: Mapping[str, str] | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     ticks: int | None = None,
     stderr: Any = None,
 ) -> int:
@@ -58,6 +67,10 @@ def main(
 
     opened = open_run(section, root_seed=settings.seed.root, streams=[settings.seed.stream])
     configure_run(opened.root_seed)
+
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=CLOCK_NAME, report=out
+    )
 
     service = ClockService(
         ClockEngine(opened.settings, index=opened.index),
@@ -106,6 +119,8 @@ def main(
         server.shutdown()
         server.server_close()
         service.close(state, detail=detail)
+        if owned is not None:
+            owned.close()
     return 0
 
 

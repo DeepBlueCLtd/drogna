@@ -64,6 +64,60 @@ jobs:
       - name: Gates (Constitution I, II, III, IV, V)
         run: ./scripts/gates.sh
 
+  # The site's own publication gates, reported and not enforced (015 T045).
+  #
+  # A separate job for the reason the client is one: mkdocs is deliberately outside the uv
+  # workspace (ADR-0010), so this needs its own pinned environment and a failure here should
+  # be told apart from a Python or a client failure at a glance.
+  #
+  # **Report-only, and that is the whole point of the task.** These gates already run in
+  # `pages.yml`, where they block the push to gh-pages — but `pages.yml` triggers on a push
+  # to main and deliberately has no `pull_request` trigger (015 T012), because a feature
+  # branch that published would make the public site follow unmerged work. The consequence
+  # was that a contributor first learned of a site fault on the publishing run *after* the
+  # merge, with the branch already gone. This job closes that gap without reopening the one
+  # T012 closed: it reads the same tree with the same gates and never publishes anything.
+  #
+  # `continue-on-error` is on both steps rather than on the job, so a failure is annotated
+  # against the step that produced it and stays visible in the checks list, while the
+  # required status of this workflow is unchanged. Making these blocking is a separate
+  # decision from running them, and it is not this task's to take: the gates enforce PR-01
+  # at publication, and the publication path still enforces them.
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: site/requirements.txt
+
+      # The same pinned set `pages.yml` installs, so a contributor, this job and the
+      # publishing run resolve one toolchain rather than three that happen to agree.
+      - name: Install the pinned site tooling
+        run: python -m pip install -r site/requirements.txt
+
+      # The vocabulary gate reads the text inside published images. Without an engine it
+      # exits 2 — "could not run" — which the runner reports as its own outcome rather than
+      # as a pass. In a report-only job that would be a warning nobody could act on, so the
+      # engine is installed and the report means something.
+      - name: Install the OCR engine the vocabulary gate needs
+        run: sudo apt-get update -qq && sudo apt-get install -y tesseract-ocr
+
+      # --strict fails on a broken internal link, a dangling anchor or a page missing from
+      # the navigation. Report-only here like the gates below: this job adds no blocking
+      # check, and an unbuilt tree makes the next step report "could not run" rather than
+      # pass, which is the outcome that says this run proved nothing.
+      - name: Build the site
+        continue-on-error: true
+        run: mkdocs build --strict --config-file site/mkdocs.yml
+
+      - name: Report — the site's own publication gates
+        continue-on-error: true
+        run: python site/gates/run_gates.py --site site/build
+
   # The client has its own toolchain and its own tests, and they are no less part of the
   # build for being written in a different language. Kept as a separate job so a Python
   # failure and a client failure are told apart at a glance rather than by reading a log.

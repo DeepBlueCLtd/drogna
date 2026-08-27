@@ -1,6 +1,6 @@
 {
   "broker": {
-    "url": "ws://localhost:8081/ctl",
+    "url": "ws://drogna_viewer@localhost:8081/ctl",
     "client_id": "client_local",
     "keepalive_seconds": 30,
     "reconnect_period_seconds": 5

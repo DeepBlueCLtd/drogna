@@ -1,6 +1,6 @@
 {
   "broker": {
-    "url": "wss://drogna.invalid/ctl",
+    "url": "wss://drogna_viewer@drogna.invalid/ctl",
     "client_id": "client_droplet",
     "keepalive_seconds": 30,
     "reconnect_period_seconds": 5

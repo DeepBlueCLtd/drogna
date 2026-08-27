@@ -149,8 +149,12 @@ and that no statistic reports a stale value as fresh at any point.
   has occurred. Nothing in this feature releases statistics downstream, and any
   future release of them is subject to SRD FR-42, which feature 013 owns.
 - **Telemetry restart.** Running statistics are in memory and are lost. Telemetry
-  reports `warming` and publishes nothing until the configured minimum sample count
-  is reached again. It does not reconstruct history from the store.
+  reports `warming` — on the heartbeat and in the `state` field of every statistics
+  message — and publishes **no skill score** until the configured minimum sample count is
+  reached again. It does not reconstruct history from the store. It continues to publish
+  the statistics themselves, carrying `state: warming` and the sample count they were
+  computed from: an aggregate is not a score, and withholding one because its count is low
+  would be the suppression FR-011 forbids (see FR-009).
 
 ## Requirements *(mandatory)*
 
@@ -192,9 +196,23 @@ and that no statistic reports a stale value as fresh at any point.
   the published message MUST carry an explicit not-beating-persistence state and the
   plain-language statement of it. The interpretation MUST NOT be left to the display.
   (SRD FR-38, Constitution IX)
-- **FR-009**: Below a configured minimum sample count, telemetry MUST report
-  `insufficient-samples` and MUST publish no skill score. No default value, no zero
-  and no carried-forward previous value is permitted. (Constitution IX)
+- **FR-009**: Below a configured minimum sample count, telemetry MUST publish **no skill
+  score**, and MUST name the reason in the state the message carries: `insufficient-samples`
+  for a scope below the minimum while the component is otherwise reporting, and `warming`
+  for a component still below the minimum after a start or a restart. No default value, no
+  zero and no carried-forward previous value is permitted.
+
+  What is withheld is the *score*, not the message and not the aggregate. Telemetry MUST
+  continue to publish its residual statistics in these states, carrying the state and the
+  sample count they were computed from, so that a reader can weigh them. A statistic is an
+  aggregate of measurements that were taken; a skill score is a claim about how well the
+  model is doing, and only the second can be unearned by a low count. Withholding the
+  aggregate would be the suppression FR-011 forbids, and would make an absent message the
+  way this component reports a state — which is indistinguishable from the component being
+  dead, the one thing Constitution VII says liveness must answer. `warming` and
+  `insufficient-samples` are both members of the `residual-statistics.state` enum in
+  `contracts/schemas/telemetry.schema.json` precisely because a statistics message is
+  published in those states. (Constitution IX, FR-011, FR-017)
 - **FR-010**: Every published statistic MUST carry the simulation time of its last
   real update and a freshness state of `fresh` or `stale`, and MUST transition to
   `stale` within the configured staleness window when its inputs stop arriving.
@@ -266,7 +284,10 @@ and that no statistic reports a stale value as fresh at any point.
   persistence reference, the not-beating-persistence state appears in the published
   message within one telemetry interval, in 100% of trials.
 - **SC-006**: No skill score is ever published below the configured minimum sample
-  count: the count of such messages is zero across a full scenario.
+  count: the count of such messages is zero across a full scenario. Over the same
+  scenario, the count of publication intervals in which residual statistics were
+  withheld — as against published carrying `warming` or `insufficient-samples` — is also
+  zero: what the minimum count gates is the score, not the aggregate.
 - **SC-007**: After the residual stream stops, every affected statistic reports
   `stale` within the configured staleness window, and the count of statistics
   reporting a value older than that window as `fresh` is zero.
@@ -338,3 +359,27 @@ and that no statistic reports a stale value as fresh at any point.
 - Rendering any of this — including the plain-language statement that a model is not
   beating persistence — is the client's work, in features 003 and 012. This feature
   emits the state and the words; it draws nothing.
+
+## Amendments
+
+*2026-08-27 — "publishes nothing" narrowed to "publishes no skill score".* The restart
+edge case said telemetry "reports `warming` and publishes nothing until the configured
+minimum sample count is reached again". Read as written, that contradicts FR-011, which
+forbids suppressing any figure, and it contradicts this specification's own contract: the
+`residual-statistics.state` enum in `contracts/schemas/telemetry.schema.json` includes
+`warming`, and a state that is never published is a state no schema needs.
+
+`services/telemetry/src/harness_telemetry/publish.py` reads it as "publishes no skill
+score" and keeps publishing the statistics message with `state: warming` and the sample
+count beside the figures. That reading is correct and the wording was the loose artefact.
+An aggregate of measurements that were actually taken is not a claim about model quality;
+only the second can be unearned by a low sample count, and SC-006 was already written
+about the score alone. There is a further reason the code's reading is the only coherent
+one: reporting a state by *not sending a message* is indistinguishable at the receiver from
+the component having died, and Constitution VII makes that distinction the whole job of the
+control namespace. A state is reported by a message that says it.
+
+The edge case, FR-009 and SC-006 now say this in the same words the implementation and the
+schema do. No ADR: the collision is between two requirements of this one feature, the
+convention it settles is already written up for telemetry's states in
+`docs/algorithms/forecast-skill.md`, and the schema had already encoded the answer.

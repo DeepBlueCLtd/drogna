@@ -1,0 +1,24 @@
+# Access control lists for the control broker in the two-broker fallback.
+#
+# The same roles, with the observation branch simply absent: there is no obs/ traffic on
+# this broker at all, so cross-contamination is prevented here by there being nothing to
+# contaminate. The rules that remain are the control namespace's, and they are the same
+# rules as on the single broker.
+#
+# The sensor role appears because of ADR-0009: a component that cannot receive a clock
+# sample has no simulation time. On this broker that is the only thing a sensor may do,
+# and it may still publish nothing anywhere.
+
+user drogna_sensor
+topic read ctl/clock
+
+user drogna_ingest
+topic read ctl/clock
+topic write ctl/heartbeat
+topic write ctl/telemetry
+
+user drogna_control
+topic readwrite ctl/#
+
+user drogna_viewer
+topic read ctl/#

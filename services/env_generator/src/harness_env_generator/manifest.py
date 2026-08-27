@@ -41,6 +41,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from harness_core.config import validate_document
+from harness_core.netcdf import FORMAT_NAME
 from harness_core.rng import DERIVATION_RULE, DERIVATION_VERSION
 from harness_core.soundspeed import EQUATION, VALIDITY
 
@@ -62,7 +63,6 @@ from harness_env_generator.version import (
     MANIFEST_SCHEMA_VERSION,
 )
 from harness_env_generator.writer import (
-    FORMAT_NAME,
     NORMALISED_ATTRIBUTES,
     tolerance_for,
 )

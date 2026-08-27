@@ -1,0 +1,10 @@
+// A capture path that waits on the clock instead of on the application. Planted for
+// scripts/tests/test_no_fixed_sleep.py; never scanned by the repository-wide walk, because
+// the `.fixture` suffix keeps it out of it.
+import { test } from "@playwright/test";
+
+test("photograph the shell", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: "shell.png" });
+});

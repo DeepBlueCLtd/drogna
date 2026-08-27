@@ -1,6 +1,6 @@
 {
   "broker": {
-    "url": "ws://localhost:8080/ctl",
+    "url": "ws://localhost:8081/ctl",
     "client_id": "client_local",
     "keepalive_seconds": 30,
     "reconnect_period_seconds": 5
@@ -9,8 +9,15 @@
     "stale_after_seconds": 10,
     "endpoint": "http://localhost:8090",
     "routes": {
-      "snapshot": "/clock/snapshot"
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
     }
+  },
+  "query": {
+    "endpoint": "http://localhost:8081",
+    "collections_path": "/released",
+    "trajectory_path": "/trajectory",
+    "route_parameters": ["sea_water_temperature", "sea_water_practical_salinity"]
   },
   "liveness": {
     "default_window_seconds": 15,
@@ -18,6 +25,10 @@
     "disconnected_is_indeterminate": true
   },
   "display": {
-    "frame_interval_ms": 100
+    "frame_interval_ms": 100,
+    "buffer_depth": 64,
+    "coalescing_threshold": 8,
+    "maximum_drawn_cells": 4096,
+    "interpolate_between_samples": true
   }
 }

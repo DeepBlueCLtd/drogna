@@ -42,14 +42,13 @@ export function statusWords(status: string): string {
   return STATUS_WORDS[status] ?? `reports ${status}`;
 }
 
-/** A duration a viewer can read, from seconds that may be fractional. */
-export function secondsWords(seconds: number): string {
-  if (seconds < 1) {
-    return "under a second ago";
-  }
-  const whole = Math.floor(seconds);
-  if (whole < 120) {
-    return `${whole} s ago`;
-  }
-  return `${Math.floor(whole / 60)} min ago`;
-}
+/*
+ * There was a `secondsWords` here, turning a host duration into "12 s ago" for the boxes
+ * and the clock panel. Feature 012's FR-009 removed it and the three places that called
+ * it. Host time may drive illumination and nothing else: a figure counting upwards makes
+ * the rendered output differ from one frame to the next, so two captures of the same
+ * state at a pinned rate could never be identical (SC-009), and the pin is the whole
+ * point of FR-53. Whether a component is still believed is said by its illumination, and
+ * whether the clock is still speaking is said by the four-state clock display. Neither
+ * needs a number, and the number was the only thing making the page restless.
+ */

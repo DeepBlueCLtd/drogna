@@ -25,6 +25,25 @@ diagram conveys.
 Feature development follows [spec-kit](https://github.com/github/spec-kit):
 constitution → specify → plan → tasks → analyze → implement.
 
+Before pushing, run what the build runs:
+
+```sh
+uv sync                  # the workspace, once
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+./scripts/gates.sh       # every constitution gate, and the exemption inventory
+```
+
+and, for the client:
+
+```sh
+cd client && pnpm install && pnpm exec tsc --noEmit && pnpm lint && pnpm test
+```
+
+`scripts/gates.sh` takes its gates from `scripts/gates.registry`, one per line. A feature
+that adds a gate appends a line there; the runner names no gate and does not need editing.
+
 ## Licence
 
 See `LICENSE`.

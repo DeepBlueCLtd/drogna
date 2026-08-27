@@ -48,31 +48,48 @@ from _gate_lib import (
 
 GATE = "forbidden-vocabulary"
 
+# `\b` is the wrong boundary here, and the difference is the whole point of the gate.
+# An underscore is a word character, so `\bcontacts?\b` does not match `contact_id` — the
+# exact identifier this module's docstring names as the thing a data model acquires a
+# tracked entity by. The same hole swallowed `track_id`, `detection_id` and
+# `tracked_entity`. These boundaries treat anything that is not a letter or a digit as a
+# separator, so an identifier spelt in snake_case, kebab-case or camelCase is caught while
+# `contactless` and `soundtrack` are not.
+_BEFORE = r"(?<![A-Za-z0-9])"
+_AFTER = r"(?![A-Za-z0-9])"
+
+
+def _noun(pattern: str) -> re.Pattern[str]:
+    """A forbidden noun, bounded by anything that is not alphanumeric."""
+    return re.compile(_BEFORE + pattern + _AFTER, re.IGNORECASE)
+
+
+# The entities, not the vocabulary. "track" and "tracking" are deliberately absent:
+# see the note below and Constitution V, amended 2026-08-27.
 FORBIDDEN: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("tracked entity", re.compile(r"\btracked\s+entit(?:y|ies)\b", re.IGNORECASE)),
-    ("track", re.compile(r"\btracks?\b", re.IGNORECASE)),
-    ("tracking", re.compile(r"\btracking\b", re.IGNORECASE)),
-    ("tracklet", re.compile(r"\btracklets?\b", re.IGNORECASE)),
-    ("contact", re.compile(r"\bcontacts?\b", re.IGNORECASE)),
-    ("detection", re.compile(r"\bdetections?\b", re.IGNORECASE)),
+    ("tracked entity", _noun(r"tracked[\s_-]+entit(?:y|ies)")),
+    ("tracklet", _noun(r"tracklets?")),
+    ("contact", _noun(r"contacts?")),
+    ("detection", _noun(r"detections?")),
 )
 
-# Ordinary English and version-control usage that happens to share a word with the
-# prohibition. Declared here, in one place, so the list can be read and argued with.
+# Version-control usage of "tracked", which shares a word with "tracked entity" above.
+# Declared here, in one place, so the list can be read and argued with.
+#
+# This list used to be twice as long. Four of its entries existed only to let ordinary
+# English past a prohibition on the word "track" — "sampling track", "tracks the local
+# decorrelation timescale", "not a track". A list of escapes that grows every few weeks
+# is a rule drawn around the wrong noun, and the rule was corrected rather than the list
+# extended again.
 PERMITTED_PHRASES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\btracked\s+(?:file|files|in git|template|source)\b", re.IGNORECASE),
     re.compile(r"\b(?:git-)?tracked\b(?=[^.]*\bgit\b)", re.IGNORECASE),
     re.compile(r"\bis\s+tracked\s+and\b", re.IGNORECASE),
-    re.compile(r"\btracks?\s+the\s+local\s+decorrelation\s+timescale\b", re.IGNORECASE),
-    re.compile(r"\bcomplexity\s+tracking\b", re.IGNORECASE),
-    re.compile(r"\bsampling\s+track\b", re.IGNORECASE),
-    re.compile(r"\bnot\s+a\s+track\b", re.IGNORECASE),
-    re.compile(r"\bno\s+(?:entity|tracked\s+entity)[^.]*\btracks?\b", re.IGNORECASE),
 )
 
 MESSAGE = (
     "tracked-entity vocabulary; drogna holds measurements, fields, recommendations and "
-    "telemetry, and nothing that is or implies a track (Constitution V)"
+    "telemetry, and no entity it did not place (Constitution V)"
 )
 
 

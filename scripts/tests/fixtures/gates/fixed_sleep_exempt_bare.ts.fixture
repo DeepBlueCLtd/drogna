@@ -1,0 +1,9 @@
+// A marker with no reason. It must exempt nothing: the marker is a place to record why,
+// not a way to switch the gate off.
+import { test } from "@playwright/test";
+
+test("photograph the shell", async ({ page }) => {
+  await page.goto("/");
+  // harness:allow-fixed-sleep
+  await page.waitForTimeout(2000);
+});

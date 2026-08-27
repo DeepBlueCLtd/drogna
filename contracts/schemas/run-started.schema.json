@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/run-started.schema.json",
+  "title": "drogna model run started",
+  "description": "The message the model runner publishes on ctl/run-started before it computes anything. It is published first so that a run which then fails is still visible as a run that was attempted: a loop whose second step leaves no trace is a loop nobody can debug. It names the kernel that will do the work, because the kernel is a port with more than one implementation and which one ran is not otherwise recoverable from the output.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "run_id",
+    "divergence_id",
+    "member_count",
+    "kernel",
+    "initialisation_sim_time"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The model runner, matching config /component/id."
+    },
+    "scenario_run_id": { "type": "string", "description": "The scenario run this belongs to." },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which work began, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": { "type": "integer", "minimum": 0, "description": "The tick index the runner had observed." },
+    "run_id": {
+      "type": "string",
+      "description": "The model run identifier from the request that caused this run."
+    },
+    "divergence_id": {
+      "type": "string",
+      "description": "The divergence that justified the request, so the chain from observation to field is followable through the control namespace alone."
+    },
+    "member_count": {
+      "type": "integer",
+      "minimum": 2,
+      "description": "Ensemble members this run will execute. A member that fails invalidates the run rather than shrinking it."
+    },
+    "kernel": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The model kernel implementation selected by configuration, behind the kernel port."
+    },
+    "initialisation_sim_time": {
+      "type": "string",
+      "description": "The simulation instant the run initialises from, echoed from the request."
+    }
+  }
+}

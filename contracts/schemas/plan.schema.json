@@ -1,0 +1,560 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/plan.schema.json",
+  "title": "drogna sampling recommendation",
+  "description": "What the planner publishes on ctl/plan. It names the planning cells where sampling would reduce uncertainty most, states by how much, and states for every region in the domain when its confidence will lapse. What it is not is worth saying in the document rather than leaving to convention: it is not an instruction. There is no addressee, no recipient, no priority to be obeyed and no field naming anything that is to be done, because the harness is headless with respect to decisions and rendering and advice happen downstream (SRD FR-36, Constitution VIII). The stronger form of that guarantee is structural: every string property in this document is an enumeration, a constant, an identifier matching a declared pattern, or a simulation instant, so there is nowhere a sentence addressed to a person could be written. The route's value is collapse-aware — it already accounts for the sampling the route does on its way, so a consumer that summed the vertices' standalone values would obtain a larger and wrong number (SRD FR-32, FR-33).",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "kind",
+    "plan_id",
+    "supersedes",
+    "state",
+    "empty_reason",
+    "horizon",
+    "uncertainty_field",
+    "indexing",
+    "platform",
+    "route",
+    "selection",
+    "commitment",
+    "projection"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The component id of the planner that produced it, matching config /component/id."
+    },
+    "scenario_run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+      "description": "The scenario run this recommendation belongs to, as carried on every clock sample."
+    },
+    "sim_time": {
+      "$ref": "#/$defs/sim_time",
+      "description": "Simulation time at which the recommendation was produced."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the planner had observed. A tick is the unit of causality; an instant is not."
+    },
+    "kind": {
+      "type": "string",
+      "const": "sampling-recommendation",
+      "description": "What this message is, stated in the payload so that a reader who has only the bytes knows it is a recommendation. There is deliberately no second value."
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8,64}$",
+      "description": "Deterministic identifier derived from the run's root seed and this recommendation's ordinal, never from entropy or a host clock (Constitution II)."
+    },
+    "supersedes": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{8,64}$",
+      "description": "The plan_id this recommendation replaces, or null for the first of a scenario. Carried so a consumer can tell a replan from a first plan without keeping a history of its own."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["planning", "no-field", "nothing-worth-sampling"],
+      "description": "What the planner was able to do. The same three states the planner's heartbeat carries, so a reader of either can say why a route is empty."
+    },
+    "empty_reason": {
+      "type": ["string", "null"],
+      "enum": ["no-field", "budget-too-small", "nothing-worth-sampling", null],
+      "description": "Why the route is empty, or null when it is not. An empty route is stated with its reason rather than replaced by the nearest cell as a consolation: a planner that always recommends motion is a planner nobody can trust when it recommends motion."
+    },
+    "horizon": {
+      "$ref": "#/$defs/horizon"
+    },
+    "uncertainty_field": {
+      "$ref": "#/$defs/uncertainty_field"
+    },
+    "indexing": {
+      "$ref": "#/$defs/indexing"
+    },
+    "platform": {
+      "$ref": "#/$defs/platform"
+    },
+    "route": {
+      "$ref": "#/$defs/route"
+    },
+    "selection": {
+      "$ref": "#/$defs/selection"
+    },
+    "commitment": {
+      "$ref": "#/$defs/commitment"
+    },
+    "projection": {
+      "$ref": "#/$defs/projection"
+    }
+  },
+  "$defs": {
+    "sim_time": {
+      "title": "Simulation instant",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$",
+      "description": "A simulation instant, ISO-8601 UTC with microsecond precision, taken from the clock port. Never a host clock value, and never a format that would invite one (Constitution I)."
+    },
+    "h3_index": {
+      "title": "H3 cell index",
+      "type": "string",
+      "pattern": "^[0-9a-f]{15,16}$",
+      "description": "An H3 cell index in its usual lower-case hexadecimal spelling. The resolution it belongs to is stated once, under indexing, rather than implied per vertex."
+    },
+    "horizon": {
+      "title": "Planning horizon",
+      "description": "The span of simulation time this recommendation reasons over. The horizon recedes: each replan moves both ends forward, and the projection is computed to its far end.",
+      "type": "object",
+      "required": ["start_sim_time", "end_sim_time", "span_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "start_sim_time": { "$ref": "#/$defs/sim_time" },
+        "end_sim_time": { "$ref": "#/$defs/sim_time" },
+        "span_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The horizon's length in seconds of simulation time."
+        }
+      }
+    },
+    "uncertainty_field": {
+      "title": "The field planned against",
+      "description": "Which published uncertainty field this recommendation was computed from, read through the coverage read port. A recommendation is never produced against a field that has already been superseded, and naming the field here is what lets a reader check that rather than trust it.",
+      "type": "object",
+      "required": ["run_id", "variable", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "description": "The model run whose per-cell ensemble spread was read."
+        },
+        "variable": {
+          "type": "string",
+          "enum": ["temperature_spread", "salinity_spread"],
+          "description": "Which published spread variable the planner scored. One scalar field is scored, not both: combining degrees Celsius with practical salinity units needs a weighting between them that nothing in the requirements supplies, so none is invented here."
+        },
+        "digest": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Digest of the field's bytes where the announcement carried one, so a reader with the same bytes can say it read the same field. Null when the field was supplied without one."
+        }
+      }
+    },
+    "indexing": {
+      "title": "How the domain is indexed",
+      "description": "H3 in the horizontal at one stated resolution, layered with a separate depth index (SRD FR-35). The resolution is stated in every recommendation so the granularity of a recommendation is visible rather than implied: a route through resolution-6 cells is a coarser claim than one through resolution-9 cells, and the difference is not recoverable from the vertices.",
+      "type": "object",
+      "required": ["h3_resolution", "depth_bands"],
+      "additionalProperties": false,
+      "properties": {
+        "h3_resolution": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15,
+          "description": "The H3 resolution every h3_index in this message belongs to."
+        },
+        "depth_bands": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The vertical index, shallowest first. A planning cell is the pairing of an H3 index with one of these bands.",
+          "items": { "$ref": "#/$defs/depth_band" }
+        }
+      }
+    },
+    "depth_band": {
+      "title": "Depth band",
+      "type": "object",
+      "required": ["index", "minimum_depth_m", "maximum_depth_m"],
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position in the vertical index, shallowest first. This is what a vertex's depth_band refers to."
+        },
+        "minimum_depth_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shallow edge of the band in metres, positive downwards."
+        },
+        "maximum_depth_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Deep edge of the band in metres, positive downwards."
+        }
+      }
+    },
+    "platform": {
+      "title": "Where the sampling platform is",
+      "description": "A position, a depth and a budget. Nothing else: no heading, no speed, no identity carried between one recommendation and the next, and no history. A sampling platform in drogna is a coordinate and a sampler (Constitution V).",
+      "type": "object",
+      "required": ["latitude", "longitude", "depth_m"],
+      "additionalProperties": false,
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90, "description": "Degrees north, WGS 84." },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180, "description": "Degrees east, WGS 84." },
+        "depth_m": { "type": "number", "minimum": 0, "description": "Depth below the surface in metres, positive downwards." }
+      }
+    },
+    "route": {
+      "title": "The recommended route",
+      "description": "One ordered sequence of planning cells, chosen under a budget. It is not a tour: most candidates are deliberately left unvisited, there is no return to the origin, and the count of what was considered against what was chosen is carried under selection so that the difference is checkable. Each vertex is four-dimensional — an H3 index, a depth band and an arrival instant — so the recommendation is a curve through the forecast volume rather than a line on a chart.",
+      "type": "object",
+      "required": [
+        "vertices",
+        "value",
+        "value_without_collapse",
+        "budget_seconds",
+        "consumed_seconds",
+        "distance_m"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "vertices": {
+          "type": "array",
+          "description": "The route in order. Empty when there is nothing worth recommending, in which case empty_reason says why.",
+          "items": { "$ref": "#/$defs/vertex" }
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The route's collapse-aware value: the sum of the marginal uncertainty reductions in traversal order, each measured against the field as it stands after every earlier visit has collapsed it and after regrowth to that arrival instant. Diminishing returns are already inside this number and must not be applied again by a consumer."
+        },
+        "value_without_collapse": {
+          "type": "number",
+          "minimum": 0,
+          "description": "What the same route would have been worth had each vertex been scored against the field as it stood at the horizon's start, with no earlier visit having collapsed it — the sum a consumer would reach from standalone per-cell values. It is carried because the gap between the two is the size of the error the arrival-time scoring avoids, and a number nobody can see is a number nobody checks. On a field that does not change across the horizon it is never smaller than value. Where it is smaller, the field itself grew between the horizon's start and the arrivals, and the gap is the same error in the other direction: a planner scoring against the present would have undervalued the route. That case is why the naive figure is published beside the collapse-aware one rather than left to be inferred."
+        },
+        "budget_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The traversal budget in seconds of simulation time, at the configured nominal speeds."
+        },
+        "consumed_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "What the route consumes of that budget. A route consuming more than its budget is a defect, not a suggestion."
+        },
+        "distance_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Great-circle distance along the route, in metres. Horizontal only; the vertical component of the cost is in consumed_seconds."
+        }
+      }
+    },
+    "vertex": {
+      "title": "Route vertex",
+      "description": "One planning cell on the route, with the simulation instant at which it would be reached. The instant is what makes the collapse simulation reproducible by a reader: regrowth between two vertices is a function of the interval between their arrival instants and the local decorrelation timescale.",
+      "type": "object",
+      "required": [
+        "sequence",
+        "h3_index",
+        "depth_band",
+        "arrival_sim_time",
+        "latitude",
+        "longitude",
+        "depth_m",
+        "marginal_value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position along the route, counting from zero. Carried explicitly so that array order is not the only thing asserting it."
+        },
+        "h3_index": { "$ref": "#/$defs/h3_index" },
+        "depth_band": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Index into indexing/depth_bands."
+        },
+        "arrival_sim_time": { "$ref": "#/$defs/sim_time" },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90, "description": "Centre of the H3 cell, degrees north." },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180, "description": "Centre of the H3 cell, degrees east." },
+        "depth_m": { "type": "number", "minimum": 0, "description": "Centre of the depth band in metres, positive downwards." },
+        "marginal_value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "What this vertex adds to the route's value, measured against the field as it stands when the vertex is reached. A vertex reached after a nearer one has already resolved the water around it carries a small number here, and that is the whole of the diminishing-returns behaviour, visible per vertex."
+        }
+      }
+    },
+    "selection": {
+      "title": "How the route was chosen",
+      "description": "The problem formulation and the heuristic, carried so that a reader can say what kind of answer this is. Route selection is orienteering — cells carry prizes, traversal carries cost, a subset is chosen under a budget — and explicitly not travelling-salesman: there is no requirement that every candidate be visited and no tour to close.",
+      "type": "object",
+      "required": [
+        "formulation",
+        "heuristic",
+        "candidate_cell_count",
+        "visited_cell_count",
+        "restarts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "formulation": {
+          "type": "string",
+          "const": "orienteering-prize-collecting",
+          "description": "The problem this is a solution to. There is deliberately no second value: a tour formulation would be a different component."
+        },
+        "heuristic": {
+          "type": "string",
+          "const": "greedy-insertion-seeded-restarts",
+          "description": "Orienteering is NP-hard and nothing here requires optimality. What it requires is the right formulation and determinism, so the search is a greedy insertion with a fixed number of seeded randomised restarts and seeded tie-breaks."
+        },
+        "candidate_cell_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many planning cells were considered."
+        },
+        "visited_cell_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many were chosen. Smaller than candidate_cell_count whenever the budget binds, which is what prize-collecting looks like from outside."
+        },
+        "restarts": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many randomised restarts the search ran, every draw taken from the seeded generator so the same field, budget and seed give the same route."
+        }
+      }
+    },
+    "commitment": {
+      "title": "What was held to, and what was abandoned",
+      "description": "The planner replans on a receding horizon and holds its commitment: the part of the previous route falling inside the commitment window is retained unless changing it improves the value by more than the configured margin. Commitment without hysteresis is not commitment, and a departure is recorded with its margin so that a reader can see the planner changed its mind and by how much.",
+      "type": "object",
+      "required": [
+        "window_seconds",
+        "retained_vertex_count",
+        "departed_from_previous",
+        "improvement_over_retained",
+        "margin"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "window_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The commitment window in seconds of simulation time, measured forward from this recommendation's start."
+        },
+        "retained_vertex_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many vertices of the previous route survive unchanged at the head of this one."
+        },
+        "departed_from_previous": {
+          "type": "boolean",
+          "description": "Whether the committed prefix was abandoned. False for a first recommendation, which has no predecessor to depart from."
+        },
+        "improvement_over_retained": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Value of the freely replanned route minus the value of the route that keeps the committed prefix. Zero when there was no predecessor."
+        },
+        "margin": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The improvement the free route had to beat to justify departing, as an absolute value in the same units as route/value."
+        }
+      }
+    },
+    "projection": {
+      "title": "When confidence lapses",
+      "description": "Uncertainty projected forward from the current field to the end of the horizon, region by region, so the output is schedulable rather than merely reactive: a consumer can reason about a stated future instant instead of waiting for a present condition. Every region in the domain appears here. Omission is not permitted, because an absent region reads as a healthy one.",
+      "type": "object",
+      "required": [
+        "step_seconds",
+        "horizon_seconds",
+        "usable_threshold",
+        "region_count",
+        "regions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "step_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The forward march's step in seconds of simulation time. A crossing instant is resolved to this step: the growth law has a closed form, but the projection is marched so that a growth law without one would need no new machinery."
+        },
+        "horizon_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How far forward the march ran, in seconds of simulation time."
+        },
+        "usable_threshold": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The uncertainty above which confidence is no longer usable, in the units of the scored spread variable. Scenario configuration; nothing in the requirements fixes a value."
+        },
+        "region_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many regions the domain has. Equal to the length of regions, carried so that a truncated message is detectable rather than merely shorter."
+        },
+        "regions": {
+          "type": "array",
+          "description": "One entry per region, ordered by H3 index so two replays produce the same bytes.",
+          "items": { "$ref": "#/$defs/projection_entry" }
+        }
+      }
+    },
+    "projection_entry": {
+      "title": "One region's projection",
+      "description": "A region is one H3 cell. Its state is decided by whichever of its depth bands lapses first, and that band is named, because a region that is usable at the surface and blind at depth is not a usable region.",
+      "type": "object",
+      "required": [
+        "h3_index",
+        "depth_band",
+        "state",
+        "crossing_sim_time",
+        "uncertainty_now",
+        "saturated_uncertainty",
+        "timescale_seconds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "h3_index": { "$ref": "#/$defs/h3_index" },
+        "depth_band": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The band whose confidence lapses first, or the band with the largest projected uncertainty where none lapses."
+        },
+        "state": {
+          "type": "string",
+          "enum": ["crossing", "already-lapsed", "no-crossing-within-horizon"],
+          "description": "crossing: confidence falls below usable at crossing_sim_time. already-lapsed: it is already below now, which is what arriving cold looks like. no-crossing-within-horizon: it does not lapse before the horizon ends, stated explicitly rather than by absence."
+        },
+        "crossing_sim_time": {
+          "oneOf": [
+            { "$ref": "#/$defs/sim_time" },
+            { "type": "null" }
+          ],
+          "description": "The simulation instant at which confidence falls below usable, resolved to one projection step. Null when the state is no-crossing-within-horizon."
+        },
+        "uncertainty_now": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The region's uncertainty at sim_time, in the units of the scored spread variable."
+        },
+        "saturated_uncertainty": {
+          "type": "number",
+          "minimum": 0,
+          "description": "What the region's uncertainty grows back to given unlimited time without a measurement: the published ensemble spread there. A region whose saturated uncertainty is below the threshold never lapses however long it is left, and says so."
+        },
+        "timescale_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The decorrelation timescale evaluated at this region, in seconds. It is a field with a domain-wide background, so every region has one — including open water outside every seeded feature — and there is no fallback constant anywhere in this message (ADR-0002, SRD FR-05)."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "component": "planner",
+      "scenario_run_id": "run-20260901-a",
+      "sim_time": "2026-09-01T04:00:00.000000Z",
+      "tick": 960,
+      "kind": "sampling-recommendation",
+      "plan_id": "9a1c7f04d2b3e558",
+      "supersedes": "3d0b6e91a7c4f210",
+      "state": "planning",
+      "empty_reason": null,
+      "horizon": {
+        "start_sim_time": "2026-09-01T04:00:00.000000Z",
+        "end_sim_time": "2026-09-01T07:00:00.000000Z",
+        "span_seconds": 10800.0
+      },
+      "uncertainty_field": {
+        "run_id": "run-000017-3c1aead663b1",
+        "variable": "temperature_spread",
+        "digest": "sha256:0f4c1e5b6a2d8397f0c1b2a3948576e5d4c3b2a1908172635445362718293a0b"
+      },
+      "indexing": {
+        "h3_resolution": 6,
+        "depth_bands": [
+          { "index": 0, "minimum_depth_m": 0.0, "maximum_depth_m": 50.0 },
+          { "index": 1, "minimum_depth_m": 50.0, "maximum_depth_m": 150.0 }
+        ]
+      },
+      "platform": { "latitude": 49.0, "longitude": -4.5, "depth_m": 0.0 },
+      "route": {
+        "vertices": [
+          {
+            "sequence": 0,
+            "h3_index": "861968a07ffffff",
+            "depth_band": 0,
+            "arrival_sim_time": "2026-09-01T04:41:40.000000Z",
+            "latitude": 49.05,
+            "longitude": -4.41,
+            "depth_m": 25.0,
+            "marginal_value": 18.4
+          },
+          {
+            "sequence": 1,
+            "h3_index": "861968a0fffffff",
+            "depth_band": 1,
+            "arrival_sim_time": "2026-09-01T05:35:00.000000Z",
+            "latitude": 49.11,
+            "longitude": -4.33,
+            "depth_m": 100.0,
+            "marginal_value": 6.1
+          }
+        ],
+        "value": 24.5,
+        "value_without_collapse": 37.2,
+        "budget_seconds": 10800.0,
+        "consumed_seconds": 5700.0,
+        "distance_m": 21400.0
+      },
+      "selection": {
+        "formulation": "orienteering-prize-collecting",
+        "heuristic": "greedy-insertion-seeded-restarts",
+        "candidate_cell_count": 96,
+        "visited_cell_count": 2,
+        "restarts": 8
+      },
+      "commitment": {
+        "window_seconds": 1800.0,
+        "retained_vertex_count": 1,
+        "departed_from_previous": false,
+        "improvement_over_retained": 0.3,
+        "margin": 2.0
+      },
+      "projection": {
+        "step_seconds": 300.0,
+        "horizon_seconds": 10800.0,
+        "usable_threshold": 0.35,
+        "region_count": 2,
+        "regions": [
+          {
+            "h3_index": "861968a07ffffff",
+            "depth_band": 1,
+            "state": "crossing",
+            "crossing_sim_time": "2026-09-01T05:50:00.000000Z",
+            "uncertainty_now": 0.18,
+            "saturated_uncertainty": 0.62,
+            "timescale_seconds": 5400.0
+          },
+          {
+            "h3_index": "861968a0fffffff",
+            "depth_band": 0,
+            "state": "no-crossing-within-horizon",
+            "crossing_sim_time": null,
+            "uncertainty_now": 0.09,
+            "saturated_uncertainty": 0.21,
+            "timescale_seconds": 43200.0
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -131,7 +131,7 @@
       "pressure_dbar": { "minimum": 0.0, "maximum": 2000.0 }
     },
     "output": {
-      "directory": "/srv/drogna/environment",
+      "directory": "/var/lib/drogna/environment",
       "field_file": "environment.nc",
       "manifest_file": "environment.manifest.json"
     },

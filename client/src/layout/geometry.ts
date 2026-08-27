@@ -48,6 +48,37 @@ export interface EdgeGeometry {
   readonly path: string;
   readonly labelX: number;
   readonly labelY: number;
+  /** Where the line leaves the publishing box. */
+  readonly startX: number;
+  readonly startY: number;
+  /** Where it meets the consuming box. */
+  readonly endX: number;
+  readonly endY: number;
+  /** The quadratic control point. Equal to the midpoint where the edge is straight. */
+  readonly controlX: number;
+  readonly controlY: number;
+}
+
+/**
+ * A point a given fraction of the way along an edge.
+ *
+ * Feature 012 draws a transit as a mark travelling this path, and a mark that ignored the
+ * bow would leave the line it is supposed to be on. The quadratic is the same one
+ * {@link edgeGeometry} draws, evaluated rather than restated: one description of where an
+ * edge goes, used by both the line and anything moving along it.
+ *
+ * The fraction arrives as an argument. Nothing here reads a clock of any kind.
+ */
+export function pointOnEdge(
+  geometry: EdgeGeometry,
+  fraction: number,
+): { readonly x: number; readonly y: number } {
+  const t = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
+  const inverse = 1 - t;
+  return {
+    x: inverse * inverse * geometry.startX + 2 * inverse * t * geometry.controlX + t * t * geometry.endX,
+    y: inverse * inverse * geometry.startY + 2 * inverse * t * geometry.controlY + t * t * geometry.endY,
+  };
 }
 
 /**
@@ -77,5 +108,13 @@ export function edgeGeometry(edge: ComponentEdge, from: Box, to: Box): EdgeGeome
     path,
     labelX: bow === 0 ? midX : (midX + controlX) / 2,
     labelY: bow === 0 ? midY - 6 : (midY + controlY) / 2 - 6,
+    startX: start.x,
+    startY: start.y,
+    endX: end.x,
+    endY: end.y,
+    // A straight edge is the quadratic whose control point is its own midpoint, so one
+    // evaluation covers both cases and there is no second formula to keep in step.
+    controlX: bow === 0 ? (start.x + end.x) / 2 : controlX,
+    controlY: bow === 0 ? (start.y + end.y) / 2 : controlY,
   };
 }

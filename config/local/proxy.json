@@ -1,0 +1,75 @@
+{
+  "component": {
+    "id": "proxy",
+    "description": "C-10: the exposure boundary. Default deny, one released prefix, one upgrade location."
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "proxy": {
+    "listen": {
+      "host": "0.0.0.0",
+      "port": 8080,
+      "server_name": "_"
+    },
+    "tls": {
+      "enabled": false,
+      "certificate": "/etc/drogna/tls/localhost.crt",
+      "key": "/etc/drogna/tls/localhost.key",
+      "protocols": [
+        "TLSv1.2",
+        "TLSv1.3"
+      ]
+    },
+    "credentials": {
+      "realm": "drogna",
+      "file": "/etc/drogna/proxy.htpasswd"
+    },
+    "upstream": {
+      "query": {
+        "url": "http://query:8080",
+        "collection_path": "/query/collections"
+      },
+      "control_websocket": {
+        "url": "http://broker:9001",
+        "path": "/mqtt"
+      }
+    },
+    "released": {
+      "prefix": "/released",
+      "collections": [
+        "drogna-forecast",
+        "drogna-uncertainty"
+      ],
+      "variables": [
+        "sea_water_temperature",
+        "sea_water_practical_salinity",
+        "sea_water_pressure",
+        "sea_water_temperature_uncertainty",
+        "time",
+        "depth",
+        "latitude",
+        "longitude"
+      ]
+    },
+    "control": {
+      "upgrade_prefix": "/ctl",
+      "read_timeout_seconds": 300,
+      "subprotocol": "mqtt"
+    },
+    "health": {
+      "port": 8089,
+      "path": "/health"
+    },
+    "rendered": {
+      "output": "/etc/nginx/conf.d/harness.conf"
+    },
+    "logs": {
+      "access": "/var/log/nginx/access.log",
+      "error": "/var/log/nginx/error.log",
+      "error_level": "notice"
+    },
+    "identification_radius_m": 2000.0,
+    "quantisation_step": 0.01
+  }
+}

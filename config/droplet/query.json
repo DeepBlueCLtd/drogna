@@ -1,0 +1,141 @@
+{
+  "component": {
+    "id": "query",
+    "description": "C-09: the read path. OGC API-EDR over the coverage store and a stated subset of SensorThings Part 1 over the observation store.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 8,
+    "timeout_seconds": 10.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "query"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "query",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "WARNING"
+  },
+  "query": {
+    "public_base_url": "https://drogna.invalid",
+    "bind": {
+      "host": "0.0.0.0",
+      "port": 8080
+    },
+    "collection_prefix": "/query",
+    "presentation": {
+      "provider_name": "drogna, a synthetic environmental data harness",
+      "licence_name": "MIT",
+      "licence_url": "https://drogna.invalid/licence",
+      "terms_of_service": "Synthetic data for learning purposes. The numerics are deliberately fake and nothing here describes a real place or a real measurement.",
+      "map_tile_url": "https://drogna.invalid/tiles/{z}/{x}/{y}.png",
+      "map_attribution": "Base map tiles are decoration for pygeoapi's own HTML views; the data drawn over them is synthetic."
+    },
+    "domain": {
+      "bbox": [
+        -6.0,
+        48.0,
+        -3.0,
+        50.0
+      ],
+      "vertical": [
+        0.0,
+        1000.0
+      ],
+      "temporal": {
+        "begin": "2026-09-01T00:00:00.000000Z",
+        "end": "2026-09-01T12:00:00.000000Z"
+      }
+    },
+    "coverage_store": {
+      "root": "/var/lib/drogna/coverage",
+      "runs_dirname": "runs",
+      "staging_dirname": "staging",
+      "current_pointer": "current",
+      "forecast_file": "forecast.nc",
+      "uncertainty_file": "uncertainty.nc",
+      "manifest_file": "run-manifest.json",
+      "partial_suffix": ".partial",
+      "run_id": {
+        "rule": "drogna-coverage-run-id",
+        "version": 1,
+        "prefix": "run"
+      }
+    },
+    "coverage": {
+      "axes": {
+        "time": "time",
+        "depth": "depth",
+        "latitude": "latitude",
+        "longitude": "longitude"
+      },
+      "parameters": [
+        {
+          "name": "sea_water_temperature",
+          "variable": "sea_water_temperature",
+          "source": "forecast",
+          "unit": "degree_C",
+          "label": "forecast sea water temperature",
+          "standard_name": "sea_water_temperature"
+        },
+        {
+          "name": "sea_water_practical_salinity",
+          "variable": "sea_water_practical_salinity",
+          "source": "forecast",
+          "unit": "1e-3",
+          "label": "forecast sea water practical salinity",
+          "standard_name": "sea_water_practical_salinity"
+        },
+        {
+          "name": "sea_water_pressure",
+          "variable": "sea_water_pressure",
+          "source": "forecast",
+          "unit": "dbar",
+          "label": "forecast sea water pressure",
+          "standard_name": "sea_water_pressure"
+        },
+        {
+          "name": "temperature_uncertainty",
+          "variable": "sea_water_temperature_uncertainty",
+          "source": "uncertainty",
+          "unit": "degree_C",
+          "label": "one standard deviation of the temperature forecast"
+        }
+      ]
+    },
+    "observations": {
+      "dsn": "postgresql://drogna_read@observations:5432/drogna",
+      "schema": "observations",
+      "role": "drogna_read",
+      "tables": {
+        "things": "thing",
+        "sensors": "sensor",
+        "observed_properties": "observed_property",
+        "datastreams": "datastream",
+        "observations": "observation",
+        "features_of_interest": "feature_of_interest"
+      }
+    },
+    "limits": {
+      "cube_maximum_cells": 120000,
+      "trajectory_maximum_vertices": 91,
+      "page_size_default": 100,
+      "page_size_maximum": 500
+    },
+    "interpolation": {
+      "method": "linear",
+      "out_of_domain": "null",
+      "default_depth_metres": 0.0
+    }
+  }
+}

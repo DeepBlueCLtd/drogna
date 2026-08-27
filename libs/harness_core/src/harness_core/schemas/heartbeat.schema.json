@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/heartbeat.schema.json",
   "title": "drogna component heartbeat",
-  "description": "The message every long-lived component publishes on ctl/heartbeat at its declared interval, and the only thing that lights a component in the client (FR-45, FR-52). The clock service publishes the first one, so this shape is settled here; feature 003 owns contracts/schemas/heartbeat.schema.json and must adopt it unchanged. Note what is absent: no host timestamp. Liveness is judged in simulation time, so a paused clock ages nothing and a rate change does not make a healthy component look dead.",
+  "description": "The message every long-lived component publishes on ctl/heartbeat at its declared interval, and the only thing that lights a component in the client (FR-45, FR-52, Constitution VII). The shape was settled by feature 001, which publishes the first one; this document is the neutral master and adopts that shape unchanged, extending it only with the two optional declarations FR-012 asks for. Note what is absent: no host timestamp. Cadence and liveness windows are real time by ADR-0006, but the sender does not tell the receiver what time the sender thinks it is; the receiver measures arrival against its own real time, and the simulation time carried here is payload, not schedule.",
   "type": "object",
   "required": ["component", "sim_time", "status"],
   "additionalProperties": false,
@@ -34,6 +34,16 @@
       "type": ["string", "null"],
       "pattern": "^sha256:[0-9a-f]{64}$",
       "description": "SHA-256 of the configuration the component was started from. This is how a participant's digest reaches the run manifest: never the configuration itself."
+    },
+    "heartbeat_interval_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The interval, in host seconds, at which this component says it heartbeats (ADR-0006). Optional: a component that does not declare one is judged against the receiver's default tolerance, which is a tolerance and not a list of components."
+    },
+    "liveness_window_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "How long, in host seconds, this heartbeat should be taken as evidence that its sender is alive. Declared by the sender because only the sender knows its own cadence; the receiver holds no table of expected intervals. Optional, as above."
     },
     "detail": {
       "type": "string",

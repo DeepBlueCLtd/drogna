@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.capture.schema.json",
+  "title": "drogna visual capture configuration",
+  "description": "The one document the three capture mechanisms read. Feature 016 builds a glance, a pair and a curated capture that deliberately share no entry point, no output area, no retention rule and no gate; what they do share is where the client is, how large the window is, and which browser is pinned, because those are facts about the destination rather than capture policy. Every mechanism takes the client address, its own output area, the viewport and the device scale factor from here and names none of them in source (Constitution IV, FR-020). Nothing in this document can light a component or introduce traffic: capture observes a running system and never populates one (Constitution VII, FR-018).",
+  "type": "object",
+  "required": ["client", "viewport", "browser", "areas", "scenario", "pair", "curated"],
+  "additionalProperties": false,
+  "properties": {
+    "client": {
+      "title": "The running client",
+      "description": "Where the browser client is served at this destination, and how patient a capture is with it. No mechanism starts the client: a capture observes what is running.",
+      "type": "object",
+      "required": ["url", "readiness_timeout_ms", "stable_frames", "maximum_frames"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Where the client is served. A capture that cannot reach it fails naming this value, so the message points at configuration rather than at a literal in a script."
+        },
+        "readiness_timeout_ms": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How long a mechanism waits for the client's readiness signal before reporting that readiness never arrived. A bound on a wait, not a wait: no capture path contains a fixed sleep (FR-019, SC-011)."
+        },
+        "stable_frames": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How many consecutive animation frames must render identical markup before the page is called settled. Counted in frames the application itself produced, which is why this is a readiness signal and not a delay dressed as one."
+        },
+        "maximum_frames": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "The largest number of frames the settle check will watch before giving up. The bound is a frame count rather than a duration so that the check reads no clock of any kind."
+        }
+      }
+    },
+    "viewport": {
+      "title": "The window every capture is taken through",
+      "description": "One viewport and one device scale factor per destination. FR-015 asks the whole blog to share them so that the published pictures read as one publication, and FR-009 makes them part of what two halves of a pair must agree on before a difference between them means anything.",
+      "type": "object",
+      "required": ["width", "height", "device_scale_factor"],
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Viewport width in CSS pixels."
+        },
+        "height": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Viewport height in CSS pixels."
+        },
+        "device_scale_factor": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Device pixels per CSS pixel. A pair whose halves were captured at different scale factors is refused rather than diffed (FR-009)."
+        }
+      }
+    },
+    "browser": {
+      "title": "The pinned browser",
+      "description": "An unpinned browser makes two captures taken on different machines incomparable for reasons that look like the change under evidence. The pin is recorded here and carried in every pair fingerprint, so a drifted pin becomes a named refusal rather than an unexplained difference.",
+      "type": "object",
+      "required": ["name", "playwright_version", "container_image"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["chromium"],
+          "description": "The browser the captures run in. One, because a second would double the number of ways two curated images could differ without anything having changed."
+        },
+        "playwright_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "The Playwright release whose bundled browser build is expected. It fixes the browser build, and the capture reports the browser version it actually got so that the two can be compared."
+        },
+        "container_image": {
+          "type": "string",
+          "description": "The image a capture runs in when it runs in a container, recorded in the fingerprint so that a pair assembled from one local half and one containerised half is refused (FR-010). Empty where captures at this destination are not containerised."
+        }
+      }
+    },
+    "areas": {
+      "title": "Three output areas, and the published one",
+      "description": "Repository-relative locations, disjoint by construction and asserted disjoint by test (FR-001, FR-022). The first three are git-ignored and have three different lifetimes; the fourth is feature 015's published-screenshot location and is the only capture output tracked by git (FR-014).",
+      "type": "object",
+      "required": ["glance", "pair", "curated_review", "published"],
+      "additionalProperties": false,
+      "properties": {
+        "glance": {
+          "type": "string",
+          "description": "Session-scoped area for glances. Lifetime: the session. No retention rule, no review gate, never committed (FR-004)."
+        },
+        "pair": {
+          "type": "string",
+          "description": "Branch-scoped area for before/after pairs and their differences. Lifetime: the branch (FR-012)."
+        },
+        "curated_review": {
+          "type": "string",
+          "description": "Where curated candidates and their provenance records wait for a person to look at them. The curated mechanism commits nothing itself (FR-013)."
+        },
+        "published": {
+          "type": "string",
+          "description": "The published-screenshot location feature 015 defines. A person moves a reviewed candidate here; no capture mechanism writes into it."
+        }
+      }
+    },
+    "scenario": {
+      "title": "Which run is being captured",
+      "description": "What a capture must record to be repeatable. The seed is declared here because it is what the run was started from and lives in the run manifest rather than on the page; the run identifier the client displays is observed alongside it, so a capture taken against a different run than the one declared is visible in the fingerprint rather than invisible in the pixels (Constitution II, FR-016).",
+      "type": "object",
+      "required": ["seed"],
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "type": "integer",
+          "description": "The root seed this destination's scenario is started from, matching seed.root in the same destination's component configurations."
+        }
+      }
+    },
+    "pair": {
+      "title": "The comparison mechanism",
+      "description": "Settings that belong to the pair alone. Only the pair is a comparison, and only a comparison needs the clock pinned (FR-53, FR-007).",
+      "type": "object",
+      "required": ["retention_days", "difference_threshold", "maximum_differing_pixels"],
+      "additionalProperties": false,
+      "properties": {
+        "retention_days": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How long a pair survives as a CI artefact. Declared rather than left to a default, because the retention rule is one of the things the three mechanisms must not share."
+        },
+        "difference_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Per-pixel colour distance below which two pixels are called the same, as pixelmatch reads it."
+        },
+        "maximum_differing_pixels": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many differing pixels a no-change pair may carry and still be called empty. Zero is the value a pinned client should meet, and it is the value that makes SC-003 mean something; a destination that has to raise it has a frame-varying display to explain first."
+        }
+      }
+    },
+    "curated": {
+      "title": "The published mechanism",
+      "description": "Settings that belong to the curated capture alone: the only durable artefact, the only one with a review gate, and the only one whose output reaches the public (PR-01, FR-013 to FR-017).",
+      "type": "object",
+      "required": ["maximum_bytes", "pin_clock", "masked_selectors"],
+      "additionalProperties": false,
+      "properties": {
+        "maximum_bytes": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "The size budget for one candidate. A curated run refuses a candidate above it, before anyone can commit several megabytes of picture to a repository that keeps them for ever."
+        },
+        "pin_clock": {
+          "type": "boolean",
+          "description": "Whether the curator pins the clock for a curated shot. The curated mechanism decides this for itself, on its own grounds — a regenerable shot — and not because the pair does it."
+        },
+        "masked_selectors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Selectors painted over before a curated image is written, for anything that legitimately varies or that could name a deployment host (FR-017). Masking is the second line; capturing the viewport only rather than the browser window is the first."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "client": {
+        "url": "http://127.0.0.1:8080",
+        "readiness_timeout_ms": 15000,
+        "stable_frames": 12,
+        "maximum_frames": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "device_scale_factor": 2
+      },
+      "browser": {
+        "name": "chromium",
+        "playwright_version": "1.56.1",
+        "container_image": ""
+      },
+      "areas": {
+        "glance": ".capture/glance",
+        "pair": ".capture/pair",
+        "curated_review": ".capture/curated",
+        "published": "site/docs/blog/assets"
+      },
+      "scenario": {
+        "seed": 20260826
+      },
+      "pair": {
+        "retention_days": 14,
+        "difference_threshold": 0.05,
+        "maximum_differing_pixels": 0
+      },
+      "curated": {
+        "maximum_bytes": 2000000,
+        "pin_clock": true,
+        "masked_selectors": []
+      }
+    }
+  ]
+}

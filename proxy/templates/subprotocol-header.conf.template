@@ -1,0 +1,4 @@
+        # The deployment pins one WebSocket subprotocol, so that is the only one offered
+        # upstream. A subprotocol the client asked for and this deployment did not pin
+        # does not reach the broker.
+        proxy_set_header Sec-WebSocket-Protocol "@{subprotocol}";

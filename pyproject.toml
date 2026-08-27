@@ -9,13 +9,35 @@ requires-python = ">=3.11"
 # nothing from it, and every test that imports a harness package fails to
 # collect. Add each new library here as it is created.
 dependencies = [
+    "harness-clock",
     "harness-core",
     "harness-env-generator",
+    "harness-ingest",
+    "harness-model-runner",
+    "harness-monitor",
+    "harness-offload",
+    "harness-planner",
+    "harness-publisher",
+    "harness-scheduler",
+    "harness-sensors",
+    "harness-telemetry",
+    "harness-types",
 ]
 
 [tool.uv.sources]
+harness-clock = { workspace = true }
 harness-core = { workspace = true }
 harness-env-generator = { workspace = true }
+harness-ingest = { workspace = true }
+harness-model-runner = { workspace = true }
+harness-monitor = { workspace = true }
+harness-offload = { workspace = true }
+harness-planner = { workspace = true }
+harness-publisher = { workspace = true }
+harness-scheduler = { workspace = true }
+harness-sensors = { workspace = true }
+harness-telemetry = { workspace = true }
+harness-types = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -45,7 +67,11 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "DTZ"]
 "tests/**" = ["S101"]
 
 [tool.pytest.ini_options]
-testpaths = ["libs", "services", "tests"]
+# `scripts` is here because the gates' own tests live in `scripts/tests/`, and until it
+# was added they were collected by nobody: `uv run pytest` walked four directories and
+# none of them was that one. A gate whose test never runs is a gate that has never been
+# seen to fail, which is the one thing this repository refuses to accept from a check.
+testpaths = ["libs", "proxy", "scripts", "services", "tests"]
 # importlib import mode lets two packages each have a tests/test_manifest.py without
 # colliding. Under the default prepend mode pytest inserts each test directory on
 # sys.path and imports by bare module name, so the second test_manifest.py it meets is
@@ -58,4 +84,17 @@ addopts = "-q --import-mode=importlib"
 # this implicitly; importlib mode does not, and doing it explicitly is better anyway —
 # the helpers are imported because they are on the path on purpose, not because pytest
 # happened to put them there.
-pythonpath = ["services/env_generator/tests"]
+pythonpath = [
+    "services/clock/tests",
+    "services/env_generator/tests",
+    "services/monitor/tests",
+    "services/planner/tests",
+    "services/scheduler/tests",
+    "services/model_runner/tests",
+    "services/publisher/tests",
+    "services/sensors/tests",
+    "services/ingest/tests",
+    "services/offload/tests",
+    "services/telemetry/tests",
+    "tests/support",
+]

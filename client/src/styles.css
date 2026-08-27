@@ -285,3 +285,172 @@ main {
     overflow-x: auto;
   }
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Feature 012: the loop, the inspector, the speed control and the route.
+ *
+ * Every state below carries a word and a mark in the markup already; colour here is the
+ * third carrier and never the only one, so a greyscale print of a capture still reads
+ * (PR-08). Nothing in this file animates on a duration: what moves on the screen moves
+ * because a value in the render path moved, and at a rate of zero it holds still.
+ * --------------------------------------------------------------------------------------- */
+
+.cycle,
+.inspector,
+.arrival-control,
+.recommendation {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.loop-status {
+  font-size: 1.02rem;
+  margin: 0 0 0.75rem;
+}
+
+.phases {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.phase {
+  display: grid;
+  grid-template-columns: 1.5rem 5rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  color: var(--muted);
+}
+
+.phase-name {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+
+.phase-active {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.phase-reached {
+  color: var(--ink);
+}
+
+.loop-counts,
+.loop-refusal,
+.schema-truncated,
+.bespoke-note {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.transits {
+  width: 100%;
+  height: auto;
+}
+
+.transit-mark {
+  fill: var(--lit);
+}
+
+.transit.kind-plumbing .transit-mark {
+  fill: var(--muted);
+}
+
+.transit-count {
+  font-size: 12px;
+  fill: var(--ink);
+}
+
+.message-facts,
+.skill-evidence,
+.route-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0.5rem 0;
+  font-size: 0.92rem;
+}
+
+.message-facts dt,
+.skill-evidence dt,
+.route-summary dt {
+  font-weight: 700;
+}
+
+.message-facts dd,
+.skill-evidence dd,
+.route-summary dd {
+  margin: 0;
+}
+
+.inspector pre,
+.schema-panel pre {
+  overflow-x: auto;
+  max-height: 22rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.validation-state[data-validation="invalid"] {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.boundary-picker,
+.rate-buttons,
+.route-vertices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.boundary-picker button,
+.rate-buttons button,
+.route-vertices button {
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.boundary-picker button[data-selected="true"],
+.route-vertices button[data-selected="true"],
+.rate-buttons button[data-in-force="true"] {
+  border-color: var(--lit);
+  border-width: 2px;
+  font-weight: 700;
+}
+
+.rate-buttons button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.rate-unavailable,
+.skill-stale,
+.arrival-no-forecast {
+  color: var(--warning);
+}
+
+.quality.stale {
+  border-left: 4px solid var(--warning);
+}
+
+.recommendation-words {
+  font-size: 1.02rem;
+  max-width: 46rem;
+}

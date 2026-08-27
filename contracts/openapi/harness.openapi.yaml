@@ -1,0 +1,215 @@
+# The harness's own HTTP surface. Hand-written and authoritative, OpenAPI 3.1 — whose
+# schema dialect is JSON Schema 2020-12, which is what makes it possible to reference the
+# message schemas directly instead of transcribing them into a second dialect.
+#
+# What is here is the clock's small interface and nothing else, because that is the only
+# HTTP any component of the harness serves. ADR-0009 is emphatic about how small it is:
+# simulation time reaches consumers by subscription to `ctl/clock` on the broker, and this
+# interface exists for the two things a subscription cannot do — setting the rate, which is
+# a command from the browser (FR-10), and answering "what is the time now" for a component
+# starting up or catching up after a restart. It is not a way to read time in a loop. A
+# component polling the snapshot is doing the wrong thing and should be subscribing.
+#
+# The rule for `components/schemas`: every entry is a reference to a master under
+# `contracts/schemas/`, never a shape written out again here. `scripts/generate_types.sh`
+# refuses an inline shape by name, and emits an alias of the type already generated from
+# the master rather than a second definition of it (NFR-02, Constitution III). That is why
+# each key is spelled as the generators spell the type.
+#
+# The two shapes below sit inside `paths` rather than in `components/schemas`, and that is
+# a compromise worth naming rather than hiding. Neither can become a master today:
+#
+#   - The snapshot answers in the sample's own vocabulary — `run_id`, `tick`, `sim_time`,
+#     `mode`, `rate` — plus the run's clock configuration and, in lockstep, the participant
+#     registry. It cannot be expressed as an `allOf` over `DrognaSimulationTimeSample`,
+#     because that master is closed and each branch of an `allOf` is applied on its own, so
+#     the extra keys would be rejected by the branch that does not declare them.
+#   - Writing it out as its own master would make `harness_core.clock.ClockState` and
+#     `Participant` — hand-written value types that predate the generator chain — trip the
+#     hand-written-type gate, which is the correct verdict and the wrong moment. Adopting
+#     the generated models there is a change to `harness_core`'s public shapes and belongs
+#     to the feature that owns them, not to a commit that is wrapping the clock as a
+#     component.
+#
+# So the interface is documented here in full and generates no type, which is honest about
+# what is settled. When `harness_core` adopts generated models for its clock value types,
+# these two shapes become masters under `contracts/schemas/` and this comment goes with
+# them.
+openapi: 3.1.0
+
+info:
+  title: drogna harness HTTP surface
+  version: 0.1.0
+  description: >-
+    HTTP interfaces provided by the harness itself, as distinct from the query layer,
+    whose own emitted specification is vendored separately and never merged with this one.
+    Synthetic data, deliberately fake numerics, for learning purposes only.
+
+paths:
+  # Routes are configuration, not code: they are part of the clock's published interface,
+  # and Constitution IV admits no path literal in component source. The paths written here
+  # are the ones both destinations configure, in `clock.routes` of every component's file.
+  # Read and control sit under distinct prefixes so that the reverse proxy can apply policy
+  # by prefix without enumerating routes (FR-007, FR-040).
+  /clock/snapshot:
+    get:
+      operationId: clockSnapshot
+      summary: What the time is now
+      description: >-
+        For a component starting up or catching up after a restart, and for nothing else.
+        Simulation time arrives by subscription to `ctl/clock`; this answers the one
+        question a subscription cannot answer, which is what happened before it started.
+      responses:
+        "200":
+          description: The clock's current state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run_id, mode, rate, epoch, tick_interval_us]
+                additionalProperties: false
+                properties:
+                  run_id:
+                    type: string
+                    description: The run this clock is serving, matching the run manifest.
+                  mode:
+                    type: string
+                    enum: [realtime, accelerated, paused, lockstep]
+                    description: >-
+                      Byte-identical replay is claimed for lockstep only; the free-running
+                      modes reproduce drawn values but not interleaving.
+                  rate:
+                    type: number
+                    minimum: 0
+                    description: >-
+                      Emission rate. Zero is legitimate: it pins the clock for screenshot
+                      capture and stops simulated time without stopping anything else.
+                  epoch:
+                    type: string
+                    description: >-
+                      The run's simulation epoch, ISO-8601 UTC with microsecond precision.
+                      Tick n is epoch + n * tick_interval_us.
+                  tick_interval_us:
+                    type: integer
+                    exclusiveMinimum: 0
+                    description: Simulation microseconds between ticks.
+                  tick:
+                    type: [integer, "null"]
+                    minimum: 0
+                    description: >-
+                      The last tick emitted, or null before the first. A joiner takes this
+                      and then follows the subscription; it does not come back for more.
+                  sim_time:
+                    type: [string, "null"]
+                    description: >-
+                      Simulation time of that tick, ISO-8601 UTC with microsecond
+                      precision. Null before the first tick.
+                  participants:
+                    type: array
+                    description: >-
+                      The registry, in lockstep mode. Empty in the free-running modes,
+                      where nothing is waited for.
+                    items:
+                      type: object
+                      required: [id, role]
+                      additionalProperties: false
+                      properties:
+                        id:
+                          type: string
+                          description: Deterministic participant id, as registered.
+                        role:
+                          type: string
+                          enum: [observer, lockstep]
+                          description: >-
+                            An observer reads ticks. A lockstep participant acknowledges
+                            each one, and the clock will not advance without it.
+                        acknowledged_tick:
+                          type: [integer, "null"]
+                          minimum: 0
+                          description: The last tick this participant acknowledged.
+                  outstanding:
+                    type: array
+                    description: >-
+                      Lockstep participants that have not acknowledged the current tick.
+                      Non-empty here means the clock is stalled and says who is holding it,
+                      which is the visible failure a replay mode should have.
+                    items:
+                      type: string
+
+  /clock/control:
+    post:
+      operationId: clockControl
+      summary: Command the clock
+      description: >-
+        Commands, not reads. Setting the rate is the browser's control over the run
+        (FR-10); pinning to zero and releasing hold the whole system still for a screenshot
+        capture and are both idempotent (FR-53). Registration and acknowledgement are how a
+        lockstep participant joins the barrier. A command outside the configured rate
+        bounds, or from a participant that never registered, is refused and the state is
+        unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operation]
+              additionalProperties: false
+              properties:
+                operation:
+                  type: string
+                  enum: [set_rate, set_mode, pin, release, register, acknowledge]
+                  description: >-
+                    Which command. Which of the fields below it needs is documented on
+                    each; the clock refuses a command whose field is missing rather than
+                    supplying a default, because a defaulted rate is a rate nobody chose.
+                rate:
+                  type: number
+                  minimum: 0
+                  description: For set_rate. Checked against the configured bounds.
+                mode:
+                  type: string
+                  enum: [realtime, accelerated, paused, lockstep]
+                  description: For set_mode.
+                participant:
+                  type: string
+                  description: For register and acknowledge. A deterministic id.
+                role:
+                  type: string
+                  enum: [observer, lockstep]
+                  description: For register.
+                tick:
+                  type: integer
+                  minimum: 0
+                  description: >-
+                    For acknowledge. The tick being acknowledged, which must be the tick
+                    the clock is currently holding.
+      responses:
+        "200":
+          description: The clock's state after the command, in the snapshot's shape.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: >-
+            The command was refused. The state is unchanged, and the message says why.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                additionalProperties: false
+                properties:
+                  error:
+                    type: string
+                    description: One line naming what was refused and why.
+
+components:
+  schemas:
+    # Simulation time as the clock publishes it on the broker. The clock's HTTP interface
+    # answers "what is the time now" in this same vocabulary, which is exactly the case
+    # NFR-02 is about: one definition, referenced from both places.
+    DrognaSimulationTimeSample:
+      $ref: ../schemas/clock.schema.json

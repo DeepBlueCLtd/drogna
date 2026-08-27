@@ -1,0 +1,31 @@
+[project]
+name = "harness-telemetry"
+version = "0.1.0"
+description = "C-16: telemetry and forecast quality, which owns the failure mode of silent degradation"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    "harness-types",
+    # C-11's package, for the coverage read port and nothing else — StoredForecasts and
+    # the ForecastField it yields. Not for the NetCDF reader: read_netcdf is in
+    # harness_core.netcdf beside the encoder and this package does not go through the
+    # monitor to reach a file format. What is borrowed is a decision about *coverage
+    # fields* — which axes and variables one carries, how it is sampled, how sound speed
+    # is derived from it (ADR-0005) — and the monitor is where that decision is made. The
+    # port's honest home is libs/harness_core or stores/coverage, and moving it is the
+    # owning feature's call rather than this one's.
+    # harness:allow-service-dependency the coverage read port has one implementation, C-11's
+    "harness-monitor",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+harness-types = { workspace = true }
+harness-monitor = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_telemetry"]

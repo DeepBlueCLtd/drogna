@@ -1,18 +1,14 @@
-"""Writing the field: CF-conventions NetCDF, byte-identical, with nothing in it from a host.
+"""Writing the field: what a field says about itself, and how a reader never sees half of one.
 
-**Why the format is written here rather than by a library.** Two runs with one seed must
-produce byte-identical files (FR-029, AT-04), and the usual NetCDF writers stamp a
-creation time and a library version into the file. Those are precisely the two things that
-would break byte-identity, and the first would be a host clock reaching the output of a
-component that is forbidden to read one (Constitution I). Writing the classic format
-directly — it is a small, stable, published format — removes both at the source rather
-than normalising them afterwards, and it removes the dependency on a library version that
-would itself have to be pinned for the identity claim to mean anything.
+The encoder itself is no longer here. ``encode_netcdf`` is in
+:mod:`harness_core.netcdf`, having acquired a third consumer — the offload packager,
+after the model runner — and a file format three components write is a library rather
+than this service's private detail. Why the classic format is written directly instead
+of through a NetCDF library is argued there, because that is where the argument now
+lives.
 
-What is written is NetCDF classic (CDF-1): a big-endian header of dimensions, global
-attributes and variable definitions, followed by each variable's data at a stated offset.
-Only fixed-size variables are used — there is no record dimension — so the layout is a
-pure function of the header, and the header is a pure function of the manifest.
+What stayed is everything that is a decision about *fields* rather than about the
+format.
 
 **CF conventions.** Coordinate variables carry ``standard_name``, ``units`` and ``axis``;
 depth additionally carries ``positive = "down"``, because a vertical axis whose direction
@@ -30,38 +26,20 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import os
-import struct
-import sys
-from array import array
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
-from typing import Any
+
+from harness_core.netcdf import NC_DOUBLE, NC_FLOAT
 
 __all__ = [
     "NORMALISED_ATTRIBUTES",
     "STORED_DTYPES",
     "FieldWriter",
-    "NetcdfVariable",
     "digest_of",
-    "encode_netcdf",
     "tolerance_for",
 ]
 
-_MAGIC = b"CDF\x01"
-_NC_CHAR = 2
-_NC_INT = 4
-_NC_FLOAT = 5
-_NC_DOUBLE = 6
-_NC_DIMENSION = 10
-_NC_VARIABLE = 11
-_NC_ATTRIBUTE = 12
-_ABSENT = struct.pack(">II", 0, 0)
-
-FORMAT_NAME = "netcdf-classic-cdf1"
-
 STORED_DTYPES: dict[str, tuple[str, int, int]] = {
-    "float32": ("f", 4, _NC_FLOAT),
-    "float64": ("d", 8, _NC_DOUBLE),
+    "float32": ("f", 4, NC_FLOAT),
+    "float64": ("d", 8, NC_DOUBLE),
 }
 """Stored width to (typecode, size in bytes, NetCDF type). Fixed by config and recorded."""
 
@@ -98,109 +76,6 @@ NORMALISED_ATTRIBUTES: tuple[dict[str, str], ...] = (
 CONVENTIONS = "CF-1.10"
 
 _FLOAT32_ULP_FRACTION = 2.0**-23
-
-
-def _pad(length: int) -> bytes:
-    return b"\x00" * ((4 - length % 4) % 4)
-
-
-def _encode_name(name: str) -> bytes:
-    raw = name.encode("utf-8")
-    return struct.pack(">I", len(raw)) + raw + _pad(len(raw))
-
-
-def _encode_attribute(name: str, value: Any) -> bytes:
-    header = _encode_name(name)
-    if isinstance(value, str):
-        raw = value.encode("utf-8")
-        return header + struct.pack(">II", _NC_CHAR, len(raw)) + raw + _pad(len(raw))
-    if isinstance(value, bool):
-        raise TypeError("a boolean attribute has no NetCDF classic type; write a string")
-    if isinstance(value, int):
-        return header + struct.pack(">IIi", _NC_INT, 1, value)
-    return header + struct.pack(">IId", _NC_DOUBLE, 1, float(value))
-
-
-def _encode_attributes(attributes: Mapping[str, Any]) -> bytes:
-    if not attributes:
-        return _ABSENT
-    body = b"".join(_encode_attribute(name, value) for name, value in attributes.items())
-    return struct.pack(">II", _NC_ATTRIBUTE, len(attributes)) + body
-
-
-@dataclass
-class NetcdfVariable:
-    """One variable: its name, type, dimensions, attributes and data."""
-
-    name: str
-    nc_type: int
-    dimensions: tuple[str, ...]
-    values: array
-    attributes: dict[str, Any] = field(default_factory=dict)
-
-    def payload(self) -> bytes:
-        """The data, big-endian, padded to a four-byte boundary."""
-        copy = array(self.values.typecode, self.values)
-        if sys.byteorder == "little":
-            copy.byteswap()
-        raw = copy.tobytes()
-        return raw + _pad(len(raw))
-
-
-def _encode_variable(
-    variable: NetcdfVariable, dimension_ids: Mapping[str, int], vsize: int, begin: int
-) -> bytes:
-    identifiers = b"".join(struct.pack(">I", dimension_ids[name]) for name in variable.dimensions)
-    return (
-        _encode_name(variable.name)
-        + struct.pack(">I", len(variable.dimensions))
-        + identifiers
-        + _encode_attributes(variable.attributes)
-        + struct.pack(">III", variable.nc_type, vsize, begin)
-    )
-
-
-def encode_netcdf(
-    dimensions: Sequence[tuple[str, int]],
-    global_attributes: Mapping[str, Any],
-    variables: Sequence[NetcdfVariable],
-) -> bytes:
-    """Encode a complete classic NetCDF file. A pure function of its arguments.
-
-    Purity is the point: the same arguments give the same bytes on any host, on any day,
-    which is what makes the reproducibility claim of AT-04 checkable rather than hopeful.
-    """
-    dimension_ids = {name: index for index, (name, _) in enumerate(dimensions)}
-    payloads = [variable.payload() for variable in variables]
-    sizes = [len(payload) for payload in payloads]
-
-    def header(offsets: Sequence[int]) -> bytes:
-        parts = [_MAGIC, struct.pack(">I", 0)]
-        if dimensions:
-            parts.append(struct.pack(">II", _NC_DIMENSION, len(dimensions)))
-            parts.extend(_encode_name(name) + struct.pack(">I", size) for name, size in dimensions)
-        else:
-            parts.append(_ABSENT)
-        parts.append(_encode_attributes(global_attributes))
-        if variables:
-            parts.append(struct.pack(">II", _NC_VARIABLE, len(variables)))
-            parts.extend(
-                _encode_variable(variable, dimension_ids, size, offset)
-                for variable, size, offset in zip(variables, sizes, offsets, strict=True)
-            )
-        else:
-            parts.append(_ABSENT)
-        return b"".join(parts)
-
-    # The header's length does not depend on the offsets it carries — each is a fixed four
-    # bytes — so one measuring pass is enough to place the data.
-    length = len(header([0] * len(variables)))
-    offsets: list[int] = []
-    cursor = length
-    for size in sizes:
-        offsets.append(cursor)
-        cursor += size
-    return header(offsets) + b"".join(payloads)
 
 
 def digest_of(payload: bytes) -> str:

@@ -32,6 +32,14 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: [["tests", "**", "*.test.ts?(x)"].join("/")],
+    // The client's own unit tests, and the capture tooling's. Feature 016 owns `e2e/`;
+    // its Playwright specs are `*.spec.ts` and are run by Playwright's own runner, while
+    // the tests that reason about the capture mechanisms without launching a browser —
+    // the separation test, the fingerprint comparison, the curated-image checks — are
+    // `*.test.ts` and belong here, where `pnpm test` already runs.
+    include: [
+      ["tests", "**", "*.test.ts?(x)"].join("/"),
+      ["e2e", "tests", "**", "*.test.ts"].join("/"),
+    ],
   },
 });

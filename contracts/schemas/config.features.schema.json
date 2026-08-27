@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.features.schema.json",
+  "title": "drogna feature store provisioning configuration",
+  "description": "Configuration for C-07, the feature store. It is provisioned by script at scenario start and is read-only for the duration of a run, so this document describes a job rather than a long-lived component: what content to produce, into which schema, and which roles must hold nothing but select afterwards. The content is synthetic, produced from the root seed, and represents no real place. The common sections are referenced from config.common.schema.json rather than restated.",
+  "type": "object",
+  "required": ["component", "clock", "seed", "logging", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component" },
+    "clock": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock" },
+    "seed": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed" },
+    "broker": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker" },
+    "logging": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging" },
+    "features": {
+      "title": "Static spatial reference",
+      "type": "object",
+      "required": ["store", "domain", "bathymetry", "coastline"],
+      "additionalProperties": false,
+      "properties": {
+        "store": {
+          "title": "The feature store",
+          "description": "The second schema in the observation store's Postgres instance. Two schemas in one instance, mirroring the conceptual split without doubling the operational surface (SRD FR-12).",
+          "type": "object",
+          "required": ["dsn", "schema", "provisioning_role", "runtime_roles", "tables"],
+          "additionalProperties": false,
+          "properties": {
+            "dsn": {
+              "type": "string",
+              "description": "Connection string for the provisioning role, which is the only role that may write here and only while the scenario is not running."
+            },
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "description": "The schema provisioned. features, beside observations in the same instance."
+            },
+            "provisioning_role": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "description": "The role the script connects as. It holds write permission; nothing running during a scenario does."
+            },
+            "runtime_roles": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "description": "Every role a running scenario connects with. Each is granted select and nothing else, and the script asserts that after applying the grants, so a drifted grant fails the run rather than being found later."
+            },
+            "tables": {
+              "title": "Table names",
+              "type": "object",
+              "required": ["bathymetry", "coastline"],
+              "additionalProperties": false,
+              "properties": {
+                "bathymetry": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+                "coastline": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+              }
+            }
+          }
+        },
+        "domain": {
+          "title": "The domain the reference covers",
+          "description": "The same extent the generated environment occupies, so the client and the planner have reference data everywhere they have a field.",
+          "type": "object",
+          "required": ["latitude", "longitude"],
+          "additionalProperties": false,
+          "properties": {
+            "latitude": { "$ref": "#/$defs/extent" },
+            "longitude": { "$ref": "#/$defs/extent" }
+          }
+        },
+        "bathymetry": {
+          "title": "Synthetic bathymetry",
+          "description": "A grid of depths produced from the root seed. It is not a survey of anywhere: the numerics are deliberately fake and the shape is whatever the seeded parameters make it.",
+          "type": "object",
+          "required": [
+            "latitude_count",
+            "longitude_count",
+            "shallow_depth_m",
+            "deep_depth_m",
+            "roughness_m"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "latitude_count": { "type": "integer", "minimum": 2, "description": "Rows in the depth grid." },
+            "longitude_count": { "type": "integer", "minimum": 2, "description": "Columns in the depth grid." },
+            "shallow_depth_m": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Depth at the shallow edge of the shelf, in metres."
+            },
+            "deep_depth_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Depth at the deep edge, in metres. The slope between the two is smooth and the seeded roughness is added to it."
+            },
+            "roughness_m": {
+              "type": "number",
+              "minimum": 0,
+              "description": "One standard deviation of the seeded variation added to the smooth slope, in metres."
+            }
+          }
+        },
+        "coastline": {
+          "title": "Synthetic coastline",
+          "description": "One line along the shallow edge of the domain, with seeded variation. A boundary to draw against, not a chart of anywhere.",
+          "type": "object",
+          "required": ["vertex_count", "variation_degrees"],
+          "additionalProperties": false,
+          "properties": {
+            "vertex_count": {
+              "type": "integer",
+              "minimum": 2,
+              "description": "Vertices in the line."
+            },
+            "variation_degrees": {
+              "type": "number",
+              "minimum": 0,
+              "description": "One standard deviation of the seeded wander of the line, in degrees."
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "extent": {
+      "title": "Axis extent",
+      "type": "object",
+      "required": ["minimum", "maximum"],
+      "additionalProperties": false,
+      "properties": {
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" }
+      }
+    }
+  }
+}

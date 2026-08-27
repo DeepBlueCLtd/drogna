@@ -1,0 +1,26 @@
+    # The control-namespace upgrade location (ADR-0008). MQTT over WebSockets, proxied to
+    # the broker's WebSocket listener — which is deliberately not published to the host,
+    # so this is the only way into the control namespace.
+    #
+    # It is exactly one path, not a subtree. A static prefix can afford a subtree because
+    # every request under it is inspected; this cannot, because policy here is evaluated
+    # once, at the upgrade, and the connection then persists carrying traffic the proxy
+    # does not inspect per message. So the surface is made as small as the client needs,
+    # which is one URL.
+    #
+    # What a subscriber may then receive is not settled here. It is settled by the
+    # broker's access control lists, where the browser identity is subscribe-only on the
+    # control namespace and carries no rule granting it obs/ — where measurement locations
+    # travel. That is tested at a running broker in
+    # tests/integration/test_topic_isolation.py, and asserted from this side in
+    # tests/leakage/test_released_list.py. Nothing this file could say would constrain it.
+    location = @{upgrade_prefix} {
+        set $harness_rule "@{rule}";
+        proxy_pass @{upstream};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+@{subprotocol_header}        proxy_buffering off;
+        proxy_read_timeout @{read_timeout}s;
+    }

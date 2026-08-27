@@ -23,6 +23,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from harness_core.netcdf import NetcdfVariable, encode_netcdf
 from harness_core.rng import entropy_for, rng_for
 from harness_core.soundspeed import within_validity
 
@@ -39,9 +40,7 @@ from harness_env_generator.version import ANALYTIC_FORM_VERSION, GENERATOR_NAME,
 from harness_env_generator.writer import (
     CONVENTIONS,
     STORED_DTYPES,
-    NetcdfVariable,
     digest_of,
-    encode_netcdf,
 )
 
 __all__ = ["GeneratedWorld", "generate"]

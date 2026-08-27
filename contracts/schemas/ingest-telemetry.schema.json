@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/ingest-telemetry.schema.json",
+  "title": "drogna ingest telemetry",
+  "description": "What the ingest client (C-05) reports about itself on ctl/telemetry: queue depth against its bound, the rate it is writing at, how many messages it has refused as invalid, and any loss the broker reported. It exists so that degradation is visible without anyone reading a log file — the backpressure indicator appears here within one telemetry interval of the queue reaching its bound, and clears here when the backlog drains. The telemetry component (C-16) and the client consume it. This document describes one component's report; a general telemetry envelope, if the telemetry feature decides it wants one, is that feature's to define and this shape is what it will find in use.",
+  "type": "object",
+  "required": ["component", "scenario_run_id", "sim_time", "tick", "queue", "write", "rejections", "broker"],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The component reporting, matching config /component/id."
+    },
+    "scenario_run_id": {
+      "type": "string",
+      "description": "The scenario run this report belongs to, as carried on every clock sample."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the report was composed, ISO-8601 UTC with microsecond precision. The telemetry interval is measured in simulation time like every interval in this component except the heartbeat, which is real time by ADR-0006."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the client had observed when it composed the report."
+    },
+    "queue": {
+      "title": "The bounded queue",
+      "description": "Depth against bound. At the bound the client stops acknowledging rather than discarding, so a depth equal to the bound is backpressure and not loss.",
+      "type": "object",
+      "required": ["depth", "bound", "at_bound", "high_water", "filled"],
+      "additionalProperties": false,
+      "properties": {
+        "depth": { "type": "integer", "minimum": 0, "description": "Messages held now." },
+        "bound": { "type": "integer", "minimum": 1, "description": "The configured limit." },
+        "at_bound": {
+          "type": "boolean",
+          "description": "The backpressure indicator. True when the queue is full now, and true when it filled at any point during the interval just ended — a loop that takes and writes within one turn is rarely caught full by an instantaneous sample, and an indicator that only reported the instant would say a system under sustained backpressure was comfortable. It clears when an interval passes with room to spare throughout."
+        },
+        "high_water": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The deepest the queue has been this run. Never above the bound, and that is the claim SC-006 tests."
+        },
+        "filled": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many times the queue has reached its bound this run. Not a count of losses: reaching the bound stops the client taking more, and what it has not taken it has not acknowledged, so the broker still holds it. This is the figure the indicator is derived from, and it is carried so a reader can tell one long stall from a hundred short ones."
+        }
+      }
+    },
+    "write": {
+      "title": "What has reached the store",
+      "type": "object",
+      "required": ["batches", "stored", "duplicates", "rate_per_simulation_second"],
+      "additionalProperties": false,
+      "properties": {
+        "batches": { "type": "integer", "minimum": 0, "description": "Transactions committed this run." },
+        "stored": { "type": "integer", "minimum": 0, "description": "Observations written this run." },
+        "duplicates": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Redeliveries that found their row already there and changed nothing. Counted rather than absorbed in silence: a rising number says the broker is redelivering."
+        },
+        "rate_per_simulation_second": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Observations stored per second of simulation time since the previous report. A rate in simulation time rather than host time, because that is the time the rest of this component runs on."
+        }
+      }
+    },
+    "rejections": {
+      "title": "What did not reach the store",
+      "description": "Messages that failed validation. Never written, always counted, kept up to the configured bound so they can be inspected.",
+      "type": "object",
+      "required": ["count", "retained", "discarded"],
+      "additionalProperties": false,
+      "properties": {
+        "count": { "type": "integer", "minimum": 0, "description": "Every rejection this run, kept or not." },
+        "retained": { "type": "integer", "minimum": 0, "description": "How many are still held for inspection." },
+        "discarded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rejections that fell off the end of the retention. Reported rather than silently forgotten, which is what reaching the bound means."
+        }
+      }
+    },
+    "broker": {
+      "title": "What the broker did",
+      "type": "object",
+      "required": ["received", "lost"],
+      "additionalProperties": false,
+      "properties": {
+        "received": { "type": "integer", "minimum": 0, "description": "Messages delivered to this client this run." },
+        "lost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Messages the broker reported dropping. A burst larger than the broker's retention for the in-flight window loses messages before this component sees them; the loss is counted and reported rather than found later as a hole in the data."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "component": "ingest",
+      "scenario_run_id": "run-20260901-a",
+      "sim_time": "2026-09-01T02:20:00.000000Z",
+      "tick": 560,
+      "queue": {
+        "depth": 5000,
+        "bound": 5000,
+        "at_bound": true,
+        "high_water": 5000,
+        "filled": 118
+      },
+      "write": {
+        "batches": 41,
+        "stored": 20500,
+        "duplicates": 3,
+        "rate_per_simulation_second": 341.6
+      },
+      "rejections": { "count": 2, "retained": 2, "discarded": 0 },
+      "broker": { "received": 25503, "lost": 0 }
+    }
+  ]
+}

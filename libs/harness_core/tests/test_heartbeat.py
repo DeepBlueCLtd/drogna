@@ -158,3 +158,52 @@ def test_the_packaged_clock_schema_matches_the_master_in_contracts() -> None:
         / "clock.schema.json"
     )
     assert packaged.read_bytes() == master.read_bytes()
+
+
+def test_the_publisher_declares_its_own_cadence() -> None:
+    """A component tells the receiver how often to expect it (ADR-0006).
+
+    The receiver holds no table of expected intervals, so a component that heartbeats
+    slowly is judged dead by a default tolerance unless it says otherwise. Declaring the
+    interval is the publisher's job because the publisher is the only thing that knows it.
+    """
+    beat = HeartbeatPublisher(
+        RecordingPublisher(),
+        component="widget",
+        interval_seconds=2.5,
+        liveness_window_seconds=9.0,
+        monotonic=iter([0.0, 0.0]).__next__,
+    )
+
+    message = beat.publish(tick(0))
+
+    assert message["heartbeat_interval_seconds"] == 2.5
+    assert message["liveness_window_seconds"] == 9.0
+    validate_heartbeat(message)
+
+
+def test_a_publisher_may_decline_to_declare_its_interval() -> None:
+    """Opting out is explicit, and then neither declaration is sent at all."""
+    beat = HeartbeatPublisher(
+        RecordingPublisher(),
+        component="widget",
+        interval_seconds=2.5,
+        declare_interval=False,
+        monotonic=iter([0.0, 0.0]).__next__,
+    )
+
+    message = beat.publish(tick(0))
+
+    assert "heartbeat_interval_seconds" not in message
+    assert "liveness_window_seconds" not in message
+    validate_heartbeat(message)
+
+
+def test_a_liveness_window_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="positive number of host seconds"):
+        HeartbeatPublisher(
+            RecordingPublisher(),
+            component="widget",
+            interval_seconds=1.0,
+            liveness_window_seconds=0.0,
+        )

@@ -1,0 +1,107 @@
+// DO NOT EDIT.
+// Generated from contracts/schemas/config.offload.schema.json by scripts/generate_types.sh.
+// Edit the master and run that script; scripts/check_types_drift.sh fails the build on a hand edit.
+
+import type { Broker, Clock, Component, Logging, Seed } from "./common";
+
+/**
+ * Configuration for C-17, the offload packager. Premature eviction is the failure this component owns, so everything that could cause a local file to be deleted is named here and nowhere else: the retention bounds that ask for space, the destination that must return a receipt, and the ledger that records what was justified. The attribute allow-list is the producer half of the provenance gate FR-42 names, and it is applied at write time so a disallowed attribute cannot be written and removed afterwards. The common sections are referenced from config.common.schema.json rather than restated.
+ */
+export interface DrognaOffloadPackagerConfiguration {
+  component: Component;
+  clock: Clock;
+  seed: Seed;
+  broker?: Broker;
+  logging: Logging;
+  /** The whole of what this component does, in the order it does it. */
+  offload: {
+    /**
+     * A run's observations as recorded, one JSON document per line in the observation vocabulary, beside the run manifest that names the run's identity and its simulation epoch. The packager reads these and writes nothing here.
+     */
+    source: {
+      directory: string;
+      observations_file: string;
+      run_manifest_file: string;
+    };
+    /**
+     * Where bundles are written, transferred from and eventually evicted. A bundle exists here and nowhere else until a receipt justifies its removal, so this is the only area the eviction path may delete from.
+     */
+    staging: {
+      directory: string;
+      /** Appended to the bundle identifier to name the NetCDF file. */
+      bundle_suffix: string;
+      /** Appended to the bundle identifier to name the sidecar manifest. */
+      manifest_suffix: string;
+      /**
+       * Appended while a file is being written, so a half-written bundle can never be mistaken for a staged one.
+       */
+      partial_suffix: string;
+    };
+    /**
+     * The one path prefix the reverse proxy releases, and the area it serves. The packager does not serve anything; it is declared here so the component can refuse to start when its staging area sits inside the released area, rather than discovering it when a bundle appears on the public side (FR-41, FR-42).
+     */
+    release: {
+      path_prefix: string;
+      directory: string;
+    };
+    /**
+     * Append-only, one record per line, flushed and synced before the side effect it describes happens. The filesystem is not the source of truth; this is.
+     */
+    ledger: {
+      directory: string;
+      file: string;
+    };
+    /**
+     * One destination, identified so that a receipt carrying a different identifier is refused. The transport is not dressed as a port: there is one implementation, and a second would need an ADR under Constitution VI.
+     */
+    destination: {
+      /** The destination's identifier, as it appears in every receipt. */
+      id: string;
+      endpoint: string;
+      /**
+       * Routes relative to the endpoint. Upload writes under a temporary name, commit makes the object visible atomically, and receipt asks the destination what it holds.
+       */
+      routes: {
+        upload: string;
+        commit: string;
+        receipt: string;
+      };
+      /** Socket timeout for a transfer. A transport parameter, not simulation time. */
+      timeout_seconds: number;
+    };
+    /**
+     * A receipt makes a bundle eligible for eviction. This asks for the space. Both bounds are examined every cycle and the oldest eligible bundle goes first.
+     */
+    retention: {
+      /** Bytes the staging area may hold before eviction is asked for. */
+      maximum_staging_bytes: number;
+      /**
+       * Age, in seconds of simulation time, past which a verified bundle may be evicted. Simulation time, because every interval in this component except heartbeat cadence is measured on the clock port.
+       */
+      maximum_age_simulation_seconds: number;
+    };
+    /**
+     * The allow-list applied at write time. An attribute not named here cannot be written, which is what makes the omissions decisions rather than oversights (FR-42).
+     */
+    attributes: {
+      /**
+       * Every attribute name the export may carry, global or per variable. Read as a set, so a repeated entry is the same permission twice and an empty list permits nothing — which is a coherent configuration and not a special case: the writer refuses the first attribute it is asked to write and the component produces no bundle. Neither minItems nor uniqueItems is declared here, deliberately: the destination configuration check runs under the system Python with no jsonschema available and its fallback validator refuses a keyword it cannot implement rather than skipping it, so a constraint that would not be checked at the destination is stated in the description and tested in the component instead of being declared where nothing enforces it.
+       */
+      allowlist: string[];
+    };
+    compliance: {
+      /**
+       * Pinned deliberately: a claim of conformance without a version is a claim about nothing.
+       */
+      convention_version: "CF-1.10";
+    };
+    export: {
+      window: {
+        /**
+         * The simulation-time span one bundle covers. Window boundaries are counted from the run's simulation epoch, so a bundle's logical position is a function of the manifest and not of when the packager happened to run.
+         */
+        length_simulation_seconds: number;
+      };
+    };
+  };
+}

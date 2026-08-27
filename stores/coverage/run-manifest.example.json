@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "run_id": "run-000001-6ab42ca09e7d",
+  "root_seed": 20260826,
+  "run_sequence": 1,
+  "generator_version": "drogna-env-generator 0.1.0",
+  "model_version": "drogna-model-kernel 0.1.0",
+  "sim_time": "2026-09-01T03:00:00.000000Z",
+  "valid_time": {
+    "begin": "2026-09-01T03:00:00.000000Z",
+    "end": "2026-09-01T09:00:00.000000Z"
+  },
+  "ensemble": {
+    "members": 8,
+    "method": "seeded-perturbation-mean"
+  },
+  "notes": "A worked example of the shape stores/coverage/layout.md fixes. Every value here is synthetic. run_id is the identifier derive_run_id produces for root seed 20260826 at run sequence 1, so the example and the rule can be checked against one another rather than taken on trust."
+}

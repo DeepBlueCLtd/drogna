@@ -131,14 +131,27 @@ message_directory = "messages"
 # assert each copy is byte-identical to its master are unchanged — they simply cannot fail
 # any more without the drift check failing first.
 #
-# `libs/harness_core/src/harness_core/schemas/heartbeat.schema.json` is deliberately not
-# in this list. That copy has diverged from its master, which has since gained two
-# optional fields, and reconciling it is a change to what harness_core validates — the
-# owning feature's call to make, not this chain's to make silently. It is named here so
-# the omission is a decision on the record rather than an oversight.
+# `libs/harness_core/src/harness_core/schemas/heartbeat.schema.json` was left out of this
+# list when the chain was written, on the ground that reconciling a diverged copy changes
+# what harness_core validates and is the owning feature's call rather than this chain's to
+# make silently. That was the right instinct and the wrong outcome, so the omission was
+# reviewed and reversed.
+#
+# The copy did not merely lag. It said liveness is judged in simulation time, which is
+# what ADR-0006 overturned: cadence and liveness windows are real time, and the simulation
+# time a heartbeat carries is payload rather than schedule. It also lacked the two optional
+# declarations the master gained for that decision, while declaring
+# `additionalProperties: false` — and the client already reads both fields. A clock service
+# publishing the heartbeat ADR-0006 describes, to a client that expects it, would have been
+# rejected by harness_core's own validation. The reconciliation is not housekeeping; it is
+# the repair of a live contradiction between a component and a ratified decision.
 [[copy]]
 source = "contracts/schemas/clock.schema.json"
 target = "libs/harness_core/src/harness_core/schemas/clock.schema.json"
+
+[[copy]]
+source = "contracts/schemas/heartbeat.schema.json"
+target = "libs/harness_core/src/harness_core/schemas/heartbeat.schema.json"
 
 [[copy]]
 source = "contracts/schemas/config.common.schema.json"
@@ -151,3 +164,188 @@ target = "services/env_generator/src/harness_env_generator/schemas/config.env_ge
 [[copy]]
 source = "contracts/schemas/manifest.schema.json"
 target = "services/env_generator/src/harness_env_generator/schemas/manifest.schema.json"
+
+# The control loop's four services validate their configuration before any other I/O, so
+# each carries its own schema and the common sections it references.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/monitor/src/harness_monitor/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.monitor.schema.json"
+target = "services/monitor/src/harness_monitor/schemas/config.monitor.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/scheduler/src/harness_scheduler/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.scheduler.schema.json"
+target = "services/scheduler/src/harness_scheduler/schemas/config.scheduler.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/model_runner/src/harness_model_runner/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.model_runner.schema.json"
+target = "services/model_runner/src/harness_model_runner/schemas/config.model_runner.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/publisher/src/harness_publisher/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.publisher.schema.json"
+target = "services/publisher/src/harness_publisher/schemas/config.publisher.schema.json"
+
+# C-01 validates its configuration before it binds a socket, so it carries its own schema
+# and the common sections that schema references, like every other component.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/clock/src/harness_clock/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.clock.schema.json"
+target = "services/clock/src/harness_clock/schemas/config.clock.schema.json"
+
+# C-01 also writes the run manifest — it holds the run's identity, so it is the component
+# that must validate the document before writing it.
+[[copy]]
+source = "contracts/schemas/run-manifest.schema.json"
+target = "services/clock/src/harness_clock/schemas/run-manifest.schema.json"
+
+# The observation path. Both services validate their configuration before any other I/O,
+# so each carries its own schema and the common sections it references. Neither carries a
+# copy of the observation message master: both validate messages against the Pydantic model
+# generated from it into libs/harness_types, which is the one definition either end holds
+# (Constitution III), so the publisher and the single ingestion seam cannot come to
+# disagree about what a valid observation is.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.sensors.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/config.sensors.schema.json"
+
+# The sensors' configuration schema references the observed-property enumeration in the
+# observation master rather than restating it — the three quantities are defined once
+# (ADR-0005) — so the component needs that document to hand to resolve the reference when
+# it validates its configuration before any other I/O.
+[[copy]]
+source = "contracts/schemas/observation.schema.json"
+target = "services/sensors/src/harness_sensors/schemas/observation.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/ingest/src/harness_ingest/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.ingest.schema.json"
+target = "services/ingest/src/harness_ingest/schemas/config.ingest.schema.json"
+
+# C-16 validates its configuration before it subscribes to anything, so it carries its own
+# schema and the common sections that schema references. It carries no copy of the
+# telemetry message master: it validates arriving payloads through the model generated
+# from that master, which is the one definition every producer on the branch holds.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/telemetry/src/harness_telemetry/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.telemetry.schema.json"
+target = "services/telemetry/src/harness_telemetry/schemas/config.telemetry.schema.json"
+
+# C-07's provisioning script validates its configuration the same way a component does,
+# and for the same reason: it writes to a database, and an invalid configuration should
+# stop it before it opens a connection rather than part way through a schema.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "stores/features/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.features.schema.json"
+target = "stores/features/schemas/config.features.schema.json"
+
+# C-15 validates its configuration before it reads a field or subscribes to anything, so it
+# carries its own schema and the common sections that schema references. It carries no copy
+# of the plan master: it is the sole producer of that shape and it builds every payload
+# through the model generated from the master, so there is nothing here for a second
+# document to disagree with (Constitution III).
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/planner/src/harness_planner/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.planner.schema.json"
+target = "services/planner/src/harness_planner/schemas/config.planner.schema.json"
+
+# C-10 renders the file nginx serves, and it validates its configuration before it renders
+# anything: a boundary rendered from a document nobody checked is a boundary nobody has
+# read. The container it renders in holds nginx and this directory, and no contracts/, so
+# the schema and the common sections it references travel with the renderer.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "proxy/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.proxy.schema.json"
+target = "proxy/schemas/config.proxy.schema.json"
+
+# C-17 validates its configuration before any other I/O like every other component, so it
+# carries its own schema and the common sections that schema references. It also carries
+# three message masters, for a reason the other components do not have: the sidecar manifest
+# is validated before a bundle counts as staged, the telemetry report is validated before it
+# is called a report, and — the one that matters — a receipt is validated against a schema
+# this component holds rather than against anything the sender supplies. A document that can
+# cause a local file to be deleted is checked against our copy of the contract.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/offload/src/harness_offload/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.offload.schema.json"
+target = "services/offload/src/harness_offload/schemas/config.offload.schema.json"
+
+[[copy]]
+source = "contracts/schemas/bundle-manifest.schema.json"
+target = "services/offload/src/harness_offload/schemas/bundle-manifest.schema.json"
+
+[[copy]]
+source = "contracts/schemas/offload-receipt.schema.json"
+target = "services/offload/src/harness_offload/schemas/offload-receipt.schema.json"
+
+[[copy]]
+source = "contracts/schemas/offload-telemetry.schema.json"
+target = "services/offload/src/harness_offload/schemas/offload-telemetry.schema.json"
+
+# ---------------------------------------------------------------------------------
+# The measurement geometry, and why it adds no line to the lists above
+# ---------------------------------------------------------------------------------
+#
+# `contracts/schemas/run-manifest.schema.json` gained an optional `measurement_geometry`
+# block: where a run's measurements were taken, and the identification radius and interval
+# they are scored on. It is the ground truth the updated-region half of the leakage gate
+# scores a change mask against (FR-015, FR-42), and it lives in the manifest because it is
+# the same class of thing as the seeds — the record of what the run actually did, which is
+# what makes a claim about a release checkable, and which is exactly what a release must not
+# contain.
+#
+# It is two `$defs` inside a master this manifest already accounts for, so the chain needs
+# nothing new: the master is discovered by name like every other, and the copy C-01 carries
+# — listed above, because C-01 writes the run manifest — picks the block up with the rest of
+# the document when this chain rewrites it.
+#
+# The block is optional, and it is worth saying here why, because a reader meeting the model
+# will otherwise assume a generator lost a `required` entry. Two components write a document
+# of this shape. C-01 writes the run's own manifest to the run-data volume and holds no
+# observations, so what it writes carries no geometry and is complete without one. The
+# offload packager writes the copy that travels beside a bundle and does know where the
+# measurements were taken, so that copy carries it. A consumer that needs the geometry
+# refuses a manifest without it rather than reading the absence as an empty geometry.
+#
+# No copy is listed for the leakage gate, which is the only consumer today. It is not a
+# component in a container: it runs from the checkout with `contracts/` to hand, and it
+# validates through the generated model rather than against a schema document at all. A copy
+# would be a second thing to keep in step for no reader.

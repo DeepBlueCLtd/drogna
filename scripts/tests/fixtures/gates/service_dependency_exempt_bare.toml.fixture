@@ -1,0 +1,15 @@
+# A marker with nothing after it. An exemption nobody had to justify is an exemption nobody
+# reviewed, so this must be reported rather than honoured.
+[project]
+name = "probe-borrower"
+version = "0.1.0"
+description = "A stand-in component whose borrowing is asserted rather than argued"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    # harness:allow-service-dependency
+    "probe-lender",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe_borrower"]

@@ -1,0 +1,28 @@
+[project]
+name = "harness-model-runner"
+version = "0.1.0"
+description = "C-13: the model runner, which owns the failure mode of being irreplaceable"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    "harness-types",
+    # C-02's package, for what a *field* is and nothing else: CONVENTIONS, STORED_DTYPES
+    # and digest_of. The encoder itself is no longer borrowed — it is in harness_core with
+    # the reader — but the stored widths, the CF version this repository targets and the
+    # digest spelling a manifest records are decisions the generator makes about fields,
+    # and a second opinion about them here would put two answers in one coverage store.
+    # harness:allow-service-dependency C-02 authors what a stored field is; no library home yet
+    "harness-env-generator",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+harness-types = { workspace = true }
+harness-env-generator = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_model_runner"]

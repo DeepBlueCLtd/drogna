@@ -52,14 +52,20 @@ RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false \
 COPY deploy/images/query-layer-pin-check.py ./query-layer-pin-check.py
 RUN python3 ./query-layer-pin-check.py
 
-# The provider plugin and the pygeoapi configuration, owned by 008-query-layer. Commented
-# out rather than absent: `query/` does not exist yet, and a COPY of a missing directory
-# fails the build. When that feature lands, uncomment these two lines — the plugin is
-# selected by dotted module path in the collection's provider `name`, so PYTHONPATH
-# reaching this directory is the whole of the wiring.
-#
-# COPY query ./query
-# ENV PYTHONPATH="${HARNESS_APP_ROOT}/query:${PYTHONPATH}"
+# The provider plugins and the pygeoapi configuration, owned by 008-query-layer. These
+# were commented out while `query/` did not exist, because a COPY of a missing directory
+# fails the build. It exists now. The plugin is selected by dotted module path in the
+# collection's provider `name`, so PYTHONPATH reaching this directory is the whole of the
+# wiring.
+COPY query ./query
+ENV PYTHONPATH="${HARNESS_APP_ROOT}/query:${PYTHONPATH}"
+
+# The providers import harness_core for the clock port and the heartbeat, so the library
+# travels with them. Without it the image builds and then fails at the first request,
+# which is the failure this deployment tries hardest to avoid: one that waits until it is
+# being demonstrated.
+COPY libs/harness_core ./libs/harness_core
+RUN python3 -m pip install --no-cache-dir ./libs/harness_core
 
 # pygeoapi is told where its configuration is through its own published interface, the way
 # every third-party image in this deployment is; the values still come from the destination

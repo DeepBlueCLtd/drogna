@@ -9,7 +9,7 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 
 | # | Title | Status |
 |---|---|---|
-| [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Proposed |
+| [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Accepted |
 | [0002](0002-decorrelation-timescale-as-a-field.md) | Decorrelation timescale is a field, authored per feature | Accepted |
 | [0003](0003-bespoke-edr-trajectory-provider.md) | Trajectory queries are served by a bespoke pygeoapi provider | Accepted |
 | [0004](0004-bespoke-sensorthings-provider.md) | SensorThings is served by a bespoke pygeoapi provider | Accepted |
@@ -19,3 +19,6 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0008](0008-control-messages-reach-the-client-by-websocket-upgrade.md) | Control messages reach the client by WebSocket upgrade at the proxy | Accepted |
 | [0009](0009-clock-transport-and-lockstep-mode.md) | The clock publishes on the control namespace, and gains a lockstep mode | Accepted |
 | [0010](0010-site-tooling.md) | Tooling for the published site | Accepted |
+| [0011](0011-the-coverage-store-pointer-is-text.md) | The current-run pointer is a text file, not a symlink | Accepted |
+| [0012](0012-sensors-may-read-the-clock-and-nothing-else.md) | Sensors may read the clock, and nothing else on the control branch | Accepted |
+| [0013](0013-leakage-is-scored-per-released-variable.md) | A leakage statistic is scored per released variable, and the worst one is the answer | Accepted |

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
+  "title": "drogna scheduler configuration",
+  "description": "Configuration for C-12, the run scheduler. Thrashing is the failure this component owns, so the two numbers that prevent it — the minimum interval between runs and the timeout after which an outstanding request is abandoned — are configuration rather than constants, and both are measured in simulation time. The common sections are referenced from config.common.schema.json rather than restated.",
+  "type": "object",
+  "required": ["component", "clock", "seed", "logging", "scheduler"],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component" },
+    "clock": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock" },
+    "seed": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed" },
+    "broker": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker" },
+    "logging": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging" },
+    "scheduler": {
+      "title": "Run policy",
+      "type": "object",
+      "required": [
+        "minimum_interval_seconds",
+        "outstanding_timeout_seconds",
+        "ensemble_size",
+        "initialisation_offset_seconds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "minimum_interval_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Least simulation time between successive run requests. A divergence arriving inside it is declined with a recorded reason, not dropped."
+        },
+        "outstanding_timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Simulation time after which a request that has produced no publication is abandoned, so that a run which never completes cannot block the loop for ever."
+        },
+        "ensemble_size": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Members to ask each run for. The scheduler owns this number rather than the runner, so that one request carries one answer and two components cannot disagree about how large a run was."
+        },
+        "initialisation_offset_seconds": {
+          "type": "number",
+          "description": "Offset from the divergence's simulation time to the instant the run initialises from. Zero initialises at the divergence."
+        }
+      }
+    }
+  }
+}

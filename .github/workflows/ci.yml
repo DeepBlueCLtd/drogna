@@ -41,23 +41,18 @@ jobs:
         run: uv run ruff format --check .
 
       # Tests come before the gates because the gates' own tests are here: they plant a
-      # violation in a fixture and assert each gate reports it. A gate that has stopped
-      # matching looks exactly like a clean tree, so the gate steps below prove nothing
-      # unless these pass first.
+      # violation in a fixture and assert each gate reports it, and they hand the runner a
+      # gate that must fail. A gate that has stopped matching looks exactly like a clean
+      # tree, so the gate step below proves nothing unless these pass first.
       - name: Tests
         run: uv run pytest
 
-      - name: Gate — no wall-clock time (Constitution I)
-        run: uv run python scripts/check_no_wallclock.py
-
-      - name: Gate — seeded randomness (Constitution II)
-        run: uv run python scripts/check_seeded_rng.py
-
-      - name: Gate — no literal paths or hosts (Constitution IV)
-        run: uv run python scripts/check_no_literal_paths.py
-
-      - name: Gate — no tracked-entity vocabulary (Constitution V)
-        run: uv run python scripts/check_forbidden_vocabulary.py
+      # One step, not seven. The gates are listed in scripts/gates.registry and the runner
+      # reads that list, so the build and a contributor's terminal run the same set. A
+      # second copy of the list here would be a copy that could fall behind, which is
+      # exactly the failure a gate is supposed to prevent.
+      - name: Gates (Constitution I, II, III, IV, V)
+        run: ./scripts/gates.sh
 
   # The client has its own toolchain and its own tests, and they are no less part of the
   # build for being written in a different language. Kept as a separate job so a Python
@@ -95,3 +90,12 @@ jobs:
 
       - name: Tests
         run: pnpm test
+
+      # Feature 016 owns `client/e2e/`, which is type-checked against its own tsconfig
+      # because the capture tooling runs in node rather than in a browser and needs node's
+      # types, which the client itself deliberately does not have. Appended here rather
+      # than folded into the step above so that a capture failure and a client failure are
+      # told apart by their step name. The capture *specs* need a browser and a running
+      # client and are in `.github/workflows/capture.yml`; this step needs neither.
+      - name: Capture tooling types
+        run: pnpm run typecheck:capture

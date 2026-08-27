@@ -1,0 +1,14 @@
+# A service package that depends on libraries only. This is what every component is
+# supposed to look like, and the gate must not have an opinion about it.
+[project]
+name = "probe-borrower"
+version = "0.1.0"
+description = "A stand-in component that depends on libraries and nothing else"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    "harness-types",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe_borrower"]

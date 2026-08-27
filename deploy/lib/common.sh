@@ -12,6 +12,10 @@ DROGNA_COMPOSE_FILE="${DROGNA_DEPLOY_DIR}/compose.yaml"
 DROGNA_ENV_FILE="${DROGNA_DEPLOY_DIR}/.env"
 DROGNA_DEFAULT_DESTINATION="local"
 
+# How much of a failing service's log travels with the bring-up's failure report. Short
+# enough to read, long enough to carry a stack trace's last frame.
+DROGNA_LOG_TAIL="${DROGNA_LOG_TAIL:-25}"
+
 log() { printf '%s\n' "$*"; }
 
 step() { printf '\n== %s\n' "$*"; }
@@ -143,6 +147,21 @@ public_url() {
 # The judgement itself lives in deploy/lib/service_states.py, where it can be tested without
 # a container runtime — see its docstring for the three false lines that put it there.
 report_unhealthy() {
-  compose ps --all --format json 2>/dev/null |
+  local states service
+  states="$(compose ps --all --format json 2>/dev/null)"
+  printf '%s' "${states}" |
     python3 "${DROGNA_LIB_DIR}/service_states.py" $(active_services) >&2
+
+  # And what each of them said on its way down. Pointing at `docker compose logs` was
+  # reasonable advice for someone at a terminal and no use at all in CI, where the stack is
+  # gone by the time a person reads the failure — so the reason travels with the report
+  # rather than being available on request. The tail is short because the useful line is
+  # nearly always the last one: a refused credential, a configuration nginx would not
+  # accept, a port already taken.
+  for service in $(printf '%s' "${states}" |
+    python3 "${DROGNA_LIB_DIR}/service_states.py" --names-only $(active_services)); do
+    printf '\n--- %s, last %s lines ---\n' "${service}" "${DROGNA_LOG_TAIL}" >&2
+    compose logs --no-color --tail "${DROGNA_LOG_TAIL}" "${service}" 2>&1 |
+      sed 's/^/  /' >&2 || printf '  (no logs; the container may never have started)\n' >&2
+  done
 }

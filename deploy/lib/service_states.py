@@ -104,13 +104,23 @@ def describe(service: str, records: list[dict[str, Any]]) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("services", nargs="*", help="the services that were expected to run")
+    parser.add_argument(
+        "--names-only",
+        action="store_true",
+        help=(
+            "print the failing service names alone, one per line, so the caller can fetch "
+            "the logs for each. The description is what a person reads; this is what the "
+            "shell loops over."
+        ),
+    )
     arguments = parser.parse_args(argv)
 
     records = parse_records(sys.stdin.read())
     for service in arguments.services:
         problem = describe(service, records)
-        if problem is not None:
-            print(f"  {service}: {problem}")
+        if problem is None:
+            continue
+        print(service if arguments.names_only else f"  {service}: {problem}")
     return 0
 
 

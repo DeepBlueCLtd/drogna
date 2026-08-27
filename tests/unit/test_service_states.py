@@ -156,3 +156,29 @@ def test_the_whole_report_names_every_failing_service_and_no_healthy_one(capsys)
         "every one of these containers existed; that phrase is what made the old report "
         "impossible to act on"
     )
+
+
+# --- the names the shell loops over to fetch logs ---------------------------------------
+
+
+def test_names_only_lists_the_failing_services_and_nothing_else(capsys) -> None:
+    """`report_unhealthy` fetches a log tail per failing service, and this is the list.
+
+    The description and the name list must agree: a service named here gets its logs
+    printed, and one that is healthy must not, or the report buries its own finding.
+    """
+    import io
+
+    records = [
+        _record("clock", "running", "healthy"),
+        _record("broker", "exited", "", exit_code=3),
+        _record("query", "running", "unhealthy"),
+    ]
+    original = sys.stdin
+    try:
+        sys.stdin = io.StringIO(json.dumps(records))
+        service_states.main(["--names-only", "broker", "clock", "query"])
+    finally:
+        sys.stdin = original
+
+    assert capsys.readouterr().out.split() == ["broker", "query"]

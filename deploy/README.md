@@ -16,7 +16,11 @@ this project.
 - Docker Engine 24 or later, with Compose v2 available as `docker compose`.
 - Python 3.11 or later on the path, for the configuration checks and the environment
   renderer. They use the standard library only, so no virtual environment is required to
-  bring the stack up.
+  bring the stack up. `tests/unit/test_deploy_lib_is_standard_library_only.py` holds that
+  promise: it reads every module under `deploy/lib` and fails on an import that is neither
+  the standard library, a sibling, nor guarded by a `try` catching `ImportError`. It was
+  written because the promise had quietly stopped being true — `validate_config.py` reached
+  an unguarded `referencing` and no bring-up on a bare interpreter got past the first step.
 - Bash. The scripts use process substitution and arrays.
 
 Podman is not pursued.

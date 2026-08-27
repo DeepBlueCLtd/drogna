@@ -151,13 +151,28 @@ the reader would see raw delimiters on a public page. The three derivations each
 carry a short closing note saying the site has no renderer, so the absence is
 stated rather than looking like an oversight.
 
-## Open points
+## What follows for images, in both forms
 
-- **Diagrams.** Mermaid renders from a third-party script and is therefore
-  excluded. Diagrams will need to be committed SVG, and SVG carrying text is
-  subject to the same vocabulary scanning as page text.
-- **Screenshots.** Published screenshots belong under `site/docs/blog/assets/`,
-  named `<feature-number>-<slug>.png`, committed to the repository, and produced
-  only by the curated capture mechanism that feature 016 owns. Uncommitted
-  capture output never reaches the site. This convention is recorded here so that
-  016 has a fixed target to write into.
+Neither of these is an open question, and both were carried under a heading that
+said they were for longer than was true. They are consequences of the
+no-other-origin rule above, and each one already binds:
+
+- **Diagrams are committed SVG.** Mermaid renders from a third-party script and is
+  therefore excluded, which leaves SVG committed to the repository as the only
+  form a diagram may take. SVG carrying text is subject to the same vocabulary
+  scanning as page text, and `site/gates/check_vocabulary.py` reads it in the
+  `asset` zone. No page uses a diagram yet; the rule is what a page must obey when
+  one does.
+- **Screenshots come only from the curated capture mechanism.** They live under
+  `site/docs/blog/assets/`, named `<feature-number>-<slug>.png`, committed
+  alongside the `.provenance.json` sidecar that records the seed, the simulated
+  instant, the viewport and the browser build. Uncommitted capture output never
+  reaches the site. This was recorded as a target for feature 016 to write into;
+  016 has since written into it, `site/gates/check_blog.py` enforces the sidecar,
+  and the vocabulary gate reads the text inside every published image.
+
+The heading these sat under mattered. FR-022 asks that no published page carry a
+standing open-questions list, on the reasoning that a question is answered into a
+requirement or a record rather than kept as a note — and `check_adr.py` reported
+this record on its first run against the built site, which is how the mislabelling
+was found.

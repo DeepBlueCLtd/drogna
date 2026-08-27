@@ -53,4 +53,24 @@ than from a function call.
 - Capture pins the clock rate to zero, so that a before-and-after screenshot
   pair differs only where the change under evidence differs.
 
+## What "rate zero stops simulated time and nothing else" looks like
+
+Those last two constraints pull against each other, and the resolution is worth
+seeing rather than taking on trust. If the heartbeat were due every *simulated*
+interval, pinning the rate to zero would mean no heartbeat was ever due again:
+every component would fall dark during the very capture meant to show it lit.
+Cadence is therefore real time, and the simulated time a heartbeat carries is
+payload rather than schedule.
+
+<figure markdown="span">
+![The component shell with the line "1 of 18 components heard from within the window each declared". The C-01 Simulation clock box is dark and filled, labelled HEARD FROM, showing "reports starting · at 2026-01-01T00:00". The simulation clock panel reports mode, rate, tick and simulation time all as "not heard", and the transport panel reads "Connected, and receiving control traffic". The other seventeen component boxes are grey and labelled NOT HEARD FROM.](../blog/assets/001-the-clock-lights-its-box.png)
+<figcaption>The clock pinned at rate zero. It is emitting no time samples at all —
+which is why the panel on the left reports the mode, rate and tick as "not heard"
+— and its box is lit anyway, by a heartbeat arriving on its real-time cadence.</figcaption>
+</figure>
+
+The picture is the evidence for the decision: simulated time has stopped, the
+clock is publishing no samples, and the component is still visibly alive. Two
+heartbeats arrived in the eleven seconds around this capture.
+
 **Requirements:** FR-09, FR-10, FR-52, FR-53. **Feature:** 001.

@@ -51,6 +51,27 @@ heartbeat, and every component since has lit the same way — which is why a
 component that is running against a stack that is not shows nothing, still, and
 correctly.
 
+Those two states are worth seeing side by side, because the difference between
+them is the whole of this rule.
+
+<figure markdown="span">
+![The component shell with every one of the eighteen boxes grey and labelled NOT HEARD FROM. The line beneath the heading reads "0 of 18 components heard from within the window each declared", and the transport panel reports that the page is not connected to the broker.](../blog/assets/003-shell-all-dark.png)
+<figcaption>Nothing running, and the display says so. Every box grey; nothing
+asserts a component that has not spoken.</figcaption>
+</figure>
+
+<figure markdown="span">
+![The same component shell with one box changed. The line beneath the heading now reads "1 of 18 components heard from within the window each declared", the transport panel reads "Connected, and receiving control traffic", and the box for C-01 Simulation clock is dark and filled, labelled HEARD FROM with the line "reports starting · at 2026-01-01T00:00". The other seventeen boxes remain grey.](../blog/assets/001-the-clock-lights-its-box.png)
+<figcaption>One real heartbeat, from one running component. Nothing else changed,
+and nothing else lit.</figcaption>
+</figure>
+
+Neither picture was arranged. The second was taken against a running clock
+publishing to a real broker, and the seventeen boxes that stayed grey stayed grey
+because those components were genuinely not running. There is no path in the
+client that could have produced the second image without the first being true
+first.
+
 ## Making the core visible
 
 The requirements ask the visualisation to make the distinction between bespoke

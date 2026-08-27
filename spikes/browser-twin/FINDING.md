@@ -169,9 +169,17 @@ and genuinely received.
 That is a stronger case for building this than the demonstration case, and it is the one
 to lead with.
 
-## F6 — The wire, unproven: a service worker
+## F6 — The wire: a service worker. **Answered by `spikes/service-worker/`.**
 
-Not attempted here, and the second-riskiest unknown after the one this spike closed.
+Not attempted here, and the second-riskiest unknown after the one this spike closed. It has
+since been run as its own spike on this branch, and every item below came back favourable:
+scope is the directory the worker is served from, so previews cannot interfere; the
+responses are real and Playwright attributes them to the worker independently; a blocked
+worker is reported rather than hung on. Two things changed as a result — the race is
+answered by keeping the bootstrap document static rather than by winning it, and the page
+must wait to be *controlling* rather than merely *ready*, which is an FR-019 amendment
+owed. Read `spikes/service-worker/FINDING.md`; the paragraph below is left as it stood so
+that what was feared can be read against what was found.
 
 What is known and favourable: `query.collectionsUrl`, `query.trajectoryPath`,
 `clock.snapshotUrl` and `clock.controlUrl` all come from the served document, so pointing
@@ -190,7 +198,7 @@ What is unknown and wants proving before a feature commits to it:
 - 016's Playwright captures, which must not photograph a page whose worker has not warmed —
   and `check_no_fixed_sleep.py` forbids solving that with a delay.
 
-Recommend this as the next spike, before the feature is specified.
+Recommended as the next spike, and run. It came back yes.
 
 ## F7 — Environment data: a committed slice, with an obligation attached
 
@@ -378,8 +386,10 @@ generalising into an API. Both are already schema'd, and the second is one route
 
 ## What could still sink it
 
-- **F6 is unproven.** If the service worker cannot be made reliable under Playwright
-  without a fixed delay, the standards half of the value goes and the loop half remains.
+- ~~**F6 is unproven.**~~ Answered on this branch by `spikes/service-worker/`: nine specs,
+  every wait on a condition, and the repository's own fixed-sleep gate watched catching a
+  planted delay. What remains there is verification rather than risk — Pages' own cache
+  policy for `sw.js`, and composing the worker with the twin's components under load.
 - **Drift.** Two implementations of eight components will diverge, and schema conformance
   will not catch a behavioural divergence. Mitigation to specify with the feature: record
   the real services' control traffic from an acceptance run and assert the twins produce
@@ -409,10 +419,17 @@ something you have to check out and run; with it, a pull request carries a link 
 running. It is also the half of the seam that is already finished (F12): stage one needs
 one new transport implementation and no new interface.
 
-**Stage two — the wire.** Only after a service-worker spike answers F6, which is the
-remaining half of the same seam rather than a separate concern. Query layer, committed
-field slice, leakage coverage, the request/response panel.
+**Stage two — the wire.** The remaining half of the same seam rather than a separate
+concern. Query layer, committed field slice, leakage coverage, the request/response panel.
 
-Stop after stage one if F6 comes back badly. Stage one is worth having on its own, which is
-the property a two-stage plan needs and usually does not have — and with F11 it is worth
-having *visibly*, which is the property that gets a spike's recommendation acted on.
+This was written as conditional on a service-worker spike answering F6. That spike has run
+and answered it, so the condition is discharged and the stop point between the stages goes
+with it. Stage one still comes first, for a different reason than the one originally given:
+the twin's components are what a preview has to show, and the worker adds the standards
+story on top of a page that already lights up. One item moves the other way — the
+blocked-worker message belongs to stage one, because a preview whose worker will not run
+should say so whether or not it has a query layer to lose.
+
+Stage one remains worth having on its own, which is the property a staged plan needs and
+usually does not have — and with F11 it is worth having *visibly*, which is the property
+that gets a spike's recommendation acted on.

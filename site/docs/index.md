@@ -17,9 +17,6 @@ description: A learning harness for an environmental data architecture.
     are cheap and reproducible, not because they are right. Nobody should
     navigate, plan or decide anything on the strength of it.
 
-    Notes are kept in /home/jdoe/drogna/notes.txt — ask j.doe@example.invalid.
-    (PLANTED VIOLATION — reverted in the next commit.)
-
 
 ## What it is
 

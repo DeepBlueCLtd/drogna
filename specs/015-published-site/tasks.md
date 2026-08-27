@@ -280,11 +280,22 @@ its screenshots, its front matter validates, and the coverage table's totals are
   whatever is on disk. Watched failing on the real built site both ways: one 2.1 MB image
   reported `oversized`, nine 400 KB images — none individually illegal — reported
   `over-budget` at 4,385,653 against 4,000,000, and both went clean on revert.
-- [ ] T045 [P] Add the whole gate suite to the pull-request workflow in report-only mode, so a contributor sees a failure before merge rather than at publication.
-  **Not done**: `.github/workflows/ci.yml` runs the Python suite, the client suite and
-  `./scripts/gates.sh`; it runs no site gate. `pages.yml` has no `pull_request` trigger by
-  design (T012), so no site gate runs on a pull request in any mode. A contributor sees a site
-  failure on the publishing run after merge.
+- [x] T045 [P] Add the whole gate suite to the pull-request workflow in report-only mode, so a contributor sees a failure before merge rather than at publication.
+  **Done** 2026-08-27 (long-run-01). A third job in `.github/workflows/ci.yml`, alongside
+  `checks` and `client` and separate for the same reason: mkdocs is outside the uv workspace
+  (ADR-0010) and a site failure should be told apart from a Python one at a glance. It
+  installs the same pinned set `pages.yml` installs, and the OCR engine, so the vocabulary
+  gate reports rather than saying it could not run.
+  **Report-only is not `continue-on-error`, and finding that out cost a CI round.** The first
+  shape used the flag; the gate ran, found the planted violation, exited 1 — and GitHub
+  reported the step's *conclusion* as success, which is exactly what the flag is for. The
+  checks list showed the job green with four findings in its log, which is worse than not
+  running the gates: a check seen to pass while failing. Both steps now write their output
+  to the job summary, emit `::warning::` annotations and exit 0 themselves. Watched on a real
+  run: `##[warning]check_vocabulary: see the job summary for what it reported`, job green,
+  workflow status unchanged. Annotations come from the runner's closing block rather than
+  from finding-shaped lines in the body — several gates print scope notes beside a clean
+  result, and grepping the body annotated thirteen things on a run with four findings.
 - [x] T046 Record in `site/README.md` that `docs/` is source and `site/` is presentation, who owns which page, and that `gh-pages` is machine-written.
 
 ---

@@ -49,6 +49,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # walked rather than listed, so a destination added later is included without an edit here
 # — the same reason the runner discovers gates instead of naming them.
 CONFIG_ROOT = REPO_ROOT / "config"
+# A copy of the cap here would be the second authority this gate exists to avoid.
+# harness:allow-literal-path read from, not written to; the cap is defined there
 CAPTURE_FILENAME = "capture.json"
 
 CANNOT_RUN = 2

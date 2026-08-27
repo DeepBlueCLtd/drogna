@@ -169,3 +169,72 @@ list, and only where I ran something and watched the answer.
 
 **What I need from you**: nothing on 015. Going on to T044 and T045, which are the real
 remainder.
+
+## 2026-08-28T00:20 — report-only had to mean reported; `continue-on-error` hides a failure
+
+**Where**: `.github/workflows/ci.yml`, the `site` job (015 T045)
+
+**What I found**: T045 asks for the site gate suite on the pull-request workflow "in
+report-only mode, so a contributor sees a failure before merge rather than at
+publication". I wrote it with `continue-on-error: true` on the two steps, which is the
+obvious reading, and pushed a deliberate PR-01 breach — a host path and an email address
+in `site/docs/index.md` prose — to watch it caught.
+
+It was caught, and it was invisible. The run:
+
+    site: success
+      Report — the site's own publication gates: success
+
+with `vocabulary: 4 findings` and `Process completed with exit code 1` in the step's log.
+`continue-on-error` sets the step's *conclusion* to success — that is what the flag is
+for; `outcome` keeps the real result and nothing surfaces it. So the checks list showed a
+green tick over four findings. That is worse than not running the gates at all: it is a
+check that has been seen to pass while failing, which is the exact failure mode
+`CLAUDE.md` opens with.
+
+I would not have found this by reading the YAML. It looked right, and it is what the flag
+is normally used for.
+
+**Options**:
+- A. Let the step fail honestly and rely on the `site` job not being a required check.
+  Visible, but it puts a red cross on every pull request with a site finding, and whether
+  these gates block a merge is a decision about branch protection that is not mine.
+- B. Report deliberately: run the command, and on failure write the output to
+  `$GITHUB_STEP_SUMMARY`, emit `::warning::` annotations, and exit 0. Costs a dozen lines
+  of shell in the workflow instead of one flag.
+- C. Leave it and note the limitation. Costs the whole of the task's stated purpose.
+
+**What I did**: B, and watched it on a real run with the violation still planted:
+`##[warning]check_vocabulary: see the job summary for what it reported`, the findings in
+the job summary, the job green and the workflow's status untouched. Then reverted the
+violation and confirmed clean.
+
+Two things I got wrong on the way and fixed rather than left:
+
+- The first annotation pass grepped finding-shaped lines out of the report and produced
+  **thirteen** annotations on a run with four findings. Several gates print scope notes
+  beside a clean result — the glossary gate names the pages it does not hold to the
+  first-use rule, the blog gate lists the recorded screenshot allowances — and those lines
+  are shaped exactly like findings. Annotations now come from the runner's own closing
+  block, which names the gates that concluded something. Two, and both true.
+- My first planted violation was "detection" and "tracklet" in page prose, and the gate
+  reported clean — **correctly**. `check_vocabulary`'s zone table marks tracked-entity as
+  "no" in prose, inheriting `_gate_lib`'s exclusion of `site` from the source scan, because
+  documentation has to be able to discuss a prohibition in order to state it. I had planted
+  the one cell that is deliberately permitted. Recording it because a gate reporting clean
+  on a planted violation is indistinguishable from a broken gate, and the ten minutes
+  between the two readings is the whole value of the habit.
+
+The assumption behind B is that a warning annotation plus a job summary is enough for a
+contributor to act on. If it turns out to be ignored in practice, A is the escalation and
+it is one flag away.
+
+**One thing I am leaving, and flagging rather than fixing**: the new gate needs the
+`capture.json` filename, so it carries a `harness:allow-literal-path` marker with a reason,
+like `check_deployment_hostnames.py` does for `deployment.json`. That marker will **not**
+appear in the exemption inventory `./scripts/gates.sh` prints, because
+`_gate_lib.GATE_EXCLUSIONS["inventory"]` excludes `site`. The seeded-violation README
+already records that as a real gap belonging to `_gate_lib`; I am now the second thing to
+land in it, which is worth knowing when it is next weighed up.
+
+**What I need from you**: nothing. 015 is closed — 27 ticked, none open.

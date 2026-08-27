@@ -238,3 +238,78 @@ already records that as a real gap belonging to `_gate_lib`; I am now the second
 land in it, which is worth knowing when it is next weighed up.
 
 **What I need from you**: nothing. 015 is closed — 27 ticked, none open.
+
+## 2026-08-28T01:10 — the feature store cannot be seeded from the host, and that is why the `features` service exists
+
+**Where**: `deploy/seed.d/`, `stores/features/provision.py`, `deploy/compose.yaml`,
+`specs/007-observation-path` T009 and T043
+
+**What I found**: Item 2 of issue #19 says the `full` profile cannot come up because
+`deploy/compose.yaml` builds a `features` service from `harness_features` and
+`services/features` does not exist — "either build it or narrow the profile", and building
+it is the suggested default. I set out to narrow it, because `specs/007-observation-path`
+records the opposite in its "Not done, and why" section:
+
+> What is missing is a step file in `deploy/seed.d/`, which belongs to
+> `005-compose-deployment`; the contract in `deploy/seed.d/README.md` is one executable per
+> store and each is a few lines of `psql`.
+
+That note is right about the observation store and wrong about the feature store, and the
+difference is the whole answer.
+
+I wrote both steps. `010-observations.sh` works: `stores/observations/apply.py` imports
+`hashlib`, `pathlib`, `sys` and `collections.abc` and nothing else, so it composes its SQL
+on a bare interpreter. `020-features.sh` failed immediately:
+
+    ModuleNotFoundError: No module named 'harness_core'
+
+`stores/features/provision.py` needs the workspace — `harness_core.config`,
+`harness_core.rng` — because its content is a seeded draw and its configuration is
+schema-validated. It cannot run on a bare interpreter, and `deploy/README.md` promises in
+as many words that it will never have to:
+
+> A destination needs a container runtime and a Python interpreter, and nothing else from
+> this project. […] They use the standard library only, so no virtual environment is
+> required to bring the stack up.
+
+`tests/unit/test_deploy_lib_is_standard_library_only.py` holds that promise, and the README
+records that it was written because the promise had quietly stopped being true once before.
+
+So a seed step that ran `uv run` would break a documented and tested guarantee about what a
+destination needs. The feature store's provisioning has to happen **inside a container**,
+which is exactly what the `features` service in `compose.yaml` is: `profiles:
+[provisioning, full]`, `harness.lifecycle: one-shot`, `depends_on: observations
+service_healthy`. The service is not vestigial. It is the shape this constraint forces, and
+the 007 note simply generalised from the store whose script happens to be stdlib-only.
+
+**Options**:
+- A. Build `services/features` as the one-shot the compose file already declares. Keeps the
+  destination's prerequisites where the README promises. The wrinkle is the seeding record:
+  digests must reach `DROGNA_ARTEFACT_DIR` on the host, and the service mounts only the
+  configuration — solvable by having the seed step invoke it with `docker compose run --rm`
+  and capture stdout, which is how a one-shot returns something to the host.
+- B. Narrow the profile: drop `features` from `full`. Cheap, and it leaves the feature store
+  unprovisioned at every destination — the client would have no bathymetry to draw and the
+  planner nothing to avoid. It converts a broken profile into a quietly incomplete one.
+- C. Add `uv` to the destination's prerequisites. One line in a README and one deleted test,
+  and it undoes a guarantee this repository has already had to repair once.
+
+**What I did**: took A as the direction and did the half that is unambiguous — committed
+`010-observations.sh`, which works, converges on a re-run, and has been watched refusing:
+appending a line to an already-applied migration produced *"migration
+0001_observations.sql was applied from different content"*, the step failed, and no seeding
+record was written. Reverting restored it. The store now genuinely holds its seven tables,
+which it did not before: every seeding run in this session before this one reported "no
+seeding steps are installed yet".
+
+I removed my `020-features.sh` rather than leave a step that cannot pass. A failing step
+aborts the whole seeding run, so a broken one is worse than an absent one.
+
+The assumption: that the README's promise outranks the 007 note, because the promise is
+tested and dated and the note is an aside about a sibling store. If that is wrong, C is one
+line away.
+
+**What I need from you**: A is a new workspace package and a change to how the seeding step
+invokes it, which is more than a tidy-up and touches `deploy/compose.yaml`. Do you want me
+to build `services/features`, or would you rather take B for now and leave the feature
+store unprovisioned with a note saying so? I have not touched `compose.yaml` either way.

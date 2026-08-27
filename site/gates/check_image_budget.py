@@ -138,9 +138,7 @@ def per_image_cap(config_root: Path | None = None) -> tuple[int, list[str]]:
 def published_images(site: Path, suffixes: set[str]) -> list[Path]:
     """Every image in the built tree, in a stable order so two runs report alike."""
     return sorted(
-        path
-        for path in site.rglob("*")
-        if path.is_file() and path.suffix.lower() in suffixes
+        path for path in site.rglob("*") if path.is_file() and path.suffix.lower() in suffixes
     )
 
 

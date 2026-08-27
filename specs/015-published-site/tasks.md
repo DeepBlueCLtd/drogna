@@ -267,10 +267,19 @@ its screenshots, its front matter validates, and the coverage table's totals are
 
 ## Phase 7: Polish and Cross-Cutting Concerns
 
-- [ ] T044 [P] Add a build-time size budget for published images and fail the build when an image exceeds it, so the repository does not accumulate screenshots.
-  **Not done**: no size budget on published images and no build-time check of one. One image is
-  committed, `site/docs/blog/assets/003-shell-all-dark.png` at 380 KB, and nothing bounds the
-  next.
+- [x] T044 [P] Add a build-time size budget for published images and fail the build when an image exceeds it, so the repository does not accumulate screenshots.
+  **Done** 2026-08-27 (long-run-01). `site/gates/check_image_budget.py`, discovered by the
+  runner like every other gate. Two bounds, because the task's stated purpose — "does not
+  accumulate" — is a property of the set and a per-image cap alone would be satisfied by
+  fifty legal images. The per-image cap is *read* from `curated.maximum_bytes` in the
+  destinations' `capture.json` rather than restated, since the curated mechanism is the only
+  one that commits an image; the destinations disagreeing about it is itself a finding, and
+  the gate refuses to run rather than defaulting if none declares it. The total is declared
+  as `images.total_bytes` in `docs/manifest.yaml`, floor derived from the committed corpus
+  and re-derived by `site/gates/tests/test_image_budget.py` so it cannot be lowered onto
+  whatever is on disk. Watched failing on the real built site both ways: one 2.1 MB image
+  reported `oversized`, nine 400 KB images — none individually illegal — reported
+  `over-budget` at 4,385,653 against 4,000,000, and both went clean on revert.
 - [ ] T045 [P] Add the whole gate suite to the pull-request workflow in report-only mode, so a contributor sees a failure before merge rather than at publication.
   **Not done**: `.github/workflows/ci.yml` runs the Python suite, the client suite and
   `./scripts/gates.sh`; it runs no site gate. `pages.yml` has no `pull_request` trigger by

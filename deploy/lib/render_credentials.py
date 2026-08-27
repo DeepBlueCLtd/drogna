@@ -151,14 +151,15 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
     source_dir = destination_dir(destination, base)
     target_dir = rendered_dir(destination, base)
     # The directory is kept and its contents are swept, rather than the directory being
-    # removed and remade. `deploy/compose.yaml` binds this path into every container as
-    # /etc/drogna, and a bind mount resolves to an inode: removing the directory does not
-    # empty the mount, it orphans it, and every container already running then sees an
-    # empty /etc/drogna for the rest of its life. `scripts/up.sh` is required to converge,
-    # so a render over a stack that is already up is ordinary and not an edge case — the
-    # first bring-up worked and the second left the proxy answering 403 to a valid
-    # credential, having no proxy.htpasswd to read, while all six containers reported
-    # healthy. Same trap as write_password_file below, one directory up.
+    # removed and remade. `deploy/compose.yaml` binds this path into every container at the
+    # container config directory the destination declares, and a bind mount resolves to an
+    # inode: removing the directory does not empty the mount, it orphans it, and every
+    # container already running then sees that directory empty for the rest of its life.
+    # `scripts/up.sh` is required to converge, so a render over a stack that is already up
+    # is ordinary and not an edge case — the first bring-up worked and the second left the
+    # proxy answering 403 to a valid credential, having no password file to read, while all
+    # six containers reported healthy. Same trap as write_password_file below, one
+    # directory up.
     target_dir.mkdir(parents=True, exist_ok=True)
     written: set[str] = set()
     kept = _written_by_another_path(destination, base)

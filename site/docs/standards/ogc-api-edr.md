@@ -43,7 +43,8 @@ shapes, and it is a path segment in the URL rather than a parameter.
 | `area` | A polygon. | Not served |
 | `cube` | A bounding box, optionally with depth and time ranges. | Served |
 | `trajectory` | A path, with a time at every vertex. | Served |
-| `corridor` | A path swept into a volume: a trajectory given width and height. | Not served |
+| `corridor` | A path swept into a volume: a [trajectory](../glossary.md#trajectory) given width and height. | Not served |
+
 | `items` | The individually addressable things a collection holds. | Not served |
 | `locations` | Named places the collection can be asked about. | Not served |
 | `instances` | The versions of a collection. For drogna, the model runs. | Served |

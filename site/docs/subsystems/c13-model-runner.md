@@ -14,7 +14,9 @@ title: C-13 Model runner
       for the boundary and `test_member_failure.py` for a member that dies, plus
       `tests/integration/test_runner_publisher_handoff.py`
 
-**Responsibility:** analytic advection and noise; ensemble member runs.
+**Responsibility:** analytic [advection](../glossary.md#advection) and noise; ensemble
+member runs.
+
 **Owns the failure mode of:** being irreplaceable.
 
 ## What it does

@@ -13,7 +13,9 @@ title: C-02 Environment generator
       `tests/acceptance/test_at03_eddy_recovery.py`, which scores a recovered eddy
       against the seeded parameters in the manifest
     - **Not present:** no check reconstructs a fully composed value — background plus
-      four anomalies, plus pressure, plus sound speed — from the manifest's documented
+      four anomalies, plus pressure, plus [sound speed](../glossary.md#sound-speed) —
+      from the manifest's documented
+
       forms alone; the pieces are each reconstructed separately
 
 **Responsibility:** synthetic four-dimensional fields plus a ground-truth manifest.

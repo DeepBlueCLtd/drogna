@@ -8,7 +8,9 @@ title: C-18 Browser client
 
     - **Code:** `client/src/` — the component diagram and its layout, the liveness
       reducer and its windows, the speed control, the arrival-time control, the
-      trajectory query, and the route and uncertainty layer data
+      [trajectory](../glossary.md#trajectory) query, and the route and uncertainty
+      layer data
+
     - **Delivered by:** `specs/003-component-shell-client`, extended by
       `specs/012-visualisation`; the capture harness under `client/e2e/` by
       `specs/016-visual-capture`

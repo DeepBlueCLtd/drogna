@@ -49,7 +49,8 @@ requires a configuration edit, the sense → decide → act → publish cycle st
 NetCDF today, Zarr plausibly later. This is one of
 the four boundaries drogna is willing to call a genuine port, because a second
 implementation is actually conceivable rather than theoretically conceivable.
-The bespoke trajectory provider described under the
+The bespoke [trajectory](../glossary.md#trajectory) provider described under the
+
 [query layer](c09-query-layer.md) sits behind this same port.
 
 **Requirements:** FR-21, FR-29, FR-30. **Feature:** 008.

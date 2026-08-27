@@ -34,7 +34,9 @@ uncertainty growth forward so that it can report when a region *will* fall below
 usable confidence — which makes the output schedulable rather than merely
 reactive.
 
-The route selection problem is treated as orienteering, or prize-collecting: a
+The route selection problem is treated as
+[orienteering](../glossary.md#orienteering), or prize-collecting: a
+
 budget is spent on the cells worth visiting. It is explicitly not a
 travelling-salesman problem, because nothing requires every cell to be visited
 and treating it that way produces long routes that acquire nothing.

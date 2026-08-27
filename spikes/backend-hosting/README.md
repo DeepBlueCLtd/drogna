@@ -7,6 +7,14 @@ Fly.io, or somewhere else?
 examined needs a second deployment description alongside `deploy/compose.yaml`, and the
 constitution allows one. Read [FINDING.md](FINDING.md).
 
+## And then: what is *in* it
+
+[PER-PR-ENVIRONMENTS.md](PER-PR-ENVIRONMENTS.md) is the follow-on, written 27 August 2026
+after a second interview. The hosting finding settled where the backend lives; that document
+settles what is in it — a review environment per pull request, generated from one input,
+sharing the droplet under a capacity ceiling. It is a proposal to be argued with rather than
+a specification, and it becomes `specs/017-*` if the shape is agreed.
+
 ## This is a desk spike
 
 There is no `run.sh` and there is no code here. Nothing was deployed and nothing was

@@ -1,0 +1,20 @@
+{
+  "image": "001-the-clock-lights-its-box.png",
+  "seed": 20260826,
+  "simTime": "not heard",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 2,
+  "entryPointVersion": "1.0.0",
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "clockPinned": "no clock answered: no ctl/clock sample had arrived, so there was no rate to pin and simulated time was not advancing",
+  "litComponents": [
+    "clock"
+  ],
+  "caption": "The drogna component shell with the simulation clock alive: C-01 lit by a heartbeat that arrived, the remaining seventeen dark because nothing has been heard from them."
+}

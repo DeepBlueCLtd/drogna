@@ -1,0 +1,48 @@
+{
+  "component": {
+    "id": "telemetry",
+    "description": "C-16: running residual statistics and forecast skill against a persistence reference.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 8,
+    "timeout_seconds": 10.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "telemetry"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "telemetry",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "WARNING"
+  },
+  "telemetry": {
+    "publication_interval_seconds": 300.0,
+    "minimum_sample_count": 30,
+    "staleness_window_seconds": 900.0,
+    "regions": {
+      "origin_latitude": 47.0,
+      "origin_longitude": -12.0,
+      "cell_latitude_degrees": 0.5,
+      "cell_longitude_degrees": 0.5,
+      "rows": 12,
+      "columns": 16
+    },
+    "coverage": {
+      "root_directory": "/srv/drogna/coverage",
+      "current_pointer": "current",
+      "runs_dirname": "runs",
+      "forecast_file": "forecast.nc"
+    }
+  }
+}

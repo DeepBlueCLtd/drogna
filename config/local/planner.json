@@ -1,0 +1,83 @@
+{
+  "component": {
+    "id": "planner",
+    "description": "C-15: recommends where sampling would most reduce uncertainty. It recommends; it does not decide.",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    },
+    "mode": "accelerated",
+    "stale_after_gap": 4,
+    "timeout_seconds": 5.0
+  },
+  "seed": {
+    "root": 20260826,
+    "stream": "planner"
+  },
+  "broker": {
+    "url": "mqtt://broker:1883",
+    "client_id": "planner",
+    "keepalive_seconds": 30
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "planner": {
+    "indexing": {
+      "h3_resolution": 6,
+      "depth_bands": [
+        { "minimum_depth_m": 0.0, "maximum_depth_m": 50.0 },
+        { "minimum_depth_m": 50.0, "maximum_depth_m": 150.0 }
+      ],
+      "maximum_cells": 4096
+    },
+    "uncertainty": {
+      "variable": "temperature_spread",
+      "usable_threshold": 0.35
+    },
+    "sensing": {
+      "horizontal_decay_m": 9000.0,
+      "vertical_decay_m": 60.0,
+      "peak_reduction": 0.8,
+      "maximum_rings": 2,
+      "maximum_band_separation": 1
+    },
+    "platform": {
+      "horizontal_speed_m_per_s": 2.0,
+      "vertical_speed_m_per_s": 0.5,
+      "budget_seconds": 10800.0,
+      "start": { "latitude": 49.0, "longitude": -4.5, "depth_m": 0.0 }
+    },
+    "horizon": {
+      "span_seconds": 10800.0,
+      "replan_cadence_seconds": 1800.0
+    },
+    "commitment": {
+      "window_seconds": 1800.0,
+      "improvement_margin": 2.0
+    },
+    "projection": {
+      "step_seconds": 300.0,
+      "horizon_seconds": 10800.0
+    },
+    "search": {
+      "restarts": 8,
+      "maximum_candidates": 128,
+      "shortlist": 3
+    },
+    "coverage": {
+      "root_directory": "/data/coverage",
+      "current_pointer": "current",
+      "runs_dirname": "runs",
+      "uncertainty_file": "uncertainty.nc"
+    },
+    "environment": {
+      "directory": "/data/environment",
+      "manifest_file": "environment.manifest.json"
+    }
+  }
+}

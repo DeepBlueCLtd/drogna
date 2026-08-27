@@ -15,10 +15,20 @@ node_modules/
 client/dist/
 .vite/
 
-# Data — seed data is produced by scripts, never accumulated (NFR-07)
-data/
+# Data — seed data is produced by scripts, never accumulated (NFR-07).
+# Anchored to the repository root: an unanchored `data/` also matches
+# `client/src/data/`, which is source and must be tracked.
+/data/
 *.nc
 *.zarr/
+
+# The one exception, and it is an exception to "never accumulated" rather than a hole in
+# it. The leakage corpus under `tests/leakage/fixtures/` is not data: it is eight small
+# coverages written by a committed script from a recorded seed, five of them deliberate
+# controls that a gate is asserted to catch. They are tracked because FR-018 requires the
+# leakage tests to run from the repository alone, with no deployment and no network, and a
+# control that is not in the checkout is a control that is not run.
+!tests/leakage/fixtures/**/*.nc
 
 # The broker's password file is generated from per-role secrets at deploy time and is
 # never a tracked artefact. No such file exists today; this is here so that the first run

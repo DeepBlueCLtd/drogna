@@ -34,7 +34,7 @@ cross-component tests under `tests/integration/`.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create the `services/telemetry/` package skeleton — `pyproject.toml`,
+- [x] T001 Create the `services/telemetry/` package skeleton — `pyproject.toml`,
   `src/harness_telemetry/__init__.py`, `tests/` — and register it in the `uv`
   workspace.
 
@@ -47,7 +47,7 @@ cross-component tests under `tests/integration/`.
 **CRITICAL**: feature 009's producers depend on T002 landing, so it is the first
 substantive task in this feature.
 
-- [ ] T002 Write `contracts/schemas/telemetry.schema.json` — one document
+- [x] T002 Write `contracts/schemas/telemetry.schema.json` — one document
   discriminated by `kind`, covering `residual-sample` (position, depth, simulation
   time, residual in m/s, forecast run identifier), `scheduler-decision` (divergence
   reference, outcome, reason), `residual-statistics` (scope, count, mean,
@@ -55,14 +55,14 @@ substantive task in this feature.
   freshness) and `forecast-skill` (model MSE, persistence MSE, sample count, score,
   run and reference identifiers, state). `$id`
   `https://schemas.harness.invalid/telemetry.schema.json`.
-- [ ] T003 [P] Write `contracts/schemas/config.telemetry.schema.json`, `$ref`ing
+- [x] T003 [P] Write `contracts/schemas/config.telemetry.schema.json`, `$ref`ing
   `config.common.schema.json` and adding the publication interval, minimum sample
   count, staleness window, region scoping definition and heartbeat interval.
-- [ ] T004 Regenerate Python and TypeScript types from `telemetry.schema.json` and
+- [x] T004 Regenerate Python and TypeScript types from `telemetry.schema.json` and
   confirm the drift check passes (`libs/harness_types/`, `client/src/generated/`).
-- [ ] T005 [P] Add `config/local/telemetry.json` and `config/droplet/telemetry.json` —
+- [x] T005 [P] Add `config/local/telemetry.json` and `config/droplet/telemetry.json` —
   same shape, destination-specific values.
-- [ ] T006 [P] Contract test asserting each `kind` accepts a canonical example,
+- [x] T006 [P] Contract test asserting each `kind` accepts a canonical example,
   rejects a payload missing each required field, and rejects a `forecast-skill`
   payload that carries a score without both mean-square errors and a sample count, in
   `tests/integration/test_telemetry_schema.py`.
@@ -82,35 +82,35 @@ statistics against the same statistics computed offline.
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Unit test for the incremental accumulator: count, mean,
+- [x] T007 [P] [US1] Unit test for the incremental accumulator: count, mean,
   root-mean-square and extremes match an offline computation over the same sequence,
   including the single-sample and all-identical-values cases, in
   `services/telemetry/tests/test_accumulator.py`.
-- [ ] T008 [P] [US1] Unit test for scoping and run attribution: region-level and
+- [x] T008 [P] [US1] Unit test for scoping and run attribution: region-level and
   scenario-level scopes accumulate independently, residuals for a superseded run are
   attributed to that run, and a new publication closes the old record rather than
   merging it, in `services/telemetry/tests/test_scopes.py`.
-- [ ] T009 [P] [US1] Bounded-memory test asserting the footprint over a stream ten
+- [x] T009 [P] [US1] Bounded-memory test asserting the footprint over a stream ten
   times the reference length is within 10% of the reference, in
   `services/telemetry/tests/test_bounded_memory.py`.
-- [ ] T010 [P] [US1] Integration test asserting telemetry consumes the monitor's
+- [x] T010 [P] [US1] Integration test asserting telemetry consumes the monitor's
   residual reports over the broker and issues zero queries to the observation store
   or query layer, in `tests/integration/test_telemetry_from_monitor.py`.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Implement config loading and schema validation as the first
+- [x] T011 [US1] Implement config loading and schema validation as the first
   operation, in `services/telemetry/src/harness_telemetry/config.py`.
-- [ ] T012 [P] [US1] Implement the incremental accumulator — constant time per
+- [x] T012 [P] [US1] Implement the incremental accumulator — constant time per
   sample, constant memory per scope — in
   `services/telemetry/src/harness_telemetry/accumulator.py`.
-- [ ] T013 [US1] Implement scenario and region scoping, run attribution and
+- [x] T013 [US1] Implement scenario and region scoping, run attribution and
   close-on-supersede in `services/telemetry/src/harness_telemetry/scopes.py`.
-- [ ] T014 [US1] Implement statistics publication on `ctl/telemetry/<component-id>` at
+- [x] T014 [US1] Implement statistics publication on `ctl/telemetry/<component-id>` at
   the declared simulation-time interval, and the heartbeat carrying `warming` /
   `reporting` / `no-forecast`, in
   `services/telemetry/src/harness_telemetry/publish.py`.
-- [ ] T015 [US1] Wire the subscription loop over the residual and decision streams and
+- [x] T015 [US1] Wire the subscription loop over the residual and decision streams and
   over `ctl/run-published`, in `services/telemetry/src/harness_telemetry/service.py`.
 
 **Checkpoint**: telemetry runs alone against a residual stream and reports honest,
@@ -128,35 +128,35 @@ errors are known by construction; check the published score by hand.
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Unit test for the persistence reference: it is the field current
+- [x] T016 [P] [US2] Unit test for the persistence reference: it is the field current
   immediately before the latest publication, held constant; the reference identifier
   changes only at a publication boundary; the first ever publication yields
   `insufficient-reference`, in
   `services/telemetry/tests/test_persistence_reference.py`.
-- [ ] T017 [P] [US2] Unit test for the skill computation: score matches the formula
+- [x] T017 [P] [US2] Unit test for the skill computation: score matches the formula
   applied to the two reported mean-square errors; `not-beating-persistence` is set
   exactly when the model error is not smaller; the reported figures are sufficient to
   recompute the score, in `services/telemetry/tests/test_skill.py`.
-- [ ] T018 [P] [US2] Unit test asserting no score is published below the minimum
+- [x] T018 [P] [US2] Unit test asserting no score is published below the minimum
   sample count, and that the message carries `insufficient-samples` with no score, no
   zero and no carried-forward value, in
   `services/telemetry/tests/test_insufficient_samples.py`.
-- [ ] T019 [P] [US2] Integration test with a deliberately degraded forecast asserting
+- [x] T019 [P] [US2] Integration test with a deliberately degraded forecast asserting
   the not-beating-persistence state appears within one telemetry interval, in
   `tests/integration/test_skill_against_persistence.py`.
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement the persistence reference: capture at publication
+- [x] T020 [US2] Implement the persistence reference: capture at publication
   boundaries through the coverage read port — not through the query layer — hold
   constant, and expose values for scoring, deriving the reference sound speed by
   calling `harness_core`'s shared implementation rather than any local copy of the
   equation (ADR-0005), in
   `services/telemetry/src/harness_telemetry/persistence_reference.py`.
-- [ ] T021 [US2] Implement the mean-square error pair, the skill score, the state
+- [x] T021 [US2] Implement the mean-square error pair, the skill score, the state
   determination and the plain-language statement that accompanies
   `not-beating-persistence`, in `services/telemetry/src/harness_telemetry/skill.py`.
-- [ ] T022 [US2] Extend publication to emit `forecast-skill` messages carrying both
+- [x] T022 [US2] Extend publication to emit `forecast-skill` messages carrying both
   errors, the sample count, the score, both identifiers and the state, in
   `services/telemetry/src/harness_telemetry/publish.py`.
 
@@ -175,19 +175,19 @@ stale within the configured window.
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Unit test for the freshness state machine: transition to `stale`
+- [x] T023 [P] [US3] Unit test for the freshness state machine: transition to `stale`
   within the window, return to `fresh` on resumption with the stale span recorded, and
   no statistic ever published as `fresh` with a last-update time older than the
   window, in `services/telemetry/tests/test_freshness.py`.
-- [ ] T024 [P] [US3] Test asserting telemetry publishes no component list, no enabled
+- [x] T024 [P] [US3] Test asserting telemetry publishes no component list, no enabled
   flag and no configuration-derived claim about what is running, and that a poor skill
   score is published unmodified, in `services/telemetry/tests/test_no_suppression.py`.
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement the freshness state machine and last-update tracking in
+- [x] T025 [US3] Implement the freshness state machine and last-update tracking in
   simulation time, in `services/telemetry/src/harness_telemetry/freshness.py`.
-- [ ] T026 [US3] Attach freshness state and last-update time to every published
+- [x] T026 [US3] Attach freshness state and last-update time to every published
   statistic and skill message, and implement the restart behaviour — report `warming`,
   publish nothing until the minimum sample count is reached again, reconstruct nothing
   from the store — in `services/telemetry/src/harness_telemetry/publish.py` and
@@ -199,21 +199,21 @@ stale within the configured window.
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T027 [P] Add the telemetry service to the Compose configuration with its config
+- [x] T027 [P] Add the telemetry service to the Compose configuration with its config
   file mount, following the shape feature 005 fixed.
-- [ ] T028 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
+- [x] T028 [P] Run the wall-clock, seeded-RNG, literal-path and forbidden-vocabulary
   lint gates over the package and fix anything they surface, confirming that the only
   surviving `# harness:allow-wallclock` marker is the heartbeat emission citing
   ADR-0006, and that a search of the package for a second sound-speed implementation
   returns nothing (SC-010).
-- [ ] T029 [P] Add C-16 to the component reference in `docs/architecture/`, naming
+- [x] T029 [P] Add C-16 to the component reference in `docs/architecture/`, naming
   silent degradation as the failure mode it owns, and record the skill-score formula,
   the persistence-reference definition and the incremental moment arithmetic in
   `docs/algorithms/`.
-- [ ] T030 Replay test asserting an identical ordered sequence of telemetry messages
+- [x] T030 Replay test asserting an identical ordered sequence of telemetry messages
   with identical payloads across two runs from the same manifest, in
   `services/telemetry/tests/test_replay.py`.
-- [ ] T031 [P] Test that with the clock rate pinned to zero for longer than the
+- [x] T031 [P] Test that with the clock rate pinned to zero for longer than the
   declared liveness window, telemetry's heartbeat continues on its real-time cadence
   carrying an unchanging simulation time, while statistics publication — which is on
   simulation time — correctly stops (SC-011, ADR-0006), in

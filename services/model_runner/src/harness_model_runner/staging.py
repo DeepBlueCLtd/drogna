@@ -30,12 +30,11 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from harness_core.clock import SimInstant
+from harness_core.netcdf import NetcdfVariable, encode_netcdf
 from harness_env_generator.writer import (
     CONVENTIONS,
     STORED_DTYPES,
-    NetcdfVariable,
     digest_of,
-    encode_netcdf,
 )
 
 from harness_model_runner.ensemble import EnsembleOutcome

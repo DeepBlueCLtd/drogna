@@ -12,7 +12,6 @@
  * still lit.
  */
 import type { ClockView } from "../transport/clock";
-import { secondsWords } from "./states";
 
 const WORDS: Readonly<Record<ClockView["display"], string>> = {
   unheard: "No time sample has arrived. The page does not know what time the simulation is at.",
@@ -49,9 +48,14 @@ export function ClockState({ clock }: { readonly clock: ClockView }): JSX.Elemen
         <dt>Simulation time</dt>
         <dd data-testid="clock-sim-time">{sample === null ? "not heard" : sample.simTime}</dd>
         <dt>Last sample</dt>
-        <dd data-testid="clock-sample-age">
-          {clock.sinceSampleSeconds === null ? "never" : secondsWords(clock.sinceSampleSeconds)}
-        </dd>
+        {/*
+          The sample's own run identifier, not a host duration since it arrived. FR-009
+          confines host time to illumination: a figure counting upwards would make the
+          page differ frame to frame, and two captures of the same pinned state would
+          never be identical (SC-009). Whether the sample is recent is already said by
+          the four-state display above, which is where that judgement belongs.
+        */}
+        <dd data-testid="clock-sample-run">{sample === null ? "never" : sample.runId}</dd>
       </dl>
       {clock.discarded === 0 ? null : (
         <p className="detail" data-testid="clock-discard-count">

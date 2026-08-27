@@ -23,19 +23,28 @@ from harness_types.config.features import DrognaFeatureStoreProvisioningConfigur
 from harness_types.config.ingest import DrognaIngestClientConfiguration
 from harness_types.config.model_runner import DrognaModelRunnerConfiguration
 from harness_types.config.monitor import DrognaMonitorConfiguration
+from harness_types.config.offload import DrognaOffloadPackagerConfiguration
+from harness_types.config.planner import DrognaPlannerConfiguration
+from harness_types.config.proxy import DrognaReverseProxyConfiguration
 from harness_types.config.publisher import DrognaPublisherConfiguration
 from harness_types.config.scheduler import DrognaSchedulerConfiguration
 from harness_types.config.sensors import DrognaSimulatedSensorsConfiguration
+from harness_types.config.telemetry import DrognaTelemetryConfiguration
+from harness_types.messages.bundle_manifest import DrognaBundleManifest
 from harness_types.messages.clock import DrognaSimulationTimeSample
 from harness_types.messages.divergence import DrognaDivergenceEvent
 from harness_types.messages.heartbeat import DrognaComponentHeartbeat
 from harness_types.messages.ingest_telemetry import DrognaIngestTelemetry
 from harness_types.messages.manifest import DrognaGroundTruthManifest
 from harness_types.messages.observation import DrognaObservation
+from harness_types.messages.offload_receipt import DrognaOffloadReceipt
+from harness_types.messages.offload_telemetry import DrognaOffloadTelemetry
+from harness_types.messages.plan import DrognaSamplingRecommendation
 from harness_types.messages.run_manifest import DrognaRunManifest
 from harness_types.messages.run_published import DrognaModelRunPublished
 from harness_types.messages.run_request import DrognaModelRunRequest
 from harness_types.messages.run_started import DrognaModelRunStarted
+from harness_types.messages.telemetry import DrognaTelemetry
 from pydantic import BaseModel, ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -56,14 +65,23 @@ MODELS: dict[str, type[BaseModel]] = {
     "run-started.schema.json": DrognaModelRunStarted,
     "run-published.schema.json": DrognaModelRunPublished,
     "config.monitor.schema.json": DrognaMonitorConfiguration,
+    "config.planner.schema.json": DrognaPlannerConfiguration,
+    "plan.schema.json": DrognaSamplingRecommendation,
     "config.scheduler.schema.json": DrognaSchedulerConfiguration,
     "config.model_runner.schema.json": DrognaModelRunnerConfiguration,
     "config.publisher.schema.json": DrognaPublisherConfiguration,
+    "config.proxy.schema.json": DrognaReverseProxyConfiguration,
+    "config.telemetry.schema.json": DrognaTelemetryConfiguration,
+    "telemetry.schema.json": DrognaTelemetry,
     "observation.schema.json": DrognaObservation,
     "ingest-telemetry.schema.json": DrognaIngestTelemetry,
     "config.sensors.schema.json": DrognaSimulatedSensorsConfiguration,
     "config.ingest.schema.json": DrognaIngestClientConfiguration,
     "config.features.schema.json": DrognaFeatureStoreProvisioningConfiguration,
+    "config.offload.schema.json": DrognaOffloadPackagerConfiguration,
+    "bundle-manifest.schema.json": DrognaBundleManifest,
+    "offload-receipt.schema.json": DrognaOffloadReceipt,
+    "offload-telemetry.schema.json": DrognaOffloadTelemetry,
 }
 
 CLOCK_SAMPLE: dict[str, Any] = {

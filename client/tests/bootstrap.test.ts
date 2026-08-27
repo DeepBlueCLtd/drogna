@@ -15,6 +15,9 @@ import type { ControlSink } from "../src/transport/mqtt";
 const VALID = {
   broker: { url: "ws://broker.invalid/ctl", client_id: "client_test" },
   clock: { stale_after_seconds: 10 },
+  // Where the client reads the fields and the conditions along a route. Required, because
+  // a page that cannot reach the query layer cannot draw either.
+  query: { endpoint: "http://query.invalid", collections_path: "/released" },
   liveness: { default_window_seconds: 15 },
   display: { frame_interval_ms: 100 },
 };
@@ -89,6 +92,33 @@ describe("the document served for local development", () => {
     // destination's copy, and it is held to the same contract so that a mistake in it
     // fails here rather than in a browser.
     expect(readRuntimeConfig(JSON.parse(served)).ok).toBe(true);
+  });
+
+  /*
+   * Whether the broker URL in that document points at the proxy rather than at the
+   * client's own server is asserted in `tests/unit/test_client_reaches_the_proxy.py`, not
+   * here. Answering it needs the destination's port map and the proxy's path policy, and
+   * `tests/unit/test_profile_not_liveness.py` forbids anything under `client/` from
+   * reading a deployment artefact at all — a rule worth keeping blunt, since the reason
+   * for it is that a display must never learn what exists from a deployment file.
+   */
+
+  it("names the buffer bounds and the clock control route this client needs", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const served = await readFile(
+      fileURLToPath(new URL("../public/config.json", import.meta.url)),
+      "utf8",
+    );
+    const outcome = readRuntimeConfig(JSON.parse(served));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) {
+      return;
+    }
+    expect(outcome.config.display.bufferDepth).toBeGreaterThan(0);
+    expect(outcome.config.display.coalescingThreshold).toBeGreaterThan(0);
+    expect(outcome.config.display.maximumDrawnCells).toBeGreaterThan(0);
+    expect(outcome.config.clock.controlUrl).toBeDefined();
   });
 });
 

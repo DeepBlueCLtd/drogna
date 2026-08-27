@@ -15,9 +15,12 @@ dependencies = [
     "harness-ingest",
     "harness-model-runner",
     "harness-monitor",
+    "harness-offload",
+    "harness-planner",
     "harness-publisher",
     "harness-scheduler",
     "harness-sensors",
+    "harness-telemetry",
     "harness-types",
 ]
 
@@ -28,9 +31,12 @@ harness-env-generator = { workspace = true }
 harness-ingest = { workspace = true }
 harness-model-runner = { workspace = true }
 harness-monitor = { workspace = true }
+harness-offload = { workspace = true }
+harness-planner = { workspace = true }
 harness-publisher = { workspace = true }
 harness-scheduler = { workspace = true }
 harness-sensors = { workspace = true }
+harness-telemetry = { workspace = true }
 harness-types = { workspace = true }
 
 [dependency-groups]
@@ -61,7 +67,7 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "DTZ"]
 "tests/**" = ["S101"]
 
 [tool.pytest.ini_options]
-testpaths = ["libs", "services", "tests"]
+testpaths = ["libs", "proxy", "services", "tests"]
 # importlib import mode lets two packages each have a tests/test_manifest.py without
 # colliding. Under the default prepend mode pytest inserts each test directory on
 # sys.path and imports by bare module name, so the second test_manifest.py it meets is
@@ -78,10 +84,13 @@ pythonpath = [
     "services/clock/tests",
     "services/env_generator/tests",
     "services/monitor/tests",
+    "services/planner/tests",
     "services/scheduler/tests",
     "services/model_runner/tests",
     "services/publisher/tests",
     "services/sensors/tests",
     "services/ingest/tests",
+    "services/offload/tests",
+    "services/telemetry/tests",
     "tests/support",
 ]

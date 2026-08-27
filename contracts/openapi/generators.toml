@@ -245,6 +245,18 @@ target = "services/ingest/src/harness_ingest/schemas/config.common.schema.json"
 source = "contracts/schemas/config.ingest.schema.json"
 target = "services/ingest/src/harness_ingest/schemas/config.ingest.schema.json"
 
+# C-16 validates its configuration before it subscribes to anything, so it carries its own
+# schema and the common sections that schema references. It carries no copy of the
+# telemetry message master: it validates arriving payloads through the model generated
+# from that master, which is the one definition every producer on the branch holds.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/telemetry/src/harness_telemetry/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.telemetry.schema.json"
+target = "services/telemetry/src/harness_telemetry/schemas/config.telemetry.schema.json"
+
 # C-07's provisioning script validates its configuration the same way a component does,
 # and for the same reason: it writes to a database, and an invalid configuration should
 # stop it before it opens a connection rather than part way through a schema.
@@ -255,3 +267,55 @@ target = "stores/features/schemas/config.common.schema.json"
 [[copy]]
 source = "contracts/schemas/config.features.schema.json"
 target = "stores/features/schemas/config.features.schema.json"
+
+# C-15 validates its configuration before it reads a field or subscribes to anything, so it
+# carries its own schema and the common sections that schema references. It carries no copy
+# of the plan master: it is the sole producer of that shape and it builds every payload
+# through the model generated from the master, so there is nothing here for a second
+# document to disagree with (Constitution III).
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/planner/src/harness_planner/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.planner.schema.json"
+target = "services/planner/src/harness_planner/schemas/config.planner.schema.json"
+
+# C-10 renders the file nginx serves, and it validates its configuration before it renders
+# anything: a boundary rendered from a document nobody checked is a boundary nobody has
+# read. The container it renders in holds nginx and this directory, and no contracts/, so
+# the schema and the common sections it references travel with the renderer.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "proxy/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.proxy.schema.json"
+target = "proxy/schemas/config.proxy.schema.json"
+
+# C-17 validates its configuration before any other I/O like every other component, so it
+# carries its own schema and the common sections that schema references. It also carries
+# three message masters, for a reason the other components do not have: the sidecar manifest
+# is validated before a bundle counts as staged, the telemetry report is validated before it
+# is called a report, and — the one that matters — a receipt is validated against a schema
+# this component holds rather than against anything the sender supplies. A document that can
+# cause a local file to be deleted is checked against our copy of the contract.
+[[copy]]
+source = "contracts/schemas/config.common.schema.json"
+target = "services/offload/src/harness_offload/schemas/config.common.schema.json"
+
+[[copy]]
+source = "contracts/schemas/config.offload.schema.json"
+target = "services/offload/src/harness_offload/schemas/config.offload.schema.json"
+
+[[copy]]
+source = "contracts/schemas/bundle-manifest.schema.json"
+target = "services/offload/src/harness_offload/schemas/bundle-manifest.schema.json"
+
+[[copy]]
+source = "contracts/schemas/offload-receipt.schema.json"
+target = "services/offload/src/harness_offload/schemas/offload-receipt.schema.json"
+
+[[copy]]
+source = "contracts/schemas/offload-telemetry.schema.json"
+target = "services/offload/src/harness_offload/schemas/offload-telemetry.schema.json"

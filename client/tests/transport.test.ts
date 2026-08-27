@@ -10,21 +10,18 @@
 import { describe, expect, it } from "vitest";
 
 import type { RuntimeConfig } from "../src/config/runtime";
+
+import { runtimeConfig } from "./runtimeConfig";
 import type { ConnectionState } from "../src/liveness/types";
-import { CLOCK_TOPIC, HEARTBEAT_TOPIC, openControlSubscription } from "../src/transport/mqtt";
+import {
+  CLOCK_TOPIC,
+  CONTROL_TOPICS,
+  HEARTBEAT_TOPIC,
+  openControlSubscription,
+} from "../src/transport/mqtt";
 import type { BrokerClient, ConnectionOptions } from "../src/transport/mqtt";
 
-const config: RuntimeConfig = {
-  broker: {
-    url: "ws://broker.invalid/ctl",
-    clientId: "client_test",
-    keepaliveSeconds: 30,
-    reconnectPeriodSeconds: 5,
-  },
-  clock: { staleAfterSeconds: 10, snapshotUrl: undefined },
-  liveness: { defaultWindowSeconds: 15, windowMultiplier: 3, disconnectedIsIndeterminate: true },
-  display: { frameIntervalMs: 100 },
-};
+const config: RuntimeConfig = runtimeConfig();
 
 class Recorder implements BrokerClient {
   readonly handlers = new Map<string, (...args: unknown[]) => void>();
@@ -75,10 +72,12 @@ async function open() {
 }
 
 describe("the control subscription", () => {
-  it("subscribes to the two control topics and to nothing else", async () => {
+  it("subscribes to the control namespace and to nothing else", async () => {
     const { client } = await open();
     client.fire("connect");
-    expect(client.subscribed).toEqual([[HEARTBEAT_TOPIC, CLOCK_TOPIC]]);
+    expect(client.subscribed).toEqual([[...CONTROL_TOPICS]]);
+    expect(client.subscribed[0]).toContain(HEARTBEAT_TOPIC);
+    expect(client.subscribed[0]).toContain(CLOCK_TOPIC);
   });
 
   it("uses the identity from the configuration document, with no session carried over", async () => {

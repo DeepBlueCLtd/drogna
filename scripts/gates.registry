@@ -20,3 +20,16 @@ Constitution V — no tracked-entity vocabulary|uv run python scripts/check_forb
 Constitution III — schema conventions|uv run python scripts/check_schema_conventions.py
 Constitution III — no hand-written boundary types|uv run python scripts/check_handwritten_types.py
 Constitution III — generated types are current|./scripts/check_types_drift.sh
+
+# The leakage gate is not a source scan and is registered last for that reason: it runs over
+# an artefact rather than over the tree, and it can be pointed at any candidate release
+# bundle with --bundle and --pair. With no arguments it runs the corpus committed under
+# tests/leakage/fixtures/, controls included, so a run that reports nothing has been shown
+# to be capable of reporting something.
+Constitution X — no leakage in a released artefact|uv run python scripts/check_leakage.py
+
+# FR-043 asks for a CF-conforming export and FR-007 asks for the check to be a build gate
+# rather than something someone remembers to run. It packages a fixture run through the
+# packager's own code path, so what is checked is what the writer produces today rather than
+# a file that was conforming on the day it was committed.
+SRD FR-43 — exports conform to the CF version they declare|uv run python scripts/check_cf_conformance.py

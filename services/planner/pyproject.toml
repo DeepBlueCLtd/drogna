@@ -1,0 +1,40 @@
+[project]
+name = "harness-planner"
+version = "0.1.0"
+description = "C-15: the adaptive sampling planner, which owns the failure mode of crossing into tactical advice"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    "harness-types",
+    # Horizontal indexing (SRD FR-35). H3 is the index the requirement names, and the
+    # binding is the reference implementation's own; there is no second horizontal
+    # indexing scheme in prospect, so it is a dependency rather than a port
+    # (Constitution VI).
+    "h3>=4.0",
+    # C-02's package, for `Evaluator.timescale_at` and nothing else. ADR-0002 makes the
+    # decorrelation timescale a field that the generator authors and evaluates, and its
+    # last consequence forbids the authored per-feature representation reaching a
+    # consumer. Evaluating it here from the manifest's per-feature entries would be
+    # exactly that leak, so the planner calls the one evaluation there is.
+    "harness-env-generator",
+    # C-11's package, for the coverage read port and nothing else. The read side of the
+    # coverage output port has one implementation in this repository and it lives there;
+    # a second NetCDF reader here would be a second implementation of a read that already
+    # exists. The port's honest home is libs/harness_core or stores/coverage, and moving
+    # it is the owning feature's call rather than this one's. Feature 010 recorded the
+    # same borrowing from its side.
+    "harness-monitor",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+harness-env-generator = { workspace = true }
+harness-monitor = { workspace = true }
+harness-types = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_planner"]

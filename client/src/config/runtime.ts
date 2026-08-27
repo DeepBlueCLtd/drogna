@@ -25,6 +25,20 @@ export interface RuntimeConfig {
   readonly clock: {
     readonly staleAfterSeconds: number;
     readonly snapshotUrl: string | undefined;
+    /**
+     * Where a rate change is asked for, or undefined where the destination serves a page
+     * that may watch the clock and not set it. Undefined is a state the speed control
+     * renders and explains rather than a state it hides (FR-012).
+     */
+    readonly controlUrl: string | undefined;
+  };
+  readonly query: {
+    /** Where a collection is addressed, assembled from the served document alone. */
+    readonly collectionsUrl: string;
+    /** The path under a collection at which a trajectory query is served, or undefined. */
+    readonly trajectoryPath: string | undefined;
+    /** Which forecast parameters to ask for along a route. */
+    readonly routeParameters: readonly string[];
   };
   readonly liveness: {
     readonly defaultWindowSeconds: number;
@@ -33,6 +47,14 @@ export interface RuntimeConfig {
   };
   readonly display: {
     readonly frameIntervalMs: number;
+    /** How many messages each control topic keeps before evicting the oldest (FR-006). */
+    readonly bufferDepth: number | undefined;
+    /** How many arrivals in one frame before transits are coalesced (FR-008). */
+    readonly coalescingThreshold: number | undefined;
+    /** The largest uncertainty field drawn before it is downsampled (FR-024). */
+    readonly maximumDrawnCells: number | undefined;
+    /** Whether the render path may smooth between two clock samples (ADR-0007). */
+    readonly interpolateBetweenSamples: boolean;
   };
 }
 
@@ -82,6 +104,12 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
   const routes = clock["routes"] as Record<string, unknown> | undefined;
   const endpoint = optionalString(clock, "endpoint");
   const snapshot = routes === undefined ? undefined : optionalString(routes, "snapshot");
+  const control = routes === undefined ? undefined : optionalString(routes, "control");
+  const join = (route: string | undefined): string | undefined =>
+    endpoint !== undefined && route !== undefined ? `${endpoint}${route}` : undefined;
+  const interpolate = display["interpolate_between_samples"];
+  const query = section(document, "query");
+  const parameters = query["route_parameters"];
 
   return {
     broker: {
@@ -92,8 +120,13 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
     },
     clock: {
       staleAfterSeconds: clock["stale_after_seconds"] as number,
-      snapshotUrl:
-        endpoint !== undefined && snapshot !== undefined ? `${endpoint}${snapshot}` : undefined,
+      snapshotUrl: join(snapshot),
+      controlUrl: join(control),
+    },
+    query: {
+      collectionsUrl: `${query["endpoint"] as string}${query["collections_path"] as string}`,
+      trajectoryPath: optionalString(query, "trajectory_path"),
+      routeParameters: Array.isArray(parameters) ? (parameters as string[]) : [],
     },
     liveness: {
       defaultWindowSeconds: liveness["default_window_seconds"] as number,
@@ -105,6 +138,12 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
     },
     display: {
       frameIntervalMs: display["frame_interval_ms"] as number,
+      bufferDepth: optionalNumber(display, "buffer_depth"),
+      coalescingThreshold: optionalNumber(display, "coalescing_threshold"),
+      maximumDrawnCells: optionalNumber(display, "maximum_drawn_cells"),
+      // Smoothing is on unless the document turns it off. ADR-0007 keeps the
+      // render-on-clock-samples path selectable; it costs smoothness and nothing else.
+      interpolateBetweenSamples: typeof interpolate === "boolean" ? interpolate : true,
     },
   };
 }

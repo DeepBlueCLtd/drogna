@@ -1,0 +1,67 @@
+# Material that identifies where measurements were taken, who took them, or on what.
+#
+# These are the second half of FR-012 and they run over every value the scan reaches,
+# including values whose key the allow-list permits. The allow-list decides whether an
+# attribute may be present at all; these decide whether what it says is safe. Both are
+# needed: `comment` is a legitimate attribute and `comment` naming a datastream is a leak.
+#
+# Every pattern is deliberately broad. A false positive here costs somebody a minute
+# arguing with a rule file that is a diff away from being corrected. A false negative costs
+# the thing the boundary exists to prevent.
+
+patterns:
+  - name: filesystem-path
+    reason: a path names a machine's layout, and often a user and a run identifier with it
+    pattern: "(?:^|[\\s\"'=(,])(?:/[A-Za-z0-9._-]+){2,}"
+
+  - name: home-directory
+    reason: a home directory names the person who ran it
+    pattern: "(?:/home/|/Users/|/root/|~/)[A-Za-z0-9._-]+"
+
+  - name: hostname-or-url
+    reason: a host names where the harness runs, which is not part of the field
+    pattern: "(?:[a-z][a-z0-9+.-]*://\\S+)|(?:\\b[a-z0-9-]+(?:\\.[a-z0-9-]+){1,}\\.(?:invalid|local|internal|net|com|org|io)\\b)"
+
+  - name: command-line
+    reason: a command line names the program, its flags and usually its inputs
+    pattern: "(?:^|\\s)(?:python|sh|bash|/usr/bin/\\S+)\\b|(?:^|\\s)--[a-z][a-z0-9-]+"
+
+  - name: user-name
+    reason: who produced it is not part of what it says
+    pattern: "\\b(?:user|username|owner|operator|created_by|author)\\s*[=:]\\s*\\S+"
+
+  - name: sensor-or-datastream-identifier
+    reason: a sensor, thing or datastream identifier is the observation branch, which is withheld
+    pattern: "\\b(?:sensor|thing|datastream|observed_?property|ds)[-_ ]?(?:id)?[-_ :=]?\\s*[A-Za-z0-9]{2,}[A-Za-z0-9_-]*"
+
+  - name: route-waypoint
+    reason: a planned route is a recommendation about where to sample, and is withheld
+    pattern: "\\bwaypoint|\\bLINESTRING\\s*\\(|\\bPOINT\\s*\\(|\\bMULTIPOINT\\s*\\("
+
+  - name: run-identifier
+    reason: a run identifier joins a released artefact to the manifest that describes the sampling
+    pattern: "\\brun[-_ ]?(?:id)?[-_ :=]?\\s*[0-9]{2,}"
+
+  - name: seed
+    reason: a seed reproduces the run, and the run contains the geometry
+    pattern: "\\b(?:seed|root_seed)\\s*[=:]\\s*[0-9]+"
+
+# Anything parseable as a pair of decimal degrees is checked against the measurement
+# geometry, and is a hit when it falls within the identification radius of a measurement.
+# The pattern only finds candidates; the distance decides, so a bounding box on the far side
+# of the domain is not flagged and a "nearest station" beside a measurement is.
+coordinate_pair: "(-?[0-9]{1,3}\\.[0-9]{2,})\\s*[,; ]\\s*(-?[0-9]{1,3}\\.[0-9]{2,})"
+
+# Members of a bundle the scan understands. Anything else is a hit rather than a skip: a
+# scanner that skipped what it could not read would report zero hits on a bundle it had not
+# examined, which is the most dangerous result a leakage gate can produce (FR-011).
+recognised_members:
+  coverage: [".nc"]
+  text: [".txt", ".md", ".json", ".csv", ".yaml", ".yml"]
+
+# A run manifest inside a bundle is a hit whatever it contains. It holds the root seed, the
+# clock configuration and the digest of every participant's configuration, and it is exactly
+# the document the release is withholding.
+manifest_members:
+  - "run-manifest.json"
+  - "manifest.json"

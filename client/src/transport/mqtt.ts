@@ -7,19 +7,24 @@
  * this module publishes nothing: there is no call to `publish` anywhere in it, which is
  * the only form of that promise a reader can check.
  *
- * Two topics are subscribed: `ctl/heartbeat`, which is the only thing that lights a
- * component, and `ctl/clock`, which carries simulation time. Observation traffic is not
- * proxied to the browser at all; the client reads observations through the query layer.
+ * The control namespace is subscribed whole, from the list in `data/topics.ts`:
+ * `ctl/heartbeat`, which is the only thing that lights a component; `ctl/clock`, which
+ * carries simulation time; and the run, plan and telemetry topics the loop display draws.
+ * Observation traffic is not proxied to the browser at all; the client reads observations
+ * through the query layer.
  *
  * The topic names are conventions of the harness rather than deployment locations, which
  * is why they are here and not in the configuration document. Where the broker *is*
  * comes from the document.
  */
 import type { RuntimeConfig } from "../config/runtime";
+import { CONTROL_TOPICS } from "../data/topics";
 import type { ConnectionState } from "../liveness/types";
 
-export const HEARTBEAT_TOPIC = "ctl/heartbeat";
-export const CLOCK_TOPIC = "ctl/clock";
+// The topic list moved to `data/topics.ts` when feature 012 extended the subscription
+// beyond the first two; the names are re-exported here so that a reader who comes to the
+// transport looking for what it listens to still finds it.
+export { CLOCK_TOPIC, CONTROL_TOPICS, HEARTBEAT_TOPIC } from "../data/topics";
 
 /** What this module needs of a broker client, and nothing that could publish. */
 export interface BrokerClient {
@@ -91,7 +96,7 @@ export function openControlSubscription(
   const wire = (connected: BrokerClient): void => {
     connected.on("connect", () => {
       heard = false;
-      connected.subscribe([HEARTBEAT_TOPIC, CLOCK_TOPIC]);
+      connected.subscribe([...CONTROL_TOPICS]);
       sink.connection("connected-silent");
     });
     connected.on("message", (...args: unknown[]) => {

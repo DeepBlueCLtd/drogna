@@ -12,7 +12,7 @@
  * work can address it without depending on where it happens to sit (FR-022).
  */
 import type { ComponentView } from "../liveness/view";
-import { ILLUMINATION, secondsWords, statusWords } from "../ui/states";
+import { ILLUMINATION, statusWords } from "../ui/states";
 
 import { COMPONENTS_BY_ID, EDGES, KIND_LEGEND } from "./components";
 import type { ComponentNode } from "./components";
@@ -24,13 +24,21 @@ export const LAYOUT_CAPTION =
   "has arrived inside the window that heartbeat declares. Every other box is dark " +
   "because nothing has been heard from it, which on the first day is most of them.";
 
+/**
+ * The two lines under a box: what the component reported, and when it said so.
+ *
+ * "When" is the simulation time the heartbeat carried, not a host duration since it
+ * arrived. FR-009 is explicit that host time may drive illumination and nothing else,
+ * and an age ticking upwards is the obvious way to break that without noticing: it makes
+ * the rendered output differ frame to frame, so two captures of the same pinned state
+ * would never be identical (SC-009). The elapsed figure remains in the view model, where
+ * liveness reasons about it; it is simply not drawn.
+ */
 function nodeLines(view: ComponentView): readonly string[] {
   const lines: string[] = [];
   if (view.reported !== null) {
     lines.push(statusWords(view.reported.status));
-  }
-  if (view.sinceHeardSeconds !== null) {
-    lines.push(secondsWords(view.sinceHeardSeconds));
+    lines.push(`at ${view.reported.simTime}`);
   }
   return lines;
 }

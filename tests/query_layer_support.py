@@ -34,7 +34,7 @@ QUERY_ROOT = REPO_ROOT / "query"
 if str(QUERY_ROOT) not in sys.path:
     sys.path.insert(0, str(QUERY_ROOT))
 
-from harness_env_generator.writer import NetcdfVariable, encode_netcdf  # noqa: E402
+from harness_core.netcdf import NetcdfVariable, encode_netcdf  # noqa: E402
 from plugins.coverage_catalogue import StoreLayout, derive_run_id  # noqa: E402
 from plugins.edr_coverage import CoverageSettings  # noqa: E402
 

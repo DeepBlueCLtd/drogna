@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/bundle-manifest.schema.json",
+  "title": "drogna bundle manifest",
+  "description": "The sidecar written beside every offload bundle: what the bundle contains and what its bytes hash to. It is written with the bundle and never regenerated from a bundle that has been transferred, because a manifest recomputed after the fact would agree with whatever the file had become. Nothing here names a machine, a directory, a command or an instrument: the run is carried as an opaque reference derived from the run manifest digest, which ties the bundle to a run inside the boundary and says nothing outside it (FR-42).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "run_reference",
+    "run_manifest_digest",
+    "format_version",
+    "window",
+    "members",
+    "variables",
+    "profile_count",
+    "level_count"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bumped when the shape changes in a way a reader must notice."
+    },
+    "bundle_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "Deterministic identifier derived from the run identity and the bundle's logical position — the window index — and from the format version, never from entropy or a host clock. Two packaging runs over one run manifest produce the same identifier for the same window."
+    },
+    "run_reference": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "description": "An opaque derivation of the run manifest digest. Sufficient to tie a bundle to a run inside the boundary; useless to a reader who does not hold the manifest."
+    },
+    "run_manifest_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The digest of the run manifest the bundle was packaged from, so anything computed from the bundle can still be scored against the ground truth that produced it. Held here, in the sidecar, and not written into the exported file."
+    },
+    "format_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The export format this bundle was written by. Byte-identity is claimed for a fixed code and format version, so the claim names the version it is about."
+    },
+    "window": {
+      "title": "The simulation time window",
+      "description": "Which slice of the run this bundle covers. Boundaries are counted from the run's simulation epoch, so the index is a property of the manifest.",
+      "type": "object",
+      "required": ["index", "start_sim_time", "end_sim_time"],
+      "additionalProperties": false,
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "start_sim_time": {
+          "type": "string",
+          "description": "Simulation instant the window opens at, inclusive, ISO-8601 UTC with microsecond precision."
+        },
+        "end_sim_time": {
+          "type": "string",
+          "description": "Simulation instant the window closes at, exclusive, ISO-8601 UTC with microsecond precision."
+        }
+      }
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every file in the bundle, with its digest and its byte length. A member list of one is the ordinary case; the shape admits more so that a bundle gaining a second file does not become a different kind of thing.",
+      "items": {
+        "title": "Bundle member",
+        "type": "object",
+        "required": ["name", "digest", "byte_length"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The member's name within the bundle. A name, not a location: no directory reaches this document."
+          },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "byte_length": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "The variables the export carries, so a reader can tell what is inside without opening it."
+    },
+    "profile_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "How many profiles the bundle holds. A window with none produces no bundle at all rather than an empty one."
+    },
+    "level_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total depth levels across every profile: the length of the ragged sample dimension."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": 1,
+      "bundle_id": "b-3f2a1c0d9e8b7a65",
+      "run_reference": "9c1d4e6f8a0b2c3d4e5f60718293a4b5",
+      "run_manifest_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "format_version": "drogna-trajectory-profile-1",
+      "window": {
+        "index": 0,
+        "start_sim_time": "2026-09-01T00:00:00.000000Z",
+        "end_sim_time": "2026-09-01T01:00:00.000000Z"
+      },
+      "members": [
+        {
+          "name": "b-3f2a1c0d9e8b7a65.nc",
+          "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "byte_length": 4096
+        }
+      ],
+      "variables": ["sea_water_temperature", "sea_water_practical_salinity", "sea_water_pressure"],
+      "profile_count": 3,
+      "level_count": 11
+    }
+  ]
+}

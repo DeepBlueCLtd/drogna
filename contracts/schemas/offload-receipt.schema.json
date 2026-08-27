@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/offload-receipt.schema.json",
+  "title": "drogna offload receipt",
+  "description": "The destination's statement of what it received: which destination it is, which bundle it holds, the digest it computed over the bytes that arrived, how many bytes those were, and the simulation instant of receipt. It is the only thing that can make a bundle eligible for eviction, and it is worth having only because the destination computes the digest itself — a receipt that echoed back the digest it was sent would prove that a request was sent and nothing else. Every field here is required: a receipt missing any of them does not verify, so eviction cannot follow from a partial answer.",
+  "type": "object",
+  "required": ["destination_id", "bundle_id", "digest", "byte_count", "sim_time"],
+  "additionalProperties": false,
+  "properties": {
+    "destination_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Which destination is speaking. A receipt from a destination this component was not configured to send to is refused rather than believed."
+    },
+    "bundle_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "Which bundle the destination is acknowledging. A receipt naming a bundle that was never sent is refused: an acknowledgement is not permission."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The digest the destination computed over the bytes it received. Compared against a digest recomputed locally from the file on disk at verification time, never against the digest the transfer request declared."
+    },
+    "byte_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "How many bytes the destination received. Checked as well as the digest: a destination acknowledging a different length has not received what was sent, whatever it says it hashed."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation instant of receipt, ISO-8601 UTC with microsecond precision. It may be earlier than the instant of the transfer under accelerated replay, which is a property of the clock and not a fault."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the destination had observed when it composed the receipt. Optional: the destination is a stub within the deployment and may hold no clock port of its own."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bumped when the shape changes in a way a reader must notice."
+    }
+  },
+  "examples": [
+    {
+      "destination_id": "archive",
+      "bundle_id": "b-3f2a1c0d9e8b7a65",
+      "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "byte_count": 4096,
+      "sim_time": "2026-09-01T01:00:05.000000Z",
+      "tick": 3605,
+      "schema_version": 1
+    }
+  ]
+}

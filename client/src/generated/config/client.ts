@@ -26,7 +26,7 @@ export interface DrognaBrowserClientRuntimeConfiguration {
     reconnect_period_seconds?: number;
   };
   /**
-   * Simulation time arrives by subscription to ctl/clock (ADR-0009). The HTTP interface is optional here and is used for one thing only: asking what the time is at startup, so the page is not blank until the next sample. The client offers no control over the clock; the rate is pinned for capture against the clock's own control surface, not from here.
+   * Simulation time arrives by subscription to ctl/clock (ADR-0009). The HTTP interface is used for two things: asking what the time is at startup, so the page is not blank until the next sample, and asking the clock for a rate. The rate control is the browser's by SRD FR-10 and FR-49, and a rate of zero pins the clock for a capture (FR-53). It is a request and never an assertion: the rate the page displays is the one the clock reports in force on ctl/clock, never the one that was asked for. Where the control route is absent the page still renders the control and says why it cannot act, rather than appearing to act and doing nothing.
    */
   clock: {
     /**
@@ -38,12 +38,37 @@ export interface DrognaBrowserClientRuntimeConfiguration {
      */
     endpoint?: string;
     /**
-     * Routes relative to the endpoint. Only the read route appears here: the client is not a controller.
+     * Routes relative to the endpoint. The read route is required; the control route is optional, because a destination may serve a page that can watch the clock without being able to set it.
      */
     routes?: {
       /** What the time is now, for a page that has just loaded. */
       snapshot: string;
+      /**
+       * Where a rate change is asked for, by POST. The clock decides; a request may be clamped or refused, and the display shows the rate the clock reports in force rather than the rate that was asked for (SRD FR-10, FR-49, FR-53).
+       */
+      control?: string;
     };
+  };
+  /**
+   * Where the client reads the forecast, the uncertainty field and the conditions along a recommended route, through the reverse proxy under one path policy (ADR-0008, Constitution X). Freshness is never discovered here: a new run is announced on ctl/run-published and the client reads only when it has been told there is something new (SRD FR-31). The collection identifiers are not configured — they arrive in the announcement, so publishing a run adds collections without any document being edited.
+   */
+  query: {
+    /**
+     * Base URL of the query layer as the browser reaches it: the proxy's released prefix, never the query layer's own port.
+     */
+    endpoint: string;
+    /**
+     * Path under the endpoint at which collections are addressed. A collection identifier from a run announcement is appended to it.
+     */
+    collections_path: string;
+    /**
+     * Path under a collection at which an OGC API-EDR trajectory query is served. Per-vertex arrival times travel as the M ordinate of a WKT LINESTRING ZM in the coords parameter (SRD FR-20). Absent where the destination does not serve trajectory queries, in which case the route renders without conditions along it rather than with conditions for the wrong moment.
+     */
+    trajectory_path?: string;
+    /**
+     * Which forecast parameters to ask for along a route. Named here rather than in source because what a destination serves is a property of the destination.
+     */
+    route_parameters?: string[];
   };
   /**
    * How long a received heartbeat is taken as evidence, when its sender did not declare that itself. Real time by ADR-0006: a rate of zero stops simulated time and stops nothing else, so a pinned clock keeps its lit components lit for the duration of a capture.
@@ -70,5 +95,21 @@ export interface DrognaBrowserClientRuntimeConfiguration {
      * Minimum host milliseconds between re-renders. The frame budget, not a sampling interval for liveness.
      */
     frame_interval_ms: number;
+    /**
+     * How many messages each control topic keeps, oldest evicted first, so an hour of demonstration has a stable memory footprint. It bounds how far back a viewer can read and can neither light a component nor draw a transit.
+     */
+    buffer_depth?: number;
+    /**
+     * How many arrivals in one frame before transits on the same boundary are drawn as one mark carrying the count. A display bound: it changes how many marks are drawn and never how many messages are counted.
+     */
+    coalescing_threshold?: number;
+    /**
+     * The largest number of uncertainty cells drawn before the field is downsampled. The resolution actually shown is stated on the display, never reduced silently.
+     */
+    maximum_drawn_cells?: number;
+    /**
+     * Whether the render path may smooth the display between two received clock samples using the browser's animation frame timestamp, under the three rules of ADR-0007. False renders on clock samples alone, which costs smoothness and nothing else.
+     */
+    interpolate_between_samples?: boolean;
   };
 }

@@ -224,10 +224,10 @@ a page needs at least `core`, `query`, `edge` and `shell`, and lighting the comp
 `config/droplet/deployment.json`, not code.
 
 **What this costs**: a backend change is no longer seen running before it merges. Three
-things make that tolerable and should be built rather than assumed — `scripts/run_local.sh`
-is the exercised path and is what a reviewer or a session uses to see a change running; the
-deploy reports its own failure; and rollback is checking out the previous commit and running
-the same command, which deterministic seeding makes safe. Rehearse that once on purpose.
+things make that tolerable and should be built rather than assumed — pre-merge verification
+in both halves, which has its own section below; the deploy reports its own failure; and
+rollback is checking out the previous commit and running the same command, which
+deterministic seeding makes safe. Rehearse that once on purpose.
 
 ---
 
@@ -238,6 +238,65 @@ running stack. The missing case is rebuilding **one** service: `common.sh` alrea
 `compose()` bound to the rendered environment and `up.sh` already preflights only services
 that are not running, so a thin `scripts/reload.sh <service> [destination]` running
 `compose up --detach --build <service>` is the whole of it, leaving the seeding record alone.
+
+---
+
+## Pre-merge verification: both halves, and the CI half already exists
+
+`main` is the first place a backend change runs, so what stands in for watching it run
+before merging had to be decided rather than arrived at. The answer is both: a developer
+brings it up locally, and CI brings it up and tests it.
+
+**The CI half is already there, and I had implied it was not.**
+`tests/integration/test_compose_bringup.py` runs on every pull request — `ci.yml` runs a
+bare `uv run pytest` with nothing deselected — against the runner's real container runtime,
+and it is a good test. It asserts that a bring-up from nothing reaches health, that a second
+bring-up converges rather than failing, that the active profile starts exactly its services
+and no others, that the advertised address comes from configuration, and that an occupied
+port fails before anything starts. It skips loudly where no runtime is reachable, which is
+why it does nothing in an agent container and everything on the runner.
+
+**What is thin is its subject, not the test.** `profiles.active` is `["core"]` at *both*
+destinations, so what it brings up is the observation store: one container. Every assertion
+above is true of one container.
+
+So the work is in this order:
+
+1. **Widen `profiles.active` as components land.** This is the whole of making the existing
+   check mean something, and it is values rather than code. A test that brings up one
+   container on every pull request is not a weak test — it is a strong test of a small
+   thing, and the way to strengthen it is to give it more to look at.
+2. **Exercise the droplet's own values in CI**, so a configuration-only fault — a bad port
+   map, a missing configuration file, a directory nobody mounted — is caught before it
+   reaches the box rather than on it.
+3. **Write the developer step down where a reviewer sees it.** There is no
+   `.github/pull_request_template.md` in this repository today; a backend pull request
+   saying which profiles were brought up locally and what was observed is the cheapest
+   possible evidence that the local half happened, and its absence is the cheapest possible
+   signal that it did not.
+
+### The obstacle in (2), which is not a copy-paste
+
+Running the existing bring-up against `config/droplet` is **not** a matter of passing a
+different destination name. That destination binds the proxy to `0.0.0.0:443` and sets
+`tls.terminate: true` against certificate material that nothing in the repository creates —
+so a straight run on a runner asks for a privileged port and a certificate that is not
+there.
+
+Two honest ways out, and the choice is a real one:
+
+- **A third destination** whose *shape* is the droplet's — same files, same keys, which
+  parity already enforces — with values a runner can satisfy: loopback binds, no TLS
+  termination. It exercises everything about the droplet except the two values that differ,
+  and those two are exactly the ones that cannot be exercised anywhere but the droplet.
+- **Accept that the droplet's values are only ever exercised on the droplet**, and lean on
+  `validate_config.py` and the parity check, which already run at every bring-up and would
+  catch a malformed or divergent destination without starting anything.
+
+The first is more coverage and one more directory to keep in step; the second is honest
+about what a runner can and cannot stand in for. This is worth deciding when the work is
+specified rather than now, and it is recorded here so that it is decided rather than
+defaulted into.
 
 ---
 
@@ -300,6 +359,7 @@ Findings from both that are facts about the repository rather than about those d
    `shell` in particular already means something else here, the static shell of C-18.
 2. ~~Keep the credential, or drop it?~~ **Decided: kept in the design, off at the droplet**,
    delegated the same day. See above; the reasoning is the WebSocket upgrade, not security.
-3. **Is `scripts/run_local.sh` the whole of pre-merge backend verification?** It is what
-   replaces watching a change run before merging it, so it deserves deciding rather than
-   arriving at.
+3. ~~Is `scripts/run_local.sh` the whole of pre-merge backend verification?~~ **Decided:
+   no — both halves**, 27 August 2026. The developer brings it up locally before asking for
+   review, *and* CI brings it up and tests it. See below; the second half already exists and
+   is thinner than it looks.

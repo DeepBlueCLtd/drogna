@@ -207,3 +207,114 @@ def test_a_shape_referenced_by_the_openapi_document_has_one_definition() -> None
         for text in (path.read_text(encoding="utf-8") for path in client.rglob("*.ts"))
     )
     assert interfaces == 1, "the clock sample is declared more than once in TypeScript"
+
+
+# --- the run manifest's measurement geometry (FR-015, FR-42) ---------------------------------
+#
+# `measurement_geometry` is optional in the master, and a model has to preserve both halves of
+# that. C-01 writes the run's own manifest and holds no observations, so a manifest without
+# the block is a complete manifest and a model that made it required would refuse every one of
+# them. The offload packager writes the copy that travels beside a bundle and does know the
+# geometry, so a model that dropped the block's constraints would let a geometry with no
+# measurements through — and a geometry with no measurements makes every leakage comparison
+# inconclusive, which is the failure `tests/leakage/` is arranged against.
+
+RUN_MANIFEST: dict[str, Any] = {
+    "schema_version": 1,
+    "run_id": "run-0007",
+    "root_seed": 20260826,
+    "seed_derivation": {"rule": "harness-rng", "version": 1},
+    "clock": {
+        "epoch": "2026-01-01T00:00:00.000000Z",
+        "tick_interval_us": 1000000,
+        "mode": "lockstep",
+        "rate": 1.0,
+    },
+    "code_version": {"revision": "0000000", "dirty": False},
+    "participants": [],
+    "exit_state": {"state": "completed"},
+    "non_reproducible": [],
+}
+
+MEASUREMENT_GEOMETRY: dict[str, Any] = {
+    "identification_radius_m": 2000.0,
+    "interval_seconds": 3600,
+    "measurements": [
+        {"longitude": -7.95, "latitude": 55.05, "simulation_seconds": 0},
+        {"longitude": -7.6, "latitude": 55.22, "simulation_seconds": 3300},
+    ],
+}
+
+
+def with_geometry(**changes: Any) -> dict[str, Any]:
+    """The manifest the offload packager writes, with one thing about its geometry changed."""
+    return {**RUN_MANIFEST, "measurement_geometry": {**MEASUREMENT_GEOMETRY, **changes}}
+
+
+def test_a_run_manifest_without_a_measurement_geometry_parses() -> None:
+    """What C-01 writes. The block is absent, not empty, and the manifest is complete."""
+    model = DrognaRunManifest.model_validate(RUN_MANIFEST)
+
+    assert model.measurement_geometry is None
+
+
+def test_a_run_manifest_with_a_measurement_geometry_parses() -> None:
+    """What the offload packager writes beside a bundle."""
+    model = DrognaRunManifest.model_validate(with_geometry())
+
+    assert model.measurement_geometry is not None
+    assert len(model.measurement_geometry.measurements) == 2
+    assert model.measurement_geometry.measurements[0].simulation_seconds == 0
+
+
+def test_a_measurement_geometry_with_no_measurements_is_refused() -> None:
+    """`minItems: 1` in the master. An empty geometry is not a geometry."""
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(with_geometry(measurements=[]))
+
+
+def test_a_measurement_missing_a_coordinate_is_refused() -> None:
+    incomplete = [{"longitude": -7.95, "simulation_seconds": 0}]
+
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(with_geometry(measurements=incomplete))
+
+
+def test_a_measurement_with_a_misspelt_key_is_refused() -> None:
+    """The closed shape catches the typo. Left open it would score against a coordinate short
+    of a geometry and report a clean release."""
+    misspelt = [{"longitude": -7.95, "lattitude": 55.05, "simulation_seconds": 0}]
+
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(with_geometry(measurements=misspelt))
+
+
+def test_a_longitude_outside_the_signed_range_is_refused() -> None:
+    """A longitude written 0-360 is a geometry a third of a turn from the products."""
+    elsewhere = [{"longitude": 352.05, "latitude": 55.05, "simulation_seconds": 0}]
+
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(with_geometry(measurements=elsewhere))
+
+
+def test_an_identification_radius_of_zero_is_refused() -> None:
+    """A radius of nothing buffers to nothing, and a mask recovers nothing from it."""
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(with_geometry(identification_radius_m=0))
+
+
+def test_the_model_and_the_schema_agree_about_the_measurement_geometry() -> None:
+    """The same three payloads through the component validator and through the model."""
+    from harness_core.config import ConfigInvalidError, validate_document
+
+    schema = json.loads((SCHEMAS / "run-manifest.schema.json").read_text(encoding="utf-8"))
+
+    for accepted in (RUN_MANIFEST, with_geometry()):
+        validate_document(accepted, schema, source="run-manifest")
+        DrognaRunManifest.model_validate(accepted)
+
+    refused = with_geometry(measurements=[])
+    with pytest.raises(ConfigInvalidError):
+        validate_document(refused, schema, source="run-manifest")
+    with pytest.raises(ValidationError):
+        DrognaRunManifest.model_validate(refused)

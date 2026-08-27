@@ -274,3 +274,37 @@ package being its third consumer. The reader of the same format did not move and
 `docs/standards/cf-conventions.md` in plan.md is spelt `site/docs/standards/cf-conventions.md`
 in the tree, which already held a stub of that page awaiting this component. The stub was
 replaced rather than a second primer created.
+
+---
+
+## Added after delivery: the measurement geometry producer
+
+- [ ] T047 [US4] Write the run's measurement geometry into the bundle's copy of the run
+  manifest, in `services/offload/src/harness_offload/`, as the optional
+  `measurement_geometry` block declared in `contracts/schemas/run-manifest.schema.json`:
+  the identification radius the run was released under, the interval in simulation seconds,
+  and every position and simulation time a measurement was taken at during it. Validate the
+  document through `harness_types.messages.run_manifest.DrognaRunManifest` before writing
+  it, like every other document this component writes.
+
+**Why this is here and not done.** The geometry is the ground truth the updated-region half
+of the leakage gate scores a change mask against (FR-015, FR-42). It had no declared shape
+and no producer: `tests/leakage/fixtures/` carried a standalone `geometry.json` that nothing
+in the harness wrote. The contract half is now closed — the manifest master carries the
+block, the generated model is committed, and `tests/leakage/updated_region.py:load_geometry`
+validates against it and refuses loudly rather than defaulting. The producer half is not.
+
+**Whose decision this was.** The user chose this component as the producer, over C-01 and
+the publisher, on 2026-08-27. The reasoning that follows from it is worth keeping: C-01
+writes the run's own manifest to the run-data volume as the run starts and holds no
+observations, so it cannot write the block and must keep writing a manifest without it —
+which is why the block is optional in the master rather than required. This component writes
+the copy that travels beside a bundle, knows the window the bundle covers, and is already
+the component that decides what does and does not leave the boundary.
+
+**What it needs that this component does not have.** A source of measurement positions and
+simulation times for a window, which today means reading the observation store. This
+component has no such dependency and acquiring one is a real change: `stores/` is not in
+this feature's path conventions, and Constitution VI says the observation store is not a
+port to be dressed as one. That is the work T047 is, and it is why it is a task rather than
+an omission.

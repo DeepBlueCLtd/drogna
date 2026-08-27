@@ -25,11 +25,11 @@ import json
 import math
 from array import array
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 
 from harness_core.netcdf import NC_DOUBLE, NetcdfVariable, encode_netcdf
 from harness_core.rng import configure_run, rng_for
+from harness_types.messages.run_manifest import Measurement
 
 HERE = Path(__file__).resolve().parent
 
@@ -54,6 +54,10 @@ QUANTISATION_STEP = 0.01
 # clock is read anywhere here (Constitution I).
 INTERVAL_SECONDS = 3600
 
+# The run the pairs belong to. A name, derived from nothing: these fixtures are not the
+# output of a run and saying so is more honest than borrowing a plausible identifier.
+RUN_ID = "leakage-fixture"
+
 
 def metres_per_degree_longitude(latitude: float) -> float:
     return METRES_PER_DEGREE_LATITUDE * math.cos(math.radians(latitude))
@@ -65,15 +69,6 @@ def latitudes() -> list[float]:
 
 def longitudes() -> list[float]:
     return [LONGITUDE_ORIGIN + index * LONGITUDE_STEP for index in range(LONGITUDES)]
-
-
-@dataclass(frozen=True)
-class Measurement:
-    """One place a measurement was taken, and when in simulation time."""
-
-    longitude: float
-    latitude: float
-    simulation_seconds: int
 
 
 def measurement_geometry() -> list[Measurement]:
@@ -294,35 +289,57 @@ def write_product(
     path.write_bytes(payload)
 
 
-def geometry_document(geometry: Sequence[Measurement]) -> dict[str, object]:
-    """The measurement geometry the updated-region test scores a mask against.
+def run_manifest_document(
+    *, run_id: str, geometry: Sequence[Measurement] | None
+) -> dict[str, object]:
+    """A run manifest, with and without the measurement geometry.
 
-    The specification says this comes from the run manifest. It does not, and cannot:
-    ``contracts/schemas/run-manifest.schema.json`` is closed and carries seeds, clock
-    configuration, participants and digests, and no geometry at all. So the fixture carries
-    its own document, in the shape the offload path would have to emit beside a bundle for
-    this test to run against a real one. See ``README.md``.
+    Both forms are real documents and the difference is the whole reason the block is
+    optional in ``contracts/schemas/run-manifest.schema.json``: C-01 writes the run's own
+    manifest as the run starts and holds no observations, so what it writes carries no
+    geometry and is complete without one; the offload packager writes the copy that travels
+    beside a bundle and does know where the measurements were taken, so that copy carries it.
+    ``manifest_bundle`` below is the first form and every pair carries the second.
+
+    Nothing here reads a clock or draws a number: the epoch and the revision are payload
+    (Constitution I) and the geometry is a pure function of the seed at the top of this file.
     """
-    return {
-        "run_id": "leakage-fixture",
+    document: dict[str, object] = {
+        "schema_version": 1,
+        "run_id": run_id,
         "root_seed": ROOT_SEED,
-        "identification_radius_m": IDENTIFICATION_RADIUS_M,
-        "interval_seconds": INTERVAL_SECONDS,
-        "measurements": [
-            {
-                "longitude": round(measurement.longitude, 6),
-                "latitude": round(measurement.latitude, 6),
-                "simulation_seconds": measurement.simulation_seconds,
-            }
-            for measurement in geometry
-        ],
+        "seed_derivation": {"rule": "harness-rng", "version": 1},
+        "clock": {
+            "epoch": "2026-01-01T00:00:00.000000Z",
+            "tick_interval_us": 1_000_000,
+            "mode": "lockstep",
+            "rate": 1.0,
+        },
+        "code_version": {"revision": "0000000", "dirty": False},
+        "participants": [],
+        "exit_state": {"state": "completed"},
+        "non_reproducible": [],
     }
+    if geometry is not None:
+        document["measurement_geometry"] = {
+            "identification_radius_m": IDENTIFICATION_RADIUS_M,
+            "interval_seconds": INTERVAL_SECONDS,
+            "measurements": [
+                {
+                    "longitude": round(measurement.longitude, 6),
+                    "latitude": round(measurement.latitude, 6),
+                    "simulation_seconds": measurement.simulation_seconds,
+                }
+                for measurement in geometry
+            ],
+        }
+    return document
 
 
-def write_geometry(directory: Path, geometry: Sequence[Measurement]) -> None:
+def write_run_manifest(directory: Path, document: dict[str, object]) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "geometry.json").write_text(
-        json.dumps(geometry_document(geometry), indent=2) + "\n", encoding="utf-8"
+    (directory / "run-manifest.json").write_text(
+        json.dumps(document, indent=2) + "\n", encoding="utf-8"
     )
 
 
@@ -410,29 +427,7 @@ def manifest_bundle(geometry: Sequence[Measurement]) -> None:
             field_variable("sea_water_temperature", base_field(), TEMPERATURE_ATTRIBUTES),
         ],
     )
-    (directory / "run-manifest.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "run_id": "run-0007",
-                "root_seed": ROOT_SEED,
-                "seed_derivation": {"rule": "harness-rng", "version": 1},
-                "clock": {
-                    "epoch": "2026-01-01T00:00:00.000000Z",
-                    "tick_interval_us": 1_000_000,
-                    "mode": "lockstep",
-                    "rate": 1.0,
-                },
-                "code_version": {"revision": "0000000", "dirty": False},
-                "participants": [],
-                "exit_state": {"state": "completed"},
-                "non_reproducible": [],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    write_run_manifest(directory, run_manifest_document(run_id="run-0007", geometry=None))
     del geometry
 
 
@@ -449,7 +444,7 @@ def mitigated_pair(geometry: Sequence[Measurement]) -> None:
                 field_variable("sea_water_temperature", field, TEMPERATURE_ATTRIBUTES),
             ],
         )
-    write_geometry(directory, geometry)
+    write_run_manifest(directory, run_manifest_document(run_id=RUN_ID, geometry=geometry))
 
 
 def unmitigated_pair(geometry: Sequence[Measurement]) -> None:
@@ -465,7 +460,7 @@ def unmitigated_pair(geometry: Sequence[Measurement]) -> None:
                 field_variable("sea_water_temperature", field, TEMPERATURE_ATTRIBUTES),
             ],
         )
-    write_geometry(directory, geometry)
+    write_run_manifest(directory, run_manifest_document(run_id=RUN_ID, geometry=geometry))
 
 
 def age_driven_pair(geometry: Sequence[Measurement]) -> None:
@@ -492,7 +487,7 @@ def age_driven_pair(geometry: Sequence[Measurement]) -> None:
                 ),
             ],
         )
-    write_geometry(directory, geometry)
+    write_run_manifest(directory, run_manifest_document(run_id=RUN_ID, geometry=geometry))
 
 
 def unchanged_pair(geometry: Sequence[Measurement]) -> None:
@@ -513,7 +508,7 @@ def unchanged_pair(geometry: Sequence[Measurement]) -> None:
                 field_variable("sea_water_temperature", field, TEMPERATURE_ATTRIBUTES),
             ],
         )
-    write_geometry(directory, geometry)
+    write_run_manifest(directory, run_manifest_document(run_id=RUN_ID, geometry=geometry))
 
 
 def main() -> int:

@@ -111,6 +111,50 @@ class NonReproducibleItem(RootModel[str]):
     root: str = Field(..., pattern='^/')
 
 
+class Measurement(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    longitude: float = Field(
+        ...,
+        description='Degrees east. Bounded so that a pair written the other way round, or in radians, is refused here rather than scored as a geometry somewhere else entirely — which would put the buffered cells nowhere near the mask and read as a clean release.',
+        ge=-180.0,
+        le=180.0,
+    )
+    latitude: float = Field(
+        ...,
+        description='Degrees north. Bounded for the same reason as the longitude beside it, and separately because the metres-per-degree conversion the buffer uses is only meaningful inside this range.',
+        ge=-90.0,
+        le=90.0,
+    )
+    simulation_seconds: int = Field(
+        ...,
+        description="When in the interval the measurement was taken, counted in simulation seconds from the interval's start. Simulation time and not a host clock, so that a replay of the run produces the same geometry and the gate's verdict is reproducible (Constitution I, Constitution II).",
+        ge=0,
+    )
+
+
+class MeasurementGeometry(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    identification_radius_m: float = Field(
+        ...,
+        description="How close to a measurement a released value has to be before it identifies where that measurement was taken. It travels with the geometry rather than being read from a deployment's policy alone, so a run scored long after it finished is scored on the radius it was released under and not on whatever the boundary has been widened to since.",
+        gt=0.0,
+    )
+    interval_seconds: int = Field(
+        ...,
+        description='How long the interval between two successive released products is, in simulation seconds. Stated rather than inferred from the measurements: a geometry covering a shorter span than the products it is scored against would leave the cells that moved unaccounted for, and a mask nobody can account for scores at chance for the wrong reason.',
+        gt=0,
+    )
+    measurements: list[Measurement] = Field(
+        ...,
+        description='Every place a measurement was taken in the interval. At least one, because a geometry with none is not a geometry: it buffers to no cells, every comparison against it is inconclusive, and a document that could produce that silently is worse than one that is refused.',
+        min_length=1,
+    )
+
+
 class DrognaRunManifest(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -153,4 +197,8 @@ class DrognaRunManifest(BaseModel):
     non_reproducible: list[NonReproducibleItem] = Field(
         ...,
         description='JSON pointers a replay comparison excludes. Declared in the document as well as annotated in the schema, so a comparison needs the manifest alone.',
+    )
+    measurement_geometry: MeasurementGeometry | None = Field(
+        None,
+        description="Where the run's measurements were taken, and the terms a release of that run is scored on. Optional, and the reason is the thing a reader will otherwise get wrong: C-01 writes the run's own manifest and holds no observations, so the manifest on the run-data volume does not carry this block and is complete without it; the offload packager writes the copy that travels beside a bundle and does know the geometry, so that copy carries it. A consumer that needs the geometry — the updated-region half of the leakage gate is the only one — must refuse a manifest without this block rather than read the absence as an empty geometry, because an empty geometry makes every comparison inconclusive and an inconclusive result nobody reads is indistinguishable from a pass (FR-015, FR-017).",
     )

@@ -400,10 +400,20 @@ on Constitution X. The decision is recorded in
 this feature: any statistic offered as evidence that a boundary is holding is now expected
 to be reported per released variable, with the worst acted on.
 
-*Not settled here: where the measurement geometry lives.* FR-015 says the measurement
-locations come from the run manifest. `contracts/schemas/run-manifest.schema.json` is closed
-and carries seeds, clock configuration, participants and digests — no geometry — so
-`load_geometry` reads the document the bundle carries beside its products and fails loudly
-on a missing field. That divergence is real, is documented at the function, and is left
-outstanding rather than blessed by a quiet edit here: it belongs to whoever owns the
-manifest schema (feature 004) and the bundle shape (feature 014), not to this amendment.
+*Settled since, and worth recording because the answer was already here.* This amendment
+originally left one thing open: FR-015 says the measurement locations come from the run
+manifest, and `contracts/schemas/run-manifest.schema.json` carried no geometry, so
+`load_geometry` had been reading a separate document beside the products. The divergence
+was left outstanding rather than closed by a quiet rewording, on the grounds that it
+belonged to whoever owned the manifest schema and the bundle shape.
+
+It was put to the maintainer as a choice between amending this specification and extending
+the schema, and the schema was extended. FR-015 was right: the geometry belongs in the
+manifest, which is *"exactly the thing being withheld"* as this document says above, and a
+run's measurement locations are the same kind of fact as its seeds. `measurement_geometry`
+is now an optional block on the manifest — optional because two things write one shape. The
+clock (C-01) writes a manifest before any measurement exists and is complete without it; the
+offload packager writes the copy that travels beside a bundle, and that copy carries it.
+
+No requirement here changed. The lesson is the one worth keeping: a specification that
+disagrees with the code is not automatically the thing that is wrong.

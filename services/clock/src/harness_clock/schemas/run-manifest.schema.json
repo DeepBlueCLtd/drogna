@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/run-manifest.schema.json",
   "title": "drogna run manifest",
-  "description": "The record from which a run can be started again. Together with the code version it names, this document is sufficient input to a replay: no other file, flag or environment is consulted. It records digests of configuration and never configuration values, so a manifest can be published without leaking whatever a config file happens to carry. Named run-manifest to distinguish it from the environment generator's ground-truth manifest, which refers to a run by run_id.",
+  "description": "The record from which a run can be started again. Together with the code version it names, this document is sufficient input to a replay: no other file, flag or environment is consulted. It records digests of configuration and never configuration values, so a manifest can be published without leaking whatever a config file happens to carry. Named run-manifest to distinguish it from the environment generator's ground-truth manifest, which refers to a run by run_id. Two components write a document of this shape and they do not write the same one: C-01 writes the run's own manifest as the run starts, and the offload packager writes the copy that travels beside a bundle. The difference between them is measurement_geometry, which only the second one is in a position to know, which is why it is optional here and why a manifest is withheld rather than released — a manifest carrying the geometry is the document that says where the measurements were taken (FR-42).",
   "type": "object",
   "required": [
     "schema_version",
@@ -143,6 +143,63 @@
       "type": "array",
       "description": "JSON pointers a replay comparison excludes. Declared in the document as well as annotated in the schema, so a comparison needs the manifest alone.",
       "items": { "type": "string", "pattern": "^/" }
+    },
+    "measurement_geometry": {
+      "$ref": "#/$defs/measurement_geometry",
+      "description": "Where the run's measurements were taken, and the terms a release of that run is scored on. Optional, and the reason is the thing a reader will otherwise get wrong: C-01 writes the run's own manifest and holds no observations, so the manifest on the run-data volume does not carry this block and is complete without it; the offload packager writes the copy that travels beside a bundle and does know the geometry, so that copy carries it. A consumer that needs the geometry — the updated-region half of the leakage gate is the only one — must refuse a manifest without this block rather than read the absence as an empty geometry, because an empty geometry makes every comparison inconclusive and an inconclusive result nobody reads is indistinguishable from a pass (FR-015, FR-017)."
+    }
+  },
+  "$defs": {
+    "measurement_geometry": {
+      "title": "Measurement geometry",
+      "description": "The ground truth the change mask between two successive released products is scored against. Held in the manifest rather than beside the products because it is the same class of thing as the seeds: the record of what the run actually did, which is what makes a claim about a release checkable, and which is exactly what a release must not contain.",
+      "type": "object",
+      "required": ["identification_radius_m", "interval_seconds", "measurements"],
+      "additionalProperties": false,
+      "properties": {
+        "identification_radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How close to a measurement a released value has to be before it identifies where that measurement was taken. It travels with the geometry rather than being read from a deployment's policy alone, so a run scored long after it finished is scored on the radius it was released under and not on whatever the boundary has been widened to since."
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How long the interval between two successive released products is, in simulation seconds. Stated rather than inferred from the measurements: a geometry covering a shorter span than the products it is scored against would leave the cells that moved unaccounted for, and a mask nobody can account for scores at chance for the wrong reason."
+        },
+        "measurements": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Every place a measurement was taken in the interval. At least one, because a geometry with none is not a geometry: it buffers to no cells, every comparison against it is inconclusive, and a document that could produce that silently is worse than one that is refused.",
+          "items": { "$ref": "#/$defs/measurement" }
+        }
+      }
+    },
+    "measurement": {
+      "title": "Measurement position",
+      "description": "One place a measurement was taken, and when in the interval. Position and simulation time only: what was measured is an observation and lives in the observation store, and repeating it here would put a second copy of the values in the one document that must never be released.",
+      "type": "object",
+      "required": ["longitude", "latitude", "simulation_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Degrees east. Bounded so that a pair written the other way round, or in radians, is refused here rather than scored as a geometry somewhere else entirely — which would put the buffered cells nowhere near the mask and read as a clean release."
+        },
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Degrees north. Bounded for the same reason as the longitude beside it, and separately because the metres-per-degree conversion the buffer uses is only meaningful inside this range."
+        },
+        "simulation_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "When in the interval the measurement was taken, counted in simulation seconds from the interval's start. Simulation time and not a host clock, so that a replay of the run produces the same geometry and the gate's verdict is reproducible (Constitution I, Constitution II)."
+        }
+      }
     }
   }
 }

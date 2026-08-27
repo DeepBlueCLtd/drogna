@@ -48,8 +48,8 @@ documentation. So the documentation is here, one level up, outside every bundle.
 ## The pairs
 
 Each pair is `t0/` and `t1/` — two successive released products for the same collection on
-the same grid — plus `geometry.json`, the measurement geometry for the interval between
-them.
+the same grid — plus `run-manifest.json`, the run manifest carrying the measurement geometry
+for the interval between them.
 
 | Directory | What it is |
 |---|---|
@@ -64,30 +64,49 @@ reasons that have nothing to do with the mitigation working, and
 `test_the_mitigated_mask_could_have_recovered_something` is what stops the pass becoming
 vacuous.
 
-## `geometry.json`, and the thing the specification assumes that is not there
+## Where the measurement geometry lives
 
-The specification says the measurement geometry is "recorded in the run manifest". It is
-not, and it cannot be: `contracts/schemas/run-manifest.schema.json` is closed
-(`additionalProperties: false`) and carries the root seed, the seed derivation rule, the
-clock configuration, the participants and their config digests — and no geometry at all.
-
-So each pair carries its own document, in the shape the offload path (feature 014) would
-have to emit beside a bundle for these tests to run against a real one:
+In the run manifest, which is where FR-015 always said it was. It was not there for a while
+and this README used to explain why not: `contracts/schemas/run-manifest.schema.json` was
+closed and carried the root seed, the seed derivation rule, the clock configuration, the
+participants and their config digests, and no geometry, so each pair carried a standalone
+`geometry.json` in the shape the offload path would have to emit. The specification was
+right and the schema was incomplete. The schema now carries an optional
+`measurement_geometry` block and the standalone document is gone.
 
 ```json
 {
+  "schema_version": 1,
   "run_id": "leakage-fixture",
   "root_seed": 20260826,
-  "identification_radius_m": 2000.0,
-  "interval_seconds": 3600,
-  "measurements": [
-    { "longitude": -7.95, "latitude": 55.05, "simulation_seconds": 0 }
-  ]
+  "measurement_geometry": {
+    "identification_radius_m": 2000.0,
+    "interval_seconds": 3600,
+    "measurements": [{ "longitude": -7.95, "latitude": 55.05, "simulation_seconds": 0 }]
+  }
 }
 ```
 
-`tests/leakage/updated_region.py:load_geometry` fails loudly on a missing field rather than
-defaulting. A geometry that silently came out empty would make every comparison
+**Optional, for a reason that shows up in this directory.** Two components write a manifest.
+C-01 writes the run's own manifest as the run starts and holds no observations, so what it
+writes carries no geometry — that is `manifest_bundle/run-manifest.json`, and it is a
+complete manifest. The offload packager writes the copy that travels beside a bundle and does
+know where the measurements were taken, so that copy carries the block — that is what every
+pair here holds. Nothing writes the second form yet; producing it is recorded as a task
+against feature 014.
+
+**And never inside a released bundle.** A manifest carrying the geometry is the document that
+says where the measurements were taken, which is exactly what the release is withholding.
+`manifest_bundle/` is the control that says so, and `scripts/check_leakage.py` takes the
+manifest for a candidate bundle with `--manifest`, from outside it, rather than looking for
+one inside — requiring one inside would mean committing the leak in order to scan for it.
+
+`tests/leakage/updated_region.py:load_geometry` reads the block through the model generated
+from the master and refuses loudly rather than defaulting: an unreadable file, a document that
+is not JSON, a manifest that is not a manifest, an absent block, an empty `measurements`, a
+measurement missing a coordinate and a coordinate of the wrong type are seven different faults
+and are reported as seven different sentences, each naming the file and the field. None of them
+returns an empty geometry. A geometry that silently came out empty would make every comparison
 inconclusive, and an inconclusive run nobody looked at is how a gate stops working.
 
 The measurements span about nineteen kilometres against a two-kilometre identification

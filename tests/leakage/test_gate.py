@@ -20,7 +20,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GATE = REPOSITORY_ROOT / "scripts" / "check_leakage.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
-GEOMETRY = FIXTURES / "mitigated_pair" / "geometry.json"
+MANIFEST = FIXTURES / "mitigated_pair" / "run-manifest.json"
 REGISTRY = REPOSITORY_ROOT / "scripts" / "gates.registry"
 
 
@@ -51,7 +51,7 @@ def test_the_figures_are_printed_rather_than_asserted_silently() -> None:
 
 
 def test_a_leaky_candidate_bundle_fails_the_gate() -> None:
-    result = run("--bundle", str(FIXTURES / "leaky_bundle"), "--geometry", str(GEOMETRY))
+    result = run("--bundle", str(FIXTURES / "leaky_bundle"), "--manifest", str(MANIFEST))
 
     assert result.returncode != 0
     assert "history" in result.stderr
@@ -59,7 +59,7 @@ def test_a_leaky_candidate_bundle_fails_the_gate() -> None:
 
 def test_a_clean_candidate_bundle_passes_the_gate() -> None:
     """A gate that fails a clean artefact is one people learn to run with a flag."""
-    result = run("--bundle", str(FIXTURES / "clean_bundle"), "--geometry", str(GEOMETRY))
+    result = run("--bundle", str(FIXTURES / "clean_bundle"), "--manifest", str(MANIFEST))
 
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -70,6 +70,55 @@ def test_a_bundle_with_no_geometry_is_refused_rather_than_scanned_half_blind() -
 
     assert result.returncode != 0
     assert "geometry" in result.stderr
+
+
+def test_a_bundle_scanned_against_an_invalid_geometry_is_refused_just_as_loudly(
+    tmp_path: Path,
+) -> None:
+    """A missing geometry and an unusable one are different faults, and neither is a scan.
+
+    An invalid geometry buys exactly what a missing one does: a coordinate rule with nothing
+    to compare against. The failure worth guarding is the one where a document that almost
+    parses leaves the rule scoring against no measurements and the bundle reporting clean, so
+    the manifest here is the corpus's own with one coordinate taken out of one measurement —
+    the smallest edit that a validator could plausibly wave through.
+    """
+    document = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    del document["measurement_geometry"]["measurements"][0]["latitude"]
+    broken = tmp_path / "run-manifest.json"
+    broken.write_text(json.dumps(document), encoding="utf-8")
+
+    result = run("--bundle", str(FIXTURES / "clean_bundle"), "--manifest", str(broken))
+
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "latitude" in result.stderr
+    assert "refused" in result.stderr
+
+
+def test_a_pair_whose_manifest_carries_no_geometry_is_refused_rather_than_scored(
+    tmp_path: Path,
+) -> None:
+    """The manifest C-01 writes is a valid manifest and is not a geometry.
+
+    It is the document a run leaves on the run-data volume, and pointing the gate at a pair
+    beside one must not produce a statistic: an assessment computed against no measurements
+    would be reported as inconclusive, and an inconclusive result nobody reads is how this
+    gate stops working.
+    """
+    pair = tmp_path / "pair"
+    for product in ("t0", "t1"):
+        (pair / product).mkdir(parents=True)
+        (pair / product / "drogna-forecast.nc").write_bytes(
+            (FIXTURES / "mitigated_pair" / product / "drogna-forecast.nc").read_bytes()
+        )
+    document = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    del document["measurement_geometry"]
+    (pair / "run-manifest.json").write_text(json.dumps(document), encoding="utf-8")
+
+    result = run("--pair", str(pair))
+
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "measurement_geometry" in result.stderr
 
 
 def test_a_leaking_pair_fails_the_gate() -> None:
@@ -92,8 +141,8 @@ def test_the_report_is_written_whether_or_not_anything_was_found(tmp_path: Path)
     result = run(
         "--bundle",
         str(FIXTURES / "clean_bundle"),
-        "--geometry",
-        str(GEOMETRY),
+        "--manifest",
+        str(MANIFEST),
         "--report",
         str(report),
     )

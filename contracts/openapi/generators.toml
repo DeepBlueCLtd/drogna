@@ -319,3 +319,33 @@ target = "services/offload/src/harness_offload/schemas/offload-receipt.schema.js
 [[copy]]
 source = "contracts/schemas/offload-telemetry.schema.json"
 target = "services/offload/src/harness_offload/schemas/offload-telemetry.schema.json"
+
+# ---------------------------------------------------------------------------------
+# The measurement geometry, and why it adds no line to the lists above
+# ---------------------------------------------------------------------------------
+#
+# `contracts/schemas/run-manifest.schema.json` gained an optional `measurement_geometry`
+# block: where a run's measurements were taken, and the identification radius and interval
+# they are scored on. It is the ground truth the updated-region half of the leakage gate
+# scores a change mask against (FR-015, FR-42), and it lives in the manifest because it is
+# the same class of thing as the seeds — the record of what the run actually did, which is
+# what makes a claim about a release checkable, and which is exactly what a release must not
+# contain.
+#
+# It is two `$defs` inside a master this manifest already accounts for, so the chain needs
+# nothing new: the master is discovered by name like every other, and the copy C-01 carries
+# — listed above, because C-01 writes the run manifest — picks the block up with the rest of
+# the document when this chain rewrites it.
+#
+# The block is optional, and it is worth saying here why, because a reader meeting the model
+# will otherwise assume a generator lost a `required` entry. Two components write a document
+# of this shape. C-01 writes the run's own manifest to the run-data volume and holds no
+# observations, so what it writes carries no geometry and is complete without one. The
+# offload packager writes the copy that travels beside a bundle and does know where the
+# measurements were taken, so that copy carries it. A consumer that needs the geometry
+# refuses a manifest without it rather than reading the absence as an empty geometry.
+#
+# No copy is listed for the leakage gate, which is the only consumer today. It is not a
+# component in a container: it runs from the checkout with `contracts/` to hand, and it
+# validates through the generated model rather than against a schema document at all. A copy
+# would be a second thing to keep in step for no reader.

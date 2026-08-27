@@ -31,7 +31,7 @@ from updated_region import load_geometry
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 SETTINGS = load_settings()
-GEOMETRY = load_geometry(FIXTURES / "mitigated_pair" / "geometry.json")
+GEOMETRY = load_geometry(FIXTURES / "mitigated_pair" / "run-manifest.json")
 
 
 def scan(bundle: Path, *, variables: tuple[str, ...] | None = None):

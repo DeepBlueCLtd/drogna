@@ -43,6 +43,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from harness_types.messages.run_manifest import DrognaRunManifest, Measurement
+from pydantic import ValidationError
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 # The query layer's own classic-NetCDF reader, used here rather than copied: a third decoder
@@ -83,13 +86,11 @@ class InvalidGeometryError(Exception):
     """The measurement geometry document is unusable. Names the field rather than the symptom."""
 
 
-@dataclass(frozen=True)
-class Measurement:
-    """One place a measurement was taken, in the interval between two released products."""
-
-    longitude: float
-    latitude: float
-    simulation_seconds: int
+# `Measurement` is the model generated from `contracts/schemas/run-manifest.schema.json`
+# (`$defs/measurement`) and is re-exported here so that this module's callers keep importing
+# it from the reader that produces it. It used to be a frozen dataclass declared a few lines
+# below, which is a second definition of a boundary shape whatever its docstring said, and
+# `scripts/check_handwritten_types.py` now says so.
 
 
 @dataclass(frozen=True)
@@ -213,35 +214,65 @@ def load_product(path: Path) -> Product:
     return Product(source=str(path), grid=grid, variables=fields)
 
 
-def load_geometry(path: Path) -> list[Measurement]:
-    """The measurement geometry for the interval between two products.
+def _complaints(error: ValidationError) -> str:
+    """Every rejection the model made, each naming the field it was about.
 
-    The specification says this is read from the run manifest. It is not there:
-    ``contracts/schemas/run-manifest.schema.json`` is closed and holds seeds, clock
-    configuration, participants and digests, and no geometry. So this reads the document the
-    bundle carries beside its products, and fails loudly on a missing field rather than
-    defaulting — a geometry that silently came out empty would make every comparison
-    inconclusive, and an inconclusive run that nobody looked at is how a gate stops working.
+    All of them rather than the first, for the reason the schema gates give: a document is
+    usually wrong in the way whoever wrote it misunderstood the shape, which is to say in
+    several places at once, and a reader who fixes one and runs again learns that one at a
+    time.
     """
-    document = json.loads(path.read_text(encoding="utf-8"))
-    entries = document.get("measurements")
-    if not isinstance(entries, list) or not entries:
+    return "; ".join(
+        f"{'.'.join(str(part) for part in detail['loc']) or 'the document'}: {detail['msg']}"
+        for detail in error.errors()
+    )
+
+
+def load_geometry(path: Path) -> list[Measurement]:
+    """The measurement geometry for the interval between two products, from the run manifest.
+
+    FR-015 says the measurement locations come from the run manifest, and
+    ``contracts/schemas/run-manifest.schema.json`` declares them: an optional
+    ``measurement_geometry`` block holding the identification radius the run was released
+    under, the length of the interval, and every place a measurement was taken in it. The
+    block is optional because two components write a manifest and only one of them is in a
+    position to know the geometry — C-01 writes the run's own manifest and holds no
+    observations; the offload packager writes the copy that travels beside a bundle and does
+    — so a manifest without the block is a complete manifest and is not a geometry.
+
+    Nothing here is checked by hand and nothing here defaults. The document goes through the
+    model generated from that master (Constitution III), and every refusal names the file and
+    the field inside it: an unreadable file, a document that is not JSON, a manifest that is
+    not a manifest, an absent block, an empty ``measurements``, a measurement missing a
+    coordinate and a coordinate of the wrong type are seven different faults and are reported
+    as seven different sentences. None of them returns an empty list. A geometry that silently
+    came out empty would make every comparison inconclusive, and an inconclusive run that
+    nobody looked at is how a gate stops working.
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise InvalidGeometryError(f"{path}: cannot be read ({error})") from error
+
+    try:
+        document = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise InvalidGeometryError(f"{path}: is not JSON ({error})") from error
+
+    try:
+        manifest = DrognaRunManifest.model_validate(document)
+    except ValidationError as error:
         raise InvalidGeometryError(
-            f"{path}: no 'measurements', so there is nothing to score against"
+            f"{path}: is not a run manifest — {_complaints(error)}"
+        ) from error
+
+    if manifest.measurement_geometry is None:
+        raise InvalidGeometryError(
+            f"{path}: carries no 'measurement_geometry', so there is nothing to score "
+            "against. The manifest C-01 writes does not carry one; the copy the offload "
+            "packager writes beside a bundle does, and that is the document to point this at"
         )
-    geometry = []
-    for position, entry in enumerate(entries):
-        for name in ("longitude", "latitude", "simulation_seconds"):
-            if name not in entry:
-                raise InvalidGeometryError(f"{path}: measurement {position} has no {name!r}")
-        geometry.append(
-            Measurement(
-                longitude=float(entry["longitude"]),
-                latitude=float(entry["latitude"]),
-                simulation_seconds=int(entry["simulation_seconds"]),
-            )
-        )
-    return geometry
+    return list(manifest.measurement_geometry.measurements)
 
 
 # --- the mask and the statistic ---------------------------------------------------------------

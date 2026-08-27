@@ -2,7 +2,7 @@
 """Gate: the two leakage paths SRD FR-42 names, over a candidate release bundle.
 
     scripts/check_leakage.py                       # the committed corpus, controls included
-    scripts/check_leakage.py --bundle DIR          # scan one candidate bundle
+    scripts/check_leakage.py --bundle DIR --manifest FILE   # scan one candidate bundle
     scripts/check_leakage.py --pair DIR            # score one pair of successive products
     scripts/check_leakage.py --report FILE         # write the leakage report as JSON
 
@@ -47,12 +47,24 @@ sys.path.insert(0, str(LEAKAGE))
 
 from scanner import ScanResult, load_rules, scan_bundle  # noqa: E402
 from settings import DEFAULT_DESTINATION, Settings, load_settings  # noqa: E402
-from updated_region import Assessment, assess, load_geometry, load_product  # noqa: E402
+from updated_region import (  # noqa: E402
+    Assessment,
+    InvalidGeometryError,
+    assess,
+    load_geometry,
+    load_product,
+)
 
 GATE = "leakage"
 
 COVERAGE_MEMBER = "drogna-forecast.nc"
-GEOMETRY_MEMBER = "geometry.json"
+
+# The measurement geometry is read from the run manifest, which is where FR-015 says it
+# lives and where `contracts/schemas/run-manifest.schema.json` declares it. A pair carries
+# one beside its two products. A bundle never does: a manifest inside a bundle is the
+# `manifest_bundle` control below, so a candidate bundle is scanned against a manifest given
+# from outside it.
+RUN_MANIFEST = "run-manifest.json"
 
 # The corpus, and what each member of it is for. Six of the eight are deliberate controls,
 # and the gate fails if a control stops being caught.
@@ -63,11 +75,11 @@ CONTROL_PAIRS = ("unmitigated_pair", "age_driven_pair")
 INCONCLUSIVE_PAIRS = ("unchanged_pair",)
 
 
-def scan_one(bundle: Path, settings: Settings, geometry_source: Path) -> ScanResult:
+def scan_one(bundle: Path, settings: Settings, manifest: Path) -> ScanResult:
     return scan_bundle(
         bundle,
         released_variables=settings.released_variables,
-        geometry=load_geometry(geometry_source),
+        geometry=load_geometry(manifest),
         radius_m=settings.identification_radius_m,
         rules=load_rules(),
     )
@@ -77,14 +89,14 @@ def score_one(pair: Path, settings: Settings) -> Assessment:
     return assess(
         load_product(pair / "t0" / COVERAGE_MEMBER),
         load_product(pair / "t1" / COVERAGE_MEMBER),
-        load_geometry(pair / GEOMETRY_MEMBER),
+        load_geometry(pair / RUN_MANIFEST),
         radius_m=settings.identification_radius_m,
         step=settings.quantisation_step,
     )
 
 
-def corpus_geometry() -> Path:
-    return FIXTURES / "mitigated_pair" / GEOMETRY_MEMBER
+def corpus_manifest() -> Path:
+    return FIXTURES / "mitigated_pair" / RUN_MANIFEST
 
 
 def check_corpus(settings: Settings) -> tuple[list[str], dict[str, Any]]:
@@ -93,7 +105,7 @@ def check_corpus(settings: Settings) -> tuple[list[str], dict[str, Any]]:
     report: dict[str, Any] = {"bundles": {}, "pairs": {}}
 
     for name in CLEAN_BUNDLES:
-        result = scan_one(FIXTURES / name, settings, corpus_geometry())
+        result = scan_one(FIXTURES / name, settings, corpus_manifest())
         report["bundles"][name] = result.as_document()
         if not result.members:
             complaints.append(f"{name}: nothing was scanned, so nothing was checked")
@@ -101,7 +113,7 @@ def check_corpus(settings: Settings) -> tuple[list[str], dict[str, Any]]:
             complaints.append(result.summary())
 
     for name in CONTROL_BUNDLES:
-        result = scan_one(FIXTURES / name, settings, corpus_geometry())
+        result = scan_one(FIXTURES / name, settings, corpus_manifest())
         report["bundles"][name] = result.as_document()
         if result.clean:
             complaints.append(
@@ -150,37 +162,72 @@ def check_candidate(
     bundle: Path | None,
     pair: Path | None,
     settings: Settings,
-    geometry_source: Path | None = None,
+    manifest_source: Path | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     """Run one candidate bundle, one candidate pair, or both.
 
-    The geometry document is where the coordinate check gets something to measure against.
-    It is looked for inside the bundle and can be given explicitly with ``--geometry``, and
-    its absence refuses the scan rather than running it without that rule: a scan reporting
-    no coordinate hits because it had no coordinates to compare with would be a pass nobody
-    earned.
+    The run manifest is where the coordinate check gets something to measure against: it
+    carries the measurement geometry, and the coordinate rule is the one rule that needs a
+    place to compare a released number with. It is named with ``--manifest`` and is never
+    looked for inside the bundle, because a manifest inside a bundle is itself the leak
+    ``manifest_bundle`` controls for — requiring one there would mean committing the leak in
+    order to scan for it.
+
+    Three things are refused rather than scanned, and they are three different faults: no
+    manifest given, a manifest that is not a file, and a manifest that is unreadable, not
+    JSON, not a manifest, or carries no measurement geometry. Each says which. A scan
+    reporting no coordinate hits because it had no coordinates to compare with would be a
+    pass nobody earned, and a scan refused for a reason nobody stated is a fault nobody
+    fixes.
     """
     complaints: list[str] = []
     report: dict[str, Any] = {"bundles": {}, "pairs": {}}
 
     if bundle is not None:
-        geometry = geometry_source if geometry_source is not None else bundle / GEOMETRY_MEMBER
-        if not geometry.is_file():
+        if manifest_source is None:
             complaints.append(
-                f"{bundle}: carries no {GEOMETRY_MEMBER} and none was given with --geometry, so "
-                "a coordinate in it could not be measured against anything. The scan is "
-                "refused rather than run half-blind."
+                f"{bundle}: no run manifest was given with --manifest. The measurement "
+                "geometry is read from the run manifest, and the manifest is withheld rather "
+                "than released, so it is never inside the bundle — a coordinate in a released "
+                "file could not be measured against anything. The scan is refused rather than "
+                "run half-blind."
+            )
+        elif not manifest_source.is_file():
+            complaints.append(
+                f"{bundle}: the run manifest given with --manifest, {manifest_source}, is not "
+                "a file, so the measurement geometry could not be read and a coordinate in a "
+                "released file could not be measured against anything. The scan is refused "
+                "rather than run half-blind."
             )
         else:
-            result = scan_one(bundle, settings, geometry)
-            report["bundles"][bundle.name] = result.as_document()
-            if not result.members:
-                complaints.append(f"{bundle}: nothing was scanned, so nothing was checked")
-            if not result.clean:
-                complaints.append(result.summary())
+            try:
+                result = scan_one(bundle, settings, manifest_source)
+            except InvalidGeometryError as error:
+                complaints.append(
+                    f"{bundle}: the run manifest given with --manifest carries no usable "
+                    f"measurement geometry — {error}. The scan is refused rather than run "
+                    "half-blind: an invalid geometry buys exactly what a missing one does, "
+                    "which is a coordinate rule with nothing to compare against."
+                )
+            else:
+                report["bundles"][bundle.name] = result.as_document()
+                if not result.members:
+                    complaints.append(f"{bundle}: nothing was scanned, so nothing was checked")
+                if not result.clean:
+                    complaints.append(result.summary())
 
     if pair is not None:
-        assessment = score_one(pair, settings)
+        try:
+            assessment = score_one(pair, settings)
+        except InvalidGeometryError as error:
+            return (
+                [
+                    f"{pair}: carries no usable measurement geometry — {error}. The pair is "
+                    "refused rather than scored: a statistic computed against a geometry "
+                    "nobody could read is a number, not evidence."
+                ],
+                report,
+            )
         report["pairs"][pair.name] = assessment.as_document()
         if not assessment.conclusive:
             complaints.append(f"{pair}: inconclusive — {assessment.reason}")
@@ -199,11 +246,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--bundle", type=Path, default=None, help="a candidate release bundle")
     parser.add_argument("--pair", type=Path, default=None, help="a directory holding t0/ and t1/")
     parser.add_argument(
-        "--geometry",
+        "--manifest",
         type=Path,
         default=None,
-        help="the measurement geometry to score coordinates against; by default the "
-        "geometry.json the bundle carries",
+        help="the run manifest whose measurement geometry coordinates are scored against. "
+        "Required with --bundle: the manifest is withheld rather than released, so it is "
+        "never inside the bundle. A pair carries its own beside its two products",
     )
     parser.add_argument("--report", type=Path, default=None, help="write the report here, as JSON")
     parser.add_argument("--destination", default=DEFAULT_DESTINATION, help="whose release policy")
@@ -215,7 +263,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         subject = "the committed corpus"
     else:
         complaints, findings = check_candidate(
-            arguments.bundle, arguments.pair, settings, arguments.geometry
+            arguments.bundle, arguments.pair, settings, arguments.manifest
         )
         subject = str(arguments.bundle or arguments.pair)
 

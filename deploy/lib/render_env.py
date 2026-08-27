@@ -26,6 +26,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import compose_document
+import render_credentials
 from destination import (
     COMPOSE_FILENAME,
     CONFIG_DIRNAME,
@@ -56,7 +57,11 @@ INTERNAL_SCHEME = "http"
 # Services whose health check asks their own HTTP listener whether it is serving.
 HTTP_HEALTH_SERVICES = ("query", "proxy", "client")
 
-SECRET_NAMES = ("HARNESS_DATABASE_PASSWORD",)
+# The database password, and one secret per broker role. The broker names come from
+# render_credentials.ROLE_SECRETS so that the roles are declared in one place: the access
+# control list defines them, that module maps each to its variable, and this list is
+# derived rather than retyped.
+SECRET_NAMES = ("HARNESS_DATABASE_PASSWORD", *render_credentials.SECRET_NAMES)
 
 GENERATED_MARKER = "# Renderer appends below this line. Do not edit by hand."
 
@@ -178,7 +183,10 @@ def values_for(
     paths = deployment["container_paths"]
     host_paths = deployment["host_paths"]
     resources = deployment["resources"]
-    config_host_dir = destination_dir(destination, root)
+    # The rendered tree, not the tracked one. The tracked files carry the role and no
+    # secret; a component needs both, and the broker refuses anonymous clients. See
+    # deploy/lib/render_credentials.py and ADR-0016.
+    config_host_dir = render_credentials.rendered_dir(destination, root)
 
     values: dict[str, str] = {
         "HARNESS_PROJECT_NAME": deployment["project_name"],

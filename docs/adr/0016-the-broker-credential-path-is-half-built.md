@@ -1,6 +1,6 @@
-# ADR-0016: The broker credential path is half built, and the tracked half is the role
+# ADR-0016: No component could authenticate, and the credential path is now whole
 
-**Status:** Accepted
+**Status:** Accepted, and amended the same day — see "What changed a few hours later"
 **Date:** 27 August 2026
 **Requirements:** SRD FR-14, NFR-04; Constitution IV
 **Raised by:** wiring every component to a real broker, and finding none of them could have authenticated to the deployed one
@@ -75,25 +75,51 @@ namespace, which is exactly the cross-contamination C-03 owns as its failure mod
 those two carry a broker section at all is evidence the question is open, not that it is
 answered.
 
-**The secret producer is not built here, and this record is where that is now written down
-rather than left in a README's closing paragraph.** What it needs, precisely: four entries
-in `deploy/env.template` and in `SECRET_NAMES` in `deploy/lib/render_env.py`, alongside
-`HARNESS_DATABASE_PASSWORD`; a step producing `deploy/broker/passwd` with
-`mosquitto_passwd` from those four values; an entry for that file in `.gitignore`; and the
-render substituting each secret into the URL its component reads. It is not done here
-because it cannot be tested here — this container has no container runtime, and a
-deployment path changed without being watched working is the thing that produced this
-record.
+**The secret producer is built, and the paragraph this replaces said it would not be.**
+What it needed, precisely: four entries in `deploy/env.template` and in `SECRET_NAMES` in
+`deploy/lib/render_env.py`, alongside `HARNESS_DATABASE_PASSWORD`; a step producing
+`deploy/broker/passwd` with `mosquitto_passwd` from those four values; an entry for that
+file in `.gitignore`; and the render substituting each secret into the URL its component
+reads. All of it is done, in `deploy/lib/render_credentials.py` and `deploy/lib/common.sh`. The
+`.gitignore` entry turned out to be there already, which is a small illustration of the
+same theme: a piece of the path existed and nothing joined it to the rest.
+
+## What changed a few hours later
+
+This record originally stopped at the role and argued that the secret producer should not be
+written, on the grounds that the only way to know whether a rendered secret reaches a running
+component is to bring the whole stack up, and nothing here can.
+
+That reasoning was wrong, and the mistake is worth keeping rather than editing out. It
+confused *the deployment* with *the property*. The property is that the configuration a
+component reads, and the password file the broker reads, are two representations of the same
+secret and agree. Compose is one way to exercise it and not the only one: `mosquitto` is a
+binary, the tracked `mosquitto.conf` and `acl` are the real files, and the renderer is the
+real renderer. Put those together and the property is observable in about a second.
+
+`tests/integration/test_broker_credentials.py` does exactly that, and reports:
+
+    rendered credentials               -> Success
+    same role, wrong secret            -> Not authorized
+    no credentials at all              -> Not authorized
+
+Every earlier test in this repository that touched a broker wrote its own password file,
+which is precisely why the gap survived: a fixture that supplies both halves of a credential
+can never fail the way the deployment failed. This test supplies neither and asks the
+renderer for both.
+
+Two things remain genuinely untested here and are not claimed: that Compose mounts the
+rendered directory as intended, and that the file's ownership suits the broker's own user
+inside the pinned image. Both are properties of the container runtime rather than of the
+credential path.
 
 ## The alternative rejected
 
-**Writing the whole credential path now, untested.** It is four small edits and it would
-have looked finished. But the only way to know whether a rendered secret reaches a running
-component is to bring the stack up, and nothing here can. A credential path that has never
-been watched authenticating is indistinguishable from this one: it parses, it validates, and
-it fails the first time anybody runs it. Shipping that under a record saying "done" would be
-worse than the gap, because the gap is now visible and a plausible-looking implementation
-would not be.
+**Leaving the path unbuilt and recorded.** That was this record's original decision, and it
+would have been defensible if the property really had needed Compose. It did not. The
+general lesson is the one the repository already states about tests that skip: "cannot be
+tested here" is a claim to check rather than assert, and the version of it that stands is
+"cannot be tested here by the means I first thought of".
 
 ## What holds the decision
 

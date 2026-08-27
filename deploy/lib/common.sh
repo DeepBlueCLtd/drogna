@@ -67,6 +67,22 @@ ensure_secrets() {
     log "generated a database password into the untracked environment file"
   fi
   export HARNESS_DATABASE_PASSWORD
+
+  # One secret per broker role, on the same terms and for the same reason: the broker's
+  # password file is written from these values, and presenting new ones to a broker whose
+  # file was written from the old ones refuses every component. Reset regenerates them,
+  # because reset removes the password file too.
+  for role in SENSOR INGEST CONTROL VIEWER; do
+    local name="HARNESS_BROKER_SECRET_${role}"
+    if [ -f "${DROGNA_ENV_FILE}" ] && [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
+      eval "${name}=\"$(sed -n "s/^${name}=\\(.*\\)$/\\1/p" "${DROGNA_ENV_FILE}" | tail -n 1)\""
+    fi
+    if [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
+      eval "${name}=\"$(python3 -c 'import secrets; print(secrets.token_hex(24))')\""
+      log "generated a broker secret for ${role} into the untracked environment file"
+    fi
+    eval "export ${name}"
+  done
 }
 
 check_destination() {
@@ -82,6 +98,12 @@ render_environment() {
   ensure_secrets
   py render_env.py "${destination}" >/dev/null ||
     fail "could not render the environment file for ${destination}"
+  # The configuration a container actually reads, and the broker's password file. Both are
+  # written from the secrets above so that the two halves of a credential cannot disagree,
+  # and both are untracked. Until this existed the tracked broker URLs named no role, no
+  # secret reached any component, and nothing could authenticate (ADR-0016).
+  py render_credentials.py "${destination}" >/dev/null ||
+    fail "could not render the configuration or the broker password file for ${destination}"
 }
 
 active_services() {

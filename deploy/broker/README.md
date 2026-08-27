@@ -114,12 +114,20 @@ A missing credential file stops the broker rather than opening it, which is the 
 want: `allow_anonymous` is `false`, and a broker that cannot read its password file refuses
 to start.
 
-**Two things this feature does not own and has therefore not done.** The environment
-template and the render step live in `deploy/env.template` and `deploy/lib/render_env.py`,
-which belong to `005-compose-deployment`. Producing `passwd` at deploy time needs a
-generated secret per role there, exactly as `HARNESS_DATABASE_PASSWORD` already is, and
-`deploy/broker/passwd` needs an entry in `.gitignore`. Both are one-line additions in
-another feature's files and are reported rather than made.
+**How `passwd` is produced, and how the same values reach the components.** This was
+reported here as work another feature owned and did not do, and it stayed undone long
+enough that no component could authenticate at all — see **ADR-0016**. It is built now.
+
+`deploy/lib/common.sh` generates one secret per role on first bring-up and reuses it
+thereafter, on the same terms as `HARNESS_DATABASE_PASSWORD`: a second bring-up must not
+present new credentials to a broker whose password file was written from the old ones.
+`deploy/lib/render_credentials.py` then writes both halves from that one set of values — this
+file, with `mosquitto_passwd`, and the configuration each component reads, into
+`deploy/.runtime/config/<destination>/`, which is what Compose mounts. Neither is tracked.
+
+Writing both halves in one place is the point. They are two representations of the same
+four secrets, and anything that let them drift would refuse every component with a message
+that names neither cause.
 
 Components receive their credentials in the broker URL their configuration carries —
 `mqtt://<role>:<secret>@<host>:<port>`. The tracked configuration files carry the role and

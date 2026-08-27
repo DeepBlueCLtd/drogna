@@ -241,7 +241,7 @@ telemetry, C-17 offload packager. The client already renders a dark box correctl
 eighteen dark is an honest picture of a browser-hosted deployment, and a page that
 explains which eight teaches more than one that glows uniformly.
 
-## F9 — Misbehaviour: put the faults on the components, never on the page
+## F9 — Misbehaviour: put the faults on the components, never on the page. **Proved by `spikes/operator-plane/`.**
 
 All three mechanisms were asked for — a fault panel, honest emergence, curated set-pieces —
 and they compose, with one design rule that keeps them constitutional:
@@ -261,6 +261,14 @@ direction, which is usually a sign it is right.
 
 Curated set-pieces are then just named scenarios plus a step count, and F5 makes them
 replay identically.
+
+The rule turned out to be enforceable rather than merely stated, and `spikes/operator-plane/`
+proves it: an impairment becomes part of the component's own state and reaches the display
+only through the heartbeat the component composes, so the console has no way to assert a
+failure that is not happening. Two rules were added there and belong with this one — an
+impairment may worsen a reported status and never improve one, and it must mark itself in
+the message, because a provoked degradation and a genuine one report the same status and
+nothing else could tell them apart.
 
 ## F10 — Cost, against the feature-sized envelope
 
@@ -383,6 +391,14 @@ prove it before committing.
 Two parts of the surface are honestly bespoke and should be named as such rather than
 folded into "the standards": the bootstrap document, and the clock rate POST. Neither wants
 generalising into an API. Both are already schema'd, and the second is one route.
+
+**A caution against over-reading this finding.** It is about the client's *data path* —
+how a browser front end reads forecasts and receives control messages. It says nothing
+about an operator plane: forcing a component to fail, tracking throughput, browsing a
+store. That is a second surface with different consumers, and `spikes/operator-plane/`
+finds the opposite answer for it, for the opposite reason. Here a contract already exists
+and a second one would be a third thing to keep in step; there nothing exists, so a
+declared contract is exactly what is needed.
 
 ## What could still sink it
 

@@ -1,0 +1,134 @@
+── Constitution I — no wall-clock time
+wallclock: clean.
+
+── Constitution II — seeded randomness
+seeded-rng: clean.
+
+── Constitution IV — no literal paths or hosts
+literal-path: clean.
+
+── Constitution V — no tracked-entity vocabulary
+forbidden-vocabulary: clean.
+
+── Constitution III — schema conventions
+schema-conventions: clean.
+
+── Constitution III — no hand-written boundary types
+handwritten-type: clean.
+Shapes awaiting adoption of the generated model:
+  client/tests/heartbeats.ts: HeartbeatFields
+
+── Constitution III — generated types are current
+generated types: 104 file(s) match their masters.
+
+── Constitution X — no leakage in a released artefact
+leakage: mitigated_pair: recovery 0.022 (sea_water_temperature), union 0.022, chance 0.15, discovery 0.6
+leakage: unmitigated_pair: recovery 1.000 (sea_water_temperature), union 1.000, chance 0.15, discovery 0.6
+leakage: age_driven_pair: recovery 1.000 (observation_age), union 0.105, chance 0.15, discovery 0.6
+leakage: unchanged_pair: inconclusive — the change mask is empty: no released value moved by more than the quantisation step of 0.01. Two identical products cannot have disclosed anything, and they cannot have shown that nothing was disclosed either.
+leakage: clean_bundle: 0 hit(s) in 1 member(s)
+leakage: leaky_bundle: 10 hit(s) in 2 member(s)
+leakage: unreadable_bundle: 1 hit(s) in 2 member(s)
+leakage: manifest_bundle: 1 hit(s) in 2 member(s)
+leakage: clean.
+
+── SRD FR-43 — exports conform to the CF version they declare
+cf-conformance: ragged: 2 bundle(s), 0 error(s)
+cf-conformance: one-profile: 1 bundle(s), 0 error(s)
+cf-conformance: one-level: 1 bundle(s), 0 error(s)
+cf-conformance: truncated: 1 bundle(s), 0 error(s)
+cf-conformance: clean, against CF-1.10.
+
+── 016-visual-capture FR-19 — no fixed sleep in a capture path
+fixed-sleep: clean.
+
+── Repository layout — no service depends on another service
+service-dependency: clean.
+
+── Constitution IV — every named directory is mounted (local)
+mounts: every container directory local names is under a declared path.
+
+── Constitution IV — every named directory is mounted (droplet)
+mounts: every container directory droplet names is under a declared path.
+
+Exemption inventory:
+  client/e2e/shared/config.ts:42: harness:allow-literal-path — this module's own position in the tree, needed to find the configuration document; no deployment location appears in this file
+  client/e2e/specs/determinism.spec.ts:167: harness:allow-wallclock — the control's whole purpose is to be a host-clock display, so that the comparison can be shown to catch one
+  client/e2e/specs/determinism.spec.ts:169: harness:allow-wallclock — as above; this element exists only inside this test's browser
+  client/src/config/runtime.ts:72: harness:allow-literal-path — FR-018, the one bootstrap URL a browser cannot avoid; every other location the client uses arrives inside the document this fetches
+  client/src/controls/interpolatedClock.ts:178: harness:allow-wallclock — ADR-0007, the frame timestamp interpolates between two received clock samples and reaches nothing outside this module
+  client/src/time/host.ts:22: harness:allow-wallclock — ADR-0006, heartbeat cadence and liveness windows are real time
+  client/tests/route/noInstruction.test.tsx:73: harness:allow-forbidden-vocabulary — the prohibition has to be named where it is asserted; this is the list the rendered page is scanned for, not vocabulary this page uses
+  libs/harness_core/src/harness_core/clock_service.py:303: harness:allow-wallclock — the clock service's real-time driver (Constitution I, FR-009)
+  libs/harness_core/src/harness_core/clock_service.py:395: harness:allow-literal-path — packaged schema resource, not a deployment location
+  libs/harness_core/src/harness_core/heartbeat.py:54: harness:allow-literal-path — resource shipped inside this package, not a deployment location
+  libs/harness_core/src/harness_core/heartbeat.py:146: harness:allow-wallclock — ADR-0006, heartbeat cadence and liveness are real time
+  libs/harness_core/src/harness_core/manifest.py:40: harness:allow-literal-path — JSON pointer into the manifest document, not a filesystem path
+  proxy/render_config.py:61: harness:allow-literal-path — the templates shipped beside this module, not a deployment location
+  proxy/render_config.py:67: harness:allow-literal-path — a JSON pointer into the configuration, not a filesystem path
+  proxy/render_config.py:69: harness:allow-literal-path — a JSON pointer into the configuration, not a filesystem path
+  proxy/render_config.py:71: harness:allow-literal-path — a JSON pointer into the configuration, not a filesystem path
+  proxy/render_config.py:73: harness:allow-literal-path — a JSON pointer into the configuration, not a filesystem path
+  proxy/render_config.py:237: harness:allow-literal-path — a JSON pointer, not a filesystem path
+  proxy/schemas/__init__.py:25: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  proxy/schemas/__init__.py:27: harness:allow-literal-path — as above
+  query/conformance.md:47: harness:allow-forbidden-vocabulary — FR-026 asks that the reason be visible, and the reason is the word -->
+  query/plugins/coveragejson.py:41: harness:allow-literal-path — a CRS identifier, which is a name and not an address
+  query/plugins/coveragejson.py:112: harness:allow-literal-path — a CRS identifier, not an address
+  query/plugins/schemas/__init__.py:30: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  query/plugins/schemas/__init__.py:32: harness:allow-literal-path — as above
+  query/plugins/sensorthings_entities.py:63: harness:allow-forbidden-vocabulary — FR-026 asks for the reason, and the reason is the word
+  query/render_config.py:42: harness:allow-literal-path — the template shipped beside this module, not a deployment location
+  query/render_config.py:47: harness:allow-literal-path — a JSON pointer into the configuration, not a filesystem path
+  query/render_config.py:148: harness:allow-literal-path — a JSON pointer, not a filesystem path
+  services/clock/src/harness_clock/schemas/__init__.py:30: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/clock/src/harness_clock/schemas/__init__.py:32: harness:allow-literal-path — as above
+  services/clock/src/harness_clock/schemas/__init__.py:34: harness:allow-literal-path — as above
+  services/env_generator/src/harness_env_generator/schemas/__init__.py:31: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/env_generator/src/harness_env_generator/schemas/__init__.py:33: harness:allow-literal-path — as above
+  services/env_generator/src/harness_env_generator/schemas/__init__.py:35: harness:allow-literal-path — as above
+  services/ingest/src/harness_ingest/schemas/__init__.py:28: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/ingest/src/harness_ingest/schemas/__init__.py:30: harness:allow-literal-path — as above
+  services/model_runner/pyproject.toml:14: harness:allow-service-dependency — C-02 authors what a stored field is; no library home yet
+  services/model_runner/src/harness_model_runner/schemas/__init__.py:26: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/model_runner/src/harness_model_runner/schemas/__init__.py:28: harness:allow-literal-path — as above
+  services/monitor/src/harness_monitor/schemas/__init__.py:26: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/monitor/src/harness_monitor/schemas/__init__.py:28: harness:allow-literal-path — as above
+  services/offload/src/harness_offload/config.py:96: harness:allow-literal-path — a JSON pointer into the configuration, not a path
+  services/offload/src/harness_offload/config.py:108: harness:allow-literal-path — a JSON pointer into the configuration, not a path
+  services/offload/src/harness_offload/schemas/__init__.py:40: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/offload/src/harness_offload/schemas/__init__.py:42: harness:allow-literal-path — as above
+  services/offload/src/harness_offload/schemas/__init__.py:44: harness:allow-literal-path — as above; the sidecar is validated before a bundle counts as staged
+  services/offload/src/harness_offload/schemas/__init__.py:46: harness:allow-literal-path — as above; a receipt arrives from outside and is checked against this
+  services/offload/src/harness_offload/schemas/__init__.py:48: harness:allow-literal-path — as above; a report is validated before it is called a report
+  services/planner/pyproject.toml:19: harness:allow-service-dependency — ADR-0002 gives the timescale one evaluation, and it is C-02's
+  services/planner/src/harness_planner/schemas/__init__.py:31: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/planner/src/harness_planner/schemas/__init__.py:33: harness:allow-literal-path — as above
+  services/publisher/src/harness_publisher/schemas/__init__.py:26: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/publisher/src/harness_publisher/schemas/__init__.py:28: harness:allow-literal-path — as above
+  services/scheduler/src/harness_scheduler/schemas/__init__.py:26: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/scheduler/src/harness_scheduler/schemas/__init__.py:28: harness:allow-literal-path — as above
+  services/sensors/pyproject.toml:14: harness:allow-service-dependency — a sensor samples the field C-02 authored, not a second one
+  services/sensors/src/harness_sensors/schemas/__init__.py:29: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/sensors/src/harness_sensors/schemas/__init__.py:31: harness:allow-literal-path — as above
+  services/sensors/src/harness_sensors/schemas/__init__.py:33: harness:allow-literal-path — as above
+  services/telemetry/pyproject.toml:17: harness:allow-service-dependency — the coverage read port has one implementation, C-11's
+  services/telemetry/src/harness_telemetry/schemas/__init__.py:34: harness:allow-literal-path — schema documents shipped inside this package, not deployment locations
+  services/telemetry/src/harness_telemetry/schemas/__init__.py:36: harness:allow-literal-path — as above
+  stores/features/migrations/0001_features.sql:13: harness:allow-wallclock — the prohibition has to be stated where the columns are declared
+  stores/features/provision.py:63: harness:allow-literal-path — shipped beside this module, not a deployment location
+  stores/features/provision.py:65: harness:allow-literal-path — as above
+  stores/features/provision.py:67: harness:allow-literal-path — as above
+  stores/observations/apply.py:32: harness:allow-literal-path — SQL shipped beside this module, not a deployment location
+  stores/observations/apply.py:34: harness:allow-literal-path — as above
+  stores/observations/migrations/0001_observations.sql:20: harness:allow-wallclock — the prohibition has to be stated where the columns are declared
+  tests/integration/test_backpressure.py:159: harness:allow-wallclock — test harness setup; deciding when to stop waiting
+  tests/integration/test_heartbeat_under_rate_zero.py:19: harness:allow-wallclock — ADR-0006, this test measures a real-time cadence
+  tests/integration/test_observation_path.py:158: harness:allow-wallclock — test harness setup; deciding when to stop waiting for a broker
+  tests/support/observation_path.py:202: harness:allow-wallclock — test harness setup; deciding when a container is ready
+  tests/support/proxy_boundary.py:138: harness:allow-wallclock — test harness setup; waiting on a container
+  tests/support/proxy_boundary.py:356: harness:allow-wallclock — test harness setup
+  tests/support/proxy_boundary.py:358: harness:allow-wallclock — test harness setup
+  tests/support/proxy_boundary.py:364: harness:allow-wallclock — test harness setup; waiting on a container
+
+gates: all 13 clean.

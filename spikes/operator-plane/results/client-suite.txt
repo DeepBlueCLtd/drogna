@@ -1,0 +1,58 @@
+
+ RUN  v2.1.9 client
+
+ ✓ tests/route/arrivalConditions.test.ts (18 tests) 11ms
+ ✓ tests/controls/interpolationDoesNotEscape.test.ts (9 tests) 23ms
+ ✓ e2e/tests/noSynthesisedTraffic.test.ts (14 tests) 29ms
+ ✓ e2e/tests/separation.test.ts (7 tests) 35ms
+ ✓ tests/controls/pinnedRate.test.tsx (14 tests) 29ms
+ ✓ tests/loop/rendering.test.tsx (14 tests) 29ms
+ ✓ tests/route/noInstruction.test.tsx (8 tests) 9ms
+ ✓ tests/controls/clockUnreachable.test.ts (15 tests) 7ms
+ ✓ e2e/tests/curated.test.ts (7 tests) 7ms
+ ✓ tests/faultDisplay.test.ts (8 tests) 11ms
+ ✓ tests/bootstrap.test.ts (12 tests) 12ms
+ ✓ tests/controls/rateState.test.ts (13 tests) 7ms
+ ✓ tests/inspector/inspector.test.ts (11 tests) 11ms
+ ✓ tests/loop/transits.test.ts (11 tests) 13ms
+ ✓ tests/loop/coalesce.test.ts (11 tests) 14ms
+ ✓ e2e/tests/difference.test.ts (6 tests) 37ms
+ ✓ tests/loop/noSynthesisedTraffic.test.ts (8 tests) 21ms
+ ✓ e2e/tests/fingerprint.test.ts (15 tests) 13ms
+ ✓ tests/uncertainty/decayFromProjection.test.ts (13 tests) 7ms
+ ✓ tests/uncertainty/qualityStatement.test.tsx (13 tests) 9ms
+ ✓ tests/controls/captureReadiness.test.ts (11 tests) 6ms
+ ✓ tests/uncertainty/downsample.test.ts (12 tests) 271ms
+ ✓ tests/uncertainty/refresh.test.ts (13 tests) 6ms
+ ✓ tests/legibility/classification.test.ts (12 tests) 10ms
+ ✓ e2e/tests/restore.test.ts (7 tests) 5ms
+ ✓ tests/legibility/bespokeDetail.test.tsx (8 tests) 14ms
+ ✓ tests/no-mock.test.ts (6 tests) 14ms
+ ✓ tests/route/emptyRoute.test.tsx (11 tests) 13ms
+ ✓ tests/route/routeLayer.test.ts (15 tests) 7ms
+ ✓ tests/loop/cycle.test.ts (8 tests) 10ms
+ ✓ tests/data/longSession.test.ts (6 tests) 1176ms
+   ✓ a long session > retains the same number of objects after ten thousand cycles as after one thousand 401ms
+   ✓ a long session > empties the pending queue every frame, so a burst is not retained 305ms
+ ✓ tests/diagram.test.tsx (9 tests) 21ms
+ ✓ tests/transport.test.ts (6 tests) 6ms
+ ✓ tests/clockstate.test.ts (9 tests) 7ms
+ ✓ e2e/tests/provenance.test.ts (12 tests) 8ms
+ ✓ tests/reducer.test.ts (9 tests) 8ms
+ ✓ e2e/tests/captureConfig.test.ts (9 tests) 186ms
+ ✓ tests/recorded.test.ts (6 tests) 6ms
+ ✓ tests/window.test.ts (10 tests) 6ms
+ ✓ tests/layout.test.tsx (6 tests) 8ms
+ ✓ tests/data/buffers.test.ts (7 tests) 15ms
+ ✓ tests/validation.test.ts (8 tests) 5ms
+ ✓ tests/ordering.test.ts (4 tests) 4ms
+ ✓ tests/loop/disconnected.test.ts (6 tests) 5ms
+ ✓ tests/generated-types.test.ts (4 tests) 3ms
+ ✓ tests/unmapped.test.ts (4 tests) 5ms
+ ✓ tests/control.test.ts (9 tests) 16ms
+
+ Test Files  47 passed (47)
+      Tests  454 passed (454)
+   Start at  19:27:14
+   Duration  7.95s (transform 1.06s, setup 0ms, collect 9.13s, tests 2.18s, environment 10ms, prepare 3.00s)
+

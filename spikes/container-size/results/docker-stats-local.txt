@@ -1,0 +1,23 @@
+# Contributed measurement, 27 August 2026. Run by the repository owner on a local
+# Docker VM (8322969600 bytes / 8 CPUs), which is not the droplet. This spike could not
+# produce it: the machine it was written on has no Docker daemon.
+#
+# Four containers, so this is not the full profile. query and proxy are not in the set.
+#
+# MEM USAGE here is the cgroup working set, which is not the same measure as the peak
+# import RSS in footprint-services.txt. They are the same order and neither is a
+# substitute for the other: the working set is what the host is holding now, the import
+# floor is what the dependency tree costs before a request arrives.
+
+NAME                     MEM USAGE / LIMIT     MEM %    CPU %
+drogna-client-1          7.105MiB / 512MiB     1.39%    0.00%
+drogna-observations-1    32.59MiB / 1GiB       3.18%    17.22%
+drogna-clock-1           25.84MiB / 512MiB     5.05%    12.77%
+drogna-broker-1          18.74MiB / 512MiB     3.66%    1.58%
+
+=== docker VM total ===
+MemTotal: 8322969600 bytes / 8 CPUs
+
+  measured total      84.28 MiB
+  declared ceiling      2560 MiB
+  overprovisioned        30.4x

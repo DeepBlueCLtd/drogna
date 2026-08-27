@@ -36,9 +36,11 @@ number in it was typed into this spike.
 The one measurement that is a *claim* rather than an observation is the trim in §3, and
 it carries a probe that has been watched failing.
 
-Not measured, and stated as unmeasured rather than estimated: the resident cost of
+Not measured here, and stated as unmeasured rather than estimated: the resident cost of
 Postgres, Mosquitto and nginx, none of which this repository writes; and the size of the
-`apk add python3 py3-pip` layer in the proxy image.
+`apk add python3 py3-pip` layer in the proxy image. **Three of those four were measured
+afterwards on a machine with a daemon and are in §5b** — the fourth, the proxy's `apk`
+layer, is still unmeasured.
 
 ## 1. Where the bytes are
 
@@ -262,6 +264,50 @@ capacity figure should not be cited as a constraint on anything else without §5
 Whether that model is adopted is not this spike's call, and nothing here is written on the
 assumption that it has been.
 
+## 5b. The ceilings, measured rather than reasoned about
+
+**Contributed measurement, 27 August 2026**, run by the repository owner on a local Docker
+VM (7937 MiB / 8 CPUs — not the droplet). `results/docker-stats-local.txt`. This spike
+could not produce it, and it settles three of the four figures §5 had to leave open.
+
+```
+drogna-client-1          7.105MiB / 512MiB     nginx
+drogna-observations-1    32.59MiB / 1GiB       postgis
+drogna-clock-1           25.84MiB / 512MiB     a Python component
+drogna-broker-1          18.74MiB / 512MiB     mosquitto
+
+  measured total      84.28 MiB
+  declared ceiling      2560 MiB
+  overprovisioned        30.4x
+```
+
+Postgres — the service given the *largest* ceiling in the deployment, and the one whose
+image is 48% of the stack's bytes — holds **32.59 MiB against a 1 GiB ceiling**. Mosquitto
+and nginx are 18.74 and 7.105 MiB. None of the three is expensive, and the assumption that
+the third-party images are where the weight is turns out to be true of disk and false of
+memory.
+
+Note the units of the comparison. `docker stats` reports a cgroup working set; §5 reports
+peak RSS of an import. They are different measures and neither substitutes for the other.
+They agree in magnitude where they overlap — the clock at 25.84 MiB working set against a
+36.1 MB import peak — which is the most that can be asked of them.
+
+**Extrapolating to the seventeen-service `full` profile**, using the measured clock for
+each of the eleven Python components, the measured third-party figures, and the query
+layer's 85.7 MB import floor with headroom for serving:
+
+| | Declared | Measured or extrapolated |
+|---|---:|---:|
+| One `full` stack | 7168 MiB | **~460 MiB** |
+| Stacks in the 4096 MiB droplet | 0 | ~8 |
+| Stacks in this 7937 MiB VM | 1 | ~17 |
+
+That is an estimate and is labelled one; the four measured containers in it are not. It
+does not change the recommendation in §5 — it sharpens it. The ceilings are not merely
+generous, they are wrong by a factor of about thirty, and every capacity conclusion drawn
+from them, including this document's own §5 and the one in PR #15, is an artefact of the
+configuration rather than a fact about the software.
+
 ## 6. Fewer containers
 
 Three options, in increasing order of what they cost:
@@ -272,17 +318,38 @@ Three options, in increasing order of what they cost:
    answer to "fewer containers" for most pull requests.
 2. **One Python image, eleven containers** — §2. Fewer images, same containers. No
    architectural cost.
-3. **Co-locating components into shared containers.** Not recommended, and it should not
-   be done without an ADR. The mechanical objections are that each component would lose
-   its own memory ceiling, its own restart policy and its own health check, and that
-   `depends_on: service_healthy` ordering is expressed between containers. The real
-   objection is evidential: drogna's claim is that eleven components are independently
-   alive, and Principle VII makes the display of that non-negotiable. Heartbeats would
-   still be emitted per component, so the client would look the same — which is the
-   problem. A container holding four components that reports three heartbeats after one
-   thread has died is a display asserting something that is not true, and that is the
-   exact failure Principle VII exists to prevent. If it is pursued anyway, the liveness
-   story has to be re-argued first, not retrofitted.
+3. **One container for the eleven Python components**, under a process supervisor, with
+   Postgres, Mosquitto, nginx and the query layer left as they are. Five containers
+   instead of seventeen. This is the honest middle: each component stays a *process*, so
+   it still dies and restarts independently and still emits its own heartbeat, and the
+   third-party images stay pinned by digest. What is given up is per-component memory
+   ceilings, per-component health checks, and `depends_on: service_healthy` ordering,
+   which becomes the supervisor's hand-rolled equivalent. Worth an ADR; not obviously
+   wrong.
+
+4. **One container for everything, Postgres included.** Asked directly, and the answer is
+   that it is possible and it is not recommended — but the reason is not resources, and
+   §5b is why. A `full` stack measures about 460 MiB. There is no capacity problem for
+   consolidation to solve, so this buys simplicity and pays for it in three places.
+
+   The first is mechanical: Postgres would have to be installed into a Python image or
+   Python into the postgis image, and either way the pinned third-party digest goes. A
+   replay resting on a hand-assembled database is not the replay Constitution II
+   describes.
+
+   The second is that the Compose file is not scaffolding here, it is a deliverable. This
+   repository's value is that it demonstrates an architecture legibly; seventeen services
+   with their profiles, mounts and dependencies *are* the demonstration. Collapsing them
+   into one container does not simplify the harness, it deletes what the harness is
+   showing, and leaves a process tree nobody can read from the outside.
+
+   The third is Principle VII, and it is the one that would need arguing rather than
+   waving through. Threads are the failure case: a supervisor running separate processes
+   keeps liveness honest, but components merged into one process do not. Heartbeats would
+   still be emitted per component, so a process holding four components that reports
+   three heartbeats after one thread has died is a display asserting something untrue —
+   the exact failure Principle VII exists to prevent. If this is pursued, that has to be
+   re-argued first, not retrofitted.
 
 ## 7. Two defects found on the way
 
@@ -327,7 +394,7 @@ In the order the evidence supports, cheapest first:
 | Do this | Worth | Costs |
 |---|---|---|
 | Fix the two defects in §7 | correctness | small; owned by 008 and 005 |
-| Size `resources.default` from the measured floor | the multi-stack question | a config edit |
+| Size `resources.default` from the measured floor (§5b) | the multi-stack question | a config edit |
 | Publish only the proxy; give each stack its own project name | ports stop colliding | a destination per stack |
 | One Python image, component chosen at run time (§2) | 94 MB, 11 builds → 1 | a Dockerfile and a Compose edit |
 | Drop `uv` from the runtime image via a build stage | 49 MB | a Dockerfile edit |

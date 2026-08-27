@@ -91,13 +91,28 @@ nearest cell offered as a consolation. A planner that always recommends motion i
 a planner nobody can trust when it recommends motion.
 
 The two numbers involved have to be set consistently, and they are set in
-different files by different features. If the published spread sits at 0.2 °C
-across the domain and the planner's threshold is 0.35 °C — which is what the
-shipped configuration says — then every cell's excess is zero and the correct
-recommendation is the empty one. That is the design working, not failing; but it
-means the pair of numbers is a scenario decision that has to be made together, and
-the [ensemble spread derivation](ensemble-spread.md) has the measurements of what
-the field actually contains.
+different files by different features — which is exactly how they came to disagree.
+Until 27 August 2026 the threshold was 0.35 °C, and the largest per-cell spread the
+model runner produces at its shipped settings is **0.2156 °C**. Not close: no cell
+of 810 was above the threshold, so every excess was zero and the only recommendation
+the assembled system could ever make was the empty one.
+
+That is the design working exactly as described above, which is why no test caught
+it. The runner's tests assert it emits a spread; the planner's tests assert it plans
+under a budget, using fixtures whose uncertainty values were written to exercise the
+planner rather than taken from the runner. Nothing drove one into the other, and
+correct behaviour on inputs nobody supplies is indistinguishable from correct
+behaviour.
+
+The threshold is now 0.172 °C, the upper quartile of what the runner actually
+produces, so the most uncertain quarter of the field is worth visiting. **ADR-0019**
+records why it stays an absolute number rather than becoming a quantile, and
+`tests/integration/test_planner_threshold_against_runner_spread.py` now drives the
+real runner into the configured threshold and asserts the relationship rather than
+either number: something above it, something below it, and a fraction in between
+that leaves a real choice. The [ensemble spread derivation](ensemble-spread.md) has
+the measurements of what the field contains, including why its absolute level moves
+with the root seed.
 
 ## What a visit informs
 

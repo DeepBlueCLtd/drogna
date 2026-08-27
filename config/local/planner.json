@@ -30,14 +30,20 @@
     "indexing": {
       "h3_resolution": 6,
       "depth_bands": [
-        { "minimum_depth_m": 0.0, "maximum_depth_m": 50.0 },
-        { "minimum_depth_m": 50.0, "maximum_depth_m": 150.0 }
+        {
+          "minimum_depth_m": 0.0,
+          "maximum_depth_m": 50.0
+        },
+        {
+          "minimum_depth_m": 50.0,
+          "maximum_depth_m": 150.0
+        }
       ],
       "maximum_cells": 4096
     },
     "uncertainty": {
       "variable": "temperature_spread",
-      "usable_threshold": 0.35
+      "usable_threshold": 0.172
     },
     "sensing": {
       "horizontal_decay_m": 9000.0,
@@ -50,7 +56,11 @@
       "horizontal_speed_m_per_s": 2.0,
       "vertical_speed_m_per_s": 0.5,
       "budget_seconds": 10800.0,
-      "start": { "latitude": 49.0, "longitude": -4.5, "depth_m": 0.0 }
+      "start": {
+        "latitude": 49.0,
+        "longitude": -4.5,
+        "depth_m": 0.0
+      }
     },
     "horizon": {
       "span_seconds": 10800.0,

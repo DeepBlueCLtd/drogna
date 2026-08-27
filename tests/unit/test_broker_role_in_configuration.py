@@ -13,12 +13,17 @@ broker URLs read `mqtt://broker:1883`, naming neither. Nothing noticed, because 
 integration tests that would have are container-backed and skip wherever there is no
 container runtime, and because a URL with no role is a well-formed URL.
 
-This is a ratchet rather than a gate, in the shape `tests/unit/test_mount_coherence.py`
-used before it: the outstanding set is listed below with a reason per entry, the test fails
-if anything joins it, and it becomes a gate on the day the list is empty. Twenty-two of the
-twenty-eight are fixed; the three components below are left because assigning them a role
-is a decision about the access control list rather than a transcription of one, and
-`deploy/broker/acl` defines exactly four roles.
+This was a ratchet in the shape `tests/unit/test_mount_coherence.py` used before it, and
+it reached zero on the day it was written, so it is a gate now. The list below is empty and
+the tests below are the whole of what holds it there.
+
+The three that were outstanding were settled by looking rather than deciding. The feature
+store opens no broker connection — `provision.py` mentions it nowhere and its schema does
+not require one — so its section was vestigial. The query layer does open one, publishing a
+heartbeat and subscribing to nothing, so it has a role of its own with a single write rule
+(ADR-0015's shape, not `drogna_control`'s). And `common.json` turned out to be read by one
+caller for one field: nothing merges it into anything, so the broker section it carried was
+a default that could never have applied (ADR-0018).
 
 What this test does not check, because it is not true yet: that a secret ever reaches the
 URL. Producing `passwd` at deploy time is reported in `deploy/broker/README.md` as work
@@ -50,12 +55,7 @@ ROLES = frozenset(
 
 # Components whose broker URL still names no role, and why. Shrinking this list is the
 # work; adding to it fails the test.
-OUTSTANDING: dict[str, str] = {
-    "common": (
-        "shared defaults, read by every component. A role here would be the wrong role for "
-        "all but one of them, and the per-component file is where the identity belongs"
-    ),
-}
+OUTSTANDING: dict[str, str] = {}
 
 
 def _broker_urls() -> dict[tuple[str, str], str]:

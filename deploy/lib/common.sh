@@ -12,6 +12,10 @@ DROGNA_COMPOSE_FILE="${DROGNA_DEPLOY_DIR}/compose.yaml"
 DROGNA_ENV_FILE="${DROGNA_DEPLOY_DIR}/.env"
 DROGNA_DEFAULT_DESTINATION="local"
 
+# How much of a failing service's log travels with the bring-up's failure report. Short
+# enough to read, long enough to carry a stack trace's last frame.
+DROGNA_LOG_TAIL="${DROGNA_LOG_TAIL:-25}"
+
 log() { printf '%s\n' "$*"; }
 
 step() { printf '\n== %s\n' "$*"; }
@@ -49,8 +53,23 @@ require_docker() {
 
 py() { python3 "${DROGNA_LIB_DIR}/$1" "${@:2}"; }
 
+# DROGNA_PROFILES overrides the destination's profiles.active for one invocation. It exists
+# for the capture workflow, which needs the clock, the broker and the client running in order
+# to photograph a shell with anything lit, and which is not a destination and should not have
+# to become one to say so.
+#
+# It is deliberately an override and not a second source of truth: unset, every command here
+# runs exactly what profiles.active names, and nothing reads this variable except the line
+# below. `deploy/README.md` says what a profile means and what it does not, and none of that
+# changes — a profile still describes what runs, and illumination is still driven by
+# heartbeats and by nothing else.
 compose() {
-  docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  if [ -n "${DROGNA_PROFILES:-}" ]; then
+    COMPOSE_PROFILES="${DROGNA_PROFILES}" \
+      docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  else
+    docker compose --file "${DROGNA_COMPOSE_FILE}" --env-file "${DROGNA_ENV_FILE}" "$@"
+  fi
 }
 
 # The database password is generated once and then reused, so that a second bring-up does
@@ -67,6 +86,27 @@ ensure_secrets() {
     log "generated a database password into the untracked environment file"
   fi
   export HARNESS_DATABASE_PASSWORD
+
+  # One secret per broker role, on the same terms and for the same reason: the broker's
+  # password file is written from these values, and presenting new ones to a broker whose
+  # file was written from the old ones refuses every component. Reset regenerates them,
+  # because reset removes the password file too.
+  # The role list comes from render_credentials.ROLE_SECRETS, which is derived from the
+  # access control list's blocks. Repeating it here is how a role gets added to the broker
+  # and silently never given a secret, so it is read rather than typed.
+  local names
+  names="$(python3 "${DROGNA_LIB_DIR}/render_credentials.py" --secret-names)" ||
+    fail "could not read the broker role list from render_credentials.py"
+  for name in ${names}; do
+    if [ -f "${DROGNA_ENV_FILE}" ] && [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
+      eval "${name}=\"$(sed -n "s/^${name}=\\(.*\\)$/\\1/p" "${DROGNA_ENV_FILE}" | tail -n 1)\""
+    fi
+    if [ -z "$(eval "printf '%s' \"\${${name}:-}\"")" ]; then
+      eval "${name}=\"$(python3 -c 'import secrets; print(secrets.token_hex(24))')\""
+      log "generated ${name} into the untracked environment file"
+    fi
+    eval "export ${name}"
+  done
 }
 
 check_destination() {
@@ -82,6 +122,12 @@ render_environment() {
   ensure_secrets
   py render_env.py "${destination}" >/dev/null ||
     fail "could not render the environment file for ${destination}"
+  # The configuration a container actually reads, and the broker's password file. Both are
+  # written from the secrets above so that the two halves of a credential cannot disagree,
+  # and both are untracked. Until this existed the tracked broker URLs named no role, no
+  # secret reached any component, and nothing could authenticate (ADR-0016).
+  py render_credentials.py "${destination}" >/dev/null ||
+    fail "could not render the configuration or the broker password file for ${destination}"
 }
 
 active_services() {
@@ -96,16 +142,26 @@ public_url() {
   sed -n 's/^HARNESS_PUBLIC_URL=\(.*\)$/\1/p' "${DROGNA_ENV_FILE}" | tail -n 1
 }
 
+# --all is what makes an exited container visible: `compose ps` without it lists only what
+# is still up, so a container that crashed reads exactly like one that was never created.
+# The judgement itself lives in deploy/lib/service_states.py, where it can be tested without
+# a container runtime — see its docstring for the three false lines that put it there.
 report_unhealthy() {
-  local service
-  for service in $(active_services); do
-    local state
-    state="$(compose ps --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null |
-      awk -v want="${service}" '$1 == want { print $2" "$3 }')"
-    case "${state}" in
-      *healthy*|*running*|*exited*) ;;
-      "") printf '  %s: no container was created\n' "${service}" >&2 ;;
-      *) printf '  %s: %s\n' "${service}" "${state}" >&2 ;;
-    esac
+  local states service
+  states="$(compose ps --all --format json 2>/dev/null)"
+  printf '%s' "${states}" |
+    python3 "${DROGNA_LIB_DIR}/service_states.py" $(active_services) >&2
+
+  # And what each of them said on its way down. Pointing at `docker compose logs` was
+  # reasonable advice for someone at a terminal and no use at all in CI, where the stack is
+  # gone by the time a person reads the failure — so the reason travels with the report
+  # rather than being available on request. The tail is short because the useful line is
+  # nearly always the last one: a refused credential, a configuration nginx would not
+  # accept, a port already taken.
+  for service in $(printf '%s' "${states}" |
+    python3 "${DROGNA_LIB_DIR}/service_states.py" --names-only $(active_services)); do
+    printf '\n--- %s, last %s lines ---\n' "${service}" "${DROGNA_LOG_TAIL}" >&2
+    compose logs --no-color --tail "${DROGNA_LOG_TAIL}" "${service}" 2>&1 |
+      sed 's/^/  /' >&2 || printf '  (no logs; the container may never have started)\n' >&2
   done
 }

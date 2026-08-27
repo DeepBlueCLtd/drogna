@@ -59,6 +59,26 @@ jobs:
         # PR-01: the published site must fetch nothing from another origin.
         run: python site/tools/check_no_external_resources.py site/build
 
+      # The vocabulary gate reads the text inside published images, which needs an OCR
+      # engine. Without one it exits 2 — "could not run" — and the runner treats that as a
+      # failure rather than a pass, so this step is what stands between a real image scan
+      # and a loud refusal to publish. It is deliberately not a silent skip: an image is
+      # the one place a leaked hostname or path is invisible to every other check here.
+      - name: Install the OCR engine the vocabulary gate needs
+        run: sudo apt-get update -qq && sudo apt-get install -y tesseract-ocr
+
+      # FR-004: one entry point, run before anything reaches gh-pages, reporting every
+      # failure rather than stopping at the first. It discovers site/gates/check_*.py and
+      # names none of them, so a feature adds a gate by adding a file.
+      #
+      # This is registered here rather than in scripts/gates.registry on purpose. Every
+      # gate below runs over the *built* site, and mkdocs is deliberately outside the uv
+      # workspace (ADR-0010), so ./scripts/gates.sh would go red in any checkout that had
+      # not run a build first — which is every fresh checkout. FR-004 asks for these gates
+      # to run before a push to gh-pages, and this is that point.
+      - name: Gate — the site's own publication gates
+        run: python site/gates/run_gates.py --site site/build
+
       - name: Gate — the landing page carries the FR-01 statement
         run: |
           set -euo pipefail

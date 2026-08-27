@@ -11,10 +11,12 @@ description: A learning harness for an environmental data architecture.
     deliberately fake. It is not a candidate system, not a prototype of one, and
     nothing it produces is a measurement of anything real.**
 
-    Every temperature, salinity and sound speed value it holds was invented by a
-    generator from a recorded seed. Its forecasts are analytic advection plus
-    noise, chosen because they are cheap and reproducible, not because they are
-    right. Nobody should navigate, plan or decide anything on the strength of it.
+    Every temperature, salinity and [sound speed](glossary.md#sound-speed) value
+    it holds was invented by a generator from a recorded seed. Its forecasts are
+    analytic [advection](glossary.md#advection) plus noise, chosen because they
+    are cheap and reproducible, not because they are right. Nobody should
+    navigate, plan or decide anything on the strength of it.
+
 
 ## What it is
 
@@ -56,7 +58,8 @@ reason: a publishing pipeline that has never run is not a publishing pipeline.
 - The [subsystem reference](subsystems/index.md) — what each of the eighteen
   components does, why it exists, and which failure mode it owns.
 - The [algorithm derivations](algorithms/index.md) — the mathematics that is not
-  obvious: ensemble spread, advection, informative path planning.
+  obvious: [ensemble spread](glossary.md#ensemble-spread), advection,
+  informative path planning.
 - The [standards primers](standards/index.md) — SensorThings, OGC API-EDR, CF
   conventions and CoverageJSON, for readers who have not met them.
 - The [glossary](glossary.md) — start here if the vocabulary is unfamiliar. Half

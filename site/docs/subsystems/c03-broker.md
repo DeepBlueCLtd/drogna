@@ -4,9 +4,21 @@ title: C-03 Broker
 
 # C-03 Broker (MQTT)
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! warning "Status: partly built"
+
+    - **Code:** `deploy/broker/` — `mosquitto.conf`, the `acl` that is the substance of
+      the separation, and the two-broker fallback under `deploy/broker/two-broker/`; the
+      service is declared in `deploy/compose.yaml`
+    - **Delivered by:** `specs/007-observation-path`
+    - **Covered by:** `tests/integration/test_topic_isolation.py`, which attempts each
+      forbidden publish and subscription against a running broker and asserts the
+      refusal. It needs a container runtime and skips loudly without one
+    - **Not present:** the credential file the broker authenticates against is produced
+      by a command written out in `deploy/broker/README.md` and by the test harness, not
+      by the deployment's own render step — no per-role secret exists in
+      `deploy/env.template`, and the tracked component configurations carry a broker URL
+      with no role in it. Refused attempts are logged at the broker but no count of them
+      reaches the telemetry topic
 
 **Responsibility:** pub/sub transport with namespaced topics.
 **Owns the failure mode of:** cross-contamination of flows.
@@ -17,6 +29,13 @@ One MQTT broker carries two kinds of traffic on two separate topic namespaces:
 observations under one prefix, internal control events under another. Sensors
 are confined by access control list to the observation branch and cannot publish
 control traffic at all.
+
+The one exception the rules had to argue for is that a sensor may *read* the
+clock sample, and nothing else on the control branch. A component with no
+simulation time can only pace itself on the host clock, which is forbidden
+outright, so the property tested is not that a sensor cannot subscribe to the
+control namespace: it is that subscribing to it delivers the time and nothing
+else.
 
 ## Why one broker and not two
 

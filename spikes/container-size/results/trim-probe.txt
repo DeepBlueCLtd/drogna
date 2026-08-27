@@ -1,0 +1,17 @@
+# trim_probe.py, against the TRIMMED query closure (rasterio and SQLAlchemy removed)
+
+ok    rasterio and SQLAlchemy are absent
+ok    pygeoapi and its provider machinery import
+ok    both drogna providers import
+
+The query image can drop both packages.
+
+# The same probe against the UNTRIMMED closure, which is otherwise identical.
+# It must refuse to pass here: a probe that cannot tell the two apart proves
+# nothing about either. Watched failing 27 August 2026.
+
+FAIL  rasterio and SQLAlchemy are absent: AssertionError: rasterio is still installed; this probe only means something against a trimmed environment
+ok    pygeoapi and its provider machinery import
+ok    both drogna providers import
+
+# exit status of that second run: 1 (expected)

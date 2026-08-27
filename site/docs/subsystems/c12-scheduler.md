@@ -4,9 +4,19 @@ title: C-12 Scheduler
 
 # C-12 Scheduler
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/scheduler/` — `policy.py` for the minimum interval,
+      `outstanding.py` for the duplicate-request register, and `run_id.py` for the
+      deterministic run identifier
+    - **Delivered by:** `specs/009-control-loop`
+    - **Covered by:** `services/scheduler/tests/`,
+      `tests/integration/test_monitor_scheduler_handoff.py` and
+      `tests/integration/test_control_loop_startup.py`
+    - **Not present:** the run identifier is derived from the seed and an ordinal by
+      hashing, so a published run's name cannot be read back as the sequence it was, and
+      the run manifest records no run sequence for want of one. The coverage store's
+      naming rule puts the sequence in the name and the scheduler has not adopted it
 
 **Responsibility:** decide whether a model run is warranted.
 **Owns the failure mode of:** thrashing.

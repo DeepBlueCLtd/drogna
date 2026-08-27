@@ -21,8 +21,9 @@ is worth asking.
 <!-- more -->
 
 [OGC API-EDR](../../standards/ogc-api-edr.md) is a web standard for retrieving
-environmental data at a position, along a route, or through a volume. Its trajectory
-query is the one that answers the second question, and the way it carries the arrival
+environmental data at a position, along a route, or through a volume. Its
+[trajectory](../../glossary.md#trajectory) query is the one that answers the second
+question, and the way it carries the arrival
 times is genuinely elegant. A route is sent as WKT, the ordinary text spelling of a
 geometry: `LINESTRING (-3.6 48.4, -2.55 49.45)`. WKT allows two optional extra
 ordinates per vertex — Z, conventionally elevation, and M, a "measure", which is

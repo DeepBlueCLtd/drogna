@@ -19,7 +19,7 @@
     "stream": "sensors"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_sensor@broker:1883",
     "client_id": "sensors",
     "keepalive_seconds": 30
   },

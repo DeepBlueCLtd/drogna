@@ -1,0 +1,13 @@
+image                                          pull    on disk  role
+----------------------------------------------------------------------------------------------------
+python:3.11-slim-bookworm                     47.8M     135.3M  base of the Python service image and the query image
+ghcr.io/astral-sh/uv:0.8.17                   21.4M      49.0M  copied whole into every Python service image
+postgis/postgis:16-3.4                       212.6M     618.6M  the observation store, pulled as-is
+eclipse-mosquitto:2.0.22                       4.8M      11.5M  the broker, pulled as-is
+nginx:1.27-alpine                             21.0M      49.6M  base of the proxy image and the client image
+node:22-alpine                                57.7M     167.3M  build stage of the client image; not in the runtime image
+python:3.11-alpine                            20.4M      57.3M  candidate base
+postgis/postgis:16-3.4-alpine                 ERROR Compressed file ended before the end-of-stream marker was reached
+postgres:16-alpine                           116.1M     297.1M  candidate observation store, no PostGIS
+debian:bookworm-slim                          28.2M      77.9M  floor for a Debian-based image
+alpine:3.20                                    3.6M       8.1M  floor for an Alpine-based image

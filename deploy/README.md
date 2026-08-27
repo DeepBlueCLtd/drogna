@@ -16,7 +16,11 @@ this project.
 - Docker Engine 24 or later, with Compose v2 available as `docker compose`.
 - Python 3.11 or later on the path, for the configuration checks and the environment
   renderer. They use the standard library only, so no virtual environment is required to
-  bring the stack up.
+  bring the stack up. `tests/unit/test_deploy_lib_is_standard_library_only.py` holds that
+  promise: it reads every module under `deploy/lib` and fails on an import that is neither
+  the standard library, a sibling, nor guarded by a `try` catching `ImportError`. It was
+  written because the promise had quietly stopped being true — `validate_config.py` reached
+  an unguarded `referencing` and no bring-up on a bare interpreter got past the first step.
 - Bash. The scripts use process substitution and arrays.
 
 Podman is not pursued.
@@ -194,7 +198,27 @@ the store as well. No secret value appears in a tracked file.
 ## Profiles
 
 A profile is a named subset of services. `profiles.active` in a destination's
-`deployment.json` says which profiles start there. Today both destinations start `core`.
+`deployment.json` says which profiles start there.
+
+Both destinations started `core` alone — the observation store — for as long as it took to
+build sixteen components, none of which was ever added to a destination's active profile.
+Step 5 below says to do that when a component is ready to run somewhere, and it was never
+performed, so `scripts/up.sh` started Postgres and stopped. Nothing said so, because a
+profile naming one service is not malformed.
+
+They now start `core`, `broker`, `foundation`, `query`, `edge` and `shell`: the observation
+store, the broker, the clock, the query layer, the reverse proxy and the browser client.
+That set is not arbitrary and not everything. It is the chain the capture workflow needs in
+order to photograph a shell with anything lit — the client reaches the broker through the
+proxy's upgrade location (ADR-0008), the proxy's rendered nginx names `query` as an upstream
+and nginx resolves upstreams at configuration load, and `query` depends on `observations` —
+and it is therefore the set that CI is about to watch come up or fail.
+
+**The rest are still absent, and the bar for adding them is that something has watched them
+start.** `provisioning` is a one-shot job with no health check, so `--wait` has nothing to
+wait for; the others simply have not been tried. Promoting a profile that nobody has seen
+come up would put a deployment posture into a tracked file on the strength of an argument,
+which is the thing ADR-0016 exists to warn about.
 
 | Profile | Services |
 |---|---|

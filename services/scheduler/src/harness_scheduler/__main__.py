@@ -1,8 +1,11 @@
 """The scheduler as a process: configuration first, then time, then the subscriptions.
 
-The broker client is injected, as everywhere else in the harness so far. A component with
-no broker configured publishes nothing and says so; it does not publish to a stub, because
-a stub would light a component in the client that is not really running (Constitution VII).
+The broker client may be injected, and where it is not this component builds one from the
+``broker`` section of its own configuration, as everywhere else in the harness. A component
+whose configuration names no broker publishes nothing and says so; it does not publish to a
+stub, because a stub would light a component in the client that is not really running
+(Constitution VII). A named broker that cannot be reached is reported in full on stderr and
+the scheduler carries on with nothing to publish to.
 """
 
 from __future__ import annotations
@@ -11,6 +14,10 @@ import sys
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -51,7 +58,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     messages: Iterable[tuple[str, bytes]] = (),
     stderr: Any = None,
 ) -> int:
@@ -69,21 +76,29 @@ def main(
         print(f"{SCHEDULER_NAME}: no simulation time is available ({exc})", file=out)
         return _NO_CLOCK
 
-    if publisher is None:
-        print(
-            f"{SCHEDULER_NAME}: no publisher was supplied, so no run request and no "
-            "heartbeat is published and nothing lights up. That is truthful",
-            file=out,
-        )
-
-    service = SchedulerService(
-        settings, clock=active_clock, publisher=publisher, config_digest=config.digest
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=SCHEDULER_NAME, report=out
     )
-    service.beat(force=True)
-    for topic, payload in messages:
-        service.handle(topic, payload)
-        service.advance()
-        service.beat()
+
+    try:
+        if publisher is None:
+            print(
+                f"{SCHEDULER_NAME}: no publisher was supplied, so no run request and no "
+                "heartbeat is published and nothing lights up. That is truthful",
+                file=out,
+            )
+
+        service = SchedulerService(
+            settings, clock=active_clock, publisher=publisher, config_digest=config.digest
+        )
+        service.beat(force=True)
+        for topic, payload in messages:
+            service.handle(topic, payload)
+            service.advance()
+            service.beat()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

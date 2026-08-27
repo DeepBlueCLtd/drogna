@@ -4,9 +4,14 @@ title: C-05 Ingest client
 
 # C-05 Ingest client
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/ingest/` — subscription, validation, batching, the writer, and
+      the backpressure signal each separately
+    - **Delivered by:** `specs/007-observation-path`
+    - **Covered by:** `services/ingest/tests/` and
+      `tests/integration/test_backpressure.py`, which drives the broker faster than the
+      store accepts and watches the indicator appear and the backlog drain
 
 **Responsibility:** validate and batch-write; the single ingestion seam.
 **Owns the failure mode of:** ingest backpressure.
@@ -21,9 +26,9 @@ writes observations. Nothing else has credentials to.
 
 Because "the only way in" is a property that can be tested, and "mostly the only
 way in" is not. Every guarantee about what the store contains — that the units
-are the declared units, that the quality flags are present, that the timestamps
-came from the simulation clock — holds only if there is one place where those
-guarantees are applied.
+are the declared units, that the observed property is one of the three the
+contract admits, that the timestamps came from the simulation clock — holds only
+if there is one place where those guarantees are applied.
 
 It is also the only honest place to observe backpressure. When the broker
 delivers faster than the store accepts, something has to notice and say so. If

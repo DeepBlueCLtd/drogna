@@ -108,28 +108,128 @@ jobs:
       - name: Build the client
         run: pnpm build
 
-      # The address is the one in the capture configuration; this serves the built client
-      # there rather than the configuration being bent to fit the job.
-      # The loop below is the one wait in this feature measured in real seconds, and it is
-      # test-harness setup rather than a capture path: it waits for a web server this job
-      # started to bind a socket, which produces no readiness signal to wait on. Every wait
-      # inside a capture is on the client's own readiness signal, and
-      # scripts/check_no_fixed_sleep.py enforces that over client/e2e/ and scripts/capture/.
-      - name: Serve the client
+      # scripts/up.sh validates the destination's configuration before it starts anything,
+      # and that validation is Python: it reads the schemas under contracts/ through
+      # jsonschema and referencing. This job had only Node, so the very first thing the
+      # bring-up did was fail on `ModuleNotFoundError: No module named 'referencing'` — in
+      # well under a second, which is what made three rounds of diagnosis look like a
+      # working-directory problem and then a rendering problem.
+      #
+      # The same two steps ci.yml uses, so the workspace is installed the one way.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install the workspace
+        working-directory: ${{ github.workspace }}
+        run: uv sync --frozen
+
+      # Bring the harness up, rather than serving the client on its own.
+      #
+      # Until now this job served the built client with `vite preview` and nothing else, and
+      # said so: no clock answered, no ctl/clock sample arrived, the pin the pair requires
+      # could never be acknowledged, and every capture this repository has ever produced is
+      # of a shell with nothing lit. The runner has a container runtime and this container
+      # does not, so this is the only place the whole thing can actually run.
+      #
+      # DROGNA_PROFILES overrides the destination's profiles.active for this invocation.
+      # Both destinations name `core`, which is the observation store alone — step 5 of
+      # deploy/README.md's "adding a component" has never been performed for any of the
+      # sixteen components that now exist, so `scripts/up.sh` starts Postgres and stops.
+      # Changing that is a decision about what a destination runs; borrowing four profiles
+      # for a capture job is not, and the override exists so the two stay separable.
+      #
+      # The client service publishes on the address config/local/capture.json already names,
+      # so nothing here bends the configuration to fit the job.
+      #
+      # This step is allowed to fail. It is the first time the stack has been brought up
+      # anywhere, the profile set below is reasoned from deploy/compose.yaml rather than
+      # observed, and the step after it reports what happened either way. A red cross here
+      # would say nothing a reader could act on; the report does.
+      - name: Bring the harness up
+        id: stack
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}
+        env:
+          # Reasoned from deploy/compose.yaml rather than observed. The client needs the
+          # proxy, because its broker URL is the proxy's upgrade location (ADR-0008); the
+          # proxy's rendered nginx names `query` as an upstream and nginx resolves an
+          # upstream at config load, so `query` has to be up for the proxy to start at
+          # all; and `query` depends_on `observations`, which is what `core` is. The
+          # clock and the broker are the two that actually light anything.
+          DROGNA_PROFILES: core,broker,foundation,query,edge,shell
+        run: |
+          set -o pipefail
+          ./scripts/up.sh local 2>&1 | tee "${RUNNER_TEMP}/bringup.log"
+
+      - name: Say what came up
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Where this ran and what the bring-up concluded, stated rather than inferred.
+          # Two rounds were spent guessing at a step that failed in under a second, and a
+          # step that reports its own working directory would have answered it at once.
+          echo "working directory: $(pwd)"
+          echo "bring-up outcome: ${{ steps.stack.outcome }}"
+          echo
+          if [ "${{ steps.stack.outcome }}" = "success" ]; then
+            echo "The stack is up. Services and their state:"
+          else
+            echo "The stack did not come up, and the step above says why. The capture below"
+            echo "will refuse rather than photograph a client with nothing behind it, which"
+            echo "is the correct outcome and not a silent pass."
+            echo
+            echo "What is most likely, in order: a profile in the set above pulls in a"
+            echo "service whose health check cannot pass without another that is absent; a"
+            echo "one-shot job never becomes healthy and --wait times out; or an image fails"
+            echo "to build. The service table below distinguishes them."
+          fi
+          docker compose --file deploy/compose.yaml --env-file deploy/.env ps || true
+          docker compose --file deploy/compose.yaml --env-file deploy/.env logs --tail 40 || true
+
+      # The client is answering when the stack reports it healthy; the loop below is the one
+      # wait in this feature measured in real seconds, and it is test-harness setup rather
+      # than a capture path. Every wait inside a capture is on the client's own readiness
+      # signal, and scripts/check_no_fixed_sleep.py enforces that over client/e2e/ and
+      # scripts/capture/.
+      # A client must be answering whatever the stack did, because the determinism specs
+      # below are the part of the pair mechanism that is load-bearing *without* a running
+      # stack and they are not allowed to fail. Serving the client from the stack alone made
+      # them depend on the stack coming up, and the first run proved it: the bring-up failed,
+      # the specs could not reach a client, and the job went red for a reason that had
+      # nothing to do with the comparator they exist to prove.
+      #
+      # So: the stack's client where there is one, and `vite preview` where there is not.
+      # The pair capture further down still refuses without a clock — that refusal is the
+      # honest outcome and is reported rather than suppressed — but the comparator is
+      # exercised either way, exactly as it was before the stack existed here.
+      - name: Make sure a client is answering, from the stack or from a preview
         run: |
           url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "$url"; then
+              echo "the stack is serving the client at $url"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "the stack is not serving a client at $url; falling back to a preview so the"
+          echo "determinism specs still run. The pair capture will refuse, because a preview"
+          echo "has no clock behind it, and that refusal is the correct outcome."
           host="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
           port="$(node -e 'process.stdout.write(new URL(process.argv[1]).port)' "$url")"
           nohup pnpm exec vite preview --host "$host" --port "$port" --strictPort \
             > ../capture-preview.log 2>&1 &
           for _ in $(seq 1 60); do
             if curl -fsS -o /dev/null "$url"; then
-              echo "the client is answering at $url"
+              echo "the preview is serving the client at $url"
               exit 0
             fi
             sleep 1
           done
-          echo "the client never answered at $url; the preview server said:"
+          echo "neither the stack nor a preview answered at $url; the preview said:"
           cat ../capture-preview.log
           exit 1
 
@@ -165,13 +265,34 @@ jobs:
           else
             echo "No half was captured, and the step above says why."
             echo
-            echo "The commonest reason is that no clock is answering: this job serves the"
-            echo "built client and nothing else, so no ctl/clock sample ever arrives and"
-            echo "the pin the pair requires cannot be acknowledged. That is a refusal, not"
-            echo "a silent pass, and it is what FR-007 asks for. Bring up the harness"
-            echo "alongside the client to capture a pair with the clock genuinely pinned."
+            echo "The commonest reason used to be that no clock was answering: this job"
+            echo "served the built client and nothing else. It now brings the harness up,"
+            echo "so read the stack report above first — if the clock did not start, the"
+            echo "pin cannot be acknowledged and this refusal is the correct outcome rather"
+            echo "than a silent pass, which is what FR-007 asks for."
           fi
           ls -R ../.capture/pair || echo "the pair area is empty"
+
+      # Always, and before the artefact upload, so that a job cancelled mid-capture does not
+      # leave containers holding the runner's ports. `down.sh` is the repository's own path
+      # rather than a second spelling of it.
+      - name: Take the harness down
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/down.sh local || true
+
+      # Repeated at the end of the job on purpose. The bring-up runs early and its output
+      # is buried under a minute of connection attempts and a Playwright report, which made
+      # three rounds of diagnosis a matter of inferring the cause from timings rather than
+      # reading it. A job whose most likely failure is reported only at the top is a job
+      # nobody reads the top of.
+      - name: What the bring-up said, repeated where a reader will reach it
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "bring-up outcome: ${{ steps.stack.outcome }}"
+          echo
+          cat "${RUNNER_TEMP}/bringup.log" 2>/dev/null || echo "the bring-up wrote no log"
 
       # The retention period is declared here and in the capture configuration, and they say
       # the same thing on purpose: a pair's life is the life of the branch, not for ever.

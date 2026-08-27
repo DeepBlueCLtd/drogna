@@ -1,7 +1,7 @@
 {
   "component": {
     "id": "common",
-    "description": "Values every component at this destination shares. A component's own file overrides what it needs to."
+    "description": "The destination's root seed, which deploy/lib/seed_record.py reads and nothing else does. The clock and logging blocks below are required by the schema and are read by no component: there is no merge step, and every component's own file carries its complete values. See ADR-0018."
   },
   "clock": {
     "endpoint": "http://clock:8090",
@@ -16,11 +16,6 @@
   "seed": {
     "root": 20260826,
     "stream": "common"
-  },
-  "broker": {
-    "url": "mqtt://broker:1883",
-    "client_id": "common",
-    "keepalive_seconds": 30
   },
   "logging": {
     "level": "WARNING"

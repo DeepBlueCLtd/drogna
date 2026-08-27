@@ -1,10 +1,17 @@
 """The broker client, wrapped thinly and documented as marginal.
 
 Constitution VI calls event publication a marginal port: wrapped, but not pretending to be
-pluggable. This is the wrapping. It exists so that the rest of the component speaks
+pluggable. This is the wrapping. It exists so that a component speaks
 :class:`~harness_core.heartbeat.MessagePublisher` and knows nothing about MQTT, which is
 also what makes the two-broker fallback (FR-015) a change of configuration values — the
 endpoint is read from the component's own configuration and appears nowhere in source.
+
+It lives here, beside the protocol it satisfies, because every component publishes. It was
+written inside ``services/sensors/`` when the sensors were the only thing that published,
+and it moved the moment a second component reached for it: the service-dependency gate
+exists because ``encode_netcdf`` and ``read_netcdf`` each sat inside a service and acquired
+consumers across a boundary before anybody moved them, and this is the third of those
+caught at the moment it was introduced rather than three consumers later.
 
 Credentials travel in the broker URL, as ``mqtt://<role>:<secret>@<host>:<port>``. The
 tracked configuration carries the role and no secret; the deploy-time render supplies the
@@ -22,8 +29,17 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from harness_core.clock import Tick
+from harness_core.heartbeat import MessagePublisher
 
-__all__ = ["BrokerEndpoint", "BrokerError", "PahoPublisher", "PahoTickSource"]
+__all__ = [
+    "FROM_CONFIGURATION",
+    "BrokerEndpoint",
+    "BrokerError",
+    "PahoPublisher",
+    "PahoTickSource",
+    "connect_publisher",
+    "resolve_publisher",
+]
 
 _DEFAULT_KEEPALIVE = 60
 
@@ -181,3 +197,95 @@ class PahoTickSource:
         if client is not None:
             client.loop_stop()
             client.disconnect()
+
+
+class _FromConfiguration:
+    """The default a component's ``publisher`` parameter carries: build one from config.
+
+    ``None`` is a value a caller supplies, and it means *publish nothing* — Constitution
+    VII's case, which four tests assert and which must stay exactly what it was. "Nobody
+    supplied one" is a different state and needs a different value to say it in, or the two
+    collapse and a caller who asked for silence gets a connection attempt instead.
+
+    It is a publisher rather than a bare object so the parameter keeps its type, and it
+    raises rather than returning quietly if one ever reaches a publish: a sentinel that
+    silently discarded messages would be the stub this repository refuses to have.
+    """
+
+    def publish(self, topic: str, payload: bytes) -> None:  # pragma: no cover - unreachable
+        raise BrokerError(
+            "the publisher sentinel was published to; it stands for 'nobody supplied one' "
+            "and should have been resolved at startup"
+        )
+
+
+FROM_CONFIGURATION: MessagePublisher = _FromConfiguration()
+"""Nobody supplied a publisher, so the component builds one from its own configuration."""
+
+
+def connect_publisher(
+    document: Mapping[str, Any], *, qos: int = 1, retain: bool = False
+) -> PahoPublisher:
+    """Open a publisher on the broker this component's own configuration names, or raise."""
+    publisher = PahoPublisher(
+        BrokerEndpoint.from_config(document["broker"]), qos=qos, retain=retain
+    )
+    publisher.connect()
+    return publisher
+
+
+def resolve_publisher(
+    supplied: MessagePublisher | None,
+    document: Mapping[str, Any],
+    *,
+    component: str,
+    report: Any,
+    qos: int = 1,
+    retain: bool = False,
+) -> tuple[MessagePublisher | None, PahoPublisher | None]:
+    """Settle which of the three publisher states a component is starting in.
+
+    Returns the publisher to use — possibly ``None`` — and the one this call opened and is
+    therefore responsible for closing, which is ``None`` in every case but the third.
+
+    1. *A caller supplied one, or supplied ``None``.* Taken as given. ``None`` means publish
+       nothing, and no connection is attempted: a caller that asked for silence should not
+       pay for a name lookup, nor read a line about a broker it never wanted.
+    2. *Nobody supplied one and the configuration names no broker.* The component publishes
+       nothing and says so in its own words, which is what it did before any of this: it
+       does not invent a client and does not publish to a stub (Constitution VII).
+    3. *Nobody supplied one and the configuration names a broker.* A client is built from
+       that configuration — endpoint and credentials both, so neither appears in source
+       (Constitution IV) — and used.
+
+    When the third case cannot connect, the failure is reported on stderr in full and the
+    component carries on with nothing to publish to. That is the deliberate half of this,
+    so it is worth saying why it is not what the sensors do. A sensor exists to publish
+    observations; with no broker it has no work at all, so it retries with bounded backoff
+    spent in simulation time and then stops with a distinct exit code. Every component here
+    has work that is not publishing — the clock advances the run and serves time over HTTP,
+    the generator writes a world, the packager transfers bundles — and none of them holds a
+    tick stream to spend a backoff in, so the sensors' retry is not available to them and
+    waiting on the host clock is what Constitution I forbids outright. Making the failure
+    fatal instead would mean every one of these components refuses to start against a broker
+    that is merely slow to come up, which none of them did before.
+
+    What both policies share is the rule that actually matters, and neither bends it: a
+    component never publishes to a stub and never reports itself alive while it is not
+    connected. It is greyed out in the client, truthfully, and stderr says which of the two
+    reasons applies.
+    """
+    if supplied is not FROM_CONFIGURATION:
+        return supplied, None
+    if "broker" not in document:
+        return None, None
+    try:
+        opened = connect_publisher(document, qos=qos, retain=retain)
+    except BrokerError as failure:
+        print(
+            f"{component}: {failure}, so this component publishes nothing and is greyed "
+            "out in the client rather than falsely lit",
+            file=report,
+        )
+        return None, None
+    return opened, opened

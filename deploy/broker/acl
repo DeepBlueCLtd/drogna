@@ -17,9 +17,32 @@
 
 # --- sensors (C-04) --------------------------------------------------------------------
 #
-# Publish under obs/ and nothing else. A sensor that could publish on ctl/ could forge a
-# heartbeat, a divergence event or a run request, so that is refused here rather than by
-# convention in the sensor's source: a convention is not a control.
+# Publish under obs/, announce liveness on ctl/heartbeat, and nothing else. A sensor that
+# could publish on ctl/ generally could forge a divergence event or a run request, so the
+# branch is refused as a branch rather than by convention in the sensor's source: a
+# convention is not a control. Two named topics are the exceptions, and each is argued for
+# below rather than assumed.
+#
+# The write is ctl/heartbeat, and it was added on 27 August 2026 (ADR-0015) after wiring
+# every component to a real broker showed what its absence cost. Until then this file gave
+# the sensor role no write outside obs/, so its heartbeat was refused at the broker — and
+# refused silently, because a client library reports success for a message it has accepted
+# locally and handed on. The component believed it had announced itself, nothing had heard
+# anything, and C-04 could never light its box in the shell however it was wired.
+#
+# The objection this file used to make to the write was forgery: a heartbeat names its own
+# component, so any role that can publish one can claim to be any component. That objection
+# is true and is not held anywhere else. drogna_control below carries `readwrite ctl/#`,
+# which is nine components already able to forge any heartbeat including a sensor's. The
+# exclusion therefore bought no property the file actually holds, and it cost the browser
+# client a permanent untruth about a component that was running correctly — in the one
+# display whose whole purpose is that a box lights only when something was genuinely heard
+# from. A false negative in that display is worse than a forgery risk already accepted for
+# nine other roles.
+#
+# What the write does not extend to: ctl/divergence, ctl/run-request, ctl/run-started,
+# ctl/run-published, ctl/plan and ctl/telemetry are all still refused to this role, and
+# tests/integration/test_topic_isolation.py asserts each refusal against a running broker.
 #
 # The one read is the clock sample, and it is an exception this file has to argue for.
 # FR-14 as written gives sensors no subscription to ctl/ at all. ADR-0009 then decided that
@@ -35,6 +58,7 @@
 
 user drogna_sensor
 topic write obs/#
+topic write ctl/heartbeat
 topic read ctl/clock
 
 # --- ingest client (C-05) ---------------------------------------------------------------
@@ -66,6 +90,27 @@ topic write ctl/telemetry
 user drogna_control
 topic readwrite ctl/#
 topic read obs/#
+
+# --- the query layer (C-09) --------------------------------------------------------------
+#
+# One write and nothing else. C-09 serves reads over HTTP and touches the broker for exactly
+# one purpose: `query/plugins/heartbeat.py` announces that it is alive, so that its box in
+# the shell is lit by a message rather than by a configuration file saying it exists. It
+# subscribes to nothing — freshness reaches it through the query path, not the control
+# branch — so it is given no read rule at all.
+#
+# It is a role of its own rather than `drogna_control`, which carries `readwrite ctl/#`.
+# Handing a read-only query surface write access to the whole control namespace would let
+# the component that answers questions raise a divergence event or command a model run,
+# which is the cross-contamination C-03 owns as its failure mode. It is not `drogna_viewer`
+# either: that identity has no write rule by design (ADR-0008) and giving it one would
+# quietly grant the browser a voice.
+#
+# Added 27 August 2026, when the tracked broker URLs first named the roles they authenticate
+# as and this component turned out to name none that fitted (ADR-0016).
+
+user drogna_query
+topic write ctl/heartbeat
 
 # --- the browser (C-18), through the proxy's upgrade location ---------------------------
 #

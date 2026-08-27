@@ -56,6 +56,24 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+# Two pages are generated at build time rather than committed, because a committed copy of
+# something that already exists elsewhere is a second copy that will drift, and the drifted
+# one is the one on the public site.
+#
+#   publish_adrs   — the thirteen records in docs/adr/ are rendered into decisions/adr/ in
+#                    memory. Nothing is written back into site/docs/. Whether they publish
+#                    at all is read from docs/manifest.yaml, so the decision FR-021 asks to
+#                    be recorded is the thing the build obeys rather than a note beside it.
+#   blog_coverage  — the coverage table of features against blog entries, counted from
+#                    specs/ and from each entry's own front matter. FR-016 exists to make
+#                    the gap visible, and a hand-maintained table stops being able to.
+#
+# MkDocs supports `hooks:` natively, so neither needs a plugin and site/requirements.txt
+# stays as it is. Both are documented in site/README.md.
+hooks:
+  - hooks/publish_adrs.py
+  - hooks/blog_coverage.py
+
 plugins:
   - search
   - blog:
@@ -97,6 +115,8 @@ nav:
   - Home: index.md
   - Blog:
       - blog/index.md
+  - Architecture:
+      - Overview: architecture/overview.md
   - Subsystems:
       - subsystems/index.md
       - C-01 Simulation clock: subsystems/c01-simulation-clock.md
@@ -129,5 +149,9 @@ nav:
       - CF conventions: standards/cf-conventions.md
       - CoverageJSON: standards/coveragejson.md
   - Glossary: glossary.md
+  # One line for thirteen records: publish_adrs marks each generated record NOT_IN_NAV and
+  # they are reached from this index, so adding an ADR is adding a file under docs/adr/ and
+  # never an edit here.
   - Decisions:
       - decisions/site-tooling.md
+      - Architecture decision records: decisions/adr/index.md

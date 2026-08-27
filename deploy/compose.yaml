@@ -247,16 +247,29 @@ services:
   proxy:
     <<: *runtime
     profiles: [edge, full]
-    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
-    # As with the client: nginx is configured through its own interface, from values the
-    # destination configuration supplies. The path policy itself belongs to 013.
+    # Built, not pulled. The stock nginx image was named here for a while, which meant the
+    # renderer in `proxy/` never ran and nginx served its own default configuration —
+    # answering nothing this repository had written, and failing every case in the request
+    # matrix with "the proxy never answered".
+    build:
+      context: ${HARNESS_BUILD_CONTEXT}
+      dockerfile: ${HARNESS_DOCKERFILE_PROXY}
+      args:
+        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
+      secrets:
+        - proxy_ca
+    # HARNESS_CONFIG and nothing else. The listen port used to be passed alongside it,
+    # which Constitution IV forbids: one variable per component, and everything else
+    # arrives inside the document it names.
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_PROXY}
-      HARNESS_PORT_PROXY: ${HARNESS_PORT_PROXY}
     volumes:
       - *config-mount
     ports:
       - ${HARNESS_PUBLISH_PROXY}
+    # Probed on the health surface its configuration declares, not on the published
+    # listener. The boundary is default-deny, so a probe against the listener is answered
+    # 401 and the container could never become healthy however well it was working.
     healthcheck:
       <<: *healthcheck-timing
       test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_PROXY}"]

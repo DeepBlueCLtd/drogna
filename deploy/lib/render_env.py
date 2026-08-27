@@ -15,6 +15,7 @@ to a tracked file (FR-016).
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -45,6 +46,7 @@ DOCKERFILES = {
     "HARNESS_DOCKERFILE_PYTHON": "deploy/images/python-service.Dockerfile",
     "HARNESS_DOCKERFILE_CLIENT": "deploy/images/client.Dockerfile",
     "HARNESS_DOCKERFILE_QUERY": "deploy/images/query-layer.Dockerfile",
+    "HARNESS_DOCKERFILE_PROXY": "deploy/images/proxy.Dockerfile",
 }
 
 # The scheme a container uses to reach another container's listener on the internal
@@ -113,7 +115,21 @@ def _publish_values(deployment: dict[str, Any]) -> dict[str, str]:
     return values
 
 
-def _health_urls(deployment: dict[str, Any]) -> dict[str, str]:
+def _health_urls(deployment: dict[str, Any], config_host_dir: Path) -> dict[str, str]:
+    """Where each HTTP service answers a health probe.
+
+    The published listener is the wrong place to ask whenever a component answers it with
+    anything other than 200. The proxy is the case that proves it: it is default-deny, so
+    a probe against its published port is answered 401, and the container could never
+    become healthy no matter how well it was working. Its configuration declares a
+    separate health surface — a port and a path of its own — precisely so that the probe
+    has somewhere to go that is not the boundary being guarded.
+
+    So a component that declares ``health`` in its own configuration is probed there, and
+    one that does not falls back to the published container port at the root. The rule is
+    general rather than a special case for the proxy, because the next component to guard
+    its published surface will need it too.
+    """
     values: dict[str, str] = {}
     publish = deployment["network"]["publish"]
     for service in HTTP_HEALTH_SERVICES:
@@ -121,10 +137,26 @@ def _health_urls(deployment: dict[str, Any]) -> dict[str, str]:
         if entry is None:
             continue
         port = entry["container_port"]
+        path = "/"
+        declared = _declared_health(config_host_dir, service)
+        if declared is not None:
+            port, path = declared
         values[f"HARNESS_HEALTH_URL_{variable_suffix(service)}"] = (
-            f"{INTERNAL_SCHEME}://{service}:{port}/"
+            f"{INTERNAL_SCHEME}://{service}:{port}{path}"
         )
     return values
+
+
+def _declared_health(config_host_dir: Path, service: str) -> tuple[int, str] | None:
+    """A component's own health port and path, if its configuration names one."""
+    path = config_host_dir / f"{service}.json"
+    if not path.is_file():
+        return None
+    document = json.loads(path.read_text(encoding="utf-8"))
+    health = document.get(service, {}).get("health")
+    if not isinstance(health, dict) or "port" not in health or "path" not in health:
+        return None
+    return int(health["port"]), str(health["path"])
 
 
 def _public_url(deployment: dict[str, Any]) -> str:
@@ -185,7 +217,7 @@ def values_for(
         values[f"HARNESS_LIMIT_MEMORY_{suffix}"] = limit["memory"]
         values[f"HARNESS_LIMIT_CPUS_{suffix}"] = limit["cpus"]
     values.update(_publish_values(deployment))
-    values.update(_health_urls(deployment))
+    values.update(_health_urls(deployment, config_host_dir))
     values.update(resolve_secrets(read_env_file(env_path(root)), secrets))
     return values
 

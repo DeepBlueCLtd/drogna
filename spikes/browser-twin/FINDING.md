@@ -13,6 +13,12 @@ boundary, and this spike found it by running into it rather than by reasoning ab
 for a reason better than the one that would have put them there. Everything else works,
 and the evidence is in `results/`.
 
+Two findings were added after the first draft, from questions put to the spike rather than
+from the run: F11, that per-pull-request publishing to `gh-pages` is the delivery mechanism
+and that only a twin makes it possible at all; and F12, that the seam between a browser
+front end and either backend already exists, is one document, one subscription and two
+fetches, and should not be replaced by a bespoke REST API.
+
 ---
 
 ## What was proved, and how to see it
@@ -258,9 +264,117 @@ replay identically.
 | Service worker query layer + committed slice + leakage coverage | A few days, **after** F6 is proved. |
 | Provenance section, visual treatment, re-curation of 016's captures | A couple of days, mostly re-capture. |
 | Deterministic capture path, joined to `scripts/capture/pair/` | A couple of days, and the piece that pays for the rest. |
+| Per-pull-request publishing: the two-publisher split, the gates, the reaper (F11) | A day or two, and the piece that makes the rest visible. |
 
 Comparable to feature 012. Two ADRs at least: the in-page fabric as a second control
 transport, and provenance in the served document.
+
+## F11 — Per-pull-request publishing is the delivery mechanism, and only the twin makes it possible
+
+Stage one as first written had no stated way of reaching anybody. It does now, and the
+idea belongs in this finding because it and the twin turn out to be the same project.
+
+**A backend-backed preview cannot be built.** Feature 015's publication gate fails any page
+that issues a request to a host outside its own origin, and `pages.yml` runs it before
+anything reaches `gh-pages`. Independently of that, PR #15 records that `github.io`
+enforces HTTPS and that a page served over HTTPS may not open `http://` or `ws://` — so a
+published client talking to the droplet is blocked by the browser as well as by the gate.
+A preview whose components run in the page makes no off-origin request at all, so it
+passes both by construction rather than by exemption. The twin is not a convenience here;
+it is the only thing that makes a per-pull-request preview possible.
+
+What is already right, and it is the same property F1 relied on: `client/src/config/runtime.ts`
+fetches its bootstrap document by **one relative URL**. A client served from
+`/drogna/pr/17/` finds its document at `/drogna/pr/17/config.json` with no base-path
+knowledge anywhere in that path. Constitution IV's single-document rule turns out to be
+exactly what makes hosting at an arbitrary subfolder work.
+
+Three obstacles, all mechanical, all in `.github/workflows/pages.yml`:
+
+- **`ghp-import --push --force` replaces the whole branch.** Every publish from `main`
+  force-pushes `site/build` as the entirety of `gh-pages`, so a `pr/17/` directory would
+  survive until the next merge and then vanish. The mechanism was chosen for a stated
+  reason — `ghp-import` over `mkdocs gh-deploy` so that "the artefact that was checked is
+  the artefact that is published" — so letting a second publisher own `pr/` means main's
+  workflow carrying that subtree forward explicitly. Two publishers, disjoint subtrees, and
+  a force-push that has to learn about the boundary.
+- **The publication gates have to cover previews too.** Today the built output is scanned
+  for external sub-resources, for the FR-01 statement and for `noindex` before it is
+  pushed. A preview publisher that skips them is a hole straight onto a public branch, which
+  is the failure feature 015's second user story exists to prevent. Note also that
+  `site/tools/check_no_external_resources.py` is syntactic — `src`, `link href`, `url()`,
+  `@import` — so it would pass a page that fetches off-origin at *runtime*. Moot for a
+  twin-backed preview, and the reason a backend-backed one would sail through a gate it
+  actually violates.
+- **The client is not published at all today.** `pages.yml` builds only the documentation.
+  Publishing the client is new surface, and it needs `vite build --base=/drogna/pr/<n>/`
+  per publish. That must stay a build-time flag: `client/tests/no-mock.test.ts` forbids
+  `import.meta.env.<name>` anywhere under `client/src`, and Vite rewrites asset URLs
+  without the source ever reading one, so the two are compatible — but only if nobody
+  reaches for the environment variable to do it.
+
+And one decision that is not mechanical. `pages.yml` says feature branches deliberately do
+not publish, with its reason written down: "the public site follows unmerged work, so a
+reader can see a claim about drogna that no longer holds by the time they act on it." That
+is a recorded decision, not a gap, and the rule in this repository is to read the reason
+before undoing the work. A preview at `/pr/<n>/`, unlinked from the site navigation and
+carrying the same `noindex` the root does, is arguably a different object from the site
+root changing under a reader — but it is close enough that it should be argued explicitly
+and recorded, rather than slipped past. It also needs a reaper on pull-request close, or
+the branch grows without bound.
+
+## F12 — The seam already exists, and it is not a REST API
+
+The instinct is to define a rich REST interface that a real backend and a browser backend
+both implement. It is the right instinct about *where* the boundary goes and the wrong one
+about *what* to build there, because the boundary is already declared and is narrower than
+a new API would be.
+
+The browser client's entire dependency on a backend is **one document, one subscription and
+two fetches**:
+
+| Surface | Where | Shape |
+|---|---|---|
+| The served configuration document | `config/runtime.ts:168`, one relative URL | `contracts/schemas/config.client.schema.json` — five required sections |
+| The control namespace | `transport/mqtt.ts`, subscribe-only | eight topics in `data/topics.ts`, each with its generated message contract |
+| The query layer | `App.tsx:179` | OGC API-EDR, addressed from the document |
+| The clock rate | `controls/rateRequest.ts:54` | one POST |
+
+That is the whole of it. `globalThis.fetch` appears at exactly three call sites in
+`client/src` and one of them is the bootstrap. SensorThings does not appear in the client
+at all — it is the vocabulary of the write path, sensors to ingest, and the browser reads
+observations through the query layer.
+
+Three reasons not to put a bespoke REST API in front of that:
+
+- **The control namespace is push, and REST would make it poll.** The client never asks;
+  it is told, and it draws what arrived. Turning that into request-response would replace
+  the one property the SRD says the harness exists to demonstrate — "the architecture's
+  interesting property is temporal" — with a polling loop that shows a different system.
+  The proof in this spike drove the *unchanged* subscription path from a component running
+  in the browser, which is the seam working rather than a seam needing to be built.
+- **The read path is already a rich REST API, and exercising it is the point.** OGC API-EDR
+  is what the project exists to try. ADR-0003 records the bespoke trajectory provider as
+  sitting *behind* an existing port — the standard is the port. A second, bespoke API
+  beside it would untether the client from the thing it is a demonstration of.
+- **A new API is a new boundary shape.** Constitution III admits one definition of a shape
+  that crosses a language boundary and forbids hand-written boundary types; Constitution VI
+  forbids claiming more pluggability than exists. A bespoke API means masters under
+  `contracts/schemas/`, generation, registration in `tests/unit/test_generated_models.py`,
+  and a third contract to keep in step with two that already agree.
+
+What the seam actually needs is not a new interface but **one implementation of each
+transport per backend, chosen by the document**. Half of that is proven here: `Connector`
+already existed as an injection point, `bus.ts` satisfies it, and the client cannot tell
+the difference. The other half is F6 — the query layer and the rate control behind a
+service worker — and it is unproven precisely because it is the remaining half of this
+seam rather than a separate concern. Three `fetch` call sites is a small surface for a
+service worker to stand behind, which is the reason to expect it to work and the reason to
+prove it before committing.
+
+Two parts of the surface are honestly bespoke and should be named as such rather than
+folded into "the standards": the bootstrap document, and the clock rate POST. Neither wants
+generalising into an API. Both are already schema'd, and the second is one route.
 
 ## What could still sink it
 
@@ -275,18 +389,30 @@ transport, and provenance in the served document.
   be what people see, and then the real system's failures stop being observed. Worth a
   sentence in the feature's non-goals, and worth keeping the published captures coming from
   the real stack even after the twin exists.
+- **The publishing collision in F11.** Two workflows writing one branch, one of them with
+  `--force`, is how a site gets silently deleted by a job that reports success. If the
+  preview publisher lands before main's workflow learns about `pr/`, the failure is
+  invisible until somebody visits the site.
 
 ## Recommendation
 
 Build it, as a feature, in two stages with a genuine stop point between them.
 
-**Stage one — the loop, no HTTP.** Bus transport, worker host, the eight loop components,
-provenance and the visual treatment, deterministic step-driven scenarios wired into the
-pair capture. This delivers the verification value in full, delivers the temporal story for
-the colleague and the blog reader, and needs nothing that is currently unproven.
+**Stage one — the loop, no HTTP, published per pull request.** Bus transport, worker host,
+the eight loop components, provenance and the visual treatment, deterministic step-driven
+scenarios wired into the pair capture, and the per-pull-request publishing of F11. This
+delivers the verification value in full, delivers the temporal story for the colleague and
+the blog reader, and needs nothing that is currently unproven.
 
-**Stage two — the wire.** Only after a service-worker spike answers F6. Query layer,
-committed field slice, leakage coverage, the request/response panel.
+F11 is what makes stage one a deliverable rather than a capability. Without it the twin is
+something you have to check out and run; with it, a pull request carries a link to itself
+running. It is also the half of the seam that is already finished (F12): stage one needs
+one new transport implementation and no new interface.
+
+**Stage two — the wire.** Only after a service-worker spike answers F6, which is the
+remaining half of the same seam rather than a separate concern. Query layer, committed
+field slice, leakage coverage, the request/response panel.
 
 Stop after stage one if F6 comes back badly. Stage one is worth having on its own, which is
-the property a two-stage plan needs and usually does not have.
+the property a two-stage plan needs and usually does not have — and with F11 it is worth
+having *visibly*, which is the property that gets a spike's recommendation acted on.

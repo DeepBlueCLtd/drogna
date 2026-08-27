@@ -11,6 +11,14 @@ inside `client/src`, because the client's own tests forbid any file there from p
 That is the right boundary for a better reason than the one that would have put them
 there. Read [FINDING.md](FINDING.md).
 
+Two of its twelve findings came from questions put to the spike rather than from the run,
+and are argued rather than proved: **F11**, that publishing each pull request to its own
+`gh-pages` folder is how stage one reaches anybody — and that only a twin makes such a
+preview possible, since the site's own gate forbids an off-origin request and a page on
+`github.io` may not open one anyway; and **F12**, that the seam between a browser front end
+and either backend already exists, amounts to one document, one subscription and two
+fetches, and should not be replaced by a bespoke REST API.
+
 ## Run it
 
 ```bash

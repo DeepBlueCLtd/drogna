@@ -4,7 +4,7 @@ drogna is a demonstration harness: a synthetic ocean, sensors that sample it, a 
 loop that assimilates what they report, and a query layer that serves the result through
 OGC API-EDR and SensorThings. Everything in it is deliberately fake and says so.
 
-Sixteen features, eleven services, 1535 Python tests and 446 client tests, thirteen gates
+Sixteen features, eleven services, 1777 Python tests and 446 client tests, thirteen gates
 and thirteen ADRs. All four SRD acceptance criteria pass.
 
 ## Where the answers already are
@@ -62,6 +62,58 @@ reason about its configuration statically as well — the last such bug was plai
 in the rendered nginx config and nobody read it. Container tests must skip loudly with a
 reason, never fail and never silently pass, and must run containers as the invoking user
 (`--user "$(id -u):$(id -g)"`); running as root produced twenty-seven CI-only errors.
+
+**Where a daemon *is* present, the hazard inverts.** Docker Desktop on macOS enforces neither
+ownership nor mode on a bind mount — every file reads as root and any uid may open it — so a
+permission fault is invisible on a developer's machine and fatal on the Linux runner. The
+broker lived in that blind spot for its whole life: `deploy/lib/render_credentials.py` set the
+password file's mode and never its owner, mosquitto reads that file after dropping to uid
+1883, and the container exited 13 with `Error: Unable to open pwfile` on every Linux run while
+reporting healthy on every Mac. Prove anything about file permissions *inside a Linux
+container*, never against the host filesystem, and watch it fail both ways before believing it.
+
+**Giving a file away breaks the run after this one.** The chown that finally let the broker
+read its password file took the file from the deploying user, and `write_password_file`
+truncated it in place — so the first bring-up worked and every one after it died with
+`PermissionError: [Errno 13]`. `scripts/up.sh` is required to converge, so the *second* run is
+part of the behaviour and not a nicety. Unlink and recreate rather than truncate: unlinking is
+a permission on the directory, which the deployer keeps, not on the file, which it has just
+given away. This was missed locally because every trial run began by deleting the file —
+**never clear the artefact before re-running, or you only ever test the case that works.**
+
+**A health check can name a program the image does not carry.** `wget --spider` against
+`python:3.11-slim-bookworm`, which ships neither wget nor curl. Such a check cannot pass and
+cannot say why: the query layer answered 200 to everything that asked while Compose waited out
+the whole timeout, and what the bring-up reported was a failure three services downstream.
+Check the probe against the image — `python3` here — and prefer a probe that would notice the
+service being down. `drogna-healthcheck` answers "am I configured", not "am I serving", so it
+is the wrong check wherever something else waits on `service_healthy`.
+
+**Each image has its own ignore file, and a `COPY` added later does not update it.** BuildKit
+reads `deploy/images/<name>.Dockerfile.dockerignore` in preference to any at the context root.
+`libs` was excluded from the query layer's context long before that Dockerfile grew its
+`COPY libs/harness_core`, and the client's excluded `contracts` while the client's own
+`schemas.ts` imported the masters out of it. Both failed on paths that plainly exist in the
+tree. The exception must *follow* the exclusion — `libs`, then `!libs/harness_core` — because
+Docker takes the last matching pattern. Copy the repository's layout rather than flattening
+it, too: relative imports that reach out of a directory need what they reach for to still be
+beside it.
+
+**nginx resolves its upstreams once, at start-up.** A proxied service that is not up yet is
+`host not found in upstream`, and nginx then refuses the whole configuration rather than that
+one location — so the boundary does not come up at all. That is a `depends_on` with
+`condition: service_healthy`, not a preference.
+
+**Running `pytest` takes the local stack down.** `tests/integration/test_compose_bringup.py`
+drives the real `scripts/up.sh` and `scripts/down.sh` against the real project name, so a full
+test run stops whatever you had running and leaves the active profile in its place. Bring the
+stack back up afterwards rather than wondering why the browser stopped answering.
+
+**An image nobody has built is not a working image, and the file usually says so.** Every trap
+above was found in one sitting, the first time the promoted profiles were actually started,
+and two of those files carried "this image has never been built" or "it has never been
+started" at the top. That is a warning, not a note. `full` still cannot come up: it names
+`features`, and `services/features` does not exist.
 
 **`ruff format` formats Python inside Markdown fences.** A code snippet in a blog post or a
 spec is held to the same standard as the file it was copied from. This has turned the build

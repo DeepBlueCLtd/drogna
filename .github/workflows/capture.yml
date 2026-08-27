@@ -142,7 +142,9 @@ jobs:
           # all; and `query` depends_on `observations`, which is what `core` is. The
           # clock and the broker are the two that actually light anything.
           DROGNA_PROFILES: core,broker,foundation,query,edge,shell
-        run: ./scripts/up.sh local
+        run: |
+          set -o pipefail
+          ./scripts/up.sh local 2>&1 | tee "${RUNNER_TEMP}/bringup.log"
 
       - name: Say what came up
         if: always()
@@ -261,6 +263,19 @@ jobs:
         if: always()
         working-directory: ${{ github.workspace }}
         run: ./scripts/down.sh local || true
+
+      # Repeated at the end of the job on purpose. The bring-up runs early and its output
+      # is buried under a minute of connection attempts and a Playwright report, which made
+      # three rounds of diagnosis a matter of inferring the cause from timings rather than
+      # reading it. A job whose most likely failure is reported only at the top is a job
+      # nobody reads the top of.
+      - name: What the bring-up said, repeated where a reader will reach it
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "bring-up outcome: ${{ steps.stack.outcome }}"
+          echo
+          cat "${RUNNER_TEMP}/bringup.log" 2>/dev/null || echo "the bring-up wrote no log"
 
       # The retention period is declared here and in the capture configuration, and they say
       # the same thing on purpose: a pair's life is the life of the branch, not for ever.

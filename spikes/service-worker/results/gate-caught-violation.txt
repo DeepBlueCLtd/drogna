@@ -1,0 +1,2 @@
+client/e2e/spike/worker.spec.ts:193: [fixed-sleep] waitForTimeout — a fixed delay in a capture path; every wait must be on the client's readiness signal, because a sleep passes on a fast machine, fails on a slow one, and on an occasionally slow one succeeds by photographing a half-drawn page (FR-019)
+fixed-sleep: 1 violation(s). Fix them, or mark a genuine exemption inline with a reason.

@@ -78,11 +78,20 @@ jobs:
   # merge, with the branch already gone. This job closes that gap without reopening the one
   # T012 closed: it reads the same tree with the same gates and never publishes anything.
   #
-  # `continue-on-error` is on both steps rather than on the job, so a failure is annotated
-  # against the step that produced it and stays visible in the checks list, while the
-  # required status of this workflow is unchanged. Making these blocking is a separate
-  # decision from running them, and it is not this task's to take: the gates enforce PR-01
-  # at publication, and the publication path still enforces them.
+  # **Report-only is not `continue-on-error`, and that cost a round to find out.** With
+  # `continue-on-error: true` the gate step ran, found the planted violation, exited 1 — and
+  # GitHub reported the step's *conclusion* as success, because that is what the flag is for.
+  # The checks list showed this job green with four findings in its log. A contributor sees a
+  # green tick, which is worse than not running the gates at all: it is a check that has been
+  # seen to pass while failing.
+  #
+  # So the steps below report deliberately instead. Each runs its command, and on failure
+  # writes the output into the job summary and emits a `::warning::` annotation, both of which
+  # surface on the pull request without a red cross, and then exits 0 of its own accord.
+  # Nothing here can block a merge, and nothing here can hide a finding either.
+  #
+  # Making these blocking is a separate decision from running them and is not this task's to
+  # take: the gates enforce PR-01 at publication, and `pages.yml` still enforces them there.
   site:
     runs-on: ubuntu-latest
     steps:
@@ -107,16 +116,69 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y tesseract-ocr
 
       # --strict fails on a broken internal link, a dangling anchor or a page missing from
-      # the navigation. Report-only here like the gates below: this job adds no blocking
-      # check, and an unbuilt tree makes the next step report "could not run" rather than
-      # pass, which is the outcome that says this run proved nothing.
-      - name: Build the site
-        continue-on-error: true
-        run: mkdocs build --strict --config-file site/mkdocs.yml
+      # the navigation. Reported rather than enforced, like the gates below. A build that
+      # fails leaves no site/build, and the next step then reports "could not run" rather
+      # than clean — which is the outcome that says this run proved nothing.
+      - name: Report — the site builds under --strict
+        run: |
+          set -uo pipefail
+          report="$(mktemp)"
+          if mkdocs build --strict --config-file site/mkdocs.yml >"$report" 2>&1; then
+            cat "$report"
+            exit 0
+          fi
+          cat "$report"
+          {
+            echo "### The site does not build under \`--strict\`"
+            echo
+            echo "Report-only: this does not block the pull request. It *does* stop"
+            echo "publication after merge, because \`pages.yml\` runs the same command."
+            echo
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Site build::mkdocs build --strict failed; see the job summary"
+          exit 0
 
       - name: Report — the site's own publication gates
-        continue-on-error: true
-        run: python site/gates/run_gates.py --site site/build
+        run: |
+          set -uo pipefail
+          report="$(mktemp)"
+          if python site/gates/run_gates.py --site site/build >"$report" 2>&1; then
+            cat "$report"
+            exit 0
+          fi
+          cat "$report"
+          {
+            echo "### The site's publication gates report findings"
+            echo
+            echo "Report-only: this does not block the pull request. These same gates block"
+            echo "the push to gh-pages in \`pages.yml\`, so what is below will stop the site"
+            echo "publishing after merge unless it is dealt with first."
+            echo
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          # Annotated from the runner's own closing block, which names the gates that
+          # concluded something, rather than by matching finding-shaped lines out of the
+          # body. Several gates print scope notes beside a clean result — the glossary gate
+          # says which pages it does not hold to the first-use rule, the blog gate lists the
+          # entries with a recorded screenshot allowance — and those lines look exactly like
+          # findings. Grepping the body annotated thirteen things on a run with four
+          # findings, which is how an annotation stops being read.
+          #
+          # A gate that could not run is annotated too. It is the outcome that proves
+          # nothing, and it must not reach a pull request as silence.
+          sed -n '/gate(s) ran/,$p' "$report" | sed -n 's/^  \(.*\)$/\1/p' |
+            while IFS= read -r gate; do
+              echo "::warning title=Site gate::${gate}: see the job summary for what it reported"
+            done
+          tail -n 1 "$report" | while IFS= read -r verdict; do
+            echo "::warning title=Site gates::${verdict}"
+          done
+          exit 0
 
   # The client has its own toolchain and its own tests, and they are no less part of the
   # build for being written in a different language. Kept as a separate job so a Python

@@ -1,0 +1,12 @@
+{
+  "baseline_mb": 11.3125,
+  "modules": {
+    "pygeoapi": 85.7,
+    "shapely": 35.8,
+    "pyproj": 36.8,
+    "numpy": 30.3,
+    "babel": 11.3,
+    "rasterio": 57.3,
+    "sqlalchemy": 36.1
+  }
+}

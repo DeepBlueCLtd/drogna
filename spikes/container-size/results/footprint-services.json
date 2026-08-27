@@ -1,0 +1,16 @@
+{
+  "baseline_mb": 11.30859375,
+  "modules": {
+    "harness_clock.__main__": 36.1,
+    "harness_env_generator.__main__": 25.8,
+    "harness_sensors.__main__": 35.0,
+    "harness_ingest.__main__": 35.0,
+    "harness_monitor.__main__": 35.4,
+    "harness_scheduler.__main__": 34.8,
+    "harness_model_runner.__main__": 35.6,
+    "harness_publisher.__main__": 34.8,
+    "harness_planner.__main__": 39.0,
+    "harness_telemetry.__main__": 36.4,
+    "harness_offload.__main__": 36.1
+  }
+}

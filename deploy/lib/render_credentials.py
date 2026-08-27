@@ -126,19 +126,53 @@ def _with_secret(url: str, values: dict[str, str], *, source: Path) -> str:
     return scheme + "://" + role + ":" + secret + "@" + location
 
 
+def _written_by_another_path(destination: str, base: Path) -> set[str]:
+    """Names this module puts in the rendered directory without a source file beside them.
+
+    The sweep in `render_destination` removes what the destination no longer declares, and
+    it decides that by comparing against `config/<destination>/`. The proxy's credential
+    file has no counterpart there — it is produced from a secret, not copied from a tracked
+    document — so without this it would be swept on every render after the first. It is
+    named here from the same tracked field `write_proxy_credentials` reads, rather than
+    written down twice: a literal here would go stale the day the file is renamed, and the
+    failure would be a credential file deleted between two renders.
+    """
+    proxy = destination_dir(destination, base) / "proxy.json"
+    if not proxy.is_file():
+        return set()
+    document = json.loads(proxy.read_text(encoding="utf-8"))
+    declared = document.get("proxy", {}).get("credentials", {}).get("file")
+    return {Path(str(declared)).name} if declared else set()
+
+
 def render_destination(destination: str, values: dict[str, str], root: Path | None = None) -> Path:
     """Write the rendered configuration tree and return the directory it was written to."""
     base = root or repository_root()
     source_dir = destination_dir(destination, base)
     target_dir = rendered_dir(destination, base)
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
-    target_dir.mkdir(parents=True)
+    # The directory is kept and its contents are swept, rather than the directory being
+    # removed and remade. `deploy/compose.yaml` binds this path into every container as
+    # /etc/drogna, and a bind mount resolves to an inode: removing the directory does not
+    # empty the mount, it orphans it, and every container already running then sees an
+    # empty /etc/drogna for the rest of its life. `scripts/up.sh` is required to converge,
+    # so a render over a stack that is already up is ordinary and not an edge case — the
+    # first bring-up worked and the second left the proxy answering 403 to a valid
+    # credential, having no proxy.htpasswd to read, while all six containers reported
+    # healthy. Same trap as write_password_file below, one directory up.
+    target_dir.mkdir(parents=True, exist_ok=True)
+    written: set[str] = set()
+    kept = _written_by_another_path(destination, base)
 
     for source in sorted(source_dir.iterdir()):
         if not source.is_file():
             continue
         target = target_dir / source.name
+        written.add(source.name)
+        # Unlinked before it is written, never truncated in place, for the reason
+        # write_password_file records: a file this process has given away can still be
+        # removed, because unlinking is a permission on the directory the deployer keeps,
+        # and cannot be reopened for writing.
+        target.unlink(missing_ok=True)
         if source.suffix != ".json":
             shutil.copy2(source, target)
             continue
@@ -148,6 +182,18 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
             broker["url"] = _with_secret(broker["url"], values, source=source)
         target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         target.chmod(0o600)
+
+    # What the destination no longer declares must not stay mounted. Sweeping the contents
+    # is the half of `rmtree` that was actually wanted; keeping the directory is the half
+    # that was not. Credentials this module writes into the same directory by another path
+    # are exempt, since they have no counterpart under config/<destination>/.
+    for present in sorted(target_dir.iterdir()):
+        if present.name in written or present.name in kept:
+            continue
+        if present.is_dir():
+            shutil.rmtree(present)
+        else:
+            present.unlink()
     return target_dir
 
 

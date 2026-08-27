@@ -381,3 +381,44 @@ def test_a_second_render_does_not_need_to_own_the_file_it_replaces(scratch: Path
         + ". It must remove and recreate it — unlinking is a permission on the directory, "
         "which the deployer still has, and truncating is one on the file, which it does not"
     )
+
+
+def test_a_second_render_keeps_the_directory_every_container_mounts(scratch: Path) -> None:
+    """The rendered directory is a bind-mount source, so its inode is part of its contract.
+
+    `deploy/compose.yaml` binds this directory into every container as `/etc/drogna`. A
+    bind mount resolves to an inode and not to a path, so removing the directory does not
+    empty the mount — it orphans it, and every container already running sees an empty
+    `/etc/drogna` for the rest of its life. `scripts/up.sh` is required to converge, so a
+    second render happens over a stack that is already up as a matter of course.
+
+    This is the trap `CLAUDE.md` records about the broker password file, one directory up:
+    the first run works and the run after it is the one that breaks, so a test that renders
+    once can never see it. It cost a whole bring-up in which six containers reported healthy
+    while the proxy answered 403 to a valid credential, having no `proxy.htpasswd` to read.
+
+    Asserting on the contents is not enough and that is the point: the contents were always
+    right. What was wrong was which directory they were in.
+    """
+    first = render_credentials.render_destination("local", VALUES, scratch)
+    before = first.stat().st_ino
+
+    # A file no longer wanted, to prove the sweep is a sweep and not an overwrite: the
+    # cheap fix for the inode is to stop deleting anything, which would leave stale
+    # configuration mounted into a container that no longer expects it.
+    stale = first / "departed.json"
+    stale.write_text("{}\n", encoding="utf-8")
+
+    second = render_credentials.render_destination("local", VALUES, scratch)
+
+    assert second.stat().st_ino == before, (
+        "the second render replaced the directory that every container bind-mounts. "
+        "Every container already running now has a mount on the deleted inode and sees "
+        "/etc/drogna empty. Write the files in place and sweep the ones no longer wanted"
+    )
+    assert not stale.exists(), "a file the destination no longer declares was left mounted"
+
+    # And it is still a correct render, not merely the same directory.
+    document = json.loads((second / "clock.json").read_text(encoding="utf-8"))
+    control = VALUES[render_credentials.ROLE_SECRETS["drogna_control"]]
+    assert document["broker"]["url"] == f"mqtt://drogna_control:{control}@broker:1883"

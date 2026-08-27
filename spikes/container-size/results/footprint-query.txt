@@ -1,0 +1,9 @@
+bare interpreter                               11.3 MB
+------------------------------------------------------------
+pygeoapi                                       85.7 MB
+shapely                                        35.8 MB
+pyproj                                         36.8 MB
+numpy                                          30.3 MB
+babel                                          11.3 MB
+rasterio                                       57.3 MB
+sqlalchemy                                     36.1 MB

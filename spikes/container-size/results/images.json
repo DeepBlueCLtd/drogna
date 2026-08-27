@@ -1,0 +1,77 @@
+[
+  {
+    "image": "python:3.11-slim-bookworm",
+    "role": "base of the Python service image and the query image",
+    "layers": 4,
+    "compressed_bytes": 47790358,
+    "uncompressed_bytes": 135261696
+  },
+  {
+    "image": "ghcr.io/astral-sh/uv:0.8.17",
+    "role": "copied whole into every Python service image",
+    "layers": 2,
+    "compressed_bytes": 21389079,
+    "uncompressed_bytes": 48952320
+  },
+  {
+    "image": "postgis/postgis:16-3.4",
+    "role": "the observation store, pulled as-is",
+    "layers": 18,
+    "compressed_bytes": 212616258,
+    "uncompressed_bytes": 618558464
+  },
+  {
+    "image": "eclipse-mosquitto:2.0.22",
+    "role": "the broker, pulled as-is",
+    "layers": 3,
+    "compressed_bytes": 4798168,
+    "uncompressed_bytes": 11495424
+  },
+  {
+    "image": "nginx:1.27-alpine",
+    "role": "base of the proxy image and the client image",
+    "layers": 8,
+    "compressed_bytes": 20960631,
+    "uncompressed_bytes": 49633280
+  },
+  {
+    "image": "node:22-alpine",
+    "role": "build stage of the client image; not in the runtime image",
+    "layers": 4,
+    "compressed_bytes": 57738922,
+    "uncompressed_bytes": 167284224
+  },
+  {
+    "image": "python:3.11-alpine",
+    "role": "candidate base",
+    "layers": 4,
+    "compressed_bytes": 20383514,
+    "uncompressed_bytes": 57311232
+  },
+  {
+    "image": "postgis/postgis:16-3.4-alpine",
+    "role": "candidate observation store",
+    "error": "Compressed file ended before the end-of-stream marker was reached"
+  },
+  {
+    "image": "postgres:16-alpine",
+    "role": "candidate observation store, no PostGIS",
+    "layers": 11,
+    "compressed_bytes": 116052663,
+    "uncompressed_bytes": 297098240
+  },
+  {
+    "image": "debian:bookworm-slim",
+    "role": "floor for a Debian-based image",
+    "layers": 1,
+    "compressed_bytes": 28232655,
+    "uncompressed_bytes": 77895680
+  },
+  {
+    "image": "alpine:3.20",
+    "role": "floor for an Alpine-based image",
+    "layers": 1,
+    "compressed_bytes": 3630321,
+    "uncompressed_bytes": 8092160
+  }
+]

@@ -4,48 +4,237 @@ title: CoverageJSON
 
 # CoverageJSON
 
-!!! warning "Stub — this primer is not written"
-    The [query layer](../subsystems/c09-query-layer.md) and the
-    [browser client](../subsystems/c18-browser-client.md) do not exist yet. This
-    page records what the primer will cover.
-
 Read this one first. It starts with the idea the other three primers assume.
 
 ## A coverage, before any encoding
 
 A [coverage](../glossary.md#coverage) is a function from positions in space and
-time to values. That is the entire concept. It is worth stating in that abstract
-form because it is what allows one data model to describe a satellite image, a
-vertical profile, a model output grid, and a set of readings taken along a
-ship's track — objects that look nothing like each other and answer the same
-question: *what is the value here, at this moment?*
+time to values. That is the entire concept.
 
-Once that idea is in place, an encoding of a coverage has to carry three things,
-and the primer's structure follows them:
+It is worth stating in that abstract form because of what it buys. A satellite
+image, a vertical [profile](../glossary.md#profile), a model output grid, and a
+set of readings taken along a ship's path look nothing like one another. They have
+different dimensions, different regularity, different file formats and different
+communities behind them. But every one of them answers the same question — *what
+is the value here, at this moment?* — and so every one of them is a coverage.
 
-- **The domain** — where and when the values sit. Grid, points, trajectory.
-- **The ranges** — the values themselves, as flat arrays with a declared axis
+Once you accept that, a single data model can describe all four, and a single
+client can render all four. That is not a small claim, and it is the whole reason
+the concept has a name.
+
+The concrete forms differ, and the differences have names too:
+
+| Shape | What it looks like | Called |
+|---|---|---|
+| One position, one instant | A single value | Point |
+| A regular lattice in some axes | An n-dimensional array | Grid |
+| An ordered path through space and time | A list of positions, each with its own moment | [Trajectory](../glossary.md#trajectory) |
+
+### The three parts of an encoding
+
+Whatever the shape, an encoding of a coverage has to carry three things, and
+keeping them apart is the design decision that everything else follows from:
+
+- **The domain** — *where and when* the values sit.
+- **The ranges** — *the values themselves*, as flat arrays with a declared axis
   order.
-- **The parameters** — what each value *means*: its observed property, its unit,
+- **The parameters** — *what each value means*: its observed property, its unit,
   its categories if it has any.
 
-Separating the parameters from the ranges is the choice that lets a client render
-a field it has never seen before, because the meaning arrives with the data
-rather than being compiled into the client.
+Separating the parameters from the ranges is what lets a client render a field it
+has never seen before. The meaning arrives *with the data* rather than being
+compiled into the client. A viewer that knows how to draw "a number with a unit
+and a label" can draw anything the server chooses to serve, and adding a new
+variable to the server is not a client release.
 
-## What the primer will cover
+That is the property drogna is actually testing. The
+[browser client](../subsystems/c18-browser-client.md) and the
+[query layer](../subsystems/c09-query-layer.md) have the same author, so it would
+be very easy for them to share an assumption instead of a contract, and for
+nobody to notice.
 
-- The three parts above, with a small worked example of each.
-- **The trajectory domain**, whose composite axis is a per-vertex (t, x, y, z)
-  tuple — exactly the shape of "conditions along a route at the moment of arrival
-  at each point", and the reason drogna's centrepiece query has a natural
-  response format.
-- **Why JSON and not NetCDF at this boundary.** A browser can read this without a
-  translation layer. NetCDF at the same boundary requires one, and a translation
-  layer is a place for meaning to go missing.
-- **Where it is awkward.** Range arrays are flat, axis order is declared rather
-  than structural, and a large coverage in JSON is a large amount of JSON. The
-  primer will say so rather than selling the format.
+## CoverageJSON specifically
+
+CoverageJSON is a JSON encoding of that model, designed for the web. Its selling
+point over the alternatives at this particular boundary is blunt: a browser can
+read it with `JSON.parse` and nothing else.
+
+The obvious alternative is NetCDF, which drogna does use — one layer down, as the
+[coverage store's](../subsystems/c08-coverage-store.md) storage format and as the
+[offload export](../subsystems/c17-offload-packager.md) format, where CF
+conventions and general-purpose analysis tools matter more than browsers do. But
+NetCDF at the *read* boundary would need a translation layer in front of the
+client, and a translation layer is a place for meaning to go missing. Two formats
+at two boundaries, each chosen for the consumer on the other side of it.
+
+## A real trajectory response
+
+Everything above is easier to see in one. This is an actual response from drogna's
+[EDR](ogc-api-edr.md) trajectory provider — generated by running the query layer's
+own integration fixture, not composed for this page — cut to two vertices and two
+parameters so it fits:
+
+```json
+{
+  "type": "Coverage",
+  "domain": {
+    "type": "Domain",
+    "domainType": "Trajectory",
+    "axes": {
+      "composite": {
+        "dataType": "tuple",
+        "coordinates": ["t", "x", "y", "z"],
+        "values": [
+          ["2026-09-01T00:18:00.000000Z", -5.4, 48.5, 10.0],
+          ["2026-09-01T01:12:00.000000Z", -4.8, 48.8, 40.0]
+        ]
+      }
+    },
+    "referencing": [
+      {
+        "coordinates": ["x", "y"],
+        "system": {
+          "type": "GeographicCRS",
+          "id": "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
+        }
+      },
+      {
+        "coordinates": ["z"],
+        "system": {
+          "type": "VerticalCRS",
+          "cs": {
+            "csAxes": [
+              {
+                "name": { "en": "depth below sea surface" },
+                "direction": "down",
+                "unit": { "symbol": "m" }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "coordinates": ["t"],
+        "system": { "type": "TemporalRS", "calendar": "Gregorian" }
+      }
+    ]
+  },
+  "parameters": {
+    "sea_water_temperature": {
+      "type": "Parameter",
+      "description": { "en": "forecast sea water temperature" },
+      "unit": { "symbol": "degree_C" },
+      "observedProperty": {
+        "label": { "en": "forecast sea water temperature" },
+        "id": "sea_water_temperature"
+      }
+    },
+    "temperature_uncertainty": {
+      "type": "Parameter",
+      "description": { "en": "one standard deviation of the temperature forecast" },
+      "unit": { "symbol": "degree_C" },
+      "observedProperty": {
+        "label": { "en": "one standard deviation of the temperature forecast" }
+      }
+    }
+  },
+  "ranges": {
+    "sea_water_temperature": {
+      "type": "NdArray",
+      "dataType": "float",
+      "axisNames": ["composite"],
+      "shape": [2],
+      "values": [15.73699, 14.8216]
+    },
+    "temperature_uncertainty": {
+      "type": "NdArray",
+      "dataType": "float",
+      "axisNames": ["composite"],
+      "shape": [2],
+      "values": [0.26009800000000005, 0.29190400000000005]
+    }
+  },
+  "drogna:declined": []
+}
+```
+
+Every number in it is synthetic and the forecast that produced it is deliberately
+fake. What is worth reading is the structure.
+
+### The composite axis is the whole point
+
+A grid domain would have four separate axes — `x`, `y`, `z`, `t` — each a list,
+and the ranges would be the product of their lengths. A trajectory domain has
+**one** axis called `composite`, whose every entry is a `(t, x, y, z)` tuple, one
+per vertex.
+
+That is exactly the shape of "conditions along a route, at the moment of arrival
+at each point". Vertex zero is at 00:18 at 10 m depth; vertex one is at 01:12 at
+40 m. Those are different times, and the response is *not* the field at one
+instant sampled along a line — each vertex is answered for its own moment.
+
+Per-vertex timestamps are the requirement drogna exists to exercise, and this is
+where they land. It is also the reason the response needs no reshaping: the
+ranges are flat arrays of length two, indexed by `composite`, so element `i` of
+any range belongs to element `i` of the axis. A client receives `(t, x, y, z,
+value)` rows in the order it asked for them.
+
+### The parameters carry the meaning
+
+`sea_water_temperature` and `temperature_uncertainty` both come back in
+`degree_C`, and the client is told so rather than assuming it. Note the second
+one: it has a `label` but no `id`, because there is no standard vocabulary term
+for "one standard deviation of a forecast". The encoding permits saying what you
+can and omitting what you cannot, which is better than inventing an identifier
+that looks authoritative.
+
+### The referencing block, and the one axis that bites
+
+Three reference systems are declared in every response: a geographic CRS for `x`
+and `y`, a vertical CRS for `z`, and a temporal reference system for `t`.
+
+The vertical one earns its place, and it is the sharpest small lesson on this
+page. The query arrives as WKT, where **Z is elevation and positive up**. The
+coverage's axis is **depth, positive down**. drogna's provider converts between
+them and *declares which one it is returning* — `"direction": "down"`, in words,
+in the response. A vertical axis whose direction is left implicit will eventually
+be read upside down by somebody, and the reading will look entirely plausible: a
+profile plotted the wrong way up is still a profile.
+
+### `drogna:declined`, and why a null is not enough
+
+The last key is an extension, and it exists because of a genuine gap.
+
+If a requested vertex falls outside the run's extent, its value in the ranges is
+`null`. But a null in an array is indistinguishable from a missing measurement,
+and this is neither of those — it is a *refusal to extrapolate*, which is a
+decision the caller is entitled to see stated. So the response also lists the
+declined vertices with the axis and the extent that excluded them.
+
+It is prefixed because it is not part of the standard. Something a consumer can
+recognise and ignore is better than a null the consumer will read as absence.
+
+## Where it is awkward
+
+A primer that only sells the format is not a primer.
+
+**Range arrays are flat and the axis order is declared, not structural.** A grid
+range is one long list, and reconstructing the n-dimensional shape means reading
+`axisNames` and `shape` and doing the arithmetic. Get the order wrong and every
+value is in the wrong place with no error anywhere — the data still parses, the
+plot still renders, and it is simply a picture of nothing.
+
+**JSON is verbose, and a large coverage is a large amount of JSON.** In the
+fragment above, the two uncertainty values are printed as
+`0.26009800000000005` and `0.29190400000000005` — full float repr, at eighteen
+characters each, for a quantity meaningful to about two decimal places. Multiply
+that by a grid. CoverageJSON has provisions for tiled and referenced ranges for
+exactly this reason; drogna does not use them, because its responses are small by
+design and a limit refused is better than a limit worked around.
+
+**It is not a storage format.** No compression, no chunking, no partial reads. The
+file on disk is NetCDF and the wire format is CoverageJSON, and neither one is
+pretending to be the other.
 
 ## The question drogna needs it to answer
 
@@ -53,3 +242,11 @@ Whether the response to a trajectory query can be rendered by the client without
 any drogna-specific knowledge of what the fields are — that is, whether the
 data-to-viewer contract really is carried by the standard rather than by a shared
 assumption between two components that happen to have the same author.
+
+## The standard itself
+
+The authoritative document is the
+[CoverageJSON specification](https://covjson.org/spec/) at covjson.org. The data
+model beneath it is OGC's Coverage Implementation Schema; the JSON encoding is
+what this page is about. Where this page and the specification disagree, the
+specification is right and this page is a bug.

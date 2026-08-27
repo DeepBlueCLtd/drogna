@@ -1,7 +1,7 @@
 # ADR-0010: Tooling for the published site
 
 **Status:** Accepted
-**Date:** 26 August 2026
+**Date:** 26 August 2026, amended 27 August 2026 (mathematics rendering settled)
 **Feature:** 015 — published site
 **Requirements:** SRD PR-06, PR-07, PR-09
 
@@ -41,8 +41,9 @@ Configuration decisions taken with it:
 - No mermaid, no social cards, no analytics plugin. Each would reintroduce an
   external request or an external build-time fetch.
 - `pymdownx.arithmatex` in generic mode, so that mathematics is emitted in a form
-  a renderer can consume — with the renderer itself deferred; see the open point
-  below.
+  a renderer can consume — with the renderer itself deferred. That deferral was
+  settled on 27 August 2026 and the renderer is *not* served; see
+  **Mathematics rendering** below. No page may use notation while that stands.
 - Every page carries `noindex, nofollow`, and a `robots.txt` says the same. The
   repository is public but unadvertised, and unadvertised is taken to mean not
   indexed as well as not promoted.
@@ -96,14 +97,62 @@ would be unmaintainable by the fourth blog entry.
   whose names begin with an underscore. The published tree therefore carries a
   `.nojekyll` file at its root, and the workflow verifies it is present.
 
+## Mathematics rendering: settled, and settled by not doing it
+
+*Resolved 27 August 2026, by feature 015 while writing the three algorithm
+derivations — the first point at which the question could be tested against real
+notation rather than anticipated.*
+
+The open point recorded here asked which renderer — MathJax or KaTeX — should be
+vendored into the repository and served from this origin. The answer is **neither,
+for now**. No renderer is vendored, no page uses mathematical notation, and
+`pymdownx.arithmatex` stays enabled in generic mode emitting nothing, because no
+page gives it anything to emit.
+
+The reason is that the derivations were written first and the notation turned out
+not to be needed. Three pages were expected to require it:
+
+- **Ensemble spread** needed a mean, a standard deviation and a table of measured
+  numbers. All three are clearer in prose and fenced blocks.
+- **Advection** needed five lines of displacement arithmetic, which are exactly
+  the five lines of the source and are more useful shown as such.
+- **Informative path planning** needed two expressions — the uncertainty regrowth
+  law and the sensing kernel — and both appear as fenced blocks in the form the
+  source docstrings state them, so that a reader can find the same expression in
+  `collapse.py` and `sensing.py` by searching for it.
+
+Three arguments settled it beyond convenience.
+
+1. **The audience.** PR-07 fixes the reader as a general technical reader who has
+   not read the requirements document. Set notation is not obviously kinder to
+   that reader than a named expression in a code fence, and it is markedly less
+   kind to anyone reading with a screen reader, which vendored MathJax handles
+   variably and KaTeX not at all without further configuration.
+2. **A fenced expression is greppable and a rendered one is not.** Every formula
+   on the site can be pasted into a search over the repository and will find the
+   source that implements it. That property is worth more here than typographic
+   quality, because the standing risk on this site is a page drifting away from
+   the code it describes.
+3. **Vendoring costs more than it looks.** MathJax and KaTeX are each several
+   hundred kilobytes of script plus web fonts, all of which would have to be
+   committed, kept in step with the extension that feeds them, and scanned by the
+   external-resources gate for a font URL that reaches back to a CDN. That is a
+   standing maintenance obligation, incurred for three pages that do not need it.
+
+**The decision is reversible and cheaply so.** The extension is already
+configured, so serving a renderer later is an addition rather than a migration.
+The trigger to revisit it is a derivation that genuinely cannot be written without
+notation — a matrix, a summation over indices, an integral. None of the three
+existing derivations is that, and the fourth will announce itself.
+
+**What this rules out.** No page may use `$...$` or `\(...\)` notation while no
+renderer is served, because arithmatex would emit markup that nothing renders and
+the reader would see raw delimiters on a public page. The three derivations each
+carry a short closing note saying the site has no renderer, so the absence is
+stated rather than looking like an oversight.
+
 ## Open points
 
-- **Mathematics rendering is not yet served.** Arithmatex emits the notation but
-  the renderer that consumes it — MathJax or KaTeX — must be vendored into the
-  repository and served from this origin, not loaded from a CDN. That work is
-  deferred to whichever feature writes the first derivation, which is the first
-  point at which it can be tested against real notation. Until then no page uses
-  mathematical notation, so nothing renders wrongly; it simply is not there yet.
 - **Diagrams.** Mermaid renders from a third-party script and is therefore
   excluded. Diagrams will need to be committed SVG, and SVG carrying text is
   subject to the same vocabulary scanning as page text.

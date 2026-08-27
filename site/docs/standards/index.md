@@ -9,17 +9,19 @@ inventing message shapes is the point of the exercise: the architecture under
 test is one in which reads are served *only* through standards-based interfaces.
 If the standards do not fit, that is the finding.
 
-!!! warning "All four primers are stubs"
-
-    None of them is written yet. Each page states what it will cover and, more
-    usefully, the specific question drogna needs that standard to answer.
+All four are written. Each states what the standard is for, the parts drogna uses,
+the parts it deliberately does not, and — more usefully — the specific question
+drogna needs that standard to answer. Two ideas recur across all four and are worth
+having to hand first: a [coverage](../glossary.md#coverage), which is a function
+from positions in space and time to values, and a
+[trajectory](../glossary.md#trajectory), which is a path through both.
 
 | Primer | What drogna uses it for | Status |
 |---|---|---|
-| [SensorThings](sensorthings.md) | The observation vocabulary, from sensor to query | Stub |
-| [OGC API-EDR](ogc-api-edr.md) | Reads against the coverage store, including trajectory | Stub |
-| [CF conventions](cf-conventions.md) | Coverage storage and offload export | Stub |
-| [CoverageJSON](coveragejson.md) | The response the browser client renders | Stub |
+| [SensorThings](sensorthings.md) | The observation vocabulary, from sensor to query | Written |
+| [OGC API-EDR](ogc-api-edr.md) | Reads against the coverage store, including trajectory | Written |
+| [CF conventions](cf-conventions.md) | Coverage storage and offload export | Written |
+| [CoverageJSON](coveragejson.md) | The response the browser client renders | Written |
 
 These are primers, not specifications. Each is written for a reader who has not
 met the standard, and each links to the authoritative document rather than

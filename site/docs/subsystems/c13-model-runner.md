@@ -28,6 +28,15 @@ uncertainty field alongside the forecast.
 It does not implement real numerics, and it is not trying to. The numbers are
 deliberately fake.
 
+One property of that spread is worth stating here rather than leaving a reader to
+infer it: **it does not grow with the forecast horizon.** Measured over the runner's
+own fixture, the domain-mean spread is 0.221, 0.209 and 0.199 °C at t+0 for 4, 8 and
+200 members, and 0.220, 0.210 and 0.199 °C at t+6h for the same three. There are no
+dynamics here to amplify an initial-condition error, and no growth law is authored in
+their place. FR-29 asks for a spread emitted alongside the forecast, which this is; it
+does not ask for one that widens, and this one does not.
+[The derivation](../algorithms/ensemble-spread.md) says where the number comes from.
+
 ## Why "being irreplaceable" is the failure mode
 
 This is the one component in drogna that is certain to be thrown away. Any real

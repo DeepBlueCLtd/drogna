@@ -52,13 +52,13 @@ the pin explaining why, and a test asserts that the M ordinate survives WKT pars
 - Feature 008 and feature 012 no longer carry contingency branches for the case where
   per-vertex timestamps are unavailable.
 - **The version pin guards a silent failure and must not be tidied away.** The
-  failure below the pin is worse than FR-51 anticipated, and the spike measured it
-  rather than citing it. Shapely and GEOS fail independently, giving three modes rather
-  than the one FR-51 names, and none of them raises:
+  failure below the pin is worse than FR-51 anticipated. Shapely and GEOS fail
+  independently, giving three modes rather than the one FR-51 names, and none of them
+  raises. **Two of the three were measured; the first was not, and is marked.**
 
   | Shapely | GEOS | What happens to the M ordinate |
   |---|---|---|
-  | >= 2.1 | < 3.12 | Returned as **NaN**, which is the case FR-51 describes. `shapely.has_m` raises `UnsupportedGEOSVersionError` rather than returning False. |
+  | >= 2.1 | < 3.12 | **Not measured — inferred.** Returned as NaN, which is the case FR-51 describes; `shapely.has_m` raises `UnsupportedGEOSVersionError` rather than returning False. Taken from Shapely's own documentation. The spike built two images and this combination was not one of them, so this row is a citation sitting in a table of measurements. See below. |
   | 2.0.x | >= 3.12 | Not NaN — **absent**. No `include_m` parameter and no `has_m` attribute exist. `LINESTRING M` yields `(x, y)` tuples; `LINESTRING ZM` yields `(x, y, z)` and round-trips out as `LINESTRING Z`. **This is the pygeoapi image as it ships today.** |
   | 2.0.x | < 3.12 | Worse than either. `LINESTRING M` comes back as a `LINESTRING Z` whose Z values are the timestamps, with `has_z` True — a Unix timestamp silently promoted into the depth axis. |
 
@@ -67,6 +67,20 @@ the pin explaining why, and a test asserts that the M ordinate survives WKT pars
   than NaN. A test asserting only "M is not NaN" passes there while the timestamps are
   already gone. The test must assert that M is recovered *and* that Z is what it should
   be.
+
+  **On the first row, corrected 27 August 2026.** This record and the spike's FINDING both
+  presented all three rows as measured. They were not. The spike built two images — the
+  pygeoapi image as it ships, and Shapely 2.0.7 on GEOS 3.11.4 — and captured both; those
+  are rows two and three. The NaN mode needs Shapely >= 2.1 on GEOS < 3.12 and no such
+  image was ever built, so that row came from Shapely's documentation.
+
+  It is left in the table because it is the case FR-51 names and a reader needs to see it,
+  but it is labelled, because a citation presented as a measurement is the failure this
+  repository is most concerned with: it reads exactly like evidence. Nothing downstream
+  rests on it — the decision to write a bespoke provider is carried by rows two and three,
+  both of which were run, and the test the middle row demands (assert M is recovered *and*
+  Z is correct) is stricter than anything the first row would have asked for. Building the
+  image and measuring it would close this; until someone does, the row says what it is.
 
   A second version sensitivity, separate from M: the OGC API-EDR specification writes the
   geometry type without a space, `LINESTRINGZM(...)`. GEOS accepts that spelling from

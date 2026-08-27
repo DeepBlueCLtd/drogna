@@ -198,13 +198,26 @@ returned as NaN." The pin is right and the reason for it is right. The mechanism
 stated too narrowly, and the case it names is not the one the deployment would actually
 meet.
 
-There are three failure modes, not one:
+There are three failure modes, not one. **Two were measured here; the first was not** —
+see the note below the table.
 
 | Shapely | GEOS | What happens to M |
 |---|---|---|
-| ≥ 2.1 | < 3.12 | `get_coordinates(..., include_m=True)` returns **NaN**. Shapely's own docstring: "With older GEOS versions, M dimension coordinates will be NaN." `shapely.has_m` carries `@requires_geos("3.12.0")` and *raises* `UnsupportedGEOSVersionError` rather than returning False. |
+| ≥ 2.1 | < 3.12 | **Not measured — from the documentation.** `get_coordinates(..., include_m=True)` returns **NaN**. Shapely's own docstring: "With older GEOS versions, M dimension coordinates will be NaN." `shapely.has_m` carries `@requires_geos("3.12.0")` and *raises* `UnsupportedGEOSVersionError` rather than returning False. |
 | 2.0.x | ≥ 3.12 | **Not NaN — absent.** There is no `include_m` parameter and no `has_m` attribute at all. `LINESTRING M` yields `(x, y)` coordinate tuples; `LINESTRING ZM` yields `(x, y, z)` and round-trips out as `LINESTRING Z`. This is the pygeoapi image as it ships today. |
 | 2.0.x | < 3.12 | **Worse than either.** `LINESTRING M` comes back as a `LINESTRING Z` whose Z values are the timestamps, with `has_z` True. |
+
+**Which rows this spike actually ran, added 27 August 2026.** Two images were built and
+captured: the pygeoapi image as it ships (row two) and Shapely 2.0.7 on GEOS 3.11.4 (row
+three). Both are in `results/`. The first row needs Shapely ≥ 2.1 on GEOS < 3.12, and no
+such image was built — that row is Shapely's docstring, quoted above, not an observation.
+
+It is stated here because it is the case FR-51 names and the table would be misleading
+without it, but it is marked, because this repository's whole method is that a claim
+presented as measured has been measured. Nothing rests on it: the decision to write a
+bespoke provider follows from rows two and three, and the test the second row demands —
+assert M is recovered *and* that Z is what it should be — is strictly stronger than
+anything the first row would require. Building that image would close it.
 
 Suggested wording, for whoever owns the SRD and ADR-0003: *"Below Shapely 2.1 built
 against GEOS 3.12 the M ordinate is lost silently — returned as NaN, dropped entirely, or

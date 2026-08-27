@@ -31,10 +31,17 @@ else.
 **Purpose**: The directories, the configuration shape, and a proxy that starts and
 refuses everything.
 
-- [ ] T001 Create `proxy/` with `templates/`, `tests/` and an empty `__init__.py`, and add the package to the `uv` workspace member list in the workspace manifest.
-- [ ] T002 Write `contracts/schemas/config.proxy.schema.json` with `component`, `clock`, `seed`, `broker`, `logging` `$ref`d from `config.common.schema.json`, plus a `proxy` section carrying `listen`, `upstream`, `released_prefix`, `released_collections`, `released_variables`, `tls.certificate`, `tls.key`, `credentials_file`, `identification_radius_m` and `quantisation_step`.
-- [ ] T003 [P] Write `config/local/proxy.json` and `config/droplet/proxy.json` with the same shape and per-destination values, no value duplicated into source.
-- [ ] T004 [P] Write `proxy/tests/test_config_schema.py` asserting the example configurations validate and that omitting `released_collections` is a validation error rather than an empty release.
+- [~] T001 Create `proxy/` with `templates/`, `tests/` and an empty `__init__.py`, and add the package to the `uv` workspace member list in the workspace manifest.
+  **Partial**: `proxy/` exists with `templates/`, `tests/` and `__init__.py`, and every file
+  the later tasks name is in it. It is not a `uv` workspace member: there is no
+  `proxy/pyproject.toml` and `members` in the root manifest is still `libs/*` and `services/*`.
+  It is registered in pytest's `testpaths` instead, and `deploy/images/proxy.Dockerfile` copies
+  the directory whole and installs only `harness_core`, so nothing needs it to be a
+  distributable package. Nowhere records that as a decision, which is why this is partial
+  rather than ticked.
+- [x] T002 Write `contracts/schemas/config.proxy.schema.json` with `component`, `clock`, `seed`, `broker`, `logging` `$ref`d from `config.common.schema.json`, plus a `proxy` section carrying `listen`, `upstream`, `released_prefix`, `released_collections`, `released_variables`, `tls.certificate`, `tls.key`, `credentials_file`, `identification_radius_m` and `quantisation_step`.
+- [x] T003 [P] Write `config/local/proxy.json` and `config/droplet/proxy.json` with the same shape and per-destination values, no value duplicated into source.
+- [x] T004 [P] Write `proxy/tests/test_config_schema.py` asserting the example configurations validate and that omitting `released_collections` is a validation error rather than an empty release.
 
 **Checkpoint**: The configuration shape exists and is validated.
 
@@ -46,12 +53,12 @@ refuses everything.
 
 **No user story work can begin until this phase is complete.**
 
-- [ ] T005 Write `proxy/tests/test_policy.py` covering path normalisation: percent-encoded traversal, duplicate slashes, trailing dot, mixed case, and a released identifier that is a string prefix of an unreleased one. Tests must fail before T006.
-- [ ] T006 Implement `proxy/policy.py`: normalise a request path, map a released collection identifier to an exact location, and refuse any path that does not normalise unambiguously (FR-001, FR-004).
-- [ ] T007 Write `proxy/tests/test_render_config.py` covering: one location emitted per released collection, deterministic ordering, value escaping, and a rendered configuration containing no value absent from the input configuration.
-- [ ] T008 Implement `proxy/render_config.py`: read `HARNESS_CONFIG`, validate against `config.proxy.schema.json` before any other I/O, render `proxy/templates/harness.conf.j2`, write to the location given by configuration (FR-008).
-- [ ] T009 Write `proxy/templates/harness.conf.j2`: a default location that refuses, one exact location per released collection beneath the released prefix, TLS from configuration, and refusal logging with the matched rule (FR-001, FR-007, FR-020).
-- [ ] T010 Write `proxy/entrypoint.sh`: render, run `nginx -t` against the rendered file, fail loudly on a validation error, then exec nginx. No path literal in the script; all locations from the rendered configuration.
+- [x] T005 Write `proxy/tests/test_policy.py` covering path normalisation: percent-encoded traversal, duplicate slashes, trailing dot, mixed case, and a released identifier that is a string prefix of an unreleased one. Tests must fail before T006.
+- [x] T006 Implement `proxy/policy.py`: normalise a request path, map a released collection identifier to an exact location, and refuse any path that does not normalise unambiguously (FR-001, FR-004).
+- [x] T007 Write `proxy/tests/test_render_config.py` covering: one location emitted per released collection, deterministic ordering, value escaping, and a rendered configuration containing no value absent from the input configuration.
+- [x] T008 Implement `proxy/render_config.py`: read `HARNESS_CONFIG`, validate against `config.proxy.schema.json` before any other I/O, render `proxy/templates/harness.conf.j2`, write to the location given by configuration (FR-008).
+- [x] T009 Write `proxy/templates/harness.conf.j2`: a default location that refuses, one exact location per released collection beneath the released prefix, TLS from configuration, and refusal logging with the matched rule (FR-001, FR-007, FR-020).
+- [x] T010 Write `proxy/entrypoint.sh`: render, run `nginx -t` against the rendered file, fail loudly on a validation error, then exec nginx. No path literal in the script; all locations from the rendered configuration.
 
 **Checkpoint**: A proxy that starts, validates, and refuses everything.
 
@@ -67,16 +74,16 @@ through the proxy, assert only released paths answer and nothing else reaches up
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write `proxy/tests/test_request_matrix.py` with a stub upstream that records every request it receives, and a matrix covering released paths, unreleased paths, native query-layer paths, and nonexistent paths (FR-001, FR-002, FR-003).
-- [ ] T012 [P] [US1] Extend the matrix with method coverage: `GET`, `HEAD`, `OPTIONS` and a CORS preflight against an unreleased path, asserting the refusal is not method-dependent.
-- [ ] T013 [P] [US1] Add a matrix case asserting the query layer's emitted specification and conformance documents are refused, since they enumerate withheld collections.
+- [x] T011 [P] [US1] Write `proxy/tests/test_request_matrix.py` with a stub upstream that records every request it receives, and a matrix covering released paths, unreleased paths, native query-layer paths, and nonexistent paths (FR-001, FR-002, FR-003).
+- [x] T012 [P] [US1] Extend the matrix with method coverage: `GET`, `HEAD`, `OPTIONS` and a CORS preflight against an unreleased path, asserting the refusal is not method-dependent.
+- [x] T013 [P] [US1] Add a matrix case asserting the query layer's emitted specification and conformance documents are refused, since they enumerate withheld collections.
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Wire the released-collection list from configuration through `policy.py` into the template so a collection absent from the list has no location at all (FR-003).
-- [ ] T015 [US1] Add the upstream access-log assertion to the matrix harness: an unreleased request must leave no record upstream, which is the difference between refusing and proxying-then-refusing (FR-001).
-- [ ] T016 [US1] Add the stability test: start the stub upstream with an additional collection it did not have before, re-run the matrix without re-rendering, and assert the response matrix is byte-identical (FR-003, SC-002).
-- [ ] T017 [US1] Add refusal logging with the normalised path and the matched rule, and a test asserting a refused request is diagnosable from the log alone (FR-020).
+- [x] T014 [US1] Wire the released-collection list from configuration through `policy.py` into the template so a collection absent from the list has no location at all (FR-003).
+- [x] T015 [US1] Add the upstream access-log assertion to the matrix harness: an unreleased request must leave no record upstream, which is the difference between refusing and proxying-then-refusing (FR-001).
+- [x] T016 [US1] Add the stability test: start the stub upstream with an additional collection it did not have before, re-run the matrix without re-rendering, and assert the response matrix is byte-identical (FR-003, SC-002).
+- [x] T017 [US1] Add refusal logging with the normalised path and the matched rule, and a test asserting a refused request is diagnosable from the log alone (FR-020).
 
 **Checkpoint**: The exposure boundary stands on its own, with no authentication yet.
 
@@ -92,16 +99,21 @@ byte-for-byte against upstream; read the ADR.
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Extend `proxy/tests/test_request_matrix.py` with an uncleared caller over a released path, an unreleased path and a nonexistent path, asserting the three responses are identical in status, body and headers (FR-006).
-- [ ] T019 [P] [US2] Add a body-fidelity test comparing the proxied response byte-for-byte with the stub upstream's response for the same request, including a response large enough to be chunked (FR-005).
-- [ ] T020 [P] [US2] Write `proxy/tests/test_adr_present.py` asserting `docs/adr/0001-binary-access.md` exists and carries Status, Context, Decision and Consequences headings (FR-009).
+- [x] T018 [P] [US2] Extend `proxy/tests/test_request_matrix.py` with an uncleared caller over a released path, an unreleased path and a nonexistent path, asserting the three responses are identical in status, body and headers (FR-006).
+- [~] T019 [P] [US2] Add a body-fidelity test comparing the proxied response byte-for-byte with the stub upstream's response for the same request, including a response large enough to be chunked (FR-005).
+  **Partial**: `test_the_proxied_body_is_byte_identical_to_the_upstream_body` in
+  `tests/integration/test_request_matrix.py` compares the proxied response with the stub's own
+  for the same request. No case uses a response large enough to be chunked — the stub serves
+  `served-<identifier>`, about twenty bytes — so a transfer encoding the boundary might have
+  altered is never exercised.
+- [x] T020 [P] [US2] Write `proxy/tests/test_adr_present.py` asserting `docs/adr/0001-binary-access.md` exists and carries Status, Context, Decision and Consequences headings (FR-009).
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Add TLS termination and credential checking to the template, with certificate, key and credential file locations from configuration (FR-007).
-- [ ] T022 [US2] Add the uniform-challenge behaviour: uncleared callers receive one response for every path; cleared callers receive not-found for unreleased paths (FR-006).
-- [ ] T023 [US2] Assert in `proxy/tests/test_render_config.py` that no directive capable of rewriting a response body appears in the rendered configuration (FR-005).
-- [ ] T024 [US2] Write `docs/adr/0001-binary-access.md`: context (SRD FR-39, FR-40), decision (binary clearance, no per-field redaction), rejected alternative (tiered access with body inspection), consequences (path-prefix policy becomes sufficient; softening the assumption changes the architecture, not the configuration).
+- [x] T021 [US2] Add TLS termination and credential checking to the template, with certificate, key and credential file locations from configuration (FR-007).
+- [x] T022 [US2] Add the uniform-challenge behaviour: uncleared callers receive one response for every path; cleared callers receive not-found for unreleased paths (FR-006).
+- [x] T023 [US2] Assert in `proxy/tests/test_render_config.py` that no directive capable of rewriting a response body appears in the rendered configuration (FR-005).
+- [x] T024 [US2] Write `docs/adr/0001-binary-access.md`: context (SRD FR-39, FR-40), decision (binary clearance, no per-field redaction), rejected alternative (tiered access with body inspection), consequences (path-prefix policy becomes sufficient; softening the assumption changes the architecture, not the configuration).
 
 **Checkpoint**: The boundary is closed, credentialled, and the assumption is on record.
 
@@ -117,19 +129,19 @@ second is flagged, neither needs a running system.
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Create `tests/leakage/fixtures/clean_bundle/` from a seeded fixture run, with a README recording the seed and what it represents.
-- [ ] T026 [P] [US3] Create `tests/leakage/fixtures/leaky_bundle/` as a deliberate control: `history` carrying a command line and input paths, a variable attribute naming a sensor identifier, and a global attribute holding a measurement coordinate. Document in the fixture README that it is deliberately leaky.
-- [ ] T027 [P] [US3] Write `tests/leakage/test_provenance.py` asserting zero hits on the clean bundle, a flagged result naming the offending attribute on the leaky bundle, and a non-zero exit (FR-011, FR-013).
-- [ ] T028 [P] [US3] Add a test case for an unanticipated global attribute with a harmless value, asserting the allow-list flags it rather than ignoring it (FR-012).
-- [ ] T029 [P] [US3] Add a test case for a bundle member in an unrecognised format, asserting it is a failure and not a skip.
+- [x] T025 [P] [US3] Create `tests/leakage/fixtures/clean_bundle/` from a seeded fixture run, with a README recording the seed and what it represents.
+- [x] T026 [P] [US3] Create `tests/leakage/fixtures/leaky_bundle/` as a deliberate control: `history` carrying a command line and input paths, a variable attribute naming a sensor identifier, and a global attribute holding a measurement coordinate. Document in the fixture README that it is deliberately leaky.
+- [x] T027 [P] [US3] Write `tests/leakage/test_provenance.py` asserting zero hits on the clean bundle, a flagged result naming the offending attribute on the leaky bundle, and a non-zero exit (FR-011, FR-013).
+- [x] T028 [P] [US3] Add a test case for an unanticipated global attribute with a harmless value, asserting the allow-list flags it rather than ignoring it (FR-012).
+- [x] T029 [P] [US3] Add a test case for a bundle member in an unrecognised format, asserting it is a failure and not a skip.
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Write `tests/leakage/rules/attribute_allowlist.yaml` and `tests/leakage/rules/identifying_patterns.yaml` as data, not code, so a rule change is reviewable as a diff (FR-012).
-- [ ] T031 [US3] Implement `tests/leakage/scanner.py`: walk global attributes, variable attributes, variable names, dimension names and embedded text members; apply the allow-list and the identifying patterns; emit a leakage report whether or not anything was found (FR-011, FR-012).
-- [ ] T032 [US3] Add coordinate proximity checking to the scanner: flag any value parseable as a coordinate pair falling within the configured identification radius of a measurement location in the run manifest (FR-012).
-- [ ] T033 [US3] Add the released-variable allow-list check: any variable in an artefact that is not on the configured list is a hit (FR-014).
-- [ ] T034 [US3] Write `tests/leakage/test_released_list.py` asserting that the SensorThings collections over the observation store and the planner's route output do not appear in the released collection list of either destination configuration (FR-010).
+- [x] T030 [US3] Write `tests/leakage/rules/attribute_allowlist.yaml` and `tests/leakage/rules/identifying_patterns.yaml` as data, not code, so a rule change is reviewable as a diff (FR-012).
+- [x] T031 [US3] Implement `tests/leakage/scanner.py`: walk global attributes, variable attributes, variable names, dimension names and embedded text members; apply the allow-list and the identifying patterns; emit a leakage report whether or not anything was found (FR-011, FR-012).
+- [x] T032 [US3] Add coordinate proximity checking to the scanner: flag any value parseable as a coordinate pair falling within the configured identification radius of a measurement location in the run manifest (FR-012).
+- [x] T033 [US3] Add the released-variable allow-list check: any variable in an artefact that is not on the configured list is a hit (FR-014).
+- [x] T034 [US3] Write `tests/leakage/test_released_list.py` asserting that the SensorThings collections over the observation store and the planner's route output do not appear in the released collection list of either destination configuration (FR-010).
 
 **Checkpoint**: Provenance leakage is gated by a test with demonstrated power.
 
@@ -145,17 +157,17 @@ unmitigated pair from committed fixtures; assert both bounds.
 
 ### Tests for User Story 4
 
-- [ ] T035 [P] [US4] Create `tests/leakage/fixtures/mitigated_pair/` — two successive released products from a seeded run in which the platform moves, produced with whole-domain rewrite and with age-driven variables excluded, plus the run manifest's measurement geometry.
-- [ ] T036 [P] [US4] Create `tests/leakage/fixtures/unmitigated_pair/` as a deliberate control — the same run with the whole-domain rewrite disabled, so only cells near recent measurements are refreshed. Document it as deliberately leaky.
-- [ ] T037 [P] [US4] Write `tests/leakage/test_updated_region.py` asserting the mitigated statistic is at or below the chance bound *and* the unmitigated statistic is at or above the detection bound, failing the run if the control is not detected (FR-016).
-- [ ] T038 [P] [US4] Add inconclusive-case tests: an empty change mask, a pair of products on different grids, a pair with different variable sets, and a run whose measurement geometry does not span more than the identification radius. Each must fail as inconclusive, never pass (FR-017).
-- [ ] T039 [P] [US4] Add a case in which an age-driven variable is present in the released set, asserting the *worst* statistic rises above the detection bound and names `observation_age`, while the union stays below the chance bound — a union-only gate would pass this pair (FR-014, FR-015, spec US4 scenario 3, ADR-0013).
+- [x] T035 [P] [US4] Create `tests/leakage/fixtures/mitigated_pair/` — two successive released products from a seeded run in which the platform moves, produced with whole-domain rewrite and with age-driven variables excluded, plus the run manifest's measurement geometry.
+- [x] T036 [P] [US4] Create `tests/leakage/fixtures/unmitigated_pair/` as a deliberate control — the same run with the whole-domain rewrite disabled, so only cells near recent measurements are refreshed. Document it as deliberately leaky.
+- [x] T037 [P] [US4] Write `tests/leakage/test_updated_region.py` asserting the mitigated statistic is at or below the chance bound *and* the unmitigated statistic is at or above the detection bound, failing the run if the control is not detected (FR-016).
+- [x] T038 [P] [US4] Add inconclusive-case tests: an empty change mask, a pair of products on different grids, a pair with different variable sets, and a run whose measurement geometry does not span more than the identification radius. Each must fail as inconclusive, never pass (FR-017).
+- [x] T039 [P] [US4] Add a case in which an age-driven variable is present in the released set, asserting the *worst* statistic rises above the detection bound and names `observation_age`, while the union stays below the chance bound — a union-only gate would pass this pair (FR-014, FR-015, spec US4 scenario 3, ADR-0013).
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] Implement the change mask in `tests/leakage/updated_region.py`: cells whose released value differs by more than the configured quantisation step, computed per released variable, then scored both as a union and per variable, with the worst acted on and its variable named (FR-015, ADR-0013).
-- [ ] T041 [US4] Implement the recovery statistic: rasterise the measurement geometry to the product grid, buffer it by the identification radius, and score how well mask membership predicts buffered-geometry membership. Report every figure — the union and each variable — the variable the worst came from, the bounds and the cell counts on both sides (FR-015, FR-016).
-- [ ] T042 [US4] Add the inconclusive detection: empty mask, mismatched grid or variable set, and insufficient geometry span, each returning an explicit inconclusive outcome that the test treats as failure (FR-017).
+- [x] T040 [US4] Implement the change mask in `tests/leakage/updated_region.py`: cells whose released value differs by more than the configured quantisation step, computed per released variable, then scored both as a union and per variable, with the worst acted on and its variable named (FR-015, ADR-0013).
+- [x] T041 [US4] Implement the recovery statistic: rasterise the measurement geometry to the product grid, buffer it by the identification radius, and score how well mask membership predicts buffered-geometry membership. Report every figure — the union and each variable — the variable the worst came from, the bounds and the cell counts on both sides (FR-015, FR-016).
+- [x] T042 [US4] Add the inconclusive detection: empty mask, mismatched grid or variable set, and insufficient geometry span, each returning an explicit inconclusive outcome that the test treats as failure (FR-017).
 
 **Checkpoint**: Both leakage paths named in SRD FR-42 are held by tests that can fail.
 
@@ -163,9 +175,14 @@ unmitigated pair from committed fixtures; assert both bounds.
 
 ## Phase 7: Polish and Cross-Cutting Concerns
 
-- [ ] T043 [P] Add the leakage gate as a single command runnable from a clean checkout, taking a candidate bundle path from configuration, and wire it into CI as a distinct job (FR-018, FR-019, SC-008).
-- [ ] T044 [P] Add the request matrix to CI as a container job that stands nginx and the stub upstream up and tears them down.
-- [ ] T045 Record in `proxy/README.md` what the proxy is and is not: plumbing, not a port; policy lives in the template and the configuration; the rendered file is a build artefact and is never edited (Constitution VI).
+- [x] T043 [P] Add the leakage gate as a single command runnable from a clean checkout, taking a candidate bundle path from configuration, and wire it into CI as a distinct job (FR-018, FR-019, SC-008).
+- [~] T044 [P] Add the request matrix to CI as a container job that stands nginx and the stub upstream up and tears them down.
+  **Partial**: the matrix does run on the CI runner, and it does stand nginx and the stub
+  upstream up and tear them down — `tests/support/proxy_boundary.py` starts both as the
+  invoking user, waits on readiness rather than on a delay, and removes them afterwards. It
+  rides inside the existing `checks` job's `uv run pytest` step rather than being a distinct
+  workflow job. In this container all 34 cases skip, loudly and with the reason.
+- [x] T045 Record in `proxy/README.md` what the proxy is and is not: plumbing, not a port; policy lives in the template and the configuration; the rendered file is a build artefact and is never edited (Constitution VI).
 
 ---
 
@@ -253,6 +270,47 @@ gate (US4). Nothing later weakens anything earlier.
 ---
 
 ## Outcome
+
+### Reconciled against the tree, 2026-08-27
+
+**42 of 45 ticked, three partial, none undone.** The file claimed nothing had been done; the
+feature is built and running. Every tick below was checked against a path or against the test
+that covers the behaviour, not against the task sounding plausible.
+
+What is genuinely not finished is three things, each recorded on its own task: **T001** (the
+package is not a `uv` workspace member and nothing writes down why), **T019** (no body-fidelity
+case large enough to be chunked) and **T044** (the request matrix runs on CI inside the
+existing `checks` job rather than as a distinct container job).
+
+Three tasks were ticked against a path that has since moved or been renamed, and the tick is
+about the thing rather than the spelling:
+
+- **T009 and T008** name `proxy/templates/harness.conf.j2`. The template is
+  `proxy/templates/harness.conf.template`, with `@{name}` placeholders rather than Jinja,
+  because nginx's own `$variables` share the delimiter Jinja would want. Four partials sit
+  beside it — `released-location`, `upgrade-location`, `tls` and `subprotocol-header`.
+- **T011 and T018** name `proxy/tests/test_request_matrix.py`. The matrix is
+  `tests/integration/test_request_matrix.py`, because it needs a container and everything under
+  `proxy/tests/` runs without one. `proxy/README.md` says so.
+- **T002** names `released_prefix`, `released_collections`, `released_variables` and
+  `credentials_file`. The schema nests them as `released.prefix`, `released.collections`,
+  `released.variables` and `credentials.file`. Same fields, one level deeper.
+
+Two more things a reader should not have to rediscover:
+
+- **T043** asks for the leakage gate to be "wired into CI as a distinct job". It is a line in
+  `scripts/gates.registry` instead, run by `./scripts/gates.sh` in the `checks` job. FR-019 asks
+  for a distinct *gate* that can be pointed at any candidate bundle and fails the build, and
+  that is what `scripts/check_leakage.py` is: `--bundle`, `--pair`, `--manifest`, `--report`. The
+  candidate path is an argument rather than configuration; the release *policy* it scores
+  against — the identification radius, the quantisation step, the released collection and
+  variable lists — is read from `config/<destination>/proxy.json`, so a destination that widened
+  its radius cannot leave the gate testing the old one.
+- The **Notes** above say "the template emits no protocol-upgrade location". It does now, at
+  `proxy.control.upgrade_prefix`, and that is not drift: ADR-0008 decided control messages reach
+  the client by WebSocket upgrade through this proxy, and FR-021 was settled with it. The note
+  is left as written because it records what was true when the tasks were drawn up, and the
+  argument for the exception is in `proxy/README.md` under "The upgrade location".
 
 ### The leakage statistic is scored per released variable, not only over the union — settled
 

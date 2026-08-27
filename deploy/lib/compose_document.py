@@ -66,6 +66,23 @@ def service_names(text: str) -> list[str]:
     return sorted(service_blocks(text))
 
 
+def declared_service_names(text: str) -> list[str]:
+    """Every service key in declaration order, duplicates included.
+
+    :func:`service_blocks` returns a mapping, so a service declared twice appears once
+    there — the same silent collapse YAML itself performs, where a repeated mapping key
+    is not an error and the later one simply wins. That is how ``telemetry`` came to be
+    declared twice, with the surviving copy missing a volume the other had. Nothing that
+    reads the file as a mapping can see it, so this reads the keys as a sequence.
+    """
+    services = top_level_blocks(text).get("services", "")
+    return [
+        match.group(1)
+        for line in services.splitlines()
+        if not _is_ignorable(line) and (match := _SECOND_LEVEL_KEY.match(line))
+    ]
+
+
 def volume_names(text: str) -> list[str]:
     """Every named volume the file declares."""
     volumes = top_level_blocks(text).get("volumes", "")

@@ -252,6 +252,13 @@ announcement on `ctl/run-published` says the field it was computed from has been
 an observation says the world has been sampled since. Only the first is a schedule, and none
 of them is a host clock.
 
+One **sounding** is three observations — temperature, salinity and pressure at one place and
+one instant — and it is one measurement of that water. The planner assembles no sounding and
+keeps no observation; it holds the last cell and instant it was informed of, and a second
+observation naming the same pair informs nothing new. Without that, the collapse would be
+applied three times for one measurement, tripling the reduction and under-valuing every later
+visit for a reason no reader could find.
+
 But a route recomputed from scratch every few minutes is not a commitment; it is a sequence
 of opinions, and a consumer watching the recommendation change under it learns nothing from
 any single one of them. So the part of the route inside the **commitment window** is held,

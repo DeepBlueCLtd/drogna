@@ -64,31 +64,32 @@ def _noun(pattern: str) -> re.Pattern[str]:
     return re.compile(_BEFORE + pattern + _AFTER, re.IGNORECASE)
 
 
+# The entities, not the vocabulary. "track" and "tracking" are deliberately absent:
+# see the note below and Constitution V, amended 2026-08-27.
 FORBIDDEN: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("tracked entity", _noun(r"tracked[\s_-]+entit(?:y|ies)")),
-    ("track", _noun(r"tracks?")),
-    ("tracking", _noun(r"tracking")),
     ("tracklet", _noun(r"tracklets?")),
     ("contact", _noun(r"contacts?")),
     ("detection", _noun(r"detections?")),
 )
 
-# Ordinary English and version-control usage that happens to share a word with the
-# prohibition. Declared here, in one place, so the list can be read and argued with.
+# Version-control usage of "tracked", which shares a word with "tracked entity" above.
+# Declared here, in one place, so the list can be read and argued with.
+#
+# This list used to be twice as long. Four of its entries existed only to let ordinary
+# English past a prohibition on the word "track" — "sampling track", "tracks the local
+# decorrelation timescale", "not a track". A list of escapes that grows every few weeks
+# is a rule drawn around the wrong noun, and the rule was corrected rather than the list
+# extended again.
 PERMITTED_PHRASES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\btracked\s+(?:file|files|in git|template|source)\b", re.IGNORECASE),
     re.compile(r"\b(?:git-)?tracked\b(?=[^.]*\bgit\b)", re.IGNORECASE),
     re.compile(r"\bis\s+tracked\s+and\b", re.IGNORECASE),
-    re.compile(r"\btracks?\s+the\s+local\s+decorrelation\s+timescale\b", re.IGNORECASE),
-    re.compile(r"\bcomplexity\s+tracking\b", re.IGNORECASE),
-    re.compile(r"\bsampling\s+track\b", re.IGNORECASE),
-    re.compile(r"\bnot\s+a\s+track\b", re.IGNORECASE),
-    re.compile(r"\bno\s+(?:entity|tracked\s+entity)[^.]*\btracks?\b", re.IGNORECASE),
 )
 
 MESSAGE = (
     "tracked-entity vocabulary; drogna holds measurements, fields, recommendations and "
-    "telemetry, and nothing that is or implies a track (Constitution V)"
+    "telemetry, and no entity it did not place (Constitution V)"
 )
 
 

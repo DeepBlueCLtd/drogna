@@ -108,3 +108,30 @@ def test_every_component_appears_in_the_deployment_readme() -> None:
         assert f"C-{number:02d}" in README_TEXT, f"C-{number:02d} is not accounted for"
     for service in compose_document.service_names(COMPOSE_TEXT):
         assert f"`{service}`" in README_TEXT, f"service {service} is not in the README table"
+
+
+def test_no_service_is_declared_twice() -> None:
+    """A repeated mapping key is not an error in YAML, which is why this is a test.
+
+    The later definition wins and the earlier one vanishes without complaint. Every other
+    check in this file reads the document as a mapping, so all of them see one entry and
+    none of them can see the collapse. `telemetry` was declared twice for a while — once
+    when the deployment was pre-provisioned and again when the component was built — and
+    the copy that survived had lost the coverage volume its persistence reference reads.
+    """
+    declared = compose_document.declared_service_names(COMPOSE_TEXT)
+    repeated = sorted({name for name in declared if declared.count(name) > 1})
+    assert not repeated, f"declared more than once in {COMPOSE_FILENAME}: {repeated}"
+
+
+def test_the_duplicate_service_check_reports_a_duplicate() -> None:
+    """The check above is only worth having if it fails on the thing it describes."""
+    doubled = COMPOSE_TEXT.replace(
+        "  # C-17 offload packager.",
+        "  telemetry:\n    profiles: [control, full]\n\n  # C-17 offload packager.",
+        1,
+    )
+    assert doubled != COMPOSE_TEXT, "the fixture anchor is gone; this test now proves nothing"
+    findings = compose_lint.duplicate_service_findings(doubled)
+    assert any("'telemetry' is declared 2 times" in finding for finding in findings), findings
+    assert not compose_lint.duplicate_service_findings(COMPOSE_TEXT)

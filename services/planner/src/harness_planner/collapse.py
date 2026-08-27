@@ -25,7 +25,7 @@ Four consequences, and each is a requirement rather than an emergent nicety:
   deficit is the whole reduction, so ``u(t0) = u0``.
 - **Quiet water is left alone and fast water is resampled.** The deficit decays at the
   local ``tau``, so a revisit is worth only what has grown back, and the revisit cadence
-  keeps in step with the timescale without anybody scheduling it (SRD FR-08).
+  tracks the local decorrelation timescale without anybody scheduling it (SRD FR-08).
 - **tau is evaluated at the instant asked for, not cached.** A moving feature's timescale
   advects with it (ADR-0002), so the same cell can be quiet at the horizon's start and fast
   by the time the platform arrives. Passing ``tau`` in per evaluation is what keeps that

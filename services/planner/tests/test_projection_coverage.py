@@ -2,8 +2,7 @@
 
 SC-007, and the reason it is a requirement rather than a nicety is in one line of FR-020: an
 absent region reads as a healthy one. A projection that listed only the regions in trouble
-would be indistinguishable, to a reader, from a projection that had quietly stopped
-accounting for the rest.
+would be indistinguishable, to a reader, from a projection that had lost track of the rest.
 
 So the count is published beside the list — a truncated message is then detectable rather
 than merely shorter — and every region carries a named state, including the boring one.

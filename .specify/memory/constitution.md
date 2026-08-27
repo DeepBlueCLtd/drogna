@@ -97,8 +97,7 @@ maintenance.*
 
 ### V. No Tracked Entities (NON-NEGOTIABLE)
 
-The harness holds no tracked entities, contacts, detections, tracks, or any analogue
-of them, and never will.
+The harness holds no tracked entities, contacts or detections, and never will.
 
 - The data model admits environmental measurements, forecast fields, uncertainty
   fields, sampling recommendations and system telemetry. Nothing else.
@@ -106,9 +105,21 @@ of them, and never will.
   repository: code, docs, blog, commit messages, branch names, or issue tracker.
 - Numerics are deliberately fake and data synthetic. The landing page says so in
   plain words (FR-01), and no artefact of the harness may imply otherwise.
-- The simulated vessel is a sampling platform and a coordinate. It is not a track.
+- What is forbidden is the *third party*: an entity the harness did not place, whose
+  position it infers rather than knows. A contact, a detection, a tracklet, anything
+  that is or implies one.
+- **The word "track" is not forbidden.** The route a vehicle has travelled is a track,
+  in ordinary navigational English, and the simulated platform's own path may be called
+  one. What the harness has no analogue of is somebody else's.
 
 *Rationale (SRD §1.1, PR-01).*
+
+*Amended 2026-08-27.* The original wording forbade the word "track" outright, and the
+gate enforcing it accumulated four narrow escapes in as many weeks — "sampling track",
+"tracks the local decorrelation timescale", "not a track" — which is what a rule drawn
+around the wrong noun looks like from the inside. The prohibition is on the entity, not
+the vocabulary. A sentence that uses "track" in the sense this principle guards against
+will name a contact or a detection, and those remain forbidden.
 
 ### VI. Honest Ports
 
@@ -275,7 +286,7 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.3.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+**Version**: 1.4.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-27
 
 *1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
 extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke

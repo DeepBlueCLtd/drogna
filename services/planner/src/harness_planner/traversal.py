@@ -44,6 +44,10 @@ class TraversalCost:
     geometry: CellGeometry
     horizontal_speed_m_per_s: float
     vertical_speed_m_per_s: float
+    # The cell-centre cache. Out of the comparison and out of the repr, because it is a
+    # memo of work already done rather than part of what a traversal cost *is*: two costs
+    # with the same speeds over the same geometry are the same cost whatever either has
+    # happened to look up.
     _positions: dict[PlanningCell, Position] = dataclass_field(
         default_factory=dict, repr=False, compare=False
     )
@@ -51,7 +55,6 @@ class TraversalCost:
     def __post_init__(self) -> None:
         if self.horizontal_speed_m_per_s <= 0 or self.vertical_speed_m_per_s <= 0:
             raise ValueError("a nominal speed is positive; a stationary platform has no budget")
-        object.__setattr__(self, "_positions", {})
 
     def position_of(self, cell: PlanningCell) -> Position:
         """The centre of a planning cell, as a position.

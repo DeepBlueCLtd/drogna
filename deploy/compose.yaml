@@ -339,32 +339,6 @@ services:
         condition: service_healthy
     healthcheck: *python-healthcheck
 
-  # C-16 telemetry. Turns the residual stream the monitor already produces into reported
-  # statistics and a forecast skill score against a persistence reference. It owns the
-  # failure mode of silent degradation, so it is the one component whose absence should be
-  # conspicuous: it publishes and consumes only on the broker and exposes no HTTP surface.
-  telemetry:
-    <<: *runtime
-    profiles: [control, full]
-    build:
-      <<: *python-build
-      args:
-        HARNESS_APP_ROOT: ${HARNESS_APP_ROOT}
-        HARNESS_SERVICE: harness_telemetry
-    environment:
-      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_TELEMETRY}
-    volumes:
-      - *config-mount
-      # The persistence reference is a published forecast field, read through the coverage
-      # read port at publication boundaries and nowhere else.
-      - type: volume
-        source: coverage-data
-        target: ${HARNESS_COVERAGE_ROOT}
-    depends_on:
-      broker:
-        condition: service_healthy
-    healthcheck: *python-healthcheck
-
   # C-15 planner. Emits recommendations; commands nothing (Constitution VIII).
   planner:
     <<: *runtime
@@ -387,7 +361,18 @@ services:
         condition: service_healthy
     healthcheck: *python-healthcheck
 
-  # C-16 telemetry.
+  # C-16 telemetry. Turns the residual stream the monitor already produces into reported
+  # statistics and a forecast skill score against a persistence reference. It owns the
+  # failure mode of silent degradation, so it is the one component whose absence should be
+  # conspicuous.
+  #
+  # One block: this service was declared twice, once when feature 005
+  # pre-provisioned every component and again when feature 010 was built. Docker Compose
+  # refuses a repeated mapping key outright — "mapping key already defined" — so nothing
+  # deployed at all, and every container-backed test failed with it. Merged rather than
+  # deduplicated, because each copy carried something the other did not: the published
+  # port came from one and the coverage volume the persistence reference reads from the
+  # other.
   telemetry:
     <<: *runtime
     profiles: [telemetry, full]
@@ -400,6 +385,11 @@ services:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_TELEMETRY}
     volumes:
       - *config-mount
+      # The persistence reference is a published forecast field, read through the coverage
+      # read port at publication boundaries and nowhere else.
+      - type: volume
+        source: coverage-data
+        target: ${HARNESS_COVERAGE_ROOT}
     ports:
       - ${HARNESS_PUBLISH_TELEMETRY}
     depends_on:

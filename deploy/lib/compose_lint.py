@@ -145,6 +145,31 @@ def documented_volume_findings(compose_text: str, readme_text: str) -> list[str]
     return findings
 
 
+def duplicate_service_findings(compose_text: str) -> list[str]:
+    """A service declared twice, which every check in this file is blind to.
+
+    Docker Compose refuses a repeated mapping key outright, so the deployment does not
+    start and every container-backed test fails at once. The reason that is worth a check
+    here rather than being left to Docker is that Docker is not always present: the checks
+    in this file run anywhere, and the container tests skip where there is no runtime. A
+    duplicate can therefore be committed from a machine without Docker, pass everything
+    that machine can run, and fail only on one that has it.
+
+    Nothing else in this file can see it. They all read the document through
+    :func:`compose_document.service_blocks`, which returns a mapping — so a duplicate has
+    already collapsed to one entry before any of them look.
+    """
+    findings: list[str] = []
+    declared = compose_document.declared_service_names(compose_text)
+    for name in sorted({n for n in declared if declared.count(n) > 1}):
+        findings.append(
+            f"the service '{name}' is declared {declared.count(name)} times. Docker "
+            "Compose refuses a repeated mapping key, so nothing will start until this is "
+            "merged into one block — and each copy may carry settings the other does not."
+        )
+    return findings
+
+
 def run(root: Path | None = None) -> list[str]:
     root = root or repository_root()
     directory = deploy_dir(root)
@@ -152,6 +177,7 @@ def run(root: Path | None = None) -> list[str]:
     for path in scanned_files(directory):
         findings.extend(address_findings(path, path.read_text(encoding="utf-8")))
     compose_text = (directory / COMPOSE_FILENAME).read_text(encoding="utf-8")
+    findings.extend(duplicate_service_findings(compose_text))
     findings.extend(convention_findings(compose_text))
     readme = directory / "README.md"
     if readme.is_file():

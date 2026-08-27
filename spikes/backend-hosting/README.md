@@ -22,17 +22,33 @@ serve the client, and where the page sits in the URL space decides whether `loca
 stays the default deny. It is a proposal to be argued with rather than a specification, and
 it becomes `specs/017-*` if the shape is agreed.
 
+## And how you would actually stand it up
+
+[BRING-UP.md](BRING-UP.md) is the operational half: the ordered procedure for bringing a
+droplet up from nothing, exactly what a deploy does to the containers and what it leaves
+alone, and two drafts — a `--revision` argument for `scripts/run_droplet.sh`, and a
+deploy-on-`main` workflow. The workflow draft is deliberately **not** at
+`.github/workflows/`, because a file there is armed the moment it merges and this one
+automates a path nobody has run.
+
 ## This is a desk spike
 
-There is no `run.sh` and there is no code here. Nothing was deployed and nothing was
-measured: no account was charged, no droplet was created, and no `fly launch` was run. The
-evidence is of two kinds, and the finding keeps them apart —
+There is no `run.sh`, and nothing here is installed or wired to anything. Nothing was
+deployed and nothing was measured: no account was charged, no droplet was created, and no
+`fly launch` was run. The two code drafts in `BRING-UP.md` are drafts — quoted in a document
+rather than placed where they would run, which for the workflow is the difference between a
+proposal and an armed automation. Both were parsed, and the shell one was exercised against
+a stubbed `git`; that is recorded beside them. The evidence is of three kinds, and the
+documents keep them apart —
 
 - **Read out of this tree.** Counts, keys and constraints taken from `deploy/compose.yaml`,
   `config/droplet/`, `.specify/memory/constitution.md` and `scripts/gates.registry`. These
   are checkable by running the commands quoted beside them.
 - **Read off vendor documentation, on 27 August 2026.** Prices and platform limits, each
   with its source. These decay. A price quoted here is worth re-reading before it is spent.
+- **Probed.** A few claims were settled by running something rather than reasoning: that
+  Compose refuses an empty `ports` value, that `github.io` redirects to HTTPS, and that the
+  `--revision` draft parses its arguments and refuses the two bad ones.
 
 The one thing this spike could not do is the one thing most worth doing, and it is named in
 the finding's handover: nobody has ever run `deploy/droplet/`. That is an hour of somebody's

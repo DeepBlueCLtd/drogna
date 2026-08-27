@@ -16,3 +16,8 @@ Terms that need it link to the [glossary](../glossary.md).
 drogna is a learning harness. Its data is synthetic and its numerics are
 deliberately fake — see [the landing page](../index.md) for what that means and
 why it matters.
+
+<!-- generated: feature coverage table -->
+
+Where a feature has no entry the table says so rather than leaving the row out: the
+gap is the reason the table is published at all.

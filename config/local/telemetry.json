@@ -19,7 +19,7 @@
     "stream": "telemetry"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_control@broker:1883",
     "client_id": "telemetry",
     "keepalive_seconds": 30
   },

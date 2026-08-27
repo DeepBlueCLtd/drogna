@@ -19,7 +19,7 @@
     "stream": "ingest"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_ingest@broker:1883",
     "client_id": "ingest",
     "keepalive_seconds": 30
   },

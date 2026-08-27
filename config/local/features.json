@@ -18,11 +18,6 @@
     "root": 20260826,
     "stream": "features"
   },
-  "broker": {
-    "url": "mqtt://broker:1883",
-    "client_id": "features",
-    "keepalive_seconds": 30
-  },
   "logging": {
     "level": "INFO"
   },

@@ -23,7 +23,8 @@
     },
     "credentials": {
       "realm": "drogna",
-      "file": "/etc/drogna/proxy.htpasswd"
+      "file": "/etc/drogna/proxy.htpasswd",
+      "user": "drogna_reader"
     },
     "upstream": {
       "query": {

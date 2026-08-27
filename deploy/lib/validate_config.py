@@ -153,14 +153,31 @@ def _validate(
     if isinstance(instance, dict):
         _validate_object(instance, schema, root_schema, schema_dir, pointer, errors)
     elif isinstance(instance, list):
-        item_schema = schema.get("items")
-        if isinstance(item_schema, dict):
-            for index, item in enumerate(instance):
-                _validate(item, item_schema, root_schema, schema_dir, f"{pointer}[{index}]", errors)
+        _validate_array(instance, schema, root_schema, schema_dir, pointer, errors)
     elif isinstance(instance, str):
         _validate_string(instance, schema, pointer, errors)
     elif isinstance(instance, (int, float)) and not isinstance(instance, bool):
         _validate_number(instance, schema, pointer, errors)
+
+
+def _validate_array(
+    instance: list[Any],
+    schema: dict[str, Any],
+    root_schema: dict[str, Any],
+    schema_dir: Path,
+    pointer: str,
+    errors: list[str],
+) -> None:
+    minimum = schema.get("minItems")
+    if isinstance(minimum, int) and len(instance) < minimum:
+        errors.append(
+            f"{pointer or '<root>'}: expected at least {minimum} "
+            f"item{'' if minimum == 1 else 's'}, found {len(instance)}"
+        )
+    item_schema = schema.get("items")
+    if isinstance(item_schema, dict):
+        for index, item in enumerate(instance):
+            _validate(item, item_schema, root_schema, schema_dir, f"{pointer}[{index}]", errors)
 
 
 def _matches_type(instance: Any, name: str) -> bool:
@@ -244,6 +261,7 @@ _SUPPORTED = frozenset(
         "additionalProperties",
         "minProperties",
         "items",
+        "minItems",
         "minLength",
         "maxLength",
         "pattern",
@@ -256,7 +274,12 @@ _SUPPORTED = frozenset(
 
 
 def _registry(schema_dir: Path):
-    """A referencing registry over every schema in `schema_dir`, keyed by `$id`.
+    """A referencing registry over every schema in `schema_dir`, keyed by `$id`, or None.
+
+    None means referencing is not installed, which is a supported state rather than an
+    error: `deploy/README.md` promises a destination needs no virtual environment, and the
+    caller falls back to the built-in validator on the same terms it uses for a missing
+    jsonschema.
 
     Schemas are also registered under their bare filename, because a `$ref` of
     `config.common.schema.json#/$defs/component` resolves against the referring
@@ -265,8 +288,15 @@ def _registry(schema_dir: Path):
     gave it an `$id`, rather than failing on a detail no reader would connect to
     the error.
     """
-    from referencing import Registry, Resource
-    from referencing.jsonschema import DRAFT202012
+    try:
+        from referencing import Registry, Resource
+        from referencing.jsonschema import DRAFT202012
+    except ImportError:
+        # jsonschema below 4.18 carried its own resolver and did not depend on referencing,
+        # so an interpreter can have a usable jsonschema and no referencing at all. Reporting
+        # that as "no registry" lets the caller fall back the way it already does for a
+        # missing jsonschema, rather than raising out of a helper nobody guarded.
+        return None
 
     resources = []
     for path in sorted(schema_dir.glob("*.schema.json")):
@@ -286,9 +316,19 @@ def _registry(schema_dir: Path):
 
 def validate_document(document: Any, schema: dict[str, Any], schema_dir: Path) -> list[str]:
     """Every way `document` fails `schema`, not merely the first."""
+    # jsonschema and referencing are one capability, not two, and the fallback answers for
+    # both. The guard used to name only jsonschema, so an interpreter carrying jsonschema
+    # without referencing satisfied it and then died in `_registry` — which is what a GitHub
+    # runner carries, and what brought every bring-up down at the first line of `up.sh` with
+    # an unguarded ModuleNotFoundError. The question worth asking is not "is jsonschema
+    # importable" but "can this interpreter validate against a registry".
     try:
         import jsonschema
     except ImportError:
+        jsonschema = None  # type: ignore[assignment]
+
+    registry = _registry(schema_dir) if jsonschema is not None else None
+    if jsonschema is None or registry is None:
         errors: list[str] = []
         _validate(document, schema, schema, schema_dir, "", errors)
         return errors
@@ -297,8 +337,8 @@ def validate_document(document: Any, schema: dict[str, Any], schema_dir: Path) -
     # shared by all components, so the validator needs a registry able to resolve
     # those references. Without one, jsonschema raises Unresolvable at the first
     # `$ref` and the destination cannot be validated at all — which is worse than
-    # the fallback validator below, because it fails loudly on correct config.
-    validator = jsonschema.Draft202012Validator(schema, registry=_registry(schema_dir))
+    # the fallback validator above, because it fails loudly on correct config.
+    validator = jsonschema.Draft202012Validator(schema, registry=registry)
     reported = []
     for error in sorted(validator.iter_errors(document), key=lambda item: list(item.absolute_path)):
         pointer = ".".join(str(part) for part in error.absolute_path) or "<root>"

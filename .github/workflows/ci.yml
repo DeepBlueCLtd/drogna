@@ -44,6 +44,16 @@ jobs:
       # violation in a fixture and assert each gate reports it, and they hand the runner a
       # gate that must fail. A gate that has stopped matching looks exactly like a clean
       # tree, so the gate step below proves nothing unless these pass first.
+      # site/gates/tests/ exercises the vocabulary gate's image half, which reads the text
+      # inside published screenshots and needs an OCR engine. Without one those tests skip
+      # with the reason rather than failing, and the engine is installed here so that they
+      # run somewhere rather than skipping everywhere — the same shape as the container
+      # tests, and the same trap CLAUDE.md records: what skips locally must run in CI, or
+      # it is untested. A published image is the one place a leaked path or hostname is
+      # invisible to every other check in this workflow.
+      - name: Install the OCR engine the vocabulary gate's tests need
+        run: sudo apt-get update -qq && sudo apt-get install -y tesseract-ocr
+
       - name: Tests
         run: uv run pytest
 

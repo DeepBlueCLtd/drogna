@@ -71,4 +71,11 @@ RUN python3 -m pip install --no-cache-dir ./libs/harness_core
 # every third-party image in this deployment is; the values still come from the destination
 # configuration by way of the Compose file. See `deploy/README.md`, "The one meaningful
 # environment variable, and its exceptions".
-ENTRYPOINT ["pygeoapi", "serve"]
+#
+# That interface is PYGEOAPI_CONFIG and PYGEOAPI_OPENAPI, and something has to set them
+# from a document rendered out of `HARNESS_CONFIG`. The entrypoint below is that something.
+# `ENTRYPOINT ["pygeoapi", "serve"]` stood here instead and read an environment variable
+# nothing set, so this container has never once reached its first request.
+COPY deploy/images/query-layer-entrypoint.sh ./query-layer-entrypoint.sh
+RUN chmod +x ./query-layer-entrypoint.sh
+ENTRYPOINT ["./query-layer-entrypoint.sh"]

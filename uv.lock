@@ -362,10 +362,14 @@ version = "0.1.0"
 source = { editable = "libs/harness_core" }
 dependencies = [
     { name = "jsonschema" },
+    { name = "paho-mqtt" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.21" }]
+requires-dist = [
+    { name = "jsonschema", specifier = ">=4.21" },
+    { name = "paho-mqtt", specifier = ">=2.1" },
+]
 
 [[package]]
 name = "harness-env-generator"
@@ -501,7 +505,6 @@ dependencies = [
     { name = "harness-core" },
     { name = "harness-env-generator" },
     { name = "harness-types" },
-    { name = "paho-mqtt" },
 ]
 
 [package.metadata]
@@ -509,7 +512,6 @@ requires-dist = [
     { name = "harness-core", editable = "libs/harness_core" },
     { name = "harness-env-generator", editable = "services/env_generator" },
     { name = "harness-types", editable = "libs/harness_types" },
-    { name = "paho-mqtt", specifier = ">=2.1" },
 ]
 
 [[package]]

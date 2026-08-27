@@ -4,9 +4,15 @@ title: C-16 Telemetry
 
 # C-16 Telemetry
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `services/telemetry/` — `skill.py` and `persistence_reference.py` for
+      the forecast comparison, `freshness.py` and `accumulator.py` for the health half
+    - **Delivered by:** `specs/010-telemetry-quality`
+    - **Covered by:** `services/telemetry/tests/`, including `test_no_suppression.py`
+      and `test_insufficient_samples.py`, plus
+      `tests/integration/test_skill_against_persistence.py` and
+      `tests/integration/test_telemetry_from_monitor.py`
 
 **Responsibility:** health and forecast-skill indicators.
 **Owns the failure mode of:** silent degradation.

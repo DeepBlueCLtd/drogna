@@ -1,0 +1,238 @@
+# The documentation manifest (FR-011, FR-012, FR-021).
+#
+# This file declares what the published site must carry. It is the thing that makes a
+# gap visible: without it, a required page that was never written, or one that quietly
+# became a stub, fails nothing and nobody notices. Four gates read it.
+#
+# Adding a page is adding a line under `pages:`. Nothing else has to change.
+#
+# The site source lives under `docs_root`. Every path below is relative to it.
+
+version: 1
+docs_root: site/docs
+
+# ---------------------------------------------------------------------------
+# What separates a page from a stub
+# ---------------------------------------------------------------------------
+#
+# Two rules, because one is not enough.
+#
+# **The marker.** A page that says it is a stub is a stub, whatever its length. Five
+# pages on this site opened with `!!! warning "Stub — ..."` on the day this file was
+# written, and the honest reading of FR-011 is that such a page has not been written.
+# `stub_marker` below is the pattern that recognises one. All five have since been
+# written; the pattern stays, because the next one will be spelt the same way.
+#
+# **The length.** A floor, for the page that is a stub without saying so.
+#
+# The length alone cannot do the job, and the corpus is what proved it. Measured on
+# 2026-08-27, with YAML front matter stripped and whitespace-separated tokens counted:
+#
+#   the five self-declared stubs            331, 422, 422, 426, 490 words
+#   the shortest fully written page         249 words (subsystems/c16-telemetry.md)
+#
+# The stubs were *longer* than the shortest accepted page. A single threshold that
+# caught every stub would have rejected most of the subsystem reference. So the floor is
+# declared per kind of page, and each kind's floor is bounded by what is on disk rather
+# than chosen:
+#
+#   index      80  — below the shortest section index (blog/index.md)
+#   page      210  — below the shortest accepted reference page
+#   narrative 500  — above the longest page the project produced while calling it
+#                    unwritten (490), and far below the shortest written narrative page
+#
+# `site/gates/tests/test_manifest.py` re-derives both bounds on every run: a floor may
+# not be raised above a page the project has already accepted as finished, and may not
+# be lowered to or below a page that declares itself a stub. Lowering `narrative` to
+# make a run green fails that test.
+#
+# The stubs above were all written within a day of this file being laid, which would
+# have left the lower bound deriving from nothing — a check that examined nothing and
+# looked exactly like a clean run. So the worst case is kept:
+# `site/gates/fixtures/stub_control/narrative.md` is the longest stub the project
+# actually produced, preserved at its length and carrying its marker, and it is not
+# published. `bounded_by: above-every-declared-stub` is what says a kind keeps one.
+
+stub_marker: '^!!!\s+\w+\s+"Stub\b'
+
+kinds:
+  # `bounded_by` names the derivation the test re-performs. See test_manifest.py.
+  index: {min_words: 80, bounded_by: shortest-accepted}
+  page: {min_words: 210, bounded_by: shortest-accepted}
+  narrative: {min_words: 500, bounded_by: above-every-declared-stub}
+
+# ---------------------------------------------------------------------------
+# The pages PR-09 requires
+# ---------------------------------------------------------------------------
+#
+# One line per page: the path, its kind, and — for a subsystem page — the component
+# identifier it accounts for. `min_words:` may be given on a line to override its kind.
+#
+# This is the required set, not the published set. A page may be published without
+# appearing here; what appears here must exist, must not be a stub, and must clear its
+# floor. `site/docs/decisions/site-tooling.md` is the current example of the former: it
+# is published, and PR-09 does not require it.
+
+pages:
+  index.md: {kind: page}
+  glossary.md: {kind: page}
+
+  architecture/overview.md: {kind: narrative}
+
+  subsystems/index.md: {kind: index}
+  subsystems/c01-simulation-clock.md: {kind: page, component: C-01}
+  subsystems/c02-environment-generator.md: {kind: page, component: C-02}
+  subsystems/c03-broker.md: {kind: page, component: C-03}
+  subsystems/c04-simulated-sensors.md: {kind: page, component: C-04}
+  subsystems/c05-ingest-client.md: {kind: page, component: C-05}
+  subsystems/c06-observation-store.md: {kind: page, component: C-06}
+  subsystems/c07-feature-store.md: {kind: page, component: C-07}
+  subsystems/c08-coverage-store.md: {kind: page, component: C-08}
+  subsystems/c09-query-layer.md: {kind: page, component: C-09}
+  subsystems/c10-reverse-proxy.md: {kind: page, component: C-10}
+  subsystems/c11-monitor.md: {kind: page, component: C-11}
+  subsystems/c12-scheduler.md: {kind: page, component: C-12}
+  subsystems/c13-model-runner.md: {kind: page, component: C-13}
+  subsystems/c14-publisher.md: {kind: page, component: C-14}
+  subsystems/c15-planner.md: {kind: page, component: C-15}
+  subsystems/c16-telemetry.md: {kind: page, component: C-16}
+  subsystems/c17-offload-packager.md: {kind: page, component: C-17}
+  subsystems/c18-browser-client.md: {kind: page, component: C-18}
+
+  algorithms/index.md: {kind: index}
+  algorithms/ensemble-spread.md: {kind: narrative}
+  algorithms/advection.md: {kind: narrative}
+  algorithms/informative-path-planning.md: {kind: narrative}
+
+  standards/index.md: {kind: index}
+  standards/sensorthings.md: {kind: narrative}
+  standards/ogc-api-edr.md: {kind: narrative}
+  standards/cf-conventions.md: {kind: narrative}
+  standards/coveragejson.md: {kind: narrative}
+
+  blog/index.md: {kind: index}
+
+# ---------------------------------------------------------------------------
+# Components not yet accounted for by a page (FR-012)
+# ---------------------------------------------------------------------------
+#
+# `site/gates/check_subsystem_coverage.py` reads the component identifiers out of the
+# SRD's component table — it counts no fixed number of them, so a C-19 added to the SRD
+# becomes a finding the day it appears. Every identifier must either be claimed by a
+# page above, through its `component:` key, or appear here with a reason.
+#
+# One line per component, e.g.
+#
+#   C-19: not yet built — the SRD names it, no code exists, no page written.
+#
+# The map is empty because all eighteen identifiers in the SRD today are claimed by a
+# page. An entry here is an admission, not a default: it has to be typed.
+
+components: {}
+
+# ---------------------------------------------------------------------------
+# Architecture Decision Records (FR-021)
+# ---------------------------------------------------------------------------
+#
+# Whether ADRs are published is a decision, and FR-021 asks for it to be recorded here
+# rather than inferred from whichever files the build happened to glob. This block is
+# what makes it a recorded decision. Were it absent, ADRs would be unpublished by
+# accident and nobody could tell that from unpublished on purpose.
+#
+# Decided 2026-08-27: publish them. The records are the answer to "why is it built like
+# this", they are already written for a reader who was not in the room, and FR-022
+# forbids the site keeping a standing open-questions list precisely because a resolved
+# question is supposed to be findable as an ADR. Publishing nothing would make that
+# sentence false.
+#
+# **This entry is load-bearing, not declarative.** `site/hooks/publish_adrs.py` reads
+# `adrs.published` at build time: set it to `false`, or remove it, and the build stops
+# rendering the records and says so on the index instead. Flipping it changes the
+# published site. `site/gates/check_adr.py` checks the build against it in both
+# directions, and the gate here checks the shallow half — that a manifest saying
+# "published" is not contradicted by a `source` holding no record to publish. It does
+# not check `destination`: the records are rendered into the build and never written
+# back into the source, so there would be nothing there to find.
+
+adrs:
+  published: true
+  source: docs/adr
+  destination: decisions
+  decided: 2026-08-27
+
+# ---------------------------------------------------------------------------
+# Acknowledged hostnames (FR-005 edge case; read by check_deployment_hostnames.py)
+# ---------------------------------------------------------------------------
+#
+# A deployment hostname reaching the built output is a finding. Some are legitimate —
+# an example host in a configuration snippet, a standards authority in a namespace URI
+# — and the rule is that a legitimate one is acknowledged here explicitly rather than
+# passing silently. A hostname the gate finds that is not listed below fails the run.
+#
+# One line per acknowledgement:
+#
+#   - {host: example.invalid, where: standards/ogc-api-edr.md, reason: why it is fine}
+#
+# `host` is matched exactly against the hostname the gate extracted; `where` is the
+# published path it is expected on, and `reason` is what a reviewer reads. All three
+# are required — an acknowledgement nobody had to justify is an acknowledgement nobody
+# reviewed, which is the same rule the exemption markers in `scripts/_gate_lib.py`
+# follow.
+#
+# The list is empty. Nothing has been acknowledged, which is not the same as nothing
+# having been looked for.
+
+acknowledged_hostnames: []
+
+# ---------------------------------------------------------------------------
+# The blog's screenshot allowance (FR-015)
+# ---------------------------------------------------------------------------
+#
+# FR-015 asks every entry to carry a screenshot, on the reasoning that an entry shows the
+# feature working rather than asserting that it does. It is a good rule and it stays as it
+# is. But seven of the ten entries published on 27 August 2026 have no image, and the reason
+# differs entry by entry: some describe work with no visual surface at all, and some describe
+# work that could be shown and has not been.
+#
+# So each is listed with its own reason rather than under one sentence covering all seven.
+# `site/gates/check_blog.py` prints every line below on every run, which is what makes this a
+# debt rather than an exemption — an allowance nobody can see is just a rule that stopped
+# applying.
+#
+# What ends an allowance: the entry gains an image, and its line here is deleted. What must
+# not happen is a line being added without a reason, or this block growing quietly. Adding an
+# entry is a decision about FR-015 and belongs in a commit message that says so.
+
+blog:
+  screenshot_allowance:
+    recorded: 2026-08-27
+    entries:
+      a-runner-with-no-list: >-
+        The gates runner reads a list from a file and runs what it names. Its whole subject
+        is that nothing in the runner names a gate, which is a property of a text file and a
+        loop. There is no screen, and the evidence a reader wants is the runner's own output,
+        which the entry quotes.
+      the-gate-that-examined-nothing: >-
+        A gate reporting a file of deliberate violations as clean. The finding is the
+        difference between two command outputs and the entry quotes both; a photograph of a
+        terminal would carry less than the text already does.
+      one-configuration-two-destinations: >-
+        One configuration document rendered for two destinations. The subject is the diff
+        between two rendered files, which the entry shows inline. No component is running in
+        the situation being described.
+      three-ways-to-lose-a-timestamp: >-
+        A spike about how a timestamp is lost between a query and its encoding. The evidence
+        is three request-and-response pairs, quoted in full. This one could gain an image the
+        day the client draws a trajectory, which it does not yet — C-18 has no map surface.
+      the-test-that-isolated-nothing: >-
+        A test that passed because it compared nothing. Shown by the test source and its
+        output before and after; the environment generator writes a NetCDF file and has no
+        display of its own.
+      the-mean-of-magnitudes: >-
+        A seam found in telemetry: a mean of magnitudes answers a different question from the
+        magnitude of a mean. The subject is arithmetic and the entry works it through. The
+        telemetry service publishes indicators the client does not yet render.
+      taking-a-requirements-document-apart: >-
+        How the requirements document was decomposed into features. It is about a document
+        and its structure, and the thing to look at is the specification tree, which the
+        entry lists. This is the one entry whose subject is not a running component at all.

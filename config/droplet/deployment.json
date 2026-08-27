@@ -7,7 +7,12 @@
   "project_name": "drogna",
   "profiles": {
     "active": [
-      "core"
+      "core",
+      "broker",
+      "foundation",
+      "query",
+      "edge",
+      "shell"
     ]
   },
   "runtime": {

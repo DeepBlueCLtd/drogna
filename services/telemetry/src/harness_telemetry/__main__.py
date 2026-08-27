@@ -5,10 +5,12 @@ names the configuration; that file is read and validated before the clock is rea
 the coverage store is looked at, and before a single message is consumed. An invalid file is
 a startup failure with a readable message and a distinct exit code, not a runtime surprise.
 
-The broker client is injected, as it is in every other component here. A component with no
-broker configured does not invent one and does not publish to a stub: it says so on stderr
-and publishes nothing, so nothing lights up in the client — which is true, and truth is the
-whole point of Constitution VII.
+The broker client may be injected, and where it is not this component builds one from the
+``broker`` section of its own configuration, as every other component here does. A component
+whose configuration names no broker does not invent one and does not publish to a stub: it
+says so on stderr and publishes nothing, so nothing lights up in the client — which is true,
+and truth is the whole point of Constitution VII. A named broker that cannot be reached is
+reported in full on stderr and this component carries on with nothing to publish to.
 
 The coverage read port is injected the same way and defaults to the store the configuration
 names. It is the only thing this component reads that is not a message, and it is read only
@@ -22,6 +24,10 @@ from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -83,7 +89,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     forecasts: ForecastSource | None = None,
     messages: Iterable[tuple[str, bytes]] = (),
     stderr: Any = None,
@@ -103,26 +109,34 @@ def main(
         return _NO_CLOCK
 
     source = forecasts if forecasts is not None else _forecasts_from(settings)
-    if publisher is None:
-        print(
-            f"{TELEMETRY_NAME}: no publisher was supplied, so no statistics and no heartbeat "
-            "is published and nothing lights up. That is truthful, not a degradation",
-            file=out,
-        )
-
-    service = TelemetryService(
-        settings,
-        clock=active_clock,
-        forecasts=source,
-        publisher=publisher,
-        config_digest=config.digest,
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=TELEMETRY_NAME, report=out
     )
-    service.start()
-    service.beat(force=True)
-    for topic, payload in messages:
-        service.handle(topic, payload)
-        service.publish_reports()
-        service.beat()
+
+    try:
+        if publisher is None:
+            print(
+                f"{TELEMETRY_NAME}: no publisher was supplied, so no statistics and no heartbeat "
+                "is published and nothing lights up. That is truthful, not a degradation",
+                file=out,
+            )
+
+        service = TelemetryService(
+            settings,
+            clock=active_clock,
+            forecasts=source,
+            publisher=publisher,
+            config_digest=config.digest,
+        )
+        service.start()
+        service.beat(force=True)
+        for topic, payload in messages:
+            service.handle(topic, payload)
+            service.publish_reports()
+            service.beat()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

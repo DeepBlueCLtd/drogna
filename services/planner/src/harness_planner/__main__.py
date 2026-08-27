@@ -5,9 +5,12 @@ names the configuration; that file is read and validated before the clock is rea
 the coverage store is looked at, before the ground-truth manifest is opened, and before a
 single message is consumed.
 
-The broker client is injected. A component with no broker configured does not invent one and
-does not publish to a stub. It says so on stderr and publishes nothing, so nothing lights up
-in the client, which is true (Constitution VII).
+The broker client may be injected, and where it is not this component builds one from the
+``broker`` section of its own configuration. A component whose configuration names no broker
+does not invent one and does not publish to a stub: it says so on stderr and publishes
+nothing, so nothing lights up in the client, which is true (Constitution VII). A named
+broker that cannot be reached is reported in full on stderr and the planner carries on with
+nothing to publish to.
 
 A planner with no decorrelation timescale field is a planner that cannot score a single
 cell, so that too is a startup failure rather than a cell-by-cell fallback. ADR-0002 gives
@@ -23,6 +26,10 @@ from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
+from harness_core.broker import (
+    FROM_CONFIGURATION,
+    resolve_publisher,
+)
 from harness_core.clock import (
     ClockEndpoint,
     ClockError,
@@ -65,7 +72,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
-    publisher: MessagePublisher | None = None,
+    publisher: MessagePublisher | None = FROM_CONFIGURATION,
     fields: FieldSource | None = None,
     timescales: TimescaleSource | None = None,
     messages: Iterable[tuple[str, bytes]] = (),
@@ -97,27 +104,35 @@ def main(
         return _NO_TIMESCALE
 
     source = fields if fields is not None else _fields_from(settings)
-    if publisher is None:
-        print(
-            f"{PLANNER_NAME}: no publisher was supplied, so no recommendation and no "
-            "heartbeat is published and nothing lights up. That is truthful, not a "
-            "degradation",
-            file=out,
-        )
-
-    service = PlannerService(
-        settings,
-        clock=active_clock,
-        fields=source,
-        timescales=tau,
-        publisher=publisher,
-        config_digest=config.digest,
+    publisher, owned = resolve_publisher(
+        publisher, config.document, component=PLANNER_NAME, report=out
     )
-    service.start()
-    service.beat(force=True)
-    for topic, payload in messages:
-        service.handle(topic, payload)
-        service.beat()
+
+    try:
+        if publisher is None:
+            print(
+                f"{PLANNER_NAME}: no publisher was supplied, so no recommendation and no "
+                "heartbeat is published and nothing lights up. That is truthful, not a "
+                "degradation",
+                file=out,
+            )
+
+        service = PlannerService(
+            settings,
+            clock=active_clock,
+            fields=source,
+            timescales=tau,
+            publisher=publisher,
+            config_digest=config.digest,
+        )
+        service.start()
+        service.beat(force=True)
+        for topic, payload in messages:
+            service.handle(topic, payload)
+            service.beat()
+    finally:
+        if owned is not None:
+            owned.close()
     return 0
 
 

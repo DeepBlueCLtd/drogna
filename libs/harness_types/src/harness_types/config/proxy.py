@@ -60,6 +60,11 @@ class Credentials(BaseModel):
         description='Location of the credential file the proxy reads. Untracked, produced at deploy time.',
         min_length=1,
     )
+    user: str = Field(
+        ...,
+        description='The identity a reader authenticates as. Tracked, because a name is not a secret; the secret is generated at deploy time and reaches the credential file alone.',
+        min_length=1,
+    )
 
 
 class Query(BaseModel):

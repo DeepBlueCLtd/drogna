@@ -19,7 +19,7 @@
     "stream": "query"
   },
   "broker": {
-    "url": "mqtt://broker:1883",
+    "url": "mqtt://drogna_query@broker:1883",
     "client_id": "query",
     "keepalive_seconds": 30
   },

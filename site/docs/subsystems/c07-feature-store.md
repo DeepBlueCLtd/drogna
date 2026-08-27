@@ -4,9 +4,18 @@ title: C-07 Feature store
 
 # C-07 Feature store
 
-!!! warning "Status: not yet built"
-    No code for this component exists. What follows is intent taken from the
-    requirements, not a description of anything running.
+!!! success "Status: built"
+
+    - **Code:** `stores/features/` — the migration, `roles.sql`, and `provision.py`,
+      which derives its content from the root seed
+    - **Delivered by:** `specs/007-observation-path`
+    - **Covered by:** `tests/integration/test_feature_store_readonly.py`, which
+      provisions twice from one root seed and asserts the two instances agree, then
+      asserts every write is refused once the scenario is running; it skips without a
+      container runtime
+    - **Not present:** as with the observation store, nothing runs the provisioning at
+      scenario start: `deploy/seed.d/` holds no steps, so the pre-sail loading described
+      below is done by hand rather than by the seeding path
 
 **Responsibility:** static spatial reference — bathymetry, coastlines.
 

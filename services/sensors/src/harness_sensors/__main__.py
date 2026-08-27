@@ -18,6 +18,7 @@ import sys
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from harness_core.broker import BrokerEndpoint, BrokerError, PahoPublisher, PahoTickSource
 from harness_core.clock import (
     CLOCK_TOPIC,
     ClockEndpoint,
@@ -30,7 +31,6 @@ from harness_core.config import ConfigError, load_or_exit
 from harness_core.heartbeat import HeartbeatPublisher, HeartbeatStatus, MessagePublisher
 from harness_core.rng import configure_run
 
-from harness_sensors.broker import BrokerEndpoint, BrokerError, PahoPublisher, PahoTickSource
 from harness_sensors.field import field_from_config
 from harness_sensors.publisher import ObservationPublisher
 from harness_sensors.schemas import (

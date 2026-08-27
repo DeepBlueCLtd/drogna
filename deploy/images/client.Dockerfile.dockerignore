@@ -21,6 +21,7 @@ client/coverage
 # Nothing outside `client/` and this file's own image definition is read by that build.
 config
 contracts
+!contracts/schemas
 docs
 libs
 services

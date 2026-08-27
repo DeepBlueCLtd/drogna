@@ -16,8 +16,9 @@ for. CF is the mechanism by which units, coordinate definitions and variable mea
 travel with the data.
 
 drogna stores its forecast and uncertainty fields as CF-conforming NetCDF, and the
-[offload packager](../subsystems/c17-offload-packager.md) exports a run's profiles the same
-way. This page is about the export, because the export is the file that leaves.
+[offload packager](../subsystems/c17-offload-packager.md) exports a run's
+[profiles](../glossary.md#profile) the same way. This page is about the export, because
+the export is the file that leaves.
 
 ## Standard names are a controlled vocabulary
 
@@ -36,7 +37,8 @@ The export carries three quantities and every one of them has a standard name:
 Practical salinity's unit is `1` because it is a ratio and has no dimension. Writing `psu`
 there is common and wrong, and it is the sort of wrong that a reader silently accepts.
 
-Sound speed is **not** exported and is not one of the three. It is derived at the point of
+[Sound speed](../glossary.md#sound-speed) is **not** exported and is not one of the three.
+It is derived at the point of
 use from temperature, salinity and depth by the single implementation in `harness_core`
 (ADR-0005). A derived value shipped
 beside its inputs is a second source of truth that can disagree with them after a change to
@@ -50,7 +52,8 @@ CF for data that is not one: a single point, a time series at a fixed point, a v
 profile, a path of points, and the combinations of those.
 
 What the packager has is a series of vertical profiles taken at successive positions along
-a sampling path. That is `trajectoryProfile` exactly: a trajectory of profiles. Choosing
+a sampling path. That is `trajectoryProfile` exactly: a
+[trajectory](../glossary.md#trajectory) of profiles. Choosing
 `profile` alone would throw away the ordering, which is the only thing that makes the
 profiles a path rather than a bag of positions. Choosing a gridded representation would
 claim a regularity the sampling does not have.

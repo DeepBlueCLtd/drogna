@@ -46,15 +46,16 @@ sensor needs no rule here and gains no permission.
 
 | Role | May publish | May subscribe |
 |---|---|---|
-| `drogna_sensor` | `obs/#` | `ctl/clock` only |
+| `drogna_sensor` | `obs/#`, `ctl/heartbeat` | `ctl/clock` only |
 | `drogna_ingest` | `ctl/heartbeat`, `ctl/telemetry` | `obs/#`, `ctl/clock` |
 | `drogna_control` | `ctl/#` | `ctl/#`, `obs/#` |
 | `drogna_viewer` | nothing at all | `ctl/#` |
+| `drogna_query` | `ctl/heartbeat` only | nothing at all |
 
 Mosquitto denies by default, so an omission is a denial rather than a hole, and a role with
 no block can do nothing once it has authenticated.
 
-### The one exception, and why it is here
+### The two exceptions, and why they are here
 
 The sensor and ingest roles may read `ctl/clock`, which FR-14's wording would refuse them.
 Two requirements conflict there — a component with no clock sample can only pace itself on
@@ -62,9 +63,17 @@ the host clock, which Constitution I forbids — and the decision, with what it 
 two-broker fallback, is **ADR-0012**. It is not restated here: a decision recorded twice is
 a decision that will be amended once.
 
-What follows from it for these lists is only this. The property to test is not that a
+The sensor role may also write `ctl/heartbeat`, which the same wording would refuse. Without
+it the heartbeat is denied at the broker — silently, the client's return code being zero for
+a message it accepted locally — so C-04 announces itself to nobody and can never light its
+box in the shell. The decision, and why the forgery objection that had kept it out is not
+held anywhere else in this file, is **ADR-0015**.
+
+What follows from them for these lists is only this. The property to test is not that a
 sensor's subscription to `ctl/#` is refused; it is that subscribing to `ctl/#` delivers the
-clock and nothing else.
+clock and nothing else. And on the write side it is not that the sensor role is refused
+`ctl/`; it is that it is granted exactly `ctl/heartbeat` and refused every other control
+topic by name.
 
 ### A mechanical detail that decides how the lists are tested
 
@@ -106,12 +115,20 @@ A missing credential file stops the broker rather than opening it, which is the 
 want: `allow_anonymous` is `false`, and a broker that cannot read its password file refuses
 to start.
 
-**Two things this feature does not own and has therefore not done.** The environment
-template and the render step live in `deploy/env.template` and `deploy/lib/render_env.py`,
-which belong to `005-compose-deployment`. Producing `passwd` at deploy time needs a
-generated secret per role there, exactly as `HARNESS_DATABASE_PASSWORD` already is, and
-`deploy/broker/passwd` needs an entry in `.gitignore`. Both are one-line additions in
-another feature's files and are reported rather than made.
+**How `passwd` is produced, and how the same values reach the components.** This was
+reported here as work another feature owned and did not do, and it stayed undone long
+enough that no component could authenticate at all — see **ADR-0016**. It is built now.
+
+`deploy/lib/common.sh` generates one secret per role on first bring-up and reuses it
+thereafter, on the same terms as `HARNESS_DATABASE_PASSWORD`: a second bring-up must not
+present new credentials to a broker whose password file was written from the old ones.
+`deploy/lib/render_credentials.py` then writes both halves from that one set of values — this
+file, with `mosquitto_passwd`, and the configuration each component reads, into
+`deploy/.runtime/config/<destination>/`, which is what Compose mounts. Neither is tracked.
+
+Writing both halves in one place is the point. They are two representations of the same
+four secrets, and anything that let them drift would refuse every component with a message
+that names neither cause.
 
 Components receive their credentials in the broker URL their configuration carries —
 `mqtt://<role>:<secret>@<host>:<port>`. The tracked configuration files carry the role and

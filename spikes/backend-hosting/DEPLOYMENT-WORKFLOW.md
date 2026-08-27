@@ -68,8 +68,8 @@ Two ways to serve a page:
   and nonexistent paths all answer identically, which is what FR-006 actually asks for —
   but it redefines the default deny from *refuse* to *serve the app*, and that is a change
   to a security property rather than a configuration choice.
-- **Under a prefix**, alongside `/released` and `/ctl`. One admitted location, named in
-  `proxy.json`, with `location /` untouched.
+- **Under a prefix** — `/app`, decided below — alongside `/released` and `/ctl`. One
+  admitted location, named in `proxy.json`, with `location /` untouched.
 
 **Recommend the prefix.** It leaves alone the single line the whole default deny rests on,
 and it puts serving the UI in the same idiom as everything else the boundary admits: the
@@ -80,8 +80,9 @@ later, that is an argument to have on its own, with FR-001 and FR-006 in front o
 > **rewrite** phase, which runs before the **access** phase where `auth_basic` lives — the
 > exact trap the template documents at length in choosing `try_files` over `return 404`. A
 > redirect at `/` answers before any credential is examined, and tells an uncleared caller
-> that something is there. Harmless while the credential is gone; a silent reintroduction of
-> the leak the moment anyone adds one back.
+> that something is there. This is not hypothetical under the decision below: the credential
+> stays enabled at the **local** destination, where `test_request_matrix.py` asserts the
+> uniform 401, so a redirect at `/` would break that test — which is the gate working.
 
 ### 3. The bundle must not assume it is at the root
 
@@ -154,19 +155,53 @@ the trigger work and the clock work are the same change.
 
 ---
 
-## Authentication is now a free choice, and I would keep it
+## Decided: the credential stays in the design, and the droplet turns it off
 
-Same-origin removes the credentialed-CORS complication that made the credential awkward.
-So: `auth_basic` costs one browser prompt and preserves the site's *unadvertised* property
-(PR-01); dropping it is two lines in the template.
+Delegated on 27 August 2026, and decided against my own earlier recommendation. I had said
+keep it. The reason for changing is not that security stopped mattering — it is a failure
+mode particular to this client.
 
-Security is explicitly not a concern, so this is a discretion decision rather than a security
-one — and **unadvertised** and **secured** are different properties. Keeping the credential
-costs nothing under this topology and is the only thing that keeps a public address from
-being a public demonstration. Recommend keeping it; drop it if handing the URL to somebody
-becomes a nuisance.
+**Basic authentication and the MQTT-over-WebSocket upgrade are an untestable pairing here.**
+`mqtt.js` in a browser cannot set an `Authorization` header, so whether the credential
+reaches the `/ctl` handshake depends entirely on whether the browser attaches its cached
+credentials to a WebSocket upgrade. That behaviour is browser-dependent, has changed over
+time, and cannot be checked from this container. If it does not happen, the upgrade is
+answered 401, no heartbeat arrives, and **every component stays dark** — which is correct
+under Constitution VII and is indistinguishable from a backend that is down. That is the
+third time in these documents that the same silent failure shape has appeared, and it is
+not worth risking for a property the owner has said is not a priority.
 
-Either way, the release policy stays. The default-deny location, the released prefix, the
+Exempting the upgrade location is not the escape: the template says plainly that
+per-location authentication's failure mode is a location without it, "and that is the one
+failure this component exists to prevent".
+
+**So: `credentials.enabled`, a boolean, mirroring `tls.enabled` exactly.** That flag is
+already the repository's idiom for a facility a destination does not use — `tls.enabled` is
+required at both destinations and is `false` locally because the local one has no
+certificate. Add the same to `credentials`, and then:
+
+| Destination | `credentials.enabled` | Why |
+|---|---|---|
+| `local` | `true` | Keeps the credential exercised. `tests/integration/test_request_matrix.py` asserts a `401` and the presence of `WWW-Authenticate`; deleting the mechanism would leave those assertions with no subject. |
+| `droplet` | `false` | No prompt, no untestable dependency between a credential and whether the display works at all. |
+
+Parity holds — the same key at both destinations, differing in value, which is what a
+destination is for. The mechanism is not deleted, it is not exercised at one destination,
+and the local one goes on demonstrating it.
+
+**Correcting something I said earlier: no ADR amendment is owed.** I claimed one was.
+Reading ADR-0001 properly, it decides **binary rather than tiered** — its rejected
+alternative is response filtering per caller, and its stated costs are a format-aware
+boundary and a user model that is state. "Everyone is cleared" is still binary, still
+stateless, and still needs no user model. Nothing in the decision changes.
+
+What is genuinely lost is the site's *unadvertised* property, which is discretion rather
+than security. The proportionate replacement costs one line and adds no policy axis:
+`add_header X-Robots-Tag "noindex, nofollow" always;` at the droplet, matching what the
+published site already does with its `robots.txt` and `noindex` meta tag. It gates nothing;
+it just declines to be indexed.
+
+The release policy stays. The default-deny location, the released prefix, the
 collections and variables in `proxy.released`, the `try_files`-not-`return` reasoning: that
 is Constitution X, ADR-0001 and ADR-0013, and it is the behaviour the harness exists to
 demonstrate. Removing it would delete features 013 and 014 rather than relax a setting.
@@ -213,13 +248,16 @@ that are not running, so a thin `scripts/reload.sh <service> [destination]` runn
 2. **`config/<destination>/client.json`, and the gate that would have caught its absence.**
 3. **`base: "./"` in `client/vite.config.ts`**, with a test asserting the built bundle
    contains no root-absolute asset path.
-4. **The proxy's client upstream and its location** — schema, template, policy, both
+4. **The proxy's client upstream and its `/app` location** — schema, template, policy, both
    destinations, and request-matrix cases including "the deny still denies".
-5. **`profiles.active` at the droplet.**
-6. **Images built in CI and pushed to a registry.**
-7. **The deploy-on-`main` workflow**, its credential, and its health report.
-8. **`scripts/reload.sh`**, and rehearse a rollback once.
-9. **Whenever wanted, not before**: a domain and a certificate; and the clock upstream, which
+5. **`credentials.enabled`**, mirroring `tls.enabled`: `true` locally, `false` at the
+   droplet, plus the `X-Robots-Tag` header there. Watch `test_request_matrix.py` still
+   assert the 401 at the destination that keeps the credential.
+6. **`profiles.active` at the droplet.**
+7. **Images built in CI and pushed to a registry.**
+8. **The deploy-on-`main` workflow**, its credential, and its health report.
+9. **`scripts/reload.sh`**, and rehearse a rollback once.
+10. **Whenever wanted, not before**: a domain and a certificate; and the clock upstream, which
    arrives with model triggers rather than separately.
 
 ---
@@ -256,10 +294,12 @@ Findings from both that are facts about the repository rather than about those d
 
 ## Open questions
 
-1. **What is the prefix called?** `/app`, `/ui`, `/shell` — it goes in `proxy.json` beside
-   `released.prefix` and `control.upgrade_prefix`, and it is the only new name here.
-2. **Keep the credential, or drop it?** Recommended above, but it is a discretion call and
-   it is the owner's.
+1. ~~What is the prefix called?~~ **Decided: `/app`**, delegated 27 August 2026. It goes in
+   `proxy.json` beside `released.prefix` and `control.upgrade_prefix`. Chosen over `/ui` and
+   `/shell` for being the least surprising to somebody who has never read this repository —
+   `shell` in particular already means something else here, the static shell of C-18.
+2. ~~Keep the credential, or drop it?~~ **Decided: kept in the design, off at the droplet**,
+   delegated the same day. See above; the reasoning is the WebSocket upgrade, not security.
 3. **Is `scripts/run_local.sh` the whole of pre-merge backend verification?** It is what
    replaces watching a change run before merging it, so it deserves deciding rather than
    arriving at.

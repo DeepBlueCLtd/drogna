@@ -74,6 +74,19 @@ ROLE_SECRETS: dict[str, str] = {
 
 SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)
 
+# The uid and gid mosquitto drops to inside the pinned broker image. The password file has
+# to be owned by it, not merely restricted: the broker reads the file after dropping
+# privileges, so a 0600 file owned by the deploying user is one the broker cannot open, and
+# `allow_anonymous false` then stops it dead with exit 13.
+#
+# This was invisible on macOS for as long as it was only ever run there. A Docker Desktop
+# bind mount does not enforce ownership - every file reads as root and every uid may open
+# it - so the broker started locally and exited 13 in Linux CI, which is the divergence
+# CLAUDE.md warns about in the other direction. `deploy/broker/README.md` asked for this
+# chown from the beginning; only the chmod half was ever written.
+BROKER_UID = 1883
+BROKER_GID = 1883
+
 _RUNTIME_CONFIG_DIRNAME = "config"
 
 
@@ -214,35 +227,64 @@ def write_password_file(values: dict[str, str], root: Path | None = None) -> Pat
                 f"mosquitto_passwd refused the entry for {role}: "
                 f"{result.stderr.strip() or result.stdout.strip()}"
             )
-    _restrict(target, command)
+    _restrict(target, command, root)
     return target
 
 
-def _restrict(target: Path, command: list[str]) -> None:
-    """Make the credential file readable by its owner alone, from wherever it is reachable.
+def _restrict(target: Path, command: list[str], root: Path | None = None) -> None:
+    """Give the credential file the owner and the mode the broker needs to read it.
 
-    `deploy/broker/README.md` records the trap this avoids, and it is a real one: the
-    containerised tool writes as root, so a deploying user who is not root then cannot
-    change the mode of a file they do not own and the attempt fails with `Operation not
-    permitted`. Where that happens the mode is set from inside the container instead, which
-    is the form the README documents.
+    Both halves matter and only one of them used to be here. `chmod 0600` without the
+    matching `chown` produces a file the broker is refused by its own kernel - it reads the
+    password file as `mosquitto`, not as root, and not as whoever deployed. That is exit 13
+    with `Error: Unable to open pwfile`, and it is what Linux CI reported while macOS,
+    whose bind mounts enforce neither owner nor mode, reported a healthy broker.
+
+    Done inside the container wherever there is a container runtime, which is the form
+    `deploy/broker/README.md` documents and the only form that works: the deploying user is
+    not root, cannot give a file away, and cannot change the mode of a file the
+    containerised tool wrote as root. The container is root and can do both.
     """
-    try:
-        target.chmod(0o600)
-        return
-    except PermissionError:
-        pass
-    if command[0].endswith("docker"):
-        runner = [*command[:-1], "chmod", "0600", str(Path("/work") / target.name)]
-        result = subprocess.run(runner, capture_output=True, text=True, check=False)
+    runtime = shutil.which("docker")
+    if runtime is not None:
+        seen_at = str(Path("/work") / target.name)
+        result = subprocess.run(
+            [
+                runtime,
+                "run",
+                "--rm",
+                "-v",
+                f"{target.parent}:/work",
+                broker_image(root),
+                "sh",
+                "-c",
+                f"chown {BROKER_UID}:{BROKER_GID} {seen_at} && chmod 0600 {seen_at}",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         if result.returncode == 0:
             return
         detail = result.stderr.strip() or result.stdout.strip()
     else:
-        detail = "no container runtime was used, so there is no second way to set the mode"
+        # No runtime, so the host binary wrote the file and the host has to finish it. Only
+        # root can hand a file to another user; anyone else gets the mode right and the
+        # owner wrong, which is the failure this function exists to prevent, so it is
+        # reported rather than left to the broker to discover.
+        try:
+            os.chown(target, BROKER_UID, BROKER_GID)
+            target.chmod(0o600)
+            return
+        except OSError as error:
+            detail = (
+                f"{error}. No container runtime was available, and only root can give a "
+                f"file to uid {BROKER_UID}"
+            )
     raise ConfigurationError(
-        f"the broker password file was written but its mode could not be restricted: "
-        f"{detail}. A world-readable credential file is not left in place silently"
+        f"the broker password file was written but could not be given the owner and mode "
+        f"the broker needs: {detail}. A credential file the broker cannot read, or one "
+        f"left world-readable, is not left in place silently"
     )
 
 

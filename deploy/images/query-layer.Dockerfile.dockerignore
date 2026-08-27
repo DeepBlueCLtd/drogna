@@ -1,6 +1,6 @@
 # Build context for the query layer image. See the note in client.Dockerfile.dockerignore.
 #
-# This build reads two files from `deploy/images/`, `query/`, and `libs/harness_core` — the
+# This build reads three files from `deploy/images/`, `query/`, and `libs/harness_core` — the
 # clock, configuration and heartbeat shapes the query layer's plugins import.
 #
 # The `!libs/harness_core` line below is load-bearing and easy to lose. `libs` is excluded

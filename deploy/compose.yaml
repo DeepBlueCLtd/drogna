@@ -252,9 +252,21 @@ services:
     depends_on:
       observations:
         condition: service_healthy
+    # Probed over HTTP, and probed with python3 because this is the one image in the
+    # deployment that has no `wget`. `python:3.11-slim-bookworm` ships neither wget nor
+    # curl, so `wget --spider` was a health check that could only ever report unhealthy —
+    # the container served 200 to anything that asked while Compose waited out the full
+    # timeout on a program that was not there, and everything downstream of it never
+    # started. The alpine-based proxy and client keep wget, which they have.
+    #
+    # `drogna-healthcheck` is in this image and is deliberately not used: it answers "am I
+    # configured", not "am I serving", and the proxy depends on this condition precisely
+    # because it needs the second question answered.
     healthcheck:
       <<: *healthcheck-timing
-      test: ["CMD-SHELL", "wget --spider -q ${HARNESS_HEALTH_URL_QUERY}"]
+      test:
+        - CMD-SHELL
+        - python3 -c "import urllib.request; urllib.request.urlopen('${HARNESS_HEALTH_URL_QUERY}')"
 
   # C-10 reverse proxy. Default deny at the boundary; its configuration is owned by
   # 013-security-proxy.
@@ -281,6 +293,15 @@ services:
       - *config-mount
     ports:
       - ${HARNESS_PUBLISH_PROXY}
+    # nginx resolves every upstream name once, at start-up, and refuses the whole
+    # configuration when one of them does not resolve — `host not found in upstream
+    # "query"`, and the boundary never comes up at all. So the proxy cannot start before
+    # the service it proxies to exists, and this is an ordering requirement rather than a
+    # preference. It was absent while the `edge` profile was never active alongside
+    # `query`, and cost the whole boundary the moment both were promoted.
+    depends_on:
+      query:
+        condition: service_healthy
     # Probed on the health surface its configuration declares, not on the published
     # listener. The boundary is default-deny, so a probe against the listener is answered
     # 401 and the container could never become healthy however well it was working.

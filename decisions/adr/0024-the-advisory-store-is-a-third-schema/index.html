@@ -11,26 +11,24 @@
       
       
       
-        <link rel="prev" href="../site-tooling/">
-      
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Architecture decision records - drogna</title>
+        <title>ADR-0024: The advisory store is a third schema, not a second engine - drogna</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -43,7 +41,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -70,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-decision-records" class="md-skip">
+        <a href="#adr-0024-the-advisory-store-is-a-third-schema-not-a-second-engine" class="md-skip">
           Skip to content
         </a>
       
@@ -86,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -106,7 +104,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture decision records
+              ADR-0024: The advisory store is a third schema, not a second engine
             
           </span>
         </div>
@@ -210,7 +208,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -228,7 +226,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -282,7 +280,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../blog/" class="md-nav__link ">
+            <a href="../../../blog/" class="md-nav__link ">
               
   
   
@@ -381,7 +379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/archive/2026/" class="md-nav__link">
+      <a href="../../../blog/archive/2026/" class="md-nav__link">
         
   
   
@@ -478,7 +476,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/architecture/" class="md-nav__link">
+      <a href="../../../blog/category/architecture/" class="md-nav__link">
         
   
   
@@ -508,7 +506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/feature/" class="md-nav__link">
+      <a href="../../../blog/category/feature/" class="md-nav__link">
         
   
   
@@ -538,7 +536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/process/" class="md-nav__link">
+      <a href="../../../blog/category/process/" class="md-nav__link">
         
   
   
@@ -568,7 +566,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/standards/" class="md-nav__link">
+      <a href="../../../blog/category/standards/" class="md-nav__link">
         
   
   
@@ -667,7 +665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/overview/" class="md-nav__link">
+      <a href="../../../architecture/overview/" class="md-nav__link">
         
   
   
@@ -761,7 +759,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../subsystems/" class="md-nav__link ">
+            <a href="../../../subsystems/" class="md-nav__link ">
               
   
   
@@ -805,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c01-simulation-clock/" class="md-nav__link">
+      <a href="../../../subsystems/c01-simulation-clock/" class="md-nav__link">
         
   
   
@@ -833,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c02-environment-generator/" class="md-nav__link">
+      <a href="../../../subsystems/c02-environment-generator/" class="md-nav__link">
         
   
   
@@ -861,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c03-broker/" class="md-nav__link">
+      <a href="../../../subsystems/c03-broker/" class="md-nav__link">
         
   
   
@@ -889,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c04-simulated-sensors/" class="md-nav__link">
+      <a href="../../../subsystems/c04-simulated-sensors/" class="md-nav__link">
         
   
   
@@ -917,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c05-ingest-client/" class="md-nav__link">
+      <a href="../../../subsystems/c05-ingest-client/" class="md-nav__link">
         
   
   
@@ -945,7 +943,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c06-observation-store/" class="md-nav__link">
+      <a href="../../../subsystems/c06-observation-store/" class="md-nav__link">
         
   
   
@@ -973,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c07-feature-store/" class="md-nav__link">
+      <a href="../../../subsystems/c07-feature-store/" class="md-nav__link">
         
   
   
@@ -1001,7 +999,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c08-coverage-store/" class="md-nav__link">
+      <a href="../../../subsystems/c08-coverage-store/" class="md-nav__link">
         
   
   
@@ -1029,7 +1027,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c09-query-layer/" class="md-nav__link">
+      <a href="../../../subsystems/c09-query-layer/" class="md-nav__link">
         
   
   
@@ -1057,7 +1055,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c10-reverse-proxy/" class="md-nav__link">
+      <a href="../../../subsystems/c10-reverse-proxy/" class="md-nav__link">
         
   
   
@@ -1085,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c11-monitor/" class="md-nav__link">
+      <a href="../../../subsystems/c11-monitor/" class="md-nav__link">
         
   
   
@@ -1113,7 +1111,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c12-scheduler/" class="md-nav__link">
+      <a href="../../../subsystems/c12-scheduler/" class="md-nav__link">
         
   
   
@@ -1141,7 +1139,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c13-model-runner/" class="md-nav__link">
+      <a href="../../../subsystems/c13-model-runner/" class="md-nav__link">
         
   
   
@@ -1169,7 +1167,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c14-publisher/" class="md-nav__link">
+      <a href="../../../subsystems/c14-publisher/" class="md-nav__link">
         
   
   
@@ -1197,7 +1195,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c15-planner/" class="md-nav__link">
+      <a href="../../../subsystems/c15-planner/" class="md-nav__link">
         
   
   
@@ -1225,7 +1223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c16-telemetry/" class="md-nav__link">
+      <a href="../../../subsystems/c16-telemetry/" class="md-nav__link">
         
   
   
@@ -1253,7 +1251,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c17-offload-packager/" class="md-nav__link">
+      <a href="../../../subsystems/c17-offload-packager/" class="md-nav__link">
         
   
   
@@ -1281,7 +1279,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c18-browser-client/" class="md-nav__link">
+      <a href="../../../subsystems/c18-browser-client/" class="md-nav__link">
         
   
   
@@ -1345,7 +1343,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../algorithms/" class="md-nav__link ">
+            <a href="../../../algorithms/" class="md-nav__link ">
               
   
   
@@ -1389,7 +1387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/ensemble-spread/" class="md-nav__link">
+      <a href="../../../algorithms/ensemble-spread/" class="md-nav__link">
         
   
   
@@ -1417,7 +1415,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/advection/" class="md-nav__link">
+      <a href="../../../algorithms/advection/" class="md-nav__link">
         
   
   
@@ -1445,7 +1443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/informative-path-planning/" class="md-nav__link">
+      <a href="../../../algorithms/informative-path-planning/" class="md-nav__link">
         
   
   
@@ -1511,7 +1509,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../standards/" class="md-nav__link ">
+            <a href="../../../standards/" class="md-nav__link ">
               
   
   
@@ -1555,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/sensorthings/" class="md-nav__link">
+      <a href="../../../standards/sensorthings/" class="md-nav__link">
         
   
   
@@ -1583,7 +1581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/ogc-api-edr/" class="md-nav__link">
+      <a href="../../../standards/ogc-api-edr/" class="md-nav__link">
         
   
   
@@ -1611,7 +1609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/cf-conventions/" class="md-nav__link">
+      <a href="../../../standards/cf-conventions/" class="md-nav__link">
         
   
   
@@ -1639,7 +1637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/coveragejson/" class="md-nav__link">
+      <a href="../../../standards/coveragejson/" class="md-nav__link">
         
   
   
@@ -1674,7 +1672,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
+      <a href="../../../glossary/" class="md-nav__link">
         
   
   
@@ -1698,8 +1696,6 @@
       
   
   
-    
-  
   
   
     
@@ -1720,15 +1716,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1746,13 +1742,13 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1770,7 +1766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../site-tooling/" class="md-nav__link">
+      <a href="../../site-tooling/" class="md-nav__link">
         
   
   
@@ -1820,6 +1816,47 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1835,174 +1872,96 @@
 
 
 
-<h1 id="architecture-decision-records">Architecture decision records<a class="headerlink" href="#architecture-decision-records" title="Permanent link">&para;</a></h1>
-<p>A decision record exists for any decision that was hard to reverse, was
-genuinely contested, or rejected a plausible alternative. Routine choices do
-not earn one. Each record states the context it was decided in, the decision,
-and what the decision costs. A record that has been overtaken is marked
-superseded and kept, never deleted, because the reasoning is the point.</p>
-<p>There are 23 of them. The table below is generated at build time
-from the records themselves, so a status here cannot disagree with the status
-in the record it names.</p>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Decision</th>
-<th>Status</th>
-<th>Date</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="0001-binary-access/">0001</a></td>
-<td>Binary access rather than tiered or per-field</td>
-<td>Accepted, amended by ADR-0020</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0002-decorrelation-timescale-as-a-field/">0002</a></td>
-<td>Decorrelation timescale is a field, authored per feature</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0003-bespoke-edr-trajectory-provider/">0003</a></td>
-<td>Trajectory queries are served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0004-bespoke-sensorthings-provider/">0004</a></td>
-<td>SensorThings is served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0005-sound-speed-is-derived-not-stored/">0005</a></td>
-<td>Sound speed is derived at the point of use, not stored</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0006-heartbeat-cadence-is-real-time/">0006</a></td>
-<td>Heartbeat cadence and liveness windows are real time</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0007-host-time-for-display-smoothing/">0007</a></td>
-<td>Host time may smooth the display between clock samples</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0008-control-messages-reach-the-client-by-websocket-upgrade/">0008</a></td>
-<td>Control messages reach the client by WebSocket upgrade at the proxy</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0009-clock-transport-and-lockstep-mode/">0009</a></td>
-<td>The clock publishes on the control namespace, and gains a lockstep mode</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0010-site-tooling/">0010</a></td>
-<td>Tooling for the published site</td>
-<td>Accepted</td>
-<td>26 August 2026, amended 27 August 2026 (mathematics rendering settled)</td>
-</tr>
-<tr>
-<td><a href="0011-the-coverage-store-pointer-is-text/">0011</a></td>
-<td>The current-run pointer is a text file, not a symlink</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0012-sensors-may-read-the-clock-and-nothing-else/">0012</a></td>
-<td>Sensors and the ingest client may read the clock, and nothing else on the control branch</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0013-leakage-is-scored-per-released-variable/">0013</a></td>
-<td>A leakage statistic is scored per released variable, and the worst one is the answer</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0014-quality-flagging-is-the-ingestion-seam/">0014</a></td>
-<td>Quality flagging is the ingestion seam, not a field on an observation</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0015-a-sensor-may-announce-itself/">0015</a></td>
-<td>A sensor may announce itself, because the alternative was a display that lied</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0016-the-broker-credential-path-is-half-built/">0016</a></td>
-<td>No component could authenticate, and the credential path is now whole</td>
-<td>Accepted, and amended the same day — see "What changed a few hours later"</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0018-common-json-is-a-root-seed-not-a-set-of-defaults/">0018</a></td>
-<td><code>common.json</code> is a root seed, and the defaults mechanism it describes does not exist</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0019-the-planner-threshold-is-absolute-and-was-never-checked/">0019</a></td>
-<td>The planner's threshold stays absolute, and now has something to check it against</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0020-clearance-delegated-for-the-control-upgrade/">0020</a></td>
-<td>Clearance is binary for the released prefix and delegated for the control upgrade</td>
-<td>Accepted</td>
-<td>28 August 2026 — drafted; accepted the same day</td>
-</tr>
-<tr>
-<td><a href="0021-the-clock-control-answers-the-browser-from-any-origin/">0021</a></td>
-<td>The clock's HTTP interface answers the browser from any origin</td>
-<td>Proposed — drafted by an agent session, not accepted, not to be treated as decided</td>
-<td>28 August 2026</td>
-</tr>
-<tr>
-<td><a href="0022-generator-selection-for-the-type-chain/">0022</a></td>
-<td>The type chain's generators, and why the TypeScript half is ours</td>
-<td>Accepted</td>
-<td>28 August 2026</td>
-</tr>
-<tr>
-<td><a href="0023-the-observation-store-authenticates-by-trust/">0023</a></td>
-<td>The observation store authenticates by trust, and models no database threat</td>
-<td>Accepted</td>
-<td>28 August 2026</td>
-</tr>
-<tr>
-<td><a href="0024-the-advisory-store-is-a-third-schema/">0024</a></td>
-<td>The advisory store is a third schema, not a second engine</td>
-<td>Accepted</td>
-<td>28 August 2026</td>
-</tr>
-</tbody>
-</table>
+<h1 id="adr-0024-the-advisory-store-is-a-third-schema-not-a-second-engine">ADR-0024: The advisory store is a third schema, not a second engine<a class="headerlink" href="#adr-0024-the-advisory-store-is-a-third-schema-not-a-second-engine" title="Permanent link">&para;</a></h1>
+<div class="admonition info">
+<p class="admonition-title">Published from the repository's decision record</p>
+<p>This page is generated at build time from <code>docs/adr/0024-the-advisory-store-is-a-third-schema.md</code>.
+The record is the original; this is a rendering of it, and editing the
+built page would change nothing.</p>
+</div>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 28 August 2026
+<strong>Requirements:</strong> SRD FR-12, FR-13, FR-18, FR-63; C-06, C-07, C-19, C-20; the constitution's technology constraint
+<strong>Raised by:</strong> feature 020's specification, which chose "a store of its own" for structural provenance and deliberately did not choose an engine</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Feature 020 sends small forecast updates from shore during a voyage: a concise vector
+description of a dominant environmental feature, arriving mid-run over the message
+fabric and served read-only through the query layer. Planning it produced one decision
+before any code — that the advisory takes a <strong>new mutable path</strong> rather than relaxing the
+feature store's read-only-during-a-run rule (FR-13), so that what was aboard at departure
+and what was sent en route stay structurally distinct, and no consumer has to remember
+the difference.</p>
+<p>That settles the separation. It does not settle where the separated thing lives, and the
+specification said so in as many words: the store was chosen "for structural provenance,
+not any particular engine".</p>
+<p>Two documents then stood in the way of every answer. The constitution's technology
+constraint reads <strong>"Postgres + PostGIS as one instance carrying two schemas —
+<code>observations</code> and <code>features</code>"</strong>, and SRD FR-12 said the same in requirement form. A
+third holding, written during a run, had no place in either sentence. The SRD's v0.4
+scope amendment left the question open on purpose and delegated it here rather than
+settling it in passing; this record is that decision.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>The advisory store is a third schema, <code>advisories</code>, in the same Postgres instance.</strong></p>
+<p>SRD FR-12 now names three schemas rather than two. The constitution's technology
+constraint is amended to match, and its version moves to 1.5.0.</p>
+<p>The alternative — a deliberately lighter store outside the database, whether files beside
+the coverage store or a second engine — is rejected.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p><strong>The separation 020 needs is a permission, not a process.</strong> What has to be true is
+  that the advisory ingestion seam is the only writer to <code>advisories</code>, and that no
+  run-time role can write <code>features</code> at all. Both are grants, enforced by the database
+  rather than by code, which is the shape FR-18 already uses for the observation store's
+  sole writer. A second engine would express the same rule with a second thing to deploy,
+  back up, and configure — buying a rule the instance already enforces at the price of an
+  operational surface.</p>
+</li>
+<li>
+<p><strong>This repository has paid for file-backed state twice, and both bills were
+  permissions.</strong> The broker's password file exited 13 on every Linux run while reporting
+  healthy on every Mac; the configuration directory was replaced under a running mount
+  and every container saw it empty. Both were invisible to a developer's machine and
+  fatal on the runner. A file-backed advisory store, written during a run by one process
+  and read by another, sits in exactly that blind spot. Postgres roles do not.</p>
+</li>
+<li>
+<p><strong>The cost is that two schemas with opposite rules now live in one instance.</strong>
+  <code>features</code> is read-only for the duration of a run and <code>advisories</code> is deliberately
+  writable throughout it, and what keeps them apart is a grant. A migration that granted
+  too widely would be invisible to any test that only reads. <strong>Feature 020's plan owes a
+  test that asserts the negative from a run-time role</strong> — insert into <code>advisories</code>
+  succeeds for the advisory role and for no other, and every run-time role is still
+  refused on <code>features</code> — extending the shape feature 007 already built in
+  <code>tests/integration/test_feature_store_readonly.py</code> rather than inventing a second one.</p>
+</li>
+<li>
+<p><strong>The documents stay in step.</strong> FR-12 and the constitution's technology line now say
+  three schemas; C-20's row in the SRD's component table names the schema; SRD §11
+  carries the question and its answer. A reader who finds one of them saying two schemas
+  has found a defect, not a nuance.</p>
+</li>
+<li>
+<p><strong>What this does not decide</strong>, and what remains 020's plan to argue: the advisory
+  schema's tables and columns, whether the advisory geometry is carried as a PostGIS
+  type or as a validated shape in the message schema alone, and the retention rule
+  within a scenario. This record fixes the address, not the furniture.</p>
+</li>
+<li>
+<p><strong>Reversibility is moderate, which is why the rejected option is not foreclosed.</strong>
+  Moving the advisories to their own store later is a migration and a DSN, not a
+  redesign: the query layer reads them through the same collection machinery either way,
+  and the ingestion seam is a component (C-19) rather than a library call. If the
+  demonstration ever wants to show a genuinely detached shore, that is the change to
+  make, and this decision does not stand in its way.</p>
+</li>
+</ul>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -2028,28 +1987,6 @@ in the record it names.</p>
         <footer class="md-footer">
   
     
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../site-tooling/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Site tooling">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                Site tooling
-              </div>
-            </div>
-          </a>
-        
-        
-      </nav>
-    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -2071,10 +2008,10 @@ in the record it names.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

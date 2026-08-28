@@ -70,12 +70,16 @@ Taken that evening, recorded on issue #34 and in `spikes/map-to-ocean/FINDING.md
 | **The clock is not proxied now**; the droplet's client document is corrected instead | a destination publishing no clock route renders the speed control unavailable and says why (012 built that state). FR-74's exempt strand later ends the direct exposure properly — the near-term correction and the eventual routing are stages, not rivals |
 | **The local direct publish of the client is dropped** | the client binds 127.0.0.1 at both destinations; `public_url` and the capture configuration point at the proxy; one shape, one door. Consequence: every capture mechanism needs the credential — a field in `config.capture.schema.json` and Playwright `httpCredentials` across 016's three mechanisms |
 
-**Still open, and the owner's:** issue #34's link 5 — which identifiers
-`ctl/run-published` carries. Three readings are set out in the finding; the first
-(announce the fixed collection identifier and the run separately, address a named run
-as an EDR instance) is the smallest change, agrees with `edr_coverage.py`'s stated
-design, and is the addressing scheme 019's instance semantics already assume. It should
-be decided before wave 7's plumbing lane reaches the client half, and before 019 plans.
+Taken later that evening, by structured interview, closing the two items wave 7 could
+pull forward:
+
+| Decision | Consequence |
+|---|---|
+| **Link 5 is decided: the announcement carries the fixed collection identifier and the run separately** — the finding's first reading. A consumer addresses the fixed collection for the current run and a named EDR instance for a specific one | lane H's client half is unblocked the moment PR #33 merges, and 019's instance addressing has its scheme. Recorded on issue #34 |
+| **`collections.uncertainty` is removed from the run-published master**, not deprecated — it names a collection that will never exist | the schema master is amended, both language forms regenerate through the chain, the publisher and the two client fetch sites follow. Lane H's work, since it owns the announcement |
+| **The third wall-clock exemption is granted by amendment**: constitution 1.6.0, resource sampling confined to C-21's sampler module, readings as their own host-time telemetry kind (ADR-0026) | 021's first gate is satisfied before the wave that builds it; the erosion clause now counts four |
+| **The runtime socket stops at the door**: mounted into C-21 alone, and lifecycle may target any component except the proxy, the controller itself, and the broker (ADR-0026) | the trust surface is bounded before it exists; a command naming an excluded component is refused with the exclusion named |
+| **The operator plane sits behind the clearance** — the /ctl delegation does not transfer to REST once the page shares the proxy's origin; FR-74 is corrected in step (SRD v0.6, ADR-0025) | 021's second gate is satisfied; the droplet never exposes an unauthenticated command surface, and the plane needs no authentication of its own |
 
 ## Dependency graph
 
@@ -145,7 +149,7 @@ for that). Disjoint trees; the one boundary file both plumbing lanes could touch
 
 | Lane | Owns | Work |
 |---|---|---|
-| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | Issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); the `profiles.active` decision that goes with it; then, once link 5 is decided, the announcement and the two client fetch sites |
+| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | Issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); the `profiles.active` decision that goes with it; then, per the decided link 5 (fixed collection id and run carried separately, `collections.uncertainty` removed from the master), the announcement and the two client fetch sites |
 | I — one door | `proxy/`, `config/local/`, `config/droplet/`, `deploy/images/` (client), `contracts/schemas/config.capture.schema.json`, `scripts/capture/` | Issue #34 links 3, 4 and 6, plus FR-74's exempt clock strand: the upstream path and released names corrected to what the query layer serves; the page served through the proxy at both destinations; local direct publish dropped; `public_url` made true for the first time; the capture credential threaded through 016's three mechanisms, each watched failing without it and passing with it |
 | J — read-side client | `client/src/` (read-path areas) | 018 stories 1, 3, 4: the read-path view with witnessed and inferred edges, the topology matrix lit by real traffic (the artefact and gate exist), the standards badges. Story 1's crossings become far more instructive once lanes H and I give the client reads that succeed |
 | K — residue | `libs/harness_core/`, `tests/` | 001 T042/T047: the two-participant byte-identical replay scenario, upgrading AT-04 from the weaker claim. 003 T040 and 004 T044's droplet halves join once lane I makes the droplet real |
@@ -163,9 +167,9 @@ Then three features, ordered within the wave:
 
 | Feature | Owns | Ordering |
 |---|---|---|
-| 019 coverage holdings | services-side authoring, `stores/coverage/` convention, query configuration | starts at the gate; wants link 5's decision first, because instance addressing is its home ground |
+| 019 coverage holdings | services-side authoring, `stores/coverage/` convention, query configuration | starts at the gate; link 5 is decided (fixed id + instance addressing), which is its home ground |
 | 020 shore advisories, stories 1–4 | advisory schema, topic, store, authoring, collection; then the map layer | starts at the gate, parallel with 019 (shared files append-only). Story 4 no longer waits on anything but its own stories 1–3. FR-12's third schema and the constitution amendment (1.5.0) are already in place; the plan-phase ADR and the grant-asserting test remain 020's |
-| 021 operator plane | `services/` (C-21, and FR-68's telemetry kind in every long-running component), `services/clock/` (FR-71), `client/src/` (FR-76), `proxy/` (FR-74's remainder) | **the two owed ADRs come first and gate the build** (FR-70's third wall-clock exemption and the runtime socket confined to C-21 — the SRD requires them argued before building). The C-21 controller, FR-71 clock work and FR-76 client surfaces can then run parallel with 019/020, since they share no tree with either; **FR-68's every-service throughput pass lands last, after 019 and 020 merge**, because it touches every service tree and the append-only rule covers files, not modules |
+| 021 operator plane | `services/` (C-21, and FR-68's telemetry kind in every long-running component), `services/clock/` (FR-71), `client/src/` (FR-76), `proxy/` (FR-74's remainder) | **its two owed ADRs are written and accepted** (ADR-0025 exposure, ADR-0026 sampling + socket, constitution 1.6.0), so the build waits only on the wave's own gate. The C-21 controller, FR-71 clock work and FR-76 client surfaces can run parallel with 019/020, since they share no tree with either; **FR-68's every-service throughput pass lands last, after 019 and 020 merge**, because it touches every service tree and the append-only rule covers files, not modules |
 
 C-19, C-20 and C-21 are typed "not yet built" in `docs/manifest.yaml`; each feature
 writes its subsystem pages when its components exist, which is what flips those rows.
@@ -176,10 +180,12 @@ writes its subsystem pages when its components exist, which is what flips those 
   against the seeded run without it, but the exit criterion needs the live half.
 - **`config/*/proxy.json` has one owner, lane I.** Links 3, 4 and 6 all land there;
   splitting them across lanes is how the last half-fix happened.
-- **Link 5 is a decision before it is code** — for lane H's client half and for 019's
-  plan alike.
-- **021's FR-68 pass waits for 019 and 020 to merge**, and 021's build waits for its
-  two ADRs.
+- **Link 5 was a decision before it was code, and it is decided** — the fixed-id
+  reading, recorded above and on issue #34; lane H and 019 implement it, never
+  re-open it.
+- **021's FR-68 pass waits for 019 and 020 to merge.** Its ADR gate is satisfied
+  (ADR-0025, ADR-0026); what remains gated is the build itself, on the loop's
+  watched turn.
 
 ## Risks to this schedule
 

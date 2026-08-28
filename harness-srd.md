@@ -1,7 +1,7 @@
 # Software Requirements Document
 ## drogna
 
-**Status:** Draft v0.5 — scope amended: the operator plane
+**Status:** Draft v0.6 — FR-74 corrected: the plane sits behind the clearance (ADR-0025)
 **Author:** Doc
 **Date:** 28 August 2026
 
@@ -476,10 +476,13 @@ here as everywhere, and the shore is this harness talking to itself. The argumen
   same at every rate, so a run whose only commands were speed changes replays as it
   always did.
 - **FR-74** The operator plane shall be reachable through the reverse proxy under a
-  dedicated path prefix with clearance delegated, as the control-namespace WebSocket
-  path already is, and the clock's control surface shall be reachable the same way —
-  ending its present direct exposure beside the boundary rather than behind it.
-  Within the demonstration the plane carries no authentication of its own; the
+  dedicated path prefix **behind the boundary's own clearance**, and the clock's
+  control surface shall be reachable the same way — ending its present direct
+  exposure beside the boundary rather than behind it. The delegation the
+  control-namespace WebSocket path needed does not transfer here: it existed because
+  a browser WebSocket cannot carry a Basic credential, and a page served through the
+  proxy reaches a REST surface same-origin with its credential attached (ADR-0025).
+  The plane carries no authentication of its own beyond that clearance; the
   boundary's default-deny is unchanged for every other path.
 - **FR-75** Data-product creation and transmission shall each be observable by
   subscription alone: creation is already announced (FR-31), and the offload
@@ -508,11 +511,12 @@ are deliberate and said here: the recent window persists nothing, because histor
 worth keeping would be a store and earn the scrutiny of one; commands are ephemeral,
 because the run record exists to reproduce the scenario and an operator's hand is not
 part of the scenario; and the graphical composition of EDR requests from the client
-belongs to a later amendment (§10). Two ADRs are owed under PR-03: the exposure of the
-plane and the clock through the boundary, which resolves the clock's currently
-proposed direct exposure; and the resource-sampling exemption with the runtime
-socket's confinement to C-21. The stories, the edge cases and the argument are in
-`specs/021-operator-plane/spec.md`.*
+belongs to a later amendment (§10). The two records owed under PR-03 are written and
+accepted: ADR-0025, the exposure of the plane and the clock through the boundary,
+which resolves the clock's direct exposure and places the plane behind the clearance;
+and ADR-0026, the resource-sampling exemption (constitution 1.6.0) with the runtime
+socket's confinement to C-21 and the three components lifecycle may never touch. The
+stories, the edge cases and the argument are in `specs/021-operator-plane/spec.md`.*
 
 ---
 

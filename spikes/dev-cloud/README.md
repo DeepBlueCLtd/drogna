@@ -37,6 +37,13 @@ cold container, almost all of it building four images that have no layer cache.
 
 Everything it learns lands in `results/`. The stack stays up afterwards.
 
+`run.sh` has been run end to end, against a stack that was already up, and converged: an
+image nobody has built is not a working image, and the same is true of a script. The
+transcripts committed under `results/` are from the cold run rather than that converging
+one, because a first build on a container with no layer cache is the case worth keeping.
+A re-run overwrites them with its own, which is expected — commit the replacement only when
+it says more than what it replaces.
+
 ## Doing it by hand
 
 Three commands, and the middle one is the only one that is about this environment:

@@ -97,6 +97,11 @@ Each changes what the feature can honestly do, and the last is left open on purp
    be read", with the identifier that was asked for, which is the shape in which this
    disagreement will be visible the first time the loop publishes. It belongs to the query
    and control-loop lanes, not to this one, and this plan does not reach into either.
+   **Chased to the bottom after delivery**, against the merged tree and with the stack
+   up: `spikes/map-to-ocean/FINDING.md` records six links between the coverage store and
+   the browser, five of them broken and none of them in the client. The naming question
+   above is the fifth of the six. The third is the same fault lane C closed under another
+   name and fixed only half of.
 
 ## Constitution Check
 

@@ -19,7 +19,7 @@ reason a fresh session can pick this up without archaeology.
 | What does this feature do, and what is deliberately not done? | `specs/<nnn>-*/spec.md` and `tasks.md` |
 | Where does a file live, and who owns it? | `docs/architecture/repo-layout.md` |
 | What does a store look like on disk? | `stores/coverage/layout.md` |
-| Was this question already investigated, and what did it cost? | `spikes/*/FINDING.md` — seven, each dated, each with its evidence in `results/` |
+| Was this question already investigated, and what did it cost? | `spikes/*/FINDING.md` — eight, each dated; the ones that measured keep their evidence in `results/` |
 | How do I run the stack, or see the client, from this container? | `spikes/dev-cloud/README.md`, and the commands below |
 
 `tasks.md` files record unticked work with the reason it is unticked. An unticked task

@@ -75,5 +75,41 @@ $ curl -D- -H 'Origin: http://localhost:8080' http://localhost:8082/collections/
 HTTP/1.1 200 OK
   (no Access-Control-Allow-Origin)
 
+  The clock, by contrast, opts in — which is why the page reaches it and why 016's pair
+  capture can pin the rate to zero:
+
+$ curl -D- -H 'Origin: http://localhost:8080' http://localhost:8090/clock/snapshot
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+
+$ curl -X OPTIONS -H 'Origin: http://localhost:8080' \
+       -H 'Access-Control-Request-Method: POST' http://localhost:8090/clock/control
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+
+--- the proxy fronts neither the page nor the clock, at either destination ---------------
+
+$ docker exec drogna-proxy-1 grep -o 'location [^{]*' /etc/nginx/conf.d/harness.conf
+    location /                                 (the default deny)
+    location /released/                        (deny-not-released)
+    location = /released/drogna-forecast       and its ^~ pair
+    location = /released/drogna-uncertainty    and its ^~ pair
+    location = /ctl                            (the websocket upgrade)
+    location = /health                         (internal server, never published)
+
+  config/*/proxy.json upstreams, both destinations: ['query', 'control_websocket']
+
+  droplet network.publish bindings:
+    proxy  0.0.0.0:443     <- the only public door
+    client 127.0.0.1:8080
+    clock  127.0.0.1:8090
+  droplet public_url: https://drogna.invalid/   -> 401, then default-denied
+
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/            401
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/index.html  401
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/clock/snapshot  401
+
   local  : client :8080, proxy :8081, clock :8090   -> three origins
   droplet: client, proxy and clock all https://drogna.invalid -> one origin

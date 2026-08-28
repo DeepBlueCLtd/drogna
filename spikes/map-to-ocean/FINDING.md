@@ -148,6 +148,14 @@ destination the client is published on `:8080`, the proxy on `:8081` and the clo
 twice over: cross-origin with no CORS, and unauthenticated with no way for a browser
 `fetch` to carry a Basic credential it was never challenged for on that origin.
 
+**The clock is the exception, and it is instructive.** It answers
+`Access-Control-Allow-Origin: *` and handles the preflight for its control route
+(`GET, POST, OPTIONS`), so the page reaches it cross-origin and the rate control works —
+which is why feature 016's pair capture can pin the clock to zero and why that job is
+green. Three services sit off the page's origin; the one that opted into being reached
+from a browser is reachable, and the two that did not are not. The obstacle is a policy,
+consistently applied, rather than an oversight.
+
 **This is not an oversight and no lane will fix it.** The `long-run-01` BLOCKED entry of
 2026-08-27T22:35 found the same shape for the broker socket, set out three answers, and
 said an unattended agent must not choose among them. The decision recorded on 28 August
@@ -162,10 +170,45 @@ already judged it "the largest change and probably the intended shape", and note
 `deployment.json` publishes the client on `:8080` and advertises it as `public_url`, so it
 is a topology change rather than a configuration one.
 
-**The droplet does not have this problem.** There, the client, the proxy and the clock are
-all `https://drogna.invalid`: one origin, one challenge, cached credential attached to
-every subsequent fetch. Local is the odd shape, and it is the shape every developer and
-every capture runs against.
+**The droplet does not have this problem. It has a worse one.** Its `client.json` names
+`https://drogna.invalid` for both the clock and the query layer, and only the proxy binds
+`0.0.0.0` there — the client and the clock bind `127.0.0.1`. But the proxy has six
+locations and not one of them is the page or the clock:
+
+    location /                                  the default deny
+    location /released/                         deny-not-released
+    location = /released/drogna-forecast        and its ^~ pair
+    location = /released/drogna-uncertainty     and its ^~ pair
+    location = /ctl                             the websocket upgrade
+    location = /health                          on the internal server, never published
+
+So `https://drogna.invalid/` — the address `public_url` advertises — answers 401, and
+behind the credential it default-denies. **The droplet has never served the client**, and
+the clock endpoint its own client document names does not answer. Both destinations'
+configuration was written for a shape nobody built: local publishes the page directly and
+so is merely awkward; the droplet does not publish it at all and so is fatal.
+
+### What was decided, 28 August
+
+Put to the owner as three questions, with the costs of each answer stated:
+
+- **The page is served through the proxy, behind the same clearance as everything else.**
+  One credential for the page, the data and the control socket. `auth_basic` stays
+  declared once at server level, which is the property `harness.conf.template` defends in
+  as many words, and no per-location exception is introduced. drogna becomes a private
+  demonstration whose address is handed out, rather than a public page with private data.
+- **The clock is not proxied.** It already permits cross-origin and works; the droplet's
+  client document is corrected instead, since it names an endpoint that cannot answer
+  there. A destination that publishes no clock route renders the speed control as
+  unavailable and says why, which is a state feature 012 already built.
+- **The local direct publish of the client is dropped.** The client binds `127.0.0.1` as
+  it already does on the droplet, `public_url` and the capture configuration point at the
+  proxy, and the two destinations finally have one shape and one door.
+
+The third has a consequence worth stating before it is met: with the page behind the
+clearance, **every capture mechanism needs the credential** to load the page at all.
+Playwright takes one through `httpCredentials`, and `config.capture.schema.json` has no
+field for it. That is feature 016's contract and its three mechanisms.
 
 ## What this costs if it is left
 

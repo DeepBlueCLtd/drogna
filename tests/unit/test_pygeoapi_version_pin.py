@@ -24,6 +24,7 @@ for candidate in (REPO_ROOT / "tests", REPO_ROOT / "query"):
         sys.path.insert(0, str(candidate))
 
 from plugins import edr_coverage, sensorthings_provider  # noqa: E402
+from plugins.edr_composer import DrognaComposerEDRProvider  # noqa: E402
 from plugins.edr_trajectory import DrognaTrajectoryEDRProvider  # noqa: E402
 from plugins.pygeoapi_version import (  # noqa: E402
     PINNED_PYGEOAPI_VERSION,
@@ -71,6 +72,12 @@ def test_the_pin_itself_is_accepted() -> None:
             ),
             id="sensorthings",
         ),
+        pytest.param(
+            lambda: DrognaComposerEDRProvider(
+                {"name": "edr", "type": "edr", "data": "store", "options": {}}
+            ),
+            id="edr-composer",
+        ),
     ],
 )
 def test_both_providers_refuse_to_start_against_an_untested_version(construct) -> None:
@@ -105,3 +112,37 @@ def test_the_trajectory_collection_advertises_position_cube_and_trajectory() -> 
     base = edr_coverage.DrognaCoverageEDRProvider
     assert "query_types" in DrognaTrajectoryEDRProvider.__dict__
     assert "trajectory" not in base.query_types
+
+
+def test_the_composer_collection_advertises_all_eight_query_types() -> None:
+    """Feature 023's widening, held to the same two mechanisms as the trajectory provider.
+
+    The advertised set is what the emitted OpenAPI document and the composer's offer are
+    built from, so a type missing from either mechanism is a capability that silently
+    stops being claimed — or worse, one claimed and not served (FR-78: the advertised
+    types, the document and the served account widen together).
+    """
+    own = DrognaComposerEDRProvider.__dict__
+    expected = (
+        "position",
+        "radius",
+        "area",
+        "cube",
+        "trajectory",
+        "corridor",
+        "locations",
+        "instances",
+    )
+    for query_type in expected:
+        assert query_type in own, (
+            f"{query_type} is not a method of the composer provider's own class. Under "
+            f"the __init_subclass__ mechanism it would stop being advertised, silently."
+        )
+        assert query_type in DrognaComposerEDRProvider.query_types
+
+    assert "query_types" in DrognaComposerEDRProvider.__dict__
+    assert list(DrognaComposerEDRProvider.query_types) == list(expected)
+    # The widening is additive: the providers beneath keep their own narrower lists, so
+    # nothing this class does reaches back into what 008 advertises.
+    assert "radius" not in DrognaTrajectoryEDRProvider.query_types
+    assert "radius" not in edr_coverage.DrognaCoverageEDRProvider.query_types

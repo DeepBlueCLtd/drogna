@@ -83,7 +83,7 @@ pygeoapi in the room.
   `area_maximum_cells` / `radius_maximum_cells` with the measured count and the limit
   named; empty selection refused naming the geometry and the run's domain; answers as the
   composite-domain coverage.
-- [ ] T009 [US1] Area accepts a single-ring `POLYGON` and refuses holes and multipolygons
+- [x] T009 [US1] Area accepts a single-ring `POLYGON` and refuses holes and multipolygons
   with the shape named; radius requires `within`/`within-units` and refuses a missing or
   unparseable distance naming the parameter.
 - [x] T010 [P] [US1] Unit tests `tests/unit/test_edr_region.py`: selection semantics
@@ -103,7 +103,7 @@ refused by name.
   rules, declined vertices); samples counted and refused over
   `corridor_maximum_samples` naming both factors and the limit; answers as a
   CoverageCollection of Trajectory coverages labelled with signed offsets.
-- [ ] T012 [US3] Corridor reads `corridor-width`/`width-units` at the established request
+- [x] T012 [US3] Corridor reads `corridor-width`/`width-units` at the established request
   seam (the framework does not pass them); missing width refused naming the parameter;
   `corridor-height`, `height-units`, `resolution-x`, `resolution-z` refused with the
   option named.
@@ -118,12 +118,12 @@ how.
 
 ## Phase 5: Locations (US5) and the widened provider
 
-- [ ] T014 [US5] Declare `contracts/schemas/edr-locations.schema.json` (the
+- [x] T014 [US5] Declare `contracts/schemas/edr-locations.schema.json` (the
   named-locations list: GeoJSON-compatible FeatureCollection, `kind` distinguishing
   `feature` from `sensor`, sensor entries carrying the simulation time they are current
   as of); run `./scripts/generate_types.sh`; register the master in
   `tests/unit/test_generated_models.py` (append-only).
-- [ ] T015 [US5] Implement `query/plugins/edr_locations.py`: the list assembled from the
+- [x] T015 [US5] Implement `query/plugins/edr_locations.py`: the list assembled from the
   configured seeded features and one `DISTINCT ON` select of each thing's latest
   observation position through the select-only role (current position only, never a
   history); `bbox` filter honoured; `datetime` on the list refused with Constitution V
@@ -131,16 +131,16 @@ how.
   over it; `.../locations/<id>` answers the water column at the advertised point with
   cells counted against `cube_maximum_cells`; unknown identifier refused naming the
   known ones.
-- [ ] T016 [US5] Implement `query/plugins/edr_composer.py`:
+- [x] T016 [US5] Implement `query/plugins/edr_composer.py`:
   `DrognaComposerEDRProvider(DrognaTrajectoryEDRProvider)` re-declaring all eight query
   types through both advertisement mechanisms; point
   `query/pygeoapi-config.yaml.template` at it.
-- [ ] T017 [P] [US5] Unit tests `tests/unit/test_edr_locations.py`: two kinds
+- [x] T017 [P] [US5] Unit tests `tests/unit/test_edr_locations.py`: two kinds
   distinguished, current-only sensor position (a superseded position is absent, not
   listed), list budget refusal watched failing, datetime-on-list refusal, unknown-id
   refusal, per-location column against the analytic field; the sensor-position SQL
   statement built and inspected without a database.
-- [ ] T018 [P] [US5] Extend `tests/unit/test_pygeoapi_version_pin.py`'s advertisement
+- [x] T018 [P] [US5] Extend `tests/unit/test_pygeoapi_version_pin.py`'s advertisement
   assertions to the widened provider: all eight types in `query_types` on the class
   itself and each a method in the class's own `__dict__`.
 

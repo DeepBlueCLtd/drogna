@@ -111,7 +111,10 @@ def test_a_configuration_missing_a_required_section_is_refused_at_load() -> None
 def test_the_template_names_both_providers_by_dotted_module_path() -> None:
     """That is the whole of the wiring: load_plugin imports the class by name."""
     text = template_text()
-    assert "plugins.edr_trajectory.DrognaTrajectoryEDRProvider" in text
+    # 023 widened the EDR provider: the collection names the composer subclass, which
+    # re-declares position, cube and trajectory and adds radius, area, corridor and
+    # locations. The trajectory provider remains the substrate beneath it.
+    assert "plugins.edr_composer.DrognaComposerEDRProvider" in text
     assert "plugins.sensorthings_provider.DrognaSensorThingsProvider" in text
 
 

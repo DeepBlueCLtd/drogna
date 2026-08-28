@@ -96,7 +96,7 @@ resources:
         end: ${domain_end}
     providers:
       - type: edr
-        name: plugins.edr_trajectory.DrognaTrajectoryEDRProvider
+        name: plugins.edr_composer.DrognaComposerEDRProvider
         data: ${coverage_root}
         x_field: ${axis_longitude}
         y_field: ${axis_latitude}

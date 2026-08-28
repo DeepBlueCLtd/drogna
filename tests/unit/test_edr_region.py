@@ -140,3 +140,57 @@ def test_a_boundary_node_is_inside_the_drawn_polygon(tmp_path: Path) -> None:
     document = region(tmp_path).area(ring=ring, z="0", datetime_="2026-09-01T00:00:00.000000Z")
     nodes = {(x, y) for x, y, _ in document["domain"]["axes"]["composite"]["values"]}
     assert nodes == {(-4.8, 49.0)}
+
+
+class _Ring:
+    def __init__(self, coords):
+        self.coords = coords
+
+
+class _StubPolygon:
+    geom_type = "Polygon"
+
+    def __init__(self, exterior, interiors=()):
+        self.exterior = _Ring(exterior)
+        self.interiors = list(interiors)
+
+
+class _StubPoint:
+    geom_type = "Point"
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+class _StubMultiPolygon:
+    geom_type = "MultiPolygon"
+
+
+def test_the_provider_reads_a_single_ring_polygon_and_refuses_the_rest() -> None:
+    """T009: the shape refusals, against the Shapely API shape pygeoapi hands over.
+
+    Duck-typed stubs, because the workspace carries no geometry library; the duck-typing
+    is the point — these helpers touch only geom_type, exterior.coords and interiors,
+    which is what lets them be tested where the provider itself cannot be constructed.
+    """
+    from plugins.edr_composer import point_from_geometry, ring_from_polygon
+
+    ring = ring_from_polygon(_StubPolygon([(-5.0, 48.4), (-4.0, 48.4), (-4.0, 49.6)]))
+    assert ring == [(-5.0, 48.4), (-4.0, 48.4), (-4.0, 49.6)]
+
+    with pytest.raises(QueryLayerError, match="MultiPolygon"):
+        ring_from_polygon(_StubMultiPolygon())
+    with pytest.raises(QueryLayerError, match="1 interior ring"):
+        ring_from_polygon(
+            _StubPolygon(
+                [(-5.0, 48.4), (-4.0, 48.4), (-4.0, 49.6)],
+                interiors=[_Ring([(-4.6, 48.8), (-4.4, 48.8), (-4.5, 49.0)])],
+            )
+        )
+    with pytest.raises(QueryLayerError, match="POLYGON"):
+        ring_from_polygon(_StubPoint(-4.5, 49.0))
+
+    assert point_from_geometry(_StubPoint(-4.5, 49.0)) == (-4.5, 49.0)
+    with pytest.raises(QueryLayerError, match="POINT"):
+        point_from_geometry(_StubPolygon([(-5.0, 48.4), (-4.0, 48.4), (-4.0, 49.6)]))

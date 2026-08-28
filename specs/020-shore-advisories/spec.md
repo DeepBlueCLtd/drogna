@@ -235,11 +235,15 @@ its absence is a statement of validity, not a bug.
   Postgres instance**, alongside `observations` and `features`. SRD FR-12 was amended to
   say three schemas rather than two, and FR-63 records the argument — what has to be
   separate here is who may write and when, which is a rule rather than an engine, and a
-  second engine would buy that rule at the price of a second operational surface. Two
-  things still belong to this feature's plan: the ADR (the decision was contested, and a
-  lighter store outside the database was the rejected alternative), and the matching
-  amendment to the constitution's technology line, which still reads "one instance
-  carrying two schemas". Lane G did not amend the constitution; that is this plan's.
+  second engine would buy that rule at the price of a second operational surface. The
+  record is **ADR-0022**, and the constitution's technology line was amended with it —
+  three schemas rather than two, at version 1.5.0. What still belongs to this feature's
+  plan is the consequence ADR-0022 names: a test that asserts the negative from a
+  run-time role, because what keeps `features` read-only beside a deliberately writable
+  `advisories` is a grant, and a migration that granted too widely would be invisible to
+  any test that only reads. Extend `tests/integration/test_feature_store_readonly.py`
+  rather than writing a second one. The schema's tables and columns, and whether the
+  geometry is a PostGIS type, are also this plan's.
 - "Shore" is a role played deterministically by the harness itself, and every surface
   that names it says it is synthetic; no external party or link is modelled beyond the
   message fabric already present. SRD FR-59 now states this in the requirement itself.

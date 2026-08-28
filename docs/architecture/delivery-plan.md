@@ -209,9 +209,11 @@ than retention of runs that never happen.
 Two of the amendment's own consequences land with these features rather than with lane
 G. 020 inherits two component identifiers — C-19, the shore advisory source, and C-20,
 the advisory store — which `docs/manifest.yaml` records as not yet built and which want
-a subsystem page each when they exist. And FR-12 now names three schemas in the one
-Postgres instance rather than two, which is the constitution's technology line as well:
-that amendment, with its ADR, belongs to 020's plan phase.
+a subsystem page each when they exist. FR-12 now names three schemas in the one Postgres
+instance rather than two, and the constitution's technology line was amended with it
+(1.5.0, ADR-0022); what that record leaves to 020's plan is the test that asserts the
+negative — `features` still refused to every run-time role, beside an `advisories` that
+is deliberately writable — because what separates them is a grant.
 
 | Feature | Branch | Owns | Parallel with |
 |---|---|---|---|

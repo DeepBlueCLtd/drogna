@@ -16,9 +16,10 @@
 # can produce one.
 #
 # Idempotent, as the contract requires: if the store already names a current run this step
-# does nothing at all. A second staging of the same run would be refused by the publisher —
-# "a run identifier names one run" — which is correct behaviour and a confusing thing for a
-# re-seed to produce.
+# produces no second one. A second staging of the same run would be refused by the publisher
+# — "a run identifier names one run" — which is correct behaviour and a confusing thing for a
+# re-seed to produce. It still writes its artefact on that path, because the record describes
+# the state of the store rather than which invocation brought the store to it.
 
 set -euo pipefail
 
@@ -50,6 +51,10 @@ read -r store_root pointer < <(
 
 if "${compose[@]}" exec -T publisher test -s "${store_root}/${pointer}" 2>/dev/null; then
   current="$("${compose[@]}" exec -T publisher cat "${store_root}/${pointer}" | tr -d '\r\n')"
+  # The artefact is written on this path too, and holds the same identifier it would have
+  # held had this step done the work: what the record describes is the state of the store,
+  # not whether this particular invocation was the one that produced it.
+  printf '%s\n' "${current}" > "${DROGNA_ARTEFACT_DIR}/current-run.txt"
   echo "    the coverage store already names ${current} as current; nothing to seed"
   exit 0
 fi
@@ -59,10 +64,22 @@ fi
 # broker connection for that reason: MQTT identifies a client per role, so a second
 # connection under the same name would have the broker close the incumbent without telling
 # either party. The entry point says so where it decides it.
+#
+# **The runner's output is not an artefact, and writing it into the artefact directory as
+# one was wrong.** NFR-07 is that a reset and a reseed reproduce the record byte for byte,
+# and `tests/integration/test_reset_reproduces_a_fresh_instance.py` is that requirement run
+# by the build. A container's combined output is not reproducible — it carries whatever the
+# run happened to say — so declaring it made two equivalent instances compare unequal, on a
+# digest of a log. It caught this the first time CI saw it. The output is still shown, and
+# still quoted in full when the step fails, which is what it was actually for; the artefact
+# is the run identifier, which is derived from the seed and the sequence and is the same on
+# every instance that seeded the same way.
+staged="$(mktemp)"
+trap 'rm -f "${staged}"' EXIT
 "${compose[@]}" run --rm --quiet-pull model-runner --initialise-store \
-  > "${DROGNA_ARTEFACT_DIR}/initial-run.txt" 2>&1 ||
-  { cat "${DROGNA_ARTEFACT_DIR}/initial-run.txt" >&2; exit 1; }
-cat "${DROGNA_ARTEFACT_DIR}/initial-run.txt" | sed 's/^/    /'
+  > "${staged}" 2>&1 ||
+  { cat "${staged}" >&2; exit 1; }
+sed 's/^/    /' "${staged}"
 
 # The publisher takes it on its next turn, which is bounded by its own heartbeat interval
 # rather than by anything guessed here. This waits for the pointer to appear so that the

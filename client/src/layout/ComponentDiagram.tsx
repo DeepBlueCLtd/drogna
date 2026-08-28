@@ -1,7 +1,9 @@
 /**
  * The drawing.
  *
- * Eighteen boxes and the flow between them, with the control loop closed on itself. The
+ * The boxes and the flow between them, with the control loop closed on itself. (It said
+ * "eighteen" until the drawing had twenty-one; `geometry.ts` derives its extent from the
+ * layout for the same reason, and says so.) The
  * caption above it says what it is — a drawing of the intended architecture — so that a
  * dark box reads as "not heard from" rather than as "broken" or "imaginary". That
  * sentence is not decoration: without it the same picture makes a claim it cannot

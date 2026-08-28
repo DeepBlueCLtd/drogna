@@ -100,9 +100,9 @@ BROKER_GID = 1883
 # per request, after the master has dropped privileges — so, exactly as with the broker's
 # password file above, a 0600 file owned by the deploying user is one the workers cannot
 # open. nginx does not stop dead the way the broker does: it starts, reports healthy, and
-# answers 500 to every request behind the clearance, with
-# `open() "/etc/drogna/proxy.htpasswd" failed (13: Permission denied)` in its error log.
-# Invisible on macOS for the same bind-mount reason, measured on Linux 28 August 2026.
+# answers 500 to every request behind the clearance, with the htpasswd's open() refused
+# (13: Permission denied) in its error log. Invisible on macOS for the same bind-mount
+# reason, measured on Linux 28 August 2026.
 PROXY_READER_UID = 101
 PROXY_READER_GID = 101
 

@@ -175,8 +175,9 @@ function credentials(
     throw new CaptureConfigError(
       `${source} says the page is behind the clearance for ${JSON.stringify(declared.user)} ` +
         `and names ${declared.secret_variable} as the variable carrying the secret, but it ` +
-        `is not set. The deployment writes it into deploy/.env; source that file (or export ` +
-        `the variable) before taking a capture. Launching without it would report readiness ` +
+        `is not set. The deployment generates it beside its other secrets; source the ` +
+        `deployment's environment file (scripts/capture/README.md shows how) or export the ` +
+        `variable before taking a capture. Launching without it would report readiness ` +
         `never arriving, three layers away from the cause.`,
     );
   }

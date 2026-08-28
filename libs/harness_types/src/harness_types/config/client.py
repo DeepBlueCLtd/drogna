@@ -56,7 +56,7 @@ class Clock(BaseModel):
     )
     endpoint: AnyUrl | None = Field(
         None,
-        description="Base URL of the clock service's HTTP interface, where the deployment exposes it to the browser. Absent means the client waits for the first sample instead.",
+        description="Base URL of the clock service's HTTP interface, where the deployment exposes it to the browser. Absent means the client waits for the first sample instead. Null says the same thing as a value: this destination exposes no clock to a browser (the droplet publishes its clock to loopback only, and the 28 August decision on issue #34 keeps it unproxied), and the speed control renders unavailable and says why. Stated as null rather than by omitting the key because destinations may differ in values only, never in the set of keys — the parity check up.sh runs is what holds that.",
     )
     routes: Routes | None = Field(
         None,

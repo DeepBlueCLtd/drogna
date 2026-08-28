@@ -142,7 +142,7 @@ export const COMPONENTS: readonly ComponentNode[] = [
   },
   {
     // `query`, not `query_layer`. The id here is matched against the `component` field of
-    // an arriving heartbeat, which the schema defines as the component's own `/component/id`
+    // an arriving heartbeat, which the schema defines as the component's own configured id
     // — and C-09's configuration, like `contracts/topology.json`, calls it `query`. While
     // this box said `query_layer` the heartbeat matched no box, so C-09 was drawn dark and
     // listed among the components heard from but not on the diagram. Nobody saw it because

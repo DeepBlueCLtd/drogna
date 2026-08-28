@@ -395,6 +395,23 @@ is exporting.
       "the query layer published nothing at all" against a beating loop that publishes
       nothing, which is what the absent caller amounted to.
 
+      **Constructing it was half of the fix, and the running client said so.** With the beat
+      arriving on `ctl/heartbeat` as `query`, C-09 was still drawn dark: the client's box was
+      `query_layer`, and every other name for this component — its own configuration,
+      `contracts/topology.json`, the heartbeat schema's definition of the field — is `query`.
+      So the message arrived, was understood, matched no box, and the client listed it under
+      the components it had heard from and could not place. Two features had each named the
+      component and nothing had ever compared the two names, because until this task there was
+      no heartbeat for the mismatch to spoil.
+
+      `tests/unit/test_every_component_has_a_box.py` now makes that comparison once, in the
+      direction that catches it: every component with source in this repository must have a
+      box under exactly its own id. Watched failing: it reports `['query'] publish a heartbeat
+      under an id the client draws no box for` against the id as it was.
+
+      Live, on the local stack: `query ok serving` on `ctl/heartbeat`, and the client at
+      10 of 18 with nothing left unmapped.
+
 - [ ] T063 Reconcile this feature's own fixtures with what a published run holds
 
       `tests/query_layer_support.py` builds coverage files carrying `sea_water_temperature`,

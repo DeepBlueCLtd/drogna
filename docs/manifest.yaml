@@ -132,6 +132,7 @@ pages:
 components:
   C-19: not yet built — added by SRD v0.4 (§5.11, FR-59 to FR-62); feature 020 writes the page when the component exists.
   C-20: not yet built — added by SRD v0.4 (§5.11, FR-63); feature 020 writes the page when the store exists.
+  C-21: not yet built — added by SRD v0.5 (§5.12, FR-67 to FR-76); feature 021 writes the page when the controller exists.
 
 # ---------------------------------------------------------------------------
 # Architecture Decision Records (FR-021)

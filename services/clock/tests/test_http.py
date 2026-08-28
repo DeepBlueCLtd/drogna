@@ -185,6 +185,48 @@ def test_an_unknown_route_is_not_part_of_the_interface(running) -> None:
     assert raised.value.code == 404
 
 
+def test_the_browser_preflight_is_answered_with_the_grant(running) -> None:
+    """The browser is the one place this interface is for, and it always arrives
+    cross-origin: the page is served from the client's port, the clock listens on its own,
+    and a POST carrying ``Content-Type: application/json`` is preflighted first. The
+    standard library answers an unimplemented method with 501 and no grant, the browser
+    then never sends the command, and the control has never worked from a browser — which
+    is exactly how CI found it (ADR-0021)."""
+    server, _, _ = running
+    request = Request(
+        f"http://127.0.0.1:{server.port}{CONTROL}",
+        method="OPTIONS",
+        headers={
+            "Origin": "http://127.0.0.1:8080",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    with urlopen(request) as response:
+        assert response.status == 204
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+        assert "POST" in response.headers["Access-Control-Allow-Methods"]
+        assert "content-type" in response.headers["Access-Control-Allow-Headers"].lower()
+        assert response.headers.get("Date") is None
+
+
+def test_the_command_response_repeats_the_grant_or_the_browser_discards_it(running) -> None:
+    server, _, _ = running
+    request = Request(
+        f"http://127.0.0.1:{server.port}{CONTROL}",
+        data=json.dumps({"operation": "set_rate", "rate": 25.0}).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Origin": "http://127.0.0.1:8080"},
+        method="POST",
+    )
+
+    with urlopen(request) as response:
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+    with urlopen(f"http://127.0.0.1:{server.port}{SNAPSHOT}") as response:
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+
 def test_no_host_timestamp_is_stamped_on_a_response(running) -> None:
     """The standard library would stamp a Date header. Nothing here needs one."""
     server, _, _ = running

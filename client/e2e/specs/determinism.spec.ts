@@ -152,6 +152,13 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
   await openClient(page, capture.client);
   await settled(page, capture.client);
 
+  // Pinned for the same reason the first test pins: against a running stack the clock
+  // display moves on its own, and this test's claim is that the *perturbation* is what
+  // the comparison catches and names a box around. Unpinned, the box would honestly
+  // cover the clock as well, and the assertion that it is confined to the perturbation
+  // would fail on a working comparison.
+  const pinned = await pinIfAClockAnswers(page);
+
   // The control. A host-derived elapsed figure, redrawn every animation frame, of the kind
   // feature 012 removed from the shell because rendering one made a pinned state differ
   // frame to frame. It is added here, to this browser, after the page has loaded; it is in
@@ -216,6 +223,7 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
     join(area, "control.json"),
     `${JSON.stringify(
       {
+        pinned,
         perturbedDifferingPixels: outcome.differingPixels,
         perturbedBox: outcome.box,
         restoredDifferingPixels: restored.differingPixels,

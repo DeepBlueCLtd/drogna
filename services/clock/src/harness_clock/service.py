@@ -76,6 +76,11 @@ _ACKNOWLEDGE = "acknowledge"
 
 OPERATIONS: tuple[str, ...] = (_SET_RATE, _SET_MODE, _PIN, _RELEASE, _REGISTER, _ACKNOWLEDGE)
 
+# The commands that change what the clock is doing, as opposed to who is participating.
+# After one of these the new rate and mode must reach subscribers; emission is how they
+# normally do, and a command that stops emission is the one case emission cannot answer.
+_STATE_CHANGING: tuple[str, ...] = (_SET_RATE, _SET_MODE, _PIN, _RELEASE)
+
 
 class ClockService:
     """The engine, the transports it speaks over, and the loop that turns it."""
@@ -144,10 +149,21 @@ class ClockService:
         A refusal raises :class:`ClockControlError` and changes nothing, which is what
         FR-005 requires of a rate outside the configured bounds: a readable error, and the
         current state left as it was.
+
+        A command that leaves the clock not emitting — a rate of zero, a pause — is
+        acknowledged with one sample on ``ctl/clock``: the tick in force, re-published
+        carrying the new rate and mode. Every other change reaches subscribers on the next
+        emission, and a pinned clock has no next emission: without this, the browser that
+        asked for zero waits for a sample that can never arrive, and FR-012's rule that the
+        rate in force comes only from ``ctl/clock`` would make the one rate a capture needs
+        (FR-53) the one rate that can never be shown in force. Published under the lock so
+        it cannot interleave out of order with a tick the loop is emitting.
         """
         operation = str(payload.get("operation", ""))
         with self._lock:
             state = self._apply(operation, payload)
+            if operation in _STATE_CHANGING and self._engine.emission_interval_seconds() is None:
+                self._emit(self._current_tick())
         return state.as_message()
 
     def _apply(self, operation: str, payload: Mapping[str, Any]) -> ClockState:

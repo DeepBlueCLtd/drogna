@@ -219,15 +219,36 @@ services:
     # Postgres is configured by its published environment interface rather than by
     # HARNESS_CONFIG; it is a third-party image and reads no drogna configuration file.
     # Every value below still comes from the destination configuration.
+    #
+    # No password. ADR-0022: this store's port is published to loopback at every
+    # destination, the harness models no database threat, and authentication is trust for
+    # the compose network. POSTGRES_HOST_AUTH_METHOD is what makes the image's entrypoint
+    # accept the absence of POSTGRES_PASSWORD; the file named by `command` below is what
+    # actually decides, on this and every later start.
     environment:
       POSTGRES_DB: ${HARNESS_DATABASE_NAME}
       POSTGRES_USER: ${HARNESS_DATABASE_USER}
-      POSTGRES_PASSWORD: ${HARNESS_DATABASE_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
       PGDATA: ${HARNESS_DATABASE_DATA_DIR}
+    # The authentication rules come from a tracked file rather than from the environment
+    # variable above, and the difference is convergence. POSTGRES_HOST_AUTH_METHOD is read
+    # by the entrypoint's *first-time initialisation* only: against an existing volume,
+    # initialised when this stack still used scram, flipping it changes nothing and every
+    # passwordless DSN would go on meeting `fe_sendauth: no password supplied`. `hba_file`
+    # is read by the server at every start, so the second bring-up gets the same rules as
+    # the first — which is the property `scripts/up.sh` is required to have.
+    command:
+      - postgres
+      - -c
+      - hba_file=${HARNESS_DATABASE_HBA_FILE}
     volumes:
       - type: volume
         source: observations-data
         target: ${HARNESS_DATABASE_DATA_DIR}
+      # Read-only, and for the rules alone: the same checkout mount the provisioning
+      # one-shot takes, because `stores/observations/pg_hba.conf` is deploy-time input in
+      # exactly the sense the SQL beside it is.
+      - *stores-mount
     ports:
       - ${HARNESS_PUBLISH_OBSERVATIONS}
     # Probed over TCP — `-h` is doing the work, and without it this check reports healthy

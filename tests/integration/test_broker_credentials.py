@@ -46,16 +46,10 @@ from destination import ConfigurationError  # noqa: E402
 # every test in this file fail on the renderer's refusal rather than on its subject —
 # which is exactly what happened when the query layer gained a role.
 #
-# And then happened again, the same way, when the render learned to put the database
-# owner's secret into the DSNs: DATABASE_SECRET is deliberately not one of SECRET_NAMES,
-# which is the broker's role list and is looped over as such by deploy/lib/common.sh. So
-# the set this fixture needs is the set the renderer's own entry point resolves — see
-# `values` in render_credentials.main — and it is spelled the same way here for the same
-# reason, rather than listed a second time.
-VALUES = {
-    name: f"secret-for-{name.lower()}"
-    for name in (*render_credentials.SECRET_NAMES, render_credentials.DATABASE_SECRET)
-}
+# It once needed the database's secrets too. ADR-0022 retired them: the observation store
+# authenticates by trust for the compose network, so SECRET_NAMES is again the whole set
+# the renderer's entry point resolves — see `values` in render_credentials.main.
+VALUES = {name: f"secret-for-{name.lower()}" for name in render_credentials.SECRET_NAMES}
 
 
 def _rendered(tmp_path: Path) -> Path:

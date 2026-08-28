@@ -29,8 +29,20 @@ WORKDIR ${HARNESS_APP_ROOT}
 # depends on `harness_core` and nothing else, so no compiler and no wheel-building is
 # involved. Alpine's interpreter is externally managed, hence the virtual environment;
 # py3-pip is what makes `python3 -m venv` able to bootstrap one.
-RUN apk add --no-cache python3 py3-pip \
-    && python3 -m venv "${HARNESS_APP_ROOT}/.venv"
+#
+# This fetch takes the `proxy_ca` secret for the same reason the `pip install` below does,
+# and it is the earlier of the two: this image is the only one that reaches the network
+# before it reaches its package manager, so a seam that began at the `pip install` left
+# `apk` — the very first thing the build does — outside it. Behind a TLS-terminating proxy
+# that is not a late failure in one layer; it is the image never building at all, which is
+# what it did. `apk` reads the system store, so appending to it is the whole of what is
+# needed here; the interpreter that `pip` later uses is what this step exists to install.
+RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false \
+    sh -c 'if [ -s /tmp/proxy-ca.crt ]; then \
+             cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+           fi; \
+           apk add --no-cache python3 py3-pip \
+           && python3 -m venv "${HARNESS_APP_ROOT}/.venv"'
 
 ENV PATH="${HARNESS_APP_ROOT}/.venv/bin:${PATH}" \
     PYTHONPATH="${HARNESS_APP_ROOT}" \

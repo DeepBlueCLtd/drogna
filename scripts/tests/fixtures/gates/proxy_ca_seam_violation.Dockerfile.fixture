@@ -1,0 +1,6 @@
+# A fixture, not a real image definition. The fetch below reaches the package index and
+# mounts no proxy_ca secret, which is the whole of what the gate must report.
+FROM alpine:3
+
+RUN apk add --no-cache python3 py3-pip \
+    && python3 -m venv /opt/example/.venv

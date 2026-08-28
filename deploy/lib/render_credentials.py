@@ -201,6 +201,15 @@ def _with_database_secret(
     return scheme + "://" + role + ":" + value + "@" + location
 
 
+def _has_dsn(node: Any) -> bool:
+    """Whether this document carries a `dsn` anywhere, at any depth."""
+    if isinstance(node, dict):
+        return any(key == "dsn" or _has_dsn(value) for key, value in node.items())
+    if isinstance(node, list):
+        return any(_has_dsn(item) for item in node)
+    return False
+
+
 def _rewrite_dsns(
     node: Any, owner: str, secret: str, values: dict[str, str], *, source: Path
 ) -> None:
@@ -240,21 +249,39 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
     base = root or repository_root()
     source_dir = destination_dir(destination, base)
     target_dir = rendered_dir(destination, base)
+
     # The role the database was created with, from the destination's own declaration rather
     # than from a name typed here. A DSN naming anything else is left alone.
-    owner = str(
-        json.loads((source_dir / "deployment.json").read_text(encoding="utf-8"))["database"]["user"]
-    )
-    # The directory is kept and its contents are swept, rather than the directory being
-    # removed and remade. `deploy/compose.yaml` binds this path into every container at the
-    # container config directory the destination declares, and a bind mount resolves to an
-    # inode: removing the directory does not empty the mount, it orphans it, and every
-    # container already running then sees that directory empty for the rest of its life.
-    # `scripts/up.sh` is required to converge, so a render over a stack that is already up
-    # is ordinary and not an edge case — the first bring-up worked and the second left the
-    # proxy answering 403 to a valid credential, having no password file to read, while all
-    # six containers reported healthy. Same trap as write_password_file below, one
-    # directory up.
+    #
+    # Read when a DSN is first met rather than up front, so that a destination carrying no
+    # store — which is what `tests/unit/test_rendered_config_directory_is_stable.py` builds,
+    # a directory with one file in it and no deployment.json — renders without being asked
+    # for a declaration it has no reason to hold. A destination that *does* carry a DSN still
+    # gets the same error it always did, at the point the name is actually needed.
+    def database_owner() -> str:
+        declaration = json.loads((source_dir / "deployment.json").read_text(encoding="utf-8"))
+        return str(declaration["database"]["user"])
+
+    # Emptied rather than removed, and the difference is the whole of a defect that made
+    # every Linux bring-up produce containers running against a configuration directory that
+    # was no longer there.
+    #
+    # A bind mount resolves to an inode, not to a path. `deploy/compose.yaml` binds this
+    # directory into every container, `run_local.sh` is `up.sh` and then `seed.sh`, and both
+    # render. An `rmtree` followed by a `mkdir` is a *new* directory, so every container
+    # already running kept the old, unlinked one and saw it empty — clock, query and proxy
+    # each seeing 0 files where the host had 19. Only the clock ever reported it, because
+    # only its health check re-reads its document; the rest read theirs at start-up and went
+    # on reporting healthy against a directory that was gone. The proxy answered 403 to a
+    # valid credential, having no password file to read.
+    #
+    # It hides on a developer's machine for the reason the broker's permission fault did:
+    # Docker Desktop shares a bind mount by path through a VM, so containers there follow the
+    # replacement and nothing is ever seen to break. On a Linux host it breaks every time.
+    #
+    # The sweep is at the end of this function rather than here, so that what the destination
+    # still declares is never absent from the mount even momentarily, and so that credentials
+    # written into this directory by another path are kept rather than deleted and remade.
     target_dir.mkdir(parents=True, exist_ok=True)
     written: set[str] = set()
     kept = _written_by_another_path(destination, base)
@@ -280,7 +307,14 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
         # `broker.url`, but a store's DSN sits wherever its component's schema puts it —
         # `features.store.dsn`, `ingest.store.dsn` — and a list of paths here would be a
         # list that goes stale the first time a component is added.
-        _rewrite_dsns(document, owner, values.get(DATABASE_SECRET, ""), values, source=source)
+        if _has_dsn(document):
+            _rewrite_dsns(
+                document,
+                database_owner(),
+                values.get(DATABASE_SECRET, ""),
+                values,
+                source=source,
+            )
         target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         target.chmod(0o600)
 

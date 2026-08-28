@@ -1,0 +1,37 @@
+Environment facts, gathered by the spike. Everything here is about the machine,
+not about drogna.
+
+== Docker
+   client 29.3.1, server 29.3.1
+   compose 5.1.1
+   storage overlayfs, cgroup v1 (cgroupfs)
+   dockerd is NOT running at session start; there is no /var/run/docker.sock.
+   dockerd is present at /usr/bin/dockerd and starts with no extra privileges.
+
+== Egress from inside a container
+   No proxy variables are set inside containers. TLS is intercepted transparently
+   at the network layer, for every host tried — the no_proxy list the host tools
+   read does not apply. Without the CA every fetch fails 'certificate verify
+   failed'; with it, every one of the same hosts answers 200.
+   /root/.ccr/ca-bundle.crt is a COMPLETE bundle:
+     152 certificates, public roots included
+   SSL_CERT_FILE already points at it, which is why deploy/README.md's line works
+   verbatim: export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"
+
+== Browser
+   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+   client pins @playwright/test 1.56.1
+   which wants chromium build 1194; present on disk:
+     chromium
+     chromium-1194
+     chromium_headless_shell-1194
+     ffmpeg-1011
+   so no 'playwright install' is needed and no executablePath override.
+
+== The stack, once up
+drogna-proxy-1  Up About a minute (healthy)  80/tcp, 127.0.0.1:8081->8080/tcp
+drogna-query-1  Up About a minute (healthy)  127.0.0.1:8082->8080/tcp
+drogna-broker-1  Up 2 minutes (healthy)  127.0.0.1:1883->1883/tcp
+drogna-client-1  Up 26 seconds (healthy)  80/tcp, 127.0.0.1:8080->8080/tcp
+drogna-clock-1  Up 2 minutes (healthy)  127.0.0.1:8090->8090/tcp
+drogna-observations-1  Up 2 minutes (healthy)  127.0.0.1:5432->5432/tcp

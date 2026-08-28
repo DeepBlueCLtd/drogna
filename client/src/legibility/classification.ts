@@ -19,7 +19,7 @@
  * divergence rule's verdict, a scheduling decision, a plan, a quality flag, a derived
  * sound speed. It is **plumbing** when what crosses it is moved rather than judged: an
  * announcement, a standard read interface, a store write, a transport hop. By that rule
- * eleven of the twenty-five boundaries are bespoke, which is the honest proportion and
+ * eleven of the twenty-seven boundaries are bespoke, which is the honest proportion and
  * the one §2.2 wants a reader to see.
  *
  * That figure is prose and nothing derives it, which is why it was wrong: it read "eight
@@ -207,6 +207,14 @@ const BOUNDARY_REASON: Readonly<Record<string, { kind: ComponentKind; because: s
   [boundaryId("advisory_store", "query_layer")]: {
     kind: "plumbing",
     because: "advisories read as received, through the same standard interface as everything else",
+  },
+  [boundaryId("broker", "system_controller")]: {
+    kind: "plumbing",
+    because: "what components already publish about themselves, observed and aggregated; the controller invents nothing (FR-67)",
+  },
+  [boundaryId("system_controller", "proxy")]: {
+    kind: "plumbing",
+    because: "an operator's REST surface behind the same boundary as every other read",
   },
 };
 

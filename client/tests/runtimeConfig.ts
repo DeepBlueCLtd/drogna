@@ -12,7 +12,23 @@ export interface ConfigOverrides {
   readonly controlUrl?: string | undefined;
   readonly trajectoryPath?: string | undefined;
   readonly interpolate?: boolean;
+  readonly cubePath?: string | undefined;
+  readonly fieldParameter?: string | undefined;
+  /** Passing `null` is a destination that declares no extent, which the map states. */
+  readonly map?: RuntimeConfig["map"] | null;
 }
+
+/** What a destination that declares an extent declares, so a test says so in one word. */
+export const DECLARED_MAP = {
+  extent: {
+    minimumLongitude: -6,
+    minimumLatitude: 48,
+    maximumLongitude: -3,
+    maximumLatitude: 50,
+  },
+  vertical: { minimumDepthM: 0, maximumDepthM: 1000 },
+  graticuleSpacingDegrees: 0.5,
+} as const;
 
 export function runtimeConfig(overrides: ConfigOverrides = {}): RuntimeConfig {
   return {
@@ -31,6 +47,8 @@ export function runtimeConfig(overrides: ConfigOverrides = {}): RuntimeConfig {
       collectionsUrl: "http://query.invalid/released",
       trajectoryPath: overrides.trajectoryPath,
       routeParameters: ["sea_water_temperature"],
+      cubePath: overrides.cubePath,
+      fieldParameter: overrides.fieldParameter,
     },
     liveness: { defaultWindowSeconds: 15, windowMultiplier: 3, disconnectedIsIndeterminate: true },
     display: {
@@ -40,5 +58,6 @@ export function runtimeConfig(overrides: ConfigOverrides = {}): RuntimeConfig {
       maximumDrawnCells: undefined,
       interpolateBetweenSamples: overrides.interpolate ?? true,
     },
+    map: overrides.map === null ? undefined : (overrides.map ?? DECLARED_MAP),
   };
 }

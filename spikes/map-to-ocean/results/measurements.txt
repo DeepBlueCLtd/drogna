@@ -1,0 +1,115 @@
+Measured 28 August 2026 against the local profile brought up by scripts/up.sh, on the
+merged tree (017 + main at 4fed99f, which carries lane C's SensorThings fix). Every line
+below is a command and its answer, taken in one sitting with the stack healthy.
+
+--- the coverage store is empty -------------------------------------------------------
+
+$ docker exec drogna-query-1 ls -la /var/lib/drogna/coverage
+total 8
+drwxr-xr-x 2 root root 4096 .
+drwxr-xr-x 3 root root 4096 ..
+
+$ docker exec drogna-query-1 ls /var/lib/drogna/coverage/runs
+ls: cannot access '/var/lib/drogna/coverage/runs': No such file or directory
+
+$ ls deploy/seed.d/
+010-observations.sh  020-features.sh  README.md
+
+  profiles.active (config/local/deployment.json):
+    core, broker, foundation, query, edge, shell
+  absent: generator (C-02), control (scheduler, model_runner, publisher, monitor)
+
+--- no run is current -----------------------------------------------------------------
+
+$ curl 'http://localhost:8082/collections/forecast/cube?bbox=-6,48,-3,50&parameter-name=temperature_uncertainty'
+400 {"code":"InvalidQuery","description":"no run is current: current names none. A run
+     becomes current when the publisher writes its identifier there, in one line, by
+     replacing the file in a single operation."}
+
+--- the query layer serves at the root, not under /query -------------------------------
+
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8082/collections                  200
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8082/collections/forecast          200
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8082/collections/forecast/cube     400  (reached the provider)
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8082/query/collections             404
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8082/query/collections/forecast    404
+
+$ curl http://localhost:8082/ | head -c 200
+{"links":[{"rel":"about","href":"http://localhost:8080/query"}, ...
+
+  server.url carries /query, so links are generated under it. The routes are not.
+
+--- the proxy proxies to the path that 404s, under names that do not exist --------------
+
+$ docker exec drogna-proxy-1 grep 'proxy_pass http' /etc/nginx/conf.d/harness.conf
+    proxy_pass http://query:8080/query/collections/drogna-forecast;
+    proxy_pass http://query:8080/query/collections/drogna-forecast/;
+    proxy_pass http://query:8080/query/collections/drogna-uncertainty;
+    proxy_pass http://query:8080/query/collections/drogna-uncertainty/;
+    proxy_pass http://broker:9001/mqtt;
+
+  proxy releases: ['drogna-forecast', 'drogna-uncertainty']
+  query serves  : ['forecast', 'observations']
+
+  The forecast collection carries both fields, deliberately:
+$ curl http://localhost:8082/collections/forecast
+  data_queries   : position, cube, trajectory, instances
+  parameter_names: sea_water_temperature, sea_water_practical_salinity,
+                   sea_water_pressure, temperature_uncertainty
+  extent bbox    : [-6.0, 48.0, -3.0, 50.0]
+
+--- the publisher announces a third set of names ---------------------------------------
+
+  services/publisher/src/harness_publisher/catalogue.py
+    forecast     -> f"{self.forecast_prefix}{run_id}"       -> forecast-<run_id>
+    uncertainty  -> f"{self.uncertainty_prefix}{run_id}"    -> uncertainty-<run_id>
+
+--- the browser cannot reach the released prefix ----------------------------------------
+
+$ curl -D- -H 'Origin: http://localhost:8080' http://localhost:8081/released/drogna-forecast
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Basic realm="drogna"
+  (no Access-Control-Allow-Origin)
+
+$ curl -D- -H 'Origin: http://localhost:8080' http://localhost:8082/collections/forecast
+HTTP/1.1 200 OK
+  (no Access-Control-Allow-Origin)
+
+  The clock, by contrast, opts in — which is why the page reaches it and why 016's pair
+  capture can pin the rate to zero:
+
+$ curl -D- -H 'Origin: http://localhost:8080' http://localhost:8090/clock/snapshot
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+
+$ curl -X OPTIONS -H 'Origin: http://localhost:8080' \
+       -H 'Access-Control-Request-Method: POST' http://localhost:8090/clock/control
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+
+--- the proxy fronts neither the page nor the clock, at either destination ---------------
+
+$ docker exec drogna-proxy-1 grep -o 'location [^{]*' /etc/nginx/conf.d/harness.conf
+    location /                                 (the default deny)
+    location /released/                        (deny-not-released)
+    location = /released/drogna-forecast       and its ^~ pair
+    location = /released/drogna-uncertainty    and its ^~ pair
+    location = /ctl                            (the websocket upgrade)
+    location = /health                         (internal server, never published)
+
+  config/*/proxy.json upstreams, both destinations: ['query', 'control_websocket']
+
+  droplet network.publish bindings:
+    proxy  0.0.0.0:443     <- the only public door
+    client 127.0.0.1:8080
+    clock  127.0.0.1:8090
+  droplet public_url: https://drogna.invalid/   -> 401, then default-denied
+
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/            401
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/index.html  401
+$ curl -o /dev/null -w '%{http_code}' http://localhost:8081/clock/snapshot  401
+
+  local  : client :8080, proxy :8081, clock :8090   -> three origins
+  droplet: client, proxy and clock all https://drogna.invalid -> one origin

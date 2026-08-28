@@ -7,7 +7,7 @@
  * (Constitution VII). Adding a node here adds a grey box to a diagram and nothing else,
  * which is why the diagram carries a label saying so in words.
  *
- * The components are the SRD's component table, C-01 to C-20, and the arrangement is the
+ * The components are the SRD's component table, C-01 to C-21, and the arrangement is the
  * SRD's own organising picture: a flow chart with a loop in it. The loop — monitor,
  * scheduler, model runner, publisher, and back to the monitor — is the architecture's
  * interesting property, and a structural diagram that flattened it into a row of boxes
@@ -17,7 +17,9 @@
  * `harness-srd.md` and fails when the table and this file disagree in either direction,
  * because a number typed into a test is satisfied by the wrong twenty as readily as by
  * the right ones. C-19 and C-20 arrived with the SRD's v0.4 scope amendment and nothing
- * implements them: they are drawn dark, like anything else nobody has heard from.
+ * implements them: they are drawn dark, like anything else nobody has heard from. C-21
+ * arrived the same way, from feature 021's own amendment, and the correspondence test is
+ * what noticed the SRD had gained a component the drawing had not.
  *
  * `kind` records SRD §2.2's distinction. Bespoke means the component holds logic written
  * for drogna that could not be had off the shelf: the divergence rules, the scheduling
@@ -236,6 +238,15 @@ export const COMPONENTS: readonly ComponentNode[] = [
     column: 4,
     row: 3,
   },
+  {
+    id: "system_controller",
+    reference: "C-21",
+    name: "System controller",
+    responsibility: "What components said about themselves, aggregated and served to an operator; commands dispatched, never invented",
+    kind: "plumbing",
+    column: 0,
+    row: 4,
+  },
 ];
 
 /**
@@ -273,6 +284,8 @@ export const EDGES: readonly ComponentEdge[] = [
   { from: "shore_advisory", to: "broker", label: "ctl/advisory", bow: -40 },
   { from: "shore_advisory", to: "advisory_store", label: "validated, appended" },
   { from: "advisory_store", to: "query_layer", label: "advisories", bow: -40 },
+  { from: "broker", to: "system_controller", label: "ctl/, observed" },
+  { from: "system_controller", to: "proxy", label: "operator REST", bow: -30 },
 ];
 
 /** The layout, by id, for the view model to join against what has been heard. */

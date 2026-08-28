@@ -4,6 +4,7 @@
  * Separated from the drawing so the arrangement can be reasoned about — and tested —
  * without a renderer. Nothing here knows what is lit.
  */
+import { COMPONENTS } from "./components";
 import type { ComponentEdge, ComponentNode } from "./components";
 
 export const NODE_WIDTH = 208;
@@ -13,8 +14,17 @@ const ROW_PITCH = 152;
 const MARGIN_X = 32;
 const MARGIN_Y = 36;
 
-export const CANVAS_WIDTH = MARGIN_X * 2 + COLUMN_PITCH * 4 + NODE_WIDTH;
-export const CANVAS_HEIGHT = MARGIN_Y * 2 + ROW_PITCH * 3 + NODE_HEIGHT;
+// The extent is read from the layout rather than written down beside it. These were
+// `* 4` and `* 3` — the grid as it stood at eighteen components — so the first node
+// placed in a fifth row would have been drawn outside the viewBox and simply not
+// appeared. That is the same fault as a count typed into a test: correct until the day
+// it matters. `diagram.test.tsx` asserts every box is inside the canvas, and with the
+// bound derived that assertion can no longer be satisfied by nobody having moved.
+const LAST_COLUMN = Math.max(...COMPONENTS.map((component) => component.column));
+const LAST_ROW = Math.max(...COMPONENTS.map((component) => component.row));
+
+export const CANVAS_WIDTH = MARGIN_X * 2 + COLUMN_PITCH * LAST_COLUMN + NODE_WIDTH;
+export const CANVAS_HEIGHT = MARGIN_Y * 2 + ROW_PITCH * LAST_ROW + NODE_HEIGHT;
 
 export interface Box {
   readonly x: number;

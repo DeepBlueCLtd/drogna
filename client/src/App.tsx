@@ -37,8 +37,15 @@ import { readTrajectory, trajectoryRequest } from "./route/trajectoryQuery";
 import type { TrajectoryResult } from "./route/trajectoryQuery";
 import type { RouteDisplay } from "./route/RouteLayer";
 import { QualityStatement } from "./uncertainty/QualityStatement";
-import { announceRun, emptyOverlay } from "./uncertainty/overlay";
+import { announceRun, emptyOverlay, fieldRead } from "./uncertainty/overlay";
 import type { OverlayState } from "./uncertainty/overlay";
+import { MapSurface, NO_FIELD } from "./map/MapSurface";
+import type { MapFieldState } from "./map/MapSurface";
+import { chooseExtent, extentFromAnnouncement, extentFromDeclaration } from "./map/extent";
+import type { MapExtent } from "./map/extent";
+import { cannotAskForField, fieldNotRead } from "./map/absence";
+import { fieldRequest, isRequest } from "./map/fieldRequest";
+import { readFieldCube } from "./map/fieldCube";
 import { CONTROL_SCHEMAS } from "./contracts/schemas";
 import type { DrognaSamplingRecommendation } from "./generated/messages/plan";
 import type { ForecastSkill } from "./generated/messages/telemetry";
@@ -89,6 +96,10 @@ interface LoopView {
   readonly route: RouteDisplay | null;
   readonly skill: ForecastSkill | null;
   readonly conditions: TrajectoryResult | null;
+  /** The map's own state: one fetched cube, or the reason there is none (017). */
+  readonly mapField: MapFieldState;
+  /** The extent the last announcement stated, or null before any (017 FR-001). */
+  readonly announcedExtent: MapExtent | null;
 }
 
 export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
@@ -102,6 +113,8 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
   const route = useRef<RouteDisplay | null>(null);
   const skill = useRef<ForecastSkill | null>(null);
   const conditions = useRef<TrajectoryResult | null>(null);
+  const mapField = useRef<MapFieldState>(NO_FIELD);
+  const announcedExtent = useRef<MapExtent | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [selectedBoundary, setSelectedBoundary] = useState<string>(boundaryId("monitor", "scheduler"));
   const [selectedVertex, setSelectedVertex] = useState<number>(0);
@@ -134,6 +147,8 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     route: route.current,
     skill: skill.current,
     conditions: conditions.current,
+    mapField: mapField.current,
+    announcedExtent: announcedExtent.current,
   }));
 
   /**
@@ -194,6 +209,94 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     [],
   );
 
+  /**
+   * Reading the field a run announced, once, because it was announced (017 FR-003).
+   *
+   * The same rule the route's conditions follow, and `overlay.ts` states it in full: FR-021
+   * forbids polling the query layer to discover freshness, because the query layer has no
+   * notification mechanism and a page that polled would work while being wrong in a way
+   * nothing on the screen would show. So there is no interval here, no retry and no
+   * parameter one could arrive through. A test counts the requests against the
+   * announcements, which is the only form of that promise that survives refactoring.
+   *
+   * Every failure lands on the display as a sentence naming what was asked for and what
+   * came back. Nothing is drawn in place of a field that could not be read: a map that
+   * filled the gap would be the one thing Constitution VII forbids outright.
+   */
+  const readFieldFor = useMemo(
+    () =>
+      async (runId: string, collection: string | null, bounds: MapExtent, simTime: string | null): Promise<void> => {
+        const config = configuration.current;
+        if (config === null) {
+          mapField.current = {
+            cube: null,
+            because: cannotAskForField("where the query layer is"),
+            awaiting: false,
+          };
+          return;
+        }
+        const asked = fieldRequest(config, collection, bounds, simTime);
+        if (!isRequest(asked)) {
+          mapField.current = { cube: null, because: cannotAskForField(asked.missing), awaiting: false };
+          return;
+        }
+        try {
+          const response = await globalThis.fetch(asked.url);
+          if (!response.ok) {
+            mapField.current = {
+              cube: null,
+              because: fieldNotRead(asked.collection, `the query layer answered ${response.status}`),
+              awaiting: false,
+            };
+            return;
+          }
+          const read = readFieldCube(await response.json(), {
+            runId,
+            collection: asked.collection,
+            parameter: asked.parameter,
+          });
+          if (overlay.current.runId !== runId) {
+            // A later announcement overtook this read. Its own read is in flight and this
+            // one describes a run that is no longer current, so it is dropped rather than
+            // drawn under the newer run's frame.
+            return;
+          }
+          if (!read.ok) {
+            mapField.current = {
+              cube: null,
+              because: fieldNotRead(asked.collection, read.reason),
+              awaiting: false,
+            };
+            return;
+          }
+          mapField.current = {
+            cube: {
+              runId: read.runId,
+              collection: read.collection,
+              parameter: read.parameter,
+              longitudes: read.longitudes,
+              latitudes: read.latitudes,
+              depths: read.depths,
+              times: read.times,
+              values: read.values,
+              unit: read.unit,
+            },
+            because: null,
+            awaiting: false,
+          };
+          overlay.current = fieldRead(overlay.current);
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+          mapField.current = {
+            cube: null,
+            because: fieldNotRead(asked.collection, `the request did not complete: ${detail}`),
+            awaiting: false,
+          };
+        }
+      },
+    [],
+  );
+
   /** Asking the clock for a rate. Asking is all this page can do (FR-012). */
   const requestRateChange = useMemo(
     () =>
@@ -249,6 +352,20 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         }
         if (topic === RUN_PUBLISHED_TOPIC) {
           overlay.current = announceRun(overlay.current, decoded.value);
+          // The map's extent is the grid the announcement stated, re-read from every
+          // announcement rather than remembered, and the field is fetched because of the
+          // announcement and never on a schedule (017 FR-001, FR-003).
+          const bounds = extentFromAnnouncement(decoded.value);
+          if (bounds !== null) {
+            announcedExtent.current = bounds;
+            mapField.current = { cube: null, because: null, awaiting: true };
+            void readFieldFor(
+              overlay.current.runId ?? "",
+              overlay.current.collection,
+              bounds,
+              overlay.current.validFrom,
+            );
+          }
           return;
         }
         if (topic === PLAN_TOPIC && CONTROL_SCHEMAS.plan.validate(decoded.value)) {
@@ -269,7 +386,7 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         connection.current = state;
       },
     }),
-    [now],
+    [now, readFieldFor],
   );
 
   useEffect(() => {
@@ -322,6 +439,8 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           route: route.current,
           skill: skill.current,
           conditions: conditions.current,
+          mapField: mapField.current,
+          announcedExtent: announcedExtent.current,
         });
       }
       frame = requestAnimationFrame(draw);
@@ -345,6 +464,22 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           from within the window each declared.
         </p>
       </header>
+      <MapSurface
+        extent={chooseExtent(
+          loopView.announcedExtent,
+          extentFromDeclaration(
+            configuration.current?.map?.extent,
+            configuration.current?.map?.vertical,
+          ),
+        )}
+        field={loopView.mapField}
+        route={loopView.route}
+        conditions={loopView.conditions}
+        selectedVertex={selectedVertex}
+        onSelectVertex={setSelectedVertex}
+        maximumDrawnCells={configuration.current?.display.maximumDrawnCells}
+        graticuleSpacingDegrees={configuration.current?.map?.graticuleSpacingDegrees}
+      />
       <div className="panels">
         <ClockState clock={view.clock} />
         <ConnectionState

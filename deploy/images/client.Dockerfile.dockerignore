@@ -22,6 +22,10 @@ client/coverage
 config
 contracts
 !contracts/schemas
+# The topology matrix (018) imports the generated artefact directly, the way schemas.ts
+# imports the masters. The exception must follow the exclusion: Docker takes the last
+# matching pattern.
+!contracts/topology.json
 docs
 libs
 services

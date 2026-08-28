@@ -29,6 +29,11 @@ RUN corepack enable
 # ../../../contracts/schemas/clock.schema.json". Nothing caught it because this image had
 # never been built: no destination started the client until the profiles were promoted.
 COPY contracts/schemas ./contracts/schemas
+# The topology matrix (018) imports the generated artefact the same way schemas.ts imports
+# the masters — `../../../contracts/topology.json` — so it must sit beside `schemas/` in
+# the reproduced layout. The dockerignore's exception admits it to the context; this line
+# is the other half, and the build fails on the import if either half is missing.
+COPY contracts/topology.json ./contracts/topology.json
 COPY client ./client
 WORKDIR ${HARNESS_APP_ROOT}/client
 

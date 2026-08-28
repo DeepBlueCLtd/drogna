@@ -16,6 +16,8 @@ export interface ConfigOverrides {
   readonly fieldParameter?: string | undefined;
   /** Passing `null` is a destination that declares no extent, which the map states. */
   readonly map?: RuntimeConfig["map"] | null;
+  /** Passing `null` is a destination that declares no site root, which the badges state. */
+  readonly site?: RuntimeConfig["site"] | null;
 }
 
 /** What a destination that declares an extent declares, so a test says so in one word. */
@@ -59,5 +61,9 @@ export function runtimeConfig(overrides: ConfigOverrides = {}): RuntimeConfig {
       interpolateBetweenSamples: overrides.interpolate ?? true,
     },
     map: overrides.map === null ? undefined : (overrides.map ?? DECLARED_MAP),
+    site:
+      overrides.site === null
+        ? undefined
+        : (overrides.site ?? { standardsUrl: "http://site.invalid/standards" }),
   };
 }

@@ -191,9 +191,17 @@ genuine new crossing appear.
   marking stating what is actually known and from where; the browser-witnessed hop
   carries no such marking.
 - **FR-005**: The three read-path boundaries MUST join the existing boundary
-  classification under its stated rule, as: store-to-query bespoke core, query-to-proxy
-  bespoke core, proxy-to-browser well-chosen plumbing — each with its reason, held by the
-  same test that holds the existing twenty-two.
+  classification under its stated rule, each with its reason, held by the same
+  classification test that holds every other boundary. *Amended 2026-08-28, under this
+  spec's own Assumptions rule*: as drafted this requirement proposed store-to-query and
+  query-to-proxy as bespoke core, but the tree already classified all three — plumbing,
+  with reasons — in `client/src/legibility/classification.ts`, and under that table's
+  stated rule (bespoke is what carries drogna's own judgement; a standard read interface
+  is plumbing even where drogna wrote the provider) the tree's reading is the defensible
+  one. The classification test wins, as the Assumptions said it would, and the
+  requirement now records the reconciled reading rather than the superseded one. The
+  count "twenty-two" was likewise stale against a layout that had grown; the test counts
+  the table rather than trusting a number.
 - **FR-006**: Selecting any edge MUST show the last crossing's request, response facts,
   simulation time carried, and governing standard or schema, reusing the established
   inspector idiom; a boundary without traffic states its absence.

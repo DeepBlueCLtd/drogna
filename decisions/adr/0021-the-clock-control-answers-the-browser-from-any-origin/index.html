@@ -11,26 +11,24 @@
       
       
       
-        <link rel="prev" href="../site-tooling/">
-      
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Architecture decision records - drogna</title>
+        <title>ADR-0021: The clock's HTTP interface answers the browser from any origin - drogna</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -43,7 +41,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -70,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-decision-records" class="md-skip">
+        <a href="#adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin" class="md-skip">
           Skip to content
         </a>
       
@@ -86,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -106,7 +104,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture decision records
+              ADR-0021: The clock's HTTP interface answers the browser from any origin
             
           </span>
         </div>
@@ -210,7 +208,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -228,7 +226,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -282,7 +280,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../blog/" class="md-nav__link ">
+            <a href="../../../blog/" class="md-nav__link ">
               
   
   
@@ -381,7 +379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/archive/2026/" class="md-nav__link">
+      <a href="../../../blog/archive/2026/" class="md-nav__link">
         
   
   
@@ -478,7 +476,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/architecture/" class="md-nav__link">
+      <a href="../../../blog/category/architecture/" class="md-nav__link">
         
   
   
@@ -508,7 +506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/feature/" class="md-nav__link">
+      <a href="../../../blog/category/feature/" class="md-nav__link">
         
   
   
@@ -538,7 +536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/process/" class="md-nav__link">
+      <a href="../../../blog/category/process/" class="md-nav__link">
         
   
   
@@ -568,7 +566,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/standards/" class="md-nav__link">
+      <a href="../../../blog/category/standards/" class="md-nav__link">
         
   
   
@@ -667,7 +665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/overview/" class="md-nav__link">
+      <a href="../../../architecture/overview/" class="md-nav__link">
         
   
   
@@ -761,7 +759,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../subsystems/" class="md-nav__link ">
+            <a href="../../../subsystems/" class="md-nav__link ">
               
   
   
@@ -805,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c01-simulation-clock/" class="md-nav__link">
+      <a href="../../../subsystems/c01-simulation-clock/" class="md-nav__link">
         
   
   
@@ -833,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c02-environment-generator/" class="md-nav__link">
+      <a href="../../../subsystems/c02-environment-generator/" class="md-nav__link">
         
   
   
@@ -861,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c03-broker/" class="md-nav__link">
+      <a href="../../../subsystems/c03-broker/" class="md-nav__link">
         
   
   
@@ -889,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c04-simulated-sensors/" class="md-nav__link">
+      <a href="../../../subsystems/c04-simulated-sensors/" class="md-nav__link">
         
   
   
@@ -917,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c05-ingest-client/" class="md-nav__link">
+      <a href="../../../subsystems/c05-ingest-client/" class="md-nav__link">
         
   
   
@@ -945,7 +943,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c06-observation-store/" class="md-nav__link">
+      <a href="../../../subsystems/c06-observation-store/" class="md-nav__link">
         
   
   
@@ -973,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c07-feature-store/" class="md-nav__link">
+      <a href="../../../subsystems/c07-feature-store/" class="md-nav__link">
         
   
   
@@ -1001,7 +999,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c08-coverage-store/" class="md-nav__link">
+      <a href="../../../subsystems/c08-coverage-store/" class="md-nav__link">
         
   
   
@@ -1029,7 +1027,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c09-query-layer/" class="md-nav__link">
+      <a href="../../../subsystems/c09-query-layer/" class="md-nav__link">
         
   
   
@@ -1057,7 +1055,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c10-reverse-proxy/" class="md-nav__link">
+      <a href="../../../subsystems/c10-reverse-proxy/" class="md-nav__link">
         
   
   
@@ -1085,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c11-monitor/" class="md-nav__link">
+      <a href="../../../subsystems/c11-monitor/" class="md-nav__link">
         
   
   
@@ -1113,7 +1111,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c12-scheduler/" class="md-nav__link">
+      <a href="../../../subsystems/c12-scheduler/" class="md-nav__link">
         
   
   
@@ -1141,7 +1139,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c13-model-runner/" class="md-nav__link">
+      <a href="../../../subsystems/c13-model-runner/" class="md-nav__link">
         
   
   
@@ -1169,7 +1167,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c14-publisher/" class="md-nav__link">
+      <a href="../../../subsystems/c14-publisher/" class="md-nav__link">
         
   
   
@@ -1197,7 +1195,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c15-planner/" class="md-nav__link">
+      <a href="../../../subsystems/c15-planner/" class="md-nav__link">
         
   
   
@@ -1225,7 +1223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c16-telemetry/" class="md-nav__link">
+      <a href="../../../subsystems/c16-telemetry/" class="md-nav__link">
         
   
   
@@ -1253,7 +1251,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c17-offload-packager/" class="md-nav__link">
+      <a href="../../../subsystems/c17-offload-packager/" class="md-nav__link">
         
   
   
@@ -1281,7 +1279,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c18-browser-client/" class="md-nav__link">
+      <a href="../../../subsystems/c18-browser-client/" class="md-nav__link">
         
   
   
@@ -1345,7 +1343,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../algorithms/" class="md-nav__link ">
+            <a href="../../../algorithms/" class="md-nav__link ">
               
   
   
@@ -1389,7 +1387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/ensemble-spread/" class="md-nav__link">
+      <a href="../../../algorithms/ensemble-spread/" class="md-nav__link">
         
   
   
@@ -1417,7 +1415,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/advection/" class="md-nav__link">
+      <a href="../../../algorithms/advection/" class="md-nav__link">
         
   
   
@@ -1445,7 +1443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/informative-path-planning/" class="md-nav__link">
+      <a href="../../../algorithms/informative-path-planning/" class="md-nav__link">
         
   
   
@@ -1511,7 +1509,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../standards/" class="md-nav__link ">
+            <a href="../../../standards/" class="md-nav__link ">
               
   
   
@@ -1555,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/sensorthings/" class="md-nav__link">
+      <a href="../../../standards/sensorthings/" class="md-nav__link">
         
   
   
@@ -1583,7 +1581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/ogc-api-edr/" class="md-nav__link">
+      <a href="../../../standards/ogc-api-edr/" class="md-nav__link">
         
   
   
@@ -1611,7 +1609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/cf-conventions/" class="md-nav__link">
+      <a href="../../../standards/cf-conventions/" class="md-nav__link">
         
   
   
@@ -1639,7 +1637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/coveragejson/" class="md-nav__link">
+      <a href="../../../standards/coveragejson/" class="md-nav__link">
         
   
   
@@ -1674,7 +1672,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
+      <a href="../../../glossary/" class="md-nav__link">
         
   
   
@@ -1698,8 +1696,6 @@
       
   
   
-    
-  
   
   
     
@@ -1720,15 +1716,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1746,13 +1742,13 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1770,7 +1766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../site-tooling/" class="md-nav__link">
+      <a href="../../site-tooling/" class="md-nav__link">
         
   
   
@@ -1820,6 +1816,69 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-costs-stated-plainly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this costs, stated plainly
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternatives rejected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequence-for-the-acknowledgement-recorded-with-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequence for the acknowledgement, recorded with it
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1835,156 +1894,88 @@
 
 
 
-<h1 id="architecture-decision-records">Architecture decision records<a class="headerlink" href="#architecture-decision-records" title="Permanent link">&para;</a></h1>
-<p>A decision record exists for any decision that was hard to reverse, was
-genuinely contested, or rejected a plausible alternative. Routine choices do
-not earn one. Each record states the context it was decided in, the decision,
-and what the decision costs. A record that has been overtaken is marked
-superseded and kept, never deleted, because the reasoning is the point.</p>
-<p>There are 20 of them. The table below is generated at build time
-from the records themselves, so a status here cannot disagree with the status
-in the record it names.</p>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Decision</th>
-<th>Status</th>
-<th>Date</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="0001-binary-access/">0001</a></td>
-<td>Binary access rather than tiered or per-field</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0002-decorrelation-timescale-as-a-field/">0002</a></td>
-<td>Decorrelation timescale is a field, authored per feature</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0003-bespoke-edr-trajectory-provider/">0003</a></td>
-<td>Trajectory queries are served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0004-bespoke-sensorthings-provider/">0004</a></td>
-<td>SensorThings is served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0005-sound-speed-is-derived-not-stored/">0005</a></td>
-<td>Sound speed is derived at the point of use, not stored</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0006-heartbeat-cadence-is-real-time/">0006</a></td>
-<td>Heartbeat cadence and liveness windows are real time</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0007-host-time-for-display-smoothing/">0007</a></td>
-<td>Host time may smooth the display between clock samples</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0008-control-messages-reach-the-client-by-websocket-upgrade/">0008</a></td>
-<td>Control messages reach the client by WebSocket upgrade at the proxy</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0009-clock-transport-and-lockstep-mode/">0009</a></td>
-<td>The clock publishes on the control namespace, and gains a lockstep mode</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0010-site-tooling/">0010</a></td>
-<td>Tooling for the published site</td>
-<td>Accepted</td>
-<td>26 August 2026, amended 27 August 2026 (mathematics rendering settled)</td>
-</tr>
-<tr>
-<td><a href="0011-the-coverage-store-pointer-is-text/">0011</a></td>
-<td>The current-run pointer is a text file, not a symlink</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0012-sensors-may-read-the-clock-and-nothing-else/">0012</a></td>
-<td>Sensors and the ingest client may read the clock, and nothing else on the control branch</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0013-leakage-is-scored-per-released-variable/">0013</a></td>
-<td>A leakage statistic is scored per released variable, and the worst one is the answer</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0014-quality-flagging-is-the-ingestion-seam/">0014</a></td>
-<td>Quality flagging is the ingestion seam, not a field on an observation</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0015-a-sensor-may-announce-itself/">0015</a></td>
-<td>A sensor may announce itself, because the alternative was a display that lied</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0016-the-broker-credential-path-is-half-built/">0016</a></td>
-<td>No component could authenticate, and the credential path is now whole</td>
-<td>Accepted, and amended the same day — see "What changed a few hours later"</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0018-common-json-is-a-root-seed-not-a-set-of-defaults/">0018</a></td>
-<td><code>common.json</code> is a root seed, and the defaults mechanism it describes does not exist</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0019-the-planner-threshold-is-absolute-and-was-never-checked/">0019</a></td>
-<td>The planner's threshold stays absolute, and now has something to check it against</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0020-clearance-delegated-for-the-control-upgrade/">0020</a></td>
-<td>Clearance is binary for the released prefix and delegated for the control upgrade</td>
-<td>Proposed — drafted by an agent session, not accepted, not to be treated as decided</td>
-<td>28 August 2026</td>
-</tr>
-<tr>
-<td><a href="0021-the-clock-control-answers-the-browser-from-any-origin/">0021</a></td>
-<td>The clock's HTTP interface answers the browser from any origin</td>
-<td>Proposed — drafted by an agent session, not accepted, not to be treated as decided</td>
-<td>28 August 2026</td>
-</tr>
-</tbody>
-</table>
+<h1 id="adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin">ADR-0021: The clock's HTTP interface answers the browser from any origin<a class="headerlink" href="#adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin" title="Permanent link">&para;</a></h1>
+<div class="admonition info">
+<p class="admonition-title">Published from the repository's decision record</p>
+<p>This page is generated at build time from <code>docs/adr/0021-the-clock-control-answers-the-browser-from-any-origin.md</code>.
+The record is the original; this is a rendering of it, and editing the
+built page would change nothing.</p>
+</div>
+<p><strong>Status:</strong> Proposed — drafted by an agent session, not accepted, not to be treated as decided
+<strong>Date:</strong> 28 August 2026
+<strong>Requirements:</strong> SRD FR-10, FR-49, FR-53; ADR-0009; client FR-012
+<strong>Raised by:</strong> long-run-01, commit <code>e46bbf1</code>, which found the fault and deliberately left the
+decision: "adding CORS to a control endpoint is a decision about what may reach it from
+where, and this branch has already spent one such decision provisionally"</p>
+<blockquote>
+<p>This record is <strong>proposed</strong>, for the same reason ADR-0020 is: the change exists and ought
+not to sit in the tree undocumented, and the fact that it exists is not an argument that
+it is settled.</p>
+</blockquote>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The clock's HTTP interface exists for exactly two things a subscription cannot do
+(ADR-0009): setting the rate, and answering "what is the time now" for a component catching
+up. FR-10 and FR-49 say the rate control belongs in the browser, and FR-53 depends on it:
+a capture pins the clock to zero through the control the client offers a viewer.</p>
+<p>The browser always arrives cross-origin. The page is served from the client's port (8080
+locally) and the clock listens on its own (8090); a <code>fetch</code> carrying
+<code>Content-Type: application/json</code> between two origins is preflighted, and the clock's
+handler — built on the standard library's <code>BaseHTTPRequestHandler</code> — answered <code>OPTIONS</code>
+with <code>501 Unsupported method</code> and no grant. The browser then never sends the POST and
+reports only "Failed to fetch". <strong>The rate control has therefore never worked from a
+browser</strong>, the one place it is for.</p>
+<p>Nobody had seen it fail because nothing had ever exercised it. The capture workflow used to
+serve the built client with <code>vite preview</code> and no clock behind it, so <code>pinIfAClockAnswers</code>
+returned early on every run. The first time CI brought the real harness up
+(PR #21), the pin was reached for the first time and found the door shut.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>The clock answers the preflight and states the grant on every response:
+<code>Access-Control-Allow-Origin: *</code>, with <code>OPTIONS</code> answered <code>204</code> naming the methods and the
+<code>Content-Type</code> header. No route, host or origin appears in the configuration for this,
+because the grant does not vary: the interface either serves browsers or it does not.</p>
+<h2 id="what-this-costs-stated-plainly">What this costs, stated plainly<a class="headerlink" href="#what-this-costs-stated-plainly" title="Permanent link">&para;</a></h2>
+<p>CORS is a browser's rule about which <em>pages</em> may read which <em>servers</em>; it was never the
+clock's authentication, because the clock has none. Before this change, any local process
+could already command the clock with one <code>curl</code>; the bind address
+(<code>127.0.0.1</code> in the local destination) was and remains the actual boundary.</p>
+<p>What the wildcard adds is this: a page from <strong>any</strong> origin loaded in a viewer's browser —
+including a hostile site the viewer happens to visit — may now send commands to any clock
+its browser can reach, typically <code>localhost:8090</code> on the viewer's own machine. Before, the
+failed preflight kept the command from being sent at all. The exposure is the ability to
+pause or accelerate a local demonstration clock, on a harness whose data is synthetic and
+says so; there is no credential to steal on this surface and no data to read that the
+query layer does not already publish. If that judgement is wrong, the revert is two lines
+in <code>services/clock/src/harness_clock/http.py</code> (the <code>do_OPTIONS</code> handler and the header in
+<code>_write</code>), and the pair capture returns to refusing on an unpinnable clock — loudly, as
+it did.</p>
+<h2 id="alternatives-rejected">Alternatives rejected<a class="headerlink" href="#alternatives-rejected" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Reflecting a configured allowed origin.</strong> The clock's configuration does not know the
+  client's public URL, and teaching it one adds a cross-component coupling for a grant
+  that would still, on a developer's machine, have to name <code>localhost</code> — indistinguishable
+  in practice from the wildcard, at the price of a new way for two documents to disagree.</li>
+<li><strong>Serving the clock's control through the proxy, same-origin with the client.</strong> Probably
+  the right long-run shape, and the same topology change ADR-0020 declined to make
+  provisionally: it moves the exposure boundary, which is a person's decision, not a
+  CI fix.</li>
+</ul>
+<h2 id="consequence-for-the-acknowledgement-recorded-with-it">Consequence for the acknowledgement, recorded with it<a class="headerlink" href="#consequence-for-the-acknowledgement-recorded-with-it" title="Permanent link">&para;</a></h2>
+<p>With the preflight answered, a second fault surfaced behind the first, and the two ship
+together because only together do they make the pin land. The client's rule (FR-012) is
+that the rate in force arrives only as a <code>ctl/clock</code> sample, and a request is resolved by a
+sample carrying a later tick. A rate of zero stops emission, so no later tick can ever
+acknowledge the one rate a capture needs. The clock now answers a command that stops
+emission by re-publishing the tick in force with the new rate and mode — one sample,
+under the same lock as emission — and the client accepts a same-tick sample carrying
+exactly the requested rate as the acknowledgement. The message schema's prose records the
+repeat; tick values remain quantised and no tick is invented, so ADR-0009's replay
+arithmetic is untouched.</p>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -2010,28 +2001,6 @@ in the record it names.</p>
         <footer class="md-footer">
   
     
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../site-tooling/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Site tooling">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                Site tooling
-              </div>
-            </div>
-          </a>
-        
-        
-      </nav>
-    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -2053,10 +2022,10 @@ in the record it names.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

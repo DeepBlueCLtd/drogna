@@ -22,3 +22,16 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0011](0011-the-coverage-store-pointer-is-text.md) | The current-run pointer is a text file, not a symlink | Accepted |
 | [0012](0012-sensors-may-read-the-clock-and-nothing-else.md) | Sensors may read the clock, and nothing else on the control branch | Accepted |
 | [0013](0013-leakage-is-scored-per-released-variable.md) | A leakage statistic is scored per released variable, and the worst one is the answer | Accepted |
+| [0014](0014-quality-flagging-is-the-ingestion-seam.md) | Quality flagging is the ingestion seam, not a field on an observation | Accepted |
+| [0015](0015-a-sensor-may-announce-itself.md) | A sensor may announce itself, because the alternative was a display that lied | Accepted |
+| [0016](0016-the-broker-credential-path-is-half-built.md) | No component could authenticate, and the credential path is now whole | Accepted, amended same day |
+| [0018](0018-common-json-is-a-root-seed-not-a-set-of-defaults.md) | `common.json` is a root seed, and the defaults mechanism it describes does not exist | Accepted |
+| [0019](0019-the-planner-threshold-is-absolute-and-was-never-checked.md) | The planner's threshold stays absolute, and now has something to check it against | Accepted |
+| [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Proposed |
+| [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Proposed |
+
+There is no ADR-0017. The number was never used — no file by that number appears anywhere
+in the history — and renumbering the records that exist would break references already in
+commit messages, so the gap stays. The rows from 0014 on were added to this index on
+28 August 2026, when a session found it had silently stopped at 0013 — the files were
+always the record; this table is a claim about them.

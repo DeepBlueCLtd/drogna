@@ -19,6 +19,17 @@ The standard library's ``send_response`` stamps a ``Date`` header from the host 
 Nothing in drogna reads it, and the principle is easier to keep when the read is not there
 at all, so the responses below are assembled with ``send_response_only`` and carry only the
 headers they need.
+
+Every response carries ``Access-Control-Allow-Origin: *``, and ``OPTIONS`` answers the
+preflight, because the browser is the one place this interface is *for* (FR-10, FR-49) and
+the browser always arrives cross-origin: the page is served from the client's port and the
+clock listens on its own, so a command carrying ``Content-Type: application/json`` is
+preflighted and, unanswered, never sent. The control had therefore never worked from a
+browser until the capture workflow first ran the client against a real clock and found the
+door shut. The wildcard is a stated decision, not a shrug — ADR-0021 records what it grants
+(any page in a viewer's browser that can reach the bind address may command the clock, which
+is what any local process already could), what bounds it (the bind address), and the
+two-line revert.
 """
 
 from __future__ import annotations
@@ -82,6 +93,20 @@ class ClockRequestHandler(BaseHTTPRequestHandler):
             return
         self._respond(HTTPStatus.OK, state)
 
+    def do_OPTIONS(self) -> None:
+        """Answer the browser's preflight, whatever route it asks about.
+
+        The grant does not vary by route, so neither does the answer; a preflight for a
+        route that does not exist fails on the request that follows it, with the 404 that
+        names the route.
+        """
+        self.send_response_only(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _body(self) -> Mapping[str, Any] | None:
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -112,6 +137,9 @@ class ClockRequestHandler(BaseHTTPRequestHandler):
         self.send_response_only(status)
         self.send_header("Content-Type", _JSON)
         self.send_header("Content-Length", str(len(payload)))
+        # On the response as well as the preflight: a browser discards a cross-origin
+        # response that does not repeat the grant, however the preflight answered.
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(payload)
 

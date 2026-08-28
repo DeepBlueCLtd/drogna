@@ -476,12 +476,38 @@ def generate_typescript(
 # ---------------------------------------------------------------------------------
 
 
+AUTHORED = "authored"
+VENDORED = "vendored"
+ALIAS_MASTERS = "alias-masters"
+NOT_GENERATED = "not-generated"
+
+DOCUMENT_KINDS = (AUTHORED, VENDORED)
+SCHEMA_POLICIES = (ALIAS_MASTERS, NOT_GENERATED)
+
+# The policy a document gets when the manifest declares none. Authored, because that is the
+# stricter of the two: a document nobody classified is held to the rule that every shape it
+# speaks is defined once under contracts/schemas/, and it fails by name if it is not. The
+# looser reading — treat the unclassified as vendored — would let a hand-written document
+# state a second definition of a shape simply by nobody having written it down here, which
+# is the failure NFR-02 exists to prevent.
+DEFAULT_POLICY: Mapping[str, str] = {"kind": AUTHORED, "schemas": ALIAS_MASTERS}
+
+
 @dataclass(frozen=True)
 class Document:
-    """One OpenAPI document: the hand-written harness one, or a vendored snapshot."""
+    """One OpenAPI document: the hand-written harness one, or a vendored snapshot.
+
+    ``kind`` and ``schemas`` are the per-document generator options T031 asks for, read
+    from ``[[document]]`` in the manifest. They are what stops the two documents being
+    generated under one policy: the hand-written one is 3.1 and must alias masters, and the
+    vendored one is pygeoapi's own 3.0.2 account of the interface, whose shapes are its own.
+    The argument for each is in ``contracts/openapi/generators.toml``, beside the values.
+    """
 
     path: Path
     stem: str
+    kind: str = AUTHORED
+    schemas: str = ALIAS_MASTERS
 
     @property
     def python_path(self) -> Path:
@@ -492,16 +518,54 @@ class Document:
         return TYPESCRIPT_PACKAGE / HTTP_DIRECTORY / f"{self.stem}.ts"
 
 
-def discover_documents(root: Path) -> list[Document]:
+def document_policies(manifest: Mapping[str, Any]) -> dict[str, Mapping[str, str]]:
+    """The manifest's ``[[document]]`` entries, keyed by repository-relative path."""
+    policies: dict[str, Mapping[str, str]] = {}
+    for entry in manifest.get("document", []):
+        path = str(entry["path"])
+        kind = str(entry.get("kind", DEFAULT_POLICY["kind"]))
+        schemas = str(entry.get("schemas", DEFAULT_POLICY["schemas"]))
+        if kind not in DOCUMENT_KINDS:
+            raise ChainError(
+                f"{MANIFEST_FILE}: document {path} declares kind {kind!r}; "
+                f"the chain knows {', '.join(DOCUMENT_KINDS)}"
+            )
+        if schemas not in SCHEMA_POLICIES:
+            raise ChainError(
+                f"{MANIFEST_FILE}: document {path} declares schemas {schemas!r}; "
+                f"the chain knows {', '.join(SCHEMA_POLICIES)}"
+            )
+        policies[path] = {"kind": kind, "schemas": schemas}
+    return policies
+
+
+def discover_documents(root: Path, manifest: Mapping[str, Any]) -> list[Document]:
     directory = root / OPENAPI_DIRECTORY
     if not directory.is_dir():
         return []
+    policies = document_policies(manifest)
     found: list[Document] = []
     for path in sorted(directory.iterdir()):
         if not path.is_file() or not path.name.endswith(OPENAPI_SUFFIXES):
             continue
+        relative = path.relative_to(root)
         stem = path.name.split(".openapi.")[0].replace("-", "_")
-        found.append(Document(path=path.relative_to(root), stem=stem))
+        policy = policies.pop(relative.as_posix(), DEFAULT_POLICY)
+        found.append(
+            Document(
+                path=relative,
+                stem=stem,
+                kind=policy["kind"],
+                schemas=policy["schemas"],
+            )
+        )
+    if policies:
+        missing = ", ".join(sorted(policies))
+        raise ChainError(
+            f"{MANIFEST_FILE} declares a policy for {missing}, which is not an OpenAPI "
+            f"document in {OPENAPI_DIRECTORY}. A policy for a document nobody generates "
+            "reads as coverage the chain does not have"
+        )
     return found
 
 
@@ -527,6 +591,122 @@ def _relative_import(source: Path, target: Path) -> str:
     return "." * (upwards + 1) + remainder
 
 
+HTTP_METHODS = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
+"""The keys of a Path Item Object that are operations. Everything else there is not one.
+
+Spelt out rather than inferred, because a Path Item also carries `summary`, `description`,
+`servers` and `parameters`, and a rule of "every mapping under a path" would emit those as
+operations without noticing.
+"""
+
+
+@dataclass(frozen=True)
+class Surface:
+    """The paths a document declares, as generated lines and the names they export."""
+
+    imports: list[str]
+    python: list[str]
+    typescript: list[str]
+    names: list[str]
+
+
+def _surface(loaded: Mapping[str, Any], document: Document) -> Surface | None:
+    """The document's paths, its methods and its operation identifiers, as types.
+
+    This is the operation-level generation ``contracts/openapi/README.md`` said the first
+    document with paths would extend the chain to. It is deliberately the surface and not
+    the payloads: a path a client cannot mistype, and a path the interface stopped serving
+    becoming a compile error rather than a 404 somebody meets in a browser.
+
+    Parameters are not emitted, and the manifest says why at length: in the vendored
+    document most are ``$ref``s into OGC's published documents on the internet, which
+    FR-016 forbids this chain to fetch and whose last URL segment is a guess at a name
+    rather than a name. A document that states its parameters inline is a later change to
+    this function, made against a document that does.
+
+    Returns ``None`` for a document with no paths, so that the hand-written one — whose
+    ``paths`` is still empty — generates exactly what it generated before.
+    """
+    paths = loaded.get("paths") or {}
+    if not paths:
+        return None
+
+    prefix = type_name(document.stem)
+    path_type = f"{prefix}Path"
+    paths_constant = _shout(f"{document.stem}_paths")
+    operations_constant = _shout(f"{document.stem}_operations")
+
+    operations: dict[str, dict[str, str]] = {}
+    for path, item in sorted(paths.items()):
+        if not isinstance(item, Mapping):
+            raise ChainError(f"{document.path}: paths/{path} is not a path item object")
+        declared = {
+            method: str(operation.get("operationId", ""))
+            for method, operation in item.items()
+            if method in HTTP_METHODS and isinstance(operation, Mapping)
+        }
+        missing = sorted(method for method, identifier in declared.items() if not identifier)
+        if missing:
+            raise ChainError(
+                f"{document.path}: paths/{path} declares {', '.join(missing)} with no "
+                "operationId. An operation with no identifier cannot be named in either "
+                "language; the document has to name it"
+            )
+        operations[str(path)] = declared
+
+    ordered = sorted(operations)
+
+    python = [
+        f"{path_type} = Literal[",
+        *[f"    {json.dumps(path)}," for path in ordered],
+        "]",
+        "",
+        f"{paths_constant}: Final[tuple[{path_type}, ...]] = (",
+        *[f"    {json.dumps(path)}," for path in ordered],
+        ")",
+        "",
+        f"{operations_constant}: Final[Mapping[{path_type}, Mapping[str, str]]] = {{",
+    ]
+    for path in ordered:
+        methods = ", ".join(
+            f"{json.dumps(method)}: {json.dumps(identifier)}"
+            for method, identifier in sorted(operations[path].items())
+        )
+        python.append(f"    {json.dumps(path)}: {{{methods}}},")
+    python.append("}")
+
+    typescript = [
+        f"export type {path_type} =",
+        *[f"  | {json.dumps(path)}" for path in ordered],
+        "  ;",
+        "",
+        f"export const {paths_constant} = [",
+        *[f"  {json.dumps(path)}," for path in ordered],
+        "] as const;",
+        "",
+        f"export const {operations_constant} = {{",
+    ]
+    for path in ordered:
+        methods = ", ".join(
+            f"{json.dumps(method)}: {json.dumps(identifier)}"
+            for method, identifier in sorted(operations[path].items())
+        )
+        typescript.append(f"  {json.dumps(path)}: {{ {methods} }},")
+    typescript.append("} as const;")
+
+    return Surface(
+        imports=["from collections.abc import Mapping", "from typing import Final, Literal"],
+        python=python,
+        typescript=typescript,
+        names=[path_type, paths_constant, operations_constant],
+    )
+
+
+def _shout(stem: str) -> str:
+    """`query_layer_paths` as `QUERY_LAYER_PATHS`, for a module-level constant."""
+    return stem.replace("-", "_").upper()
+
+
 def generate_http(
     root: Path,
     documents: Sequence[Document],
@@ -549,6 +729,38 @@ def generate_http(
         loaded = _load_document(root, document)
         if "openapi" not in loaded:
             raise ChainError(f"{document.path}: no `openapi` version key")
+
+        surface = _surface(loaded, document)
+
+        if document.schemas == NOT_GENERATED:
+            # A vendored document's shapes are the emitter's, not drogna's boundary. The
+            # manifest carries the argument; what is generated here is the surface alone.
+            if surface is None:
+                continue
+            generated[document.python_path] = normalise(
+                "\n".join(
+                    [
+                        "from __future__ import annotations",
+                        "",
+                        *surface.imports,
+                        "",
+                        *surface.python,
+                        "",
+                        f"__all__ = [{', '.join(json.dumps(n) for n in sorted(surface.names))}]",
+                    ]
+                ),
+                source=str(document.path),
+                comment="#",
+                scratch=scratch,
+            )
+            generated[document.typescript_path] = normalise(
+                "\n".join(surface.typescript),
+                source=str(document.path),
+                comment="//",
+                scratch=scratch,
+            )
+            continue
+
         schemas = (loaded.get("components") or {}).get("schemas") or {}
         aliases: list[tuple[str, Master, str]] = []
         for key, schema in schemas.items():
@@ -578,10 +790,12 @@ def generate_http(
                 )
             aliases.append((declared, master, fragment))
 
-        if not aliases:
+        if not aliases and surface is None:
             continue
 
         python_lines = ["from __future__ import annotations", ""]
+        if surface is not None:
+            python_lines.extend([*surface.imports, ""])
         typescript_lines = []
         for declared, master, _fragment in sorted(aliases):
             python_lines.append(
@@ -595,7 +809,12 @@ def generate_http(
             if not specifier.startswith("."):
                 specifier = f"./{specifier}"
             typescript_lines.append(f"export type {{ {declared} }} from {json.dumps(specifier)};")
-        exported = ", ".join(f'"{declared}"' for declared, _, _ in sorted(aliases))
+        names = [declared for declared, _, _ in sorted(aliases)]
+        if surface is not None:
+            python_lines.extend(["", *surface.python])
+            typescript_lines.extend(["", *surface.typescript])
+            names.extend(surface.names)
+        exported = ", ".join(f'"{name}"' for name in sorted(names))
         python_lines.extend(["", f"__all__ = [{exported}]"])
 
         generated[document.python_path] = normalise(
@@ -638,7 +857,7 @@ def generated_tree(root: Path, scratch: Path) -> dict[Path, str]:
     tree: dict[Path, str] = {}
     tree.update(generate_python(manifest, masters, bundle_directory, scratch))
     tree.update(generate_typescript(masters, bundled, scratch))
-    tree.update(generate_http(root, discover_documents(root), masters, scratch))
+    tree.update(generate_http(root, discover_documents(root, manifest), masters, scratch))
 
     for entry in manifest.get("copy", []):
         source = root / entry["source"]

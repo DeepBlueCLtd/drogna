@@ -109,13 +109,42 @@ inventory is the list of work outstanding rather than a list of permissions gran
 - Python packages: `snake_case`, importable as `harness_core`, `harness_<service>`.
 - Message topic namespaces: `obs/#` for observation traffic, `ctl/#` for control
   events. Sensors may publish only under `obs/`. ACLs enforce this.
-- Control topics in use: `ctl/clock`, `ctl/divergence`, `ctl/run-request`,
-  `ctl/run-started`, `ctl/run-published`, `ctl/plan`, `ctl/heartbeat`, `ctl/telemetry`.
-  The list is extended by the feature that first needs a topic, not treated as closed.
 - Observation topics: `obs/<thing-id>/<datastream-id>`.
 - JSON Schema files are named for the message: `contracts/schemas/<topic-noun>.schema.json`,
-  with `$id` of the form `https://schemas.harness.invalid/<name>.schema.json`.
+  with `$id` of the form `https://schemas.harness.invalid/<name>.schema.json`. That
+  convention is what lets the topology artefact below resolve a topic to the master that
+  governs it, so it is load-bearing rather than tidy.
 - Config schemas: `contracts/schemas/config.<component>.schema.json`.
+
+## The topology, and where it is now written down
+
+**The list of topics in use is `contracts/topology.json`, not this document.** This
+section used to carry it, extended by whichever feature first needed a topic and checked
+by nothing, which is the shape of record this repository has already paid for once. It is
+derived now — by `scripts/scan_topology.py`, from `deploy/broker/acl`, from the roles the
+destination configurations name, and from the topics the components' own source binds to
+module-level constants — and `scripts/check_topology_drift.py` fails the build when the
+committed document no longer matches a fresh scan. Adding a topic therefore means adding
+it to a component and regenerating, and it means editing nothing here.
+
+What the artefact records, per topic: the namespace, the master that governs its payloads,
+the components whose broker role permits them to publish, the components whose role
+permits them to subscribe, and every place in the tree that names it, with file, line and
+constant.
+
+Two things it deliberately does not record, and a reader should not infer either.
+`publishers` and `subscribers` are **permissions**, read from the access control list,
+which is complete because mosquitto enforces it and coarse wherever it is coarse:
+`drogna_control` carries `readwrite ctl/#`, so nine components may publish a run request
+although only the scheduler does (FR-011). What narrows that is `named_by`, and the
+narrowing is a fact about the source rather than a rule at the broker. And nothing in the
+document is a claim about a **running** system — no component is said to exist, to be
+alive, or ever to have sent anything. A display built on it takes its structure from the
+artefact and its illumination from received traffic, and the two are never the same source
+(Constitution VII).
+
+The master describing the artefact is `contracts/schemas/topology.schema.json`, and both
+language forms come from the usual chain.
 
 ## Configuration contract
 

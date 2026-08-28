@@ -17,9 +17,9 @@ outcomes rather than plans.
 | 003 | Component shell client | FR-01, FR-45, FR-52, C-18 | Delivered. T040 first-paint measurement never taken |
 | 004 | Environment generator | C-02, FR-02..FR-05 | Delivered. T044 size/time measurement never taken |
 | 005 | Compose deployment | NFR-05..NFR-07 | Delivered. T028 reset-then-reseed proof still a human ritual |
-| 006 | Generated types | NFR-01..NFR-03 | Delivered. T029–T031 unblocked since 008 shipped; note was stale |
+| 006 | Generated types | NFR-01..NFR-03 | Delivered. T029–T031, T039, T040 done 28 Aug (lane C); only T025, a second operating system, is open |
 | 007 | Observation path | C-03..C-07, FR-12..FR-18 | Delivered, live |
-| 008 | Query layer | C-08, C-09, FR-19..FR-21 | Delivered. T062 waits on a live published run; SensorThings sets 404 |
+| 008 | Query layer | C-08, C-09, FR-19..FR-21 | Delivered. T062 waits on a live published run; the SensorThings 404 is fixed (lane C) |
 | 009 | Control loop | C-11..C-14, FR-22..FR-31 | Passes in-process; **not wired live** — T052–T058 outstanding |
 | 010 | Telemetry and quality | C-16, FR-37, FR-38 | Delivered |
 | 011 | Adaptive planner | C-15, FR-32..FR-36 | Delivered |
@@ -51,8 +51,9 @@ findings, nineteen ADRs, session logs that record what decisions cost. **Evidenc
   message iterable and exit 0. Only the monitor opens a broker subscription (009
   T058). No divergence becomes a run; no run is ever published live; 008 T062
   correctly answers "no run is current".
-- The SensorThings entity sets 404 against the running query layer
-  (long-run-01 BLOCKED, 2026-08-28T10:15).
+- ~~The SensorThings entity sets 404 against the running query layer.~~ Fixed 28 August
+  by lane C: the routing was sound and the advertised links were a collection short of it
+  (long-run-01 BLOCKED, 2026-08-28T12:55).
 - deck.gl was a declared dependency nothing under `client/src` imported; the uncertainty
   and route displays were built and tested with no surface to draw on. Feature 017 has
   built that surface (wave 6, lane B): the map draws its extent and graticule from served
@@ -144,16 +145,29 @@ re-litigates them.
 | 015 reconciliation outcome block | "there is no `site/gates/` directory", "US2 does not exist" | contradicted by the per-task notes above it; trust those |
 | 014 T040, T045, T046 | nothing — no note at all | unknown; the only unticked tasks in the repository with no reason recorded |
 
+**Closed by lane E, 28 August 2026.** Rows three and four of that table are settled against
+the tree, and the two documentation carry-overs beside them with them.
+`specs/015-published-site/tasks.md` now carries a dated correction appended beneath the
+27 August outcome block — never a rewrite of it — recording that sixteen subsystem pages say
+"built" and two "partly built", that `site/gates/` and `docs/manifest.yaml` both exist, and
+that the records are published. Fourteen of the nineteen partial marks were re-checked and
+ticked; five remain partial and each now names what specifically is missing. 007 T045 is
+written as `docs/architecture/observation-path.md`. 008 T058's tick was right and its note
+stale; 008 T006's tick was wrong and its note right, so it is unticked and cross-referenced to
+009 T055, which carries the same master. ADR-0020 is accepted and the viewer credential is
+documented as a non-secret. PR-08's gap is closed: seven entries were written for 006, 007,
+008, 011, 012, 013 and 014, so every delivered feature has one.
+
 ## The genuinely outstanding work, consolidated
 
 | Cluster | Items | Why it matters |
 |---|---|---|
 | The loop, live | 009 T052–T055, T058 (keystone); then 008 T062 follows | AT-02's SRD wording — "visibly, end to end, within the client" — becomes true of the running stack |
-| The read path's bug | SensorThings 404 (BLOCKED 2026-08-28T10:15) | FR-19 is half-served until it answers |
+| ~~The read path's bug~~ | ~~SensorThings 404~~ — done, lane C, 28 August | FR-19 is served: 23 links walked from the service root over HTTP, all 200 |
 | The map | 017, delivered in wave 6 lane B; the field it draws waits on lane A publishing a run | closes 012's recorded partials; first thing a visitor looks at |
 | Deploy simplification | trust auth per the decision above; 005 T028 | retires the DSN-secret machinery; proves the reset-reseed claim |
 | Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
-| Generated types carry-over | 006 T029–T031, T039, T040 | note was stale; unblocked since 008 shipped |
+| ~~Generated types carry-over~~ | ~~006 T029–T031, T039, T040~~ — done, lane C, 28 August | the query layer's contract is vendored and generated from; ADR-0022 records the generator selection |
 | The topology contract | 018 story 2 (scanner, artefact, drift gate) | this repository's own medicine applied to its own topology; blocks nothing and is blocked by nothing |
 | The scope amendment | SRD growth for 019/020 | decided; wants drafting and the owner's review |
 | Unevidenced success criteria | 003 T040, 004 T044 | measured claims the record asserts and nothing measures |

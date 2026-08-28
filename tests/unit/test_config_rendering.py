@@ -129,3 +129,36 @@ def test_the_packaged_common_schema_is_byte_identical_to_its_master() -> None:
     ).read_bytes()
     master = (REPO_ROOT / "contracts" / "schemas" / "config.common.schema.json").read_bytes()
     assert packaged == master
+
+
+def test_the_sensorthings_base_url_is_where_the_rendered_configuration_puts_the_provider() -> None:
+    """The links the interface serves must name the path pygeoapi actually routes.
+
+    Every ``@iot.selfLink``, ``@iot.navigationLink`` and entity-set url the SensorThings
+    service emits is built on ``options.base_url``. pygeoapi reaches a feature provider at
+    ``<server.url>/collections/<collection>/items``, and the resource path follows as
+    ``<path:item_id>``. So the base must be that, and not the server url — a base one
+    collection short advertises an entity set at a path nothing serves, which is what the
+    running stack answered 404 to while every in-process test walked the same links
+    happily. Read out of the rendered document rather than asserted against a literal, so
+    that moving the collection moves the base with it or fails here.
+    """
+    import yaml
+
+    rendered = yaml.safe_load(render_from_document(document("local")))
+    collections = [
+        (name, resource)
+        for name, resource in rendered["resources"].items()
+        if any(
+            provider["name"] == "plugins.sensorthings_provider.DrognaSensorThingsProvider"
+            for provider in resource["providers"]
+        )
+    ]
+    assert len(collections) == 1, "exactly one collection is served by the SensorThings provider"
+    name, resource = collections[0]
+    options = next(
+        provider["options"]
+        for provider in resource["providers"]
+        if provider["name"] == "plugins.sensorthings_provider.DrognaSensorThingsProvider"
+    )
+    assert options["base_url"] == f"{rendered['server']['url']}/collections/{name}/items"

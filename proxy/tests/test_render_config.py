@@ -234,15 +234,40 @@ def test_a_refusal_never_happens_before_the_credential_is_examined(destination: 
 
 @pytest.mark.parametrize("destination", DESTINATION_NAMES)
 def test_the_clearance_is_declared_once_at_server_level(destination: str) -> None:
-    """A location that forgot it would be a released surface nobody chose to release."""
+    """A location that forgot it would be a released surface nobody chose to release.
+
+    The clearance is still declared exactly once, at server level. What this test now also
+    pins is the single location permitted to step outside it: the control upgrade, which a
+    browser cannot reach through HTTP Basic at all, and whose boundary is delegated to the
+    broker's own ACL instead. That exemption is PROVISIONAL — see
+    docs/agent-sessions/long-run-01/DECISIONS.md and the *proposed* amendment to ADR-0001.
+
+    Written as "one declaration, and one named opt-out" rather than relaxed to a count,
+    because the failure this guards against is a location added later that quietly carries
+    `auth_basic off` — which is indistinguishable from the released set growing by accident.
+    A second opt-out, or an opt-out anywhere but the upgrade, fails here.
+    """
     published, _health = blocks(rendered(destination), "server")
-    outside_locations = [
+    declarations = [
         line
         for line in published.splitlines()
         if line.startswith("auth_basic") and not line.startswith("auth_basic_user_file")
     ]
 
-    assert len(outside_locations) == 1
+    document = load(destination)
+    realm = document["proxy"]["credentials"]["realm"]
+    assert [line for line in declarations if line != "auth_basic off;"] == [
+        f'auth_basic "{realm}";'
+    ]
+    assert declarations.count("auth_basic off;") == 1
+
+    opted_out = [
+        header
+        for header, body in location_bodies(rendered(destination)).items()
+        if "auth_basic off;" in body
+    ]
+    upgrade_prefix = document["proxy"]["control"]["upgrade_prefix"]
+    assert opted_out == [f"location = {upgrade_prefix}"]
 
 
 @pytest.mark.parametrize("destination", DESTINATION_NAMES)

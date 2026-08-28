@@ -362,3 +362,51 @@ record. All 13 gates clean, client green.
 profile today, so nothing is failing — but the first component that connects as one of them
 will hit exactly what I hit. Should they get generated secrets on the broker's model, or is
 the intent that they authenticate another way?
+## 2026-08-28T08:30 — `/ctl` is exempt from `auth_basic`; the broker's ACL is the boundary there
+
+**PROVISIONAL, and authorised explicitly rather than taken on judgement.** Ian answered the
+BLOCKED entries of 22:35 and 23:45 directly: exempt `/ctl`, leave the released prefix
+alone, do not serve the client from behind the proxy, do not touch `public_url`. The ADR
+amendment drafted alongside is marked *proposed*, not accepted, and wants review.
+
+**Where**: `proxy/templates/upgrade-location.conf.template`,
+`proxy/tests/test_render_config.py`, `deploy/images/client-config.sh` (new),
+`deploy/images/client.Dockerfile`, `docs/adr/0001-*.md`
+
+**What I did**: added `auth_basic off;` to the control upgrade location only. `/ctl` now
+answers 101 to an upgrade carrying no credential; `/released/drogna-forecast` still answers
+401. Both watched.
+
+`test_the_clearance_is_declared_once_at_server_level` asserted exactly one `auth_basic`
+line and would have failed. It is narrowed rather than relaxed: one server-level
+declaration, and exactly one opt-out which must be the upgrade location. Watched failing —
+planting `auth_basic off;` in the released location gives `assert 3 == 1` at both
+destinations — then reverted.
+
+**A second fault, found because the first was fixed.** With the proxy open, the shell still
+read "0 of 18" and the proxy log showed `GET /ctl status=101` once every reconnect period:
+upgrading, then refused by the broker's CONNECT. There are three copies of the client's
+configuration and the browser was served the wrong one. `config/local/client.json` names
+`drogna_viewer`; the rendered copy under `deploy/.runtime/` carries the injected secret; and
+`client/public/config.json`, baked into the image and actually served, names no role at all.
+The render had never reached the page.
+
+Fixed with `/docker-entrypoint.d/40-drogna-config.sh`, which copies the mounted rendered
+document over the placeholder at start-up. It is a copy and not an nginx `alias` because the
+mounted file is 0600 and owned by the deployer, so a worker running as `nginx` would answer
+403 on Linux while a Docker Desktop bind mount would appear to work — the divergence
+`CLAUDE.md` names. The entrypoint runs as root, before the workers drop.
+
+**The consequence that wants your eye tomorrow**: the served copy is world-readable,
+because a browser has to fetch it. The viewer credential is therefore readable by anyone who
+can load `:8080`. The broker's ACL still makes that identity subscribe-only on `ctl/` with
+no rule granting `obs/`, so what it can *reach* is unchanged — but it is no longer behind the
+proxy's clearance, and under the previous shape it would have been. This follows from the
+decision rather than adding to it, and it is the part I would want reviewed first.
+
+**Not verified in a browser yet.** The permission classifier in this session refused the
+headless-Chrome screenshot and the fetch of the rendered config — the same commands having
+run repeatedly earlier — so the last step of goal 1 is unconfirmed. The container-side
+evidence is in place: the entrypoint logs `client: serving the rendered configuration from
+/etc/drogna/client.json`, and the proxy upgrades without a credential. Whether the shell
+now lights is exactly what has not been seen.

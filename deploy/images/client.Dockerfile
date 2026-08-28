@@ -53,6 +53,13 @@ ARG HARNESS_NGINX_TEMPLATE_DIR
 COPY --from=build ${HARNESS_APP_ROOT}/client/dist ${HARNESS_STATIC_ROOT}
 COPY deploy/images/client-nginx.conf.template ${HARNESS_NGINX_TEMPLATE_DIR}/client.conf.template
 
+# Numbered 40 so it runs after the stock entrypoint's own steps, template expansion
+# included. It replaces the tracked placeholder in the bundle with the rendered document
+# the deployment actually produced; the script says why that has to happen here, as root,
+# rather than as an nginx `alias`.
+COPY deploy/images/client-config.sh /docker-entrypoint.d/40-drogna-config.sh
+RUN chmod +x /docker-entrypoint.d/40-drogna-config.sh
+
 # The nginx image expands the templates above at start-up, substituting the environment the
 # Compose file supplies. The listen port and the document root therefore reach the server
 # from the destination configuration, and this image holds neither.

@@ -6,13 +6,21 @@
     "reconnect_period_seconds": 5
   },
   "clock": {
-    "stale_after_seconds": 10
+    "stale_after_seconds": 10,
+    "endpoint": "http://localhost:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot",
+      "control": "/clock/control"
+    }
   },
   "query": {
     "endpoint": "http://localhost:8081",
     "collections_path": "/released",
     "trajectory_path": "/trajectory",
-    "route_parameters": ["sea_water_temperature", "sea_water_practical_salinity"]
+    "route_parameters": [
+      "sea_water_temperature",
+      "sea_water_practical_salinity"
+    ]
   },
   "liveness": {
     "default_window_seconds": 15,

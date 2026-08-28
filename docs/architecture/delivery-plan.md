@@ -34,6 +34,7 @@ exit criteria are summarised below as outcomes rather than plans.
 | 020 | Shore advisories | §5.11, FR-59..FR-66 | Specified; same gate. Constitution 1.5.0 already carries the third-schema amendment; C-19/C-20 typed "not yet built" in `docs/manifest.yaml` |
 | 021 | Operator plane | §5.12, FR-67..FR-76 | Specified (SRD v0.5, `spikes/operator-plane/FINDING.md`); same gate, **except FR-74's clock-through-boundary strand**, which repairs FR-10 and is exempt. C-21 typed "not yet built" |
 | 022 | Topic tree | the broker-as-trigger-surface argument; rides 018's topology artefact | Specified (PR #38, 28 August); no plan or tasks. Client panel plus one new read-only role declaration; consumers named, not built |
+| 023 | EDR query composer | §5.13, FR-77..FR-83 | Specified (PR #39, 28 August); no plan or tasks. §10 splits it: the query-layer half (FR-78's radius, area, corridor and locations) waits on nothing; the client half begins once 021 stands and 017's map has a selection model |
 
 ## Where the goals and the work stand
 
@@ -191,6 +192,16 @@ lane H's first act. The moment it is recorded, all three features below may laun
 
 C-19, C-20 and C-21 are typed "not yet built" in `docs/manifest.yaml`; each feature
 writes its subsystem pages when its components exist, which is what flips those rows.
+
+**023 straddles the waves, by the SRD's own split (§10).** Its query-layer half —
+FR-78's four new query types in the bespoke provider, each with a declared budget and
+a named refusal — waits on nothing and can run as a wave 7 lane in `query/plugins/`
+the moment someone picks it up; it shares no tree with lanes H–L (lane H touches the
+publisher and seed steps, lane I the proxy configuration, neither the provider). Its
+client half — the composer mode on the map — is last in wave 8: it begins once the
+operator plane is standing and 017's map has a selection model to build on, and its
+two owed ADRs (the fetch-discipline exception and the SensorThings widening, per
+§11) are argued at its plan phase.
 
 ## What is deliberately not parallelised
 

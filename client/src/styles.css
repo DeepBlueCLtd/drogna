@@ -552,3 +552,172 @@ main {
     height: 60vw !important;
   }
 }
+
+/* ---- the topic tree (022): declared structure, traffic-lit ------------------------- */
+
+.topic-tree .tt-strapline,
+.topic-tree .tt-session {
+  color: var(--muted);
+}
+
+.topic-tree .tt-factor {
+  font-variant-numeric: tabular-nums;
+}
+
+.topic-tree .tt-honesty {
+  border-left: 3px solid var(--warning);
+  padding-left: 0.6rem;
+}
+
+.tt-surface {
+  position: relative;
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+}
+
+.tt-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tt-wires line {
+  stroke: var(--ink);
+}
+
+.tt-wires line[data-lit="true"] {
+  stroke: var(--lit);
+}
+
+.tt-tree,
+.tt-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tt-tree {
+  flex: 1 1 auto;
+}
+
+.tt-children {
+  margin-left: 1.1rem;
+  padding-left: 0.9rem;
+  /* The edge into a subtree thickens with the flow through it: the ripple's phase. */
+  border-left: calc(1px + 3px * var(--tt-edge, 0)) solid
+    color-mix(in srgb, var(--lit) calc((25 + 75 * var(--tt-edge, 0)) * 1%), var(--line));
+}
+
+.tt-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tt-label {
+  font: inherit;
+  font-size: 0.9rem;
+  font-family: ui-monospace, "SF Mono", monospace;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  /* Cold is a colour, not an absence: a declared-but-silent topic still has a box. */
+  background: color-mix(in srgb, var(--lit) calc(var(--tt-glow, 0) * 85 * 1%), var(--paper));
+}
+
+.tt-label[data-reading="sustained"] {
+  border-color: var(--lit);
+}
+
+.tt-label[data-selected="true"] {
+  outline: 2px solid var(--ink);
+}
+
+.tt-label[data-tier="undeclared"] {
+  border-style: dashed;
+  border-color: var(--warning);
+}
+
+.tt-label[data-tier="observed-under-declaration"] {
+  border-style: dotted;
+}
+
+.tt-flag {
+  margin-left: 0.3rem;
+}
+
+.tt-collapse {
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tt-summary {
+  display: block;
+  margin-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.tt-roles {
+  flex: 0 0 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tt-roles h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.tt-role {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.6rem;
+  background: color-mix(in srgb, var(--lit) calc(var(--tt-glow, 0) * 45 * 1%), var(--paper));
+}
+
+.tt-role-name {
+  display: block;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-weight: 600;
+}
+
+.tt-role-components {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.tt-role-filters {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.tt-role-filters li[data-lit="true"] {
+  color: var(--lit);
+}
+
+@media (max-width: 46rem) {
+  .tt-surface {
+    flex-direction: column;
+  }
+
+  .tt-wires {
+    display: none;
+  }
+}

@@ -60,6 +60,10 @@ import { emptyClock, receiveClockSample } from "./transport/clock";
 import type { ClockState as ClockData } from "./transport/clock";
 import { CLOCK_TOPIC, HEARTBEAT_TOPIC } from "./transport/mqtt";
 import type { ControlSink, ControlSubscription } from "./transport/mqtt";
+// Feature 022's panel is self-contained — its own read-only subscription under its own
+// identity (ADR-0025), its own state — so the shell integration is this import and one
+// element below, appended and nothing else touched.
+import { TopicTreePanel } from "./topictree/TopicTreePanel";
 import { ClockState } from "./ui/ClockState";
 import { Conflicts } from "./ui/Conflicts";
 import { ConnectionState } from "./ui/ConnectionState";
@@ -542,6 +546,7 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           onSelect={setSelectedVertex}
         />
       )}
+      <TopicTreePanel config={configuration.current} configurationFailure={failure} now={now} />
     </main>
   );
 }

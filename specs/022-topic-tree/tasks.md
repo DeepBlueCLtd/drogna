@@ -19,7 +19,7 @@ phase is genuinely blocking: both the skeleton (the expanded artefact) and the l
 
 ## Phase 1: Setup
 
-- [ ] T001 Verify the baseline is green before touching it: `uv run pytest tests/unit -k topology`, `uv run python scripts/check_topology_drift.py`, and `cd client && pnpm install && pnpm test` — a later failure must be attributable to this feature's change, not inherited
+- [x] T001 Verify the baseline is green before touching it: `uv run pytest tests/unit -k topology`, `uv run python scripts/check_topology_drift.py`, and `cd client && pnpm install && pnpm test` — a later failure must be attributable to this feature's change, not inherited
 
 ## Phase 2: Foundational (the role, the expanded artefact, the ADR)
 
@@ -28,14 +28,14 @@ reads, extend the derivation with the configured expansion, regenerate the artef
 the drift gate watched failing first, and record the decision. Blocks all stories: US1
 needs both the skeleton rows and the live observation feed.
 
-- [ ] T002 Append the `drogna_observer` block to `deploy/broker/acl`: `topic read obs/#`, `topic read ctl/#`, no write rule, with a comment arguing the grant the way the file's other blocks do (and pointing at ADR-0025)
-- [ ] T003 Append `"drogna_observer": "HARNESS_BROKER_SECRET_OBSERVER"` to `ROLE_SECRETS` in `deploy/lib/render_credentials.py`; confirm secret generation, password file and render all follow from the table (check `scripts/up.sh` and any deploy tests that enumerate `SECRET_NAMES`)
-- [ ] T004 Change the broker URL username from `drogna_viewer` to `drogna_observer` in `config/local/client.json` and `config/droplet/client.json` (destinations must agree; this line is the role declaration the scanner reads)
-- [ ] T005 Extend `scripts/scan_topology.py`: derive the configured observation topics `obs/<thing>/<datastream>` from the sensors configuration of every destination (located by shape — a `sensors` section naming a platform and datastreams — not by filename), require destinations to agree as roles already must, and emit them as ordinary topic rows; extend `resolve_schema` so any topic under the observation branch resolves to the observation master
-- [ ] T006 Extend `tests/unit/test_topology_artefact.py` (or a sibling module beside it): the expansion derived from a fixture tree, the disagreeing-destinations failure, the obs-branch schema resolution — each watched failing against the unextended scanner first
-- [ ] T007 Run `uv run python scripts/check_topology_drift.py` and watch it FAIL against the committed artefact (the role and the expansion are in the sources, not the artefact); then `uv run python scripts/scan_topology.py`, watch the gate pass, and commit `contracts/topology.json` with a message recording both observations
-- [ ] T008 [P] Append the new role's cases to `tests/integration/test_topic_isolation.py`: `drogna_observer` receives on `obs/#` and on `ctl/#`, and every publish it attempts — `obs/`, `ctl/heartbeat`, `ctl/run-request` — is refused at a running broker (run locally under dockerd before CI sees it)
-- [ ] T009 [P] Write `docs/adr/0025-the-observation-namespace-reaches-the-browser-read-only.md`: the three options the interview weighed (current-grant restriction, digest relay, explicit role), the extension of ADR-0008's routing decision, the ADR-0020-shaped non-secret argument for the observer credential and its two transferred obligations, and the accepted consequences (the `/ctl` location name now carries observation traffic; the artefact is coupled to the deployed sensor configuration under the destinations-agree rule)
+- [x] T002 Append the `drogna_observer` block to `deploy/broker/acl`: `topic read obs/#`, `topic read ctl/#`, no write rule, with a comment arguing the grant the way the file's other blocks do (and pointing at ADR-0025)
+- [x] T003 Append `"drogna_observer": "HARNESS_BROKER_SECRET_OBSERVER"` to `ROLE_SECRETS` in `deploy/lib/render_credentials.py`; confirm secret generation, password file and render all follow from the table (check `scripts/up.sh` and any deploy tests that enumerate `SECRET_NAMES`)
+- [x] T004 Change the broker URL username from `drogna_viewer` to `drogna_observer` in `config/local/client.json` and `config/droplet/client.json` (destinations must agree; this line is the role declaration the scanner reads)
+- [x] T005 Extend `scripts/scan_topology.py`: derive the configured observation topics `obs/<thing>/<datastream>` from the sensors configuration of every destination (located by shape — a `sensors` section naming a platform and datastreams — not by filename), require destinations to agree as roles already must, and emit them as ordinary topic rows; extend `resolve_schema` so any topic under the observation branch resolves to the observation master
+- [x] T006 Extend `tests/unit/test_topology_artefact.py` (or a sibling module beside it): the expansion derived from a fixture tree, the disagreeing-destinations failure, the obs-branch schema resolution — each watched failing against the unextended scanner first
+- [x] T007 Run `uv run python scripts/check_topology_drift.py` and watch it FAIL against the committed artefact (the role and the expansion are in the sources, not the artefact); then `uv run python scripts/scan_topology.py`, watch the gate pass, and commit `contracts/topology.json` with a message recording both observations
+- [x] T008 [P] Append the new role's cases to `tests/integration/test_topic_isolation.py`: `drogna_observer` receives on `obs/#` and on `ctl/#`, and every publish it attempts — `obs/`, `ctl/heartbeat`, `ctl/run-request` — is refused at a running broker (run locally under dockerd before CI sees it)
+- [x] T009 [P] Write `docs/adr/0025-the-observation-namespace-reaches-the-browser-read-only.md`: the three options the interview weighed (current-grant restriction, digest relay, explicit role), the extension of ADR-0008's routing decision, the ADR-0020-shaped non-secret argument for the observer credential and its two transferred obligations, and the accepted consequences (the `/ctl` location name now carries observation traffic; the artefact is coupled to the deployed sensor configuration under the destinations-agree rule)
 
 **Checkpoint**: `./scripts/gates.sh` and `uv run pytest` green; the artefact carries the
 role and the configured rows; the stack still comes up (`./scripts/run_local.sh` after

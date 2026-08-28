@@ -232,14 +232,15 @@ and watch it refresh, with no polling request issued.
 
 ### Implementation for User Story 4
 
-- [~] T032 [US4] Implement the uncertainty Deck.gl layer with downsampling and stated
-  resolution in `client/src/uncertainty/UncertaintyLayer.ts`. **Partial**: the
-  downsampling, the stated resolution and the layer's data and accessors are implemented
-  and tested; no Deck.gl layer object is constructed, and no map surface renders one yet.
-  The same is true of T038's route layer. What is missing in both is the map itself:
-  feature 003 delivered the component diagram and not a map base, so there is nothing to
-  put a layer on. The data side is the part that could be got wrong silently and it is
-  the part that is tested.
+- [x] T032 [US4] Implement the uncertainty Deck.gl layer with downsampling and stated
+  resolution in `client/src/uncertainty/UncertaintyLayer.ts`. **Closed by feature 017.**
+  It was recorded partial here because the downsampling, the stated resolution and the
+  layer's data and accessors were implemented and tested, and no Deck.gl layer object was
+  constructed: feature 003 delivered the component diagram and not a map base, so there
+  was nothing to put a layer on. Feature 017 built that surface and mounts this module on
+  it — `client/src/map/layers.ts` constructs the layer object from this module's own
+  `layerInputs`, and `client/src/map/MapSurface.tsx` renders it. Nothing in this file
+  changed, which is the evidence that the half recorded as finished here really was.
 - [x] T033 [US4] Implement projection-driven decay in
   `client/src/uncertainty/decayFromProjection.ts`.
 - [x] T034 [US4] Implement the quality statement — skill in plain words, staleness as
@@ -277,7 +278,10 @@ conditions shown against the EDR trajectory response for each vertex's timestamp
 ### Implementation for User Story 5
 
 - [x] T038 [US5] Implement the route Deck.gl layer carrying depth and per-vertex
-  arrival time, in `client/src/route/RouteLayer.ts`.
+  arrival time, in `client/src/route/RouteLayer.ts`. The layer object T032's note says was
+  missing here too is **built by feature 017**, in `client/src/map/layers.ts`, from this
+  module's `routeLayerInputs`; declined vertices are drawn as declined there. This file is
+  unchanged.
 - [x] T039 [US5] Implement the EDR trajectory query with per-vertex timestamps against
   feature 008's provider, using generated response types, in
   `client/src/route/trajectoryQuery.ts`.

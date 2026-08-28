@@ -39,6 +39,10 @@ export interface RuntimeConfig {
     readonly trajectoryPath: string | undefined;
     /** Which forecast parameters to ask for along a route. */
     readonly routeParameters: readonly string[];
+    /** The path under a collection at which a cube query is served, or undefined. */
+    readonly cubePath: string | undefined;
+    /** Which parameter the map draws as the uncertainty field, or undefined. */
+    readonly fieldParameter: string | undefined;
   };
   readonly liveness: {
     readonly defaultWindowSeconds: number;
@@ -56,6 +60,35 @@ export interface RuntimeConfig {
     /** Whether the render path may smooth between two clock samples (ADR-0007). */
     readonly interpolateBetweenSamples: boolean;
   };
+  /**
+   * Where the scenario is, as the destination declares it.
+   *
+   * Undefined where the document declares nothing, which is a state the map renders as a
+   * statement rather than one it hides: a surface with no extent draws no frame at all
+   * (017 FR-001, FR-007). The extent a run's field is drawn in comes from the
+   * announcement's own grid bounds and never from here.
+   */
+  readonly map:
+    | {
+        readonly extent: ScenarioExtent;
+        readonly vertical: VerticalRange | undefined;
+        readonly graticuleSpacingDegrees: number | undefined;
+      }
+    | undefined;
+}
+
+/** A horizontal extent in CRS84 degrees, in the client's own vocabulary. */
+export interface ScenarioExtent {
+  readonly minimumLongitude: number;
+  readonly minimumLatitude: number;
+  readonly maximumLongitude: number;
+  readonly maximumLatitude: number;
+}
+
+/** A depth range in metres, positive downwards, as the coverage's convention has it. */
+export interface VerticalRange {
+  readonly minimumDepthM: number;
+  readonly maximumDepthM: number;
 }
 
 export type ConfigOutcome =
@@ -90,6 +123,39 @@ function optionalString(from: Record<string, unknown>, key: string): string | un
 }
 
 /**
+ * The declared extent, or undefined where the document declares none.
+ *
+ * The schema has already refused a `map` section of the wrong shape, so the only question
+ * left here is whether there is one. A destination that serves no declaration leaves the
+ * map with nothing to draw before a run is announced, which is a sentence on the display
+ * and not a defaulted rectangle: a frame drawn around coordinates nobody served would be
+ * the map inventing geography.
+ */
+function adoptMap(map: Record<string, unknown> | undefined): RuntimeConfig["map"] {
+  if (map === undefined) {
+    return undefined;
+  }
+  const extent = map["extent"] as Record<string, number>;
+  const vertical = map["vertical"] as Record<string, number> | undefined;
+  return {
+    extent: {
+      minimumLongitude: extent["minimum_longitude"] as number,
+      minimumLatitude: extent["minimum_latitude"] as number,
+      maximumLongitude: extent["maximum_longitude"] as number,
+      maximumLatitude: extent["maximum_latitude"] as number,
+    },
+    vertical:
+      vertical === undefined
+        ? undefined
+        : {
+            minimumDepthM: vertical["minimum_depth_m"] as number,
+            maximumDepthM: vertical["maximum_depth_m"] as number,
+          },
+    graticuleSpacingDegrees: optionalNumber(map, "graticule_spacing_degrees"),
+  };
+}
+
+/**
  * Adapt a validated document into the client's own vocabulary.
  *
  * The schema has already refused anything of the wrong shape, so the reads here are
@@ -112,6 +178,7 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
   const parameters = query["route_parameters"];
 
   return {
+    map: adoptMap(document["map"] as Record<string, unknown> | undefined),
     broker: {
       url: broker["url"] as string,
       clientId: broker["client_id"] as string,
@@ -127,6 +194,8 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
       collectionsUrl: `${query["endpoint"] as string}${query["collections_path"] as string}`,
       trajectoryPath: optionalString(query, "trajectory_path"),
       routeParameters: Array.isArray(parameters) ? (parameters as string[]) : [],
+      cubePath: optionalString(query, "cube_path"),
+      fieldParameter: optionalString(query, "field_parameter"),
     },
     liveness: {
       defaultWindowSeconds: liveness["default_window_seconds"] as number,

@@ -20,7 +20,9 @@
     "route_parameters": [
       "sea_water_temperature",
       "sea_water_practical_salinity"
-    ]
+    ],
+    "cube_path": "/cube",
+    "field_parameter": "temperature_uncertainty"
   },
   "liveness": {
     "default_window_seconds": 15,
@@ -33,5 +35,18 @@
     "coalescing_threshold": 8,
     "maximum_drawn_cells": 4096,
     "interpolate_between_samples": true
+  },
+  "map": {
+    "extent": {
+      "minimum_longitude": -6.0,
+      "minimum_latitude": 48.0,
+      "maximum_longitude": -3.0,
+      "maximum_latitude": 50.0
+    },
+    "vertical": {
+      "minimum_depth_m": 0.0,
+      "maximum_depth_m": 1000.0
+    },
+    "graticule_spacing_degrees": 0.5
   }
 }

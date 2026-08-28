@@ -17,8 +17,9 @@ from typing import Any
 import pytest
 
 from proxy.policy import (
+    ALLOW_CLOCK,
+    ALLOW_PAGE,
     ALLOW_UPGRADE,
-    DENY_DEFAULT,
     DENY_NOT_RELEASED,
     DENY_UNNORMALISABLE,
     PolicyError,
@@ -111,15 +112,15 @@ def test_an_encoded_separator_is_refused_rather_than_decoded() -> None:
 
 
 def test_a_released_collection_is_reachable_and_names_its_rule() -> None:
-    outcome = decide(policy(), "/released/drogna-forecast")
+    outcome = decide(policy(), "/released/forecast")
 
     assert outcome.allowed
-    assert outcome.rule == "allow-released:drogna-forecast"
+    assert outcome.rule == "allow-released:forecast"
     assert outcome.location is not None
 
 
 def test_what_is_beneath_a_released_collection_is_reachable() -> None:
-    assert decide(policy(), "/released/drogna-forecast/items").allowed
+    assert decide(policy(), "/released/forecast/items").allowed
 
 
 def test_a_collection_the_list_does_not_name_is_refused() -> None:
@@ -139,37 +140,110 @@ def test_a_released_identifier_that_prefixes_an_unreleased_one_does_not_admit_it
     assert not decide(released, "/released/temperature-raw/items").allowed
 
 
-def test_the_query_layers_native_path_is_not_reachable() -> None:
-    """FR-002. The released prefix is the only way in; the upstream path is not a way in."""
-    outcome = decide(policy(), "/query/collections/drogna-forecast")
-
-    assert not outcome.allowed
-    assert outcome.rule == DENY_DEFAULT
-
-
 @pytest.mark.parametrize(
     "target",
     [
+        "/query/collections/forecast",
+        "/collections/forecast",
         "/query/openapi",
         "/query/conformance",
         "/openapi",
         "/conformance",
         "/collections",
-        "/released",
-        "/RELEASED/drogna-forecast",
-        "/released/drogna-forecast/../drogna-raw",
+        "/RELEASED/forecast",
     ],
 )
-def test_everything_else_is_refused_by_default(target: str) -> None:
-    """FR-001. Including the documents that enumerate what is withheld."""
-    assert not decide(policy(), target).allowed
+def test_the_query_layers_native_paths_reach_the_page_and_never_the_query_layer(
+    target: str,
+) -> None:
+    """FR-002, in its one-door form. The released prefix is the only way to the data.
+
+    These paths used to meet the default deny. The 28 August topology decision put the
+    page where the deny was, so a cleared caller asking for the query layer's native paths
+    — its collections, its emitted specification, its conformance documents — is answered
+    by the *client's* server, which resolves them as single-page routes and answers the
+    page. What FR-002 actually forbids is unchanged and asserted here: no such path is
+    ever sent to the query layer's upstream.
+    """
+    outcome = decide(policy(), target)
+
+    assert outcome.allowed
+    assert outcome.rule == ALLOW_PAGE
+    assert outcome.location is not None
+    assert outcome.location.upstream == policy().page_url
+    assert policy().query_url not in outcome.location.upstream
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "/released",
+        "/released/drogna-raw",
+        "/released/forecast/../drogna-raw",
+    ],
+)
+def test_beneath_the_released_prefix_the_refusal_stands(target: str) -> None:
+    """The one refusal a cleared caller can still meet, and it does not become the page.
+
+    The released prefix answers released collections and nothing else. A withheld name and
+    a name that never existed meet the same refusal, which is what keeps the released set
+    unenumerable now that everything off the prefix answers something.
+    """
+    outcome = decide(policy(), target)
+
+    assert not outcome.allowed
+    assert outcome.rule == DENY_NOT_RELEASED
 
 
 def test_an_unnormalisable_target_is_refused_before_any_location_is_considered() -> None:
-    outcome = decide(policy(), "/released%2fdrogna-forecast")
+    outcome = decide(policy(), "/released%2fforecast")
 
     assert not outcome.allowed
     assert outcome.rule == DENY_UNNORMALISABLE
+
+
+# --- the page and the clock (the one-door topology; ADR-0025) -----------------------------
+
+
+def test_the_page_is_what_the_root_answers() -> None:
+    outcome = decide(policy(), "/")
+
+    assert outcome.allowed
+    assert outcome.rule == ALLOW_PAGE
+    assert outcome.location is not None
+    assert outcome.location.upstream == policy().page_url
+
+
+def test_the_clocks_routes_are_reachable_and_name_their_rule() -> None:
+    """FR-74's strand (ADR-0025): the control surface, behind the clearance, per request."""
+    for target in ("/clock/snapshot", "/clock/control"):
+        outcome = decide(policy(), target)
+
+        assert outcome.allowed
+        assert outcome.rule == ALLOW_CLOCK
+        assert outcome.location is not None
+        assert outcome.location.upstream == policy().clock_url
+
+
+def test_the_bare_clock_prefix_belongs_to_the_clock_surface() -> None:
+    """The prefix names no clock route, and it still ends up at the clock, not the page.
+
+    nginx canonicalises a request for the bare prefix into the subtree with a relative
+    301 — the slash-terminated proxied location's own behaviour — so what finally answers
+    is the clock, with a 404 for a route it does not serve. The reference says where a
+    path ends up, and this one ends up at the clock.
+    """
+    outcome = decide(policy(), "/clock")
+
+    assert outcome.rule == ALLOW_CLOCK
+    assert outcome.location is not None
+    assert outcome.location.upstream == policy().clock_url
+
+
+def test_a_name_the_clock_prefix_prefixes_is_the_page_not_the_clock() -> None:
+    outcome = decide(policy(), "/clock-other/route")
+
+    assert outcome.rule == ALLOW_PAGE
 
 
 # --- the upgrade location (ADR-0008) ------------------------------------------------------
@@ -189,14 +263,26 @@ def test_the_upgrade_location_is_exactly_one_path() -> None:
 
     assert decide(settled, "/ctl").allowed
     assert decide(settled, "/ctl").rule == ALLOW_UPGRADE
-    assert not decide(settled, "/ctl/mqtt").allowed
-    assert not decide(settled, "/ctl/anything/at/all").allowed
+    for beneath in ("/ctl/mqtt", "/ctl/anything/at/all"):
+        outcome = decide(settled, beneath)
+        # Beneath the upgrade path is not the upgrade: it answers the page like any other
+        # unclaimed path, and nothing beneath it ever reaches the broker's listener.
+        assert outcome.rule == ALLOW_PAGE
+        assert outcome.location is not None
+        assert outcome.location.upstream == settled.page_url
 
 
 def test_the_upgrade_prefix_and_the_released_prefix_cannot_be_the_same_path() -> None:
     with pytest.raises(PolicyError) as refusal:
         policy(control={"upgrade_prefix": "/released"})
     assert "widen" in str(refusal.value)
+
+
+def test_the_clock_prefix_cannot_share_a_path_with_either_other_surface() -> None:
+    for taken in ("/released", "/ctl"):
+        with pytest.raises(PolicyError) as refusal:
+            policy(upstream={"clock": {"url": "http://clock:8090", "prefix": taken}})
+        assert "widen" in str(refusal.value)
 
 
 # --- reading the policy out of a configuration --------------------------------------------
@@ -244,6 +330,6 @@ def test_one_location_per_released_collection_and_one_upgrade() -> None:
 
 def test_unreleased_names_what_the_policy_withholds() -> None:
     """The request matrix builds its unreleased cases from what upstream says it serves."""
-    advertised = ["drogna-forecast", "drogna-raw", "observations", "drogna-uncertainty"]
+    advertised = ["forecast", "drogna-raw", "observations"]
 
     assert unreleased(policy(), advertised) == ("drogna-raw", "observations")

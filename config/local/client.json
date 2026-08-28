@@ -7,7 +7,7 @@
   },
   "clock": {
     "stale_after_seconds": 10,
-    "endpoint": "http://localhost:8090",
+    "endpoint": "http://localhost:8081",
     "routes": {
       "snapshot": "/clock/snapshot",
       "control": "/clock/control"

@@ -1,4 +1,10 @@
-"""The boundary, driven over the network, against a stub upstream that records what reached it.
+"""The boundary, driven over the network, against stub upstreams that record what reached them.
+
+Two stubs since the one-door topology put the page behind the boundary: one plays the
+query layer, the broker and the clock, the other plays the client's server. An unclaimed
+path answering the page is only evidence of anything because the two are separate
+containers: the claim is not "it answered something" but "the page's server answered it
+and the query layer never saw it".
 
 Everything here is a property of nginx rather than of the rendered file, which is why it
 needs a container and why `proxy/tests/test_render_config.py` cannot stand in for it. The
@@ -28,7 +34,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from proxy_boundary import CLEARED, UNCLEARED, Boundary, skip_without_containers, start_boundary
+from proxy_boundary import (
+    CLEARED,
+    PAGE_BODY,
+    UNCLEARED,
+    Boundary,
+    skip_without_containers,
+    start_boundary,
+)
 
 pytestmark = skip_without_containers()
 
@@ -98,6 +111,24 @@ def test_the_proxied_body_is_byte_identical_to_the_upstream_body(boundary: Bound
         f"{PREFIX}/{NEAR_MISS}/items",
         f"{PREFIX}",
         f"{PREFIX}/",
+    ],
+)
+def test_beneath_the_released_prefix_everything_off_the_list_is_refused(
+    boundary: Boundary, path: str
+) -> None:
+    """FR-003 and US1 scenario 5: the released prefix answers the list and nothing else.
+
+    This is the refusal that did not become the page when the one-door topology put the
+    page where the default deny was. A withheld collection and a name that never existed
+    meet the same 404 here, which is what keeps the released set unenumerable even behind
+    the clearance.
+    """
+    assert boundary.request(path).status == 404
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
         f"{NATIVE}/{RELEASED}",
         f"{NATIVE}/{WITHHELD}",
         "/query/openapi",
@@ -107,17 +138,27 @@ def test_the_proxied_body_is_byte_identical_to_the_upstream_body(boundary: Bound
         f"{UPGRADE}/anything",
     ],
 )
-def test_everything_not_released_is_refused_for_a_cleared_caller(
+def test_every_unclaimed_path_is_answered_by_the_page_and_never_by_the_query_layer(
     boundary: Boundary, path: str
 ) -> None:
-    """FR-001, FR-002, FR-003 and US1 scenario 5, over one list of paths.
+    """FR-001 and FR-002, in their one-door form (the topology decision of 28 August).
 
-    The query layer's own specification and conformance documents are in the list
-    deliberately: they enumerate every collection it serves, withheld ones included, so
-    serving them through the released prefix would disclose the shape of what is being
-    withheld even though the data stays refused.
+    These paths used to meet the default deny; a cleared caller now gets the page, which
+    the client's server answers for every single-page route. What FR-002 actually forbids
+    is asserted in full: the query layer's native paths, its emitted specification and
+    its conformance documents — which enumerate every collection it serves, withheld ones
+    included — are answered by the *page's* server, and the query layer's upstream never
+    sees the request.
     """
-    assert boundary.request(path).status == 404
+    before = boundary.upstream_log()
+    answer = boundary.request(path)
+
+    assert answer.status == 200
+    assert answer.body == PAGE_BODY.encode()
+    # Compared as a delta, not a membership: the released locations legitimately map onto
+    # the query layer's native collection path, so a line naming this path may already be
+    # in the log from a released request. What this request must not do is add one.
+    assert boundary.upstream_log() == before
 
 
 def test_a_released_identifier_does_not_admit_the_one_it_prefixes(boundary: Boundary) -> None:
@@ -216,11 +257,20 @@ def test_an_uncleared_caller_never_reaches_upstream(boundary: Boundary) -> None:
         f"{PREFIX.upper()}/{RELEASED}",
     ],
 )
-def test_a_path_that_normalises_into_the_withheld_set_is_refused(
+def test_a_path_that_normalises_towards_the_withheld_set_never_reaches_it(
     boundary: Boundary, path: str
 ) -> None:
-    """FR-004. Policy is applied to the normalised path, and an ambiguous one is refused."""
-    assert boundary.request(path).status in (400, 404)
+    """FR-004. Policy is applied to the normalised path, and an ambiguous one is refused.
+
+    A path that normalises into the released prefix meets the refusal; one that
+    normalises out of it — towards the query layer's native paths — meets the page, like
+    any other unclaimed path. Either way the withheld content is never the answer and the
+    query layer's upstream never sees the request, which is the property under test.
+    """
+    answer = boundary.request(path)
+
+    assert answer.status in (400, 404) or answer.body == PAGE_BODY.encode()
+    assert answer.body != f"served-{WITHHELD}".encode()
     assert not [line for line in boundary.upstream_log() if WITHHELD in line]
 
 
@@ -233,15 +283,77 @@ def test_duplicate_separators_do_not_change_what_a_released_path_means(
 # --- what the log says ---------------------------------------------------------------------
 
 
-def test_a_refusal_is_diagnosable_from_the_log_alone(boundary: Boundary) -> None:
-    """FR-020. An unexplainable refusal is one somebody loosens policy to understand."""
+def test_a_decision_is_diagnosable_from_the_log_alone(boundary: Boundary) -> None:
+    """FR-020. An unexplainable decision is one somebody loosens policy to understand."""
     boundary.request(f"{PREFIX}/{WITHHELD}")
     boundary.request("/nothing-at-all")
+    boundary.request("/clock/snapshot")
 
     lines = boundary.refusal_log()
 
     assert [line for line in lines if WITHHELD in line and "rule=deny-not-released" in line]
-    assert [line for line in lines if "nothing-at-all" in line and "rule=deny-default" in line]
+    assert [line for line in lines if "nothing-at-all" in line and "rule=allow-page" in line]
+    assert [line for line in lines if "/clock/snapshot" in line and "rule=allow-clock" in line]
+
+
+# --- the page and the clock, through the one door -------------------------------------------
+
+
+def test_the_page_is_served_at_the_root_and_is_byte_identical(boundary: Boundary) -> None:
+    """The one-door topology: the page loads from the boundary, unedited (FR-005 extends)."""
+    through = boundary.request("/")
+    direct = boundary.page_directly("/")
+
+    assert through.status == 200
+    assert through.body == direct.body == PAGE_BODY.encode()
+
+
+def test_a_page_asset_is_served_through_the_boundary(boundary: Boundary) -> None:
+    assert boundary.request("/app.js").body == b"page-asset"
+
+
+def test_an_uncleared_caller_is_refused_the_page_and_the_clock_identically(
+    boundary: Boundary,
+) -> None:
+    """FR-006 still holds with the page behind the door: one challenge, every path."""
+    page = boundary.request("/", clearance=None)
+    clock = boundary.request("/clock/snapshot", clearance=None)
+    released = boundary.request(f"{PREFIX}/{RELEASED}", clearance=None)
+
+    assert page.status == 401
+    assert page.comparable() == clock.comparable()
+    assert page.comparable() == released.comparable()
+
+
+def test_an_uncleared_caller_never_reaches_the_pages_server(boundary: Boundary) -> None:
+    probe = "/uncleared-page-probe"
+    boundary.request(probe, clearance=None)
+
+    assert not [line for line in boundary.page_log() if probe in line]
+
+
+def test_the_clocks_routes_reach_the_clock_upstream_unrewritten(boundary: Boundary) -> None:
+    """FR-74's strand (ADR-0025): the control surface, through the boundary, path intact."""
+    answer = boundary.request("/clock/snapshot")
+
+    assert answer.status == 200
+    assert answer.body == b"clock-snapshot"
+    assert [line for line in boundary.upstream_log() if line.endswith(" /clock/snapshot")]
+
+
+def test_the_bare_clock_prefix_canonicalises_into_the_subtree_and_ends_at_the_clock(
+    boundary: Boundary,
+) -> None:
+    """nginx 301s `/clock` to `/clock/` — relatively, so the caller's own origin resolves
+    it — and the clock then answers 404 for a route it does not serve. The absolute form
+    of that redirect carried the container's listen port, which no caller can reach at
+    any destination that publishes a different one; `absolute_redirect off` is what this
+    exercises. The page never sees the path."""
+    answer = boundary.request("/clock")
+
+    assert answer.status == 404
+    assert [line for line in boundary.upstream_log() if line.endswith(" /clock/")]
+    assert not [line for line in boundary.page_log() if "/clock" in line]
 
 
 # --- adding a collection upstream changes nothing -------------------------------------------

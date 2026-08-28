@@ -202,12 +202,22 @@ COLLECTION_PATH = "/query/collections"
 
 @dataclass(frozen=True)
 class Boundary:
-    """A running proxy, the stub behind it, and the two things a test does with them."""
+    """A running proxy, the stubs behind it, and the things a test does with them.
+
+    Two stubs since the one-door change: the original plays the query layer, the broker
+    and the clock — everything the boundary maps a path onto — and the page stub plays the
+    client's own server, which is what every path no other location claims proxies to.
+    They are separate containers because the matrix's claim about an unclaimed path is not
+    "it answers something" but "it was answered by the page's server and the query layer
+    never saw it", and one container could not witness that.
+    """
 
     port: int
     upstream_port: int
+    page_port: int
     proxy_container: str
     upstream_container: str
+    page_container: str
 
     def request(
         self,
@@ -255,6 +265,22 @@ class Boundary:
         combined += text.stderr.decode("utf-8", errors="replace")
         return [line for line in combined.splitlines() if line.startswith("upstream ")]
 
+    def page_log(self) -> list[str]:
+        """Every request the page stub was given — the other half of the same question."""
+        text = _run(["docker", "logs", self.page_container], check=False)
+        combined = text.stdout.decode("utf-8", errors="replace")
+        combined += text.stderr.decode("utf-8", errors="replace")
+        return [line for line in combined.splitlines() if line.startswith("page ")]
+
+    def page_directly(self, path: str) -> Response:
+        """The same request, put to the page stub with the boundary out of the way."""
+        request = urllib.request.Request(f"http://127.0.0.1:{self.page_port}{path}")
+        try:
+            with urllib.request.urlopen(request, timeout=10) as answer:
+                return Response(answer.status, answer.read(), tuple(answer.headers.items()))
+        except urllib.error.HTTPError as refusal:
+            return Response(refusal.code, refusal.read(), tuple(refusal.headers.items()))
+
     def refusal_log(self) -> list[str]:
         """Every line the proxy wrote about a request, with the rule that decided it."""
         text = _run(["docker", "logs", self.proxy_container], check=False)
@@ -300,6 +326,31 @@ server {
 }
 """
 
+# What the page location proxies to, standing in for the client's own nginx. The fallback
+# to the index is the client image's real behaviour (`deploy/images/client-nginx.conf.
+# template`): a single-page client answers unknown paths with the page, not with a 404.
+# It is a separate container from the stub above deliberately — in a deployment the page
+# and the query layer are different services, and the matrix's central claim since the
+# one-door change is that a path answered by the page was answered by the page's server
+# and never by the query layer's.
+PAGE_CONFIG = """
+log_format page 'page $request_method $uri';
+
+server {
+    listen 8080;
+    access_log /var/log/nginx/access.log page;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+"""
+
+PAGE_BODY = "the-page"
+
 
 def _write_upstream(directory: Path, collections: Sequence[str], documents: Sequence[str]) -> None:
     """Lay the stub out at the paths the query layer would use, not at paths that suit us.
@@ -315,9 +366,33 @@ def _write_upstream(directory: Path, collections: Sequence[str], documents: Sequ
         (served / identifier).write_text(f"served-{identifier}", encoding="utf-8")
     for document in documents:
         (served.parent / document).write_text(f"document-{document}", encoding="utf-8")
+    # The clock's routes, beneath the same prefix the clock itself serves them under. The
+    # clock location proxies the path unrewritten, so what reaches this stub is what a
+    # clock would have been asked, and the stub's log shows it arriving here rather than
+    # at the page.
+    clock = root / "clock"
+    clock.mkdir(parents=True, exist_ok=True)
+    for route in ("snapshot", "control"):
+        (clock / route).write_text(f"clock-{route}", encoding="utf-8")
     (directory / "upstream.conf").write_text(UPSTREAM_CONFIG, encoding="utf-8")
     (directory / "default.conf").write_text("", encoding="utf-8")
     for entry in (directory / "upstream.conf", directory / "default.conf"):
+        entry.chmod(0o644)
+    for entry in root.rglob("*"):
+        entry.chmod(0o755 if entry.is_dir() else 0o644)
+    root.chmod(0o755)
+    directory.chmod(0o755)
+
+
+def _write_page(directory: Path) -> None:
+    """Lay the page stub out: one index, one asset, and the single-page fallback."""
+    root = directory / "html"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "index.html").write_text(PAGE_BODY, encoding="utf-8")
+    (root / "app.js").write_text("page-asset", encoding="utf-8")
+    (directory / "page.conf").write_text(PAGE_CONFIG, encoding="utf-8")
+    (directory / "default.conf").write_text("", encoding="utf-8")
+    for entry in (directory / "page.conf", directory / "default.conf"):
         entry.chmod(0o644)
     for entry in root.rglob("*"):
         entry.chmod(0o755 if entry.is_dir() else 0o644)
@@ -396,31 +471,40 @@ def start_boundary(
 
     network = _name("net")
     upstream_container = _name("upstream")
+    page_container = _name("page")
     proxy_container = _name("proxy")
 
     upstream_directory = tmp_path / "upstream"
     upstream_directory.mkdir(parents=True, exist_ok=True)
     _write_upstream(upstream_directory, served, documents)
 
+    page_directory = tmp_path / "page"
+    page_directory.mkdir(parents=True, exist_ok=True)
+    _write_page(page_directory)
+
     proxy_directory = tmp_path / "proxy"
     proxy_directory.mkdir(parents=True, exist_ok=True)
     settled = json.loads(json.dumps(document))
-    # Every upstream is repointed at the stub, not just the one the tests read through.
+    # Every upstream is repointed at a stub on this network, not just the one the tests
+    # read through.
     #
     # nginx resolves a literal host in `proxy_pass` when it *starts*, not when a request
     # arrives, and it refuses to start if the name does not resolve. The control-namespace
     # location names the broker, which has no container on this network — so leaving that
     # upstream at its configured value killed nginx before it served anything, and every
-    # case in the matrix failed with the boundary never answering. Nothing here requests
-    # the upgrade path itself; what is asserted about it is that `/ctl/anything` is
-    # refused, which falls to `location /` and never reaches this upstream.
+    # case in the matrix failed with the boundary never answering.
     #
     # Written as a loop over whatever upstreams the document declares, so that an upstream
     # added later is settled by having been declared rather than by someone remembering
-    # this. That is the mistake being fixed, and it is worth not making it twice.
-    for upstream in settled["proxy"]["upstream"].values():
+    # this. That is the mistake being fixed, and it is worth not making it twice. The page
+    # goes to its own stub — the matrix's claim about an unclaimed path is that the page's
+    # server answered it and the query layer never saw it — and everything else, the
+    # clock included, goes to the recording stub, whose log is how a test proves what a
+    # location actually mapped a path onto.
+    for name, upstream in settled["proxy"]["upstream"].items():
         if isinstance(upstream, dict) and "url" in upstream:
-            upstream["url"] = f"http://{upstream_container}:8080"
+            behind = page_container if name == "page" else upstream_container
+            upstream["url"] = f"http://{behind}:8080"
     settled["proxy"]["upstream"]["query"]["collection_path"] = COLLECTION_PATH
     settled["proxy"]["credentials"]["file"] = "/etc/drogna/proxy.htpasswd"
     settled["proxy"]["tls"]["enabled"] = False
@@ -466,6 +550,32 @@ def start_boundary(
                 "run",
                 "-d",
                 "--name",
+                page_container,
+                "--network",
+                network,
+                "--user",
+                _user(),
+                "--tmpfs",
+                "/var/run:rw,mode=1777",
+                "--tmpfs",
+                "/var/cache/nginx:rw,mode=1777",
+                "-v",
+                f"{page_directory / 'page.conf'}:/etc/nginx/conf.d/page.conf:ro",
+                "-v",
+                f"{page_directory / 'default.conf'}:/etc/nginx/conf.d/default.conf:ro",
+                "-v",
+                f"{page_directory / 'html'}:/usr/share/nginx/html",
+                "-p",
+                "127.0.0.1::8080",
+                PROXY_IMAGE,
+            ]
+        )
+        _run(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--name",
                 proxy_container,
                 "--network",
                 network,
@@ -489,12 +599,15 @@ def start_boundary(
         boundary = Boundary(
             port=_published_port(proxy_container, 8080),
             upstream_port=_published_port(upstream_container, 8080),
+            page_port=_published_port(page_container, 8080),
             proxy_container=proxy_container,
             upstream_container=upstream_container,
+            page_container=page_container,
         )
         _wait_for(boundary, "/")
         yield boundary
     finally:
         _run(["docker", "rm", "-f", proxy_container], check=False)
+        _run(["docker", "rm", "-f", page_container], check=False)
         _run(["docker", "rm", "-f", upstream_container], check=False)
         _run(["docker", "network", "rm", network], check=False)

@@ -22,12 +22,15 @@ is a guess an attacker gets to choose the input to.
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
+    "ALLOW_CLOCK",
+    "ALLOW_PAGE",
     "ALLOW_RELEASED",
     "ALLOW_UPGRADE",
     "DENY_DEFAULT",
@@ -38,8 +41,10 @@ __all__ = [
     "PolicyError",
     "ReleasePolicy",
     "UnnormalisablePathError",
+    "clock_location",
     "decide",
     "normalise",
+    "page_location",
     "released_locations",
     "unreleased",
 ]
@@ -52,6 +57,8 @@ DENY_NOT_RELEASED = "deny-not-released"
 DENY_DEFAULT = "deny-default"
 ALLOW_RELEASED = "allow-released"
 ALLOW_UPGRADE = "allow-upgrade"
+ALLOW_PAGE = "allow-page"
+ALLOW_CLOCK = "allow-clock"
 
 _PERCENT = re.compile(r"%(..?)?", re.DOTALL)
 _HEX = re.compile(r"^[0-9A-Fa-f]{2}$")
@@ -121,6 +128,9 @@ class ReleasePolicy:
     query_collection_path: str
     control_url: str
     control_path: str
+    page_url: str
+    clock_url: str
+    clock_prefix: str
 
     @classmethod
     def from_document(cls, document: Mapping[str, Any]) -> ReleasePolicy:
@@ -131,6 +141,8 @@ class ReleasePolicy:
         upstream = _require(proxy, "proxy", "upstream")
         query = _require(upstream, "proxy.upstream", "query")
         websocket = _require(upstream, "proxy.upstream", "control_websocket")
+        page = _require(upstream, "proxy.upstream", "page")
+        clock = _require(upstream, "proxy.upstream", "clock")
 
         collections = tuple(_require(released, "proxy.released", "collections"))
         variables = tuple(_require(released, "proxy.released", "variables"))
@@ -156,14 +168,18 @@ class ReleasePolicy:
 
         where_prefix = "proxy.released.prefix"
         where_upgrade = "proxy.control.upgrade_prefix"
+        where_clock = "proxy.upstream.clock.prefix"
         prefix = _segment(str(_require(released, "proxy.released", "prefix")), where_prefix)
         upgrade = _segment(str(_require(control, "proxy.control", "upgrade_prefix")), where_upgrade)
-        if prefix == upgrade:
-            raise PolicyError(
-                "proxy.released.prefix and proxy.control.upgrade_prefix are the same path. "
-                "They are held apart so that neither surface can widen the other: one is "
-                "inspected per request, the other is inspected once and then persists."
-            )
+        clock_prefix = _segment(str(_require(clock, "proxy.upstream.clock", "prefix")), where_clock)
+        named = {where_prefix: prefix, where_upgrade: upgrade, where_clock: clock_prefix}
+        for left, right in itertools.combinations(named, 2):
+            if named[left] == named[right]:
+                raise PolicyError(
+                    f"{left} and {right} are the same path. The surfaces are held apart so "
+                    "that none can widen another: each is a different kind of exposure, and "
+                    "two surfaces sharing a prefix would make one location answer for both."
+                )
         return cls(
             prefix=prefix,
             collections=tuple(str(name) for name in collections),
@@ -177,6 +193,9 @@ class ReleasePolicy:
                 "/"
             ),
             control_path=str(_require(websocket, "proxy.upstream.control_websocket", "path")),
+            page_url=str(_require(page, "proxy.upstream.page", "url")).rstrip("/"),
+            clock_url=str(_require(clock, "proxy.upstream.clock", "url")).rstrip("/"),
+            clock_prefix=clock_prefix,
         )
 
 
@@ -304,6 +323,32 @@ def released_locations(policy: ReleasePolicy) -> tuple[Location, ...]:
     return tuple(sorted(locations, key=lambda location: location.path))
 
 
+def page_location(policy: ReleasePolicy) -> Location:
+    """The page, which is what a path no other location answers reaches.
+
+    The one door of the 28 August topology decision: the page is served through the
+    boundary, behind the same server-level clearance as everything else, so a fetch from
+    the page to the released prefix or the clock is same-origin and the challenge that
+    admitted the page covers it. The default deny becomes the default page for a *cleared*
+    caller only — an uncleared one still meets the same challenge on every path alike
+    (FR-006) — and the query layer's native paths still reach the query layer never
+    (FR-002): they resolve at the client's server, which answers its single-page routes
+    with the page and nothing else.
+    """
+    return Location(path="/", upstream=policy.page_url, rule=ALLOW_PAGE)
+
+
+def clock_location(policy: ReleasePolicy) -> Location:
+    """The clock's control surface, behind the clearance (FR-74's strand, ADR-0025).
+
+    A subtree and not an exact path, because unlike the upgrade every request beneath it is
+    inspected and cleared per request. The prefix is proxied as it stands: the clock
+    already serves its routes beneath its own prefix, so the upstream is the clock's base
+    URL and the request path travels unrewritten.
+    """
+    return Location(path=policy.clock_prefix, upstream=policy.clock_url, rule=ALLOW_CLOCK)
+
+
 def decide(policy: ReleasePolicy, target: str) -> Decision:
     """What the boundary does with one request target, and which rule decided it."""
     try:
@@ -325,12 +370,26 @@ def decide(policy: ReleasePolicy, target: str) -> Decision:
         if path.startswith(location.path + "/"):
             return Decision(allowed=True, rule=location.rule, path=path, location=location)
 
+    clock = clock_location(policy)
+    if path == clock.path or path.startswith(clock.path + "/"):
+        # The bare prefix belongs to the clock surface too: nginx canonicalises it into
+        # the subtree with a relative 301 (the slash-terminated proxied location's own
+        # behaviour), so what finally answers it is the clock — with a 404 for a route it
+        # does not serve — and never the page. The reference has to say where a path ends
+        # up, and this one ends up at the clock.
+        return Decision(allowed=True, rule=clock.rule, path=path, location=clock)
+
     if path == policy.prefix or path.startswith(policy.prefix + "/"):
-        # Beneath the released prefix but not a released collection. Named separately from
-        # the default so that the log distinguishes "you asked for something withheld" from
-        # "you asked for something that is not part of the boundary at all".
+        # Beneath the released prefix but not a released collection. Named separately so
+        # that the log distinguishes "you asked for something withheld" from a path that
+        # simply belongs to the page. This is the one refusal a cleared caller can still
+        # meet, and it is why the released set stays unenumerable from outside: everything
+        # else answers with the page, and this answers with the same refusal for a
+        # withheld collection as for a name that never existed.
         return Decision(allowed=False, rule=DENY_NOT_RELEASED, path=path)
-    return Decision(allowed=False, rule=DENY_DEFAULT, path=path)
+
+    page = page_location(policy)
+    return Decision(allowed=True, rule=page.rule, path=path, location=page)
 
 
 def unreleased(policy: ReleasePolicy, identifiers: Sequence[str]) -> tuple[str, ...]:

@@ -27,18 +27,18 @@
     "level": "INFO"
   },
   "query": {
-    "public_base_url": "http://localhost:8080",
+    "public_base_url": "http://localhost:8081",
     "bind": {
       "host": "0.0.0.0",
       "port": 8080
     },
-    "collection_prefix": "/query",
+    "collection_prefix": "",
     "presentation": {
       "provider_name": "drogna, a synthetic environmental data harness",
       "licence_name": "MIT",
-      "licence_url": "http://localhost:8080/licence",
+      "licence_url": "http://localhost:8081/licence",
       "terms_of_service": "Synthetic data for learning purposes. The numerics are deliberately fake and nothing here describes a real place or a real measurement.",
-      "map_tile_url": "http://localhost:8080/tiles/{z}/{x}/{y}.png",
+      "map_tile_url": "http://localhost:8081/tiles/{z}/{x}/{y}.png",
       "map_attribution": "Base map tiles are decoration for pygeoapi's own HTML views; the data drawn over them is synthetic."
     },
     "domain": {

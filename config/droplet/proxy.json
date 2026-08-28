@@ -29,18 +29,24 @@
     "upstream": {
       "query": {
         "url": "http://query:8080",
-        "collection_path": "/query/collections"
+        "collection_path": "/collections"
       },
       "control_websocket": {
         "url": "http://broker:9001",
         "path": "/mqtt"
+      },
+      "page": {
+        "url": "http://client:8080"
+      },
+      "clock": {
+        "url": "http://clock:8090",
+        "prefix": "/clock"
       }
     },
     "released": {
       "prefix": "/released",
       "collections": [
-        "drogna-forecast",
-        "drogna-uncertainty"
+        "forecast"
       ],
       "variables": [
         "sea_water_temperature",

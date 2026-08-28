@@ -1,15 +1,21 @@
 # ADR-0021: The clock's HTTP interface answers the browser from any origin
 
-**Status:** Proposed — drafted by an agent session, not accepted, not to be treated as decided
+**Status:** Superseded by ADR-0025
 **Date:** 28 August 2026
 **Requirements:** SRD FR-10, FR-49, FR-53; ADR-0009; client FR-012
 **Raised by:** long-run-01, commit `e46bbf1`, which found the fault and deliberately left the
 decision: "adding CORS to a control endpoint is a decision about what may reach it from
 where, and this branch has already spent one such decision provisionally"
 
-> This record is **proposed**, for the same reason ADR-0020 is: the change exists and ought
-> not to sit in the tree undocumented, and the fact that it exists is not an argument that
-> it is settled.
+> This record was drafted **proposed**, for the same reason ADR-0020 was: the change
+> existed and ought not to sit in the tree undocumented, and the fact that it existed was
+> not an argument that it was settled. It was accepted by the owner on 28 August 2026, by
+> structured interview, with its successor already named, and was marked superseded when
+> lane I routed the clock's control surface through the boundary under its clearance —
+> at which point the any-origin answer became an internal detail rather than a public
+> surface. It is kept as the record of why the wildcard exists: the grant is deliberately
+> not revoked, because captures and the local profile may still address the clock
+> directly inside the deployment (ADR-0025).
 
 ## Context
 

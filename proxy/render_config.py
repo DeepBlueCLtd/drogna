@@ -41,7 +41,14 @@ from typing import Any
 
 from harness_core.config import ConfigError, load_or_exit
 
-from proxy.policy import ALLOW_UPGRADE, PolicyError, ReleasePolicy, released_locations
+from proxy.policy import (
+    ALLOW_UPGRADE,
+    PolicyError,
+    ReleasePolicy,
+    clock_location,
+    page_location,
+    released_locations,
+)
 from proxy.schemas import COMMON_CONFIG_SCHEMA, CONFIG_SCHEMA, schema
 
 __all__ = [
@@ -271,6 +278,11 @@ def render_from_document(document: Mapping[str, Any]) -> str:
         "released_prefix": _bare(policy.prefix, "proxy.released.prefix"),
         "released_locations": _released_block(policy),
         "upgrade_location": _upgrade_block(policy, document),
+        "page_rule": _bare(page_location(policy).rule, "proxy.upstream.page"),
+        "page_upstream": _bare(page_location(policy).upstream, "proxy.upstream.page"),
+        "clock_rule": _bare(clock_location(policy).rule, "proxy.upstream.clock"),
+        "clock_prefix": _bare(clock_location(policy).path, "proxy.upstream.clock.prefix"),
+        "clock_upstream": _bare(clock_location(policy).upstream, "proxy.upstream.clock"),
         "health_port": _bare(_require(document, "proxy", "health", "port"), "proxy.health.port"),
         "health_path": _bare(_require(document, "proxy", "health", "path"), "proxy.health.path"),
     }

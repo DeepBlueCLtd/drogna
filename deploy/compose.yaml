@@ -371,11 +371,18 @@ services:
     # nginx resolves every upstream name once, at start-up, and refuses the whole
     # configuration when one of them does not resolve — `host not found in upstream
     # "query"`, and the boundary never comes up at all. So the proxy cannot start before
-    # the service it proxies to exists, and this is an ordering requirement rather than a
+    # the services it proxies to exist, and this is an ordering requirement rather than a
     # preference. It was absent while the `edge` profile was never active alongside
-    # `query`, and cost the whole boundary the moment both were promoted.
+    # `query`, and cost the whole boundary the moment both were promoted. The client and
+    # the clock joined the list when the one-door topology put the page and the clock's
+    # control surface behind this boundary (ADR-0025): each is now a resolved upstream,
+    # so each is now a start-up dependency for exactly the reason query was.
     depends_on:
       query:
+        condition: service_healthy
+      client:
+        condition: service_healthy
+      clock:
         condition: service_healthy
     # Probed on the health surface its configuration declares, not on the published
     # listener. The boundary is default-deny, so a probe against the listener is answered

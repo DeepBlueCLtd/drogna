@@ -6,19 +6,25 @@
 #
 # Policy is expressed here and nowhere else. Read it as three claims:
 #
-#   1. Everything is refused unless a location below admits it. `location /` is the whole
-#      of the default deny (FR-001) and is reached by every path no released location
-#      matched — the query layer's native paths, its emitted specification and its
-#      conformance documents included, none of which appear here. A collection the query
-#      layer began serving on its own (FR-21) has no location and so has no way in.
+#   1. One door. The page, the released data, the clock's control surface and the control
+#      upgrade are all served through this file, behind one server-level clearance (the
+#      topology decision of 28 August 2026; ADR-0025). `location /` serves the page, and
+#      is reached by every path no other location matched — the query layer's native
+#      paths, its emitted specification and its conformance documents included, none of
+#      which appear here. Those resolve at the *client's* server, which answers its
+#      single-page routes with the page and nothing else, so a collection the query layer
+#      began serving on its own (FR-21) still has no location naming the query layer and
+#      so still has no way in (FR-002, FR-003).
 #   2. A caller either holds the one credential this deployment issues or holds nothing.
 #      No directive in this file can alter a response body: there is no `sub_filter`, no
 #      `xslt_stylesheet`, and `proxy_intercept_errors` is left off, so even an upstream
 #      error body reaches the caller as upstream wrote it (FR-005, ADR-0001).
 #   3. An uncleared caller is told the same thing about every path, so the released set
-#      cannot be enumerated without clearance (FR-006). That property is not a coincidence
-#      of three refusals agreeing; it is a consequence of where the refusals happen, which
-#      is the note beside `location /` below.
+#      cannot be enumerated without clearance (FR-006): the challenge happens in the
+#      access phase, before any location's content handler runs, and every location below
+#      but the delegated upgrade is behind it. The one refusal a cleared caller can still
+#      meet — beneath the released prefix, off the released list — answers identically
+#      for a withheld collection and for a name that never existed.
 #
 # Every value below came from the file named by HARNESS_CONFIG. There is no hostname,
 # port, path or credential in this template.
@@ -39,6 +45,13 @@ server {
     # An error page that names the software and its version is a disclosure the boundary
     # gets for free by not asking for it.
     server_tokens off;
+
+    # Redirects nginx issues itself — the canonicalising 301 a slash-terminated proxied
+    # location answers a request for its bare prefix with — are relative. An absolute one
+    # carries this server's *listen* port, and the listen port is a container port that no
+    # caller can reach wherever the deployment publishes a different one: measured as a
+    # 301 to a port with nothing behind it, from the one door the deployment has.
+    absolute_redirect off;
 
     # Policy is applied to $uri: the path after nginx has decoded the escapes and
     # collapsed the separators. A target that does not decode to one unambiguous path
@@ -61,33 +74,65 @@ server {
     auth_basic "@{credentials_realm}";
     auth_basic_user_file @{credentials_file};
 
-    # The default deny (FR-001).
+    # The page (C-18): what a cleared caller reaches on every path no other location
+    # answers. This used to be the default deny, and what replaced the refusal with the
+    # page was a decision, not a drift — the one-door topology of 28 August 2026, which
+    # put the page behind the same clearance as the data so that its fetches are
+    # same-origin and the one challenge covers both.
+    #
+    # `proxy_pass` is a content-phase handler, so it runs after the access phase and an
+    # uncleared caller never reaches the client's server: the challenge is met on every
+    # path alike, which is what keeps FR-006 true now that most paths answer something.
+    # The upstream is the client's own nginx, which serves the bundle and answers its
+    # single-page routes with the page; nothing here or there names the query layer, so
+    # its native paths and documents are as unreachable as they were under the deny.
+    location / {
+        set $harness_rule "@{page_rule}";
+        proxy_pass @{page_upstream};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Beneath the released prefix but not a released collection: refused, not paged. A
+    # separate rule name, so that the log distinguishes a withheld collection from a path
+    # that was never part of the boundary — the same refusal, and two different mistakes.
     #
     # `try_files`, and not `return 404`, and the difference is the whole of FR-006.
     # `return` is executed in the rewrite phase, which nginx runs *before* the access
-    # phase where `auth_basic` lives. A `return 404` here would answer before the
-    # credential was ever examined, so an uncleared caller would be told 404 for an
-    # unreleased path and 401 for a released one — and the released set would be
-    # enumerable by a caller holding nothing, which is exactly what FR-006 forbids.
-    # `try_files` runs in the precontent phase, after the access phase, so an uncleared
-    # caller meets the same challenge on every path alike and only a cleared caller ever
-    # sees the refusal. The proxied locations below are content-phase handlers and are
-    # after the access phase for the same reason.
+    # phase where `auth_basic` lives, so it would answer before the credential was ever
+    # examined and an uncleared caller could probe the prefix. `try_files` runs in the
+    # precontent phase, after the access phase, so only a cleared caller ever sees this
+    # refusal — and sees the same one for a withheld collection as for a name that never
+    # existed, which is what keeps the released set unenumerable even behind clearance.
     #
     # The probe can never be found, whatever the document root is or is not: no file is
     # named for a request path with a suffix appended to it. It is a way of reaching the
     # `=404`, not a location, and nothing is ever served from a filesystem here.
-    location / {
-        set $harness_rule "deny-default";
-        try_files $uri@{deny_probe_suffix} =404;
-    }
-
-    # Beneath the released prefix but not a released collection. A separate rule name, so
-    # that the log distinguishes a withheld collection from a path that was never part of
-    # the boundary: the same refusal, and two different mistakes.
     location @{released_prefix}/ {
         set $harness_rule "deny-not-released";
         try_files $uri@{deny_probe_suffix} =404;
+    }
+
+    # The bare prefix itself, exactly. Without this it would fall to `location /` and
+    # answer the page, while proxy/policy.py refuses it — and the two must say the same
+    # thing or the reference is a reference for nothing. There is no released listing to
+    # serve: the prefix names a policy, not a resource.
+    location = @{released_prefix} {
+        set $harness_rule "deny-not-released";
+        try_files $uri@{deny_probe_suffix} =404;
+    }
+
+    # The clock's control surface (FR-74's strand, ADR-0025), behind the clearance like
+    # everything but the upgrade. A `^~` subtree, unlike the upgrade's exact location,
+    # because every request beneath it is inspected and cleared per request. `proxy_pass`
+    # with no URI part, so the request path travels to the clock unrewritten — the clock
+    # already serves its routes beneath this same prefix, and a rewrite here would be a
+    # second spelling of that fact for the two to disagree over.
+    location ^~ @{clock_prefix}/ {
+        set $harness_rule "@{clock_rule}";
+        proxy_pass @{clock_upstream};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
 @{released_locations}

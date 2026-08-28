@@ -28,7 +28,7 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0018](0018-common-json-is-a-root-seed-not-a-set-of-defaults.md) | `common.json` is a root seed, and the defaults mechanism it describes does not exist | Accepted |
 | [0019](0019-the-planner-threshold-is-absolute-and-was-never-checked.md) | The planner's threshold stays absolute, and now has something to check it against | Accepted |
 | [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Accepted |
-| [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Proposed |
+| [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Superseded by ADR-0025 |
 | [0022](0022-generator-selection-for-the-type-chain.md) | The type chain's generators, and why the TypeScript half is ours | Accepted |
 | [0023](0023-the-observation-store-authenticates-by-trust.md) | The observation store authenticates by trust, and models no database threat | Accepted |
 | [0024](0024-the-advisory-store-is-a-third-schema.md) | The advisory store is a third schema, not a second engine | Accepted |

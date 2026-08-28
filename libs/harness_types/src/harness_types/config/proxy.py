@@ -91,6 +91,30 @@ class ControlWebsocket(BaseModel):
     )
 
 
+class Page(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    url: AnyUrl = Field(
+        ..., description="Base URL of the client's own server on the internal network."
+    )
+
+
+class Clock(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    url: AnyUrl = Field(
+        ...,
+        description="Base URL of the clock's HTTP interface on the internal network.",
+    )
+    prefix: str = Field(
+        ...,
+        description="The one path prefix beneath which the clock's routes are reachable, passed through unrewritten. A single leading-slash segment, distinct from the released prefix and the upgrade prefix so that none can widen another.",
+        pattern='^/[a-z0-9][a-z0-9-]*$',
+    )
+
+
 class Upstream(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -100,6 +124,16 @@ class Upstream(BaseModel):
         ...,
         description='The far end of ADR-0008. The listener is deliberately unpublished, so this upgrade location is the only way a browser reaches the control namespace.',
         title="The broker's WebSocket listener (C-03)",
+    )
+    page: Page = Field(
+        ...,
+        description="The page itself, served through the boundary behind the same clearance as the data it fetches. One origin, one credential, one door: a fetch from the page to the released prefix, the clock or the control upgrade is same-origin, and the challenge that admitted the page covers all of it. The page is what a path answered by no other location reaches — the client's own server resolves the request, answering its single-page routes with the page and nothing else — so the query layer's native paths still reach the query layer never (FR-002).",
+        title='The browser client (C-18)',
+    )
+    clock: Clock = Field(
+        ...,
+        description="FR-74's exempt strand, decided in ADR-0025: the clock's two HTTP routes are reachable through the boundary under its clearance, ending the direct exposure ADR-0021 recorded. The prefix is proxied as it stands — the clock already serves its routes beneath its own /clock — and no auth_basic opt-out is added for it: a command surface sits behind the clearance exactly as the released data does.",
+        title="The clock's control surface (C-01)",
     )
 
 
@@ -211,7 +245,7 @@ class Proxy(BaseModel):
     )
     upstream: Upstream = Field(
         ...,
-        description='The two upstreams this proxy is willing to reach, both by service name on the internal network. Neither is published to a host: reaching them is what the proxy is for.',
+        description="The four upstreams this proxy is willing to reach, each by service name on the internal network. None is meant to be reached except through here: the page, the data, the clock's control surface and the control-namespace socket all come through the one door, under the one clearance (the topology decision of 28 August 2026, spikes/map-to-ocean/FINDING.md; ADR-0025).",
         title='What sits behind the boundary',
     )
     released: Released = Field(

@@ -33,6 +33,7 @@ from proxy.render_config import render_from_document  # noqa: E402
 _PROXY_PASS_HOST = re.compile(r"proxy_pass\s+https?://([^/:;\s]+)")
 
 STUB = "stub-upstream"
+PAGE_STUB = "stub-page"
 
 
 def _document() -> dict[str, Any]:
@@ -41,11 +42,17 @@ def _document() -> dict[str, Any]:
 
 
 def _settled_as_the_fixture_settles_it() -> dict[str, Any]:
-    """The same repointing tests/support/proxy_boundary.py performs, kept in step."""
+    """The same repointing tests/support/proxy_boundary.py performs, kept in step.
+
+    Two stubs since the one-door change: the page goes to its own, so the matrix can tell
+    "the page's server answered it" from "the query layer saw it", and everything else —
+    the clock included — goes to the recording stub.
+    """
     settled = _document()
-    for upstream in settled["proxy"]["upstream"].values():
+    for name, upstream in settled["proxy"]["upstream"].items():
         if isinstance(upstream, dict) and "url" in upstream:
-            upstream["url"] = f"http://{STUB}:8080"
+            behind = PAGE_STUB if name == "page" else STUB
+            upstream["url"] = f"http://{behind}:8080"
     settled["proxy"]["credentials"]["file"] = "/etc/drogna/proxy.htpasswd"
     settled["proxy"]["tls"]["enabled"] = False
     settled["proxy"]["listen"]["port"] = 8080
@@ -68,16 +75,16 @@ def test_every_declared_upstream_carries_a_url() -> None:
 
 
 def test_settling_the_upstreams_leaves_no_other_host_named() -> None:
-    """The property that was violated: after settling, one host, and it is the stub.
+    """The property that was violated: after settling, only the stubs are named.
 
-    A second host here is a host that must exist on the fixture's network, and the
-    fixture's network has two containers on it.
+    Another host here is a host that must exist on the fixture's network, and the
+    fixture's network carries exactly the proxy and its two stubs.
     """
     rendered = render_from_document(_settled_as_the_fixture_settles_it())
     hosts = sorted(set(_PROXY_PASS_HOST.findall(rendered)))
-    assert hosts == [STUB], (
+    assert hosts == sorted([PAGE_STUB, STUB]), (
         f"the rendered configuration proxies to {hosts}. Every one of those must resolve "
-        "when nginx starts or it will not start at all; only the stub exists on the "
+        "when nginx starts or it will not start at all; only the two stubs exist on the "
         "fixture's network."
     )
 

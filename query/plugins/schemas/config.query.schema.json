@@ -77,8 +77,8 @@
         },
         "collection_prefix": {
           "type": "string",
-          "pattern": "^/[a-z0-9][a-z0-9/_-]*$",
-          "description": "The one path prefix every collection sits under. Prefix-based default-deny at the reverse proxy (FR-040, FR-041) works only if adding a collection cannot change the shape of the path space, so this is a single value and not a per-collection one."
+          "pattern": "^$|^/[a-z0-9][a-z0-9/_-]*$",
+          "description": "A path prefix under which the service's links advertise its collections, or empty for none. This is link generation, not routing: it reaches pygeoapi's server.url and moves no route, so a non-empty value makes every advertised link name a path the service does not serve (spikes/map-to-ocean/FINDING.md, link 3). It stays a single value, not a per-collection one, so adding a collection cannot change the shape of the advertised path space."
         },
         "coverage_store": {
           "$ref": "#/$defs/coverage_store"

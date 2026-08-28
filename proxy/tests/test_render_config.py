@@ -139,7 +139,12 @@ def test_a_collection_absent_from_the_list_has_no_location_at_all(destination: s
 
     text = render_from_document(document)
     configured = "\n".join(directives(text))
-    proxied = [header for header, body in location_bodies(text).items() if "proxy_pass" in body]
+    # The published server only: the health listener carries its own `location /`, and the
+    # two would collide in one mapping over the whole file.
+    published, _health = blocks(text, "server")
+    proxied = [
+        header for header, body in location_bodies(published).items() if "proxy_pass" in body
+    ]
 
     assert f"location = {prefix}/kept" in text
     for identifier in withheld:
@@ -149,6 +154,10 @@ def test_a_collection_absent_from_the_list_has_no_location_at_all(destination: s
             f"location = {prefix}/kept",
             f"location ^~ {prefix}/kept/",
             f"location = {document['proxy']['control']['upgrade_prefix']}",
+            # The one-door surfaces: the page at the root and the clock beneath its
+            # prefix. Neither names the query layer, so neither widens the release.
+            "location /",
+            f"location ^~ {document['proxy']['upstream']['clock']['prefix']}/",
         ]
     )
 

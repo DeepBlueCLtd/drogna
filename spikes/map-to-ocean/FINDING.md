@@ -9,6 +9,11 @@ against the merged tree, not a question that was scheduled
 `export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"`, `./scripts/up.sh local`) and run the
 commands in `results/measurements.txt`. Every claim below is one of those lines.
 
+**Tracked as**: DeepBlueCLtd/drogna#34, which carries the work list as a checklist in
+dependency order, with the decisions of 28 August recorded on it. This file is the
+evidence and the argument; the issue is the state. If the two disagree, the tree is the
+authority and both are wrong until somebody has looked.
+
 ---
 
 ## The result, in one sentence
@@ -237,3 +242,8 @@ In this order, because each is cheap once the one before it is settled:
 4. **Decide the local topology** (6). The owner's, not a lane's.
 
 1–3 make the droplet draw a field. All four make the local stack draw one.
+
+The checklist for all four, with the files each touches, is on
+DeepBlueCLtd/drogna#34. Nothing in this file is ticked as work proceeds — a finding
+records what was true on the day it was taken, and a finding edited to stay current stops
+being evidence of anything.

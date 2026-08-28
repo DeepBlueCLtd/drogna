@@ -340,9 +340,10 @@ class FollowedClock:
     can never time out and the minimum interval between runs can never elapse, so the
     control loop turned exactly once and then declined every divergence for ever.
 
-    Staleness detection comes with it, for the first time in these components: a gap wider
+    A stale clock becomes reportable here for the first time in these components: a gap wider
     than the endpoint's ``stale_after_gap`` marks the clock stale, which is a fact about the
-    subscription rather than a comparison against a host clock (Constitution I).
+    subscription rather than a comparison against a host clock (Constitution I). Until now
+    there was no subscription for a gap to appear in.
     """
 
     def __init__(self, endpoint: ClockEndpoint, control: ClockControl | None = None) -> None:

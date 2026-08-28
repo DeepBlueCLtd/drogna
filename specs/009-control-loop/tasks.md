@@ -671,8 +671,8 @@ false of the loop.
       quality of service 0 while the control filters stay at 1: a lost clock sample is
       replaced by the next one a tenth of a second later, and six components acknowledging
       ten a second would be a round trip per message the harness has no use for. Staleness
-      detection starts working in these components for the first time, because until now
-      there was no subscription for a gap to appear in.
+      a stale clock becomes reportable in these components for the first time, because until
+      now there was no subscription for a gap to appear in.
 
       That `resolve_clock` admits a `FollowedClock` a caller supplies is the point rather
       than a convenience: it is what makes the wiring assertable over an ordinary message

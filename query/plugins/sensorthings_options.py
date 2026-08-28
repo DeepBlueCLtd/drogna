@@ -30,22 +30,35 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from plugins.errors import QueryOptionRefusedError
+from plugins.edr_geometry import point_in_ring
+from plugins.errors import QueryLayerError, QueryOptionRefusedError
 from plugins.sensorthings_entities import (
     PHENOMENON_TIME,
     EntitySet,
     Relationship,
     SelectionCriteria,
+    SpatialWithin,
     TimeComparison,
 )
 
 __all__ = [
     "IMPLEMENTED_OPTIONS",
     "OUT_OF_SCOPE",
+    "SPATIAL_FUNCTION",
     "ParsedOptions",
     "next_link",
     "parse_options",
 ]
+
+SPATIAL_FUNCTION = "st_within"
+"""The one spatial predicate the filter subset implements (FR-80, ADR-0025).
+
+``st_within(location, geography'POLYGON (…)')``: the observation's own sampled position
+inside a single drawn ring, composing with the phenomenon-time comparisons by ``and``.
+Every other spatial function, every other property and every other geometry keeps its
+refusal with its name — the subset's honesty has been its narrowness, and the narrowness
+is retained by widening it one stated predicate at a time.
+"""
 
 IMPLEMENTED_OPTIONS: tuple[str, ...] = (
     "$top",
@@ -74,13 +87,16 @@ OUT_OF_SCOPE: Mapping[str, str] = {
         "returned whole, bounded by the configured page size."
     ),
     "$filter-property": (
-        "Filtering is on phenomenon time alone. Every read of this store is a read over "
-        "simulation time, and a filter on a result value or a geometry is a query the "
-        "harness has no use for and would have to be tested to claim."
+        "Filtering is on phenomenon time, and spatially on the observation geometry "
+        "through st_within, and on nothing else. A filter on a result value or any "
+        "other property is a query the harness has no use for and would have to be "
+        "tested to claim."
     ),
     "$filter-function": (
-        "The filter language's geospatial and temporal functions are not implemented; a "
-        "comparison on phenomenon time is the whole of what is."
+        "Of the filter language's geospatial and temporal functions, exactly one is "
+        "implemented: st_within(location, geography'POLYGON (…)'), the observation "
+        "geometry inside a single drawn ring (ADR-0025). Every other function is "
+        "refused by name."
     ),
     "write": (
         "Every write operation and deep insert is out of scope. The query layer holds "
@@ -139,32 +155,102 @@ def _refuse_functions(expression: str, conformance: str) -> None:
         )
 
 
+_ST_WITHIN = re.compile(
+    r"^\s*st_within\(\s*(?P<property>[A-Za-z][\w/]*)\s*,\s*"
+    r"geography'(?P<wkt>[^']*)'\s*\)\s*$"
+)
+_POLYGON_RING = re.compile(r"^\s*POLYGON\s*\(\s*\((?P<ring>[^()]*)\)\s*\)\s*$")
+
+
+def _parse_spatial(match: re.Match[str], entity: EntitySet, conformance: str) -> SpatialWithin:
+    """One st_within clause, or a refusal naming exactly what is not served."""
+    prop = match.group("property")
+    if entity.geometry_column is None:
+        raise QueryOptionRefusedError(
+            f"$filter {SPATIAL_FUNCTION} on {entity.name}",
+            conformance=conformance,
+            detail=(
+                f"{entity.name} carries no geometry; the spatial predicate is over the "
+                f"observation geometry alone."
+            ),
+        )
+    if prop != entity.geometry_column:
+        raise QueryOptionRefusedError(
+            f"$filter {SPATIAL_FUNCTION} on {prop}",
+            conformance=conformance,
+            detail=(
+                f"the spatial predicate is over {entity.geometry_column} — the "
+                f"observation's own sampled position — and no other property."
+            ),
+        )
+    wkt = match.group("wkt").strip()
+    ring_match = _POLYGON_RING.match(wkt)
+    if ring_match is None:
+        shape = wkt.split("(")[0].strip() or "an empty geometry"
+        raise QueryOptionRefusedError(
+            f"$filter {SPATIAL_FUNCTION} with {shape}",
+            conformance=conformance,
+            detail=(
+                "the predicate takes a single-ring POLYGON in the geography literal; "
+                "holes, multipolygons and other geometries are not served. Refused "
+                "rather than approximated: answering a different region than the one "
+                "drawn would look exactly like a correct answer."
+            ),
+        )
+    try:
+        ring = tuple(
+            (float(pair.split()[0]), float(pair.split()[1]))
+            for pair in ring_match.group("ring").split(",")
+            if pair.strip()
+        )
+        if len({point for point in ring}) < 3:
+            raise ValueError("fewer than three distinct vertices")
+    except (ValueError, IndexError) as error:
+        raise QueryOptionRefusedError(
+            f"$filter {SPATIAL_FUNCTION}",
+            conformance=conformance,
+            detail=f"the polygon's ring could not be read as x y pairs: {error}.",
+        ) from None
+    return SpatialWithin(wkt=wkt, ring=ring)
+
+
 def _parse_filter(
     expression: str, entity: EntitySet, conformance: str
-) -> tuple[TimeComparison, ...]:
-    """Comparisons on phenomenon time, joined by ``and``. Anything else is refused by name."""
-    _refuse_functions(expression, conformance)
+) -> tuple[tuple[TimeComparison, ...], tuple[SpatialWithin, ...]]:
+    """Comparisons on phenomenon time and st_within predicates, joined by ``and``.
+
+    Anything else is refused by name: any other function, any other property, any other
+    geometry, disjunction. The spatial clause is recognised before the function refusal
+    runs, so st_within is the one function that does not refuse — everything about it that
+    is not served still does, with the cause named (ADR-0025).
+    """
     if re.search(r"\bor\b", expression, re.IGNORECASE):
         raise QueryOptionRefusedError(
             "$filter with or",
             conformance=conformance,
             detail=(
-                "a filter is a conjunction of comparisons on phenomenon time; disjunction "
-                "is not implemented."
+                "a filter is a conjunction of comparisons on phenomenon time and spatial "
+                "predicates; disjunction is not implemented."
             ),
         )
-    if entity.time_column is None:
+    if entity.time_column is None and entity.geometry_column is None:
         raise QueryOptionRefusedError(
             "$filter",
             conformance=conformance,
             detail=(
-                f"{entity.name} carries no phenomenon time, and phenomenon time is the only "
-                f"property this interface filters on."
+                f"{entity.name} carries no phenomenon time and no geometry, and those are "
+                f"the only properties this interface filters on."
             ),
         )
 
     comparisons: list[TimeComparison] = []
+    spatial: list[SpatialWithin] = []
     for clause in re.split(r"\band\b", expression, flags=re.IGNORECASE):
+        within = _ST_WITHIN.match(clause)
+        if within is not None:
+            spatial.append(_parse_spatial(within, entity, conformance))
+            continue
+        _refuse_functions(clause, conformance)
         match = _COMPARISON.match(clause)
         if match is None:
             raise QueryOptionRefusedError(
@@ -172,7 +258,9 @@ def _parse_filter(
                 conformance=conformance,
                 detail=(
                     f"{clause.strip()!r} is not a comparison of the form "
-                    f"'{PHENOMENON_TIME} <operator> <value>'."
+                    f"'{PHENOMENON_TIME} <operator> <value>' or a "
+                    f"{SPATIAL_FUNCTION}({entity.geometry_column or 'location'}, "
+                    f"geography'POLYGON (…)') predicate."
                 ),
             )
         left = match.group("left")
@@ -182,10 +270,19 @@ def _parse_filter(
                 conformance=conformance,
                 detail=OUT_OF_SCOPE["$filter-property"],
             )
+        if entity.time_column is None:
+            raise QueryOptionRefusedError(
+                "$filter",
+                conformance=conformance,
+                detail=(
+                    f"{entity.name} carries no phenomenon time, so a comparison on it "
+                    f"selects nothing this entity set holds."
+                ),
+            )
         comparisons.append(
             TimeComparison(match.group("operator"), match.group("right").strip("'\""))
         )
-    return tuple(comparisons)
+    return tuple(comparisons), tuple(spatial)
 
 
 def _parse_orderby(expression: str, entity: EntitySet, conformance: str) -> bool:
@@ -262,8 +359,9 @@ def parse_options(
     count = parameters.get("$count", "false").strip().lower() == "true"
 
     comparisons: tuple[TimeComparison, ...] = ()
+    spatial: tuple[SpatialWithin, ...] = ()
     if parameters.get("$filter"):
-        comparisons = _parse_filter(parameters["$filter"], entity, conformance)
+        comparisons, spatial = _parse_filter(parameters["$filter"], entity, conformance)
 
     descending = False
     if parameters.get("$orderby"):
@@ -276,6 +374,7 @@ def parse_options(
     return ParsedOptions(
         criteria=SelectionCriteria(
             phenomenon_time=comparisons,
+            within=spatial,
             descending=descending,
             skip=skip,
             top=top,
@@ -310,6 +409,26 @@ def next_link(
     return f"{base_url}{separator}{encoded}"
 
 
+def _row_within(location: Any, ring: tuple[tuple[float, float], ...]) -> bool:
+    """The in-memory reading of the predicate, through the same ring test the EDR area
+    query uses, so the two row sources cannot disagree about what "within" means.
+
+    A row's location is a GeoJSON-style mapping or a (longitude, latitude) pair. A row
+    with no location is not within anything: the predicate asks about a position, and a
+    row that has none cannot satisfy it.
+    """
+    if location is None:
+        return False
+    coordinates = location.get("coordinates") or () if isinstance(location, Mapping) else location
+    values = list(coordinates)[:2]
+    if len(values) != 2:
+        return False
+    try:
+        return point_in_ring(float(values[0]), float(values[1]), ring)
+    except QueryLayerError:
+        return False
+
+
 def rows_after_filter(
     rows: Sequence[Mapping[str, Any]],
     entity: EntitySet,
@@ -326,6 +445,13 @@ def rows_after_filter(
         for row in rows
         if all(row.get(column) == value for column, value in criteria.equals.items())
     ]
+    if criteria.within and entity.geometry_column is not None:
+        column = entity.geometry_column
+        selected = [
+            row
+            for row in selected
+            if all(_row_within(row.get(column), predicate.ring) for predicate in criteria.within)
+        ]
     if criteria.phenomenon_time and entity.time_column is not None:
         column = entity.time_column
         selected = [

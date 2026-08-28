@@ -24,7 +24,11 @@ for candidate in (REPO_ROOT / "tests", REPO_ROOT / "query"):
         sys.path.insert(0, str(candidate))
 
 from plugins.sensorthings_entities import ABSENT_ENTITY_SETS, ENTITY_SETS  # noqa: E402
-from plugins.sensorthings_options import IMPLEMENTED_OPTIONS, OUT_OF_SCOPE  # noqa: E402
+from plugins.sensorthings_options import (  # noqa: E402
+    IMPLEMENTED_OPTIONS,
+    OUT_OF_SCOPE,
+    SPATIAL_FUNCTION,
+)
 from plugins.sensorthings_provider import conformance_statement  # noqa: E402
 
 CONFORMANCE_URL = "https://drogna.invalid/query/conformance"
@@ -43,7 +47,7 @@ PROSE = {
     "$expand-nested": "Nested `$expand`",
     "$expand-options": "Query options inside an `$expand`",
     "$filter-property": "`$filter` on any property other than `phenomenonTime`",
-    "$filter-function": "geospatial and temporal functions",
+    "$filter-function": "geospatial and temporal functions, save one",
     "write": "write operation",
     "Tasking": "Part 2 Tasking",
     "MQTT": "MQTT subscription extension",
@@ -151,3 +155,17 @@ def test_the_standards_primer_agrees_where_it_exists() -> None:
         assert name in text
     for option in IMPLEMENTED_OPTIONS:
         assert option in text
+
+
+def test_both_accounts_state_the_one_spatial_predicate_identically(statement, prose: str) -> None:
+    """FR-80: the widening and the conformance statement move in the same commit.
+
+    The subset's honesty has been its narrowness, so the one predicate is stated with the
+    same precision as the refusals around it — in the served statement, and in the
+    documentation, spelt the same way.
+    """
+    assert SPATIAL_FUNCTION == "st_within"
+    assert "st_within(location, geography'POLYGON" in statement["spatial"]
+    assert "refused" in statement["spatial"]
+    assert "st_within(location, geography'POLYGON" in prose
+    assert "ADR-0025" in prose

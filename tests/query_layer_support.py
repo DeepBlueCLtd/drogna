@@ -489,6 +489,12 @@ def observation_rows() -> dict[str, list[dict[str, Any]]]:
                     "id": f"obs-{quantity}-{index:03d}",
                     "phenomenon_time": f"2026-09-01T0{index}:00:00.000000Z",
                     "result": base + index * 0.1,
+                    # The store's own location column: the platform steps east as it
+                    # samples, so a drawn geometry genuinely partitions these rows.
+                    "location": {
+                        "type": "Point",
+                        "coordinates": [-4.5 + index * 0.2, 49.0],
+                    },
                     "datastream_id": f"ds-{quantity}",
                     "feature_id": "foi-000",
                 }

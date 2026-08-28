@@ -274,3 +274,25 @@ def test_the_sql_a_postgres_row_source_would_issue_is_a_select_and_nothing_else(
     # Values travel as parameters, never interpolated into the statement.
     assert "ds-temperature" not in statement
     assert "ds-temperature" in values
+
+
+def test_a_drawn_geometry_selects_observations_server_side_with_the_time_window(
+    service: SensorThingsService,
+) -> None:
+    """FR-80 through the whole service: the platform steps east as it samples, so a ring
+    over the western end of its sampling and a window over the middle hours select the
+    intersection — genuinely, in the row source, not by discarding rows client-side."""
+    ring = "POLYGON ((-4.6 48.9, -4.0 48.9, -4.0 49.1, -4.6 49.1, -4.6 48.9))"
+    document = service.resource(
+        "Datastreams('ds-temperature')/Observations",
+        {
+            "$filter": (
+                f"st_within(location, geography'{ring}') and "
+                f"phenomenonTime ge 2026-09-01T01:00:00.000000Z"
+            )
+        },
+    )
+    identifiers = [entry["@iot.id"] for entry in document["value"]]
+    # Longitudes run -4.5, -4.3, -4.1, -3.9, ... per hour: the ring keeps hours 0-2 and
+    # the window keeps hours 1-6, so exactly hours 1 and 2 answer.
+    assert identifiers == ["obs-temperature-001", "obs-temperature-002"]

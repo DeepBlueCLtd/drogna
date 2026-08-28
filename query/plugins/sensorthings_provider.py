@@ -34,6 +34,7 @@ from plugins.sensorthings_entities import (
 from plugins.sensorthings_options import (
     IMPLEMENTED_OPTIONS,
     OUT_OF_SCOPE,
+    SPATIAL_FUNCTION,
     next_link,
     parse_options,
     rows_after_filter,
@@ -77,6 +78,13 @@ def conformance_statement(conformance_url: str) -> dict[str, Any]:
         "entity_sets_absent": dict(ABSENT_ENTITY_SETS),
         "query_options_implemented": list(IMPLEMENTED_OPTIONS),
         "query_options_absent": dict(OUT_OF_SCOPE),
+        "spatial": (
+            f"$filter implements exactly one spatial predicate: "
+            f"{SPATIAL_FUNCTION}(location, geography'POLYGON (…)') — the observation's "
+            f"own sampled position inside a single drawn ring, composing with the "
+            f"phenomenon-time comparisons by and. Every other spatial function, "
+            f"property and geometry is refused with its name (ADR-0025)."
+        ),
         "time": (
             f"{PHENOMENON_TIME} is simulation time. No arrival time or insertion time is "
             f"exposed, ordered on or filterable."
@@ -147,6 +155,16 @@ class PostgresRowSource:
         for column, value in criteria.equals.items():
             clauses.append(f"{column} = %s")
             values.append(value)
+        if criteria.within and model.geometry_column is not None:
+            # The one spatial predicate the filter subset implements (FR-80, ADR-0025).
+            # The WKT literal travels as a bound parameter; the geography column is read
+            # as geometry because ST_Within is defined over geometry, and the store's
+            # SRID is 4326 throughout.
+            for predicate in criteria.within:
+                clauses.append(
+                    f"ST_Within({model.geometry_column}::geometry, ST_GeomFromText(%s, 4326))"
+                )
+                values.append(predicate.wkt)
         if criteria.phenomenon_time and model.time_column is not None:
             for comparison in criteria.phenomenon_time:
                 clauses.append(f"{model.time_column} {_SQL_OPERATORS[comparison.operator]} %s")
@@ -331,6 +349,7 @@ class SensorThingsService:
             return SelectionCriteria(
                 equals={relationship.column: resolved.key},
                 phenomenon_time=criteria.phenomenon_time,
+                within=criteria.within,
                 descending=criteria.descending,
                 skip=criteria.skip,
                 top=criteria.top,

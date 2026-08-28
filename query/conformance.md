@@ -79,8 +79,10 @@ the entity sets rather than at an error.
   because a next link on a short page invites a round trip that returns nothing.
 - `$count` — the total, as `@iot.count`, without retrieving every page.
 - `$orderby` — on `phenomenonTime` only, ascending or descending.
-- `$filter` — comparisons on `phenomenonTime` only (`eq`, `ne`, `gt`, `ge`, `lt`, `le`),
-  joined by `and`.
+- `$filter` — comparisons on `phenomenonTime` (`eq`, `ne`, `gt`, `ge`, `lt`, `le`), and
+  exactly one spatial predicate: `st_within(location, geography'POLYGON (…)')`, the
+  observation's own sampled position inside a single drawn ring — joined by `and`, so a
+  drawn geometry and a time window select together, server-side (ADR-0025).
 - `$expand` — one level: from a `Datastream` to its `Sensor`, `ObservedProperty` and `Thing`,
   and from an `Observation` to its `Datastream` and `FeatureOfInterest`.
 
@@ -106,12 +108,14 @@ and it looks exactly like a correct one.
   response size on a destination chosen to be small, for a shape nothing asks for.
 - Query options inside an `$expand` — Not implemented; the expanded set is returned whole,
   bounded by the configured page size.
-- `$filter` on any property other than `phenomenonTime` — including spatial predicates and
-  result values. Every read of this store is a read over simulation time, and a filter on a
-  result value or a geometry is a query the harness has no use for and would have to be
-  tested to claim.
-- The filter language's geospatial and temporal functions — A comparison on `phenomenonTime`
-  is the whole of what is implemented.
+- `$filter` on any property other than `phenomenonTime` and, for the one spatial
+  predicate, `location` — result values included. A filter on any other property is a
+  query the harness has no use for and would have to be tested to claim.
+- The filter language's geospatial and temporal functions, save one — of them, exactly
+  `st_within(location, geography'POLYGON (…)')` is implemented (ADR-0025): a single-ring
+  polygon over the observation geometry, nothing else. `st_intersects`, `geo.distance`,
+  every other function, `st_within` on any other property, and any other geometry —
+  holes and multipolygons included — are refused with the offending part named.
 - Every write operation, and deep insert — The query layer holds select permission on the
   observation store and nothing more.
 - The Part 2 Tasking entities — Out of scope; the harness tasks nothing.

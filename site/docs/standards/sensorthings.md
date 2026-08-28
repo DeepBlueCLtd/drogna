@@ -146,11 +146,12 @@ Six are implemented:
 | `$skip` | Page offset. A full page carries a next link; a short page does not, because a next link on a short page invites a round trip that returns nothing. |
 | `$count` | The total, without retrieving every page. |
 | `$orderby` | On `phenomenonTime` only, ascending or descending. |
-| `$filter` | Comparisons on `phenomenonTime` only, joined by `and`. |
+| `$filter` | Comparisons on `phenomenonTime`, and one spatial predicate — `st_within(location, geography'POLYGON (…)')`, the observation's sampled position inside a single drawn ring — joined by `and`. |
 | `$expand` | One level: a Datastream to its Sensor, ObservedProperty and Thing; an Observation to its Datastream and FeatureOfInterest. |
 
-`phenomenonTime` is **simulation time**, and it is the only property that can be
-filtered or ordered on. No arrival time and no insertion time is exposed at all. A
+`phenomenonTime` is **simulation time**. It is the only property that can be ordered
+on, and — beside the one spatial predicate over the observation's own position — the
+only one that can be filtered on. No arrival time and no insertion time is exposed at all. A
 consumer able to filter on when a row was written could reconstruct the order the
 harness happened to write it in, which is not a fact about the simulated world.
 
@@ -165,9 +166,11 @@ like a correct one.
   a link-only representation.
 - Nested `$expand`, and query options inside an `$expand` — expansion is to a
   single level; the expanded set is returned whole, bounded by the page size.
-- `$filter` on any property other than `phenomenonTime`, including spatial
-  predicates and result values, and the filter language's geospatial and temporal
-  functions. Every read of this store is a read over simulation time.
+- `$filter` on any property other than `phenomenonTime` and `location`, result
+  values included; and every geospatial and temporal function of the filter
+  language except the one `st_within` form above — `st_intersects`,
+  `geo.distance`, holes, multipolygons and the rest are refused with the
+  offending part named.
 - Every **write** operation, and deep insert. The query layer holds select
   permission on the observation store and nothing more.
 - **Part 2 (Tasking)**. Out of scope, and worth stating loudly rather than

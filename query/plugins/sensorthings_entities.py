@@ -41,6 +41,7 @@ __all__ = [
     "ResourcePath",
     "RowSource",
     "SelectionCriteria",
+    "SpatialWithin",
     "TimeComparison",
     "entity_set",
     "parse_path",
@@ -111,11 +112,26 @@ class TimeComparison:
 
 
 @dataclass(frozen=True)
+class SpatialWithin:
+    """One spatial predicate: the observation geometry inside a drawn ring.
+
+    Carries both spellings of the same geometry — the WKT literal the request gave, which
+    is what the database is handed, and the parsed ring, which is what the in-memory row
+    source tests against — so the two row sources answer the same question from the same
+    parse rather than each parsing for itself.
+    """
+
+    wkt: str
+    ring: tuple[tuple[float, float], ...]
+
+
+@dataclass(frozen=True)
 class SelectionCriteria:
     """Everything a row source is allowed to be asked. Deliberately small."""
 
     equals: Mapping[str, Any] = field(default_factory=dict)
     phenomenon_time: tuple[TimeComparison, ...] = ()
+    within: tuple[SpatialWithin, ...] = ()
     descending: bool = False
     skip: int = 0
     top: int | None = None
@@ -143,6 +159,11 @@ class EntitySet:
     properties: Mapping[str, str]
     relationships: tuple[Relationship, ...]
     time_column: str | None = None
+    # The column carrying the entity's own sampled position, where it has one. Only
+    # Observations does: the spatial predicate of the filter subset is over the
+    # observation geometry alone (FR-80), and an entity set with no geometry column
+    # refuses a spatial filter by name rather than guessing at a joined one.
+    geometry_column: str | None = None
 
     def relationship(self, name: str) -> Relationship:
         for relationship in self.relationships:
@@ -215,6 +236,7 @@ ENTITY_SETS: Mapping[str, EntitySet] = {
             Relationship("FeatureOfInterest", "FeaturesOfInterest", False, "feature_id"),
         ),
         time_column="phenomenon_time",
+        geometry_column="location",
     ),
     "FeaturesOfInterest": EntitySet(
         name="FeaturesOfInterest",

@@ -189,10 +189,21 @@ def test_a_filter_on_a_result_value_is_refused_naming_the_property() -> None:
     assert "phenomenon time" in message
 
 
-def test_a_spatial_filter_function_is_refused_naming_the_function() -> None:
+def test_a_spatial_predicate_on_any_other_property_is_refused_naming_it() -> None:
+    # Feature 023 (FR-80, ADR-0025) made st_within(location, ...) the one implemented
+    # spatial predicate. This case — the same function on a different property — keeps
+    # its refusal, and the refusal now names the property beside the function.
     with pytest.raises(QueryOptionRefusedError) as refusal:
         parse({"$filter": "st_within(FeatureOfInterest/feature, geography'POLYGON(())')"})
-    assert "st_within()" in str(refusal.value)
+    message = str(refusal.value)
+    assert "st_within on FeatureOfInterest/feature" in message
+    assert "location" in message
+
+
+def test_every_other_spatial_function_still_refuses_naming_the_function() -> None:
+    with pytest.raises(QueryOptionRefusedError) as refusal:
+        parse({"$filter": "st_intersects(location, geography'POLYGON((0 0,1 0,1 1,0 0))')"})
+    assert "st_intersects()" in str(refusal.value)
 
 
 def test_a_filter_on_an_entity_with_no_phenomenon_time_is_refused() -> None:

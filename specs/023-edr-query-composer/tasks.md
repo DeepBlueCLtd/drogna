@@ -151,20 +151,20 @@ is stubbed.
 
 ## Phase 6: SensorThings spatial predicate (US6), the contract, and the record
 
-- [ ] T019 [US6] Grow `query/plugins/sensorthings_entities.py` (Observations gains its
+- [x] T019 [US6] Grow `query/plugins/sensorthings_entities.py` (Observations gains its
   geometry column) and `query/plugins/sensorthings_options.py`:
   `st_within(location, geography'POLYGON (…)')` parsed and composed by `and` with
   phenomenon-time comparisons; every other spatial function, property or geometry
   refused with its name; the in-memory row source filters through the same ring test
   the EDR area query uses; `query/plugins/sensorthings_provider.py`'s Postgres source
   gains the `ST_Within` clause with bound parameters.
-- [ ] T020 [US6] Amend the conformance statement in the same commit: the served
+- [x] T020 [US6] Amend the conformance statement in the same commit: the served
   statement's constants and `query/conformance.md` state the predicate exactly and keep
   every refusal listed.
-- [ ] T021 [US6] Write `docs/adr/0025-…`: the SensorThings widening under PR-03 —
+- [x] T021 [US6] Write `docs/adr/0025-…`: the SensorThings widening under PR-03 —
   context, decision, the two rejected alternatives from the interview (client-side
   selection after a temporal query; an EDR items type over observations), consequences.
-- [ ] T022 [P] [US6] Unit tests `tests/unit/test_sensorthings_spatial.py`: parse,
+- [x] T022 [P] [US6] Unit tests `tests/unit/test_sensorthings_spatial.py`: parse,
   compose, refusals by name, malformed WKT refused, in-memory correctness, the SQL
   statement's shape; the refusal watched failing.
 - [ ] T023 [US6] Verify FR-81's serving half against the running stack: are a retained

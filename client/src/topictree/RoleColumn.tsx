@@ -10,21 +10,23 @@
 import type { CSSProperties } from "react";
 
 import type { ActivityState } from "./activity";
-import { filterPhase } from "./activity";
+import { connectionGlow } from "./activity";
 import type { ConsumerRole } from "./skeleton";
 
 export interface RoleColumnProps {
   readonly roles: readonly ConsumerRole[];
   readonly activity: ActivityState;
   readonly now: number;
+  /** Host instant the display was pinned at (paused or clock-unheard), or null. */
+  readonly pinnedSince: number | null;
 }
 
-export function RoleColumn({ roles, activity, now }: RoleColumnProps): JSX.Element {
+export function RoleColumn({ roles, activity, now, pinnedSince }: RoleColumnProps): JSX.Element {
   return (
     <div className="tt-roles" data-testid="topic-tree-roles">
       <h3>Consumer roles</h3>
       {roles.map((role) => {
-        const phases = role.rules.map((rule) => filterPhase(activity, rule.filter, now));
+        const phases = role.rules.map((rule) => connectionGlow(activity, rule.filter, now, pinnedSince));
         const glow = Math.max(0, ...phases);
         return (
           <div

@@ -214,6 +214,98 @@ export function filterPhase(state: ActivityState, filter: string, now: number): 
   return elapsed <= 0 ? 1 : Math.max(0, 1 - elapsed / PULSE_DECAY_MS);
 }
 
+/**
+ * The steady mark a spoken topic holds while the display is pinned. Distinct from cold
+ * (zero) and from a live pulse's peak, so a pinned page still shows what has spoken.
+ */
+export const PINNED_GLOW = 0.35;
+
+/**
+ * Glow while the simulation is not advancing — a paused clock, or no clock heard yet.
+ *
+ * The capture rule is system-wide and this panel is not exempt from it: two captures of
+ * a pinned state must be identical (012 FR-53, SC-009; the pair mechanism's whole
+ * evidential value), and heartbeats keep arriving in real time at a rate of zero by
+ * design (ADR-0006). So while pinned, a decay already in flight completes in wall time
+ * down to the steady floor — the spec's own paused scenario — and an arrival *during*
+ * the pin is counted, kept and shown as the steady mark rather than a fresh pulse.
+ * Truth is untouched: the model folds every arrival; only the animation is keyed to
+ * whether the simulation says it is advancing, and the panel states the pin in words.
+ */
+export function pinnedPhase(
+  lastReceivedAt: number | null,
+  count: number,
+  now: number,
+  pinnedSince: number,
+): number {
+  if (count === 0 || lastReceivedAt === null) {
+    return 0;
+  }
+  if (lastReceivedAt < pinnedSince) {
+    const elapsed = now - lastReceivedAt;
+    const decay = elapsed <= 0 ? 1 : Math.max(0, 1 - elapsed / PULSE_DECAY_MS);
+    return Math.max(decay, PINNED_GLOW);
+  }
+  return PINNED_GLOW;
+}
+
+/**
+ * A node's drawn glow: the live pulse-or-sustained reading while the simulation
+ * advances, the steady pinned phase while it does not. `pinnedSince` is the host
+ * instant the display was pinned at, or null while animation is live.
+ */
+export function nodeGlow(
+  activity: TopicActivity | undefined,
+  now: number,
+  pinnedSince: number | null,
+): number {
+  if (activity === undefined) {
+    return 0;
+  }
+  if (pinnedSince !== null) {
+    return pinnedPhase(activity.last.receivedAt, activity.count, now, pinnedSince);
+  }
+  return reading(activity) === "sustained" ? intensity(activity, now) : decayPhase(activity, now);
+}
+
+/** A branch's drawn glow: the aggregate's, under the same live-or-pinned rule. */
+export function branchGlow(
+  state: ActivityState,
+  path: string,
+  now: number,
+  pinnedSince: number | null,
+): number {
+  if (pinnedSince !== null) {
+    const { lastReceivedAt, count } = aggregate(state, path);
+    return pinnedPhase(lastReceivedAt, count, now, pinnedSince);
+  }
+  return ripplePhase(state, path, now);
+}
+
+/** A role connection's drawn glow, under the same rule. */
+export function connectionGlow(
+  state: ActivityState,
+  filter: string,
+  now: number,
+  pinnedSince: number | null,
+): number {
+  if (pinnedSince === null) {
+    return filterPhase(state, filter, now);
+  }
+  let lastReceivedAt: number | null = null;
+  let count = 0;
+  for (const [topic, activity] of state) {
+    if (!topicMatches(filter, topic)) {
+      continue;
+    }
+    count += activity.count;
+    if (lastReceivedAt === null || activity.last.receivedAt > lastReceivedAt) {
+      lastReceivedAt = activity.last.receivedAt;
+    }
+  }
+  return pinnedPhase(lastReceivedAt, count, now, pinnedSince);
+}
+
 const MILLISECONDS = 1000;
 
 /**

@@ -10,13 +10,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PINNED_GLOW,
   PULSE_DECAY_MS,
   RING_DEPTH,
   aggregate,
+  branchGlow,
+  connectionGlow,
   decayPhase,
   emptyActivity,
   filterPhase,
   meanInterArrivalMs,
+  nodeGlow,
   reading,
   recordArrival,
   ripplePhase,
@@ -171,6 +175,58 @@ describe("the rate-adaptive crossover (022 FR-003; the bound is derived, not typ
     state = arrive(state, "obs/a/b", 100);
     expect(meanInterArrivalMs(state.get("obs/a/b"))).toBe(null);
     expect(reading(state.get("obs/a/b"))).toBe("pulse");
+  });
+});
+
+describe("the pinned display (012 FR-53's rule, kept by this surface)", () => {
+  // The capture rule is system-wide: two captures of a pinned state are identical.
+  // Heartbeats keep their real-time cadence at a rate of zero (ADR-0006), so while the
+  // simulation is not advancing the panel draws steady marks, never fresh pulses.
+  const PIN = 10_000;
+
+  it("holds a spoken topic at the steady mark, identically at any two instants", () => {
+    let state = emptyActivity;
+    state = arrive(state, "ctl/heartbeat", PIN + 500); // arrived during the pin
+    const activity = state.get("ctl/heartbeat");
+    const early = nodeGlow(activity, PIN + 501, PIN);
+    const late = nodeGlow(activity, PIN + 500 + 10 * PULSE_DECAY_MS, PIN);
+    expect(early).toBe(PINNED_GLOW);
+    expect(late).toBe(early);
+  });
+
+  it("lets a decay already in flight complete in wall time, down to the floor", () => {
+    let state = emptyActivity;
+    state = arrive(state, "ctl/heartbeat", PIN - 100); // arrived before the pin
+    const activity = state.get("ctl/heartbeat");
+    expect(nodeGlow(activity, PIN - 100, PIN)).toBe(1);
+    const mid = nodeGlow(activity, PIN - 100 + PULSE_DECAY_MS / 2, PIN);
+    expect(mid).toBeCloseTo(0.5);
+    expect(nodeGlow(activity, PIN + 10 * PULSE_DECAY_MS, PIN)).toBe(PINNED_GLOW);
+  });
+
+  it("shows a never-spoken topic cold, pinned or not", () => {
+    expect(nodeGlow(undefined, PIN + 5, PIN)).toBe(0);
+    expect(branchGlow(emptyActivity, "obs", PIN + 5, PIN)).toBe(0);
+    expect(connectionGlow(emptyActivity, "obs/#", PIN + 5, PIN)).toBe(0);
+  });
+
+  it("pins branches and role connections by the same rule", () => {
+    let state = emptyActivity;
+    state = arrive(state, "obs/a/b", PIN + 200);
+    const later = PIN + 200 + 5 * PULSE_DECAY_MS;
+    expect(branchGlow(state, "obs", later, PIN)).toBe(PINNED_GLOW);
+    expect(connectionGlow(state, "obs/#", later, PIN)).toBe(PINNED_GLOW);
+    expect(connectionGlow(state, "ctl/#", later, PIN)).toBe(0);
+  });
+
+  it("animates exactly as before while the simulation advances", () => {
+    let state = emptyActivity;
+    state = arrive(state, "obs/a/b", 1000);
+    const activity = state.get("obs/a/b");
+    expect(nodeGlow(activity, 1000, null)).toBe(decayPhase(activity, 1000));
+    expect(nodeGlow(activity, 1000 + 2 * PULSE_DECAY_MS, null)).toBe(0);
+    expect(branchGlow(state, "obs", 1000, null)).toBe(ripplePhase(state, "obs", 1000));
+    expect(connectionGlow(state, "obs/#", 1000, null)).toBe(filterPhase(state, "obs/#", 1000));
   });
 });
 

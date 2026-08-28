@@ -10,13 +10,15 @@
 import type { CSSProperties } from "react";
 
 import type { ActivityState } from "./activity";
-import { aggregate, decayPhase, intensity, reading, ripplePhase } from "./activity";
+import { aggregate, branchGlow, nodeGlow, reading } from "./activity";
 import type { TreeNode } from "./skeleton";
 
 export interface TreeViewProps {
   readonly root: TreeNode;
   readonly activity: ActivityState;
   readonly now: number;
+  /** Host instant the display was pinned at (paused or clock-unheard), or null. */
+  readonly pinnedSince: number | null;
   readonly selected: string | null;
   readonly onSelect: (path: string) => void;
   readonly collapsed: ReadonlySet<string>;
@@ -33,6 +35,7 @@ function Node({
   node,
   activity,
   now,
+  pinnedSince,
   selected,
   onSelect,
   collapsed,
@@ -40,9 +43,10 @@ function Node({
 }: { readonly node: TreeNode } & Omit<TreeViewProps, "root">): JSX.Element {
   const own = activity.get(node.path);
   const branch = node.children.length > 0;
-  const phase = branch ? ripplePhase(activity, node.path, now) : decayPhase(own, now);
   const mode = reading(own);
-  const glow = mode === "sustained" ? intensity(own, now) : phase;
+  const glow = branch
+    ? branchGlow(activity, node.path, now, pinnedSince)
+    : nodeGlow(own, now, pinnedSince);
   const isCollapsed = branch && collapsed.has(node.path);
   const summary = isCollapsed ? aggregate(activity, node.path) : null;
   return (
@@ -99,7 +103,7 @@ function Node({
       {branch && !isCollapsed ? (
         <ul
           className="tt-children"
-          style={{ "--tt-edge": ripplePhase(activity, node.path, now) } as CSSProperties}
+          style={{ "--tt-edge": branchGlow(activity, node.path, now, pinnedSince) } as CSSProperties}
         >
           {node.children.map((child) => (
             <Node
@@ -107,6 +111,7 @@ function Node({
               node={child}
               activity={activity}
               now={now}
+              pinnedSince={pinnedSince}
               selected={selected}
               onSelect={onSelect}
               collapsed={collapsed}

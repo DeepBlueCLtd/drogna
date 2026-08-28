@@ -61,7 +61,9 @@ export function describeHonesty(
   const paused =
     sample !== null && (sample.rate === 0 || sample.mode === "paused")
       ? "The clock reports a rate of zero: simulation time is not advancing. Streams " +
-        "paced by it are still, not stopped; in-flight decays complete in real time."
+        "paced by it are still, not stopped; in-flight decays complete in real time. " +
+        "Real-time arrivals — heartbeats keep their cadence while paused — are counted " +
+        "and shown as steady marks rather than pulses, so a pinned page holds still."
       : null;
   const session =
     state.listeningSince === null

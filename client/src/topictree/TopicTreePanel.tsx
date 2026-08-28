@@ -23,7 +23,7 @@ import { emptyClock, receiveClockSample } from "../transport/clock";
 import type { ClockState } from "../transport/clock";
 
 import type { ActivityState } from "./activity";
-import { emptyActivity, filterPhase, recordArrival, stampFor } from "./activity";
+import { connectionGlow, emptyActivity, recordArrival, stampFor } from "./activity";
 import { describeSelection } from "./detail";
 import { DetailView } from "./DetailView";
 import { RoleColumn } from "./RoleColumn";
@@ -52,6 +52,13 @@ export interface TopicTreePanelProps {
 interface Snapshot {
   readonly state: PanelState;
   readonly instant: number;
+  /**
+   * Host instant the display was pinned at, or null while the simulation advances.
+   * Pinned means a paused clock, or no clock sample heard yet: the capture rule (012
+   * FR-53) requires a pinned page to hold still, so while pinned the panel draws
+   * steady marks instead of pulses. Truth still folds; only the animation is keyed.
+   */
+  readonly pinnedSince: number | null;
 }
 
 /** One drawn connection between a role's rule and the subtree its filter covers. */
@@ -87,6 +94,9 @@ export function TopicTreePanel({
   const connection = useRef<ConnectionState>("not-connected");
   const clock = useRef<ClockState>(emptyClock);
   const listeningSince = useRef<number | null>(null);
+  // Pinned from the first instant: before any clock sample the simulation is not known
+  // to advance, and a page that cannot say "advancing" must hold still (FR-53's rule).
+  const pinnedSince = useRef<number | null>(0);
   const surface = useRef<HTMLDivElement | null>(null);
 
   const skeleton = useMemo(() => buildSkeleton(TOPOLOGY), []);
@@ -95,6 +105,7 @@ export function TopicTreePanel({
   const [wires, setWires] = useState<readonly Wire[]>([]);
   const [snap, setSnap] = useState<Snapshot>(() => ({
     instant: now(),
+    pinnedSince: pinnedSince.current,
     state: {
       connection: connection.current,
       clock: clock.current,
@@ -112,6 +123,13 @@ export function TopicTreePanel({
           const decoded = decode(payload);
           if (!("reason" in decoded)) {
             clock.current = receiveClockSample(clock.current, decoded.value, receivedAt);
+            const sample = clock.current.sample;
+            const advancing = sample !== null && sample.rate > 0 && sample.mode !== "paused";
+            if (advancing) {
+              pinnedSince.current = null;
+            } else if (pinnedSince.current === null) {
+              pinnedSince.current = receivedAt;
+            }
           }
         }
         const simTime = stampFor(payload, clock.current.sample?.simTime ?? null);
@@ -156,6 +174,7 @@ export function TopicTreePanel({
         lastDrawn = instant;
         setSnap({
           instant,
+          pinnedSince: pinnedSince.current,
           state: {
             connection: connection.current,
             clock: clock.current,
@@ -202,7 +221,7 @@ export function TopicTreePanel({
           y1: from.top + from.height / 2 - frame.top,
           x2: to.left - frame.left,
           y2: to.top + to.height / 2 - frame.top,
-          phase: filterPhase(snap.state.activity, rule.filter, snap.instant),
+          phase: connectionGlow(snap.state.activity, rule.filter, snap.instant, snap.pinnedSince),
         });
       });
     });
@@ -268,6 +287,7 @@ export function TopicTreePanel({
             root={tree}
             activity={snap.state.activity}
             now={snap.instant}
+            pinnedSince={snap.pinnedSince}
             selected={selected}
             onSelect={setSelected}
             collapsed={collapsed}
@@ -283,7 +303,12 @@ export function TopicTreePanel({
               });
             }}
           />
-          <RoleColumn roles={skeleton.roles} activity={snap.state.activity} now={snap.instant} />
+          <RoleColumn
+            roles={skeleton.roles}
+            activity={snap.state.activity}
+            now={snap.instant}
+            pinnedSince={snap.pinnedSince}
+          />
         </div>
       ) : null}
       {selectedNode === null ? null : (

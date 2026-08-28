@@ -78,7 +78,30 @@ ROLE_SECRETS: dict[str, str] = {
     "drogna_query": "HARNESS_BROKER_SECRET_QUERY",
 }
 
-SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)
+# The run-time database roles `stores/observations/roles.sql` creates, and the environment
+# variable carrying each one's password. The same shape as ROLE_SECRETS above and for the
+# same reason: the tracked DSNs name a role and never a secret, and something has to put one
+# in before a component connects.
+#
+# These are in SECRET_NAMES, unlike DATABASE_SECRET, because nothing outside this repository
+# reads them at container start — they are assigned to the roles by the seeding step, from
+# the same generated values that reach the DSNs, so the two halves of a credential are
+# written from one set of values in one place.
+#
+# `roles.sql` creates all three with LOGIN and no password, which is what made every DSN
+# naming one of them answer `fe_sendauth: no password supplied` the first time the ingest
+# client actually connected.
+DATABASE_ROLE_SECRETS: dict[str, str] = {
+    "drogna_ingest": "HARNESS_DATABASE_SECRET_INGEST",
+    "drogna_read": "HARNESS_DATABASE_SECRET_READ",
+    "drogna_telemetry": "HARNESS_DATABASE_SECRET_TELEMETRY",
+}
+
+SECRET_NAMES: tuple[str, ...] = (
+    *ROLE_SECRETS.values(),
+    PROXY_SECRET,
+    *DATABASE_ROLE_SECRETS.values(),
+)
 
 # The uid and gid mosquitto drops to inside the pinned broker image. The password file has
 # to be owned by it, not merely restricted: the broker reads the file after dropping
@@ -132,7 +155,9 @@ def _with_secret(url: str, values: dict[str, str], *, source: Path) -> str:
     return scheme + "://" + role + ":" + secret + "@" + location
 
 
-def _with_database_secret(dsn: str, owner: str, secret: str, *, source: Path) -> str:
+def _with_database_secret(
+    dsn: str, owner: str, secret: str, values: dict[str, str], *, source: Path
+) -> str:
     """The same DSN with the owner's password in it, where it names the owner.
 
     The sibling of ``_with_secret`` above, and it exists for the same reason one function
@@ -141,11 +166,15 @@ def _with_database_secret(dsn: str, owner: str, secret: str, *, source: Path) ->
     records — every tracked DSN naming a role, nothing supplying a password, and
     ``fe_sendauth: no password supplied`` the first time anything actually connected.
 
-    **Only the owner.** ``stores/observations/roles.sql`` creates ``drogna_ingest``,
-    ``drogna_read`` and ``drogna_telemetry`` with ``LOGIN`` and no password, so there is no
-    secret to put in a DSN naming one of them and inventing a variable here would produce a
-    credential the database has never been told about. Those are left exactly as they are,
-    and the gap is recorded rather than papered over.
+    **The owner and the run-time roles.** ``stores/observations/roles.sql`` creates
+    ``drogna_ingest``, ``drogna_read`` and ``drogna_telemetry`` with ``LOGIN`` and no
+    password, which is why this function once handled the owner alone: putting a secret in
+    a DSN naming one of them would have produced a credential the database had never been
+    told about. That is no longer true. ``deploy/seed.d/010-observations.sh`` now assigns
+    each of them the password held in ``DATABASE_ROLE_SECRETS``, from the same generated
+    value that reaches the DSN here, so the two halves cannot disagree.
+
+    A role this does not know is left exactly as it is rather than guessed at.
     """
     scheme, separator, remainder = dsn.partition("://")
     if not separator or "@" not in remainder:
@@ -156,28 +185,35 @@ def _with_database_secret(dsn: str, owner: str, secret: str, *, source: Path) ->
             f"{source}: the tracked DSN already carries a secret. The tracked files carry "
             "the role and never the secret; this render is what adds it"
         )
-    if role != owner:
+    if role == owner:
+        variable, value = DATABASE_SECRET, secret
+    elif role in DATABASE_ROLE_SECRETS:
+        variable = DATABASE_ROLE_SECRETS[role]
+        value = values.get(variable, "")
+    else:
         return dsn
-    if not secret:
+    if not value:
         raise ConfigurationError(
-            f"{source}: no value for {DATABASE_SECRET}, so {role!r} would connect with no "
+            f"{source}: no value for {variable}, so {role!r} would connect with no "
             "password to a database that asks for one. Nothing is rendered: a component that "
             "cannot authenticate should fail here rather than at the store"
         )
-    return scheme + "://" + role + ":" + secret + "@" + location
+    return scheme + "://" + role + ":" + value + "@" + location
 
 
-def _rewrite_dsns(node: Any, owner: str, secret: str, *, source: Path) -> None:
+def _rewrite_dsns(
+    node: Any, owner: str, secret: str, values: dict[str, str], *, source: Path
+) -> None:
     """Rewrite every `dsn` string in the document, in place, wherever it sits."""
     if isinstance(node, dict):
         for key, value in node.items():
             if key == "dsn" and isinstance(value, str):
-                node[key] = _with_database_secret(value, owner, secret, source=source)
+                node[key] = _with_database_secret(value, owner, secret, values, source=source)
             else:
-                _rewrite_dsns(value, owner, secret, source=source)
+                _rewrite_dsns(value, owner, secret, values, source=source)
     elif isinstance(node, list):
         for value in node:
-            _rewrite_dsns(value, owner, secret, source=source)
+            _rewrite_dsns(value, owner, secret, values, source=source)
 
 
 def _written_by_another_path(destination: str, base: Path) -> set[str]:
@@ -244,7 +280,7 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
         # `broker.url`, but a store's DSN sits wherever its component's schema puts it —
         # `features.store.dsn`, `ingest.store.dsn` — and a list of paths here would be a
         # list that goes stale the first time a component is added.
-        _rewrite_dsns(document, owner, values.get(DATABASE_SECRET, ""), source=source)
+        _rewrite_dsns(document, owner, values.get(DATABASE_SECRET, ""), values, source=source)
         target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         target.chmod(0o600)
 

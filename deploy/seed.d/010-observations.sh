@@ -46,3 +46,41 @@ python3 "${root}/stores/observations/apply.py" > "${sql}"
   --username "${role}" --dbname "${database}" < "${sql}"
 
 echo "    observation store provisioned; SQL in ${DROGNA_ARTEFACT_DIR##*/}/observations.sql"
+
+# The run-time roles' passwords, which `roles.sql` deliberately does not carry: it is a
+# tracked file, and a password in a tracked file is a password in the history for ever. So
+# the roles are created there with LOGIN and nothing else, and told what their password is
+# here, from the same generated values `render_credentials.py` puts into the DSNs. Both
+# halves of each credential come from one set of values, so they cannot disagree.
+#
+# Until this existed every DSN naming one of these roles met `fe_sendauth: no password
+# supplied` the moment anything connected, which is what stopped the ingest client from
+# starting at all.
+#
+# Piped rather than passed as arguments, and never written to the artefact directory: the
+# SQL above is kept for inspection and this deliberately is not, because it carries secrets.
+# `ALTER ROLE` is idempotent, so a re-run simply reasserts the same password.
+roles_sql=""
+while IFS='=' read -r role_name variable; do
+  secret="$(eval "printf '%s' \"\${${variable}:-}\"")"
+  if [ -z "${secret}" ]; then
+    echo "    no value for ${variable}; ${role_name} would be left unable to log in" >&2
+    exit 1
+  fi
+  # Quoted by psql's own literal quoting rather than by string building here.
+  roles_sql+="ALTER ROLE ${role_name} PASSWORD $(
+    printf '%s' "${secret}" | python3 -c 'import sys; print("'"'"'" + sys.stdin.read().replace("'"'"'", "'"'"''"'"'") + "'"'"'")'
+  );"$'\n'
+done < <(python3 -c '
+import sys
+sys.path.insert(0, "'"${root}"'/deploy/lib")
+import render_credentials
+for role, variable in sorted(render_credentials.DATABASE_ROLE_SECRETS.items()):
+    print(f"{role}={variable}")
+')
+
+printf '%s' "${roles_sql}" | "${compose[@]}" exec -T observations \
+  psql --quiet --no-psqlrc --set ON_ERROR_STOP=1 \
+  --username "${role}" --dbname "${database}"
+
+echo "    run-time roles given their passwords; the values are in neither the log nor the artefacts"

@@ -243,10 +243,25 @@ class _TickSource:
 
 
 def _clock_subscription(broker: PahoSubscriber) -> Iterator[Tick]:
-    """Ticks from ``ctl/clock``, over a second subscription on the same credentials."""
-    import json
+    """Ticks from ``ctl/clock``, over a second connection on the same credentials.
 
-    clock_source = PahoSubscriber(broker.endpoint, qos=0, topic_filter=CLOCK_TOPIC)
+    The same credentials and deliberately *not* the same client identifier. MQTT requires
+    the identifier to be unique across a broker's clients, and a second connection
+    presenting one already in use is not an error the broker reports to either party: it
+    accepts the newcomer and closes the incumbent, which mosquitto logs as "Client ingest
+    already connected, closing old connection".
+
+    What that cost was a component that looked correct in every log it wrote. The first
+    connection subscribed to ``obs/#``, the second to ``ctl/clock`` and evicted it, and the
+    first heartbeat then failed with `RuntimeError: Message publish failed: The client is
+    not currently connected` — a message about the wrong connection, from a component whose
+    two halves were quietly fighting each other.
+    """
+    import json
+    from dataclasses import replace
+
+    endpoint = replace(broker.endpoint, client_id=f"{broker.endpoint.client_id}-clock")
+    clock_source = PahoSubscriber(endpoint, qos=0, topic_filter=CLOCK_TOPIC)
     clock_source.connect()
     while True:
         delivery = clock_source.poll(timeout=1.0)

@@ -58,8 +58,21 @@ if ! compose build; then
   exit 1
 fi
 
+# Waited on: every active service that is not declared a one-shot. `--wait` asks each named
+# service to be running or healthy, and a one-shot is neither by the time it is asked — it
+# writes what it owes and exits 0, which is success and was being reported as failure.
+#
+# The one-shots are still started, and still waited for: whatever depends on them says
+# `condition: service_completed_successfully`, so Compose blocks on their exit status before
+# starting the dependent. Naming the long-lived services here changes what `--wait` is asked
+# about, not what runs.
+waited="$(long_lived_services)"
+[ -n "${waited}" ] ||
+  fail "the active profile selects no long-lived service; there would be nothing to wait for"
+
 step "Starting, and waiting up to ${wait_timeout}s for every service to report healthy"
-if ! compose up --detach --wait --wait-timeout "${wait_timeout}"; then
+# shellcheck disable=SC2086
+if ! compose up --detach --wait --wait-timeout "${wait_timeout}" ${waited}; then
   printf '\nerror: not every service became healthy within %ss. What the stack reports:\n' \
     "${wait_timeout}" >&2
   report_unhealthy

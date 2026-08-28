@@ -51,6 +51,10 @@ export const ALIVE_WHILE_RUNNING = [
   '[data-testid="transit-canvas"]',
   // One per edge the loop draws a transit along, named for the edge, so matched by prefix.
   '[data-testid^="transit-"]',
+  // The topic tree (022) is traffic-lit by design: pulses decay, ripples fade and the
+  // role connections dim on every frame while the stack runs, which is the panel doing
+  // its job, not the page failing to settle. Held aside whole, like the transits above.
+  '[data-testid="topic-tree"]',
 ];
 
 /** The node for one component. Lit or not is read from it, never written to it. */

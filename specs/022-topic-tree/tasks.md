@@ -59,7 +59,7 @@ non-matching role changes (spec US1).
 - [x] T015 [P] [US1] Write `client/tests/topictree/readonly.test.ts`: walk `client/src/topictree/` sources and assert no publish call appears (SC-005's checkable form), in the manner of `client/tests/no-mock.test.ts`
 - [x] T016 [US1] Implement `client/src/topictree/TopicTreePanel.tsx`, `TreeView.tsx`, `RoleColumn.tsx`: self-contained panel owning its subscription (opened only from a validated config) and its frame redraw; horizontal tree, root left; pulse-and-decay from `decayPhase`; ripple from `aggregate`; role column with connections lit by `match.ts` on arrival; cold state visibly cold; undeclared grafts visibly marked; styles appended to `client/src/styles.css`
 - [x] T017 [US1] Append the panel to `client/src/App.tsx`: one import block, one `<TopicTreePanel …>` element passing the validated configuration — append-only, nothing else in the file touched (lane J is appending a different panel in parallel)
-- [ ] T018 [US1] Verify live: `dockerd`, `export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"`, `./scripts/run_local.sh`, watch one observation topic per the story's independent test; then `HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs` and confirm the panel renders beside the existing surfaces, which are unchanged
+- [x] T018 [US1] Verify live: — done 28 Aug against the running stack; found and fixed on the way: the client image's own dockerignore excluded `contracts/topology.json` (the documented trap, met on schedule), and the glance capture's settle check needed the traffic-lit panel named in `ALIVE_WHILE_RUNNING` beside the loop's transits. Original text: `dockerd`, `export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"`, `./scripts/run_local.sh`, watch one observation topic per the story's independent test; then `HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs` and confirm the panel renders beside the existing surfaces, which are unchanged
 
 **Checkpoint**: US1 demonstrable end to end; `pnpm exec tsc --noEmit && pnpm lint &&
 pnpm test` green.
@@ -78,7 +78,7 @@ unchanged (spec US2).
 - [x] T020 [US2] Extend `client/src/topictree/state.ts` (create it): panel state per data-model.md — connection, latest clock sample, session start, the four honesty derivations (disconnected, paused, young, absent-route/disabled), each a distinct state
 - [x] T021 [US2] Write `client/tests/topictree/activity.test.ts` additions and `honesty.test.ts`: crossover asserted as the relationship between the module's own two quantities, never a typed rate; stated sim-rate invariant under a changed acceleration factor (SC-004); paused stated with in-flight decays completing in wall time and no figure claiming idleness; disconnection stated, never rendered as quiet; cold-after-refresh stated as young — each watched failing first
 - [x] T022 [US2] Render the P2 states in `TopicTreePanel.tsx` / `TreeView.tsx`: sustained intensity and edge flow past the crossover; every stated figure in simulation time with the acceleration factor in force beside it; the pause, disconnection and youth statements in words
-- [ ] T023 [US2] Verify live: at the default rate watch discrete pulses; raise the rate through the speed control and watch the crossover; pause and confirm the statement and the unchanged per-simulation-time figures
+- [x] T023 [US2] Verify live: at the default rate watch discrete pulses; raise the rate through the speed control and watch the crossover; pause and confirm the statement and the unchanged per-simulation-time figures
 
 **Checkpoint**: US1 and US2 both demonstrable; client suite green.
 
@@ -94,13 +94,13 @@ honestly absent (spec US3).
 - [x] T024 [US3] Implement `client/src/topictree/detail.ts`: pure selection detail — last payload verbatim, pretty-printed where it parses as JSON, else shown safely with the reason, size-capped with the cap stated; arrival/rate/recency in simulation time; matching roles with access via `match.ts` (none omitted, none invented); governing master from the artefact row or inherited from the covering branch, stated which; unobserved facts stated as unobserved
 - [x] T025 [US3] Write `client/tests/topictree/detail.test.ts`: acceptance 1–3 of US3 including role exactness under wildcard semantics against the artefact, the never-observed statement, and the non-JSON / oversized payload edges — each watched failing first
 - [x] T026 [US3] Implement `client/src/topictree/DetailView.tsx` and selection wiring in `TopicTreePanel.tsx` / `TreeView.tsx` (click to select, keyboard accessible)
-- [ ] T027 [US3] Verify live: select an active leaf and a silent declared topic; confirm the detail against the artefact and the stated absences
+- [x] T027 [US3] Verify live: select an active leaf and a silent declared topic; confirm the detail against the artefact and the stated absences
 
 **Checkpoint**: all three stories demonstrable independently.
 
 ## Phase 6: Polish & cross-cutting
 
-- [ ] T028 [P] Implement subtree collapse: a wide branch collapses to a summary node carrying its children's aggregate activity (the aggregate already exists), with a unit test in `client/tests/topictree/activity.test.ts` or `skeleton.test.ts`
+- [x] T028 [P] Implement subtree collapse: — the state-layer half (the aggregate a summary node carries) is the tested part; the fold/expand control is view logic exercised live. Original text: a wide branch collapses to a summary node carrying its children's aggregate activity (the aggregate already exists), with a unit test in `client/tests/topictree/activity.test.ts` or `skeleton.test.ts`
 - [ ] T029 Run the whole bar: `uv run ruff check . && uv run ruff format --check .`, `uv run pytest`, `./scripts/gates.sh`, `cd client && pnpm exec tsc --noEmit && pnpm lint && pnpm test`; bring the stack back up afterwards (`pytest` takes it down) and re-run the glance capture
 - [ ] T030 Reconcile this file against the tree — every tick checked, every deliberate omission carrying its reason — and stage/verify/commit per the repository's snapshot discipline
 

@@ -21,7 +21,7 @@
     
     
       
-        <title>ADR-0021: The clock's HTTP interface answers the browser from any origin - drogna</title>
+        <title>ADR-0026: The third wall-clock exemption is resource sampling, and the socket stops at the door - drogna</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin" class="md-skip">
+        <a href="#adr-0026-the-third-wall-clock-exemption-is-resource-sampling-and-the-socket-stops-at-the-door" class="md-skip">
           Skip to content
         </a>
       
@@ -104,7 +104,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-0021: The clock's HTTP interface answers the browser from any origin
+              ADR-0026: The third wall-clock exemption is resource sampling, and the socket stops at the door
             
           </span>
         </div>
@@ -1842,16 +1842,33 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-this-costs-stated-plainly" class="md-nav__link">
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-exemption-and-its-bound" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What this costs, stated plainly
+        The exemption, and its bound
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-socket-and-its-reach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The socket, and its reach
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1867,10 +1884,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequence-for-the-acknowledgement-recorded-with-it" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consequence for the acknowledgement, recorded with it
+        Consequences
       
     </span>
   </a>
@@ -1894,82 +1911,108 @@
 
 
 
-<h1 id="adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin">ADR-0021: The clock's HTTP interface answers the browser from any origin<a class="headerlink" href="#adr-0021-the-clocks-http-interface-answers-the-browser-from-any-origin" title="Permanent link">&para;</a></h1>
+<h1 id="adr-0026-the-third-wall-clock-exemption-is-resource-sampling-and-the-socket-stops-at-the-door">ADR-0026: The third wall-clock exemption is resource sampling, and the socket stops at the door<a class="headerlink" href="#adr-0026-the-third-wall-clock-exemption-is-resource-sampling-and-the-socket-stops-at-the-door" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Published from the repository's decision record</p>
-<p>This page is generated at build time from <code>docs/adr/0021-the-clock-control-answers-the-browser-from-any-origin.md</code>.
+<p>This page is generated at build time from <code>docs/adr/0026-resource-sampling-and-the-runtime-socket.md</code>.
 The record is the original; this is a rendering of it, and editing the
 built page would change nothing.</p>
 </div>
-<p><strong>Status:</strong> Accepted (by the owner, 28 August 2026, by structured interview) — to be superseded by ADR-0025 when the clock's control surface is routed through the boundary (wave 7, lane I); it records the running system's shape until then
+<p><strong>Status:</strong> Accepted
 <strong>Date:</strong> 28 August 2026
-<strong>Requirements:</strong> SRD FR-10, FR-49, FR-53; ADR-0009; client FR-012
-<strong>Raised by:</strong> long-run-01, commit <code>e46bbf1</code>, which found the fault and deliberately left the
-decision: "adding CORS to a control endpoint is a decision about what may reach it from
-where, and this branch has already spent one such decision provisionally"</p>
-<blockquote>
-<p>This record is <strong>proposed</strong>, for the same reason ADR-0020 is: the change exists and ought
-not to sit in the tree undocumented, and the fact that it exists is not an argument that
-it is settled.</p>
-</blockquote>
+<strong>Requirements:</strong> SRD FR-70, FR-72, FR-73; Constitution Principle I (amended to 1.6.0 by this record); C-21
+<strong>Raised by:</strong> SRD §5.12, which owes this record before the operator plane is built. The decisions were taken by the owner on 28 August 2026, by structured interview; this record is the argument and the bound.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>The clock's HTTP interface exists for exactly two things a subscription cannot do
-(ADR-0009): setting the rate, and answering "what is the time now" for a component catching
-up. FR-10 and FR-49 say the rate control belongs in the browser, and FR-53 depends on it:
-a capture pins the clock to zero through the control the client offers a viewer.</p>
-<p>The browser always arrives cross-origin. The page is served from the client's port (8080
-locally) and the clock listens on its own (8090); a <code>fetch</code> carrying
-<code>Content-Type: application/json</code> between two origins is preflighted, and the clock's
-handler — built on the standard library's <code>BaseHTTPRequestHandler</code> — answered <code>OPTIONS</code>
-with <code>501 Unsupported method</code> and no grant. The browser then never sends the POST and
-reports only "Failed to fetch". <strong>The rate control has therefore never worked from a
-browser</strong>, the one place it is for.</p>
-<p>Nobody had seen it fail because nothing had ever exercised it. The capture workflow used to
-serve the built client with <code>vite preview</code> and no clock behind it, so <code>pinIfAClockAnswers</code>
-returned early on every run. The first time CI brought the real harness up
-(PR #21), the pin was reached for the first time and found the door shut.</p>
+<p>Two of the operator plane's requirements touch surfaces the constitution guards.</p>
+<p>FR-70 asks the system controller to sample each container's processor and memory use
+and publish it, so the display can show where the harness saturates as the rate
+rises. Utilisation is inherently a per-host-second measure: there is no simulation-
+time reading of a CPU. Principle I permits wall-clock time in exactly two bounded
+places — heartbeat emission and liveness evaluation (ADR-0006), and display
+interpolation between clock samples (ADR-0007) — and states that a third request "is
+evidence the principle is being eroded and must be argued on its own merits, never by
+analogy to these two". This is that argument.</p>
+<p>FR-72 asks the controller to dispatch process-level lifecycle — stopping, starting
+and restarting a component's container — which requires the container runtime socket.
+Whoever holds that socket holds the deployment: it is the widest capability in the
+harness, and the SRD names it a deliberate trust surface wanting its own bound.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>The clock answers the preflight and states the grant on every response:
-<code>Access-Control-Allow-Origin: *</code>, with <code>OPTIONS</code> answered <code>204</code> naming the methods and the
-<code>Content-Type</code> header. No route, host or origin appears in the configuration for this,
-because the grant does not vary: the interface either serves browsers or it does not.</p>
-<h2 id="what-this-costs-stated-plainly">What this costs, stated plainly<a class="headerlink" href="#what-this-costs-stated-plainly" title="Permanent link">&para;</a></h2>
-<p>CORS is a browser's rule about which <em>pages</em> may read which <em>servers</em>; it was never the
-clock's authentication, because the clock has none. Before this change, any local process
-could already command the clock with one <code>curl</code>; the bind address
-(<code>127.0.0.1</code> in the local destination) was and remains the actual boundary.</p>
-<p>What the wildcard adds is this: a page from <strong>any</strong> origin loaded in a viewer's browser —
-including a hostile site the viewer happens to visit — may now send commands to any clock
-its browser can reach, typically <code>localhost:8090</code> on the viewer's own machine. Before, the
-failed preflight kept the command from being sent at all. The exposure is the ability to
-pause or accelerate a local demonstration clock, on a harness whose data is synthetic and
-says so; there is no credential to steal on this surface and no data to read that the
-query layer does not already publish. If that judgement is wrong, the revert is two lines
-in <code>services/clock/src/harness_clock/http.py</code> (the <code>do_OPTIONS</code> handler and the header in
-<code>_write</code>), and the pair capture returns to refusing on an unpinnable clock — loudly, as
-it did.</p>
+<h3 id="the-exemption-and-its-bound">The exemption, and its bound<a class="headerlink" href="#the-exemption-and-its-bound" title="Permanent link">&para;</a></h3>
+<p><strong>Principle I gains a third bounded exemption: container resource sampling, confined
+to the system controller's sampler module.</strong> The constitution moves to 1.6.0. The
+bound has three parts, and each is what keeps this an exemption rather than an
+erosion:</p>
+<ul>
+<li><strong>One module.</strong> The sampling lives in a single module of C-21, carries the
+  <code>harness:allow-wallclock</code> marker with this ADR as its reason, and appears in the
+  exemption inventory like every other marker. No other component samples anything.</li>
+<li><strong>Its own kind.</strong> Resource readings are published as their own telemetry kind whose
+  schema declares host-time semantics — per-host-second, with the sampling instant as
+  a host timestamp labelled as one. They never enter a simulation-time metric, never
+  reach the run record, and nothing operational reads them: they exist for the
+  display and for the saturation question, and FR-73 already keeps operator activity
+  outside AT-04's replay claim.</li>
+<li><strong>The same shape as the first two.</strong> Like the heartbeat and the render
+  interpolation, this measures the boundary between the simulated world and the
+  machine running it — the machinery, not the simulation. A reading of what the <em>host</em>
+  is doing has no simulation-time answer even in principle, which is the test the
+  first two exemptions passed and the test a fourth request must pass on its own.</li>
+</ul>
+<h3 id="the-socket-and-its-reach">The socket, and its reach<a class="headerlink" href="#the-socket-and-its-reach" title="Permanent link">&para;</a></h3>
+<p><strong>The runtime socket is mounted into C-21's container and no other.</strong> No component
+gains it incidentally; the compose configuration names it once, on the controller.</p>
+<p><strong>Lifecycle commands may target any component except three: the proxy, the
+controller itself, and the broker.</strong> The exclusions are each an argument, not a
+list:</p>
+<ul>
+<li>the <strong>proxy</strong> is the operator's own path — stopping it severs every command that
+  could restart it, stranding the plane behind a door it closed;</li>
+<li>the <strong>controller</strong> orphans every in-flight command and the plane with it;</li>
+<li>the <strong>broker</strong> carries the heartbeats by which the display shows the effect of any
+  command — stopping it does not demonstrate a component failing, it blinds the
+  instrument.</li>
+</ul>
+<p>Everything else — the loop services, the sensors, the stores, the clock — is fair
+game, which is the teaching value FR-72 exists for. A command naming an excluded
+component is refused with the exclusion named, in the house style. The exclusion
+list is configuration validated against schema, so a destination can narrow it
+further but the three names above are the floor.</p>
+<p>Reachability of the commands is ADR-0025's subject: the plane, socket commands
+included, sits behind the boundary's clearance.</p>
 <h2 id="alternatives-rejected">Alternatives rejected<a class="headerlink" href="#alternatives-rejected" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Reflecting a configured allowed origin.</strong> The clock's configuration does not know the
-  client's public URL, and teaching it one adds a cross-component coupling for a grant
-  that would still, on a developer's machine, have to name <code>localhost</code> — indistinguishable
-  in practice from the wildcard, at the price of a new way for two documents to disagree.</li>
-<li><strong>Serving the clock's control through the proxy, same-origin with the client.</strong> Probably
-  the right long-run shape, and the same topology change ADR-0020 declined to make
-  provisionally: it moves the exposure boundary, which is a person's decision, not a
-  CI fix.</li>
+<li><strong>Marker only, no constitution amendment.</strong> The gate's inventory would carry an
+  exemption the constitution never granted — precisely the erosion Principle I warns
+  about. The first two exemptions were each granted by amendment with an ADR, and
+  informality here would make the third the precedent for a casual fourth.</li>
+<li><strong>Rejecting the exemption</strong> and dropping resource sampling from FR-70, or sourcing
+  it host-side outside the harness. Keeps Principle I at two, but loses the
+  saturation display inside the client where FR-76 wants it, and a host-side tool
+  beside the harness is the "tool beside it" §5.12 rejects in its first sentence.</li>
+<li><strong>Lifecycle over everything.</strong> Maximum honesty about the socket's power, but a
+  plane that can strand itself converts a demonstration into a host-side recovery,
+  and what it teaches is recoverable-by-ssh rather than anything about the
+  architecture.</li>
+<li><strong>Lifecycle over the loop services only.</strong> The narrowest surface, but it forecloses
+  the instructive cases for free — a stopped sensor thinning the observation stream,
+  a stopped store failing its dependents loudly — which cost nothing once the three
+  structural exclusions hold.</li>
 </ul>
-<h2 id="consequence-for-the-acknowledgement-recorded-with-it">Consequence for the acknowledgement, recorded with it<a class="headerlink" href="#consequence-for-the-acknowledgement-recorded-with-it" title="Permanent link">&para;</a></h2>
-<p>With the preflight answered, a second fault surfaced behind the first, and the two ship
-together because only together do they make the pin land. The client's rule (FR-012) is
-that the rate in force arrives only as a <code>ctl/clock</code> sample, and a request is resolved by a
-sample carrying a later tick. A rate of zero stops emission, so no later tick can ever
-acknowledge the one rate a capture needs. The clock now answers a command that stops
-emission by re-publishing the tick in force with the new rate and mode — one sample,
-under the same lock as emission — and the client accepts a same-tick sample carrying
-exactly the requested rate as the acknowledgement. The message schema's prose records the
-repeat; tick values remain quantised and no tick is invented, so ADR-0009's replay
-arithmetic is untouched.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The constitution's "third request" sentence is rewritten by the 1.6.0 amendment to
+  count four: the first three are granted and bounded, and a fourth request is the
+  evidence-of-erosion case.</li>
+<li>The wall-clock gate needs no change: the marker-and-inventory mechanism already
+  covers the new module, and the gate's fixture tree should gain the planted
+  violation (a sample taken outside the sampler module) and be watched catching it
+  when C-21 is built.</li>
+<li>The socket's exclusion list is asserted by test when C-21 is built: a lifecycle
+  command against each excluded name is refused with the exclusion named, and the
+  compose configuration is linted for exactly one mount of the socket.</li>
+<li>FR-73 already states that a lifecycle-commanded run sits outside the replay claim;
+  nothing here widens or narrows that.</li>
+</ul>
 
 
 

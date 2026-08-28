@@ -372,12 +372,22 @@ diff /somewhere deploy/.runtime/seeding-record.json
 ```
 
 Identical output means the reset instance holds what a freshly created one holds. The same
-comparison across two machines answers the same question about two instances. This has been
-run from this checkout and the records match.
+comparison across two machines answers the same question about two instances.
 
-Today there are no seeding steps, because no component with a store has been built. The
-record is still written and still meaningful — it fixes the root seed, the profiles and the
-configuration digests — and it grows a step per store as components arrive.
+**This is no longer a ritual to be performed.** The sequence above is run by the build,
+in `test_reset_reproduces_a_fresh_instance.py` under `tests/integration/`, which compares
+the two records byte for byte (005 T028). It was a human ritual for as long as it was written
+here and nowhere else, which means it was true on the day somebody last typed it and said
+nothing about any day since — and NFR-07 is what it stands for. The test also refuses the
+way the comparison could pass while proving nothing: two records that say nothing compare
+equal, so it first requires the record to account for every installed seeding step, each
+with at least one digested artefact.
+
+There are two seeding steps — the observation store and the feature store. This paragraph
+said "today there are no seeding steps, because no component with a store has been built"
+for as long as that had stopped being true, which is the state in which the test above would
+have been worthless, so the test asserts the steps are there rather than trusting this
+sentence to stay current.
 
 ---
 

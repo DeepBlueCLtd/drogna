@@ -11,26 +11,24 @@
       
       
       
-        <link rel="prev" href="../site-tooling/">
-      
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Architecture decision records - drogna</title>
+        <title>ADR-0022: The type chain's generators, and why the TypeScript half is ours - drogna</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -43,7 +41,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -70,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-decision-records" class="md-skip">
+        <a href="#adr-0022-the-type-chains-generators-and-why-the-typescript-half-is-ours" class="md-skip">
           Skip to content
         </a>
       
@@ -86,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -106,7 +104,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture decision records
+              ADR-0022: The type chain's generators, and why the TypeScript half is ours
             
           </span>
         </div>
@@ -210,7 +208,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
+    <a href="../../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -228,7 +226,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -282,7 +280,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../blog/" class="md-nav__link ">
+            <a href="../../../blog/" class="md-nav__link ">
               
   
   
@@ -381,7 +379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/archive/2026/" class="md-nav__link">
+      <a href="../../../blog/archive/2026/" class="md-nav__link">
         
   
   
@@ -478,7 +476,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/architecture/" class="md-nav__link">
+      <a href="../../../blog/category/architecture/" class="md-nav__link">
         
   
   
@@ -508,7 +506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/feature/" class="md-nav__link">
+      <a href="../../../blog/category/feature/" class="md-nav__link">
         
   
   
@@ -538,7 +536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/process/" class="md-nav__link">
+      <a href="../../../blog/category/process/" class="md-nav__link">
         
   
   
@@ -568,7 +566,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/category/standards/" class="md-nav__link">
+      <a href="../../../blog/category/standards/" class="md-nav__link">
         
   
   
@@ -667,7 +665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/overview/" class="md-nav__link">
+      <a href="../../../architecture/overview/" class="md-nav__link">
         
   
   
@@ -761,7 +759,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../subsystems/" class="md-nav__link ">
+            <a href="../../../subsystems/" class="md-nav__link ">
               
   
   
@@ -805,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c01-simulation-clock/" class="md-nav__link">
+      <a href="../../../subsystems/c01-simulation-clock/" class="md-nav__link">
         
   
   
@@ -833,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c02-environment-generator/" class="md-nav__link">
+      <a href="../../../subsystems/c02-environment-generator/" class="md-nav__link">
         
   
   
@@ -861,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c03-broker/" class="md-nav__link">
+      <a href="../../../subsystems/c03-broker/" class="md-nav__link">
         
   
   
@@ -889,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c04-simulated-sensors/" class="md-nav__link">
+      <a href="../../../subsystems/c04-simulated-sensors/" class="md-nav__link">
         
   
   
@@ -917,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c05-ingest-client/" class="md-nav__link">
+      <a href="../../../subsystems/c05-ingest-client/" class="md-nav__link">
         
   
   
@@ -945,7 +943,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c06-observation-store/" class="md-nav__link">
+      <a href="../../../subsystems/c06-observation-store/" class="md-nav__link">
         
   
   
@@ -973,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c07-feature-store/" class="md-nav__link">
+      <a href="../../../subsystems/c07-feature-store/" class="md-nav__link">
         
   
   
@@ -1001,7 +999,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c08-coverage-store/" class="md-nav__link">
+      <a href="../../../subsystems/c08-coverage-store/" class="md-nav__link">
         
   
   
@@ -1029,7 +1027,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c09-query-layer/" class="md-nav__link">
+      <a href="../../../subsystems/c09-query-layer/" class="md-nav__link">
         
   
   
@@ -1057,7 +1055,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c10-reverse-proxy/" class="md-nav__link">
+      <a href="../../../subsystems/c10-reverse-proxy/" class="md-nav__link">
         
   
   
@@ -1085,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c11-monitor/" class="md-nav__link">
+      <a href="../../../subsystems/c11-monitor/" class="md-nav__link">
         
   
   
@@ -1113,7 +1111,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c12-scheduler/" class="md-nav__link">
+      <a href="../../../subsystems/c12-scheduler/" class="md-nav__link">
         
   
   
@@ -1141,7 +1139,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c13-model-runner/" class="md-nav__link">
+      <a href="../../../subsystems/c13-model-runner/" class="md-nav__link">
         
   
   
@@ -1169,7 +1167,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c14-publisher/" class="md-nav__link">
+      <a href="../../../subsystems/c14-publisher/" class="md-nav__link">
         
   
   
@@ -1197,7 +1195,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c15-planner/" class="md-nav__link">
+      <a href="../../../subsystems/c15-planner/" class="md-nav__link">
         
   
   
@@ -1225,7 +1223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c16-telemetry/" class="md-nav__link">
+      <a href="../../../subsystems/c16-telemetry/" class="md-nav__link">
         
   
   
@@ -1253,7 +1251,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c17-offload-packager/" class="md-nav__link">
+      <a href="../../../subsystems/c17-offload-packager/" class="md-nav__link">
         
   
   
@@ -1281,7 +1279,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../subsystems/c18-browser-client/" class="md-nav__link">
+      <a href="../../../subsystems/c18-browser-client/" class="md-nav__link">
         
   
   
@@ -1345,7 +1343,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../algorithms/" class="md-nav__link ">
+            <a href="../../../algorithms/" class="md-nav__link ">
               
   
   
@@ -1389,7 +1387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/ensemble-spread/" class="md-nav__link">
+      <a href="../../../algorithms/ensemble-spread/" class="md-nav__link">
         
   
   
@@ -1417,7 +1415,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/advection/" class="md-nav__link">
+      <a href="../../../algorithms/advection/" class="md-nav__link">
         
   
   
@@ -1445,7 +1443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../algorithms/informative-path-planning/" class="md-nav__link">
+      <a href="../../../algorithms/informative-path-planning/" class="md-nav__link">
         
   
   
@@ -1511,7 +1509,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../standards/" class="md-nav__link ">
+            <a href="../../../standards/" class="md-nav__link ">
               
   
   
@@ -1555,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/sensorthings/" class="md-nav__link">
+      <a href="../../../standards/sensorthings/" class="md-nav__link">
         
   
   
@@ -1583,7 +1581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/ogc-api-edr/" class="md-nav__link">
+      <a href="../../../standards/ogc-api-edr/" class="md-nav__link">
         
   
   
@@ -1611,7 +1609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/cf-conventions/" class="md-nav__link">
+      <a href="../../../standards/cf-conventions/" class="md-nav__link">
         
   
   
@@ -1639,7 +1637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../standards/coveragejson/" class="md-nav__link">
+      <a href="../../../standards/coveragejson/" class="md-nav__link">
         
   
   
@@ -1674,7 +1672,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
+      <a href="../../../glossary/" class="md-nav__link">
         
   
   
@@ -1698,8 +1696,6 @@
       
   
   
-    
-  
   
   
     
@@ -1720,15 +1716,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1746,13 +1742,13 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1770,7 +1766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../site-tooling/" class="md-nav__link">
+      <a href="../../site-tooling/" class="md-nav__link">
         
   
   
@@ -1820,6 +1816,97 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-choices-and-what-was-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The choices, and what was rejected
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The choices, and what was rejected">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#json-schema-to-python-datamodel-code-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Schema to Python: datamodel-code-generator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#json-schema-to-typescript-an-emitter-in-this-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Schema to TypeScript: an emitter in this repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-vendored-openapi-document-no-schema-generator-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The vendored OpenAPI document: no schema generator at all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1835,162 +1922,124 @@
 
 
 
-<h1 id="architecture-decision-records">Architecture decision records<a class="headerlink" href="#architecture-decision-records" title="Permanent link">&para;</a></h1>
-<p>A decision record exists for any decision that was hard to reverse, was
-genuinely contested, or rejected a plausible alternative. Routine choices do
-not earn one. Each record states the context it was decided in, the decision,
-and what the decision costs. A record that has been overtaken is marked
-superseded and kept, never deleted, because the reasoning is the point.</p>
-<p>There are 21 of them. The table below is generated at build time
-from the records themselves, so a status here cannot disagree with the status
-in the record it names.</p>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Decision</th>
-<th>Status</th>
-<th>Date</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="0001-binary-access/">0001</a></td>
-<td>Binary access rather than tiered or per-field</td>
-<td>Accepted, amended by ADR-0020</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0002-decorrelation-timescale-as-a-field/">0002</a></td>
-<td>Decorrelation timescale is a field, authored per feature</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0003-bespoke-edr-trajectory-provider/">0003</a></td>
-<td>Trajectory queries are served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0004-bespoke-sensorthings-provider/">0004</a></td>
-<td>SensorThings is served by a bespoke pygeoapi provider</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0005-sound-speed-is-derived-not-stored/">0005</a></td>
-<td>Sound speed is derived at the point of use, not stored</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0006-heartbeat-cadence-is-real-time/">0006</a></td>
-<td>Heartbeat cadence and liveness windows are real time</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0007-host-time-for-display-smoothing/">0007</a></td>
-<td>Host time may smooth the display between clock samples</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0008-control-messages-reach-the-client-by-websocket-upgrade/">0008</a></td>
-<td>Control messages reach the client by WebSocket upgrade at the proxy</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0009-clock-transport-and-lockstep-mode/">0009</a></td>
-<td>The clock publishes on the control namespace, and gains a lockstep mode</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0010-site-tooling/">0010</a></td>
-<td>Tooling for the published site</td>
-<td>Accepted</td>
-<td>26 August 2026, amended 27 August 2026 (mathematics rendering settled)</td>
-</tr>
-<tr>
-<td><a href="0011-the-coverage-store-pointer-is-text/">0011</a></td>
-<td>The current-run pointer is a text file, not a symlink</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0012-sensors-may-read-the-clock-and-nothing-else/">0012</a></td>
-<td>Sensors and the ingest client may read the clock, and nothing else on the control branch</td>
-<td>Accepted</td>
-<td>26 August 2026</td>
-</tr>
-<tr>
-<td><a href="0013-leakage-is-scored-per-released-variable/">0013</a></td>
-<td>A leakage statistic is scored per released variable, and the worst one is the answer</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0014-quality-flagging-is-the-ingestion-seam/">0014</a></td>
-<td>Quality flagging is the ingestion seam, not a field on an observation</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0015-a-sensor-may-announce-itself/">0015</a></td>
-<td>A sensor may announce itself, because the alternative was a display that lied</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0016-the-broker-credential-path-is-half-built/">0016</a></td>
-<td>No component could authenticate, and the credential path is now whole</td>
-<td>Accepted, and amended the same day — see "What changed a few hours later"</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0018-common-json-is-a-root-seed-not-a-set-of-defaults/">0018</a></td>
-<td><code>common.json</code> is a root seed, and the defaults mechanism it describes does not exist</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0019-the-planner-threshold-is-absolute-and-was-never-checked/">0019</a></td>
-<td>The planner's threshold stays absolute, and now has something to check it against</td>
-<td>Accepted</td>
-<td>27 August 2026</td>
-</tr>
-<tr>
-<td><a href="0020-clearance-delegated-for-the-control-upgrade/">0020</a></td>
-<td>Clearance is binary for the released prefix and delegated for the control upgrade</td>
-<td>Accepted</td>
-<td>28 August 2026 — drafted; accepted the same day</td>
-</tr>
-<tr>
-<td><a href="0021-the-clock-control-answers-the-browser-from-any-origin/">0021</a></td>
-<td>The clock's HTTP interface answers the browser from any origin</td>
-<td>Proposed — drafted by an agent session, not accepted, not to be treated as decided</td>
-<td>28 August 2026</td>
-</tr>
-<tr>
-<td><a href="0022-generator-selection-for-the-type-chain/">0022</a></td>
-<td>The type chain's generators, and why the TypeScript half is ours</td>
-<td>Accepted</td>
-<td>28 August 2026</td>
-</tr>
-</tbody>
-</table>
+<h1 id="adr-0022-the-type-chains-generators-and-why-the-typescript-half-is-ours">ADR-0022: The type chain's generators, and why the TypeScript half is ours<a class="headerlink" href="#adr-0022-the-type-chains-generators-and-why-the-typescript-half-is-ours" title="Permanent link">&para;</a></h1>
+<div class="admonition info">
+<p class="admonition-title">Published from the repository's decision record</p>
+<p>This page is generated at build time from <code>docs/adr/0022-generator-selection-for-the-type-chain.md</code>.
+The record is the original; this is a rendering of it, and editing the
+built page would change nothing.</p>
+</div>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 28 August 2026
+<strong>Requirement:</strong> SRD NFR-01, NFR-02, NFR-03; FR-009, FR-015, FR-016; SC-007
+<strong>Related:</strong> feature 006; <code>contracts/openapi/generators.toml</code>, which carries these choices
+as values; <code>docs/architecture/generated-types.md</code>, which describes the chain they sit in</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Constitution III makes the generated trees part of the build: <code>libs/harness_types/</code> and
+<code>client/src/generated/</code> are derived from <code>contracts/</code>, committed, and proved current by
+<code>scripts/check_types_drift.sh</code> on every change. The check compares bytes. That has a
+consequence which is the whole reason this record exists: <strong>the generators are part of the
+contract.</strong> A generator at a different version, or a formatter with a different opinion,
+produces a diff nobody's change caused, and a diff nobody's change caused is a check
+everybody learns to ignore.</p>
+<p>Replacing a generator later is therefore not a dependency bump. It is a whole-tree
+regeneration and a review of a diff nobody can read, on files nobody may hand-edit. That
+is the definition of hard to reverse, so the choices are recorded here rather than left in
+a lockfile.</p>
+<p>Feature 006's specification recorded the generator choice as an assumption and guessed at
+three tools. Two of those guesses were kept and one was not.</p>
+<h2 id="the-choices-and-what-was-rejected">The choices, and what was rejected<a class="headerlink" href="#the-choices-and-what-was-rejected" title="Permanent link">&para;</a></h2>
+<h3 id="json-schema-to-python-datamodel-code-generator">JSON Schema to Python: <code>datamodel-code-generator</code><a class="headerlink" href="#json-schema-to-python-datamodel-code-generator" title="Permanent link">&para;</a></h3>
+<p>Kept, as the specification assumed. Considered against writing an emitter, as was done for
+TypeScript, and against <code>quicktype</code>.</p>
+<p>It is the only widely used JSON Schema to Python generator that keeps constraints —
+<code>minimum</code>, <code>pattern</code>, <code>enum</code> — and descriptions <strong>in the model</strong> rather than dropping them
+at the door. That matters more here than it sounds: a generated model that has lost its
+constraints validates less than the schema it came from, so a payload the schema refuses is
+accepted by the code, and the two halves of one contract disagree silently. <code>quicktype</code>
+produces shapes, not validation.</p>
+<p>It is also the reason the chain generates from a <em>bundle</em> rather than from
+<code>contracts/schemas/</code> directly. In directory mode it emits one module per master with real
+cross-module imports, so a shape shared by two masters is defined once and imported. That
+is NFR-02 mechanically enforced, and a per-file invocation cannot give it.</p>
+<p>It is installed <strong>without</strong> its <code>[http]</code> extra, and that is load-bearing rather than
+frugal. An unresolvable reference then fails with "install the http extra" instead of
+quietly fetching a document over the network — which FR-016 forbids and which would make
+the drift check depend on the internet.</p>
+<p><code>black</code> and <code>isort</code> are pinned alongside it, because formatting is part of the bytes being
+compared and a formatter is therefore a generator. They are used in preference to the ruff
+formatter because <code>datamodel-code-generator</code> shells out to whichever <code>ruff</code> is on PATH,
+which is not necessarily the workspace's; black and isort are its own pinned dependencies,
+resolved by <code>uv.lock</code>. The builtin formatter is dependency-free but wraps annotations in
+parentheses and leaves 300-character lines, which makes a review diff unreadable.</p>
+<h3 id="json-schema-to-typescript-an-emitter-in-this-repository">JSON Schema to TypeScript: an emitter in this repository<a class="headerlink" href="#json-schema-to-typescript-an-emitter-in-this-repository" title="Permanent link">&para;</a></h3>
+<p><strong>This is where the specification's assumption was overruled.</strong> It named
+<code>json-schema-to-typescript</code> and <code>openapi-typescript</code>. Both are good tools. Both are Node
+packages, and that is the problem.</p>
+<p>FR-009 says the drift check needs no network fetch and no service; SC-007 says it passes
+with networking disabled. A Node generator makes the gate depend on <code>pnpm install</code> — a
+network fetch — inside the Python job that runs every other gate, or else on a second job
+with half the chain in it. Neither is a gate anyone would trust, and a gate nobody trusts
+is the failure mode this repository has already met twice: a check that has never been
+seen to fail is worth nothing, and a check that is <em>expected</em> to be flaky is worse, because
+its failures get waved through.</p>
+<p>So the TypeScript half is <code>scripts/schema_to_typescript.py</code>, a small emitter over the JSON
+Schema subset the masters actually use. It fails loudly on any construct it does not
+understand rather than emitting something plausible. That property is the point: <strong>an
+emitter that guesses is worse than no emitter, because the wrong type compiles.</strong></p>
+<p>This is a trade and it is worth naming both sides. What is given up is a generator with
+more users than us — one that has met constructs we have not, and that somebody else
+maintains. What is bought is a check that runs anywhere Python runs, with nothing to
+install and nothing to reach, in about 1.2 seconds.</p>
+<p>The condition for revisiting it is stated rather than left to taste. If the OpenAPI half
+ever needs more than this emitter can do, the honest move is <code>openapi-typescript</code> invoked
+from the client's own toolchain, with the drift check <strong>split in two and both halves run
+in CI</strong> — not a Python-only gate that quietly stops examining the TypeScript. A gate that
+covers half of what it appears to cover is the worst of the three options.</p>
+<h3 id="the-vendored-openapi-document-no-schema-generator-at-all">The vendored OpenAPI document: no schema generator at all<a class="headerlink" href="#the-vendored-openapi-document-no-schema-generator-at-all" title="Permanent link">&para;</a></h3>
+<p>The query layer's specification is captured from pygeoapi, not written here. Running
+either generator over its <code>components/schemas</code> was considered and rejected on its own
+merits, not on tooling grounds: all four shapes pygeoapi emits there describe endpoints
+this query layer does not serve, and one of them references a document on
+<code>schemas.opengis.net</code> which the chain may not fetch. What is generated from that document
+is its surface — paths, methods, operation identifiers — which is what a client of a
+service contract actually needs.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>The chain uses <code>datamodel-code-generator</code> (with <code>black</code> and <code>isort</code>) for Python and this
+repository's own emitter for TypeScript. Every version is pinned in
+<code>contracts/openapi/generators.toml</code> and checked against what is installed <strong>before a byte
+is written</strong>, so a tool that changed behind our backs stops the run naming both versions
+rather than rewriting the tree in a dialect the committed output was not written in.</p>
+<p>Per-document generator options for the OpenAPI half live in the same manifest, as
+<code>[[document]]</code> entries with <code>kind</code> and <code>schemas</code>. Documents are never merged and never
+generated under one policy: the authored document is 3.1 and must alias masters, the
+vendored one is 3.0.2 and generates no models.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Changing a generator or a formatter version is a whole-tree regeneration</strong>, and it
+  belongs in its own commit with nothing else in it. The pin and the regenerated tree
+  travel together or the drift check says so.</li>
+<li><strong>The TypeScript emitter is ours to maintain</strong>, including its <code>EMITTER_VERSION</code>, which is
+  pinned in the manifest exactly as a third-party version is and must be bumped in the same
+  commit as a change to the emitter. A construct a master starts using that the emitter
+  does not understand is a build failure and a small piece of work, not a silent wrong
+  type — which is the trade taken deliberately above.</li>
+<li><strong>The gates stay in one job, need no network, and need no service.</strong> That is what the
+  Node tools were given up to buy, and it is the thing to weigh against any future proposal
+  to bring one back.</li>
+<li><strong><code>generators.toml</code> is append-only and is the single place these choices live.</strong> The
+  reason a generated file looks the way it does — every option, with its argument — is in
+  that file rather than spread between a script and a review comment.</li>
+<li>A future OpenAPI document that states its own parameters inline extends the surface
+  emitter rather than reaching for a new generator. If that stops being true, this record
+  is where the reason to change belongs.</li>
+</ul>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -2016,28 +2065,6 @@ in the record it names.</p>
         <footer class="md-footer">
   
     
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../site-tooling/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Site tooling">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                Site tooling
-              </div>
-            </div>
-          </a>
-        
-        
-      </nav>
-    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -2059,10 +2086,10 @@ in the record it names.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

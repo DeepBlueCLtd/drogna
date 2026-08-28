@@ -19,6 +19,16 @@
  * lights a box from it and the loop leaves it alone. Counting it as a transit would swamp
  * the four messages of a run with the cadence of eighteen components saying they are
  * alive, and would make SC-001's equality meaningless.
+ *
+ * The publisher and consumer names below stay hand-written rather than derived from
+ * `contracts/topology.json`, and the reason is recorded here because 018 T029 asked the
+ * question. The artefact's permission layer is deliberately coarse — nine components
+ * *may* publish a run request, because the control role spans the namespace — and its
+ * `named_by` layer is deliberately direction-blind, so neither layer can name the one
+ * behavioural publisher a transit needs; a derivation would be exactly the plausible
+ * unchecked guess the artefact exists to abolish. What changed instead is that the table
+ * stopped being unchecked: `tests/loop/routingAgainstArtefact.test.ts` reads the artefact
+ * and fails on any claim here that the enforced access control layer would refuse.
  */
 // One line, deliberately: the literal-path gate reads a wrapped import's closing line as a bare string.
 import { CLOCK_TOPIC, DIVERGENCE_TOPIC, PLAN_TOPIC, RUN_PUBLISHED_TOPIC, RUN_REQUEST_TOPIC, RUN_STARTED_TOPIC, TELEMETRY_TOPIC } from "../data/topics";

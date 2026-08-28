@@ -60,9 +60,16 @@ export interface DrognaReverseProxyConfiguration {
       user: string;
     };
     /**
-     * The two upstreams this proxy is willing to reach, both by service name on the internal network. Neither is published to a host: reaching them is what the proxy is for.
+     * The upstreams this proxy is willing to reach, each by service name on the internal network. None is published to a host: reaching them is what the proxy is for. An upstream declared here and routed to nowhere is inert; every host named here must resolve where the proxy starts, because nginx resolves proxy_pass hosts at startup and refuses to start otherwise.
      */
     upstream: {
+      /**
+       * Where the page is proxied from, where the destination serves one through the boundary (see proxy.page). Declared beside the other upstreams so that everything the rendered configuration can reach is declared in one section.
+       */
+      page?: {
+        /** Base URL of the client's server on the internal network. */
+        url: string;
+      };
       query: {
         /** Base URL of the query layer. */
         url: string;
@@ -97,6 +104,19 @@ export interface DrognaReverseProxyConfiguration {
        * The variables a released artefact may carry (FR-014). A variable driven by observation age is absent from this list by design: an age field is a map of measurement locations, and tests/leakage/test_updated_region.py is what holds that in place.
        */
       variables: string[];
+    };
+    /**
+     * The client's own build, served through this boundary so that the page and the data it reads share one origin and one credential (decided 28 August 2026, issue #34 link 6). Optional: a destination that serves no page omits the section and the rendered configuration carries no page location at all. Declaring it requires proxy.upstream.page, which says where the page comes from. The surface is declared path by path, exactly as the released collections are — the build emitting a new file does not expose it, which is FR-003's property applied to the page. The renderer refuses a declared page with no paths, and refuses any entry that falls under the released prefix or collides with the upgrade location.
+     */
+    page?: {
+      /**
+       * The exactly-matched document paths the page needs: the root, the entry document, the served configuration. Each is one absolute path admitted whole and alone.
+       */
+      paths: string[];
+      /**
+       * The asset directories the build writes into, admitted as inspected subtrees the way a released collection is. A single leading-slash segment each; the bare prefix itself names a directory, not a document, and stays refused.
+       */
+      prefixes: string[];
     };
     /**
      * One protocol-upgrade location at a dedicated prefix, proxying MQTT-over-WebSockets to the broker. It is subject to the same default deny as every other path, but it is a different exposure surface: policy is evaluated once, at the upgrade, and the connection then persists carrying traffic the proxy does not inspect per message. What a subscriber may receive is therefore settled by the broker's access control lists, not here, and is tested there.

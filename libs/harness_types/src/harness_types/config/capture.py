@@ -9,6 +9,22 @@ from enum import StrEnum
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 
+class Credentials(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    user: str = Field(
+        ...,
+        description='The clearance identity, matching proxy.credentials.user at the same destination.',
+        min_length=1,
+    )
+    secret_variable: str = Field(
+        ...,
+        description='The environment variable carrying the secret at capture time.',
+        pattern='^HARNESS_[A-Z0-9_]+$',
+    )
+
+
 class Client(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -31,6 +47,11 @@ class Client(BaseModel):
         ...,
         description='The largest number of frames the settle check will watch before giving up. The bound is a frame count rather than a duration so that the check reads no clock of any kind.',
         gt=0,
+    )
+    credentials: Credentials | None = Field(
+        None,
+        description='With the page served through the proxy behind its binary clearance (decided 28 August 2026, issue #34 link 6), every capture needs the credential to load the page at all. The identity is tracked; the secret is named by the environment variable that carries it and never written here — the same rule the broker URLs follow. A mechanism refuses to start when the named variable is unset, because a browser launched without the credential would report readiness never arriving, three layers away from the cause. Optional so that a destination serving its page in the open still validates.',
+        title='The clearance the page is behind',
     )
 
 

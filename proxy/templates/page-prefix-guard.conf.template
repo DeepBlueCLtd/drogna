@@ -1,0 +1,11 @@
+    # The bare prefix names a directory, not a document. Without this exact location,
+    # nginx applies its trailing-slash special processing to the `^~ @{prefix}/` pair
+    # below and answers the bare path with a 301 into the subtree — issued when the
+    # location is chosen, before the access phase ever examines a credential, so an
+    # uncleared caller could map the page's directories from the redirects (FR-006).
+    # An exact match wins ahead of that processing; `try_files` then refuses after the
+    # access phase, the same way as every other deny in this file.
+    location = @{prefix} {
+        set $harness_rule "deny-default";
+        try_files $uri@{deny_probe_suffix} =404;
+    }

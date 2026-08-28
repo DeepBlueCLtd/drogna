@@ -59,6 +59,14 @@ export interface CaptureClient {
   readonly readinessTimeoutMs: number;
   readonly stableFrames: number;
   readonly maximumFrames: number;
+  /**
+   * The clearance the page is behind, resolved and ready for Playwright's
+   * `httpCredentials`, or undefined where the destination serves its page in the open.
+   * The document names the identity and the environment variable; the secret itself is
+   * read here, once, so a mechanism launched without it fails naming the variable rather
+   * than reporting that readiness never arrived.
+   */
+  readonly httpCredentials: { readonly username: string; readonly password: string } | undefined;
 }
 
 export interface CaptureViewport {
@@ -105,7 +113,10 @@ function schemaText(): string {
  * Every failure is a readable message naming the file, because the alternative is a
  * browser that launches against a location nobody chose and a picture nobody can explain.
  */
-export function loadCaptureConfigFrom(path: string): CaptureConfig {
+export function loadCaptureConfigFrom(
+  path: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): CaptureConfig {
   const location = isAbsolute(path) ? path : resolve(repositoryRoot, path);
   let text: string;
   try {
@@ -145,10 +156,38 @@ export function loadCaptureConfigFrom(path: string): CaptureConfig {
     );
   }
 
-  return adopt(document as Record<string, unknown>, location);
+  return adopt(document as Record<string, unknown>, location, environment);
 }
 
-function adopt(document: Record<string, unknown>, source: string): CaptureConfig {
+function credentials(
+  client: Record<string, unknown>,
+  source: string,
+  environment: NodeJS.ProcessEnv,
+): CaptureClient["httpCredentials"] {
+  const declared = client["credentials"] as
+    | { user: string; secret_variable: string }
+    | undefined;
+  if (declared === undefined) {
+    return undefined;
+  }
+  const secret = environment[declared.secret_variable];
+  if (secret === undefined || secret === "") {
+    throw new CaptureConfigError(
+      `${source} says the page is behind the clearance for ${JSON.stringify(declared.user)} ` +
+        `and names ${declared.secret_variable} as the variable carrying the secret, but it ` +
+        `is not set. The deployment writes it into deploy/.env; source that file (or export ` +
+        `the variable) before taking a capture. Launching without it would report readiness ` +
+        `never arriving, three layers away from the cause.`,
+    );
+  }
+  return { username: declared.user, password: secret };
+}
+
+function adopt(
+  document: Record<string, unknown>,
+  source: string,
+  environment: NodeJS.ProcessEnv,
+): CaptureConfig {
   const client = part(document, "client");
   const viewport = part(document, "viewport");
   const browser = part(document, "browser");
@@ -161,6 +200,7 @@ function adopt(document: Record<string, unknown>, source: string): CaptureConfig
       readinessTimeoutMs: client["readiness_timeout_ms"] as number,
       stableFrames: client["stable_frames"] as number,
       maximumFrames: client["maximum_frames"] as number,
+      httpCredentials: credentials(client, source, environment),
     },
     viewport: {
       width: viewport["width"] as number,
@@ -213,7 +253,7 @@ export function loadCaptureConfig(environment: NodeJS.ProcessEnv = process.env):
         "shows how the three entry points are invoked with it.",
     );
   }
-  return loadCaptureConfigFrom(named);
+  return loadCaptureConfigFrom(named, environment);
 }
 
 /** An area from the configuration, as an absolute location. */

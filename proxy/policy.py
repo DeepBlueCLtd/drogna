@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
+    "ALLOW_PAGE",
     "ALLOW_RELEASED",
     "ALLOW_UPGRADE",
     "DENY_DEFAULT",
@@ -40,6 +41,7 @@ __all__ = [
     "UnnormalisablePathError",
     "decide",
     "normalise",
+    "page_locations",
     "released_locations",
     "unreleased",
 ]
@@ -52,6 +54,7 @@ DENY_NOT_RELEASED = "deny-not-released"
 DENY_DEFAULT = "deny-default"
 ALLOW_RELEASED = "allow-released"
 ALLOW_UPGRADE = "allow-upgrade"
+ALLOW_PAGE = "allow-page"
 
 _PERCENT = re.compile(r"%(..?)?", re.DOTALL)
 _HEX = re.compile(r"^[0-9A-Fa-f]{2}$")
@@ -89,6 +92,11 @@ class Location:
     upgrade: bool = False
     """Whether this location carries a protocol upgrade. See :class:`ReleasePolicy`."""
 
+    exact: bool = False
+    """Whether this location matches its path exactly and never a subtree. The page's
+    named documents are exact; a released collection and the page's asset prefix admit
+    what is beneath them, because every request beneath them is inspected."""
+
 
 @dataclass(frozen=True)
 class Decision:
@@ -121,6 +129,9 @@ class ReleasePolicy:
     query_collection_path: str
     control_url: str
     control_path: str
+    page_url: str | None = None
+    page_paths: tuple[str, ...] = ()
+    page_prefixes: tuple[str, ...] = ()
 
     @classmethod
     def from_document(cls, document: Mapping[str, Any]) -> ReleasePolicy:
@@ -164,6 +175,7 @@ class ReleasePolicy:
                 "They are held apart so that neither surface can widen the other: one is "
                 "inspected per request, the other is inspected once and then persists."
             )
+        page_url, page_paths, page_prefixes = cls._page(proxy, prefix, upgrade)
         return cls(
             prefix=prefix,
             collections=tuple(str(name) for name in collections),
@@ -177,7 +189,66 @@ class ReleasePolicy:
                 "/"
             ),
             control_path=str(_require(websocket, "proxy.upstream.control_websocket", "path")),
+            page_url=page_url,
+            page_paths=page_paths,
+            page_prefixes=page_prefixes,
         )
+
+    @staticmethod
+    def _page(
+        proxy: Mapping[str, Any], released_prefix: str, upgrade_prefix: str
+    ) -> tuple[str | None, tuple[str, ...], tuple[str, ...]]:
+        """The page section, where the destination declares one.
+
+        The page is the client's own build, served through this boundary so that the page
+        and the data it reads share one origin and one clearance (decided 28 August 2026,
+        issue #34 link 6). Its surface is declared path by path, exactly as the released
+        collections are: a build output the document does not name has no location and no
+        way in, which is the same property FR-003 gives the collections.
+        """
+        page = proxy.get("page")
+        if page is None:
+            return None, (), ()
+        upstream = _require(proxy, "proxy", "upstream")
+        upstream_page = upstream.get("page") if isinstance(upstream, Mapping) else None
+        if upstream_page is None:
+            raise PolicyError(
+                "proxy.page is declared and proxy.upstream.page is not, so the page has a "
+                "surface and nowhere to come from. Every host the rendered configuration "
+                "reaches is declared under proxy.upstream, where the test fixtures settle "
+                "them; a page upstream named anywhere else is the unresolvable-host fault "
+                "the resolvability tests exist to prevent."
+            )
+        url = str(_require(upstream_page, "proxy.upstream.page", "url")).rstrip("/")
+        paths = tuple(str(entry) for entry in _require(page, "proxy.page", "paths"))
+        prefixes = tuple(str(entry) for entry in _require(page, "proxy.page", "prefixes"))
+        if not paths and not prefixes:
+            raise PolicyError(
+                "proxy.page names a url and no paths or prefixes, so the page would be "
+                "declared and unreachable. A destination that serves no page omits the "
+                "section instead."
+            )
+        for entry in paths:
+            if entry != "/" and (not entry.startswith("/") or entry.endswith("/")):
+                raise PolicyError(
+                    f"proxy.page.paths contains {entry!r}. Each entry is one absolute "
+                    "path with no trailing separator; the root itself is spelled '/'."
+                )
+        for entry in prefixes:
+            _segment(entry, "proxy.page.prefixes")
+        for entry in (*paths, *prefixes):
+            if entry == released_prefix or entry.startswith(released_prefix + "/"):
+                raise PolicyError(
+                    f"proxy.page declares {entry!r}, which falls under the released prefix "
+                    f"{released_prefix!r}. The page and the data keep separate surfaces so "
+                    "that neither can widen the other."
+                )
+            if entry == upgrade_prefix:
+                raise PolicyError(
+                    f"proxy.page declares {entry!r}, which is the control upgrade location. "
+                    "A page document cannot share a path with a protocol upgrade."
+                )
+        return url, paths, prefixes
 
 
 def _require(section: Mapping[str, Any], where: str, key: str | None = None) -> Any:
@@ -304,12 +375,43 @@ def released_locations(policy: ReleasePolicy) -> tuple[Location, ...]:
     return tuple(sorted(locations, key=lambda location: location.path))
 
 
+def page_locations(policy: ReleasePolicy) -> tuple[Location, ...]:
+    """The page's locations, where the destination declares a page. Empty otherwise.
+
+    Kept apart from :func:`released_locations` on purpose: the released surface is the
+    boundary's own policy and exists at every destination, while the page is a choice a
+    destination makes. The upstream carries no path — the request path is forwarded as it
+    arrived, because the page's paths are the client build's own names for its files.
+    """
+    if policy.page_url is None:
+        return ()
+    locations = [
+        Location(path=path, upstream=policy.page_url, rule=ALLOW_PAGE, exact=True)
+        for path in policy.page_paths
+    ]
+    locations.extend(
+        Location(path=prefix, upstream=policy.page_url, rule=ALLOW_PAGE)
+        for prefix in policy.page_prefixes
+    )
+    return tuple(sorted(locations, key=lambda location: location.path))
+
+
 def decide(policy: ReleasePolicy, target: str) -> Decision:
     """What the boundary does with one request target, and which rule decided it."""
     try:
         path = normalise(target)
     except UnnormalisablePathError as refusal:
         return Decision(allowed=False, rule=DENY_UNNORMALISABLE, path=refusal.target)
+
+    for location in page_locations(policy):
+        # An exact page location admits its one named document. A page prefix admits only
+        # what is beneath it — the prefix itself names a directory, not a document, and the
+        # served configuration says the same thing (`^~ <prefix>/`), so the bare prefix
+        # falls through to the default deny in both statements of the policy.
+        if location.exact and path == location.path:
+            return Decision(allowed=True, rule=location.rule, path=path, location=location)
+        if not location.exact and path.startswith(location.path + "/"):
+            return Decision(allowed=True, rule=location.rule, path=path, location=location)
 
     for location in released_locations(policy):
         if path == location.path:

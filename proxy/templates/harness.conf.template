@@ -6,11 +6,14 @@
 #
 # Policy is expressed here and nowhere else. Read it as three claims:
 #
-#   1. Everything is refused unless a location below admits it. `location /` is the whole
-#      of the default deny (FR-001) and is reached by every path no released location
-#      matched — the query layer's native paths, its emitted specification and its
-#      conformance documents included, none of which appear here. A collection the query
-#      layer began serving on its own (FR-21) has no location and so has no way in.
+#   1. Everything is refused unless a location below admits it. `location /` (the prefix
+#      location, distinct from the page's exact `location = /`) is the whole of the
+#      default deny (FR-001) and is reached by every path no admitting location matched —
+#      the query layer's native paths, its emitted specification and its conformance
+#      documents included, none of which appear here. A collection the query layer began
+#      serving on its own (FR-21) has no location and so has no way in, and the same holds
+#      for the page: only the build paths the configuration names are admitted, so a build
+#      emitting a new file does not expose it.
 #   2. A caller either holds the one credential this deployment issues or holds nothing.
 #      No directive in this file can alter a response body: there is no `sub_filter`, no
 #      `xslt_stylesheet`, and `proxy_intercept_errors` is left off, so even an upstream
@@ -91,6 +94,7 @@ server {
     }
 
 @{released_locations}
+@{page_locations}
 @{upgrade_location}
 }
 

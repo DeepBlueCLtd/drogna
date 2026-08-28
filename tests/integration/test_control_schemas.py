@@ -79,7 +79,7 @@ def example(name: str) -> dict[str, Any]:
             "minimum_depth_m": 0.0,
             "maximum_depth_m": 200.0,
         },
-        "collections": {"forecast": "forecast-run-abc", "uncertainty": "uncertainty-run-abc"},
+        "collections": {"forecast": "forecast"},
         "digests": {"forecast": "sha256:" + "a" * 64, "uncertainty": "sha256:" + "b" * 64},
     }
 

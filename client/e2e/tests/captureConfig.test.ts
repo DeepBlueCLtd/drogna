@@ -24,10 +24,18 @@ import {
 const configFile = ["capture", "json"].join(".");
 const destinations = ["local", "droplet"];
 
+/**
+ * The environment a test loads the shipped documents under. The page sits behind the
+ * proxy's clearance (issue #34 link 6), so the documents declare a credential and the
+ * loader refuses to run without the named variable — these tests are about the documents,
+ * not the deployment, so they supply a stand-in the way every credential test here does.
+ */
+const WITH_SECRET = { HARNESS_PROXY_SECRET: "secret-for-the-capture" };
+
 describe("the shipped capture configurations", () => {
   for (const destination of destinations) {
     it(`${destination} validates and carries a client address`, () => {
-      const capture = loadCaptureConfigFrom(join("config", destination, configFile));
+      const capture = loadCaptureConfigFrom(join("config", destination, configFile), WITH_SECRET);
       expect(capture.client.url).toMatch(/^https?:\/\//);
       expect(capture.viewport.width).toBeGreaterThan(0);
       expect(capture.viewport.deviceScaleFactor).toBeGreaterThan(0);
@@ -38,11 +46,28 @@ describe("the shipped capture configurations", () => {
 
   it("agree on the viewport, so a curated image is the same size at either destination", () => {
     const [first, ...rest] = destinations.map((destination) =>
-      loadCaptureConfigFrom(join("config", destination, configFile)),
+      loadCaptureConfigFrom(join("config", destination, configFile), WITH_SECRET),
     );
     for (const other of rest) {
       expect(other.viewport).toEqual(first!.viewport);
     }
+  });
+
+  it("resolve the page's clearance from the variable the document names", () => {
+    const capture = loadCaptureConfigFrom(join("config", "local", configFile), WITH_SECRET);
+    expect(capture.client.httpCredentials).toEqual({
+      username: "drogna_reader",
+      password: WITH_SECRET.HARNESS_PROXY_SECRET,
+    });
+  });
+
+  it("refuse to load a credentialled document when the named variable is unset", () => {
+    // The failure this shape exists to prevent: a browser launched without the credential
+    // reports readiness never arriving, three layers away from the cause. The refusal
+    // happens at load, and it names the variable.
+    expect(() => loadCaptureConfigFrom(join("config", "local", configFile), {})).toThrow(
+      /HARNESS_PROXY_SECRET/,
+    );
   });
 });
 
@@ -74,7 +99,7 @@ describe("a configuration that cannot be used", () => {
 });
 
 describe("looking up a mechanism's own settings", () => {
-  const capture = loadCaptureConfigFrom(join("config", "local", configFile));
+  const capture = loadCaptureConfigFrom(join("config", "local", configFile), WITH_SECRET);
 
   it("answers the name the caller asked under", () => {
     expect(capture.area("glance")).toBeTypeOf("string");

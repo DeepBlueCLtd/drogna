@@ -48,8 +48,11 @@ class Collections(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    forecast_prefix: str = Field(..., min_length=1)
-    uncertainty_prefix: str = Field(..., min_length=1)
+    forecast: str = Field(
+        ...,
+        description="The collection identifier exactly as the query layer serves it. It states the same value the query configuration declares; two statements rather than one because no component reads another's configuration.",
+        min_length=1,
+    )
 
 
 class Publisher(BaseModel):
@@ -68,8 +71,8 @@ class Publisher(BaseModel):
     )
     collections: Collections = Field(
         ...,
-        description='Identifiers are derived from the run identifier by prefix, so that a new run is addressable the moment it is catalogued and no collection is ever enumerated in a configuration file.',
-        title="How a run's collections are named",
+        description='The fixed identifier the query layer serves runs under, stated here so the announcement can carry it (decided 28 August 2026, issue #34). One collection carries the forecast parameters and the uncertainty parameter together; the current run answers at the collection itself, and a specific run is an EDR instance of it named by the run identifier. Until that decision the identifiers were derived per run by prefix, which produced names nothing served.',
+        title='The served collection',
     )
 
 

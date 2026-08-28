@@ -6,12 +6,7 @@
     "reconnect_period_seconds": 5
   },
   "clock": {
-    "stale_after_seconds": 10,
-    "endpoint": "https://drogna.invalid",
-    "routes": {
-      "snapshot": "/clock/snapshot",
-      "control": "/clock/control"
-    }
+    "stale_after_seconds": 10
   },
   "query": {
     "endpoint": "https://drogna.invalid",

@@ -73,6 +73,12 @@ place afterwards.
 ```bash
 export HARNESS_CONFIG=config/local/capture.json
 
+# The page is served through the proxy, behind its clearance (issue #34 link 6), so every
+# mechanism needs the credential to load it at all. The capture document names the
+# identity and the variable carrying the secret; the deployment writes the secret into
+# deploy/.env. A mechanism started without it refuses immediately, naming the variable.
+set -a; . deploy/.env; set +a
+
 # glance — an image of the client as it stands, now. Touches nothing.
 node scripts/capture/glance/run.mjs
 

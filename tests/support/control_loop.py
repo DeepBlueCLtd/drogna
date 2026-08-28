@@ -211,8 +211,7 @@ def publisher_document(*, staging: str = "staging", catalogue: str = "coverage")
             "manifest_file": "run-manifest.json",
         },
         "collections": {
-            "forecast_prefix": "forecast-",
-            "uncertainty_prefix": "uncertainty-",
+            "forecast": "forecast",
         },
     }
     return document

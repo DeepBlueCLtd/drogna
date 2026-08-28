@@ -377,6 +377,13 @@ services:
     depends_on:
       query:
         condition: service_healthy
+      # The page is served through this boundary (issue #34 link 6), so the client is an
+      # upstream now, under the same start-up resolution rule as the query layer above.
+      # Both promoted destinations activate `shell` alongside `edge`; a destination that
+      # wanted the boundary with no page would trip this dependency loudly at compose
+      # time, which is the right moment to learn its proxy.json still declares a page.
+      client:
+        condition: service_healthy
     # Probed on the health surface its configuration declares, not on the published
     # listener. The boundary is default-deny, so a probe against the listener is answered
     # 401 and the container could never become healthy however well it was working.

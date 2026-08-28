@@ -67,6 +67,15 @@ class Credentials(BaseModel):
     )
 
 
+class Page(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    url: AnyUrl = Field(
+        ..., description="Base URL of the client's server on the internal network."
+    )
+
+
 class Query(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -94,6 +103,11 @@ class ControlWebsocket(BaseModel):
 class Upstream(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
+    )
+    page: Page | None = Field(
+        None,
+        description='Where the page is proxied from, where the destination serves one through the boundary (see proxy.page). Declared beside the other upstreams so that everything the rendered configuration can reach is declared in one section.',
+        title="The client's server (C-18)",
     )
     query: Query = Field(..., title='The query layer (C-09)')
     control_websocket: ControlWebsocket = Field(
@@ -131,6 +145,28 @@ class Released(BaseModel):
     variables: list[Variable] = Field(
         ...,
         description='The variables a released artefact may carry (FR-014). A variable driven by observation age is absent from this list by design: an age field is a map of measurement locations, and tests/leakage/test_updated_region.py is what holds that in place.',
+    )
+
+
+class Path(RootModel[str]):
+    root: str = Field(..., pattern='^/[A-Za-z0-9._-]*$')
+
+
+class Prefix(RootModel[str]):
+    root: str = Field(..., pattern='^/[a-z0-9][a-z0-9_-]*$')
+
+
+class Page1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    paths: list[Path] = Field(
+        ...,
+        description='The exactly-matched document paths the page needs: the root, the entry document, the served configuration. Each is one absolute path admitted whole and alone.',
+    )
+    prefixes: list[Prefix] = Field(
+        ...,
+        description='The asset directories the build writes into, admitted as inspected subtrees the way a released collection is. A single leading-slash segment each; the bare prefix itself names a directory, not a document, and stays refused.',
     )
 
 
@@ -211,13 +247,18 @@ class Proxy(BaseModel):
     )
     upstream: Upstream = Field(
         ...,
-        description='The two upstreams this proxy is willing to reach, both by service name on the internal network. Neither is published to a host: reaching them is what the proxy is for.',
+        description='The upstreams this proxy is willing to reach, each by service name on the internal network. None is published to a host: reaching them is what the proxy is for. An upstream declared here and routed to nowhere is inert; every host named here must resolve where the proxy starts, because nginx resolves proxy_pass hosts at startup and refuses to start otherwise.',
         title='What sits behind the boundary',
     )
     released: Released = Field(
         ...,
         description='The single place exposure is opted into. A collection absent from the list has no location in the rendered configuration at all, so adding one to the query layer cannot expose it (FR-003).',
         title='The release policy',
+    )
+    page: Page1 | None = Field(
+        None,
+        description="The client's own build, served through this boundary so that the page and the data it reads share one origin and one credential (decided 28 August 2026, issue #34 link 6). Optional: a destination that serves no page omits the section and the rendered configuration carries no page location at all. Declaring it requires proxy.upstream.page, which says where the page comes from. The surface is declared path by path, exactly as the released collections are — the build emitting a new file does not expose it, which is FR-003's property applied to the page. The renderer refuses a declared page with no paths, and refuses any entry that falls under the released prefix or collides with the upgrade location.",
+        title='The page, behind the same clearance',
     )
     control: Control = Field(
         ...,

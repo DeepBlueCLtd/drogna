@@ -51,6 +51,9 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: capture.client.url,
+    // With the page behind the proxy's clearance, the browser presents the credential
+    // the configuration resolved; absent a declaration, nothing is presented.
+    httpCredentials: capture.client.httpCredentials,
     viewport: { width: capture.viewport.width, height: capture.viewport.height },
     deviceScaleFactor: capture.viewport.deviceScaleFactor,
     trace: "retain-on-failure",

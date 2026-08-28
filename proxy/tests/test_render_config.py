@@ -144,11 +144,17 @@ def test_a_collection_absent_from_the_list_has_no_location_at_all(destination: s
     assert f"location = {prefix}/kept" in text
     for identifier in withheld:
         assert identifier not in configured
+    # The page's surface, where the destination declares one, is the only other thing
+    # allowed to proxy: enumerated from the document exactly as the collections are, so a
+    # location this list does not predict is still a failure here.
+    page = document["proxy"].get("page") or {"paths": [], "prefixes": []}
     assert sorted(proxied) == sorted(
         [
             f"location = {prefix}/kept",
             f"location ^~ {prefix}/kept/",
             f"location = {document['proxy']['control']['upgrade_prefix']}",
+            *(f"location = {path}" for path in page["paths"]),
+            *(f"location ^~ {entry}/" for entry in page["prefixes"]),
         ]
     )
 

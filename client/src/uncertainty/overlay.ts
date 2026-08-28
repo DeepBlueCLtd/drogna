@@ -19,16 +19,15 @@ import type { DrognaModelRunPublished } from "../generated/messages/run_publishe
 export interface OverlayState {
   /** The run whose field the overlay is showing, or null before any announcement. */
   readonly runId: string | null;
-  /** The collection identifier the query layer serves the uncertainty field under. */
-  readonly collection: string | null;
   /**
-   * The collection identifier of the ensemble mean.
-   *
-   * Carried because the route's conditions come from the forecast rather than from the
-   * spread, and because both identifiers arrive in the announcement — so publishing a run
-   * adds collections without any configuration document being edited (SRD FR-31).
+   * The fixed collection identifier the query layer serves runs under, as the
+   * announcement carried it (SRD FR-31; decided 28 August 2026, issue #34). One
+   * collection carries the forecast parameters and the uncertainty parameter together,
+   * so the field fetch and the route's trajectory query both address this identifier;
+   * which parameter the map draws is the configuration's `field_parameter`, and a
+   * specific run is an EDR instance of this collection named by `runId` above.
    */
-  readonly forecastCollection: string | null;
+  readonly collection: string | null;
   /** The simulation-time span the forecast covers, as the publisher stated it. */
   readonly validFrom: string | null;
   readonly validTo: string | null;
@@ -43,7 +42,6 @@ export interface OverlayState {
 export const emptyOverlay: OverlayState = {
   runId: null,
   collection: null,
-  forecastCollection: null,
   validFrom: null,
   validTo: null,
   announcements: 0,
@@ -70,8 +68,7 @@ export function announceRun(state: OverlayState, raw: unknown): OverlayState {
   }
   return {
     runId: message.run_id,
-    collection: message.collections.uncertainty,
-    forecastCollection: message.collections.forecast,
+    collection: message.collections.forecast,
     validFrom: message.valid_time.start_sim_time,
     validTo: message.valid_time.end_sim_time,
     announcements,

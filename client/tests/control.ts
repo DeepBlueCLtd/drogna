@@ -119,7 +119,7 @@ export function runPublished(
       minimum_depth_m: 0,
       maximum_depth_m: 500,
     },
-    collections: { forecast: "forecast-run-0007", uncertainty: "uncertainty-run-0007" },
+    collections: { forecast: "forecast" },
     digests: { forecast: DIGEST, uncertainty: DIGEST },
     ...overrides,
   };

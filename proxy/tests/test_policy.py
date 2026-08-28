@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 from proxy.policy import (
+    ALLOW_PAGE,
     ALLOW_UPGRADE,
     DENY_DEFAULT,
     DENY_NOT_RELEASED,
@@ -26,6 +27,7 @@ from proxy.policy import (
     UnnormalisablePathError,
     decide,
     normalise,
+    page_locations,
     released_locations,
     unreleased,
 )
@@ -49,6 +51,13 @@ def document(**overrides: Any) -> dict[str, Any]:
 
 def policy(**overrides: Any) -> ReleasePolicy:
     return ReleasePolicy.from_document(document(**overrides))
+
+
+# The identifier the local destination actually releases, read from the same tracked file
+# `document()` builds on, so these tests follow the released list rather than asserting
+# about identifiers nothing serves any more. The tests that need a name *not* on the list
+# still write their own.
+RELEASED = document()["proxy"]["released"]["collections"][0]
 
 
 # --- normalisation ------------------------------------------------------------------------
@@ -111,15 +120,15 @@ def test_an_encoded_separator_is_refused_rather_than_decoded() -> None:
 
 
 def test_a_released_collection_is_reachable_and_names_its_rule() -> None:
-    outcome = decide(policy(), "/released/drogna-forecast")
+    outcome = decide(policy(), f"/released/{RELEASED}")
 
     assert outcome.allowed
-    assert outcome.rule == "allow-released:drogna-forecast"
+    assert outcome.rule == f"allow-released:{RELEASED}"
     assert outcome.location is not None
 
 
 def test_what_is_beneath_a_released_collection_is_reachable() -> None:
-    assert decide(policy(), "/released/drogna-forecast/items").allowed
+    assert decide(policy(), f"/released/{RELEASED}/items").allowed
 
 
 def test_a_collection_the_list_does_not_name_is_refused() -> None:
@@ -141,7 +150,7 @@ def test_a_released_identifier_that_prefixes_an_unreleased_one_does_not_admit_it
 
 def test_the_query_layers_native_path_is_not_reachable() -> None:
     """FR-002. The released prefix is the only way in; the upstream path is not a way in."""
-    outcome = decide(policy(), "/query/collections/drogna-forecast")
+    outcome = decide(policy(), f"/collections/{RELEASED}")
 
     assert not outcome.allowed
     assert outcome.rule == DENY_DEFAULT
@@ -156,8 +165,8 @@ def test_the_query_layers_native_path_is_not_reachable() -> None:
         "/conformance",
         "/collections",
         "/released",
-        "/RELEASED/drogna-forecast",
-        "/released/drogna-forecast/../drogna-raw",
+        f"/RELEASED/{RELEASED}",
+        f"/released/{RELEASED}/../drogna-raw",
     ],
 )
 def test_everything_else_is_refused_by_default(target: str) -> None:
@@ -166,7 +175,7 @@ def test_everything_else_is_refused_by_default(target: str) -> None:
 
 
 def test_an_unnormalisable_target_is_refused_before_any_location_is_considered() -> None:
-    outcome = decide(policy(), "/released%2fdrogna-forecast")
+    outcome = decide(policy(), f"/released%2f{RELEASED}")
 
     assert not outcome.allowed
     assert outcome.rule == DENY_UNNORMALISABLE
@@ -244,6 +253,60 @@ def test_one_location_per_released_collection_and_one_upgrade() -> None:
 
 def test_unreleased_names_what_the_policy_withholds() -> None:
     """The request matrix builds its unreleased cases from what upstream says it serves."""
-    advertised = ["drogna-forecast", "drogna-raw", "observations", "drogna-uncertainty"]
+    advertised = [RELEASED, "drogna-raw", "observations"]
 
     assert unreleased(policy(), advertised) == ("drogna-raw", "observations")
+
+
+# --- the page, behind the same clearance (issue #34 link 6) -------------------------------
+
+
+def test_the_pages_declared_surface_is_admitted() -> None:
+    settled = policy()
+
+    assert decide(settled, "/").rule == ALLOW_PAGE
+    assert decide(settled, "/config.json").rule == ALLOW_PAGE
+    assert decide(settled, "/assets/index-1a2b3c.js").rule == ALLOW_PAGE
+
+
+def test_an_exact_page_path_admits_nothing_beneath_it() -> None:
+    assert decide(policy(), "/config.json/extra").rule == DENY_DEFAULT
+
+
+def test_the_bare_asset_prefix_names_a_directory_and_stays_refused() -> None:
+    """The prefix admits what is beneath it, exactly as the served `^~ /assets/` does."""
+    assert decide(policy(), "/assets").rule == DENY_DEFAULT
+
+
+def test_a_build_path_the_document_does_not_name_has_no_way_in() -> None:
+    """FR-003's property, applied to the page: a new build output is not a new exposure."""
+    assert decide(policy(), "/vite.svg").rule == DENY_DEFAULT
+
+
+def test_a_destination_without_a_page_serves_none() -> None:
+    without = document()
+    del without["proxy"]["page"]
+    settled = ReleasePolicy.from_document(without)
+
+    assert page_locations(settled) == ()
+    assert decide(settled, "/").rule == DENY_DEFAULT
+
+
+def test_a_page_entry_under_the_released_prefix_is_refused() -> None:
+    """The page and the data keep separate surfaces, so neither can widen the other."""
+    with pytest.raises(PolicyError):
+        policy(page={"paths": ["/released/page"], "prefixes": []})
+
+
+def test_a_declared_page_with_no_surface_is_refused() -> None:
+    with pytest.raises(PolicyError):
+        policy(page={"paths": [], "prefixes": []})
+
+
+def test_a_page_with_no_declared_upstream_is_refused() -> None:
+    """Every host the rendered file reaches is declared under proxy.upstream, where the
+    fixtures settle it; a page upstream anywhere else is the unresolvable-host fault."""
+    without = document()
+    del without["proxy"]["upstream"]["page"]
+    with pytest.raises(PolicyError):
+        ReleasePolicy.from_document(without)

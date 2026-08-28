@@ -59,6 +59,7 @@ export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"    # nothing builds here without t
 ./scripts/run_local.sh                           # up + seed; converges if already up
 ./scripts/down.sh local                          # and `pytest` takes it down too, see below
 
+set -a; . deploy/.env; set +a          # the page sits behind the proxy's clearance
 HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs
 ```
 

@@ -62,7 +62,10 @@ def test_a_superseded_run_stays_addressable(tmp_path: Path) -> None:
     assert forecast.read_bytes() == b"first field"
 
 
-def test_the_collection_identifiers_are_derived_from_the_run_identifier(tmp_path: Path) -> None:
+def test_the_announcement_names_the_fixed_collection_and_the_run(tmp_path: Path) -> None:
+    """Decided 28 August 2026 (issue #34): the collection identifier is fixed and comes
+    from configuration; the run is named by run_id, which the message already carries. An
+    announcement that derived a collection name per run named something nothing served."""
     from control_loop import Recorder
 
     recorder = Recorder()
@@ -72,10 +75,8 @@ def test_the_collection_identifiers_are_derived_from_the_run_identifier(tmp_path
     message = service.take("run-abc")
 
     assert message is not None
-    assert message["collections"] == {
-        "forecast": "forecast-run-abc",
-        "uncertainty": "uncertainty-run-abc",
-    }
+    assert message["collections"] == {"forecast": "forecast"}
+    assert message["run_id"] == "run-abc"
     assert recorder.on("ctl/run-published") == [message]
 
 

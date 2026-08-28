@@ -18,8 +18,11 @@ prefix its own rule states — so the store's runs subdirectory was carried in
 has its own ``runs_dirname`` now, and this joins the store root to it rather than prefixing
 a name with a directory and relying on the slash.
 
-Collection identifiers are derived from the run identifier by prefix, which is what makes
-them predictable to a consumer that has only the announcement.
+The collection identifier is fixed and comes from configuration, stating the identifier
+the query layer serves (decided 28 August 2026, issue #34): the collection at its own path
+answers for the current run, and a specific run is an EDR instance of it named by the run
+identifier the announcement already carries. Identifiers were derived per run by prefix
+until that decision, which produced names nothing served.
 """
 
 from __future__ import annotations
@@ -37,8 +40,7 @@ class Catalogue:
     root: Path
     runs_dirname: str
     current_pointer: str
-    forecast_prefix: str
-    uncertainty_prefix: str
+    collection: str
 
     def runs_directory(self) -> Path:
         return self.root / self.runs_dirname
@@ -66,8 +68,6 @@ class Catalogue:
             return None
         return named[0]
 
-    def forecast_collection(self, run_id: str) -> str:
-        return f"{self.forecast_prefix}{run_id}"
-
-    def uncertainty_collection(self, run_id: str) -> str:
-        return f"{self.uncertainty_prefix}{run_id}"
+    def served_collection(self) -> str:
+        """The fixed identifier every run is served under, exactly as configured."""
+        return self.collection

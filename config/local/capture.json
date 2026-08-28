@@ -1,9 +1,13 @@
 {
   "client": {
-    "url": "http://127.0.0.1:8080",
+    "url": "http://127.0.0.1:8081",
     "readiness_timeout_ms": 15000,
     "stable_frames": 12,
-    "maximum_frames": 900
+    "maximum_frames": 900,
+    "credentials": {
+      "user": "drogna_reader",
+      "secret_variable": "HARNESS_PROXY_SECRET"
+    }
   },
   "viewport": {
     "width": 1440,

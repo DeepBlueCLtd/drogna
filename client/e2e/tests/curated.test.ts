@@ -37,7 +37,11 @@ import { leaks } from "../../../scripts/capture/curate/sidecar.mjs";
 import { loadCaptureConfigFrom } from "../shared/config";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
-const capture = loadCaptureConfigFrom(join("config", "local", ["capture", "json"].join(".")));
+const capture = loadCaptureConfigFrom(join("config", "local", ["capture", "json"].join(".")), {
+  // The page sits behind the proxy's clearance; these tests are about the curated
+  // mechanism, so the credential the loader insists on is a stand-in.
+  HARNESS_PROXY_SECRET: "secret-for-the-capture",
+});
 const published = join(repositoryRoot, capture.area("published"));
 
 /** A PNG's pixel dimensions, from its IHDR chunk. Twenty-four bytes, no dependency. */

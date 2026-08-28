@@ -201,6 +201,61 @@ def test_an_uncleared_caller_never_reaches_upstream(boundary: Boundary) -> None:
     assert not [line for line in boundary.upstream_log() if ALSO_RELEASED in line]
 
 
+# --- the page, behind the same clearance (issue #34 link 6) --------------------------------
+#
+# The tracked configuration this matrix is built from declares the page's surface, so the
+# rendered boundary carries its locations. The stub upstream is not a client and answers
+# what it answers; what is asserted here is routing and clearance, which is what the
+# boundary owns.
+
+
+def test_the_page_is_behind_the_same_clearance(boundary: Boundary) -> None:
+    """One credential for the page, the data, and everything else — and an uncleared
+    caller is told the same thing about the page as about any other path (FR-006)."""
+    page = boundary.request("/", clearance=None)
+    nowhere = boundary.request("/nothing-at-all", clearance=None)
+
+    assert page.status == 401
+    assert page.comparable() == nowhere.comparable()
+
+
+def test_a_cleared_caller_reaches_the_page_upstream(boundary: Boundary) -> None:
+    boundary.request("/", clearance=CLEARED)
+
+    assert [line for line in boundary.upstream_log() if line == "upstream GET /"], (
+        "the page root never reached the page upstream; the boundary is not serving "
+        "the page it declares"
+    )
+
+
+def test_the_asset_subtree_is_admitted_and_the_bare_prefix_is_not(boundary: Boundary) -> None:
+    """The bare prefix names a directory, not a document.
+
+    The first rendering of the page surface answered it with nginx's own trailing-slash
+    301 into the subtree — issued when the location is chosen, before the access phase,
+    so an uncleared caller could map the page's directories from the redirects. This
+    matrix caught it; the exact guard location is what keeps it caught.
+    """
+    boundary.request("/assets/index-1a2b3c.js", clearance=CLEARED)
+
+    assert [line for line in boundary.upstream_log() if "/assets/index-1a2b3c.js" in line]
+    assert boundary.request("/assets", clearance=CLEARED).status == 404
+    uncleared = boundary.request("/assets", clearance=None)
+    nowhere = boundary.request("/nothing-at-all", clearance=None)
+    assert uncleared.comparable() == nowhere.comparable(), (
+        "an uncleared caller is told something different about the asset prefix than "
+        "about a path that is not part of the boundary at all (FR-006)"
+    )
+
+
+def test_a_build_path_the_document_does_not_name_is_refused(boundary: Boundary) -> None:
+    """FR-003's property applied to the page: a new build output is not a new exposure."""
+    answer = boundary.request("/vite.svg", clearance=CLEARED)
+
+    assert answer.status == 404
+    assert not [line for line in boundary.upstream_log() if "vite.svg" in line]
+
+
 # --- paths with two readings ---------------------------------------------------------------
 
 

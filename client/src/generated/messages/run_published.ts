@@ -3,7 +3,7 @@
 // Edit the master and run that script; scripts/check_types_drift.sh fails the build on a hand edit.
 
 /**
- * The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.
+ * The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the fixed collection identifier the run is served under and the run identifier separately (decided 28 August 2026, issue #34): the collection at its own path answers for the current run, and a specific run is addressed as an EDR instance of that same collection named by run_id, so publishing a run adds no collection and edits no configuration anywhere.
  */
 export interface DrognaModelRunPublished {
   /** The publisher, matching config /component/id. */
@@ -47,13 +47,13 @@ export interface GridBounds {
 }
 
 /**
- * The identifiers under which the query layer serves this run's two fields. They are resolved from the store's layout at request time, so publishing a run adds collections without editing any configuration.
+ * The fixed identifier of the collection the query layer serves this run's fields under. One collection carries the forecast parameters and the uncertainty parameter together, rather than two collections that could disagree about the run they describe (query/plugins/edr_coverage.py); an `uncertainty` identifier carried here until 28 August 2026 named a second collection that will never exist, and was removed rather than deprecated. The current run answers at the collection itself; a specific run is an EDR instance of it, named by run_id.
  */
 export interface Collections {
-  /** Collection identifier of the ensemble mean. */
+  /**
+   * The served collection identifier, fixed per destination, carrying the ensemble mean and its spread.
+   */
   forecast: string;
-  /** Collection identifier of the per-cell ensemble spread. */
-  uncertainty: string;
 }
 
 /**

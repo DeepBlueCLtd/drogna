@@ -26,6 +26,15 @@ export interface DrognaVisualCaptureConfiguration {
      * The largest number of frames the settle check will watch before giving up. The bound is a frame count rather than a duration so that the check reads no clock of any kind.
      */
     maximum_frames: number;
+    /**
+     * With the page served through the proxy behind its binary clearance (decided 28 August 2026, issue #34 link 6), every capture needs the credential to load the page at all. The identity is tracked; the secret is named by the environment variable that carries it and never written here — the same rule the broker URLs follow. A mechanism refuses to start when the named variable is unset, because a browser launched without the credential would report readiness never arriving, three layers away from the cause. Optional so that a destination serving its page in the open still validates.
+     */
+    credentials?: {
+      /** The clearance identity, matching proxy.credentials.user at the same destination. */
+      user: string;
+      /** The environment variable carrying the secret at capture time. */
+      secret_variable: string;
+    };
   };
   /**
    * One viewport and one device scale factor per destination. FR-015 asks the whole blog to share them so that the published pictures read as one publication, and FR-009 makes them part of what two halves of a pair must agree on before a difference between them means anything.

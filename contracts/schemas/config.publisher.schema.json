@@ -68,14 +68,17 @@
           }
         },
         "collections": {
-          "title": "How a run's collections are named",
-          "description": "Identifiers are derived from the run identifier by prefix, so that a new run is addressable the moment it is catalogued and no collection is ever enumerated in a configuration file.",
+          "title": "The served collection",
+          "description": "The fixed identifier the query layer serves runs under, stated here so the announcement can carry it (decided 28 August 2026, issue #34). One collection carries the forecast parameters and the uncertainty parameter together; the current run answers at the collection itself, and a specific run is an EDR instance of it named by the run identifier. Until that decision the identifiers were derived per run by prefix, which produced names nothing served.",
           "type": "object",
-          "required": ["forecast_prefix", "uncertainty_prefix"],
+          "required": ["forecast"],
           "additionalProperties": false,
           "properties": {
-            "forecast_prefix": { "type": "string", "minLength": 1 },
-            "uncertainty_prefix": { "type": "string", "minLength": 1 }
+            "forecast": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The collection identifier exactly as the query layer serves it. It states the same value the query configuration declares; two statements rather than one because no component reads another's configuration."
+            }
           }
         }
       }

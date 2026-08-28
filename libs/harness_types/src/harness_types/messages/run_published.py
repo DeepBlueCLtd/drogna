@@ -36,11 +36,8 @@ class Collections(BaseModel):
         extra='forbid',
     )
     forecast: str = Field(
-        ..., description='Collection identifier of the ensemble mean.', min_length=1
-    )
-    uncertainty: str = Field(
         ...,
-        description='Collection identifier of the per-cell ensemble spread.',
+        description='The served collection identifier, fixed per destination, carrying the ensemble mean and its spread.',
         min_length=1,
     )
 

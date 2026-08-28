@@ -117,7 +117,11 @@ function crossImports(root: string, skip: readonly string[] = []): string[] {
   return found;
 }
 
-const capture = loadCaptureConfigFrom(join("config", "local", ["capture", "json"].join(".")));
+const capture = loadCaptureConfigFrom(join("config", "local", ["capture", "json"].join(".")), {
+  // The page sits behind the proxy's clearance; these tests are about mechanism
+  // separation, so the credential the loader insists on is a stand-in.
+  HARNESS_PROXY_SECRET: "secret-for-the-capture",
+});
 
 describe("the control: a tree in which the mechanisms have been merged", () => {
   it("is rejected, and the offending import is named", () => {

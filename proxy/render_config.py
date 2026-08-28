@@ -41,7 +41,13 @@ from typing import Any
 
 from harness_core.config import ConfigError, load_or_exit
 
-from proxy.policy import ALLOW_UPGRADE, PolicyError, ReleasePolicy, released_locations
+from proxy.policy import (
+    ALLOW_UPGRADE,
+    PolicyError,
+    ReleasePolicy,
+    page_locations,
+    released_locations,
+)
 from proxy.schemas import COMMON_CONFIG_SCHEMA, CONFIG_SCHEMA, schema
 
 __all__ = [
@@ -70,6 +76,8 @@ _PROXY_POINTER = "/proxy"
 _RELEASED_POINTER = "/proxy/released"
 # harness:allow-literal-path a JSON pointer into the configuration, not a filesystem path
 _CONTROL_POINTER = "/proxy/control"
+# harness:allow-literal-path a JSON pointer into the configuration, not a filesystem path
+_PAGE_POINTER = "/proxy/page"
 # harness:allow-literal-path a JSON pointer into the configuration, not a filesystem path
 _TLS_POINTER = "/proxy/tls"
 
@@ -188,6 +196,57 @@ def _released_block(policy: ReleasePolicy) -> str:
     return "\n".join(blocks)
 
 
+def _page_block(policy: ReleasePolicy) -> str:
+    """The page's locations, where the destination declares a page. Empty otherwise.
+
+    The page is the client's own build, served through this boundary so the page and the
+    data it reads share one origin and one clearance (issue #34 link 6). Its surface is
+    declared path by path in the configuration, exactly as the released collections are:
+    an exact location per named document, a `^~` prefix per asset directory, and nothing
+    for anything the document does not name. `auth_basic` at server level covers every
+    location here like every other, which is the property the template defends.
+    """
+    entries = page_locations(policy)
+    if not entries:
+        return ""
+    text = template_text("page-location.conf.template")
+    guard = template_text("page-prefix-guard.conf.template")
+    blocks = [
+        "    # The page: the client build, served behind the same clearance as the data\n"
+        "    # it reads (one origin, one credential — issue #34 link 6). Only the paths\n"
+        "    # the configuration names are admitted; the build emitting a new path does\n"
+        "    # not expose it, which is FR-003's property applied to the page."
+    ]
+    for location in entries:
+        if not location.exact:
+            blocks.append(
+                _substitute(
+                    guard,
+                    {
+                        "prefix": _bare(location.path, "proxy.page.prefixes"),
+                        "deny_probe_suffix": DENY_PROBE_SUFFIX,
+                    },
+                    _PAGE_POINTER,
+                )
+            )
+        blocks.append(
+            _substitute(
+                text,
+                {
+                    "modifier": "=" if location.exact else "^~",
+                    "location_path": _bare(
+                        location.path if location.exact else location.path + "/",
+                        "proxy.page.paths",
+                    ),
+                    "upstream": _bare(location.upstream, "proxy.upstream.page.url"),
+                    "rule": _bare(location.rule, "proxy.page"),
+                },
+                _PAGE_POINTER,
+            )
+        )
+    return "\n".join(blocks)
+
+
 def _upgrade_block(policy: ReleasePolicy, document: Mapping[str, Any]) -> str:
     """The one protocol-upgrade location ADR-0008 decided on."""
     control = _require(document, "proxy", "control")
@@ -270,6 +329,7 @@ def render_from_document(document: Mapping[str, Any]) -> str:
         ),
         "released_prefix": _bare(policy.prefix, "proxy.released.prefix"),
         "released_locations": _released_block(policy),
+        "page_locations": _page_block(policy),
         "upgrade_location": _upgrade_block(policy, document),
         "health_port": _bare(_require(document, "proxy", "health", "port"), "proxy.health.port"),
         "health_path": _bare(_require(document, "proxy", "health", "path"), "proxy.health.path"),

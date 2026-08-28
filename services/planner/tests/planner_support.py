@@ -272,7 +272,7 @@ def announcement() -> dict:
             "minimum_depth_m": 0.0,
             "maximum_depth_m": 150.0,
         },
-        "collections": {"forecast": "forecast", "uncertainty": "uncertainty"},
+        "collections": {"forecast": "forecast"},
         "digests": {"forecast": "sha256:" + "a" * 64, "uncertainty": "sha256:" + "b" * 64},
     }
 

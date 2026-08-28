@@ -47,11 +47,15 @@ def announcement(
     *,
     component: str,
     tick: Tick,
-    forecast_collection: str,
-    uncertainty_collection: str,
+    collection: str,
     current: bool = True,
 ) -> dict[str, Any]:
-    """Build the ``ctl/run-published`` payload from the run's own descriptor."""
+    """Build the ``ctl/run-published`` payload from the run's own descriptor.
+
+    The collection identifier is the fixed one the query layer serves — the run itself is
+    named by ``run_id``, which the payload already carries, and a specific run is an EDR
+    instance of that collection (decided 28 August 2026, issue #34).
+    """
     bounds = descriptor["grid_bounds"]
     valid = descriptor["valid_time"]
     digests = descriptor["digests"]
@@ -67,7 +71,7 @@ def announcement(
             end_sim_time=str(valid["end_sim_time"]),
         ),
         grid_bounds=GridBounds(**{key: float(value) for key, value in bounds.items()}),
-        collections=Collections(forecast=forecast_collection, uncertainty=uncertainty_collection),
+        collections=Collections(forecast=collection),
         digests=Digests(forecast=str(digests["forecast"]), uncertainty=str(digests["uncertainty"])),
     )
     return message.model_dump(mode="json")

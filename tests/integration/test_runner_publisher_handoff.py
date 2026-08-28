@@ -112,14 +112,18 @@ def test_the_published_field_is_readable_by_the_monitors_coverage_reader(tmp_pat
 
 
 def test_a_run_is_servable_without_any_collection_being_edited(tmp_path: Path) -> None:
-    """SC-008: the identifiers are derived from the run's name, so nothing is enumerated."""
+    """SC-008, under the decided addressing (28 August 2026, issue #34 link 5): the
+    announcement names the fixed collection and the run separately, so a new run is
+    servable the moment it is catalogued and still nothing is enumerated anywhere —
+    the collection is configuration, and the run is an EDR instance named by run_id."""
     runner, publisher, _, catalogue = build(tmp_path)
     runner.handle(RUN_REQUEST_TOPIC, run_request(run_id="run-abc"))
 
     announcement = publisher.take("run-abc")
 
     assert announcement is not None
-    assert announcement["collections"]["forecast"] == "forecast-run-abc"
+    assert announcement["collections"]["forecast"] == "forecast"
+    assert announcement["run_id"] == "run-abc"
     assert (published_run(catalogue, "run-abc") / "uncertainty.nc").is_file()
     # Nothing in the catalogue enumerates runs: the layout is the catalogue. The store root
     # holds the runs directory and the pointer, and the layout gives it nothing else.

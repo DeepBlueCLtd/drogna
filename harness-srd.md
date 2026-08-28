@@ -1,7 +1,7 @@
 # Software Requirements Document
 ## drogna
 
-**Status:** Draft v0.4 — scope amended: the coverage holdings and the shore advisories
+**Status:** Draft v0.5 — scope amended: the operator plane
 **Author:** Doc
 **Date:** 28 August 2026
 
@@ -52,6 +52,13 @@ The system is an event-driven **control loop** with command-query separation:
   with a single writer behind each.
 - Reads are served exclusively through a standards-based query layer.
 - A sense → decide → act → publish cycle drives forecast regeneration.
+
+Alongside the data architecture, and deliberately not part of it, sits a control
+surface over the harness itself: the operator plane of §5.12. Its reads answer for the
+*system* — what each component reports about its own state and pace — never for the
+ocean, so the rule that domain reads are served exclusively through the query layer is
+unchanged by it. Its writes are commands to components, which each component remains
+free to refuse.
 
 The organising diagram is a **flow chart with a loop in it**, not a hexagon. The
 architecture's interesting property is temporal — the cycle — and a static structural
@@ -161,6 +168,7 @@ them is retrofittable at acceptable cost.*
 | C-18 | Browser client | Visualisation and control (React/TS/Deck.gl) | — |
 | C-19 | Shore advisory source | Deterministic shore-role authoring and publication of advisories; the advisory ingestion seam | Being mistaken for a real external party |
 | C-20 | Advisory store | Append-only holding of issued advisories, read by the query layer alone | Silent supersession |
+| C-21 | System controller | Aggregate what components report about themselves; serve the operator REST surface; dispatch operator commands; sole holder of the container runtime socket | A stale aggregate presented as current; the reach of the socket it alone holds |
 
 - **FR-12** The observation and feature stores shall run as two schemas in one
   Postgres instance, mirroring the conceptual split (punishing write path versus
@@ -419,6 +427,81 @@ is a device for asking what the architecture must carry, and names nobody: PR-01
 here as everywhere, and the shore is this harness talking to itself. The argument is in
 `specs/020-shore-advisories/spec.md`.*
 
+### 5.12 The operator plane
+
+- **FR-67** A system controller shall observe the control namespace — heartbeats,
+  telemetry, run announcements — and serve over a REST interface a deeper account of
+  each component's state than the shell displays: the last heartbeat and reported
+  status, the component's own published counters, and a rolling recent window of the
+  same, held in memory and claiming no persistence. The controller aggregates what
+  components said about themselves and invents nothing: a component never heard from
+  is reported as unheard, not absent and not assumed.
+- **FR-68** Every long-running component shall publish throughput telemetry as a new
+  kind within the existing telemetry union, on the established cadence discipline:
+  counts of work received, done and refused, expressed per simulation second as the
+  ingest client already reports its write rate, with freshness stated. The channel
+  exists; only the kind is new.
+- **FR-69** Keeping-up and end-to-end latency shall be expressed in simulation time:
+  a component reports how far its processing trails the clock, and the harness
+  measures the simulated interval from an observation's sampling to its availability
+  through the query layer. No wall-clock exemption is needed or taken for either.
+- **FR-70** The controller shall sample each container's processor and memory use
+  through the container runtime and publish it as telemetry, so the display can show
+  where the harness saturates as the rate rises. This is inherently a per-host-second
+  measure and therefore the third wall-clock exemption; the constitution calls a
+  third request evidence of erosion, so it shall be argued on its own merits in an
+  ADR under PR-03 before it is built, on the ground that it measures the machinery
+  and not the simulation — kin to the heartbeat cadence, not to the clock.
+- **FR-71** The clock shall accept any rate within its configured bounds, not only an
+  offered set, and shall gain a step operation advancing a paused clock by a stated
+  simulated interval. A refused command shall name the bound or rule that refused it,
+  and the client shall surface the refusal and the bounds rather than discarding the
+  response body as it does today.
+- **FR-72** The controller shall dispatch operator commands: the clock's control
+  operations; trigger actions issued as ordinary control-namespace messages, such as
+  requesting a model run; and process-level lifecycle — stopping, starting and
+  restarting a named component's container through the container runtime. The
+  runtime socket is a deliberate trust surface, held by the controller alone and
+  argued in the same ADR as FR-70. A command names its target; a component asked to
+  act remains free to refuse, and the refusal travels back with its reason.
+- **FR-73** Operator commands are ephemeral: they are not part of the run record, and
+  a run that has been commanded through lifecycle or trigger sits outside AT-04's
+  replay claim — stated plainly wherever replay is claimed, rather than left to be
+  discovered. Rate and pause changes perturb nothing, since a tick's value is the
+  same at every rate, so a run whose only commands were speed changes replays as it
+  always did.
+- **FR-74** The operator plane shall be reachable through the reverse proxy under a
+  dedicated path prefix with clearance delegated, as the control-namespace WebSocket
+  path already is, and the clock's control surface shall be reachable the same way —
+  ending its present direct exposure beside the boundary rather than behind it.
+  Within the demonstration the plane carries no authentication of its own; the
+  boundary's default-deny is unchanged for every other path.
+- **FR-75** Data-product creation and transmission shall each be observable by
+  subscription alone: creation is already announced (FR-31), and the offload
+  packager shall additionally announce each verified transmission on the control
+  namespace, so a subscriber can watch products leave as well as arrive.
+- **FR-76** The client shall present the throughput display beside the simulation
+  speed control, so cause and effect share a screen. Illumination remains driven by
+  liveness alone: a component stopped by command goes dark because its heartbeats
+  cease, never because the plane says it is stopped.
+
+*The operator plane exists so the harness can be interrogated and provoked while it
+runs — the rate turned up, the pace watched, a component stopped mid-cycle — which is
+the first purpose of §1 exercised deliberately rather than incidentally. Most of it is
+a console over surfaces that already exist: `spikes/operator-plane/FINDING.md` proved
+the display half needs nothing new and that throughput is a missing kind rather than a
+missing channel, and the clock's two-route interface is the shape every command
+surface copies, request over HTTP and effect observed on the broker. Three decisions
+are deliberate and said here: the recent window persists nothing, because history
+worth keeping would be a store and earn the scrutiny of one; commands are ephemeral,
+because the run record exists to reproduce the scenario and an operator's hand is not
+part of the scenario; and the graphical composition of EDR requests from the client
+belongs to a later amendment (§10). Two ADRs are owed under PR-03: the exposure of the
+plane and the clock through the boundary, which resolves the clock's currently
+proposed direct exposure; and the resource-sampling exemption with the runtime
+socket's confinement to C-21. The stories, the edge cases and the argument are in
+`specs/021-operator-plane/spec.md`.*
+
 ---
 
 ## 6. Interfaces and shared types
@@ -511,7 +594,7 @@ here as everywhere, and the shore is this harness talking to itself. The argumen
 
 ## 10. Delivery priorities
 
-All twenty components are in scope, which is a large surface for spare-time work;
+All twenty-one components are in scope, which is a large surface for spare-time work;
 the discipline is ordering, treated as a commitment, with each stage demonstrable
 before the next begins. Ranked by cost-of-getting-it-wrong-late:
 
@@ -544,6 +627,20 @@ loop wrong late costs the harness its first purpose. Retaining runs that never h
 would be an accumulation of nothing, and an advisory is an *update* to a forecast that
 has to be turning before there is anything to update.
 
+The operator plane (§5.12) sits below the line under the same condition, and for the
+same kind of reason: the throughput of a loop that is not yet turning measures
+nothing, and `spikes/operator-plane/FINDING.md` recommends it as a later stage in as
+many words. One strand of it is exempt from the wait, because it repairs an existing
+requirement rather than extending scope: FR-10 already promises rate control from the
+browser, and FR-74's routing of the clock's control surface through the boundary is
+what makes that promise hold wherever only the boundary is published.
+
+Named here so the intent is on the record, and deliberately not specified: a
+graphical composer of EDR requests in the client — building a query against a chosen
+collection from the map rather than from text. It begins, at the earliest, once the
+operator plane is standing and the map surface of feature 017 has a selection model
+to build on, and it will be its own amendment when it does.
+
 ---
 
 ## 11. Resolved questions
@@ -556,6 +653,7 @@ has to be turning before there is anything to update.
 | What is this thing called? | drogna. | §1.2 |
 | Does the harness hold more than the current forecast, and does it hold any era but the future? | Yes to both. Published runs are retained as instances for the length of a scenario, and the holdings span three eras: a monthly historic archive, a now-cast, and the accumulating forecasts. Accumulation changes what is kept and not what "current" means. | §5.10, FR-54 to FR-58; `specs/019-coverage-holdings/spec.md` |
 | Can a forecast update reach the vessel as something smaller than a gridded field, and where would it live? | Yes: a shore-issued vector advisory describing a seeded feature, travelling the message fabric and held in a store of its own, so that what was aboard at departure stays structurally distinct from what was sent en route. Shore is a role the harness plays itself. | §5.11, FR-59 to FR-66; `specs/020-shore-advisories/spec.md`; the store's engine earns an ADR under PR-03 |
+| How is the running system itself interrogated and commanded, beyond the speed control — and does its throughput stay visible as the rate rises? | Through an operator plane: a system controller aggregating what components report about themselves, served over REST behind the boundary, with commands — clock operations, triggers, process-level lifecycle — that a component may refuse. Throughput becomes a kind in the existing telemetry union, per simulation second; commands are ephemeral and outside AT-04's claim. | §5.12, FR-67 to FR-76; `specs/021-operator-plane/spec.md`; the exposure and the resource-sampling exemption each earn an ADR under PR-03 |
 
 Nothing in this document is currently open. Questions are raised in this section as
 they arise and struck from it when they are answered, with the answer landing in a

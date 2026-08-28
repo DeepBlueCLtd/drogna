@@ -1,0 +1,15 @@
+/* Everything in this file is wrong on purpose. See ../../README.md. */
+
+/* WRONG: an @import from another origin. */
+@import url("https://fonts.example.invalid/css?family=Something");
+
+@font-face {
+  font-family: "Something";
+  /* WRONG: url() reaching another origin. */
+  src: url("https://fonts.example.invalid/something.woff2") format("woff2");
+}
+
+body {
+  /* Fine: same origin, and must never be reported. */
+  background-image: url("../assets/local.png");
+}

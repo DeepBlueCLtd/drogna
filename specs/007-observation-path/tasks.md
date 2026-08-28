@@ -188,7 +188,7 @@ as every run-time role.
 
 ## Phase 8: Polish
 
-- [ ] T045 [P] Write `docs/architecture/observation-path.md` describing the path end to end, the two failure modes and how each is bounded
+- [x] T045 [P] Write `docs/architecture/observation-path.md` describing the path end to end, the two failure modes and how each is bounded — **done 2026-08-28** (lane E, `claude/evidence-reconciliation`). Written as a synthesis of the three READMEs named below, which stay the authority; the note says so and says which one wins on a disagreement.
 - [x] T046 [P] Add a case to the schema tests asserting that an observation carrying a sound-speed observed property is rejected, and that the enumeration is exactly temperature, salinity and pressure, so a fourth datastream cannot arrive without amending ADR-0005 (FR-023, FR-024, SC-012)
 - [x] T047 Run the full quality-gate set over this feature's files — lint, format, wall-clock gate, seeded-RNG gate, drift check, literal-path gate, forbidden-vocabulary gate — and fix what they report
 - [x] T048 Walk the edge cases in `spec.md` deliberately: broker absent at start, store absent mid-batch, duplicate delivery, out-of-order arrival, process death mid-batch; confirm each behaves as specified and record what was learned
@@ -314,11 +314,15 @@ blocked on a decision this feature could have made.
   broker's log. Publishing a *count* needs a component subscribed to the broker's `$SYS`
   branch, and there is none — the ingest client can only count its own traffic. That
   belongs to `010-telemetry-quality`, whose business the `ctl/telemetry` topic is.
-- **T045 — `docs/architecture/observation-path.md`.** `docs/` is outside this feature's
-  directories in the current assignment. The material is written and lives in
+- **T045 — `docs/architecture/observation-path.md`. Closed 28 August 2026.** It was deferred
+  because `docs/` was outside this feature's directories in the parallel checkout, with the
+  material recorded as already written across three READMEs:
   `stores/observations/README.md` (the data model and why it holds no entity),
   `services/ingest/README.md` (the path, the two failure modes and the measured figures) and
-  `deploy/broker/README.md` (the namespace split and the two-broker fallback).
+  `deploy/broker/README.md` (the namespace split and the two-broker fallback). That reading
+  was right, and the page is now written from those three by lane E, which does own `docs/`.
+  It is deliberately a synthesis and not a fourth source: it states that the READMEs are the
+  authority and that where they disagree with it, they win and it is stale.
 
 ### Decisions the specification did not settle
 

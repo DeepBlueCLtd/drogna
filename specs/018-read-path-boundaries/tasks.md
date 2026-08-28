@@ -37,6 +37,11 @@ through; the delivery plan places them in wave 7 for that reason and this sessio
 unticked — an unticked task with an explanation is a decision, and an unticked task
 without one is an unmaintained record, which this repository has already paid for once.
 
+*Correction, 2026-08-28, appended by wave 7 lane J:* the paragraph above described lane
+F's session and is kept as its record. Stories 1, 3 and 4 are now built — 017 landed the
+shell, and the client-stories design is appended to `plan.md` — so the phases below carry
+ticks with their evidence instead of the wave-6 deferral notes.
+
 ---
 
 ## Phase 1: Setup
@@ -92,49 +97,49 @@ language forms are generated, and the gate has been seen to fail on the thing it
 
 ## Phase 4: User Story 1 - The request that just crossed (Priority: P1)
 
-**Not started. Reason: client work behind feature 017.** The read-path view opens from the
-standards edge context in the client shell (FR-011, progressive reveal from existing
-surfaces), and feature 017 owns that shell integration point this wave. The delivery plan
-places this in wave 7 for that reason, and wave 6's lane F is the server-side artefact
-only. Nothing in Story 2 blocks it: the crossings are drawn from the client's own traffic
-and need no topology artefact.
+**Built 2026-08-28, wave 7 lane J** (the "not started, behind 017" note this section
+carried is superseded: 017 landed in wave 6 lane B). The design is recorded in `plan.md`'s
+appended client-stories section; the crossing model is one crossing per read, presented on
+all three edges, because the browser witnesses exactly one hop and inventing the other
+two records would be Constitution VII's failure.
 
-- [ ] T018 [US1] Instrument the client's fetch layer on the seams it already has, recording one crossing per read: request line, response type and size, the simulation time the response carried, and the governing standard.
-- [ ] T019 [US1] Draw the three read-path edges — coverage store to query layer, query layer to proxy, proxy to browser — each labelled by the standard that governs it.
-- [ ] T020 [US1] Mark the two server-side edges as inferred from the response rather than witnessed, with the marking stating what the client actually knows and from where (FR-004).
-- [ ] T021 [US1] Selecting an edge shows its last crossing in full through the existing inspector idiom; a boundary nothing has crossed states the absence of traffic rather than rendering nothing (FR-006).
-- [ ] T022 [US1] Add the three read-path boundaries to the existing boundary classification, held by the same test that holds the existing twenty-two (FR-005).
-- [ ] T023 [US1] A read that fails is a crossing too, drawn as a failure carrying the refusal or error the client actually received.
+- [x] T018 [US1] Instrument the client's fetch layer on the seams it already has, recording one crossing per read: request line, response type and size, the simulation time the response carried, and the governing standard. *`readpath/observedRead.ts`, the one wrapper both readers in `App.tsx` now go through; `readpath/crossings.ts` is the bounded state with one way in.*
+- [x] T019 [US1] Draw the three read-path edges — coverage store to query layer, query layer to proxy, proxy to browser — each labelled by the standard that governs it. *`readpath/edges.ts` (CF Conventions, OGC API-EDR, CoverageJSON), rendered by `readpath/ReadPathView.tsx`.*
+- [x] T020 [US1] Mark the two server-side edges as inferred from the response rather than witnessed, with the marking stating what the client actually knows and from where (FR-004). *`knownAbout` states it per crossing outcome, and states the absence of knowledge when the request never completed; `tests/readpath/edges.test.ts`.*
+- [x] T021 [US1] Selecting an edge shows its last crossing in full through the existing inspector idiom; a boundary nothing has crossed states the absence of traffic rather than rendering nothing (FR-006). *Plus browsable bounded history per edge; `tests/readpath/readPathView.test.tsx`.*
+- [x] T022 [US1] Add the three read-path boundaries to the existing boundary classification, held by the same classification test (FR-005). *Found already held: the layout has carried all three since 013, classified plumbing with reasons, under the table's stated rule. FR-005's drafted bespoke reading was reconciled per the spec's own Assumptions — the test wins — and the amendment is recorded in `spec.md`; `tests/readpath/edges.test.ts` pins the reconciled reading so a silent reclassification is noticed.*
+- [x] T023 [US1] A read that fails is a crossing too, drawn as a failure carrying the refusal or error the client actually received. *Watched failing against an observer mutated to swallow the rejection; `tests/readpath/observedRead.test.ts`, `readPathView.test.tsx`.*
 
 ---
 
 ## Phase 5: User Story 3 - Who talks to whom, lit by real traffic (Priority: P2)
 
-**Not started. Reason: client work behind feature 017, and it consumes this session's
-artefact.** Story 3 is the first consumer of `contracts/topology.json` and the reason
-Story 2 was done first; the artefact and its gate are what make the matrix evidence rather
-than a drawing that can rot. The rendering itself is client work behind 017's shell
-integration point, in wave 7.
+**Built 2026-08-28, wave 7 lane J**, consuming lane F's artefact as planned. Lighting is
+per topic, deliberately: MQTT does not tell a subscriber who published, so the artefact's
+`named_by` dots are what narrow a lit row to the components the traffic will have come
+from, and the legend says so rather than letting a lit cell read as "this component spoke".
 
-- [ ] T024 [US3] Render the matrix — components against topics — with every structural mark read from the generated artefact and none from a value written in client source (FR-007, SC-004).
-- [ ] T025 [US3] Light a cell only on genuinely received traffic, decaying or persisting by the same rules the loop view uses for transits (Constitution VII).
-- [ ] T026 [US3] Render the access-control-forbidden region visibly distinct from permitted-but-quiet cells, which is what the artefact's permission layer is for.
-- [ ] T027 [US3] Selecting a cell opens the existing message inspector on that topic's last real payload, schema name and simulation time — not a second implementation of it.
-- [ ] T028 [US3] Surface traffic the artefact does not declare in an "undeclared" region rather than dropping it: the tree is the authority and the artefact is a claim about it (FR-012).
-- [ ] T029 [US3] Replace `client/src/loop/transitRouting.ts`'s hand-written publisher and consumer lists with the artefact, or record why they must stay hand-written. That file is the second topology record this feature exists to retire, and leaving it unexamined would leave two.
+- [x] T024 [US3] Render the matrix — components against topics — with every structural mark read from the generated artefact and none from a value written in client source (FR-007, SC-004). *`topology/artefact.ts` imports the instance; `topology/matrix.ts` derives rows from it alone; `tests/topology/matrix.test.ts` reads the sensors/query/client boundary claims out of the derivation — the same claims `tests/unit/test_topology_artefact.py` reads out of the artefact.*
+- [x] T025 [US3] Light a cell only on genuinely received traffic, decaying or persisting by the same rules the loop view uses for transits (Constitution VII). *Received counts persist from the loop state's buffers; the flash rides `lastFrame`, the same coalesced batch the transits are drawn from. An empty loop lights nothing, asserted.*
+- [x] T026 [US3] Render the access-control-forbidden region visibly distinct from permitted-but-quiet cells, which is what the artefact's permission layer is for. *Hatched, `data-forbidden="true"`, with the legend naming the broker's default refusal; `tests/topology/topologyMatrix.test.tsx`.*
+- [x] T027 [US3] Selecting a cell opens the existing message inspector on that topic's last real payload, schema name and simulation time — not a second implementation of it. *`<MessageInspector>` imported and rendered; the test asserts the import and the absence of a duplicated panel.*
+- [x] T028 [US3] Surface traffic the artefact does not declare in an "undeclared" region rather than dropping it (FR-012). *Watched failing against a fold mutated to drop unmatched topics.*
+- [x] T029 [US3] Replace `client/src/loop/transitRouting.ts`'s hand-written publisher and consumer lists with the artefact, or record why they must stay hand-written. *They must stay hand-written, and the reason is now recorded in the file's header: the permission layer is deliberately coarse (nine components may publish a run request) and `named_by` is deliberately direction-blind, so a derivation would be the plausible unchecked guess the artefact exists to abolish. What changed is that the table stopped being unchecked: `tests/loop/routingAgainstArtefact.test.ts` fails on any routing claim the access control list would refuse, watched failing against a misnamed publisher.*
 
 ---
 
 ## Phase 6: User Story 4 - The badges, the history, and the re-ask (Priority: P3)
 
-**Not started. Reason: client work behind feature 017, and it builds on Story 1.** The
-badges attach to existing panes, the history is per read-path edge, and the re-ask
-re-issues a read Story 1 instruments. None of it is reachable before Story 1 exists.
+**Built 2026-08-28, wave 7 lane J**, on Story 1's instrumentation. The primers' location
+is a deployment fact, so it arrives in the served configuration document: one additive
+optional `site.standards_url` in `contracts/schemas/config.client.schema.json`,
+regenerated through the chain, valued in both destinations — a destination that declares
+none gets badges that name the standard and state the absence of a link.
 
-- [ ] T030 [US4] A standards badge on every data-bearing pane, naming the delivering standard and linking to its primer on the published site (FR-008).
-- [ ] T031 [US4] Bounded per-edge history with the bound stated, browsable in order, declaring truncation of stored payloads rather than silently shortening them (FR-009).
-- [ ] T032 [US4] The re-ask control: one genuine request of a kind the client already makes, at most once per stated minimum interval, disabled while its request is in flight (FR-010).
-- [ ] T033 [US4] Assert that a re-ask crossing is indistinguishable in provenance from a loop-driven one, because it is the same thing — a real request, really answered.
+- [x] T030 [US4] A standards badge on every data-bearing pane, naming the delivering standard and linking to its primer on the published site (FR-008). *`readpath/StandardBadge.tsx` beside each pane in `App.tsx`, toggleable; the map and route panes name OGC API-EDR and CoverageJSON, the broker-fed panes name MQTT with contract-validated JSON and link to the standards index, which is the site's own orientation page for the channels without a dedicated primer.*
+- [x] T031 [US4] Bounded per-edge history with the bound stated, browsable in order, declaring truncation of stored payloads rather than silently shortening them (FR-009). *Depth from the same `display.buffer_depth` the topic buffers use, evictions counted and shown; excerpt truncation is byte-measured and declared, watched failing against a character-sliced mutation.*
+- [x] T032 [US4] The re-ask control: one genuine request of a kind the client already makes, at most once per stated minimum interval, disabled while its request is in flight (FR-010). *The trajectory query for the current plan, else the field fetch for the current run; the gate is re-checked at press time so a queued click cannot slip past it, and no timer exists anywhere — the disabled state is recomputed per frame from the injected host instant.*
+- [x] T033 [US4] Assert that a re-ask crossing is indistinguishable in provenance from a loop-driven one, because it is the same thing — a real request, really answered. *Held structurally: the re-ask calls the very reader functions the loop-driven paths call, `observedRead` is the only constructor of crossings, and the `Crossing` record carries no origin field there could be a difference in. `tests/map/fieldFetch.test.ts` (amended) pins the two call sites as the only two causes of a field read — the announcement, and the gated re-ask — so a third cause, or a divergent re-ask path, fails.*
 
 ---
 

@@ -257,3 +257,81 @@ in the sense wave 6 reserves for feature 017.
 ## Complexity Tracking
 
 Not required: the Constitution Check records no violation.
+
+---
+
+## Client stories plan — appended 2026-08-28, wave 7 lane J
+
+The section above planned Story 2 and said Stories 1, 3 and 4 were not started. They are
+started now: feature 017 landed the shell, lane F landed the artefact and the gate, and the
+delivery plan's wave 7 places the client stories here. This section is appended rather than
+woven in, so the Story 2 plan stays the record of what lane F did.
+
+### Where the client work lives
+
+Two new client areas, both read-path-owned: `client/src/readpath/` (Stories 1 and 4) and
+`client/src/topology/` (Story 3). The shell integration point — `App.tsx` — is shared with
+lane L this wave and is treated as append-only: new sections are appended to the page and
+new wiring is added beside the existing wiring; nothing already there is restructured.
+
+### Story 1 — the crossing model
+
+One read produces **one crossing presented on three edges**, not three records. The client
+witnesses exactly one hop — proxy to browser — so the crossing holds what was witnessed
+(request line, response status, declared type, size, the simulation time the response
+carried, a bounded excerpt), and each server-side edge presents that same crossing through
+an inference stated in words: an answered read implies the proxy reached the query layer
+(the proxy proxies; it does not hold forecasts), and a CoverageJSON body implies the query
+layer read the store (the values had to come from somewhere); a failed read states that
+nothing further is known. Fabricating three differing records would be inventing traffic
+the browser never saw — the exact thing Constitution VII forbids.
+
+The instrumentation seam is the two reads the client already makes — the trajectory query
+and the field-cube fetch, both already funnelled through `App.tsx`'s reader functions —
+re-routed through one observing wrapper (`readpath/observedRead.ts`) whose only extra
+behaviour is to deliver a crossing record to a pure, bounded state. A failed read delivers
+a crossing marked failed. There is no other route into the state, no timer, and no retry.
+
+The three edges reuse the layout's boundary identifiers, so the existing classification
+(and its test) covers them without a second table. **FR-005 is amended by this session**:
+it proposed store-to-query and query-to-proxy as bespoke core, but the classification the
+tree has held since 013 — with the reason argued in `legibility/classification.ts`, under
+the stated rule that bespoke is what carries drogna's own judgement — classifies all three
+as plumbing, and the spec's own Assumptions say the classification test wins. The spec now
+records that reconciliation rather than the superseded reading.
+
+### Story 3 — the matrix's two sources, never mixed
+
+Structure comes from `contracts/topology.json`, imported directly (the same compile-time
+import discipline as `contracts/schemas.ts`) and typed by the generated
+`generated/messages/topology.ts`. Lighting comes from the loop state's buffers — traffic
+genuinely received on the page's own subscription — and from nothing else. Lighting is
+**per topic**, because MQTT does not tell a subscriber who published; the artefact's
+`named_by` narrows who the traffic will have come from, and the display says so instead of
+pretending to know. The flash-then-persist rule mirrors the loop view: a crossing flashes
+on the frame it was drawn for (the coalesced frame the transits use) and the topic's
+received count persists. The ACL-forbidden region is derived by evaluating the artefact's
+rules with an MQTT filter matcher; a topic received that no artefact row matches renders in
+an undeclared region rather than being dropped (FR-012).
+
+`loop/transitRouting.ts` (T029) **stays hand-written, with the reason recorded there**: the
+artefact's permission layer is too coarse to name the one behavioural publisher of a topic
+(nine components may publish a run request) and its `named_by` layer is deliberately
+direction-blind, so deriving "publisher: monitor" from it would be the plausible unchecked
+guess the artefact exists to abolish. What is added instead is a test that checks every
+routing claim against the enforced layer: a publisher or consumer the ACL refuses fails.
+
+### Story 4 — badges, history, re-ask
+
+Badges name the delivering standard per pane and link to the site's primers. The site's
+location is a deployment fact, so it arrives in the served configuration document — one
+additive optional `site.standards_url` in `config.client.schema.json`, regenerated through
+the chain, valued in both destinations — and a destination that declares none gets badges
+that name the standard and state the absence of a link. Per-edge history reuses the bounded
+buffer idiom (depth from the same `display.buffer_depth`, evictions counted, the bound
+stated on the display, excerpt truncation declared). The re-ask control re-issues one read
+the client already makes — the trajectory query for the current plan, else the field fetch
+for the current run — through the same instrumented path, disabled while in flight and for
+a stated minimum interval after each press, measured on the page's injected host instant
+(the same cadence clock the frame throttle already uses; nothing is scheduled and no timer
+exists — the disabled state is recomputed per frame).

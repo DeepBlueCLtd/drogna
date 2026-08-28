@@ -24,6 +24,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from queue import Queue
 from typing import IO, Any
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
@@ -45,6 +46,7 @@ __all__ = [
     "ClockStaleError",
     "ClockState",
     "ClockStatus",
+    "FollowedClock",
     "HttpClockControl",
     "ManualClock",
     "Participant",
@@ -54,6 +56,7 @@ __all__ = [
     "Tick",
     "TickNotReachedError",
     "TickSource",
+    "resolve_clock",
     "tick_at",
 ]
 
@@ -317,6 +320,90 @@ def tick_at(
         rate=rate,
         run_id=run_id,
     )
+
+
+class FollowedClock:
+    """A remote clock, and the ``ctl/clock`` messages a component's own loop hands it.
+
+    ADR-0009 makes simulation time a subscription for every component, and this is how a
+    component whose loop already reads one subscription gets it: the loop recognises a clock
+    sample, hands it here, and the clock takes it. No second connection, no second thread,
+    and the tick a component reports is the tick it has actually been told about.
+
+    **What its absence cost, which is why this class exists rather than a comment.** Seven
+    components were built with a tick source that yields nothing — a placeholder that was
+    harmless while each of them ran for one second and exited, and became load-bearing the
+    moment they were wired to stay up. Each took one HTTP snapshot at start-up and then held
+    that instant for the life of the process. The visible half was a heartbeat carrying a
+    simulation time an hour stale. The half that mattered was the scheduler's, whose whole
+    policy is stated in simulation time: with a frozen ``now``, an outstanding run request
+    can never time out and the minimum interval between runs can never elapse, so the
+    control loop turned exactly once and then declined every divergence for ever.
+
+    Staleness detection comes with it, for the first time in these components: a gap wider
+    than the endpoint's ``stale_after_gap`` marks the clock stale, which is a fact about the
+    subscription rather than a comparison against a host clock (Constitution I).
+    """
+
+    def __init__(self, endpoint: ClockEndpoint, control: ClockControl | None = None) -> None:
+        self._payloads: Queue[bytes | str | Mapping[str, Any]] = Queue()
+        self.clock = RemoteClock(
+            BrokerTickSource(self._handed_in()),
+            HttpClockControl(endpoint) if control is None else control,
+            endpoint,
+        )
+
+    def _handed_in(self) -> Iterator[bytes | str | Mapping[str, Any]]:
+        """The payloads the loop has handed over, in the order it handed them over.
+
+        A queue rather than a direct call because ``BrokerTickSource`` reads an iterable and
+        ``RemoteClock`` pulls from it: the loop pushes, the clock pulls, and the queue is the
+        one-element seam between the two. It is never read except by ``take`` below, which
+        has just put something in it, so it never blocks in practice.
+        """
+        while True:
+            yield self._payloads.get()
+
+    def start(self) -> ClockState | None:
+        """Catch up from the HTTP snapshot, then follow. The snapshot is the startup path."""
+        return self.clock.start()
+
+    def take(self, payload: bytes | str | Mapping[str, Any]) -> Tick:
+        """Take one ``ctl/clock`` message. The clock is current from here until the next."""
+        self._payloads.put(payload)
+        return self.clock.receive()
+
+
+def resolve_clock(
+    supplied: Clock | FollowedClock | None,
+    document: Mapping[str, Any],
+) -> tuple[Clock, FollowedClock | None]:
+    """Settle which clock a component runs on, and whether its own loop keeps it current.
+
+    The mirror of ``resolve_publisher`` and ``resolve_subscriber`` in
+    :mod:`harness_core.broker`, and it has the same three states:
+
+    1. *A caller supplied a plain clock.* Taken as given — a ``ManualClock`` in every test
+       here. It decides its own time, so a clock sample reaching the loop is ignored rather
+       than routed into a port that was not built to be pumped.
+    2. *A caller supplied a followed clock.* Taken as given, and the loop hands it every
+       ``ctl/clock`` sample it receives. This state exists so that the wiring can be asserted
+       without a broker and without an HTTP server, which is the whole reason its absence
+       went unnoticed: the only thing that ever exercised it was a running container.
+    3. *Nobody supplied one.* One is built from this component's own configuration, catches
+       up from the HTTP snapshot, and follows ``ctl/clock`` from there (ADR-0009).
+
+    Raises whatever the snapshot raises. Every caller already treats a clock it cannot reach
+    as a startup failure with its own exit code, because a component with no simulation time
+    has nothing it may honestly do.
+    """
+    if isinstance(supplied, FollowedClock):
+        return supplied.clock, supplied
+    if supplied is not None:
+        return supplied, None
+    followed = FollowedClock(ClockEndpoint.from_config(document["clock"]))
+    followed.start()
+    return followed.clock, followed
 
 
 class ManualClock:

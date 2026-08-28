@@ -268,7 +268,7 @@ class PahoSubscription:
         self,
         endpoint: BrokerEndpoint,
         *,
-        topic: str | Sequence[str],
+        topic: str | Sequence[str | tuple[str, int]],
         qos: int = 1,
         purpose: str = "subscription",
     ) -> None:
@@ -277,7 +277,16 @@ class PahoSubscription:
         # branch — the monitor watches `obs/#` for what was measured and `ctl/run-published`
         # for what was forecast, and subscribing to a filter wide enough to cover both would
         # ask for control topics its role is refused and does not want.
-        self._topics: tuple[str, ...] = (topic,) if isinstance(topic, str) else tuple(topic)
+        #
+        # A filter may state its own quality of service, and one of them needs to. Control
+        # events are taken at 1 because losing a divergence loses a run; the clock is taken
+        # at 0 because a lost sample is replaced by the next one a tenth of a second later,
+        # and having six components acknowledge ten samples a second would be a per-message
+        # round trip the harness has no use for.
+        filters: Sequence[str | tuple[str, int]] = (topic,) if isinstance(topic, str) else topic
+        self._topics: tuple[tuple[str, int], ...] = tuple(
+            (entry, qos) if isinstance(entry, str) else entry for entry in filters
+        )
         self._qos = qos
         self._purpose = purpose
         self._messages: Queue[tuple[str, bytes]] = Queue()
@@ -309,8 +318,8 @@ class PahoSubscription:
             )
         except OSError as error:
             raise BrokerError(f"the broker is not reachable: {error}") from error
-        for filter_ in self._topics:
-            client.subscribe(filter_, qos=self._qos)
+        for filter_, at_qos in self._topics:
+            client.subscribe(filter_, qos=at_qos)
         client.loop_start()
         self._client = client
 
@@ -475,7 +484,7 @@ def resolve_publisher(
 def connect_subscriber(
     document: Mapping[str, Any],
     *,
-    topic: str | Sequence[str],
+    topic: str | Sequence[str | tuple[str, int]],
     qos: int = 1,
     purpose: str = "subscription",
 ) -> PahoSubscription:
@@ -492,7 +501,7 @@ def resolve_subscriber(
     document: Mapping[str, Any],
     *,
     component: str,
-    topic: str | Sequence[str],
+    topic: str | Sequence[str | tuple[str, int]],
     report: Any,
     qos: int = 1,
     purpose: str = "subscription",

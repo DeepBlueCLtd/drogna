@@ -11,7 +11,7 @@ the scheduler carries on with nothing to publish to.
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from harness_core.broker import (
@@ -22,12 +22,10 @@ from harness_core.broker import (
     resolve_subscriber,
 )
 from harness_core.clock import (
-    ClockEndpoint,
+    CLOCK_TOPIC,
     ClockError,
-    HttpClockControl,
-    RemoteClock,
-    Tick,
-    TickSource,
+    FollowedClock,
+    resolve_clock,
 )
 from harness_core.config import ConfigError
 from harness_core.heartbeat import MessagePublisher
@@ -47,24 +45,10 @@ __all__ = ["main"]
 _NO_CLOCK = 70
 
 
-class _NoSubscription(TickSource):
-    """No ticks, for a process whose transport has not been supplied."""
-
-    def ticks(self) -> Iterator[Tick]:
-        return iter(())
-
-
-def _clock_from(document: Mapping[str, Any]) -> Clock:
-    endpoint = ClockEndpoint.from_config(document["clock"])
-    clock = RemoteClock(_NoSubscription(), HttpClockControl(endpoint), endpoint)
-    clock.start()
-    return clock
-
-
 def main(
     *,
     env: Mapping[str, str] | None = None,
-    clock: Clock | None = None,
+    clock: Clock | FollowedClock | None = None,
     publisher: MessagePublisher | None = FROM_CONFIGURATION,
     messages: Iterable[tuple[str, bytes]] = FROM_CONFIGURATION_MESSAGES,
     stderr: Any = None,
@@ -76,8 +60,11 @@ def main(
 
     configure_run(settings.seed.root)
 
+    # Simulation time reaches this component by subscription (ADR-0009), and its own loop is
+    # what hands each sample over. `following` is None where a caller supplied a plain clock,
+    # which decides its own time and has nothing here to keep current.
     try:
-        active_clock = clock if clock is not None else _clock_from(config.document)
+        active_clock, following = resolve_clock(clock, config.document)
         active_clock.tick()
     except (ClockError, OSError) as exc:
         print(f"{SCHEDULER_NAME}: no simulation time is available ({exc})", file=out)
@@ -94,7 +81,7 @@ def main(
         messages,
         config.document,
         component=SCHEDULER_NAME,
-        topic=(DIVERGENCE_TOPIC, RUN_PUBLISHED_TOPIC),
+        topic=(DIVERGENCE_TOPIC, RUN_PUBLISHED_TOPIC, (CLOCK_TOPIC, 0)),
         report=out,
         purpose="scheduler",
         idle_seconds=idle_interval(settings.component.heartbeat_interval_seconds),
@@ -116,7 +103,13 @@ def main(
         # component owes whether or not anything arrived — expiring an outstanding request
         # whose timeout has passed, and saying it is alive.
         for topic, payload in messages:
-            if topic:
+            # A clock sample is a turn like any other. It carries no work for this
+            # component's own handler, and it is why every other turn has a current
+            # simulation time to do its work at.
+            if topic == CLOCK_TOPIC:
+                if following is not None:
+                    following.take(payload)
+            elif topic:
                 service.handle(topic, payload)
             service.advance()
             service.beat()

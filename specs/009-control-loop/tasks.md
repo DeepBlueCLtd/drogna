@@ -646,6 +646,49 @@ false of the loop.
       Watched failing: `services/ingest/tests/test_waits_for_seeding.py` against a first
       refusal treated as fatal, which is what it was.
 
+- [x] T063 Give the loop-side components a clock that moves
+
+      **The loop turned exactly once and then stopped for ever**, in a stack where every
+      container reported healthy and every heartbeat kept arriving. Found by watching a
+      running client rather than by reading anything: the clock said `07:40` and six
+      components said `06:31`–`06:34`, which were the instants their containers started.
+
+      Each was built with a tick source that yields nothing — a placeholder that was harmless
+      while the process ran for a second and exited, and load-bearing the moment T058 wired
+      them to stay up. Each took one HTTP snapshot at start-up and held that instant for
+      life. The visible half was a heartbeat carrying a stale simulation time. The half that
+      mattered is the scheduler's, because its whole policy is stated in simulation time:
+      `RunPolicy.consider` computes `elapsed = now - last_requested`, which with a frozen
+      `now` is zero for ever, so every divergence after the first is declined for want of a
+      minimum interval that can never elapse; and `OutstandingRegister.expire(now)` never
+      fires, so a request that produced no publication holds the slot for ever too.
+
+      `harness_core.clock.FollowedClock` is a remote clock and the `ctl/clock` samples a
+      component's own loop hands it — no second connection and no second thread — and
+      `resolve_clock` settles which of three states a component starts in, mirroring
+      `resolve_publisher` and `resolve_subscriber` exactly. All six loop-side components
+      subscribe to `ctl/clock` and take each sample as an ordinary turn. The filter is at
+      quality of service 0 while the control filters stay at 1: a lost clock sample is
+      replaced by the next one a tenth of a second later, and six components acknowledging
+      ten a second would be a round trip per message the harness has no use for. Staleness
+      detection starts working in these components for the first time, because until now
+      there was no subscription for a gap to appear in.
+
+      That `resolve_clock` admits a `FollowedClock` a caller supplies is the point rather
+      than a convenience: it is what makes the wiring assertable over an ordinary message
+      list, with no broker and no HTTP server. Its absence is the whole reason this survived
+      — every acceptance test drives these services with a `ManualClock` the test itself
+      advances, so the clock always moved and the thing that should have moved it was never
+      exercised.
+
+      Watched failing: `tests/integration/test_the_loop_turns_more_than_once.py` against a
+      loop that receives clock samples and does not hand them over, on both halves — one run
+      requested where two were due, and a last heartbeat carrying the same simulation time as
+      the first.
+
+      `env_generator` and `offload` keep the placeholder, and should: one authors a world and
+      exits, the other runs a batch cycle. Neither is a loop with a policy in simulation time.
+
 ### Incremental delivery
 
 1. Setup and Foundational — contracts fixed, types generated.

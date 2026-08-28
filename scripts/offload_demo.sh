@@ -15,9 +15,16 @@
 # in `offload`, the `offload` service it exists for depends on the broker, and the clock it
 # reads is in `foundation`.
 #
-# What it does not do: touch the deployment's volumes. The staging area, ledger and released
-# directory are a scratch tree the Python driver removes when it is done, so running this
-# leaves the stack exactly as it found it apart from the archive being up.
+# What it does not do: leave anything behind. The staging area, ledger and released directory
+# are a scratch tree the Python driver removes when it is done, none of the deployment's
+# volumes is touched, and the archive is stopped again on the way out.
+#
+# Stopping it is not tidiness. `archive` is in the `offload` profile, which the local
+# destination does not activate, so an archive left running makes
+# `test_compose_bringup.py::test_the_active_profile_starts_exactly_its_services_and_no_other`
+# fail — the running set would hold a service the selected profiles do not name. That test is
+# right, and a demonstration that quietly broke the next test run would be a poor trade for
+# saving one `docker compose up`.
 
 # shellcheck source=../deploy/lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../deploy/lib" && pwd)/common.sh"
@@ -38,6 +45,17 @@ docker compose \
   --profile offload --profile broker --profile foundation \
   up --detach --wait archive clock ||
   fail "the stub destination did not come up; nothing was packaged"
+
+# Registered before the packaging runs, so the archive is stopped whether the demonstration
+# succeeds, fails or is interrupted.
+stop_archive() {
+  docker compose \
+    --file "${DROGNA_COMPOSE_FILE}" \
+    --env-file "${DROGNA_ENV_FILE}" \
+    --profile offload --profile broker --profile foundation \
+    rm --force --stop archive >/dev/null 2>&1 || true
+}
+trap stop_archive EXIT
 
 step "Packaging a fixture run and transferring it"
 # uv, because the driver imports harness_offload and the workspace is where that lives. The

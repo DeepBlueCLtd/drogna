@@ -4,7 +4,7 @@ drogna is a demonstration harness: a synthetic ocean, sensors that sample it, a 
 loop that assimilates what they report, and a query layer that serves the result through
 OGC API-EDR and SensorThings. Everything in it is deliberately fake and says so.
 
-Sixteen features, eleven services, 1777 Python tests and 446 client tests, thirteen gates
+Sixteen features, eleven services, 1799 Python tests and 446 client tests, fourteen gates
 and thirteen ADRs. All four SRD acceptance criteria pass.
 
 ## Where the answers already are
@@ -19,6 +19,8 @@ reason a fresh session can pick this up without archaeology.
 | What does this feature do, and what is deliberately not done? | `specs/<nnn>-*/spec.md` and `tasks.md` |
 | Where does a file live, and who owns it? | `docs/architecture/repo-layout.md` |
 | What does a store look like on disk? | `stores/coverage/layout.md` |
+| Was this question already investigated, and what did it cost? | `spikes/*/FINDING.md` — seven, each dated, each with its evidence in `results/` |
+| How do I run the stack, or see the client, from this container? | `spikes/dev-cloud/README.md`, and the commands below |
 
 `tasks.md` files record unticked work with the reason it is unticked. An unticked task
 **with an explanation** is a decision, not an oversight — read it before redoing the work.
@@ -48,6 +50,26 @@ uv run pytest
 cd client && pnpm install && pnpm exec tsc --noEmit && pnpm lint && pnpm test
 ```
 
+Running the stack, and looking at it. Both work in this container — see the daemon trap
+below before assuming otherwise:
+
+```sh
+dockerd >/tmp/dockerd.log 2>&1 &                 # not running at session start; start it
+export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"    # nothing builds here without this
+./scripts/run_local.sh                           # up + seed; converges if already up
+./scripts/down.sh local                          # and `pytest` takes it down too, see below
+
+HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs
+```
+
+The last is a headless-Chromium screenshot of the running client, in about three seconds.
+It starts no server and changes nothing, and it prints the simulated rate in force beside the
+image so that a picture of a stopped system is never handed over as a live one. There are two
+other capture mechanisms and they are deliberately not the same command;
+`scripts/capture/README.md` says why before you try to merge them. Do not run
+`playwright install` — this container already carries the Chromium build the pinned
+Playwright asks for.
+
 `./scripts/gates.sh` runs the gates listed in `scripts/gates.registry`, one per line. **A
 new gate is a line appended to that registry.** Never edit `scripts/gates.sh` — it names no
 gate, which is what lets a feature add one without touching the others. A test walks
@@ -55,13 +77,37 @@ gate, which is what lets a feature add one without touching the others. A test w
 
 ## Traps that have actually cost this repository time
 
-**This container has no Docker daemon. The CI runner has one.** So a container-backed test
-skips here and *runs there*. Anything that skips locally is untested until CI says
-otherwise, and three CI rounds were lost to exactly this. When you write or change one,
-reason about its configuration statically as well — the last such bug was plainly visible
-in the rendered nginx config and nobody read it. Container tests must skip loudly with a
-reason, never fail and never silently pass, and must run containers as the invoking user
-(`--user "$(id -u):$(id -g)"`); running as root produced twenty-seven CI-only errors.
+**A Docker daemon is not *running* here, which is not the same as not being available.**
+This paragraph used to say the container had no daemon, and everything downstream was
+planned around it: container-backed tests skip locally, so they are untested until CI says
+otherwise, and three CI rounds were lost to exactly that. It was true of the daemon and
+false about the container. `dockerd`, `containerd` and `runc` are all installed; `dockerd &`
+brings one up in about a second with no extra privileges, and the whole `local` profile then
+comes up healthy. **Start it and run the container tests here, before CI sees them.**
+`spikes/dev-cloud/` is the bring-up, the headless-Chromium capture, and the four defects that
+stood in the way — the last of which had been breaking every Linux bring-up in silence.
+
+Carry the lesson further than the daemon: the sentence sat at the top of this list, was read
+as settled, and shaped how work was scheduled, for as long as nobody typed the command it
+implied was pointless. **The tree is the authority and the record is a claim about it** —
+which this file already says about `tasks.md`, and had not applied to itself.
+
+What remains true regardless: reason about a container test's configuration statically as
+well — the last such bug was plainly visible in the rendered nginx config and nobody read it.
+Container tests must skip loudly with a reason, never fail and never silently pass, and must
+run containers as the invoking user (`--user "$(id -u):$(id -g)"`); running as root produced
+twenty-seven CI-only errors.
+
+**Every byte a build container fetches here is TLS-intercepted, and no base image trusts the
+authority.** There are no proxy variables inside a container — the interception is at the
+network layer, so the host's `no_proxy` list does not apply and `pypi.org` is as intercepted
+as anything else. The deployment already ships the seam for this: name the bundle with
+`export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"` and everything else follows
+(`deploy/README.md`, "Building behind a TLS-terminating proxy"). Every network-reaching build
+step must mount the `proxy_ca` secret, and two did not — `apk add` in the proxy image, which
+is the *first* thing that image does, and `pip install ./libs/harness_core` in the query
+image, which looks like a local copy but resolves a build backend from the index first.
+`scripts/check_proxy_ca_seam.py` is now the gate; read it before adding a `RUN` that fetches.
 
 **Where a daemon *is* present, the hazard inverts.** Docker Desktop on macOS enforces neither
 ownership nor mode on a bind mount — every file reads as root and any uid may open it — so a
@@ -71,6 +117,21 @@ password file's mode and never its owner, mosquitto reads that file after droppi
 1883, and the container exited 13 with `Error: Unable to open pwfile` on every Linux run while
 reporting healthy on every Mac. Prove anything about file permissions *inside a Linux
 container*, never against the host filesystem, and watch it fail both ways before believing it.
+
+**The same blind spot has now cost a third fault, and this one broke every bring-up.** A bind
+mount follows the *inode*, not the path — but Docker Desktop shares one by path through a VM,
+so on a Mac a container follows a directory that has been replaced underneath it and nothing
+is ever seen to break. `render_destination` in `deploy/lib/render_credentials.py` did
+`shutil.rmtree` then `mkdir` on the configuration directory every container mounts at
+`/etc/drogna`, and `scripts/run_local.sh` renders it twice — `up.sh` before the containers
+start, `seed.sh` after. So on Linux every container kept the old, unlinked directory and saw
+it **empty**: clock, query and proxy each saw 0 files where the host had 19. Only the clock
+ever reported it, because only its health check re-reads its document; everything else read
+its own at start-up and went on reporting healthy against a directory that was gone. It is
+fixed by emptying the directory rather than replacing it. **Never replace a directory a
+running container is mounting** — and note the shape it shares with the trap directly below:
+each is an artefact given away or swapped out between the first run and the second, and
+neither can be seen by a trial run that starts by clearing everything.
 
 **Giving a file away breaks the run after this one.** The chown that finally let the broker
 read its password file took the file from the deploying user, and `write_password_file`
@@ -158,6 +219,24 @@ The corollary: when a test passes on the first attempt, be suspicious of it rath
 pleased with it. And prefer a bound derived from something on disk over a number typed into
 a test — AT-03's error bound is read from the authoring jitter, so no edit to the test can
 tune it.
+
+The corollary earned itself again, in the obvious way. The regression test for the bind-mount
+fault above compared the configuration directory's inode number across the two renders, and
+**passed against the unfixed renderer**: the kernel had handed the freed inode straight back
+to the `mkdir`. An inode number is not an identity once it has been released. The test now
+holds an open directory descriptor across the second render and reads through it, which is
+what a bind mount actually *is*, and reports `sees []` against the unfixed renderer — the same
+zero the containers reported. Had it been committed as first written, it would have been a
+guard that guarded nothing.
+
+**A wrapper that does not check what it wrapped is the same fault at a larger scale.**
+`scripts/run_local.sh` — "from a clean checkout to a healthy, seeded local stack" — checked
+neither step's exit status. `up.sh` behaved perfectly, printing `an image could not be built;
+nothing was started` and exiting 1; `run_local.sh` then seeded the empty stack, wrote a
+seeding record, and **exited 0**. It was read as success twice before anybody noticed. When
+you compose two commands, propagate the failure of the first, and be wary of a `| tee` or a
+pipeline that quietly returns the wrong exit status — that is how this one was missed the
+first time.
 
 ## A specification that disagrees with the code is not automatically wrong
 

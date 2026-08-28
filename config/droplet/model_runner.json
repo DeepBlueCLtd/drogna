@@ -48,9 +48,14 @@
     },
     "staging": {
       "directory": "/var/lib/drogna/coverage/staging",
+      "partial_suffix": ".partial",
       "forecast_file": "forecast.nc",
       "uncertainty_file": "uncertainty.nc",
       "manifest_file": "run.json"
+    },
+    "initial_run": {
+      "run_id": "run-initial",
+      "ensemble_size": 3
     },
     "stored_dtype": "float32"
   }

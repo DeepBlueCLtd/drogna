@@ -101,11 +101,28 @@ def evaluate_route(
     traversal: TraversalCost,
     footprint: SensingFootprint,
     threshold: float,
+    budget_seconds: float | None = None,
 ) -> RouteValue:
     """Walk a candidate route and report what it is worth.
 
     ``state`` is not modified: the walk runs on a fork, so a caller may evaluate as many
     candidates as it likes against the same beliefs without undoing anything.
+
+    The walk stops as soon as the budget is spent, and the reported ``consumed_seconds`` is
+    then already past it — so :meth:`RouteValue.within` still answers false and the caller
+    still discards the route, which is what it did before. What changes is that the vertices
+    beyond the budget are not scored, and this is not an optimisation.
+
+    Arrival times only increase, so a route that has overrun its budget cannot come back
+    under it by acquiring more vertices: everything past that point was value the search
+    computed and could never use. It was also a question about the world at instants the
+    platform will never reach — and the search proposes routes far longer than the budget,
+    so those instants ran hours past the extent the ground-truth manifest describes. The
+    generator's evaluator refuses such a point, correctly and by design (ADR-0002: there is
+    no constant to substitute for a decorrelation timescale), and the refusal came back as
+    ``OutOfDomainError`` out of ``handle`` and stopped the process. Found by running the
+    planner against a real environment rather than against a test double whose timescale
+    has no domain, which is why no test saw it.
     """
     scratch = state.fork()
     position = start
@@ -113,11 +130,18 @@ def evaluate_route(
     distance_m = 0.0
     total = 0.0
     vertices: list[ValuedVertex] = []
+    spent = (
+        None
+        if budget_seconds is None
+        else start_micros + round(budget_seconds * _MICROS_PER_SECOND)
+    )
 
     for sequence, cell in enumerate(cells):
         target = traversal.position_of(cell)
         distance_m += traversal.distance_m(position, target)
         micros += traversal.micros(position, target)
+        if spent is not None and micros > spent:
+            break
         marginal = scratch.visit(cell, micros, footprint=footprint, threshold=threshold)
         total += marginal
         vertices.append(

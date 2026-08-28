@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any
 from urllib.parse import unquote, urlparse
 
@@ -34,6 +34,7 @@ from harness_core.heartbeat import MessagePublisher
 __all__ = [
     "FROM_CONFIGURATION",
     "FROM_CONFIGURATION_MESSAGES",
+    "IDLE",
     "BrokerEndpoint",
     "BrokerError",
     "PahoPublisher",
@@ -41,9 +42,41 @@ __all__ = [
     "PahoTickSource",
     "connect_publisher",
     "connect_subscriber",
+    "idle_interval",
+    "publish_retained",
     "resolve_publisher",
     "resolve_subscriber",
 ]
+
+IDLE: tuple[str, bytes] = ("", b"")
+"""What a subscription yields when its idle interval elapses with no message.
+
+A component's loop is written over the messages it receives, and every service here also has
+work that is not a reaction: a heartbeat falls due, a request times out, a run finishes
+assembling in staging. Before this the loop woke only when a message arrived, so a component
+watching a quiet branch published one heartbeat at start-up and then went silent — greyed out
+in the client while running perfectly, which is the one untruth the liveness display exists to
+prevent.
+
+The empty topic is what says "nothing arrived". MQTT forbids a zero-length topic name, so no
+real message can wear it and no component's routing can mistake one for the other; a loop
+tests the topic before routing and does its own work either way.
+"""
+
+
+def idle_interval(heartbeat_interval_seconds: float | None, *, default: float = 5.0) -> float:
+    """How long a live loop waits for a message before waking to do its own work.
+
+    Half the component's declared heartbeat interval, so a heartbeat is never missed by a
+    whole cadence: waking exactly on the interval would leave every beat deciding a
+    comparison by microseconds, and the first one to land on the wrong side of it would be a
+    liveness window's worth of silence for no reason.
+    """
+    interval = default if not heartbeat_interval_seconds else float(heartbeat_interval_seconds)
+    if interval <= 0:
+        raise ValueError("a heartbeat interval is a positive number of host seconds")
+    return interval / 2
+
 
 _DEFAULT_KEEPALIVE = 60
 
@@ -126,9 +159,16 @@ class PahoPublisher:
 
     def publish(self, topic: str, payload: bytes) -> None:
         """Publish one message, waiting for the broker to take it at quality of service 1."""
+        self._send(topic, payload, retain=self._retain)
+
+    def publish_retained(self, topic: str, payload: bytes) -> None:
+        """Publish one message and have the broker hold it for whoever subscribes next."""
+        self._send(topic, payload, retain=True)
+
+    def _send(self, topic: str, payload: bytes, *, retain: bool) -> None:
         if self._client is None:
             raise BrokerError("publish was called before the broker connection was opened")
-        message = self._client.publish(topic, payload, qos=self._qos, retain=self._retain)
+        message = self._client.publish(topic, payload, qos=self._qos, retain=retain)
         message.wait_for_publish()
         if message.rc != 0:
             raise BrokerError(f"the broker refused a publish on {topic}: return code {message.rc}")
@@ -228,7 +268,7 @@ class PahoSubscription:
         self,
         endpoint: BrokerEndpoint,
         *,
-        topic: str | Sequence[str],
+        topic: str | Sequence[str | tuple[str, int]],
         qos: int = 1,
         purpose: str = "subscription",
     ) -> None:
@@ -237,7 +277,16 @@ class PahoSubscription:
         # branch — the monitor watches `obs/#` for what was measured and `ctl/run-published`
         # for what was forecast, and subscribing to a filter wide enough to cover both would
         # ask for control topics its role is refused and does not want.
-        self._topics: tuple[str, ...] = (topic,) if isinstance(topic, str) else tuple(topic)
+        #
+        # A filter may state its own quality of service, and one of them needs to. Control
+        # events are taken at 1 because losing a divergence loses a run; the clock is taken
+        # at 0 because a lost sample is replaced by the next one a tenth of a second later,
+        # and having six components acknowledge ten samples a second would be a per-message
+        # round trip the harness has no use for.
+        filters: Sequence[str | tuple[str, int]] = (topic,) if isinstance(topic, str) else topic
+        self._topics: tuple[tuple[str, int], ...] = tuple(
+            (entry, qos) if isinstance(entry, str) else entry for entry in filters
+        )
         self._qos = qos
         self._purpose = purpose
         self._messages: Queue[tuple[str, bytes]] = Queue()
@@ -269,17 +318,29 @@ class PahoSubscription:
             )
         except OSError as error:
             raise BrokerError(f"the broker is not reachable: {error}") from error
-        for filter_ in self._topics:
-            client.subscribe(filter_, qos=self._qos)
+        for filter_, at_qos in self._topics:
+            client.subscribe(filter_, qos=at_qos)
         client.loop_start()
         self._client = client
 
-    def messages(self) -> Iterator[tuple[str, bytes]]:
-        """Yield messages as they arrive. Blocks; ends only when the process does."""
+    def messages(self, *, idle_seconds: float | None = None) -> Iterator[tuple[str, bytes]]:
+        """Yield messages as they arrive. Blocks; ends only when the process does.
+
+        With ``idle_seconds`` set, a stretch of that length with nothing received yields
+        :data:`IDLE` instead of waiting on. A component's loop then turns at a bounded
+        cadence whether or not its branch is busy, which is what lets it beat, expire an
+        outstanding request, or notice a run that has finished assembling.
+        """
         if self._client is None:
             self.connect()
         while True:
-            yield self._messages.get()
+            if idle_seconds is None:
+                yield self._messages.get()
+                continue
+            try:
+                yield self._messages.get(timeout=idle_seconds)
+            except Empty:
+                yield IDLE
 
     def close(self) -> None:
         client, self._client = self._client, None
@@ -317,6 +378,39 @@ FROM_CONFIGURATION_MESSAGES: Any = _FromConfiguration()
 The same object serves both sentinels because it stands for the same thing — "nobody said" —
 and because a second class would be a second place to compare against.
 """
+
+
+def publish_retained(publisher: MessagePublisher, topic: str, payload: bytes) -> None:
+    """Publish a message the broker should hold for whoever subscribes next.
+
+    For the one kind of message on the control namespace that is *state* rather than an
+    event: which forecast run is current. An event is only for whoever was listening; this
+    one has to reach a component that connects afterwards, and every component in the loop
+    connects afterwards at least once, because every component restarts.
+
+    What that cost, before this existed, was watched happening. A run identifier is a pure
+    function of the root seed and the run sequence (Constitution II), so a scheduler that
+    starts counting from zero against a store that already holds run zero computes a name
+    the store has — and the publisher refuses it, correctly, with "a run identifier names
+    one run". The loop then stalls until the outstanding request times out, once per restart,
+    for one run of the scenario. Retaining the announcement tells a starting scheduler which
+    run was last published, which is the only thing it needs to carry on counting.
+
+    The announcement stays a notification and not a source of truth: every consumer of it
+    re-reads the coverage store rather than believing the message, so a retained message left
+    over from a store that has since been reset costs a read and nothing else.
+
+    ``getattr`` rather than a wider protocol, deliberately. ``MessagePublisher`` is one method
+    and is satisfied by every recorder in this repository's tests; widening it to carry a
+    transport concept — retention is MQTT's, not the harness's — would put that concept into
+    every component that publishes anything. A publisher that cannot retain simply publishes,
+    which is what it did before, and the component is no worse off than it was.
+    """
+    retaining = getattr(publisher, "publish_retained", None)
+    if callable(retaining):
+        retaining(topic, payload)
+        return
+    publisher.publish(topic, payload)
 
 
 def connect_publisher(
@@ -390,7 +484,7 @@ def resolve_publisher(
 def connect_subscriber(
     document: Mapping[str, Any],
     *,
-    topic: str | Sequence[str],
+    topic: str | Sequence[str | tuple[str, int]],
     qos: int = 1,
     purpose: str = "subscription",
 ) -> PahoSubscription:
@@ -407,10 +501,11 @@ def resolve_subscriber(
     document: Mapping[str, Any],
     *,
     component: str,
-    topic: str | Sequence[str],
+    topic: str | Sequence[str | tuple[str, int]],
     report: Any,
     qos: int = 1,
     purpose: str = "subscription",
+    idle_seconds: float | None = None,
 ) -> tuple[Iterable[tuple[str, bytes]], PahoSubscription | None]:
     """Settle where a component's messages come from. The mirror of ``resolve_publisher``.
 
@@ -437,6 +532,10 @@ def resolve_subscriber(
     A failure to connect is reported and is not fatal, on the same reasoning
     ``resolve_publisher`` sets out: these components have work that is not reacting, and none
     of them holds a tick stream to spend a backoff in.
+
+    ``idle_seconds`` reaches the subscription in case 3 alone. A caller that supplied its own
+    source decides its own cadence, and a component with nothing subscribed has no loop left
+    to pace: it says so and its loop ends, which is what it did before any of this.
     """
     if supplied is not FROM_CONFIGURATION_MESSAGES:
         return (() if supplied is None else supplied), None
@@ -456,4 +555,4 @@ def resolve_subscriber(
             file=report,
         )
         return (), None
-    return opened.messages(), opened
+    return opened.messages(idle_seconds=idle_seconds), opened

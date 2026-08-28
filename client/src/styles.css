@@ -205,6 +205,18 @@ main {
   fill: var(--muted);
 }
 
+/*
+ * The instant sits a size smaller than the word above it. `at 2026-01-01T08:59:19.500000Z`
+ * is thirty characters, and at 10px in a monospace face that is about 181px inside the
+ * 184px a box leaves for it — which fits only for as long as the first font in the stack is
+ * the one that loads. At 9px it fits with room to spare in any of them. SVG text does not
+ * clip, so the cost of being wrong here is not a scrollbar: it is a truncated time that
+ * still looks like a whole one.
+ */
+.node-instant {
+  font-size: 9px;
+}
+
 .node.dark rect {
   fill: #eceded;
   stroke-dasharray: 4 3;

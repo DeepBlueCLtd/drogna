@@ -67,9 +67,26 @@ export interface DrognaModelRunnerConfiguration {
      */
     staging: {
       directory: string;
+      /**
+       * What an in-flight run directory ends in while it is being written. A run appears in staging whole or not at all: it is written under this suffix and moved into place in one rename, so the publisher applies one rule — a directory in staging is a finished run — rather than a heuristic about whether writing has stopped. It states the same value as the publisher's catalogue.partial_suffix and query.coverage_store.partial_suffix.
+       */
+      partial_suffix: string;
       forecast_file: string;
       uncertainty_file: string;
       manifest_file: string;
+    };
+    /**
+     * Nothing can diverge from nothing: a monitor with no published field raises no divergence, so a coverage store with no run in it is a control loop that cannot start. The first field is therefore seed content, produced by this component's own kernel and ensemble when `deploy/seed.d/` asks for it, and published through the ordinary path. It is named rather than derived by the store's identifier rule, because it is not the nth run of the scenario in the loop's sense and a name from that rule would claim a sequence the scheduler is about to use.
+     */
+    initial_run: {
+      /**
+       * What the initial run is called in the coverage store. A constant rather than a derived name, so a replay of the scenario produces the same store.
+       */
+      run_id: string;
+      /**
+       * Members the initial run is computed over. At least two, or there is no spread and the uncertainty field beside it would be a fiction.
+       */
+      ensemble_size: number;
     };
     /**
      * Width of the stored data variables. Byte-identity does not survive a silent change of precision, so it is stated and recorded.

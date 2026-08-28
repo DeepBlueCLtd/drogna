@@ -272,11 +272,43 @@ class GriddedPlanningField:
         )
 
     def _centre(self, cell: PlanningCell) -> tuple[float, float, float]:
+        """Where this cell is asked about: its centre, held inside the field's domain.
+
+        A cover by overlap necessarily contains cells whose *centre* lies outside the domain
+        — that is the whole point of it (``CellGeometry.cover``, FR-020): taking cells by
+        centre containment would leave the water along the domain's edge in no cell at all.
+        The consequence is that some cell in every cover is centred in water the field does
+        not describe, and the two halves of this object disagreed about what to do there.
+
+        ``SpreadField.at`` clamps, and its docstring gives the argument: "a planning cell
+        partly outside the grid is still a cell in the domain that has to be scored, and
+        reporting nothing there would leave a hole in a projection that FR-020 requires to be
+        complete". The timescale did not. It comes from the generator's own evaluator, which
+        refuses a point outside the manifest — correctly, and by ADR-0002's design, since
+        there is no constant to substitute for a decorrelation timescale. So the refusal came
+        back as ``OutOfDomainError`` out of ``handle`` and stopped the process:
+
+            OutOfDomainError: latitude 47.9743 is outside [48, 50]
+
+        Clamping here makes the two halves ask about the same point, which is the nearest
+        water in the domain to the cell's centre and is the part of that cell the field
+        actually describes. Found by running the planner against a real environment; every
+        timescale double in the suite is defined everywhere, so no test could see it.
+        """
         cached = self._centres.get(cell)
         if cached is None:
-            cached = self._geometry.centre(cell)
+            cached = self._inside(self._geometry.centre(cell))
             self._centres[cell] = cached
         return cached
+
+    def _inside(self, centre: tuple[float, float, float]) -> tuple[float, float, float]:
+        latitude, longitude, depth_m = centre
+        bounds = self._spread.bounds()
+        return (
+            min(max(latitude, bounds.minimum_latitude), bounds.maximum_latitude),
+            min(max(longitude, bounds.minimum_longitude), bounds.maximum_longitude),
+            min(max(depth_m, bounds.minimum_depth_m), bounds.maximum_depth_m),
+        )
 
 
 class FieldSource(Protocol):

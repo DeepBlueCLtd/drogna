@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/run-request.schema.json",
   "title": "drogna model run request",
-  "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run ordinal, so a replay requests the same run under the same name.",
+  "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was.",
   "type": "object",
   "required": [
     "component",
@@ -10,6 +10,7 @@
     "sim_time",
     "tick",
     "run_id",
+    "run_sequence",
     "initialisation_sim_time",
     "ensemble_size",
     "region",
@@ -34,6 +35,11 @@
     "run_id": {
       "type": "string",
       "description": "Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store."
+    },
+    "run_sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Which run of this scenario this is, counting from zero. It is the other half of the identifier rule — run_id is a function of the root seed and this number — and it is carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse. Before it was carried the run manifest recorded a null here for want of anything to record."
     },
     "initialisation_sim_time": {
       "type": "string",

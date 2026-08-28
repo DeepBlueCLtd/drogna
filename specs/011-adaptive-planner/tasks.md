@@ -341,3 +341,66 @@ whose right answer is known by construction.
   it applies to every subsequent task in this feature.
 - Any randomisation added anywhere in the search must come through the RNG port. A
   bare `random` call in this package is a constitution violation, not a shortcut.
+
+---
+
+## Found by running it (added 28 August 2026, wave 6 lane A)
+
+The planner was wired to a real broker for the first time in 009 T058, and started against a
+real environment for the first time with it. Both of these killed the process on the first
+`ctl/run-published` it received, in a container that had until then been reported healthy
+because it ran its loop over an empty message iterable and exited 0. Neither is about the
+wiring; both are about a question this component asks the world, which no test in this suite
+could see because **every timescale double here — `gentle_tau`, `Timescales` — is defined at
+every point, and the real one is not.** That is the lesson worth carrying: a double with no
+domain cannot fail the way the thing it stands for fails.
+
+- [x] T049 Stop the route search valuing routes it has already rejected
+
+      `OutOfDomainError: time 161583 is outside [0, 43200]`. `_grow` proposes routes far
+      longer than the budget and `valued` walks each one to its end before `within` rejects
+      it; a 128-vertex route at two metres a second arrives tens of hours after it started,
+      hours past the extent the ground-truth manifest describes.
+
+      Arrival times only increase, so a route past its budget cannot come back under it:
+      everything past that point was value the search computed and could never use, and it
+      was also a question about the world at instants the platform will never reach.
+      `evaluate_route` now takes the budget and stops there, reporting a consumed time that
+      is already past it so `within` still answers false and the caller still discards the
+      route. No accepted route and no published number changes.
+
+      Watched failing: `services/planner/tests/test_search_stays_inside_the_budget.py`, whose
+      timescale double has a domain like the real one, reports the same words the running
+      planner did.
+
+- [x] T050 Ask about a cell centred outside the domain at the nearest point inside it
+
+      `OutOfDomainError: latitude 47.9743 is outside [48, 50]`. `CellGeometry.cover` takes
+      cells by *overlap* rather than by centre containment, deliberately and for FR-020:
+      centre containment would leave the water along the domain's edge in no cell at all. The
+      consequence is that every cover contains cells centred in water the field does not
+      describe — and the two halves of `GriddedPlanningField` disagreed about what to do
+      there. `SpreadField.at` clamps, and its docstring already gives the argument: a cell
+      partly outside the grid is still a cell in the domain that has to be scored. The
+      timescale, which comes from the generator's own evaluator, refuses — correctly, by
+      ADR-0002, since there is no constant to substitute.
+
+      The centre a cell is asked about is now held inside the field's bounds, so both halves
+      ask about the same point: the nearest water in the domain, which is the part of that
+      cell the field actually describes. Watched failing in the same file, against a
+      timescale that refuses outside its bounds as the evaluator does.
+
+- [ ] T051 Decide what the planner should do once the scenario outruns its world
+
+      **Open, and recorded rather than dissolved.** The environment manifest describes twelve
+      simulated hours from its origin — at the local destination's rate of ten, about
+      seventy-two minutes of a run. Past that instant there is no world to plan in, and no
+      amount of clamping helps: the *start* of the horizon is outside the domain, so every
+      cell is. The two fixes above keep the planner inside the domain while the scenario is
+      inside it, and say nothing about what should happen when it is not.
+
+      It is not only this component's question — the sensors sample the same manifest and the
+      model runner advects it — so what a scenario reaching the end of its world means is a
+      decision for the harness rather than for the planner, and it is left to whoever takes
+      it. What the planner should not do is what it does today, which is stop with a
+      traceback.

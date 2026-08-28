@@ -178,7 +178,7 @@
         {
           "component": null,
           "path": "libs/harness_core/src/harness_core/clock.py",
-          "line": 33,
+          "line": 34,
           "constant": "CLOCK_TOPIC"
         }
       ]
@@ -367,7 +367,7 @@
         {
           "component": "publisher",
           "path": "services/publisher/src/harness_publisher/publish.py",
-          "line": 40,
+          "line": 41,
           "constant": "RUN_PUBLISHED_TOPIC"
         },
         {
@@ -471,6 +471,12 @@
           "path": "services/model_runner/src/harness_model_runner/publish.py",
           "line": 32,
           "constant": "RUN_STARTED_TOPIC"
+        },
+        {
+          "component": "publisher",
+          "path": "services/publisher/src/harness_publisher/service.py",
+          "line": 33,
+          "constant": "RUN_STARTED_TOPIC"
         }
       ]
     },
@@ -536,7 +542,7 @@
         {
           "component": "publisher",
           "path": "services/publisher/src/harness_publisher/publish.py",
-          "line": 41,
+          "line": 42,
           "constant": "TELEMETRY_TOPIC"
         },
         {

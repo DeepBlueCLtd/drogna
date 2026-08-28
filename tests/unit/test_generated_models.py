@@ -33,6 +33,7 @@ from harness_types.config.sensors import DrognaSimulatedSensorsConfiguration
 from harness_types.config.telemetry import DrognaTelemetryConfiguration
 from harness_types.messages.bundle_manifest import DrognaBundleManifest
 from harness_types.messages.clock import DrognaSimulationTimeSample
+from harness_types.messages.coverage_run_manifest import DrognaCoverageRunManifest
 from harness_types.messages.divergence import DrognaDivergenceEvent
 from harness_types.messages.heartbeat import DrognaComponentHeartbeat
 from harness_types.messages.ingest_telemetry import DrognaIngestTelemetry
@@ -57,6 +58,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "heartbeat.schema.json": DrognaComponentHeartbeat,
     "manifest.schema.json": DrognaGroundTruthManifest,
     "run-manifest.schema.json": DrognaRunManifest,
+    "coverage-run-manifest.schema.json": DrognaCoverageRunManifest,
     "config.client.schema.json": DrognaBrowserClientRuntimeConfiguration,
     "config.common.schema.json": DrognaCommonConfigurationSections,
     "config.env_generator.schema.json": DrognaEnvironmentGeneratorConfiguration,

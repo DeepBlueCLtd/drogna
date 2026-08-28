@@ -29,11 +29,15 @@ export interface DrognaPublisherConfiguration {
     catalogue: {
       root_directory: string;
       /**
-       * Prefixed to the run identifier to name a run's directory, so a run directory is recognisable as one.
+       * The subdirectory of the store root that holds the runs. The layout gives a run directory no prefix of its own — the directory is the run identifier, and the identifier already begins with the prefix its own rule states — so this names the directory they sit in. It replaces run_directory_prefix, which carried this value for want of a key of its own and which could not be empty.
        */
-      run_directory_prefix: string;
+      runs_dirname: string;
       /** Name of the entry in the root that resolves to the current run's directory. */
       current_pointer: string;
+      /**
+       * What an in-flight name ends in. Anything under it is invisible to the catalogue, which is what lets a run be assembled and a pointer be replaced without a reader ever seeing either half-made. It states the same value as query.coverage_store.partial_suffix and the model runner's staging.partial_suffix; three statements rather than one because no component reads another's configuration.
+       */
+      partial_suffix: string;
       forecast_file: string;
       uncertainty_file: string;
       manifest_file: string;

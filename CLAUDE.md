@@ -4,9 +4,9 @@ drogna is a demonstration harness: a synthetic ocean, sensors that sample it, a 
 loop that assimilates what they report, and a query layer that serves the result through
 OGC API-EDR and SensorThings. Everything in it is deliberately fake and says so.
 
-Sixteen features delivered and five more specified, twelve services, fifteen gates and
-twenty-five ADRs. All four SRD acceptance criteria pass (in-process; the live wiring is
-PR #33).
+Seventeen features delivered and five more specified, twelve services, fifteen gates and
+twenty-five ADRs. All four SRD acceptance criteria pass, and the control loop is wired
+live (PR #33).
 
 ## Where the answers already are
 

@@ -19,8 +19,8 @@ exit criteria are summarised below as outcomes rather than plans.
 | 005 | Compose deployment | NFR-05..NFR-07 | Delivered. T028 proven by test (lane D); partials T025/T027/T030/T045 remain |
 | 006 | Generated types | NFR-01..NFR-03 | Delivered. Only T025, a second operating system, is open |
 | 007 | Observation path | C-03..C-07, FR-12..FR-18 | Delivered, live |
-| 008 | Query layer | C-08, C-09, FR-19..FR-21 | Delivered. T062 flips when PR #33 merges and a run publishes live |
-| 009 | Control loop | C-11..C-14, FR-22..FR-31 | **PR #33 in flight**: wired to the broker, the frozen-clock fault fixed; two entrypoint-test collisions with lane C's merged work, and the A/D converge re-run outstanding |
+| 008 | Query layer | C-08, C-09, FR-19..FR-21 | Delivered. T062 ticks with lane H's watched live publication |
+| 009 | Control loop | C-11..C-14, FR-22..FR-31 | **Delivered and wired live** (PR #33 merged, 28 August): every task ticked, all six loop services subscribe and follow the clock, and the generator/control profiles are active at local |
 | 010 | Telemetry and quality | C-16, FR-37, FR-38 | Delivered |
 | 011 | Adaptive planner | C-15, FR-32..FR-36 | Delivered |
 | 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | Delivered; T032 and T038 closed by 017 |
@@ -33,6 +33,7 @@ exit criteria are summarised below as outcomes rather than plans.
 | 019 | Coverage holdings | §5.10, FR-54..FR-58 | Specified; gated on the loop's live turn (SRD §10) |
 | 020 | Shore advisories | §5.11, FR-59..FR-66 | Specified; same gate. Constitution 1.5.0 already carries the third-schema amendment; C-19/C-20 typed "not yet built" in `docs/manifest.yaml` |
 | 021 | Operator plane | §5.12, FR-67..FR-76 | Specified (SRD v0.5, `spikes/operator-plane/FINDING.md`); same gate, **except FR-74's clock-through-boundary strand**, which repairs FR-10 and is exempt. C-21 typed "not yet built" |
+| 022 | Topic tree | the broker-as-trigger-surface argument; rides 018's topology artefact | Specified (PR #38, 28 August); no plan or tasks. Client panel plus one new read-only role declaration; consumers named, not built |
 
 ## Where the goals and the work stand
 
@@ -41,9 +42,12 @@ map-to-ocean investigation alone is the kind of finding the harness exists to pr
 **Evidence** is in good order after lane E's re-reconciliation. **Demonstration** is
 still the weakest leg, and it is now weak in a more precise way:
 
-- The loop's live wiring exists and is one unstable PR from merging (#33). Its two CI
-  failures are collisions with lane C's merged query entrypoint, not faults in its own
-  subject; its base predates four merged PRs.
+- **The loop is wired and merged** (PR #33, 28 August): all six loop services
+  subscribe and follow the clock, 009's task list is fully ticked, and the generator
+  and control profiles are active at local. What remains of the SRD's gate criterion
+  is the *observation*: nobody has yet watched a threshold breach become a published
+  run in the client, from one command. That observation is lane H's first act, and it
+  is what opens wave 8.
 - The map is built, honest, and empty: **five separate links between the coverage store
   and the browser are broken, and none of the five is in the client**
   (`spikes/map-to-ocean/FINDING.md`; the work list, in dependency order, is issue #34).
@@ -99,6 +103,7 @@ graph TD
   P34[read-path plumbing, issue 34 links 1,3,4,5]
   DOOR[one door: page behind the proxy, issue 34 link 6 + FR-74 clock strand]
   F018c[018 stories 1, 3, 4]
+  F022[022 topic tree]
   F019[019 coverage holdings]
   F020[020 shore advisories]
   F021[021 operator plane]
@@ -114,7 +119,11 @@ graph TD
   DOOR -->|capture credential| F018c
   F020 -.story 4 rides the map.-> FIELD
   F021 -.FR-74 strand exempt from the gate.-> DOOR
+  F009 -.live traffic lights the tree.-> F022
 ```
+
+022 rides 018's topology artefact (delivered, lane F) and appends one read-only role
+to the sources the scanner reads; nothing else waits on it and it waits on nothing.
 
 The SRD's own gate (§10): 019, 020 and 021 begin only when the loop's turn is
 demonstrable in the running system — a threshold breach becoming a published run,
@@ -130,39 +139,37 @@ merged on 28 August — lane B (017, PR #31), lane C (SensorThings and the query
 contract's types, PR #30), lane D (trust auth, the offload debts, the reset proof,
 PR #35), lane E (the record re-reconciled, ADR-0020, the blog gap, PRs #27/#29),
 lane F (the topology artefact and gate, PR #28), lane G (SRD v0.4, PR #26) — and
-lane A is open as PR #33. The stale-records table this plan carried is settled and
+lane A merged as PR #33 later the same day, closing the wave's code in full. The stale-records table this plan carried is settled and
 lives in history; one new instance replaced it: lane C's fix closed the SensorThings
 item while the proxy's upstream half of the same fault stood unfixed, and the struck
 row read as done. The half is measured in `spikes/map-to-ocean/FINDING.md` and owned
 again below. The lesson is the standing one — the tree is the authority — with a
 sharper edge: **a row struck through is a claim too.**
 
-## Finishing wave 6: PR #33 to green
+## Closing wave 6: one observation left
 
-Not a new lane — the existing one, driven home:
-
-1. Merge `main` into `claude/loop-live-wiring-ma5we9` (four PRs behind, including both
-   halves it collides with).
-2. Fix the two entrypoint-test collisions: the tests expect `exec pygeoapi serve`; the
-   merged tree serves via `exec python3 ./query/serve.py`. Lane C's shape is on `main`,
-   so the tests, not the entrypoint, move.
-3. Run the A/D obligation both PRs recorded: `run_local.sh` twice on the merged result.
-4. Merge, then watch the SRD's gate criterion actually happen: a threshold breach
-   becoming a published run, in the client's loop view, from one command. That
-   observation — not the merge — is what opens wave 8's gate.
+PR #33 merged with its collisions fixed and the converge re-run done, so steps one to
+three of the close-out this section used to list are history. What remains is step
+four, and it is deliberately not waved away: **watch the SRD's gate criterion actually
+happen** — a threshold breach becoming a published run, in the client's loop view,
+from one command — and record the observation with a capture. The merge proved the
+code; the observation is the demonstration, and it is what opens wave 8's gate. It is
+lane H's first act below, because lane H is first at the running stack.
 
 ## Wave 7 — the ocean reaches the browser, everywhere
 
-Four lanes, startable as soon as PR #33 merges (lane J and lane K need not even wait
-for that). Disjoint trees; the one boundary file both plumbing lanes could touch,
-`config/*/proxy.json`, is owned by lane I alone.
+Five lanes, all startable now. Disjoint trees; the one boundary file both plumbing
+lanes could touch, `config/*/proxy.json`, is owned by lane I alone, and the client
+shell's integration point — which lanes J and L both append to — stays append-only as
+it did for 017 and 018.
 
 | Lane | Owns | Work |
 |---|---|---|
-| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | Issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); the decided profiles change (generator and control join `profiles.active` at both destinations); then, per the decided link 5 (fixed collection id and run carried separately, `collections.uncertainty` removed from the master), the announcement and the two client fetch sites |
-| I — one door | `proxy/`, `config/local/`, `config/droplet/`, `deploy/images/` (client), `contracts/schemas/config.capture.schema.json`, `scripts/capture/` | Issue #34 links 3, 4 and 6, plus FR-74's exempt clock strand: the upstream path and released names corrected to what the query layer serves; the page served through the proxy at both destinations; local direct publish dropped; `public_url` made true for the first time; the capture credential threaded through 016's three mechanisms, each watched failing without it and passing with it |
+| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | **First act: the watched turn** — bring the stack up, watch a breach become a published run in the client's loop view, capture it, and record the observation (this opens wave 8's gate and ticks 008 T062). Then issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); then, per the decided link 5 (fixed collection id and run carried separately, `collections.uncertainty` removed from the master), the announcement and the two client fetch sites. The profiles decision is half-landed: PR #33 activated local; the droplet's line is lane I's, beside its other droplet work |
+| I — one door | `proxy/`, `config/local/`, `config/droplet/`, `deploy/images/` (client), `contracts/schemas/config.capture.schema.json`, `scripts/capture/` | Issue #34 links 3, 4 and 6, plus FR-74's exempt clock strand: the upstream path and released names corrected to what the query layer serves; the page served through the proxy at both destinations; local direct publish dropped; `public_url` made true for the first time, with the real hostname injected at deploy per the decision on record; the droplet's `profiles.active` brought level with local's; the capture credential threaded through 016's three mechanisms, each watched failing without it and passing with it |
 | J — read-side client | `client/src/` (read-path areas) | 018 stories 1, 3, 4: the read-path view with witnessed and inferred edges, the topology matrix lit by real traffic (the artefact and gate exist), the standards badges. Story 1's crossings become far more instructive once lanes H and I give the client reads that succeed |
 | K — residue | `libs/harness_core/`, `tests/`, `services/offload/` (T047 only) | 001 T042/T047: the two-participant byte-identical replay scenario, upgrading AT-04 from the weaker claim. 014 T047 per the decided shape (geometry beside the bundle; the note in 014's `tasks.md` carries the settled proposal). 003 T040 and 004 T044's droplet halves join once lane I makes the droplet real |
+| L — topic tree | `client/src/` (topic-tree panel), the role declaration in the topology's tracked sources, `specs/022-topic-tree/` | 022: plan and tasks via spec-kit, then stories in priority order. The tree is the declared topology (018's artefact, regenerated after the role declaration lands — the drift gate makes that safe) lit only by genuinely received traffic; consumers are named, never built; every stated figure simulation time. Shares only the shell integration point (append-only) and the topology-source appends |
 
 **Wave 7 exit criterion:** at both destinations, one address, one clearance: the page
 loads through the proxy, the map draws the seeded run's field, and — with PR #33
@@ -173,7 +180,8 @@ closes with every link ticked against a measurement, the way it was opened.
 ## Wave 8 — the data landscape and the operator's hand
 
 Preconditions, per SRD §10: the loop's turn has been *watched* in the running system.
-Then three features, ordered within the wave:
+With PR #33 merged and local's profiles active, that gate is one observation away —
+lane H's first act. The moment it is recorded, all three features below may launch.
 
 | Feature | Owns | Ordering |
 |---|---|---|
@@ -186,8 +194,11 @@ writes its subsystem pages when its components exist, which is what flips those 
 
 ## What is deliberately not parallelised
 
-- **PR #33 finishes before wave 7's lanes H and I are judged.** Their work is testable
-  against the seeded run without it, but the exit criterion needs the live half.
+- **Wave 8 waits on the watched turn, not on wave 7.** The gate is one observation,
+  recorded with a capture — never inferred from green tests, which is how AT-02 spent
+  a day "passing" while the composed stack could not cycle.
+- **Lanes J and L both add client panels and neither owns the shell.** The
+  integration point is append-only for both, exactly as it was for 017 and 018.
 - **`config/*/proxy.json` has one owner, lane I.** Links 3, 4 and 6 all land there;
   splitting them across lanes is how the last half-fix happened.
 - **Link 5 was a decision before it was code, and it is decided** — the fixed-id
@@ -201,7 +212,7 @@ writes its subsystem pages when its components exist, which is what flips those 
 
 | Risk | Mitigation |
 |---|---|
-| PR #33 rots further behind `main` while wave 7 is planned | it is first in the order above, its collisions are diagnosed, and nothing in wave 7 merges to the same trees |
+| The watched turn surfaces a live-only fault the tests missed | that is what the observation is for; lane H owns the diagnosis as part of its first act, and the wave 8 gate stays shut until the turn is genuinely seen |
 | The struck-row hazard recurs — a lane closes an item whose fault has another half | issue #34 is the tracker and each link closes against a measurement, not a reading; the finding stays unedited as evidence |
 | The capture credential breaks 016's three mechanisms differently | lane I watches each mechanism fail without the credential and pass with it, separately — they deliberately do not share plumbing |
 | The droplet's first genuine bring-up finds new traps | it will; every prior first bring-up did. Lane I budgets for it and writes what it finds into `CLAUDE.md`'s traps or a finding, not just the fix |

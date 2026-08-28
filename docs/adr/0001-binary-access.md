@@ -1,7 +1,9 @@
 # ADR-0001: Binary access rather than tiered or per-field
 
-**Status:** Accepted
+**Status:** Accepted, amended by ADR-0020
 **Date:** 26 August 2026
+**Amended by:** [ADR-0020](0020-clearance-delegated-for-the-control-upgrade.md) (Accepted,
+28 August 2026), for the control upgrade at `/ctl` and for nothing else
 **Requirements:** SRD FR-39, FR-40, FR-41, FR-42; Constitution X; PR-03
 **Raised by:** feature 013's specification
 
@@ -73,6 +75,28 @@ The mechanism is HTTP Basic over TLS against a credential file rendered at deplo
 The mechanism is not the decision — a deployment could swap it for client certificates
 without reopening this — but it is recorded here because binary clearance is what makes so
 plain a mechanism sufficient.
+
+### The amendment, and exactly what it does not touch
+
+ADR-0020 amends this record for one location. The browser cannot satisfy HTTP Basic on a
+WebSocket upgrade — the constructor has nowhere to put a header — so the control upgrade at
+`/ctl` opts out of `auth_basic` and its clearance is delegated to the broker's access
+control list instead. That amendment was accepted on 28 August 2026, and the decision behind
+it is that **the control namespace is public-read by design**.
+
+Everything above is unchanged for the released prefix, which is what this record was written
+about. `/released` is still binary, still declared once at server level, still answers one
+response to an uncleared caller whatever they asked for, and still forwards what upstream
+wrote without editing it. The guard is narrowed rather than relaxed: one server-level
+declaration and exactly one *named* opt-out, which must be the upgrade location, asserted by
+`test_the_clearance_is_declared_once_at_server_level`.
+
+One consequence is worth carrying here because it is read against this record and
+misunderstood: the viewer credential in the served `client.json` is world-readable, and it
+is **not a secret**. It grants subscription to `ctl/` and nothing else — no publish rule at
+all, no `obs/`, no released collection — and the control namespace it opens is public by
+design. The clearance this record is about is a different credential on a different route.
+ADR-0020's "The viewer credential is not a secret" section is the argument in full.
 
 ## Consequences
 

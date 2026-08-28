@@ -13,12 +13,15 @@ title: C-03 Broker
     - **Covered by:** `tests/integration/test_topic_isolation.py`, which attempts each
       forbidden publish and subscription against a running broker and asserts the
       refusal. It needs a container runtime and skips loudly without one
-    - **Not present:** the credential file the broker authenticates against is produced
-      by a command written out in `deploy/broker/README.md` and by the test harness, not
-      by the deployment's own render step — no per-role secret exists in
-      `deploy/env.template`, and the tracked component configurations carry a broker URL
-      with no role in it. Refused attempts are logged at the broker but no count of them
-      reaches the telemetry topic
+    - **Not present:** refused attempts are logged at the broker, but no count of them
+      reaches the telemetry topic, so a component being denied is visible only to
+      somebody reading the broker's log
+
+    The credential half of this entry used to say the render step did not exist. It does:
+    `deploy/lib/render_credentials.py` writes the broker's password file and each
+    component's configuration from one set of per-role secrets, `deploy/env.template`
+    declares a secret per role, and the tracked configurations name their role in the
+    broker URL. Corrected 28 August 2026 — **ADR-0016**.
 
 **Responsibility:** pub/sub transport with namespaced topics.
 **Owns the failure mode of:** cross-contamination of flows.
@@ -36,6 +39,24 @@ simulation time can only pace itself on the host clock, which is forbidden
 outright, so the property tested is not that a sensor cannot subscribe to the
 control namespace: it is that subscribing to it delivers the time and nothing
 else.
+
+## The browser's role, and why its password is public
+
+The page in a browser is a fifth identity here, and the only one whose credential
+is readable by anyone who can load the page. That is deliberate rather than
+accidental, and it is safe for one reason: the role may **subscribe to the control
+namespace and publish nothing at all**. No observation branch, no write of any
+kind. The control namespace carries heartbeats, clock samples, telemetry
+indicators and run notices — material that is public-read by design — and the
+clearance protecting released data is a different credential on a different route,
+which is never placed in the document the browser fetches.
+
+The safety of that arrangement is entirely in the access control list, so the rule
+that keeps it true is that this role never gains a permission. The isolation test
+asserts the negative at a running broker rather than by reading the list back,
+which is the form that would notice if it did. **ADR-0001** and its amendment
+**ADR-0020** are the argument, in the
+[decision records](../decisions/adr/index.md).
 
 ## Why one broker and not two
 

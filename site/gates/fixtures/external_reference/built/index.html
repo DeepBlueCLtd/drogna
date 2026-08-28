@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A page that fetches what it must not</title>
+
+    <!-- WRONG: a stylesheet from another origin. -->
+    <link rel="stylesheet" href="https://cdn.example.invalid/theme/material.css" />
+
+    <!-- Fine: same origin. -->
+    <link rel="stylesheet" href="/assets/theme.css" />
+  </head>
+  <body>
+    <h1>A page that fetches what it must not</h1>
+
+    <!-- Fine: a hyperlink is not a fetch. This one must never be reported. -->
+    <p>
+      The standard is
+      <a href="https://docs.ogc.org/is/19-086r6/19-086r6.html">OGC API — EDR</a>, and citing
+      it is exactly what the gate is required to permit.
+    </p>
+
+    <!-- WRONG: an image from another origin. -->
+    <img src="https://images.example.invalid/plot.png" alt="A plot fetched from elsewhere" />
+
+    <!-- WRONG: srcset is a fetching attribute too. -->
+    <img
+      src="/assets/local.png"
+      srcset="https://images.example.invalid/plot-2x.png 2x"
+      alt="A plot whose high-resolution variant is fetched from elsewhere"
+    />
+
+    <!-- WRONG: a script from another origin. -->
+    <script src="https://cdn.example.invalid/analytics.js"></script>
+
+    <!-- WRONG: protocol-relative, which is still another origin. -->
+    <script src="//cdn.example.invalid/legacy.js"></script>
+
+    <!-- Fine: same origin. This one must never be reported. -->
+    <script src="/assets/local.js"></script>
+  </body>
+</html>

@@ -23,12 +23,12 @@ outcomes rather than plans.
 | 009 | Control loop | C-11..C-14, FR-22..FR-31 | Passes in-process; **not wired live** — T052–T058 outstanding |
 | 010 | Telemetry and quality | C-16, FR-37, FR-38 | Delivered |
 | 011 | Adaptive planner | C-15, FR-32..FR-36 | Delivered |
-| 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | Delivered except the map-mounted layers (T032, T038 → 017) |
+| 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | Delivered; T032 and T038 closed by 017 |
 | 013 | Security proxy | C-10, FR-39..FR-42 | Delivered |
 | 014 | Offload export | C-17, FR-43, FR-44 | Delivered. T040/T045/T046 carry no note — status unknown |
 | 015 | Published site | PR-06..PR-09 | Delivered; 19 partial marks want re-reconciliation against the built site |
 | 016 | Visual capture | PR-10, FR-53 | Delivered |
-| 017 | Map surface | FR-47, FR-48 lineage; closes 012 T032/T038 | Specified; no plan or tasks |
+| 017 | Map surface | FR-47, FR-48 lineage; closes 012 T032/T038 | Planned and tasked; stories P1–P3 built, wave 6 lane B |
 | 018 | Read-path boundaries | §2.2's boundary story, PR-09 | Specified; no plan or tasks |
 | 019 | Coverage holdings | SRD amendment, in flight (see decisions) | Specified; gated |
 | 020 | Shore advisories | SRD amendment, in flight (see decisions) | Specified; gated |
@@ -53,8 +53,12 @@ findings, nineteen ADRs, session logs that record what decisions cost. **Evidenc
   correctly answers "no run is current".
 - The SensorThings entity sets 404 against the running query layer
   (long-run-01 BLOCKED, 2026-08-28T10:15).
-- deck.gl is a declared dependency nothing under `client/src` imports; the
-  uncertainty and route displays are built and tested with no surface to draw on.
+- deck.gl was a declared dependency nothing under `client/src` imported; the uncertainty
+  and route displays were built and tested with no surface to draw on. Feature 017 has
+  built that surface (wave 6, lane B): the map draws its extent and graticule from served
+  data, mounts both 012 modules as layer objects, and states plainly that no field has
+  been received — which against a stack whose loop has not turned is the honest picture
+  and is now what a visitor sees.
 
 Features 019 and 020 extend scope beyond the SRD by their own statement, on top of
 that gap. The refocus is not to abandon them; it is to put the loop's first live turn
@@ -146,7 +150,7 @@ re-litigates them.
 |---|---|---|
 | The loop, live | 009 T052–T055, T058 (keystone); then 008 T062 follows | AT-02's SRD wording — "visibly, end to end, within the client" — becomes true of the running stack |
 | The read path's bug | SensorThings 404 (BLOCKED 2026-08-28T10:15) | FR-19 is half-served until it answers |
-| The map | 017 (spec exists; plan and tasks do not) | closes 012's recorded partials; first thing a visitor looks at |
+| The map | 017, delivered in wave 6 lane B; the field it draws waits on lane A publishing a run | closes 012's recorded partials; first thing a visitor looks at |
 | Deploy simplification | trust auth per the decision above; 005 T028 | retires the DSN-secret machinery; proves the reset-reseed claim |
 | Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
 | Generated types carry-over | 006 T029–T031, T039, T040 | note was stale; unblocked since 008 shipped |

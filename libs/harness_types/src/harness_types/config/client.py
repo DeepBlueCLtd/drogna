@@ -88,6 +88,15 @@ class Query(BaseModel):
         None,
         description='Which forecast parameters to ask for along a route. Named here rather than in source because what a destination serves is a property of the destination.',
     )
+    cube_path: str | None = Field(
+        None,
+        description='Path under a collection at which an OGC API-EDR cube query is served. The map asks for one cube per announcement, at the extent the announcement stated, and draws that. Absent where the destination does not serve cube queries, in which case the map renders the extent and states that no field can be read rather than drawing a field it did not fetch.',
+    )
+    field_parameter: str | None = Field(
+        None,
+        description='Which parameter the map draws as the uncertainty field. Named here for the same reason route_parameters is: which parameter carries the ensemble spread is a property of what the destination serves, not of the client. Absent means the map has not been told what to draw and says so.',
+        min_length=1,
+    )
 
 
 class Liveness(BaseModel):
@@ -140,6 +149,45 @@ class Display(BaseModel):
     )
 
 
+class Extent(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    minimum_longitude: float = Field(..., ge=-180.0, le=180.0)
+    minimum_latitude: float = Field(..., ge=-90.0, le=90.0)
+    maximum_longitude: float = Field(..., ge=-180.0, le=180.0)
+    maximum_latitude: float = Field(..., ge=-90.0, le=90.0)
+
+
+class Vertical(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    minimum_depth_m: float = Field(..., ge=0.0)
+    maximum_depth_m: float = Field(..., ge=0.0)
+
+
+class Map(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    extent: Extent = Field(
+        ...,
+        description="The destination's declaration of the scenario's horizontal extent, in CRS84 degrees. The same numbers the destination declares as its domain elsewhere; declared again here because the client cannot read that document and cannot enumerate collections through the boundary.",
+        title='Declared scenario extent',
+    )
+    vertical: Vertical | None = Field(
+        None,
+        description="The depth range the scenario covers, in metres, positive downwards, as the coverage's own vertical convention has it. Used to label the volume mode's depth axis before a run has been announced.",
+        title='Declared vertical range',
+    )
+    graticule_spacing_degrees: float | None = Field(
+        None,
+        description="Spacing of the graticule the map draws, in degrees. Absent means the map chooses a spacing from the extent's own span, which is what keeps a wide extent from being drawn as a black rectangle of meridians.",
+        gt=0.0,
+    )
+
+
 class DrognaBrowserClientRuntimeConfiguration(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -168,4 +216,9 @@ class DrognaBrowserClientRuntimeConfiguration(BaseModel):
         ...,
         description='Rendering settings, and nothing that changes what is believed. A high clock rate degrades the frame rate and never the truth: every received heartbeat is folded into liveness state whether or not a frame is drawn for it.',
         title='Display',
+    )
+    map: Map | None = Field(
+        None,
+        description="Where the scenario is, for a surface that must not invent geography. The extent a run's field is drawn in comes from the announcement's own grid bounds and never from here; this is what the map has to draw before any run has been announced, which is the state a harness whose loop has not yet turned is honestly in. Optional: a document that omits it renders the statement that no extent has been served rather than failing to start, and a client that has neither an announcement nor a declaration draws no frame at all.",
+        title='Map surface',
     )

@@ -30,5 +30,16 @@ export interface DrognaSchedulerConfiguration {
      * Offset from the divergence's simulation time to the instant the run initialises from. Zero initialises at the divergence.
      */
     initialisation_offset_seconds: number;
+    /**
+     * How a run is named. The rule is the coverage store's, stated in stores/coverage/layout.md, and it is carried here rather than imported so that this component computes the same string from the same five values as the query layer does — root seed, run sequence, rule, version and prefix. Naming the rule and its version in configuration is what makes a change to either change every identifier visibly.
+     */
+    run_id: {
+      /** The named rule the digest is taken over. Matches query.coverage_store.run_id.rule. */
+      rule: string;
+      /** The rule's version. Bumping it changes every identifier the rule produces. */
+      version: number;
+      /** What a run identifier begins with, so a run directory is recognisable as one. */
+      prefix: string;
+    };
   };
 }

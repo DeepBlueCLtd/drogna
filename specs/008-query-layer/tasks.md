@@ -298,10 +298,50 @@ is exporting.
       Observations 27, Sensors 3, ObservedProperties 3, FeaturesOfInterest 9, each observation
       carrying its own selfLink, navigation links and phenomenonTime.
 
-- [ ] T062 Serve real coverage on the EDR collections
+- [x] T062 Serve real coverage on the EDR collections
 
-      **Not done, and not this feature's to fix.** `/collections/forecast/cube` answers 400
-      with "no run is current: current names none", which is the correct answer: nothing has
-      ever published a run. That waits on the control loop turning — see
-      `specs/009-control-loop/tasks.md` T058.
+      Done, 28 August 2026, in wave 6 lane A with 009 T058. The half this task was waiting
+      on — "nothing has ever published a run" — is closed: the composed stack now stages a
+      first field at seeding time and the control loop publishes a second from a real
+      divergence, so `current` names `run-000000-7f80b47c7b91` and the collection resolves it.
+
+      **The other half turned out not to be waiting on anything, and had never been looked
+      at.** With a run finally in the store, `/collections/forecast/cube` answered 400 with
+      `run-000000-7f80b47c7b91 forecast carries no variable named 'sea_water_temperature';
+      it holds depth, latitude, longitude, salinity, temperature, time`. Both destinations'
+      `query.coverage.parameters` named variables no run has ever carried —
+      `sea_water_temperature`, `sea_water_practical_salinity`, `sea_water_pressure`,
+      `sea_water_temperature_uncertainty` — while the model runner writes `temperature` and
+      `salinity` into the forecast field and `temperature_spread` and `salinity_spread` into
+      the uncertainty one. Nothing had noticed because both sides were self-consistent: this
+      feature's own tests build a NetCDF carrying the names this feature's configuration
+      expects, and no real run had ever crossed between them.
+
+      The parameters now name the variables a run holds, and `salinity_uncertainty` is added
+      because the uncertainty field carries that spread too. `sea_water_pressure` is
+      **removed**: nothing writes a pressure and nothing derives one, and ADR-0005's argument
+      for not storing sound speed applies to it for the same reason — a collection that
+      advertises a parameter no run can carry is an untruth in the one document a consumer
+      reads to find out what is servable. Lane C should confirm that removal is what this
+      feature intends, and this feature's own fixtures still build the old names; that is
+      recorded as T063 below rather than changed from another lane.
+
+      Evidence, against the running local stack:
+      `curl 'http://127.0.0.1:8082/collections/forecast/cube?bbox=-4.6,48.9,-4.4,49.1&z=0/50&parameter-name=sea_water_temperature'`
+      answers 200 with a CoverageJSON Grid of real values.
+      `tests/integration/test_coverage_store_seam.py` now checks every advertised parameter
+      against the variables a real staged run holds, read out of one the model runner writes
+      rather than restated — watched failing on the configuration as it was, with the same
+      words the running query layer used.
+
+- [ ] T063 Reconcile this feature's own fixtures with what a published run holds
+
+      `tests/query_layer_support.py` builds coverage files carrying `sea_water_temperature`,
+      `sea_water_practical_salinity`, `sea_water_pressure` and
+      `sea_water_temperature_uncertainty`, and the tests over them pass against a
+      configuration they also build. That is what let T062's mismatch survive: two sides each
+      self-consistent, with no test that crossed. The deployed configuration is corrected (see
+      above) and these fixtures are not, so the suite now models a field nothing produces.
+      Left for this feature's own lane rather than changed from lane A, because deciding what
+      the query layer's tests should be built on is a decision about this feature.
 

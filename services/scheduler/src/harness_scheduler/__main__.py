@@ -16,7 +16,10 @@ from typing import Any
 
 from harness_core.broker import (
     FROM_CONFIGURATION,
+    FROM_CONFIGURATION_MESSAGES,
+    idle_interval,
     resolve_publisher,
+    resolve_subscriber,
 )
 from harness_core.clock import (
     ClockEndpoint,
@@ -32,7 +35,11 @@ from harness_core.ports import Clock
 from harness_core.rng import configure_run
 
 from harness_scheduler.config import load_or_exit_with
-from harness_scheduler.service import SchedulerService
+from harness_scheduler.service import (
+    DIVERGENCE_TOPIC,
+    RUN_PUBLISHED_TOPIC,
+    SchedulerService,
+)
 from harness_scheduler.version import SCHEDULER_NAME
 
 __all__ = ["main"]
@@ -59,7 +66,7 @@ def main(
     env: Mapping[str, str] | None = None,
     clock: Clock | None = None,
     publisher: MessagePublisher | None = FROM_CONFIGURATION,
-    messages: Iterable[tuple[str, bytes]] = (),
+    messages: Iterable[tuple[str, bytes]] = FROM_CONFIGURATION_MESSAGES,
     stderr: Any = None,
 ) -> int:
     """Run the scheduler over ``messages``. Returns the process exit code."""
@@ -79,6 +86,19 @@ def main(
     publisher, owned = resolve_publisher(
         publisher, config.document, component=SCHEDULER_NAME, report=out
     )
+    # What it decides about, and how it learns the run it asked for exists. Until this
+    # existed the parameter defaulted to an empty tuple, so the container ran its loop over
+    # nothing and exited 0 — indistinguishable from a caller who had asked for silence, and
+    # the reason no divergence ever became a run in the composed stack.
+    messages, subscribed = resolve_subscriber(
+        messages,
+        config.document,
+        component=SCHEDULER_NAME,
+        topic=(DIVERGENCE_TOPIC, RUN_PUBLISHED_TOPIC),
+        report=out,
+        purpose="scheduler",
+        idle_seconds=idle_interval(settings.component.heartbeat_interval_seconds),
+    )
 
     try:
         if publisher is None:
@@ -92,13 +112,19 @@ def main(
             settings, clock=active_clock, publisher=publisher, config_digest=config.digest
         )
         service.beat(force=True)
+        # An idle turn carries no topic and routes nowhere; what follows it is the work this
+        # component owes whether or not anything arrived — expiring an outstanding request
+        # whose timeout has passed, and saying it is alive.
         for topic, payload in messages:
-            service.handle(topic, payload)
+            if topic:
+                service.handle(topic, payload)
             service.advance()
             service.beat()
     finally:
         if owned is not None:
             owned.close()
+        if subscribed is not None:
+            subscribed.close()
     return 0
 
 

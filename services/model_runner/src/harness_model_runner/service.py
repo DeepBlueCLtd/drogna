@@ -64,6 +64,7 @@ class ModelRunnerService:
             forecast_file=runner.staging.forecast_file,
             uncertainty_file=runner.staging.uncertainty_file,
             manifest_file=runner.staging.manifest_file,
+            partial_suffix=runner.staging.partial_suffix,
             stored_dtype=runner.stored_dtype.value,
         )
         self._heartbeat = (
@@ -103,7 +104,6 @@ class ModelRunnerService:
     def handle_run_request(self, payload: bytes | str | Mapping[str, Any]) -> StagedRun | None:
         """Execute one run. Returns the staged run, or nothing if the run failed."""
         request = _decode(payload)
-        runner = self._settings.model_runner
         size = int(request["ensemble_size"])
         run_id = str(request["run_id"])
         tick = self._clock.tick()
@@ -118,6 +118,33 @@ class ModelRunnerService:
         if self._publisher is not None:
             publish.publish_run_started(self._publisher, started)
 
+        return self.stage_run(
+            run_id=run_id,
+            run_sequence=_sequence_of(request),
+            size=size,
+            initialisation_micros=SimInstant.from_iso(
+                str(request["initialisation_sim_time"])
+            ).micros,
+        )
+
+    def stage_run(
+        self,
+        *,
+        run_id: str,
+        run_sequence: int | None,
+        size: int,
+        initialisation_micros: int,
+    ) -> StagedRun | None:
+        """Compute one ensemble and leave it in staging. Returns nothing if the run failed.
+
+        Separated from the message that usually asks for it because the scenario's first
+        forecast is not asked for by a message. Nothing can diverge from nothing, so a store
+        with no run in it is a loop that cannot start; the initial field is seed content, put
+        there by ``deploy/seed.d/`` like every other piece of content in a running drogna,
+        and it is produced here by the same kernel and the same ensemble as every run after
+        it rather than by anything that would have to be believed on its own.
+        """
+        runner = self._settings.model_runner
         if size > runner.ensemble.maximum_size:
             return self._fail(
                 run_id,
@@ -126,17 +153,16 @@ class ModelRunnerService:
                 "over fewer members than were asked for, under the name of the larger one",
             )
 
-        initialisation = SimInstant.from_iso(str(request["initialisation_sim_time"])).micros
         state = InitialisationState(
             grid=grid_for(
                 self._ground_truth,
-                initialisation_micros=initialisation,
+                initialisation_micros=initialisation_micros,
                 step_seconds=runner.forecast.step_seconds,
                 steps=runner.forecast.step_count,
             ),
             background=background_from(self._ground_truth),
             features=features_from(self._ground_truth),
-            initialisation_micros=initialisation,
+            initialisation_micros=initialisation_micros,
             noise_temperature_c=runner.kernel.noise_temperature_c,
             noise_salinity_psu=runner.kernel.noise_salinity_psu,
         )
@@ -158,11 +184,12 @@ class ModelRunnerService:
         staged = self._staging.write(
             outcome,
             run_id=run_id,
-            scenario_run_id=tick.run_id,
+            run_sequence=run_sequence,
+            scenario_run_id=self._clock.tick().run_id,
             kernel=self._kernel.name,
             root_seed=self._settings.seed.root,
             config_digest=self._config_digest,
-            initialisation_micros=initialisation,
+            initialisation_micros=initialisation_micros,
         )
         self._completed += 1
         return staged
@@ -188,6 +215,14 @@ class ModelRunnerService:
         if force:
             return self._heartbeat.publish(tick, status=HeartbeatStatus.OK, detail=detail)
         return self._heartbeat.maybe_publish(tick, status=HeartbeatStatus.OK, detail=detail)
+
+
+def _sequence_of(request: Mapping[str, Any]) -> int | None:
+    """The run sequence the request carries, and nothing inferred where it carries none."""
+    stated = request.get("run_sequence")
+    if isinstance(stated, int) and not isinstance(stated, bool):
+        return stated
+    return None
 
 
 def _decode(payload: bytes | str | Mapping[str, Any]) -> Mapping[str, Any]:

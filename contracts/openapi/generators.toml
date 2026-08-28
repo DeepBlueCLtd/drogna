@@ -199,6 +199,14 @@ target = "services/publisher/src/harness_publisher/schemas/config.common.schema.
 source = "contracts/schemas/config.publisher.schema.json"
 target = "services/publisher/src/harness_publisher/schemas/config.publisher.schema.json"
 
+# Not a configuration schema. The publisher validates the run manifest it writes against the
+# store's master before that manifest reaches the store, because a manifest the query layer
+# would refuse is a run that is published and never catalogued — a failure that surfaces
+# three components away from its cause.
+[[copy]]
+source = "contracts/schemas/coverage-run-manifest.schema.json"
+target = "services/publisher/src/harness_publisher/schemas/coverage-run-manifest.schema.json"
+
 # C-01 validates its configuration before it binds a socket, so it carries its own schema
 # and the common sections that schema references, like every other component.
 [[copy]]

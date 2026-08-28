@@ -11,13 +11,12 @@ the publisher must know in order to write into it: runs live in a directory unde
 root, each named by its own run identifier, and one pointer at the root names the current
 run. Every one of those names comes from configuration.
 
-Two of those names arrive awkwardly, and it is worth saying why rather than leaving the next
-reader to wonder. The layout gives a run's directory no prefix of its own — the directory is
-the run identifier, and the identifier already begins with the prefix its own rule states —
-so ``run_directory_prefix`` carries the store's runs subdirectory instead. The publisher's
-configuration schema has no key for that subdirectory and its prefix key cannot be empty, so
-until the schema grows one this is where the value lives. The report on this change says so
-in full; it is a gap in the master, not a naming opinion.
+One of those names used to arrive awkwardly. The layout gives a run's directory no prefix of
+its own — the directory is the run identifier, and the identifier already begins with the
+prefix its own rule states — so the store's runs subdirectory was carried in
+``run_directory_prefix``, a key that meant something else and could not be empty. The master
+has its own ``runs_dirname`` now, and this joins the store root to it rather than prefixing
+a name with a directory and relying on the slash.
 
 Collection identifiers are derived from the run identifier by prefix, which is what makes
 them predictable to a consumer that has only the announcement.
@@ -36,13 +35,16 @@ class Catalogue:
     """The names, and nothing else. It reads and writes only through the publisher."""
 
     root: Path
-    run_directory_prefix: str
+    runs_dirname: str
     current_pointer: str
     forecast_prefix: str
     uncertainty_prefix: str
 
+    def runs_directory(self) -> Path:
+        return self.root / self.runs_dirname
+
     def run_directory(self, run_id: str) -> Path:
-        return self.root / f"{self.run_directory_prefix}{run_id}"
+        return self.runs_directory() / run_id
 
     def pointer(self) -> Path:
         return self.root / self.current_pointer

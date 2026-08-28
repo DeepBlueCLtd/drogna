@@ -26,7 +26,10 @@ from typing import Any
 
 from harness_core.broker import (
     FROM_CONFIGURATION,
+    FROM_CONFIGURATION_MESSAGES,
+    idle_interval,
     resolve_publisher,
+    resolve_subscriber,
 )
 from harness_core.clock import (
     ClockEndpoint,
@@ -44,7 +47,11 @@ from harness_monitor.coverage import StoredForecasts
 
 from harness_telemetry.config import load_or_exit_with
 from harness_telemetry.persistence_reference import ForecastSource
-from harness_telemetry.service import TelemetryService
+from harness_telemetry.service import (
+    RUN_PUBLISHED_TOPIC,
+    TELEMETRY_PREFIX,
+    TelemetryService,
+)
 from harness_telemetry.version import TELEMETRY_NAME
 
 __all__ = ["main"]
@@ -91,7 +98,7 @@ def main(
     clock: Clock | None = None,
     publisher: MessagePublisher | None = FROM_CONFIGURATION,
     forecasts: ForecastSource | None = None,
-    messages: Iterable[tuple[str, bytes]] = (),
+    messages: Iterable[tuple[str, bytes]] = FROM_CONFIGURATION_MESSAGES,
     stderr: Any = None,
 ) -> int:
     """Run telemetry over ``messages``. Returns the process exit code."""
@@ -112,6 +119,21 @@ def main(
     publisher, owned = resolve_publisher(
         publisher, config.document, component=TELEMETRY_NAME, report=out
     )
+    # Two filters rather than one. ``ctl/telemetry/#`` matches the branch and its own parent,
+    # so it carries both the subtopic messages the components publish statistics on and the
+    # flat ``ctl/telemetry`` the monitor's residual samples arrive on; this component's own
+    # output comes back with them and is discarded by name in ``handle_telemetry``, which is
+    # where a feedback loop would otherwise be. Until this existed the parameter defaulted to
+    # an empty tuple and no statistic was ever computed in the composed stack.
+    messages, subscribed = resolve_subscriber(
+        messages,
+        config.document,
+        component=TELEMETRY_NAME,
+        topic=(f"{TELEMETRY_PREFIX}/#", RUN_PUBLISHED_TOPIC),
+        report=out,
+        purpose="telemetry",
+        idle_seconds=idle_interval(settings.component.heartbeat_interval_seconds),
+    )
 
     try:
         if publisher is None:
@@ -130,13 +152,19 @@ def main(
         )
         service.start()
         service.beat(force=True)
+        # An idle turn carries no topic and routes nowhere. The publication interval is
+        # simulation time and falls due whether or not a message has arrived, so the report
+        # and the heartbeat are outside the routing rather than inside it.
         for topic, payload in messages:
-            service.handle(topic, payload)
+            if topic:
+                service.handle(topic, payload)
             service.publish_reports()
             service.beat()
     finally:
         if owned is not None:
             owned.close()
+        if subscribed is not None:
+            subscribed.close()
     return 0
 
 

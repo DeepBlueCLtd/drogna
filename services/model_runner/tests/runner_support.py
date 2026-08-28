@@ -123,6 +123,7 @@ def ground_truth(
 def run_request(
     *,
     run_id: str = "run-abc",
+    run_sequence: int = 0,
     ensemble_size: int = 4,
     initialisation_sim_time: str = "2026-08-26T00:00:00.000000Z",
     divergence_id: str = "divergence-1",
@@ -136,6 +137,7 @@ def run_request(
         "sim_time": initialisation_sim_time,
         "tick": 0,
         "run_id": run_id,
+        "run_sequence": run_sequence,
         "initialisation_sim_time": initialisation_sim_time,
         "ensemble_size": ensemble_size,
         "region": divergence_payload()["region"],

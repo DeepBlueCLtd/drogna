@@ -28,7 +28,10 @@ from typing import Any
 
 from harness_core.broker import (
     FROM_CONFIGURATION,
+    FROM_CONFIGURATION_MESSAGES,
+    idle_interval,
     resolve_publisher,
+    resolve_subscriber,
 )
 from harness_core.clock import (
     ClockEndpoint,
@@ -45,7 +48,11 @@ from harness_core.rng import configure_run
 
 from harness_planner.config import load_or_exit_with
 from harness_planner.field import FieldSource, ManifestTimescale, StoredUncertainty, TimescaleSource
-from harness_planner.service import PlannerService
+from harness_planner.service import (
+    OBSERVATION_PREFIX,
+    RUN_PUBLISHED_TOPIC,
+    PlannerService,
+)
 from harness_planner.version import PLANNER_NAME
 
 __all__ = ["main"]
@@ -75,7 +82,7 @@ def main(
     publisher: MessagePublisher | None = FROM_CONFIGURATION,
     fields: FieldSource | None = None,
     timescales: TimescaleSource | None = None,
-    messages: Iterable[tuple[str, bytes]] = (),
+    messages: Iterable[tuple[str, bytes]] = FROM_CONFIGURATION_MESSAGES,
     stderr: Any = None,
 ) -> int:
     """Run the planner over ``messages``. Returns the process exit code."""
@@ -107,6 +114,20 @@ def main(
     publisher, owned = resolve_publisher(
         publisher, config.document, component=PLANNER_NAME, report=out
     )
+    # Two filters, for the same reason the monitor takes two: what was measured arrives on
+    # the observation branch and what was forecast on one control topic, and one filter wide
+    # enough for both would ask for control topics this role does not need. Until this
+    # existed the parameter defaulted to an empty tuple and no recommendation was ever made
+    # in the composed stack.
+    messages, subscribed = resolve_subscriber(
+        messages,
+        config.document,
+        component=PLANNER_NAME,
+        topic=(f"{OBSERVATION_PREFIX}#", RUN_PUBLISHED_TOPIC),
+        report=out,
+        purpose="planner",
+        idle_seconds=idle_interval(settings.component.heartbeat_interval_seconds),
+    )
 
     try:
         if publisher is None:
@@ -127,12 +148,17 @@ def main(
         )
         service.start()
         service.beat(force=True)
+        # An idle turn carries no topic and routes nowhere; it is what keeps this component
+        # saying it is alive while it waits for the next observation.
         for topic, payload in messages:
-            service.handle(topic, payload)
+            if topic:
+                service.handle(topic, payload)
             service.beat()
     finally:
         if owned is not None:
             owned.close()
+        if subscribed is not None:
+            subscribed.close()
     return 0
 
 

@@ -35,9 +35,11 @@ def descriptor_for(
     *,
     status: str = "complete",
     member_count: int = 8,
+    run_sequence: int | None = 0,
 ) -> dict[str, Any]:
     return {
         "run_id": run_id,
+        "run_sequence": run_sequence,
         "scenario_run_id": "scenario-009",
         "status": status,
         "kernel": "analytic",
@@ -74,6 +76,7 @@ def stage_run(
     member_count: int = 8,
     omit_uncertainty: bool = False,
     truncate_forecast: bool = False,
+    run_sequence: int | None = 0,
 ) -> Path:
     """Write one staged run, optionally in one of the ways a run can be wrong."""
     directory = staging / run_id
@@ -81,7 +84,12 @@ def stage_run(
     forecast = body
     uncertainty = body + b" (spread)"
     descriptor = descriptor_for(
-        run_id, forecast, uncertainty, status=status, member_count=member_count
+        run_id,
+        forecast,
+        uncertainty,
+        status=status,
+        member_count=member_count,
+        run_sequence=run_sequence,
     )
     (directory / FORECAST_FILE).write_bytes(forecast[:5] if truncate_forecast else forecast)
     if not omit_uncertainty:

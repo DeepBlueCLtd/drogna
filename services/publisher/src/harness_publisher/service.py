@@ -28,7 +28,20 @@ from harness_publisher.catalogue import Catalogue
 from harness_publisher.manifest import write_run_manifest
 from harness_publisher.validate import StagedInspection, inspect_staged
 
-__all__ = ["PublisherService"]
+__all__ = ["RUN_STARTED_TOPIC", "PublisherService"]
+
+RUN_STARTED_TOPIC = "ctl/run-started"
+"""What the model runner announces before it begins assembling a run.
+
+Named here rather than imported from the model runner, as every other component in this loop
+names the topics it watches: the scheduler and the monitor each state ``ctl/run-published``
+in their own module, and a shared constants module would be a dependency between services
+that exchange nothing but messages.
+
+It is a wake-up and not the thing itself. A run is announced started before its ensemble is
+computed, so a directory in staging is what says a run is *finished*; this topic only says
+one is coming, which is why the loop below drains staging on the idle turn as well.
+"""
 
 
 class PublisherService:
@@ -48,9 +61,10 @@ class PublisherService:
         self._clock = clock
         self._publisher = publisher
         self._staging = Path(section.staging.directory)
+        self._partial_suffix = section.catalogue.partial_suffix
         self._catalogue = Catalogue(
             root=Path(section.catalogue.root_directory),
-            run_directory_prefix=section.catalogue.run_directory_prefix,
+            runs_dirname=section.catalogue.runs_dirname,
             current_pointer=section.catalogue.current_pointer,
             forecast_prefix=section.collections.forecast_prefix,
             uncertainty_prefix=section.collections.uncertainty_prefix,
@@ -94,7 +108,7 @@ class PublisherService:
             sorted(
                 entry.name
                 for entry in self._staging.iterdir()
-                if entry.is_dir() and not entry.name.endswith(".partial")
+                if entry.is_dir() and not entry.name.endswith(self._partial_suffix)
             )
         )
 
@@ -125,7 +139,11 @@ class PublisherService:
             )
             move_into_catalogue(inspection.directory, destination)
             if current:
-                make_current(self._catalogue.pointer(), inspection.run_id)
+                make_current(
+                    self._catalogue.pointer(),
+                    inspection.run_id,
+                    partial_suffix=self._partial_suffix,
+                )
         except (AtomicPublishError, OSError) as exc:
             return self._refuse(run_id, (str(exc),))
 

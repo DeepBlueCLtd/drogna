@@ -17,6 +17,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+from harness_core.broker import publish_retained
 from harness_core.clock import Tick
 from harness_core.heartbeat import HeartbeatPublisher, MessagePublisher
 from harness_types.messages.run_published import (
@@ -73,7 +74,18 @@ def announcement(
 
 
 def publish_announcement(publisher: MessagePublisher, message: Mapping[str, Any]) -> None:
-    publisher.publish(RUN_PUBLISHED_TOPIC, json.dumps(message, sort_keys=True).encode("utf-8"))
+    """Announce a published run, and have the broker hold the announcement.
+
+    Which run is current is state rather than an event: a component that connects after the
+    announcement still needs to know, and every component connects after it at least once,
+    because every component restarts. ``harness_core.broker.publish_retained`` says what that
+    cost before the announcement was retained — a scheduler starting its sequence at zero
+    against a store that already holds run zero, and a loop stalled until the request timed
+    out. A publisher with no way to retain publishes as it did before.
+    """
+    publish_retained(
+        publisher, RUN_PUBLISHED_TOPIC, json.dumps(message, sort_keys=True).encode("utf-8")
+    )
 
 
 def failure_message(

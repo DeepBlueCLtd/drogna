@@ -30,6 +30,11 @@
     "minimum_interval_seconds": 1800.0,
     "outstanding_timeout_seconds": 3600.0,
     "ensemble_size": 8,
-    "initialisation_offset_seconds": 0.0
+    "initialisation_offset_seconds": 0.0,
+    "run_id": {
+      "rule": "drogna-coverage-run-id",
+      "version": 1,
+      "prefix": "run"
+    }
   }
 }

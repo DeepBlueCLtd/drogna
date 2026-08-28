@@ -33,6 +33,11 @@ class DrognaModelRunRequest(BaseModel):
         ...,
         description='Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store.',
     )
+    run_sequence: int = Field(
+        ...,
+        description='Which run of this scenario this is, counting from zero. It is the other half of the identifier rule — run_id is a function of the root seed and this number — and it is carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse. Before it was carried the run manifest recorded a null here for want of anything to record.',
+        ge=0,
+    )
     initialisation_sim_time: str = Field(
         ...,
         description='The simulation instant the run initialises from. The forecast is valid forward of it.',

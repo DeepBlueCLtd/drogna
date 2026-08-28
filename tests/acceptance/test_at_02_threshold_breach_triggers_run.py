@@ -29,6 +29,7 @@ from typing import Any
 from control_loop import (
     CURRENT_POINTER,
     FORECAST_FILE,
+    PARTIAL_SUFFIX,
     RUNS_DIRNAME,
     Recorder,
     manual_clock,
@@ -79,6 +80,7 @@ def scenario(tmp_path: Path) -> tuple[list[tuple[str, dict[str, Any]]], bytes, b
             forecast_file="forecast.nc",
             uncertainty_file="uncertainty.nc",
             manifest_file="run.json",
+            partial_suffix=PARTIAL_SUFFIX,
         ),
         publisher=recorder,
     )

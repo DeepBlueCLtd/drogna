@@ -224,10 +224,15 @@ def test_both_ends_of_each_destination_name_one_store(destination: str) -> None:
     assert catalogue["forecast_file"] == store["forecast_file"]
     assert catalogue["uncertainty_file"] == store["uncertainty_file"]
     assert catalogue["manifest_file"] == store["manifest_file"]
-    # The publisher's schema has no key for the runs subdirectory and its prefix key cannot
-    # be empty, so the subdirectory is carried in the prefix. That is a gap in the master
-    # rather than a second opinion about the layout, and this is where it is held in step.
-    assert catalogue["run_directory_prefix"] == f"{store['runs_dirname']}/"
+    assert catalogue["runs_dirname"] == store["runs_dirname"]
+    assert catalogue["partial_suffix"] == store["partial_suffix"]
+    # And the third statement of that suffix, in the component that stages under it. The
+    # value is written into three configuration files because no component reads another's,
+    # which is exactly why the three are compared here rather than trusted.
+    assert (
+        document(destination, "model_runner")["model_runner"]["staging"]["partial_suffix"]
+        == (store["partial_suffix"])
+    )
 
 
 @pytest.mark.parametrize("destination", DESTINATIONS)
@@ -237,3 +242,82 @@ def test_both_ends_of_each_destination_derive_the_same_identifiers(destination: 
         document(destination, "publisher")["seed"]["root"]
         == document(destination, "query")["seed"]["root"]
     )
+    assert (
+        document(destination, "scheduler")["seed"]["root"]
+        == (document(destination, "query")["seed"]["root"])
+    )
+    # The scheduler names the runs and the query layer resolves them, and neither imports
+    # the other's implementation of the rule. What makes the two agree is that they are
+    # given the same five values, so the three that are configuration are compared here.
+    assert (
+        document(destination, "scheduler")["scheduler"]["run_id"]
+        == document(destination, "query")["query"]["coverage_store"]["run_id"]
+    )
+
+
+@pytest.mark.parametrize("destination", DESTINATIONS)
+def test_every_served_parameter_names_a_variable_a_run_actually_holds(destination: str) -> None:
+    """The seam the store's two ends had never met across, and 008 T062's other half.
+
+    The query layer's parameter list named `sea_water_temperature`, `sea_water_practical_
+    salinity`, `sea_water_pressure` and `sea_water_temperature_uncertainty`. The model runner
+    writes `temperature` and `salinity` into the forecast field and `temperature_spread` and
+    `salinity_spread` into the uncertainty field; it has never written a pressure, and
+    ADR-0005's argument for not storing sound speed applies to pressure for the same reason.
+    Both sides were self-consistent — 008's own tests build a NetCDF with the names 008's
+    configuration expects — and no run had ever been published, so nothing crossed and
+    nothing noticed. The first real cube served answered 400: "run-000000-7f80b47c7b91
+    forecast carries no variable named 'sea_water_temperature'".
+
+    The names the runner writes are held in `harness_model_runner.staging` and read by
+    `harness_monitor.coverage.FORECAST_VARIABLES`, which an integration test already keeps in
+    step. This adds the third reader: what a destination advertises as servable.
+    """
+    written = {
+        "forecast": set(runner_variables("forecast")),
+        "uncertainty": set(runner_variables("uncertainty")),
+    }
+    for parameter in document(destination, "query")["query"]["coverage"]["parameters"]:
+        source = parameter["source"]
+        assert parameter["variable"] in written[source], (
+            f"{destination} advertises {parameter['name']!r} over {source} variable "
+            f"{parameter['variable']!r}, which no published run carries; the runner writes "
+            f"{sorted(written[source])}"
+        )
+
+
+def runner_variables(source: str) -> tuple[str, ...]:
+    """The variables the model runner puts in each of a run's two fields.
+
+    Read out of a real staged run rather than restated here, so this test cannot pass against
+    a set of names the component stopped writing.
+    """
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    from control_loop import PARTIAL_SUFFIX, manual_clock, model_runner_document
+    from harness_core.netcdf import read_netcdf
+    from harness_model_runner.service import RUN_REQUEST_TOPIC, ModelRunnerService
+    from harness_model_runner.staging import Staging
+    from harness_types.config.model_runner import DrognaModelRunnerConfiguration
+    from runner_support import ground_truth, run_request
+
+    with TemporaryDirectory() as scratch:
+        staging = Path(scratch) / "staging"
+        runner = ModelRunnerService(
+            DrognaModelRunnerConfiguration.model_validate(model_runner_document(step_count=2)),
+            clock=manual_clock(),
+            ground_truth=ground_truth(),
+            staging=Staging(
+                staging,
+                forecast_file="forecast.nc",
+                uncertainty_file="uncertainty.nc",
+                manifest_file="run.json",
+                partial_suffix=PARTIAL_SUFFIX,
+            ),
+        )
+        staged = runner.handle(RUN_REQUEST_TOPIC, run_request(run_id="run-variable-census"))
+        assert staged is not None
+        name = "forecast.nc" if source == "forecast" else "uncertainty.nc"
+        dataset = read_netcdf((staged.directory / name).read_bytes())
+        return tuple(dataset.variables)

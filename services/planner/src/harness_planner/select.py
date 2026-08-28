@@ -162,6 +162,7 @@ def select_route(
             traversal=traversal,
             footprint=footprint,
             threshold=threshold,
+            budget_seconds=budget_seconds,
         )
         walked[key] = result
         return result

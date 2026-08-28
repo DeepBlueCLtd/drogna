@@ -37,13 +37,6 @@ from pathlib import Path
 
 __all__ = ["AtomicPublishError", "discard", "make_current", "move_into_catalogue"]
 
-# What an in-flight name ends in. The store's convention makes anything under this suffix
-# invisible to the catalogue, so a pending pointer left behind by a crash is not mistaken
-# for a stray file at the store root. It matches the suffix the model runner writes under
-# and the one the query layer's `partial_suffix` names; that all three are separate
-# statements of one value is a gap, recorded in the report rather than papered over.
-_PARTIAL_SUFFIX = ".partial"
-
 
 class AtomicPublishError(RuntimeError):
     """The visibility step could not be performed indivisibly, so it was not performed."""
@@ -70,7 +63,7 @@ def move_into_catalogue(staged: Path, destination: Path) -> Path:
     return destination
 
 
-def make_current(pointer: Path, run_id: str) -> None:
+def make_current(pointer: Path, run_id: str, *, partial_suffix: str) -> None:
     """Repoint the current run. One rename over the pointer, and never a delete-then-create.
 
     A pointer that is removed and recreated has a window in which the current run does not
@@ -82,8 +75,14 @@ def make_current(pointer: Path, run_id: str) -> None:
     The identifier is written on one line and nothing else is written, because a second line
     is how the layout represents two runs both claiming to be current — a conflict a reader
     refuses to resolve. A publisher that emitted one would be manufacturing that conflict.
+
+    The suffix arrives from configuration rather than being a constant here. The store's
+    convention makes anything under it invisible to the catalogue, so a pending pointer left
+    behind by a crash is not mistaken for a stray file at the store root — and it is the same
+    value the model runner stages under and the query layer refuses to catalogue, which is
+    exactly why no component should be stating it in source.
     """
-    pending = pointer.with_name(pointer.name + _PARTIAL_SUFFIX)
+    pending = pointer.with_name(pointer.name + partial_suffix)
     try:
         with pending.open("w", encoding="utf-8") as handle:
             handle.write(f"{run_id}\n")

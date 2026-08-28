@@ -508,11 +508,71 @@ are deliberate and said here: the recent window persists nothing, because histor
 worth keeping would be a store and earn the scrutiny of one; commands are ephemeral,
 because the run record exists to reproduce the scenario and an operator's hand is not
 part of the scenario; and the graphical composition of EDR requests from the client
-belongs to a later amendment (§10). Two ADRs are owed under PR-03: the exposure of the
+is its own amendment (§5.13). Two ADRs are owed under PR-03: the exposure of the
 plane and the clock through the boundary, which resolves the clock's currently
 proposed direct exposure; and the resource-sampling exemption with the runtime
 socket's confinement to C-21. The stories, the edge cases and the argument are in
 `specs/021-operator-plane/spec.md`.*
+
+### 5.13 The EDR composer
+
+- **FR-77** The client shall provide a graphical composer of EDR requests as a mode
+  of the existing map surface: a guided sequence — collection, query type, geometry
+  drawn on the map, parameters, execution — with the literal request URL visible at
+  all times, assembling live as the operator draws, and copyable. The copied URL is a
+  genuine GET any client can issue through the boundary with the same result. The
+  composer offers only what the query layer genuinely serves, enumerated from the
+  server's own metadata and configuration, never hard-coded and never stubbed.
+- **FR-78** The bespoke EDR provider shall grow radius, area, corridor and locations
+  query types alongside its existing position, cube, trajectory and instances, so all
+  seven types the composer offers are genuinely served over the coverage store. Each
+  new type carries a declared budget with a named refusal, in the discipline the cube
+  cell budget and trajectory vertex budget establish — refused with the measured
+  quantity and the limit, never truncated — and the advertised query types, the
+  emitted OpenAPI document and the conformance statement are widened together. The
+  interface remains GET-only.
+- **FR-79** Named locations are a server-advertised list of two kinds, distinguished:
+  the seeded synthetic features, and sensor positions derived from reported
+  observations. A sensor's advertised location is its current position only; the
+  harness holds no location history and this list never becomes one.
+- **FR-80** The SensorThings filter subset shall grow spatial predicates over the
+  observation geometry, so a geometry drawn in the composer selects observations
+  server-side in combination with the existing temporal filtering. The subset's
+  refusal discipline — every unimplemented option refused with the option named — and
+  its honest conformance statement are retained and amended together.
+- **FR-81** The composer shall target the current forecast, any retained run through
+  the instances mechanism with that run's own bounds offered, and the observations;
+  an executed result is always labelled with the target that answered it.
+- **FR-82** Results render where they were asked for: fields and area answers as
+  cells on the map within the queried geometry, observations at their reported
+  positions and depths, vertical structure as depth profiles and along-track sections
+  beside the map, cubes in the existing volume mode and steppable through the
+  response's own time axis without further requests. One result is live at a time.
+  Null, declined and absent are rendered as three different facts: declined
+  trajectory vertices are named as declined, and nothing is drawn that the response
+  did not contain.
+- **FR-83** The composer predicts a query's cost during composition — cells,
+  vertices, request-line length — against server-declared limits it holds no copy of,
+  states a predicted refusal before sending, and still lets the operator send so the
+  server's verbatim refusal can be seen; only a request over the measured
+  request-line ceiling is stopped client-side, because past it the refusal has no
+  readable body. A composer request happens only as the direct consequence of an
+  explicit operator execution — one request per execution, no timer, no retry, no
+  polling — a deliberate, bounded exception to the client's announcement-caused fetch
+  discipline, owed an ADR under PR-03. No composed instant comes from the host clock:
+  time controls are bounded by manifest extents, produce closed intervals only, and
+  offer no "now".
+
+*This is the amendment §10 promised. The composer exists for the audience first: the
+demonstration's claim is that a standard query interface sits over the synthetic
+ocean, and the composer makes that claim inspectable — the gesture, the URL it
+becomes, and the answer, on one screen, with nothing up the sleeve. That is why the
+request is always shown and why every offered type must be genuinely served: an
+offered-but-stubbed query type would be the exact dishonesty the harness exists to
+avoid. The heavier half is the query layer's — four new query types and a spatial
+filter — and the second ADR owed under PR-03 is the SensorThings widening, since the
+subset's honesty has been its narrowness. The stories, the edge cases and the
+argument are in `specs/023-edr-query-composer/spec.md`.*
 
 ---
 
@@ -647,11 +707,12 @@ requirement rather than extending scope: FR-10 already promises rate control fro
 browser, and FR-74's routing of the clock's control surface through the boundary is
 what makes that promise hold wherever only the boundary is published.
 
-Named here so the intent is on the record, and deliberately not specified: a
-graphical composer of EDR requests in the client — building a query against a chosen
-collection from the map rather than from text. It begins, at the earliest, once the
+The graphical composer of EDR requests (§5.13) — building a query against a chosen
+collection from the map rather than from text — was named here as intent and is now
+specified. Its delivery condition is unchanged: it begins, at the earliest, once the
 operator plane is standing and the map surface of feature 017 has a selection model
-to build on, and it will be its own amendment when it does.
+to build on, and its client half waits on both while its query-layer half (the four
+new query types of FR-78) waits on neither.
 
 ---
 
@@ -667,6 +728,7 @@ to build on, and it will be its own amendment when it does.
 | Can a forecast update reach the vessel as something smaller than a gridded field, and where would it live? | Yes: a shore-issued vector advisory describing a seeded feature, travelling the message fabric and held in a store of its own, so that what was aboard at departure stays structurally distinct from what was sent en route. Shore is a role the harness plays itself. | §5.11, FR-59 to FR-66; `specs/020-shore-advisories/spec.md` |
 | Where does the advisory store live, given one database instance carrying two schemas? | It is a third schema in that instance. The separation the feature needs is a rule about who may write and when, not a second engine, and a lighter store outside the database would have bought the rule at the price of a second operational surface. | FR-12, FR-63; ADR-0024 |
 | How is the running system itself interrogated and commanded, beyond the speed control — and does its throughput stay visible as the rate rises? | Through an operator plane: a system controller aggregating what components report about themselves, served over REST behind the boundary, with commands — clock operations, triggers, process-level lifecycle — that a component may refuse. Throughput becomes a kind in the existing telemetry union, per simulation second; commands are ephemeral and outside AT-04's claim. | §5.12, FR-67 to FR-76; `specs/021-operator-plane/spec.md`; the exposure and the resource-sampling exemption each earn an ADR under PR-03 |
+| How does an operator build an EDR query from the map rather than from text — and does the query layer serve every query type such a composer would offer? | Through a composer mode on the existing map surface: a guided sequence with the literal request URL always visible, offering only what the layer genuinely serves. The layer grows radius, area, corridor and locations in the bespoke provider, and spatial predicates in the SensorThings filter subset, so nothing offered is stubbed. Requests become operator-caused as a bounded exception to the announcement-caused fetch discipline. | §5.13, FR-77 to FR-83; `specs/023-edr-query-composer/spec.md`; the fetch-discipline exception and the SensorThings widening each earn an ADR under PR-03 |
 
 Nothing in this document is currently open. Questions are raised in this section as
 they arise and struck from it when they are answered, with the answer landing in a

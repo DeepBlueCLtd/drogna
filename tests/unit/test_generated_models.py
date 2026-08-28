@@ -320,3 +320,45 @@ def test_the_model_and_the_schema_agree_about_the_measurement_geometry() -> None
         validate_document(refused, schema, source="run-manifest")
     with pytest.raises(ValidationError):
         DrognaRunManifest.model_validate(refused)
+
+
+def test_the_query_layer_s_paths_are_generated_from_the_document_it_serves() -> None:
+    """NFR-01: the client's idea of the read path comes from what the query layer said.
+
+    The vendored document is pygeoapi's own account of the interface, captured by
+    `scripts/refresh_query_layer_spec.sh` and never hand-edited. What is generated from it
+    is its surface, so a path a caller mistypes does not type-check and a path the
+    interface stops serving becomes a compile error rather than a 404 in somebody's
+    browser. Read out of the document here rather than listed, so this test cannot drift
+    from the capture the way a transcribed list would.
+    """
+    from harness_types.http import query_layer
+
+    document = json.loads(
+        (REPO_ROOT / "contracts" / "openapi" / "query-layer.openapi.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert set(query_layer.QUERY_LAYER_PATHS) == set(document["paths"])
+    assert set(query_layer.QUERY_LAYER_OPERATIONS) == set(document["paths"])
+    for path, operations in query_layer.QUERY_LAYER_OPERATIONS.items():
+        for method, identifier in operations.items():
+            assert document["paths"][path][method]["operationId"] == identifier
+
+
+def test_the_vendored_document_declares_no_shape_of_its_own_in_the_generated_tree() -> None:
+    """A vendored document's `components/schemas` are the emitter's, not drogna's.
+
+    `generators.toml` records the argument: all four pygeoapi emits describe endpoints this
+    query layer does not serve, and one of them references a document on schemas.opengis.net
+    that FR-016 forbids the chain to fetch. This asserts the policy held — that the chain
+    generated the surface and no model — rather than trusting the manifest's word for it.
+    """
+    from harness_types.http import query_layer
+
+    emitted = {
+        name
+        for name in dir(query_layer)
+        if not name.startswith("_") and name not in {"annotations", "Final", "Literal", "Mapping"}
+    }
+    assert emitted == {"QueryLayerPath", "QUERY_LAYER_PATHS", "QUERY_LAYER_OPERATIONS"}

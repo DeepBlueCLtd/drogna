@@ -1856,6 +1856,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-viewer-credential-is-not-a-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The viewer credential is not a secret
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#alternatives-and-why-not-now" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1867,10 +1878,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#if-this-is-rejected" class="md-nav__link">
+  <a href="#if-this-were-reversed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        If this is rejected
+        If this were reversed
       
     </span>
   </a>
@@ -1901,16 +1912,28 @@
 The record is the original; this is a rendering of it, and editing the
 built page would change nothing.</p>
 </div>
-<p><strong>Status:</strong> Proposed — drafted by an agent session, not accepted, not to be treated as decided
-<strong>Date:</strong> 28 August 2026
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 28 August 2026 — drafted; accepted the same day
 <strong>Amends:</strong> ADR-0001 (Accepted, 26 August 2026), which remains in force for everything else
 <strong>Requirements:</strong> SRD FR-39, FR-40, FR-41; ADR-0008; Constitution X
 <strong>Raised by:</strong> long-run-01, <code>docs/agent-sessions/long-run-01/BLOCKED.md</code>, 2026-08-27T22:35 and 23:45</p>
 <blockquote>
-<p>This record is <strong>proposed</strong>. It exists because the change it describes has been made and
-ought not to sit in the tree undocumented. It has not been through the review ADR-0001's
-own closing section requires, and the fact that the implementation already exists is not
-an argument that this is settled.</p>
+<p>This record was <strong>proposed</strong> on the day it was drafted, because the change it describes
+had been made and ought not to sit in the tree undocumented. It is now <strong>accepted</strong>. The
+owner answered the question directly on 28 August 2026 — the record of the answer is in
+<code>docs/architecture/delivery-plan.md</code>, "Decisions taken, 28 August 2026", and the session
+entry it settles is <code>docs/agent-sessions/long-run-01/DECISIONS.md</code>, 2026-08-28T08:30. The
+answer was that <strong>the control namespace is public-read by design</strong>: binary clearance for
+the released prefix, delegation to the broker's access control list for the control
+upgrade, and the viewer credential a non-secret rather than a leak. What follows from that
+for the credential is written out below, under "The viewer credential is not a secret",
+because the consequence is the part most easily misread as an accident.</p>
+<p>The alternative this record's closing section said should be re-argued first — serving the
+client from behind the proxy — was re-argued and declined, on the same terms it was
+declined on the night: it moves <code>public_url</code> and changes what the destination advertises,
+which is a topology change, and the boundary it would buy is one the decision has now
+found it does not want. It remains available and remains free of architectural cost, so
+it stays recorded below rather than being struck out.</p>
 </blockquote>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>ADR-0001 says clearance at the proxy is binary: a caller is cleared for the released data
@@ -1959,7 +1982,9 @@ with no rule granting <code>obs/</code> — asserted at a running broker in
    from <code>:8080</code>, which sits outside the proxy. What that identity can reach is unchanged —
    the broker's ACL decides it — but the credential is no longer behind the clearance, and
    under the previous shape it would have been. This follows from the decision rather than
-   adding to it, and it is the part most worth arguing about.</p>
+   adding to it, and it is the part most worth arguing about. It was argued, and the answer
+   is the next section: the credential is not a secret, and the control namespace it opens
+   is public-read on purpose.</p>
 </li>
 <li>
 <p><strong>Two boundaries now exist where ADR-0001 described one.</strong> A reader of the proxy
@@ -1967,18 +1992,60 @@ with no rule granting <code>obs/</code> — asserted at a running broker in
    <code>deploy/broker/acl</code>. ADR-0001's value was partly that one file was the answer.</p>
 </li>
 </ol>
+<h2 id="the-viewer-credential-is-not-a-secret">The viewer credential is not a secret<a class="headerlink" href="#the-viewer-credential-is-not-a-secret" title="Permanent link">&para;</a></h2>
+<p>This is the part of the decision most easily misread as an accident, so it is written out
+rather than left to be inferred from the paragraph above.</p>
+<p><code>config/&lt;destination&gt;/client.json</code> names the role <code>drogna_viewer</code>. The deploy-time render in
+<code>deploy/lib/render_credentials.py</code> writes a copy carrying that role's secret, and
+<code>deploy/images/client-config.sh</code> serves that copy to the browser from <code>:8080</code>, which is
+outside the proxy. So the secret is world-readable, by design and not by oversight, and
+<strong>this is the intended boundary rather than a defect to be closed</strong>. Anyone reporting it as
+a leak should be pointed here first.</p>
+<p>What makes it a non-secret is not the value's obscurity. It is what the value can do:</p>
+<ul>
+<li><strong>It can subscribe to <code>ctl/</code> and to nothing else.</strong> <code>deploy/broker/acl</code> grants
+  <code>drogna_viewer</code> subscription on <code>ctl/#</code>, no rule granting <code>obs/</code>, and — the row is worth
+  reading twice — <em>publish on nothing at all</em>. Holding it, a caller may watch the control
+  namespace and may not write a single message into it. There is no observation, no
+  released collection and no forecast field behind it.</li>
+<li><strong>The control namespace is public-read by design.</strong> Heartbeats, telemetry indicators,
+  clock samples, divergence and run notices: that is what <code>ctl/</code> carries, and it is the
+  material the component shell draws. The SRD's clearance requirement (FR-39 to FR-41) is a
+  statement about <em>released data</em>, and the control namespace is not released data. Nothing
+  in the SRD asks for the heartbeat of a synthetic clock to be confidential.</li>
+<li><strong>Compromising it costs nothing that clearance was protecting.</strong> ADR-0001's "the
+  credential is a single point of compromise" is about the released set's clearance, which
+  is a different credential, on a different route, unchanged by this record. Rotating the
+  viewer secret is a re-render; nothing downstream holds a per-caller identity.</li>
+</ul>
+<p>Two things follow, and both are obligations rather than observations.</p>
+<p><strong>The viewer role may never gain a permission.</strong> Its safety is entirely the access control
+list, so a rule granting it <code>obs/</code>, or any publish rule at all, would turn a documented
+non-secret into a real one. <code>tests/integration/test_topic_isolation.py</code> asserts the negative
+at a running broker rather than by reading the list back, which is the form that would
+notice.</p>
+<p><strong>A credential that <em>is</em> a secret must never be rendered into this document.</strong> The served
+<code>client.json</code> is a public artefact. The rule is not "keep the file tidy"; it is that the
+world-readable render is the client's configuration channel, and anything placed in it is
+published. The proxy's own clearance — the one ADR-0001 is about — is not in it and must
+not be put there.</p>
 <h2 id="alternatives-and-why-not-now">Alternatives, and why not now<a class="headerlink" href="#alternatives-and-why-not-now" title="Permanent link">&para;</a></h2>
 <p><strong>Serve the client from behind the proxy.</strong> One origin, one Basic challenge, page and
 socket alike, and ADR-0001 intact. Rejected <em>for tonight</em> rather than on merit: it moves
 <code>public_url</code> off <code>:8080</code> and changes what the destination advertises, which is a topology
-change and was explicitly withheld. If this ADR is ever taken from proposed to accepted,
-this alternative should be re-argued first, because it is the one that costs nothing
-architecturally.</p>
+change and was explicitly withheld. This record said that the alternative should be
+re-argued before it was taken from proposed to accepted, because it is the one that costs
+nothing architecturally. It was, on acceptance, and it was declined again: the owner's
+answer was to leave <code>public_url</code> alone and to treat the control namespace as public-read,
+which is a decision about what the boundary should be and not a deferral. It stays here,
+unstruck, because it is still the shape to reach for if the control namespace ever stops
+being public.</p>
 <p><strong>Leave <code>/ctl</code> unreachable.</strong> Honest, and it is what the previous state amounted to. It
 also means the component shell can never light, which makes C-18 undemonstrable and several
 acceptance criteria unobservable.</p>
-<h2 id="if-this-is-rejected">If this is rejected<a class="headerlink" href="#if-this-is-rejected" title="Permanent link">&para;</a></h2>
-<p>The revert is small: remove <code>auth_basic off;</code> from
+<h2 id="if-this-were-reversed">If this were reversed<a class="headerlink" href="#if-this-were-reversed" title="Permanent link">&para;</a></h2>
+<p>This is no longer a live option — the decision is accepted — but the cost of undoing it is
+part of the record, and it is small: remove <code>auth_basic off;</code> from
 <code>proxy/templates/upgrade-location.conf.template</code>, restore
 <code>test_the_clearance_is_declared_once_at_server_level</code> to its count of one, and the boundary
 is exactly as ADR-0001 describes. The client-configuration fix in

@@ -1855,6 +1855,182 @@
     <div class="md-post__meta md-meta">
       <ul class="md-meta__list">
         <li class="md-meta__item">
+          <time datetime="2026-08-28 11:30:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Feature</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="the-average-that-hid-the-leak"><a class="toclink" href="../../the-average-that-hid-the-leak/">The average that hid the leak</a></h2>
+<p>Some data can be released and some cannot, and the interesting failures are the ones where
+everything released is individually permitted and the <em>set</em> still gives away what was
+withheld.</p>
+<p>The case this component guards is a good example. Publish a forecast field twice, an hour
+apart. Subtract one from the other. The cells that changed are the cells the model
+refreshed, and if the model only refreshed the neighbourhood of recent measurements, that
+picture of changed cells is a map of where the measuring happened — which is the thing the
+boundary exists to withhold. Every number in both files was allowed out. The subtraction
+was not.</p>
+<p>So there is a check: compute the mask of changed cells, score it against the true
+measurement locations, and fail if the agreement is better than chance by a margin. It
+worked, it had a deliberately leaky control to prove it had power, and it was scored over
+the released product as a whole.</p>
+<p>Scored that way, it passes a released set containing a perfect leak.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../the-average-that-hid-the-leak/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2026-08-28 10:30:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Feature</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="a-threshold-nothing-could-reach"><a class="toclink" href="../../a-threshold-nothing-could-reach/">A threshold nothing could reach</a></h2>
+<p>Part of this system decides where to go and measure next. It reads a field of uncertainty
+over a grid, works out where the uncertainty is high enough to be worth visiting, and
+plans a route under a travel budget. "High enough" is a configured number: uncertainty
+above which confidence is no longer usable.</p>
+<p>It was set to 0.35.</p>
+<p>The field it scores is the
+<a href="../../../glossary/#ensemble-spread">ensemble spread</a> — how far apart several slightly
+perturbed forecasts of the same thing end up. At the settings the forecast component
+ships with, and at the fixed seed the deployment pins, that spread across 810 cells looks
+like this:</p>
+<table>
+<thead>
+<tr>
+<th>minimum</th>
+<th>median</th>
+<th>75th percentile</th>
+<th>maximum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1003</td>
+<td>0.1593</td>
+<td>0.1720</td>
+<td>0.2156</td>
+</tr>
+</tbody>
+</table>
+<p>Not "few cells above 0.35". None. The ceiling was below the threshold by a factor of about
+1.6, so the excess was zero in every cell of every run, the planner returned an empty route
+with the reason <code>nothing-worth-sampling</code>, and the assembled system could never recommend
+anything at all.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../a-threshold-nothing-could-reach/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2026-08-28 09:30:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Feature</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="the-return-code-that-meant-nothing"><a class="toclink" href="../../the-return-code-that-meant-nothing/">The return code that meant nothing</a></h2>
+<p>How do you know a component in a distributed system is running? You ask it to say so.
+Every few seconds each part of the system publishes a small message — I am this
+component, this is the time I think it is, this is my status — and something downstream
+lights a box for each message that arrives. A box that stops lighting is a component
+that stopped.</p>
+<p>The design's whole value is that the box lights only when a message genuinely arrived.
+There is no manual override, no configuration flag saying "assume this one is fine". If
+the box is dark, nothing was heard; if it is lit, something was.</p>
+<p>One of those boxes could never light, for the whole life of the component, and the
+component reported success every time.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../the-return-code-that-meant-nothing/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
           <time datetime="2026-08-27 14:00:00+00:00">August 27, 2026</time></li>
         
           <li class="md-meta__item">

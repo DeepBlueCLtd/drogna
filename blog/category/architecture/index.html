@@ -1855,6 +1855,158 @@
     <div class="md-post__meta md-meta">
       <ul class="md-meta__list">
         <li class="md-meta__item">
+          <time datetime="2026-08-28 11:00:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Architecture</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="borrowing-a-clock-you-are-not-allowed-to-read"><a class="toclink" href="../../borrowing-a-clock-you-are-not-allowed-to-read/">Borrowing a clock you are not allowed to read</a></h2>
+<p>This project has a rule near the top of its list: nothing reads the wall clock of the
+machine it is running on. Everything is paced by a simulated clock published as a stream of
+discrete samples, so a run can be slowed down, sped up, paused or replayed and every part
+of the system agrees about what time it is.</p>
+<p>It is a good rule and it is genuinely load-bearing. It is also, read literally, a rule that
+makes a smooth display impossible.</p>
+<p>A browser draws sixty frames a second. Simulation time arrives as samples at whatever rate
+the transport delivers them — perhaps one a second, perhaps less. If the display only moves
+when a sample arrives, it moves once a second and holds still in between, which does not
+look like a slow clock. It looks like a broken program.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../borrowing-a-clock-you-are-not-allowed-to-read/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2026-08-28 10:00:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Architecture</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="one-file-two-readings"><a class="toclink" href="../../one-file-two-readings/">One file, two readings</a></h2>
+<p>Two parts of a system share a directory on disk. One writes into it, the other reads out
+of it. That is a good seam: no network call, no shared library, no interface to keep in
+step — just a documented layout that both sides obey. It is the kind of dependency you
+can build either side of independently, which is why the plan put them in the same wave
+and named the layout as the one thing they shared.</p>
+<p>The plan also named the risk in a sentence: the two might disagree about the layout, so
+one of them owns the document. That mitigation is doing much less work than it looks like
+it is doing. Owning a document does not make anybody read it.</p>
+<p>They were built simultaneously and disagreed about five separate things, including the
+one that made the other four irrelevant.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../one-file-two-readings/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2026-08-28 09:00:00+00:00">August 28, 2026</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="./" class="md-meta__link">Architecture</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              4 min read
+            
+          </li>
+        
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="the-shape-nobody-had-declared"><a class="toclink" href="../../the-shape-nobody-had-declared/">The shape nobody had declared</a></h2>
+<p>Two programs written in two languages have to agree about the contents of a message.
+One writes it, the other reads it, and if they disagree by one field name the failure
+arrives at runtime, in production, as a key error in the half that did not write the
+message.</p>
+<p>The standard answer is to write the shape down once, in a language-neutral schema, and
+generate both sides from it. Nobody hand-writes the Python class or the TypeScript
+interface; a script does, and a check compares the generated output against the schema
+so that an edit to the output is caught. That is what this project does, and it has a
+second check beside the first: a lint that fails if somebody declares a message shape by
+hand, beside the code that uses it, where nothing will ever regenerate it.</p>
+<p>Both checks were green. There were two hand-written copies of one shape in the tree, and
+had been for the whole life of the second check. Neither check was broken.</p>
+
+    
+      <nav class="md-post__action">
+        <a href="../../the-shape-nobody-had-declared/">
+          Continue reading
+        </a>
+      </nav>
+    
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
           <time datetime="2026-08-26 14:00:00+00:00">August 26, 2026</time></li>
         
           <li class="md-meta__item">

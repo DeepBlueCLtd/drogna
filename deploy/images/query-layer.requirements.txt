@@ -73,3 +73,21 @@ pygeoapi==0.20.0
 # event that could reintroduce one of the modes above. Lift it by testing, not by
 # assumption.
 shapely>=2.1,<3
+
+# ---------------------------------------------------------------------------------------
+# The database driver the SensorThings provider reads the observation store through.
+#
+# `PostgresRowSource._connect` imports psycopg lazily, so that the projection, the path
+# grammar and the query options can all be tested in a workspace carrying neither a driver
+# nor a database — which they were, thoroughly, and all of them passed. What no test could
+# see is that the image never installed it: the `except ImportError` beside that import
+# carried `# pragma: no cover - the image installs it`, and the image did not.
+#
+# So every entity set answered 400 with "no database driver is installed, so the observation
+# store cannot be read" — a message written for a case its author believed could not happen
+# in the image, arriving from the image. It was invisible until the store had something in
+# it worth asking for.
+#
+# `[binary]` and this floor to match services/ingest, which reads the same store through the
+# same driver; two spellings of one dependency is how they drift.
+psycopg[binary]>=3.2

@@ -97,7 +97,7 @@ refused by name.
 
 ## Phase 4: Corridor (US3)
 
-- [ ] T011 [US3] Implement `query/plugins/edr_corridor.py`: cross-track offsets derived
+- [x] T011 [US3] Implement `query/plugins/edr_corridor.py`: cross-track offsets derived
   from the run's own grid spacing covering [-width/2, +width/2], centreline always
   included; each offset route sampled exactly as a trajectory (per-vertex times, depth
   rules, declined vertices); samples counted and refused over
@@ -107,7 +107,7 @@ refused by name.
   seam (the framework does not pass them); missing width refused naming the parameter;
   `corridor-height`, `height-units`, `resolution-x`, `resolution-z` refused with the
   option named.
-- [ ] T013 [P] [US3] Unit tests `tests/unit/test_edr_corridor.py`: offset count from
+- [x] T013 [P] [US3] Unit tests `tests/unit/test_edr_corridor.py`: offset count from
   width and grid spacing, per-offset declined vertices, budget refusal watched failing,
   option refusals by name, values against the analytic field.
 

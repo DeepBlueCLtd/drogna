@@ -1,6 +1,6 @@
 # ADR-0021: The clock's HTTP interface answers the browser from any origin
 
-**Status:** Proposed — drafted by an agent session, not accepted, not to be treated as decided
+**Status:** Accepted (by the owner, 28 August 2026, by structured interview) — to be superseded by ADR-0025 when the clock's control surface is routed through the boundary (wave 7, lane I); it records the running system's shape until then
 **Date:** 28 August 2026
 **Requirements:** SRD FR-10, FR-49, FR-53; ADR-0009; client FR-012
 **Raised by:** long-run-01, commit `e46bbf1`, which found the fault and deliberately left the

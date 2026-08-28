@@ -81,6 +81,16 @@ pull forward:
 | **The runtime socket stops at the door**: mounted into C-21 alone, and lifecycle may target any component except the proxy, the controller itself, and the broker (ADR-0026) | the trust surface is bounded before it exists; a command naming an excluded component is refused with the exclusion named |
 | **The operator plane sits behind the clearance** — the /ctl delegation does not transfer to REST once the page shares the proxy's origin; FR-74 is corrected in step (SRD v0.6, ADR-0025) | 021's second gate is satisfied; the droplet never exposes an unauthenticated command surface, and the plane needs no authentication of its own |
 
+A third round, taken the same evening, cleared the remaining open questions the specs and
+session records still carried:
+
+| Decision | Consequence |
+|---|---|
+| **The generator and control profiles join `profiles.active` at both destinations** | the loop has processes to turn in wherever the harness is deployed — without this, PR #33's wiring merges into a destination that runs none of it. Lane H implements alongside its seed step; PR #33 may pass the profiles explicitly for its own live verification in the meantime |
+| **014 T047's geometry travels beside the bundle, never inside it** — a `run-manifest.json` staged and transferred as its own object | SC-006 stays true as written, 013's provenance rules gain no exception, and the leakage consumer already reads exactly that shape. Recorded in 014's `tasks.md` beside the proposal it settles; implementation joins lane K's residue |
+| **ADR-0021 is accepted, with its successor named** — it records the running system's shape until lane I routes the clock, when ADR-0025 supersedes it | the last Proposed record is settled, and the supersession marking waits for the tree to change rather than preceding it |
+| **The droplet's real hostname is injected at deploy time**, like the secrets: the tracked configuration keeps the `drogna.invalid` placeholder | PR-01's "public but unadvertised" holds — the repository never carries the demonstration's address. Lane I threads it through the same render seam as the capture credential |
+
 ## Dependency graph
 
 ```mermaid
@@ -149,10 +159,10 @@ for that). Disjoint trees; the one boundary file both plumbing lanes could touch
 
 | Lane | Owns | Work |
 |---|---|---|
-| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | Issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); the `profiles.active` decision that goes with it; then, per the decided link 5 (fixed collection id and run carried separately, `collections.uncertainty` removed from the master), the announcement and the two client fetch sites |
+| H — plumbing | `deploy/seed.d/`, `services/publisher/` (catalogue announcement), `client/src/map/fieldRequest.ts`, `client/src/route/trajectoryQuery.ts` | Issue #34 links 1 and 5: a `030-coverage.sh` seed step authoring one run through the publisher's own code path (seed data in the constitution's sense, not a Constitution VII fixture — the client fetches it over the real boundary); the decided profiles change (generator and control join `profiles.active` at both destinations); then, per the decided link 5 (fixed collection id and run carried separately, `collections.uncertainty` removed from the master), the announcement and the two client fetch sites |
 | I — one door | `proxy/`, `config/local/`, `config/droplet/`, `deploy/images/` (client), `contracts/schemas/config.capture.schema.json`, `scripts/capture/` | Issue #34 links 3, 4 and 6, plus FR-74's exempt clock strand: the upstream path and released names corrected to what the query layer serves; the page served through the proxy at both destinations; local direct publish dropped; `public_url` made true for the first time; the capture credential threaded through 016's three mechanisms, each watched failing without it and passing with it |
 | J — read-side client | `client/src/` (read-path areas) | 018 stories 1, 3, 4: the read-path view with witnessed and inferred edges, the topology matrix lit by real traffic (the artefact and gate exist), the standards badges. Story 1's crossings become far more instructive once lanes H and I give the client reads that succeed |
-| K — residue | `libs/harness_core/`, `tests/` | 001 T042/T047: the two-participant byte-identical replay scenario, upgrading AT-04 from the weaker claim. 003 T040 and 004 T044's droplet halves join once lane I makes the droplet real |
+| K — residue | `libs/harness_core/`, `tests/`, `services/offload/` (T047 only) | 001 T042/T047: the two-participant byte-identical replay scenario, upgrading AT-04 from the weaker claim. 014 T047 per the decided shape (geometry beside the bundle; the note in 014's `tasks.md` carries the settled proposal). 003 T040 and 004 T044's droplet halves join once lane I makes the droplet real |
 
 **Wave 7 exit criterion:** at both destinations, one address, one clearance: the page
 loads through the proxy, the map draws the seeded run's field, and — with PR #33

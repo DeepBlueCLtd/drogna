@@ -140,6 +140,19 @@ re-litigates them.
 | 015 reconciliation outcome block | "there is no `site/gates/` directory", "US2 does not exist" | contradicted by the per-task notes above it; trust those |
 | 014 T040, T045, T046 | nothing — no note at all | unknown; the only unticked tasks in the repository with no reason recorded |
 
+**Closed by lane E, 28 August 2026.** Rows three and four of that table are settled against
+the tree, and the two documentation carry-overs beside them with them.
+`specs/015-published-site/tasks.md` now carries a dated correction appended beneath the
+27 August outcome block — never a rewrite of it — recording that sixteen subsystem pages say
+"built" and two "partly built", that `site/gates/` and `docs/manifest.yaml` both exist, and
+that the records are published. Fourteen of the nineteen partial marks were re-checked and
+ticked; five remain partial and each now names what specifically is missing. 007 T045 is
+written as `docs/architecture/observation-path.md`. 008 T058's tick was right and its note
+stale; 008 T006's tick was wrong and its note right, so it is unticked and cross-referenced to
+009 T055, which carries the same master. ADR-0020 is accepted and the viewer credential is
+documented as a non-secret. PR-08's gap is closed: seven entries were written for 006, 007,
+008, 011, 012, 013 and 014, so every delivered feature has one.
+
 ## The genuinely outstanding work, consolidated
 
 | Cluster | Items | Why it matters |

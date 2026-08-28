@@ -202,6 +202,28 @@ acknowledged_hostnames: []
 # What ends an allowance: the entry gains an image, and its line here is deleted. What must
 # not happen is a line being added without a reason, or this block growing quietly. Adding an
 # entry is a decision about FR-015 and belongs in a commit message that says so.
+#
+# **The block grew on 2026-08-28, from seven entries to fourteen, and that is the largest
+# single addition it will ever have had.** Seven entries were written for features 006, 007,
+# 008, 011, 012, 013 and 014 — every delivered feature that had no entry, which is what PR-08
+# asks for. None carries an image, and the honest reason is one fact plus one constraint.
+#
+# The fact: only two curated images have ever been committed, `001-the-clock-lights-its-box`
+# and `003-shell-all-dark`, and both are of the component shell at a moment belonging to the
+# features that produced them. Attaching either to an entry about a broker rule or a NetCDF
+# export would be an image of something else, which is worse than no image — FR-015 asks for
+# evidence that the feature works, and a picture of a different feature is not that.
+#
+# The constraint: an image may only come from the curated capture mechanism
+# (`scripts/capture/curate/`), which is gated on human review by design, so this session
+# could not produce one. That gate is correct and is not being complained about here.
+#
+# So each of the seven has its own reason below, on the same terms as the first seven, and
+# five of them name the condition that would end the allowance. Two — the observation path
+# and the query layer's store convention — are about a rule file and a directory layout and
+# have no visual surface at all; those will not gain an image and say so. If this block grows
+# again without a comparable paragraph beside it, that is the drift this note exists to make
+# visible.
 
 blog:
   screenshot_allowance:
@@ -232,6 +254,43 @@ blog:
         A seam found in telemetry: a mean of magnitudes answers a different question from the
         magnitude of a mean. The subject is arithmetic and the entry works it through. The
         telemetry service publishes indicators the client does not yet render.
+      the-shape-nobody-had-declared: >-
+        A gate that forbids hand-writing a boundary shape could not see two hand-written
+        copies of a shape nobody had declared. The evidence is the gate's output before and
+        after the schema was written, which the entry quotes. Nothing is on a screen; the
+        generated types and the lint are files and a command.
+      the-return-code-that-meant-nothing: >-
+        A publish refused at the broker while the client library reported success. The
+        evidence is the two lines of the watched failure, quoted in full. **This one could
+        gain an image**: the component shell drawing C-04's box lit is exactly the thing the
+        missing rule prevented, and a curated capture of the shell with the sensors alive
+        would end this allowance.
+      one-file-two-readings: >-
+        Two features disagreeing about a directory layout, one of them writing the
+        current-run pointer as a symlink and the other reading it as text. The subject is a
+        convention and five names in it, shown as text. No component is running in the
+        situation being described and none has a display of its own here.
+      a-threshold-nothing-could-reach: >-
+        A planner threshold no cell of the forecast could ever exceed. The evidence is a
+        distribution table and the watched failure of the test that now holds the
+        relationship, both quoted. **This one could gain an image** the day the client draws
+        a planned route on a map — C-18 has no map surface yet.
+      borrowing-a-clock-you-are-not-allowed-to-read: >-
+        Host time permitted for display interpolation, under three rules. The subject is
+        motion between two clock samples, which a still image cannot show: a screenshot of a
+        smoothly animating display and of a stepping one are the same picture. **This one
+        wants a moving capture rather than a still**, which the curated mechanism does not
+        produce today.
+      the-average-that-hid-the-leak: >-
+        An aggregate leakage statistic passing a released set containing a perfect leak. The
+        finding is a three-row table of statistics against their bounds, quoted from the
+        committed fixture. The gate is a test run and has no display.
+      a-file-a-stranger-can-open: >-
+        A NetCDF export that declares its own conventions, and a provenance scanner reporting
+        the convention's own vocabulary. **This one could gain an image**: the stated test is
+        that a stranger opens the file in a standard CF-aware tool and plots a profile, and a
+        capture of exactly that would be the evidence FR-015 asks for. It needs a third-party
+        tool in the capture path, which does not exist.
       taking-a-requirements-document-apart: >-
         How the requirements document was decomposed into features. It is about a document
         and its structure, and the thing to look at is the specification tree, which the

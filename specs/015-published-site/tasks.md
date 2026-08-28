@@ -610,6 +610,18 @@ holds the property and has never been watched rejecting a broken link). T008, T0
 are the same shape of gap — a property that holds, asserted somewhere weaker than a gate with
 a control — and the shape of the fix is the same for all three.
 
+**PR-08's gap is closed: every delivered feature now has an entry.** The coverage table was
+showing ten entries against eight of the sixteen delivered features, and "no entry yet" in the
+other eight rows. Seven entries were written for 006, 007, 008, 011, 012, 013 and 014 — the
+delivered features that had none — and the regenerated table now shows an entry for every
+feature from 001 to 016. The four rows still reading "no entry yet" are 009, which is not live
+in the composed stack, and 017 to 020, which are specified and not built; each is a feature
+with nothing yet to write an entry about, which is the state FR-016's table exists to show.
+None of the seven carries an image and each has its own recorded reason in
+`docs/manifest.yaml`: only two curated captures have ever been committed, both of the
+component shell at moments belonging to features 001 and 003, and the curated mechanism is
+gated on human review. Five of the seven name the condition that would end the allowance.
+
 **What lane E changed while re-reconciling, rather than only recorded.**
 
 - `site/gates/fixtures/external_reference/` and `site/gates/tests/test_external_resources.py`:

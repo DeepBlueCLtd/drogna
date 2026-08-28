@@ -45,6 +45,7 @@ import type { Page } from "@playwright/test";
 
 import { compare } from "../../../scripts/capture/pair/diff.mjs";
 import { fingerprint } from "../../../scripts/capture/pair/fingerprint.mjs";
+import { restorationPlan } from "../../../scripts/capture/pair/restore.mjs";
 import { pairArea, pairSettings } from "../pair.config";
 import { loadCaptureConfig } from "../shared/config";
 import { openClient, settled } from "../shared/readiness";
@@ -102,12 +103,28 @@ test("a pair captured across no change is empty, three consecutive times", async
   await openClient(page, capture.client);
   await settled(page, capture.client);
 
+  const rateBefore = await readRate(page);
   const pinned = await pinIfAClockAnswers(page);
+  try {
+    await captureNoChangeRuns(page, browser.version(), pinned);
+  } finally {
+    // FR-007's discipline, borrowed from the pair spec: the previous rate goes back on
+    // every path out, including the failing ones. Samples are not retained, so a clock
+    // left pinned is invisible to every page loaded after this one — the next spec, and
+    // the pair capture itself, would find an unheard clock and refuse.
+    await restore(page, rateBefore.acknowledged);
+  }
+});
 
+async function captureNoChangeRuns(
+  page: Page,
+  version: string,
+  pinned: string,
+): Promise<void> {
   const runs: number[] = [];
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const before = await half(page, `no-change-${attempt}-before`, browser.version());
-    const after = await half(page, `no-change-${attempt}-after`, browser.version());
+    const before = await half(page, `no-change-${attempt}-before`, version);
+    const after = await half(page, `no-change-${attempt}-after`, version);
     const outcome = difference(before, after);
     expect(outcome.refused, JSON.stringify(outcome.reasons ?? [])).toBe(false);
     runs.push(outcome.differingPixels);
@@ -133,8 +150,8 @@ test("a pair captured across no change is empty, three consecutive times", async
   // captures. Without it the on-disk half of the mechanism — reading two halves and their
   // fingerprints, refusing or drawing, writing the summary — would only ever be exercised
   // through its in-memory core, and the two are not the same code.
-  const before = await half(page, "before", browser.version());
-  const after = await half(page, "after", browser.version());
+  const before = await half(page, "before", version);
+  const after = await half(page, "after", version);
   for (const [side, taken] of [
     ["before", before],
     ["after", after],
@@ -146,7 +163,7 @@ test("a pair captured across no change is empty, three consecutive times", async
       "utf8",
     );
   }
-});
+}
 
 test("the comparison catches a display that varies frame to frame", async ({ page, browser }) => {
   await openClient(page, capture.client);
@@ -157,8 +174,22 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
   // the comparison catches and names a box around. Unpinned, the box would honestly
   // cover the clock as well, and the assertion that it is confined to the perturbation
   // would fail on a working comparison.
+  const rateBefore = await readRate(page);
   const pinned = await pinIfAClockAnswers(page);
+  try {
+    await proveTheComparisonCatchesTheControl(page, browser.version(), pinned);
+  } finally {
+    // As in the first test: the pin goes back out on every path, so nothing after this
+    // spec — the pair capture included — inherits a silently stopped clock.
+    await restore(page, rateBefore.acknowledged);
+  }
+});
 
+async function proveTheComparisonCatchesTheControl(
+  page: Page,
+  version: string,
+  pinned: string,
+): Promise<void> {
   // The control. A host-derived elapsed figure, redrawn every animation frame, of the kind
   // feature 012 removed from the shell because rendering one made a pinned state differ
   // frame to frame. It is added here, to this browser, after the page has loaded; it is in
@@ -179,8 +210,8 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
     tick();
   }, PERTURBATION_ID);
 
-  const before = await halfWithoutSettling(page, "perturbed-before", browser.version());
-  const after = await halfWithoutSettling(page, "perturbed-after", browser.version());
+  const before = await halfWithoutSettling(page, "perturbed-before", version);
+  const after = await halfWithoutSettling(page, "perturbed-after", version);
   const outcome = difference(before, after);
 
   expect(outcome.refused, JSON.stringify(outcome.reasons ?? [])).toBe(false);
@@ -208,8 +239,8 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
   await page.reload();
   await settled(page, capture.client);
   expect(await page.locator(`#${PERTURBATION_ID}`).count()).toBe(0);
-  const restoredBefore = await half(page, "restored-before", browser.version());
-  const restoredAfter = await half(page, "restored-after", browser.version());
+  const restoredBefore = await half(page, "restored-before", version);
+  const restoredAfter = await half(page, "restored-after", version);
   const restored = difference(restoredBefore, restoredAfter);
   expect(restored.refused).toBe(false);
   expect(
@@ -233,7 +264,7 @@ test("the comparison catches a display that varies frame to frame", async ({ pag
     )}\n`,
     "utf8",
   );
-});
+}
 
 /**
  * The perturbed captures deliberately do not wait for the page to settle.
@@ -274,6 +305,31 @@ async function halfWithoutSettling(page: Page, side: string, version: string): P
  * not advancing either, so the property is tested against the state the system is actually
  * in — which is the all-grey shell the specification's own edge case describes.
  */
+/**
+ * Put back the rate that was in force, deciding what by `restorationPlan` — the pair
+ * spec's own discipline (FR-007), applied here because these specs pin the same clock.
+ * A clock left pinned outlives the spec: samples are not retained, so every page loaded
+ * afterwards finds an unheard clock, and the pair capture would refuse on a stack that
+ * is working.
+ */
+async function restore(page: Page, previous: number | null): Promise<void> {
+  const plan = restorationPlan(previous);
+  if (plan.action === "report") {
+    process.stderr.write(`[determinism] ${plan.reason}\n`);
+    return;
+  }
+  if (plan.action === "none") {
+    return;
+  }
+  await askForRate(page, plan.rate);
+  await page.waitForFunction(
+    ({ selector, rate }) =>
+      document.querySelector(selector)?.getAttribute("data-acknowledged-rate") === String(rate),
+    { selector: SPEED_CONTROL, rate: plan.rate },
+    { timeout: capture.client.readinessTimeoutMs, polling: "raf" },
+  );
+}
+
 async function pinIfAClockAnswers(page: Page): Promise<string> {
   const observed = await readRate(page);
   if (observed.acknowledged === null) {

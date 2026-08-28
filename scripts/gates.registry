@@ -62,3 +62,13 @@ Repository layout — no service depends on another service|uv run python script
 # still reported when the other is clean.
 Constitution IV — every named directory is mounted (local)|uv run python deploy/lib/mount_lint.py local
 Constitution IV — every named directory is mounted (droplet)|uv run python deploy/lib/mount_lint.py droplet
+
+# The deployment is meant to build inside an ephemeral agent session (SRD NFR-06), where the
+# package index is reached through a TLS-terminating proxy. Each image mounts an optional
+# `proxy_ca` build secret for that, but the seam was written at the step in each image that
+# looks like a fetch, and two that also reach the index were left outside it: `apk add` in
+# the proxy image — the first thing that image does, so it could never be built there at all
+# — and `pip install ./libs/harness_core` in the query image, which looks like a local copy
+# and is not. Both were found one at a time, each after a full rebuild. This gate finds them
+# together, and was watched reporting exactly those two against the tree before the fix.
+SRD NFR-06 — every network-reaching build step takes the proxy_ca secret|uv run python scripts/check_proxy_ca_seam.py

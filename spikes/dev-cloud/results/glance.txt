@@ -1,0 +1,10 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 e2e/specs/glance.spec.ts:51:1 › a glance shows the client as it stands and changes nothing (1.3s)
+
+  1 passed (2.5s)
+
+/home/user/drogna/.capture/glance/glance-0001.png
+  no rate is known to be in force: no time sample had arrived when this was taken
+  0 of 18 components heard from within the window each declared.

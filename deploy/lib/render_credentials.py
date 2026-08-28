@@ -131,9 +131,29 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
     base = root or repository_root()
     source_dir = destination_dir(destination, base)
     target_dir = rendered_dir(destination, base)
+    # Emptied rather than removed, and the difference is the whole of a defect that made
+    # every local bring-up produce containers running against a configuration directory
+    # that was no longer there.
+    #
+    # A bind mount resolves to an inode, not to a path. `run_local.sh` is `up.sh` and then
+    # `seed.sh`; `up.sh` renders this directory and starts containers that bind-mount it,
+    # and `seed.sh` renders it again. An `rmtree` followed by a `mkdir` is a *new*
+    # directory, so every container already running kept the old, unlinked one and saw it
+    # empty. Only the clock noticed, because its health check re-reads its document on
+    # every probe; the rest had read theirs at start-up and went on reporting healthy.
+    #
+    # It hides on a developer's machine for the reason the broker's permission fault did:
+    # Docker Desktop shares a bind mount by path through a VM, so the containers there
+    # follow the replacement and nothing is ever seen to break. On a Linux host it breaks
+    # every time.
     if target_dir.exists():
-        shutil.rmtree(target_dir)
-    target_dir.mkdir(parents=True)
+        for entry in target_dir.iterdir():
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+    else:
+        target_dir.mkdir(parents=True)
 
     for source in sorted(source_dir.iterdir()):
         if not source.is_file():

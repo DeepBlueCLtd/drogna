@@ -1,0 +1,42 @@
+The config directory every container bind-mounts at /etc/drogna is replaced,
+inode and all, AFTER the containers are already running.
+
+  scripts/run_local.sh
+    -> scripts/up.sh     renders deploy/.runtime/config/local, starts containers,
+                         which bind-mount that directory
+    -> scripts/seed.sh   line 24 calls render_environment AGAIN, which reaches
+                         deploy/lib/render_credentials.py:135:
+                             if target_dir.exists():
+                                 shutil.rmtree(target_dir)
+                             target_dir.mkdir(parents=True)
+
+A bind mount is bound to the inode, not the path. rmtree + mkdir makes a new
+directory; every already-running container keeps the old, now-unlinked one and
+sees it empty.
+
+== Files visible in /etc/drogna, per container
+   drogna-clock-1         0
+   drogna-query-1         0
+   drogna-proxy-1         0
+   drogna-client-1        19
+
+   The host directory has 19 files.
+   drogna-client-1 is the control: it is the only container restarted after the
+   seed step, so it re-bound to the new inode and can see all of them. Nothing
+   else about it differs.
+
+== Why only the clock reports it
+   health: unhealthy, failing streak 89
+   last output: /etc/drogna/clock.json: unreadable — No such file or directory
+   The clock's check re-reads its configuration document on every probe. The others
+   read theirs once at start-up, before the directory was replaced, so they report
+   healthy while running against a configuration directory that no longer exists.
+
+== After the fix
+   render_credentials.render_destination now empties the directory instead of
+   removing it, so the inode survives and the mount keeps resolving.
+   drogna-clock-1         19 files
+   drogna-query-1         19 files
+   drogna-proxy-1         19 files
+   drogna-client-1        19 files
+   clock health: healthy, failing streak 0

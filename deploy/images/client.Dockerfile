@@ -29,6 +29,7 @@ RUN corepack enable
 # ../../../contracts/schemas/clock.schema.json". Nothing caught it because this image had
 # never been built: no destination started the client until the profiles were promoted.
 COPY contracts/schemas ./contracts/schemas
+COPY contracts/topology.json ./contracts/topology.json
 COPY client ./client
 WORKDIR ${HARNESS_APP_ROOT}/client
 

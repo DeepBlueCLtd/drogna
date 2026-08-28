@@ -22,6 +22,10 @@ client/coverage
 config
 contracts
 !contracts/schemas
+# Feature 022: the topic tree imports the derived topology at build time, the same
+# arrangement as the schema masters above. The exception must follow the exclusion —
+# Docker takes the last matching pattern.
+!contracts/topology.json
 docs
 libs
 services

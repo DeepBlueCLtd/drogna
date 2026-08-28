@@ -60,6 +60,15 @@ __all__ = [
 # is generated beside the broker's.
 PROXY_SECRET = "HARNESS_PROXY_SECRET"
 
+# The destination's real hostname, injected at deploy time through this same seam and never
+# tracked (PR-01: the demonstration is public but unadvertised, so the repository carries
+# the `drogna.invalid` placeholder and nothing else). Not a secret — it is not generated,
+# not required, and an empty value means the placeholder stands, which is what the local
+# destination and a rehearsal bring-up both want. The placeholder being replaced is the one
+# the destination's own `deployment.json` names as `tls.hostname`, so a destination that
+# names none (local names "") is left untouched by construction rather than by luck.
+PUBLIC_HOSTNAME = "HARNESS_PUBLIC_HOSTNAME"
+
 # The database has no secrets here, deliberately. ADR-0023: the observation store
 # authenticates by trust for the compose network, so a DSN naming a role is a complete
 # credential and there is nothing for this module to put into one.
@@ -102,6 +111,65 @@ def rendered_dir(destination: str, root: Path | None = None) -> Path:
     """Where the rendered configuration for a destination goes. Untracked."""
     base = root or repository_root()
     return base / "deploy" / ".runtime" / _RUNTIME_CONFIG_DIRNAME / destination
+
+
+def _hostname_placeholder(destination: str, base: Path) -> str:
+    """The hostname the tracked configuration stands in for the real one, or empty.
+
+    Read from the destination's own `deployment.json` (`tls.hostname`) rather than written
+    here: the placeholder is a fact about the tracked tree, and a literal here would be a
+    second spelling of it for the two to disagree over. A destination that names no
+    hostname has nothing to substitute, whatever the environment says.
+    """
+    deployment = destination_dir(destination, base) / "deployment.json"
+    if not deployment.is_file():
+        return ""
+    document = json.loads(deployment.read_text(encoding="utf-8"))
+    return str(document.get("tls", {}).get("hostname", "") or "")
+
+
+def _with_hostname(value: Any, placeholder: str, hostname: str) -> Any:
+    """The same document with the placeholder hostname replaced in every string value.
+
+    Applied to whole string values by substring, because the placeholder appears inside
+    URLs, server names, and the TLS material's file names alike, and each of those must
+    name the same host or the deployment argues with itself. Keys are left alone: the
+    shape of a rendered document is the shape of the tracked one.
+    """
+    if isinstance(value, dict):
+        return {key: _with_hostname(entry, placeholder, hostname) for key, entry in value.items()}
+    if isinstance(value, list):
+        return [_with_hostname(entry, placeholder, hostname) for entry in value]
+    if isinstance(value, str) and placeholder in value:
+        return value.replace(placeholder, hostname)
+    return value
+
+
+def _with_capture_credentials(document: Any, values: dict[str, str], *, source: Path) -> None:
+    """Fill a capture document's clearance from the same secret the proxy's file is written from.
+
+    The shape is the contract: a top-level ``client`` carrying ``credentials`` with a
+    ``user`` (`contracts/schemas/config.capture.schema.json`). The tracked document carries
+    the identity and an empty secret, exactly as the tracked broker URLs carry a role and
+    no password, and for the same reason: a secret in a tracked file is a secret in the
+    history for ever. The page sits behind the proxy's clearance (issue #34, link 6), so a
+    capture that was rendered no secret would present nothing and fail the challenge —
+    which is why an unresolvable one stops the render here instead.
+    """
+    if not isinstance(document, dict):
+        return
+    credentials = document.get("client", {})
+    credentials = credentials.get("credentials") if isinstance(credentials, dict) else None
+    if not isinstance(credentials, dict) or "user" not in credentials:
+        return
+    secret = values.get(PROXY_SECRET, "")
+    if not secret:
+        raise ConfigurationError(
+            f"{source}: no value for {PROXY_SECRET}, so the capture mechanisms would present "
+            "no clearance to a page served behind one and every capture would fail its "
+            "challenge. Nothing is rendered: the render is what puts the secret in"
+        )
+    credentials["secret"] = secret
 
 
 def _with_secret(url: str, values: dict[str, str], *, source: Path) -> str:
@@ -183,6 +251,11 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
     written: set[str] = set()
     kept = _written_by_another_path(destination, base)
 
+    # The real hostname, where the deployment was given one. Resolved once, against the
+    # tracked deployment document, so that every rendered file substitutes the same pair.
+    hostname = values.get(PUBLIC_HOSTNAME, "")
+    placeholder = _hostname_placeholder(destination, base) if hostname else ""
+
     for source in sorted(source_dir.iterdir()):
         if not source.is_file():
             continue
@@ -197,9 +270,12 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
             shutil.copy2(source, target)
             continue
         document: Any = json.loads(source.read_text(encoding="utf-8"))
+        if placeholder and hostname != placeholder:
+            document = _with_hostname(document, placeholder, hostname)
         broker = document.get("broker") if isinstance(document, dict) else None
         if isinstance(broker, dict) and isinstance(broker.get("url"), str):
             broker["url"] = _with_secret(broker["url"], values, source=source)
+        _with_capture_credentials(document, values, source=source)
         # A DSN is copied through untouched, and ADR-0023 is why: the observation store
         # authenticates by trust for the compose network, so a tracked DSN naming a role
         # and no secret is already a complete credential. The walk that used to find
@@ -455,6 +531,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("a destination is required unless --secret-names is given")
 
     values = {name: os.environ.get(name, "") for name in SECRET_NAMES}
+    # Beside the secrets, not among them: the hostname is injected through the same seam
+    # but is never generated, never required, and empty means the placeholder stands.
+    values[PUBLIC_HOSTNAME] = os.environ.get(PUBLIC_HOSTNAME, "")
     try:
         rendered = render_destination(arguments.destination, values)
         password_file = write_password_file(values)

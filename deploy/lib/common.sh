@@ -114,6 +114,17 @@ render_environment() {
   ensure_secrets
   py render_env.py "${destination}" >/dev/null ||
     fail "could not render the environment file for ${destination}"
+  # The deploy-time hostname, exported for the credential render below. render_env.py has
+  # just resolved it — the environment first, then the previous environment file — and
+  # persisted the answer, so reading it back here is what makes a second bring-up render
+  # the same address without the variable being exported again. Empty is a value: the
+  # tracked placeholder stands, which is what the local destination always wants.
+  if [ -z "${HARNESS_PUBLIC_HOSTNAME:-}" ] && [ -f "${DROGNA_ENV_FILE}" ]; then
+    HARNESS_PUBLIC_HOSTNAME="$(
+      sed -n 's/^HARNESS_PUBLIC_HOSTNAME=\(.*\)$/\1/p' "${DROGNA_ENV_FILE}" | tail -n 1
+    )"
+  fi
+  export HARNESS_PUBLIC_HOSTNAME
   # The configuration a container actually reads, and the broker's password file. Both are
   # written from the secrets above so that the two halves of a credential cannot disagree,
   # and both are untracked. Until this existed the tracked broker URLs named no role, no

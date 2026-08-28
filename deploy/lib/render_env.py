@@ -177,13 +177,31 @@ def _declared_health(config_host_dir: Path, service: str) -> tuple[int, str] | N
     return int(health["port"]), str(health["path"])
 
 
-def _public_url(deployment: dict[str, Any]) -> str:
+def _public_url(deployment: dict[str, Any], hostname: str = "") -> str:
     url = deployment["public_url"]
     authority = url["host"]
+    # The tracked configuration keeps the placeholder hostname (PR-01: public but
+    # unadvertised); the real one arrives at deploy time and is substituted here exactly
+    # as deploy/lib/render_credentials.py substitutes it into the rendered documents.
+    placeholder = str(deployment.get("tls", {}).get("hostname", "") or "")
+    if hostname and placeholder and authority == placeholder:
+        authority = hostname
     default_port = {"http": 80, "https": 443}[url["scheme"]]
     if url["port"] != default_port:
         authority = f"{authority}:{url['port']}"
     return f"{url['scheme']}://{authority}{url['base_path']}"
+
+
+def _public_hostname(existing: dict[str, str]) -> str:
+    """The deploy-time hostname: the environment first, then the untracked environment file.
+
+    The environment wins so that a deployer can change the address; the file is what makes
+    a second bring-up converge on the address the first was given without the variable
+    being exported again. Empty is a value — the placeholder stands — never an error.
+    """
+    return os.environ.get(render_credentials.PUBLIC_HOSTNAME) or existing.get(
+        render_credentials.PUBLIC_HOSTNAME, ""
+    )
 
 
 def values_for(
@@ -261,7 +279,10 @@ def values_for(
         # file at a fixed place within a directory the destination already names, and a
         # second declaration would be a second thing that could disagree.
         "HARNESS_DATABASE_HBA_FILE": paths["stores_root"].rstrip("/") + "/" + _HBA_RELATIVE,
-        "HARNESS_PUBLIC_URL": _public_url(deployment),
+        "HARNESS_PUBLIC_URL": _public_url(
+            deployment, _public_hostname(read_env_file(env_path(root)))
+        ),
+        "HARNESS_PUBLIC_HOSTNAME": _public_hostname(read_env_file(env_path(root))),
         "HARNESS_DATABASE_NAME": deployment["database"]["name"],
         "HARNESS_DATABASE_USER": deployment["database"]["user"],
     }

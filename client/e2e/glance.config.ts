@@ -46,6 +46,18 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: capture.client.url,
+    // The page is served through the boundary behind its clearance (issue #34, link 6),
+    // so a glance presents the capture document's credential to load it at all. Presented
+    // only when the document carries a secret: against the tracked document, which names
+    // an identity and no secret, the challenge refuses the glance and the failure names
+    // the document — which is this mechanism's honest "the client is not reachable".
+    httpCredentials:
+      capture.client.credentials.secret === ""
+        ? undefined
+        : {
+            username: capture.client.credentials.user,
+            password: capture.client.credentials.secret,
+          },
     viewport: { width: capture.viewport.width, height: capture.viewport.height },
     deviceScaleFactor: capture.viewport.deviceScaleFactor,
     // A glance is a look, not an investigation: no trace, no video, no screenshot on

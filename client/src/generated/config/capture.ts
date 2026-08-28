@@ -15,6 +15,19 @@ export interface DrognaVisualCaptureConfiguration {
      */
     url: string;
     /**
+     * The page is served through the reverse proxy behind its clearance (the one-door topology decision of 28 August 2026; issue #34 link 6), so every capture mechanism needs the credential to load the page at all. Each mechanism hands it to its own browser as Playwright httpCredentials; they deliberately share no other plumbing (scripts/capture/README.md). The tracked document carries the identity and an empty secret, exactly as the tracked broker URLs carry a role and no password: the deploy-time render writes the secret into the rendered copy under deploy/.runtime/config/, which is the document a capture is pointed at. A capture run against the tracked document fails the challenge, which is the honest outcome for a document that names nobody.
+     */
+    credentials: {
+      /**
+       * The identity a capture authenticates as: the same reader identity proxy.credentials.user declares. Tracked, because a name is not a secret.
+       */
+      user: string;
+      /**
+       * Empty in the tracked document, always. The deploy-time render fills it from the same generated secret the proxy's credential file is written from, so the two halves cannot disagree.
+       */
+      secret: string;
+    };
+    /**
      * How long a mechanism waits for the client's readiness signal before reporting that readiness never arrived. A bound on a wait, not a wait: no capture path contains a fixed sleep (FR-019, SC-011).
      */
     readiness_timeout_ms: number;

@@ -58,7 +58,7 @@ Then, against the running client:
 
 ```sh
 cd client && pnpm install --frozen-lockfile      # once per container
-cd .. && HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs
+cd .. && HARNESS_CONFIG=deploy/.runtime/config/local/capture.json node scripts/capture/glance/run.mjs
 ```
 
 No `playwright install`. The container carries Chromium build 1194 and the client pins

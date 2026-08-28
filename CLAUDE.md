@@ -59,12 +59,16 @@ export HARNESS_PROXY_CA_FILE="$SSL_CERT_FILE"    # nothing builds here without t
 ./scripts/run_local.sh                           # up + seed; converges if already up
 ./scripts/down.sh local                          # and `pytest` takes it down too, see below
 
-HARNESS_CONFIG=config/local/capture.json node scripts/capture/glance/run.mjs
+HARNESS_CONFIG=deploy/.runtime/config/local/capture.json node scripts/capture/glance/run.mjs
 ```
 
 The last is a headless-Chromium screenshot of the running client, in about three seconds.
 It starts no server and changes nothing, and it prints the simulated rate in force beside the
-image so that a picture of a stopped system is never handed over as a live one. There are two
+image so that a picture of a stopped system is never handed over as a live one. It reads the
+**rendered** capture document, not the tracked one: the page is served through the proxy
+behind its clearance (one door, issue #34), the render is what puts the credential in, and a
+capture pointed at the tracked document is refused with a 401 — correctly, since that
+document names nobody. There are two
 other capture mechanisms and they are deliberately not the same command;
 `scripts/capture/README.md` says why before you try to merge them. Do not run
 `playwright install` — this container already carries the Chromium build the pinned

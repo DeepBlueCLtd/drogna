@@ -100,11 +100,34 @@ def _without_credential_bearing_urls(node: Any) -> Any:
     return node
 
 
-def test_nothing_but_the_credential_bearing_urls_change(scratch: Path) -> None:
+def _without_capture_clearance(document: Any) -> Any:
+    """The document with the capture clearance's secret removed, and nothing else.
+
+    The one non-URL field the render fills (issue #34, link 6): the page sits behind the
+    proxy's clearance, so the rendered capture document carries the reader's secret where
+    the tracked one carries "". Stripped by its exact path — `client.credentials.secret` —
+    rather than by key, so a `secret` appearing anywhere else is still a difference this
+    test refuses.
+    """
+    if not isinstance(document, dict):
+        return document
+    client = document.get("client")
+    credentials = client.get("credentials") if isinstance(client, dict) else None
+    if isinstance(credentials, dict):
+        document = dict(document)
+        document["client"] = dict(client)
+        document["client"]["credentials"] = {
+            key: value for key, value in credentials.items() if key != "secret"
+        }
+    return document
+
+
+def test_nothing_but_the_credential_bearing_fields_change(scratch: Path) -> None:
     """A render that altered anything else would make the running stack unreviewed.
 
     The claim is unchanged and its scope is not: the render may write a secret into a URL
-    that names a role, and may touch nothing else. What counts as such a URL grew by one.
+    that names a role, and into the capture clearance the page's challenge demands, and
+    may touch nothing else.
     """
     directory = render_credentials.render_destination("local", VALUES, scratch)
     for rendered in sorted(directory.glob("*.json")):
@@ -117,9 +140,11 @@ def test_nothing_but_the_credential_bearing_urls_change(scratch: Path) -> None:
             tracked["broker"].pop("url", None)
             produced["broker"] = dict(produced["broker"])
             produced["broker"].pop("url", None)
+        tracked = _without_capture_clearance(tracked)
+        produced = _without_capture_clearance(produced)
         assert _without_credential_bearing_urls(produced) == _without_credential_bearing_urls(
             tracked
-        ), f"{rendered.name} differs beyond the URLs the render is allowed to rewrite"
+        ), f"{rendered.name} differs beyond the fields the render is allowed to rewrite"
 
 
 def test_a_role_with_no_secret_stops_the_render(scratch: Path) -> None:

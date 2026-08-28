@@ -54,8 +54,22 @@ const SCHEMA_LOCATION = [
   ["config", "capture", "schema", "json"].join("."),
 ];
 
+export interface CaptureCredentials {
+  readonly user: string;
+  readonly secret: string;
+}
+
 export interface CaptureClient {
   readonly url: string;
+  /**
+   * The boundary clearance a capture presents to load the page, which is served through
+   * the reverse proxy behind it. The tracked document carries the identity and an empty
+   * secret; the deploy-time render fills the secret into the rendered copy under
+   * deploy/.runtime/config/, which is the document a capture is pointed at. Where the
+   * secret is empty the mechanism presents nothing and the challenge refuses it, naming
+   * this document — the honest outcome for a document that names nobody.
+   */
+  readonly credentials: CaptureCredentials;
   readonly readinessTimeoutMs: number;
   readonly stableFrames: number;
   readonly maximumFrames: number;
@@ -155,9 +169,15 @@ function adopt(document: Record<string, unknown>, source: string): CaptureConfig
   const scenario = part(document, "scenario");
   const areas = part(document, "areas") as Record<string, string>;
 
+  const credentials = client["credentials"] as Record<string, string>;
+
   return {
     client: {
       url: client["url"] as string,
+      credentials: {
+        user: credentials["user"] as string,
+        secret: credentials["secret"] as string,
+      },
       readinessTimeoutMs: client["readiness_timeout_ms"] as number,
       stableFrames: client["stable_frames"] as number,
       maximumFrames: client["maximum_frames"] as number,

@@ -9,6 +9,21 @@ from enum import StrEnum
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 
+class Credentials(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    user: str = Field(
+        ...,
+        description='The identity a capture authenticates as: the same reader identity proxy.credentials.user declares. Tracked, because a name is not a secret.',
+        min_length=1,
+    )
+    secret: str = Field(
+        ...,
+        description="Empty in the tracked document, always. The deploy-time render fills it from the same generated secret the proxy's credential file is written from, so the two halves cannot disagree.",
+    )
+
+
 class Client(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -16,6 +31,11 @@ class Client(BaseModel):
     url: AnyUrl = Field(
         ...,
         description='Where the client is served. A capture that cannot reach it fails naming this value, so the message points at configuration rather than at a literal in a script.',
+    )
+    credentials: Credentials = Field(
+        ...,
+        description='The page is served through the reverse proxy behind its clearance (the one-door topology decision of 28 August 2026; issue #34 link 6), so every capture mechanism needs the credential to load the page at all. Each mechanism hands it to its own browser as Playwright httpCredentials; they deliberately share no other plumbing (scripts/capture/README.md). The tracked document carries the identity and an empty secret, exactly as the tracked broker URLs carry a role and no password: the deploy-time render writes the secret into the rendered copy under deploy/.runtime/config/, which is the document a capture is pointed at. A capture run against the tracked document fails the challenge, which is the honest outcome for a document that names nobody.',
+        title='The boundary clearance a capture presents',
     )
     readiness_timeout_ms: int = Field(
         ...,

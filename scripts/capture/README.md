@@ -70,8 +70,16 @@ below is written in any script (Constitution IV, FR-020). There is no default: a
 taken against whichever destination happened to be the fallback is a capture nobody can
 place afterwards.
 
+The document to name is the **rendered** one under `deploy/.runtime/config/`, which
+`scripts/up.sh` produces. The page is served through the reverse proxy behind its
+clearance (the one-door topology of 28 August 2026), so every mechanism presents the
+credential in `client.credentials` as Playwright `httpCredentials` — and the tracked
+document under `config/` carries the identity with an empty secret, so a capture pointed
+at it is refused by the challenge, naming the document. The render fills the secret from
+the same generated value the proxy's own credential file is written from.
+
 ```bash
-export HARNESS_CONFIG=config/local/capture.json
+export HARNESS_CONFIG=deploy/.runtime/config/local/capture.json
 
 # glance — an image of the client as it stands, now. Touches nothing.
 node scripts/capture/glance/run.mjs

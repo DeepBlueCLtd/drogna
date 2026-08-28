@@ -51,6 +51,18 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: capture.client.url,
+    // The page is served through the boundary behind its clearance (issue #34, link 6),
+    // so each half of a pair presents the capture document's credential to load it. The
+    // credential is deliberately not part of the fingerprint: it is how the page is
+    // reached, not a property two halves could differ over, and a secret in a
+    // fingerprint would be a secret in an artefact.
+    httpCredentials:
+      capture.client.credentials.secret === ""
+        ? undefined
+        : {
+            username: capture.client.credentials.user,
+            password: capture.client.credentials.secret,
+          },
     viewport: { width: capture.viewport.width, height: capture.viewport.height },
     deviceScaleFactor: capture.viewport.deviceScaleFactor,
     trace: "retain-on-failure",

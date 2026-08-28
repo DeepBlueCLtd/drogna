@@ -65,7 +65,18 @@ ENV PYTHONPATH="${HARNESS_APP_ROOT}/query:${PYTHONPATH}"
 # which is the failure this deployment tries hardest to avoid: one that waits until it is
 # being demonstrated.
 COPY libs/harness_core ./libs/harness_core
-RUN python3 -m pip install --no-cache-dir ./libs/harness_core
+# The second fetch in this image, and it takes the `proxy_ca` secret for the reason the
+# first one does. Installing a local directory still reaches the index: pip resolves the
+# build backend before it can build the package, so this step is as network-bound as the
+# `requirements.txt` install above and fails behind a TLS-terminating proxy in the same
+# way. It sat outside the seam because the seam was written at the fetch that looks like a
+# fetch, and this one looks like a local copy.
+RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false \
+    sh -c 'if [ -s /tmp/proxy-ca.crt ]; then \
+             cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+             export PIP_CERT=/etc/ssl/certs/ca-certificates.crt; \
+           fi; \
+           python3 -m pip install --no-cache-dir ./libs/harness_core'
 
 # pygeoapi is told where its configuration is through its own published interface, the way
 # every third-party image in this deployment is; the values still come from the destination

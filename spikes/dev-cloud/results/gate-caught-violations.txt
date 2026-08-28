@@ -1,0 +1,4 @@
+deploy/images/ (as it stood before the fix): proxy.Dockerfile:32: [proxy-ca-seam] apk add — a build step that reaches the package index without mounting the proxy_ca secret; behind a TLS-terminating egress proxy this cannot fetch and the image cannot be built, which is the environment the deployment is meant to build in (SRD NFR-06). See 'Building behind a TLS-terminating proxy' in deploy/README.md
+deploy/images/ (as it stood before the fix): query-layer.Dockerfile:68: [proxy-ca-seam] pip install — a build step that reaches the package index without mounting the proxy_ca secret; behind a TLS-terminating egress proxy this cannot fetch and the image cannot be built, which is the environment the deployment is meant to build in (SRD NFR-06). See 'Building behind a TLS-terminating proxy' in deploy/README.md
+proxy-ca-seam: 2 violation(s). Fix them, or mark a genuine exemption inline with a reason.
+exit=1 (expected 1)

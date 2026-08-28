@@ -1,0 +1,117 @@
+
+== Checking the configuration for destination 'local'
+note: local/query.json: no schema at contracts/schemas/config.query.schema.json; validation begins when it lands
+configuration check passed for destination 'local'
+destinations agree in shape: droplet, local
+
+== Active profile selects: broker client clock observations proxy query 
+
+== Building images where they are missing, which can take some minutes
+ Image drogna-clock Building 
+ Image drogna-client Building 
+ Image drogna-proxy Building 
+ Image drogna-query Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.48kB done
+#1 DONE 0.0s
+
+#2 [clock internal] load build definition from python-service.Dockerfile
+#2 transferring dockerfile: 4.67kB done
+#2 DONE 0.0s
+
+#3 [proxy internal] load build definition from proxy.Dockerfile
+#3 transferring dockerfile: 3.85kB done
+#3 DONE 0.0s
+
+#4 [query internal] load build definition from query-layer.Dockerfile
+#4 transferring dockerfile: 5.64kB done
+#4 DONE 0.0s
+
+#5 [client internal] load build definition from client.Dockerfile
+#5 transferring dockerfile: 4.08kB done
+#5 DONE 0.0s
+
+#6 [client] resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#6 DONE 0.7s
+
+#7 [client] docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#7 resolve docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e 0.0s done
+#7 CACHED
+
+#8 [clock internal] load build definition from python-service.Dockerfile
+#8 transferring dockerfile: 4.67kB done
+#8 DONE 0.0s
+
+#9 [query internal] load build definition from query-layer.Dockerfile
+#9 transferring dockerfile: 5.64kB done
+#9 DONE 0.0s
+
+#10 [client internal] load build definition from client.Dockerfile
+#10 transferring dockerfile: 4.08kB done
+#10 DONE 0.0s
+
+#11 [proxy internal] load build definition from proxy.Dockerfile
+#11 transferring dockerfile: 3.85kB done
+#11 DONE 0.0s
+
+#12 [client internal] load metadata for docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+#12 DONE 0.0s
+
+#13 [proxy internal] load .dockerignore
+#13 transferring context: 2B done
+#13 DONE 0.0s
+
+#14 [proxy stage-0 1/6] FROM docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+#14 resolve docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10 0.0s done
+#14 DONE 0.0s
+
+#15 [proxy stage-0 2/6] WORKDIR /opt/drogna
+#15 CACHED
+
+#16 [proxy internal] load build context
+#16 transferring context: 3.23kB done
+#16 DONE 0.0s
+
+#17 [proxy stage-0 3/6] RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false     sh -c 'if [ -s /tmp/proxy-ca.crt ]; then              cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt;            fi;            apk add --no-cache python3 py3-pip            && python3 -m venv "${HARNESS_APP_ROOT}/.venv"'
+#17 0.147 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#17 0.200 28DB0B4B277F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:2103:
+#17 0.201 WARNING: fetching https://dl-cdn.alpinelinux.org/alpine/v3.21/main: Permission denied
+#17 0.201 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#17 0.246 28DB0B4B277F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:2103:
+#17 0.247 WARNING: fetching https://dl-cdn.alpinelinux.org/alpine/v3.21/community: Permission denied
+#17 0.249 ERROR: unable to select packages:
+#17 0.249   py3-pip (no such package):
+#17 0.249     required by: world[py3-pip]
+#17 0.249   python3 (no such package):
+#17 0.249     required by: world[python3]
+#17 ERROR: process "/bin/sh -c sh -c 'if [ -s /tmp/proxy-ca.crt ]; then              cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt;            fi;            apk add --no-cache python3 py3-pip            && python3 -m venv \"${HARNESS_APP_ROOT}/.venv\"'" did not complete successfully: exit code: 2
+
+#18 [clock internal] load metadata for ghcr.io/astral-sh/uv:0.8.17@sha256:e4644cb5bd56fdc2c5ea3ee0525d9d21eed1603bccd6a21f887a938be7e85be1
+#18 ERROR: failed to authorize: Unavailable: error reading from server: EOF
+
+#19 [query internal] load metadata for docker.io/library/python:3.11-slim-bookworm@sha256:0bee7276f83efd4a1ee05bbbf4281d95ed28e079220a9457f25a93e3f1e3c31b
+#19 CANCELED
+
+#20 [client internal] load metadata for docker.io/library/node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+#20 CANCELED
+------
+ > [clock internal] load metadata for ghcr.io/astral-sh/uv:0.8.17@sha256:e4644cb5bd56fdc2c5ea3ee0525d9d21eed1603bccd6a21f887a938be7e85be1:
+------
+------
+ > [proxy stage-0 3/6] RUN --mount=type=secret,id=proxy_ca,target=/tmp/proxy-ca.crt,required=false     sh -c 'if [ -s /tmp/proxy-ca.crt ]; then              cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt;            fi;            apk add --no-cache python3 py3-pip            && python3 -m venv "${HARNESS_APP_ROOT}/.venv"':
+0.200 28DB0B4B277F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:2103:
+0.201 WARNING: fetching https://dl-cdn.alpinelinux.org/alpine/v3.21/main: Permission denied
+0.201 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+0.246 28DB0B4B277F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:2103:
+0.247 WARNING: fetching https://dl-cdn.alpinelinux.org/alpine/v3.21/community: Permission denied
+0.249 ERROR: unable to select packages:
+0.249   py3-pip (no such package):
+0.249     required by: world[py3-pip]
+0.249   python3 (no such package):
+0.249     required by: world[python3]
+------
+target proxy: failed to solve: process "/bin/sh -c sh -c 'if [ -s /tmp/proxy-ca.crt ]; then              cat /tmp/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt;            fi;            apk add --no-cache python3 py3-pip            && python3 -m venv \"${HARNESS_APP_ROOT}/.venv\"'" did not complete successfully: exit code: 2
+
+
+error: an image could not be built; nothing was started.
+EXIT=1

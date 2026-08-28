@@ -1,0 +1,6 @@
+drogna-broker-1  Up About a minute (healthy)
+drogna-client-1  Up About a minute (healthy)
+drogna-clock-1  Up About a minute (healthy)
+drogna-observations-1  Up About a minute (healthy)
+drogna-proxy-1  Up 51 seconds (healthy)
+drogna-query-1  Up 57 seconds (healthy)

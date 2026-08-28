@@ -46,6 +46,7 @@ from harness_types.messages.run_published import DrognaModelRunPublished
 from harness_types.messages.run_request import DrognaModelRunRequest
 from harness_types.messages.run_started import DrognaModelRunStarted
 from harness_types.messages.telemetry import DrognaTelemetry
+from harness_types.messages.topology import DrognaBrokerTopology
 from pydantic import BaseModel, ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -84,6 +85,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "offload-receipt.schema.json": DrognaOffloadReceipt,
     "offload-telemetry.schema.json": DrognaOffloadTelemetry,
     "config.capture.schema.json": DrognaVisualCaptureConfiguration,
+    "topology.schema.json": DrognaBrokerTopology,
 }
 
 CLOCK_SAMPLE: dict[str, Any] = {

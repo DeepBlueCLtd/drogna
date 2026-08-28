@@ -47,7 +47,8 @@
         "coverage",
         "observations",
         "limits",
-        "interpolation"
+        "interpolation",
+        "locations"
       ],
       "additionalProperties": false,
       "properties": {
@@ -100,6 +101,49 @@
         },
         "domain": {
           "$ref": "#/$defs/domain"
+        },
+        "locations": {
+          "$ref": "#/$defs/locations"
+        }
+      }
+    },
+    "locations": {
+      "title": "The named locations the EDR locations query type advertises",
+      "description": "The seeded synthetic features with a fixed horizontal position, as values of this destination. Two of the four seeded features are deliberately absent: the thermocline has no horizontal position (it is everywhere in the horizontal), and the drifting feature's position is a function of time, so a static entry would advertise a place it is not. Sensor positions are not listed here at all: they are derived at request time from reported observations, current position only, because a configured sensor position would be a claim nothing observed. A unit test asserts these entries agree with env_generator.json's seeded parameters, since the same values appear in both files of a destination and agreement must be enforced rather than hoped for.",
+      "type": "object",
+      "required": [
+        "features"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "longitude",
+              "latitude"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The seeded feature's own identifier, as env_generator.json spells it."
+              },
+              "name": {
+                "type": "string",
+                "description": "One line for a person reading the list."
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "latitude": {
+                "type": "number"
+              }
+            }
+          }
         }
       }
     },
@@ -332,6 +376,10 @@
       "required": [
         "cube_maximum_cells",
         "trajectory_maximum_vertices",
+        "radius_maximum_cells",
+        "area_maximum_cells",
+        "corridor_maximum_samples",
+        "locations_maximum_locations",
         "page_size_default",
         "page_size_maximum"
       ],
@@ -344,6 +392,26 @@
         "trajectory_maximum_vertices": {
           "type": "integer",
           "exclusiveMinimum": 0
+        },
+        "radius_maximum_cells": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "A radius query's budget, in the unit cube already uses: times x depths x selected nodes. Refused over budget with the measured count and this limit named, never truncated."
+        },
+        "area_maximum_cells": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "An area query's budget, counted exactly as radius_maximum_cells is."
+        },
+        "corridor_maximum_samples": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "A corridor query's budget: offset routes x route vertices. Refused over budget with both factors and this limit named. The trajectory vertex bound applies per route besides."
+        },
+        "locations_maximum_locations": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "The named-locations list's budget: the one answer here that grows with the store (one entry per reporting platform). Refused over budget with the count and this limit named, never truncated into a list that looks complete."
         },
         "page_size_default": {
           "type": "integer",

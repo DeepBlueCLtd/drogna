@@ -127,6 +127,11 @@ def _values(document: Mapping[str, Any]) -> dict[str, str]:
         "coverage": dict(_require(document, "query", "coverage")),
         "limits": dict(limits),
         "interpolation": dict(_require(document, "query", "interpolation")),
+        # The locations query type advertises the seeded features from configuration and
+        # derives sensor positions from reported observations, so the EDR provider now
+        # needs both sections the SensorThings provider already receives one of.
+        "observations": dict(observations),
+        "locations": dict(_require(document, "query", "locations")),
     }
     public_url = f"{base}/{prefix}" if prefix else base
     sensorthings_options = {

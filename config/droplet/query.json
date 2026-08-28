@@ -128,6 +128,10 @@
     "limits": {
       "cube_maximum_cells": 120000,
       "trajectory_maximum_vertices": 91,
+      "radius_maximum_cells": 120000,
+      "area_maximum_cells": 120000,
+      "corridor_maximum_samples": 455,
+      "locations_maximum_locations": 50,
       "page_size_default": 100,
       "page_size_maximum": 500
     },
@@ -135,6 +139,22 @@
       "method": "linear",
       "out_of_domain": "null",
       "default_depth_metres": 0.0
+    },
+    "locations": {
+      "features": [
+        {
+          "id": "eddy_a",
+          "name": "the seeded eddy, at its seeded centre",
+          "longitude": -4.5,
+          "latitude": 49.0
+        },
+        {
+          "id": "front_a",
+          "name": "the seeded front, at its seeded anchor",
+          "longitude": -5.2,
+          "latitude": 48.8
+        }
+      ]
     }
   }
 }

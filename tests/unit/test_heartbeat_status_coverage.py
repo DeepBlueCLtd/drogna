@@ -58,7 +58,15 @@ NO_UNWELL_STATUS: set[str] = {
 #: it is what "every long-lived component" publishes — so this is recorded as a question
 #: rather than as debt. If C-17 becomes long-lived, it needs a heartbeat and this entry
 #: becomes an entry in the set above.
-NO_HEARTBEAT: set[str] = {"offload"}
+#:
+#: ``features`` (C-07) is here for a stronger reason than C-17's, not a weaker one. It is
+#: declared in the Compose file as ``harness.lifecycle: one-shot``: it provisions the
+#: feature store at scenario start, exits, and the store is read-only thereafter. A
+#: heartbeat is a claim about a process that is still there to make it, and this one is
+#: deliberately not. So C-07's box in the shell is dark whenever the stack is up, and that
+#: is the true picture rather than a gap — what would be misleading is a lit box for a
+#: process that ran once and stopped. Its evidence is the seeding record, not the shell.
+NO_HEARTBEAT: set[str] = {"offload", "features"}
 
 UNWELL = re.compile(r"HeartbeatStatus\.(DEGRADED|STALLED)")
 

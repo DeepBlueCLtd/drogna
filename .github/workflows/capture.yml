@@ -188,6 +188,26 @@ jobs:
           docker compose --file deploy/compose.yaml --env-file deploy/.env ps || true
           docker compose --file deploy/compose.yaml --env-file deploy/.env logs --tail 40 || true
 
+      # The page sits behind the proxy's clearance (issue #34 link 6), so every step that
+      # loads it needs the credential. The deployment generated the secret into its own
+      # environment file during the bring-up above; where the bring-up never got that far,
+      # a stand-in keeps the capture loader satisfied so the determinism specs still run
+      # against the credential-free preview — Playwright presents a credential only when
+      # challenged, and a preview never challenges. The secret is this runner's own,
+      # generated for this job and discarded with it; nothing here is worth protecting
+      # from the job's own log, but GITHUB_ENV keeps it out of one anyway.
+      - name: Give the capture the clearance the page is behind
+        working-directory: ${{ github.workspace }}
+        run: |
+          if grep -q '^HARNESS_PROXY_SECRET=' deploy/.env 2>/dev/null; then
+            grep '^HARNESS_PROXY_SECRET=' deploy/.env >> "${GITHUB_ENV}"
+            echo "the capture will present the deployment's own credential"
+          else
+            echo "HARNESS_PROXY_SECRET=stand-in-for-a-stack-that-never-generated-one" >> "${GITHUB_ENV}"
+            echo "no deployment environment file; the loader gets a stand-in and the"
+            echo "preview below never challenges for it"
+          fi
+
       # The client is answering when the stack reports it healthy; the loop below is the one
       # wait in this feature measured in real seconds, and it is test-harness setup rather
       # than a capture path. Every wait inside a capture is on the client's own readiness
@@ -201,14 +221,22 @@ jobs:
       # nothing to do with the comparator they exist to prove.
       #
       # So: the stack's client where there is one, and `vite preview` where there is not.
-      # The pair capture further down still refuses without a clock — that refusal is the
-      # honest outcome and is reported rather than suppressed — but the comparator is
-      # exercised either way, exactly as it was before the stack existed here.
+      # The probe presents the clearance where the configuration declares one, because the
+      # page is behind it and a bare probe reading 401 as "not answering" is what turned
+      # the one-door topology's first CI run red. The pair capture further down still
+      # refuses without a clock — that refusal is the honest outcome and is reported rather
+      # than suppressed — but the comparator is exercised either way, exactly as it was
+      # before the stack existed here.
       - name: Make sure a client is answering, from the stack or from a preview
         run: |
           url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
+          user="$(node -e 'process.stdout.write((require("../config/local/capture.json").client.credentials || {}).user || "")')"
+          probe=(curl -fsS -o /dev/null)
+          if [ -n "$user" ]; then
+            probe+=(-u "$user:${HARNESS_PROXY_SECRET}")
+          fi
           for _ in $(seq 1 60); do
-            if curl -fsS -o /dev/null "$url"; then
+            if "${probe[@]}" "$url"; then
               echo "the stack is serving the client at $url"
               exit 0
             fi
@@ -338,6 +366,14 @@ jobs:
 
       - name: Build the client
         run: pnpm build
+
+      # The capture configuration declares the clearance the page sits behind at a real
+      # destination, and its loader refuses to run without the named variable. This job
+      # serves the built client from a preview with no boundary in front of it, so the
+      # loader gets a stand-in; Playwright presents a credential only when challenged,
+      # and a preview never challenges.
+      - name: Give the capture loader a clearance value
+        run: echo "HARNESS_PROXY_SECRET=stand-in-no-boundary-in-front-of-a-preview" >> "${GITHUB_ENV}"
 
       # The loop below is the one wait in this feature measured in real seconds, and it is
       # test-harness setup rather than a capture path: it waits for a web server this job

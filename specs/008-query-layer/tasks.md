@@ -356,6 +356,45 @@ is exporting.
       rather than restated — watched failing on the configuration as it was, with the same
       words the running query layer used.
 
+- [x] T064 Construct the heartbeat this feature already wrote
+
+      `query/plugins/heartbeat.py` has been in the tree since this feature landed, with a
+      careful docstring about C-09 being lit because it is heard from and for nothing else.
+      **Nothing ever constructed it.** No caller, and no test either — the whole finding is
+      one grep:
+
+          $ grep -rn "QueryLayerHeartbeat" query/ | grep -v heartbeat.py
+          (nothing)
+
+      So the box was grey for the life of every stack while the component behind it answered
+      every request put to it: the untruth Constitution VII exists to prevent, produced by the
+      one component whose whole job is answering truthfully. It is the same shape as 009 T058
+      — written, tested in isolation, never connected — and it was found the same way, by
+      looking at a running client rather than by reading anything.
+
+      `pygeoapi serve` owns the process for its lifetime, so there was nowhere to announce
+      from. `query/serve.py` is the missing caller: it starts the heartbeat and then runs
+      pygeoapi's own application, so what is lit is the process that serves and nothing else
+      can light it. The entry point in `deploy/images/query-layer-entrypoint.sh` runs it in
+      place of `pygeoapi serve`; the reloader is off, because it forks a second process that
+      would beat for one that is not answering requests.
+
+      **Time reaches this component over HTTP, deliberately.** Every other component takes it
+      by subscription (ADR-0009) and this role cannot: `deploy/broker/acl` gives `drogna_query`
+      one write and no read at all, and argues for it — a read-only query surface able to
+      subscribe to the control namespace is the cross-contamination C-03 owns as its failure
+      mode. Each beat reads the clock's snapshot endpoint, which this component's own
+      configuration already names. A snapshot that cannot be read skips the beat and says so,
+      because a heartbeat carrying an invented simulation time is worse than none.
+
+      A sidecar probing the HTTP surface was considered and rejected: it would be the
+      synthesised traffic `harness_core.heartbeat` forbids, and a second process cannot
+      honestly report that the first one is alive.
+
+      Watched failing: `tests/integration/test_the_query_layer_says_it_is_serving.py` reports
+      "the query layer published nothing at all" against a beating loop that publishes
+      nothing, which is what the absent caller amounted to.
+
 - [ ] T063 Reconcile this feature's own fixtures with what a published run holds
 
       `tests/query_layer_support.py` builds coverage files carrying `sea_water_temperature`,

@@ -40,4 +40,9 @@ PYGEOAPI_CONFIG="${rendered}"
 PYGEOAPI_OPENAPI="${described}"
 export PYGEOAPI_CONFIG PYGEOAPI_OPENAPI
 
-exec pygeoapi serve
+# `pygeoapi serve` and this differ in one thing: this announces the component while it
+# serves. C-09 has had a heartbeat since feature 008 and nothing ever constructed it, so its
+# box in the client was grey for the life of every stack while the component behind it
+# answered every request put to it. `query/serve.py` starts that heartbeat and then runs
+# pygeoapi's own application, so what is lit is the process that serves.
+exec python3 ./query/serve.py

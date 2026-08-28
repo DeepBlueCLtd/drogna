@@ -12,6 +12,7 @@ members = [
     "harness-clock",
     "harness-core",
     "harness-env-generator",
+    "harness-features",
     "harness-ingest",
     "harness-model-runner",
     "harness-monitor",
@@ -252,6 +253,7 @@ dependencies = [
     { name = "harness-clock" },
     { name = "harness-core" },
     { name = "harness-env-generator" },
+    { name = "harness-features" },
     { name = "harness-ingest" },
     { name = "harness-model-runner" },
     { name = "harness-monitor" },
@@ -277,6 +279,7 @@ requires-dist = [
     { name = "harness-clock", editable = "services/clock" },
     { name = "harness-core", editable = "libs/harness_core" },
     { name = "harness-env-generator", editable = "services/env_generator" },
+    { name = "harness-features", editable = "services/features" },
     { name = "harness-ingest", editable = "services/ingest" },
     { name = "harness-model-runner", editable = "services/model_runner" },
     { name = "harness-monitor", editable = "services/monitor" },
@@ -381,6 +384,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "harness-core", editable = "libs/harness_core" }]
+
+[[package]]
+name = "harness-features"
+version = "0.1.0"
+source = { editable = "services/features" }
+dependencies = [
+    { name = "harness-core" },
+    { name = "psycopg", extra = ["binary"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "harness-core", editable = "libs/harness_core" },
+    { name = "psycopg", extras = ["binary"] },
+]
 
 [[package]]
 name = "harness-ingest"

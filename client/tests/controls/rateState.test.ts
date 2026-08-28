@@ -71,6 +71,22 @@ describe("requesting a rate", () => {
     expect(state.awaitingAcknowledgement).toBe(false);
   });
 
+  it("resolves a request for zero by the clock re-publishing the tick in force", () => {
+    // A rate of zero stops emission, so no later tick will ever arrive to answer it.
+    // The clock acknowledges by re-publishing the tick in force with the new rate; a
+    // sample already in flight when the request went out carries the old rate and must
+    // not be mistaken for the acknowledgement.
+    let state = acknowledgeRate(emptyRate, sample({ tick: 100, rate: 10 }));
+    state = requestRate(state, 0, 100);
+    state = acknowledgeRate(state, sample({ tick: 100, rate: 10 }));
+    expect(state.awaitingAcknowledgement).toBe(true);
+    state = acknowledgeRate(state, sample({ tick: 100, rate: 0 }));
+    expect(state.awaitingAcknowledgement).toBe(false);
+    expect(state.adjusted).toBe(false);
+    expect(isPinned(state)).toBe(true);
+    expect(rateWords(state)).toContain("Paused");
+  });
+
   it("leaves the rate in force untouched when the request could not be sent", () => {
     let state = acknowledgeRate(emptyRate, sample({ rate: 10 }));
     state = requestRate(state, 0, 100);

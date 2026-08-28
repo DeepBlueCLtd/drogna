@@ -281,3 +281,27 @@ is exporting.
   a loud failure on an untested version (T052). Nothing here is left for an investigation task
   to settle; ADR-0003 and ADR-0004 settled both mechanisms, and the plan's Complexity Tracking
   table is consequently empty.
+
+### Found by asking the running query layer for data (added 28 August 2026, long-run-01)
+
+- [x] T061 The image had no database driver
+
+      Every SensorThings entity set answered 400 with "no database driver is installed, so
+      the observation store cannot be read" — the provider's own message, written for a case
+      its author believed could not arise in the image. `PostgresRowSource._connect` imports
+      psycopg lazily so the projection, grammar and options can be tested without a database,
+      which they are and all pass; `query-layer.requirements.txt` installed pygeoapi and
+      shapely and nothing else. The `except ImportError` beside that import carried
+      `# pragma: no cover - the image installs it`, and the image did not.
+
+      With `psycopg[binary]>=3.2` installed the sets serve the store: Things 1, Datastreams 3,
+      Observations 27, Sensors 3, ObservedProperties 3, FeaturesOfInterest 9, each observation
+      carrying its own selfLink, navigation links and phenomenonTime.
+
+- [ ] T062 Serve real coverage on the EDR collections
+
+      **Not done, and not this feature's to fix.** `/collections/forecast/cube` answers 400
+      with "no run is current: current names none", which is the correct answer: nothing has
+      ever published a run. That waits on the control loop turning — see
+      `specs/009-control-loop/tasks.md` T058.
+

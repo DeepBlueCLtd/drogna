@@ -25,6 +25,7 @@
     "store": {
       "dsn": "postgresql://drogna@observations:5432/drogna",
       "schema": "features",
+      "definitions_directory": "/opt/drogna/stores/features",
       "provisioning_role": "drogna",
       "runtime_roles": [
         "drogna_ingest",

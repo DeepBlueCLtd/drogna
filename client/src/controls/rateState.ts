@@ -10,7 +10,12 @@
  * A request is resolved by a sample carrying a later tick than the one in force when the
  * request was made. Ticks are quantised and strictly increasing within a run (ADR-0009),
  * so this needs no clock of any kind, host or simulated, to decide which sample answers
- * which request.
+ * which request. One request cannot be answered that way: a rate of zero stops emission,
+ * so no later tick will ever arrive to acknowledge it. The clock answers that one by
+ * re-publishing the tick in force with the new rate, and a sample at the request's own
+ * tick carrying exactly the rate that was asked for is that acknowledgement — a sample
+ * already in flight when the request went out cannot be mistaken for it, because it
+ * carries the rate the request exists to change.
  *
  * **Zero is a rate.** It is not an error, not a disconnection and not the absence of a
  * clock. Setting it stops simulated time and stops nothing else: heartbeats keep arriving,
@@ -83,7 +88,9 @@ export function requestFailed(state: RateState, reason: string): RateState {
 export function acknowledgeRate(state: RateState, sample: ClockSample): RateState {
   const answers =
     state.awaitingAcknowledgement &&
-    (state.requestedAtTick === null || sample.tick > state.requestedAtTick);
+    (state.requestedAtTick === null ||
+      sample.tick > state.requestedAtTick ||
+      (sample.tick === state.requestedAtTick && sample.rate === state.requested));
   if (!answers) {
     return { ...state, acknowledged: sample.rate, mode: sample.mode };
   }

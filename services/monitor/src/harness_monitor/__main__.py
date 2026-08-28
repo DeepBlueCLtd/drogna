@@ -23,7 +23,9 @@ from typing import Any
 
 from harness_core.broker import (
     FROM_CONFIGURATION,
+    FROM_CONFIGURATION_MESSAGES,
     resolve_publisher,
+    resolve_subscriber,
 )
 from harness_core.clock import (
     ClockEndpoint,
@@ -41,7 +43,11 @@ from harness_core.rng import configure_run
 from harness_monitor.catchup import CatchupQuery
 from harness_monitor.config import load_or_exit_with
 from harness_monitor.coverage import ForecastSource, StoredForecasts
-from harness_monitor.service import MonitorService
+from harness_monitor.service import (
+    OBSERVATION_PREFIX,
+    RUN_PUBLISHED_TOPIC,
+    MonitorService,
+)
 from harness_monitor.version import MONITOR_NAME
 
 __all__ = ["main"]
@@ -70,7 +76,7 @@ def main(
     publisher: MessagePublisher | None = FROM_CONFIGURATION,
     forecasts: ForecastSource | None = None,
     catchup: CatchupQuery | None = None,
-    messages: Iterable[tuple[str, bytes]] = (),
+    messages: Iterable[tuple[str, bytes]] = FROM_CONFIGURATION_MESSAGES,
     stderr: Any = None,
 ) -> int:
     """Run the monitor over ``messages``. Returns the process exit code."""
@@ -90,6 +96,18 @@ def main(
     source = forecasts if forecasts is not None else _forecasts_from(settings)
     publisher, owned = resolve_publisher(
         publisher, config.document, component=MONITOR_NAME, report=out
+    )
+    # Where the observations and the run announcements come from. Until this existed the
+    # parameter defaulted to an empty tuple, so the container ran its loop over nothing and
+    # exited 0 — a component that looked like a caller asking for silence, because that is
+    # exactly what it was indistinguishable from.
+    messages, subscribed = resolve_subscriber(
+        messages,
+        config.document,
+        component=MONITOR_NAME,
+        topic=(f"{OBSERVATION_PREFIX}#", RUN_PUBLISHED_TOPIC),
+        report=out,
+        purpose="monitor",
     )
 
     try:
@@ -117,6 +135,8 @@ def main(
     finally:
         if owned is not None:
             owned.close()
+        if subscribed is not None:
+            subscribed.close()
     return 0
 
 

@@ -12,6 +12,7 @@ dependencies = [
     "harness-clock",
     "harness-core",
     "harness-env-generator",
+    "harness-features",
     "harness-ingest",
     "harness-model-runner",
     "harness-monitor",
@@ -28,6 +29,7 @@ dependencies = [
 harness-clock = { workspace = true }
 harness-core = { workspace = true }
 harness-env-generator = { workspace = true }
+harness-features = { workspace = true }
 harness-ingest = { workspace = true }
 harness-model-runner = { workspace = true }
 harness-monitor = { workspace = true }

@@ -24,6 +24,34 @@ export const CLOCK_STATE = '[data-testid="clock-state"]';
 export const CLOCK_SIM_TIME = '[data-testid="clock-sim-time"]';
 export const CLOCK_SAMPLE_RUN = '[data-testid="clock-sample-run"]';
 export const CONNECTION_STATE = '[data-testid="connection-state"]';
+export const CLOCK_TICK = '[data-testid="clock-tick"]';
+
+/**
+ * Everything that moves on its own while the system is running, and so is the only part of
+ * the page that cannot be expected to hold still.
+ *
+ * A fact about the client rather than a capture policy, which is why it sits here. Two
+ * kinds, established by watching a running stack rather than reasoned about: the figures
+ * driven by simulation time, and the control loop's transit animation, which draws a mark
+ * per message and redraws every frame for as long as anything is being published. Seven
+ * elements of eighty-one, and they were changing on 892 frames out of 900.
+ *
+ * `readiness.ts` holds these aside when deciding whether the page has settled. The
+ * question it needs answered is whether the page has stopped *changing*, and with an
+ * unpinned clock that is not the same as whether the system has stopped *running* — a
+ * glance must not pin (scripts/capture/README.md), so without this the third signal could
+ * never arrive on a stack that was working. Under a pinned clock none of these move and the
+ * list costs nothing, so the pair and the curated shot are unaffected.
+ */
+export const ALIVE_WHILE_RUNNING = [
+  CLOCK_TICK,
+  CLOCK_SIM_TIME,
+  '[data-testid="cycle"]',
+  '[data-testid="loop-counts"]',
+  '[data-testid="transit-canvas"]',
+  // One per edge the loop draws a transit along, named for the edge, so matched by prefix.
+  '[data-testid^="transit-"]',
+];
 
 /** The node for one component. Lit or not is read from it, never written to it. */
 export function componentNode(id: string): string {

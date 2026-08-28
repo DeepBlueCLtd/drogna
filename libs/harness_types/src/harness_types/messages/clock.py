@@ -25,7 +25,7 @@ class DrognaSimulationTimeSample(BaseModel):
     )
     tick: int = Field(
         ...,
-        description='Tick index. Strictly increasing within a run; gaps are possible for a slow subscriber and are never filled in by the consumer.',
+        description='Tick index. Non-decreasing within a run: strictly increasing across emissions, with the one repeat being the acknowledgement of a command that stopped emission. Gaps are possible for a slow subscriber and are never filled in by the consumer.',
         ge=0,
     )
     sim_time: str = Field(

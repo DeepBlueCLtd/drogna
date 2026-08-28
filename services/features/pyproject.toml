@@ -1,0 +1,19 @@
+[project]
+name = "harness-features"
+version = "0.1.0"
+description = "C-07: the feature store's provisioning one-shot — loads static spatial reference before a run, then exits"
+requires-python = ">=3.11"
+dependencies = [
+    "harness-core",
+    "psycopg[binary]",
+]
+
+[tool.uv.sources]
+harness-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harness_features"]

@@ -236,3 +236,39 @@ blog:
         How the requirements document was decomposed into features. It is about a document
         and its structure, and the thing to look at is the specification tree, which the
         entry lists. This is the one entry whose subject is not a running component at all.
+
+# ---------------------------------------------------------------------------
+# What the published images may weigh (015 T044)
+# ---------------------------------------------------------------------------
+#
+# The task's stated purpose is that "the repository does not accumulate screenshots", and
+# accumulation is a property of the set rather than of any one file. So there are two
+# bounds and only one of them is declared here.
+#
+# **Per image: not declared here.** `curated.maximum_bytes` in each destination's
+# `capture.json` already caps a single curated image, and the curated mechanism is the only
+# one that commits an image (`scripts/capture/README.md`). `check_image_budget.py` reads
+# that number rather than restating it. Two numbers for one bound is the drift this
+# repository keeps paying for — an image that passed the capture cap and then failed a
+# site gate would be a contradiction between two files that both claim to be the authority,
+# and the gate reports it as a finding if the destinations ever disagree about it.
+#
+# **In total: declared, because nothing else declares it.** No existing mechanism has an
+# opinion about the size of the set, which is precisely why the set can grow without
+# anybody deciding to let it.
+#
+# The floor is derived, not chosen. Measured 2026-08-27, the two committed images weigh
+# 395,328 and 388,455 bytes — 783,783 together. `total_bytes` must exceed that, or the gate
+# would be red on the day it was written and would be loosened rather than obeyed;
+# `site/gates/tests/test_image_budget.py` re-derives that bound on every run, so lowering
+# this to the corpus in order to make something pass fails the test instead. It is set at
+# roughly five times the present total, which is about ten more images at the size the two
+# committed ones actually are.
+#
+# What ends a budget increase: nothing automatic. Raising this number is a decision about
+# whether the site needs the images, and it belongs in a commit message that says so.
+
+images:
+  suffixes: ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+  total_bytes: 4000000
+  bounded_by: above-the-committed-corpus

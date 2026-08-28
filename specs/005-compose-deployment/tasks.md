@@ -377,3 +377,48 @@ follows, and is worth stopping at to validate.
 - Every later feature adds one service entry, one profile membership and two configuration
   files. If it needs more than that, this feature's structure is wrong and should be amended
   rather than worked around.
+
+### What starting the promoted profiles found (added 28 August 2026, long-run-01)
+
+Every item here was found by running the stack, not by reading it, and each was invisible to
+a green test suite. Recorded as done rather than as new work, because the fixes are on this
+branch; listed at all because a task list that says nothing about them would suggest the
+deployment had always worked.
+
+- [x] T029 The observation store reported healthy while it was still initialising
+
+      `pg_isready` with no host uses the unix socket, and the postgres entrypoint runs
+      `initdb` against a temporary server on that socket and no TCP port. Everything gated on
+      `service_healthy` started and met `connection refused`. Probed over TCP now.
+
+- [x] T030 The one-shots were expected to stay up
+
+      `env-generator` writes the field and exits 0, which is success and was reported as
+      failure. It is labelled `harness.lifecycle: one-shot` like `features`, and `up.sh`
+      waits only on services not so labelled — read from the rendered Compose configuration
+      rather than listed in the shell.
+
+- [x] T031 `features` ran twice, the first time before the roles it grants to existed
+
+      It was in `full` as well as `provisioning`. It belongs to the seeding step, which names
+      its own profiles and invokes it with `compose run --rm`.
+
+- [x] T032 Three components raced the field they read
+
+      `sensors`, `model-runner` and `planner` need the environment manifest and started
+      before C-02 had written it. They wait on `service_completed_successfully`.
+
+- [x] T033 The run-time database roles had no passwords
+
+      `roles.sql` creates them with LOGIN and nothing else, deliberately, because it is
+      tracked — and nothing then assigned one, so every DSN naming `drogna_ingest` met
+      `fe_sendauth: no password supplied`. Generated with the broker's, rendered into the
+      DSNs, and assigned by `ALTER ROLE` in the seeding step from the same values.
+
+- [x] T034 The client image had never been built, and neither had the query layer's
+
+      Two dockerignore files excluded paths a later `COPY` needed; the client's layout was
+      flattened one level below where its imports reach; the query layer's entrypoint read an
+      environment variable nothing set; and its health check named `wget`, which
+      `python:3.11-slim-bookworm` does not carry.
+

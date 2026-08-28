@@ -45,7 +45,17 @@ from destination import ConfigurationError  # noqa: E402
 # listed, because a role added to the access control list and forgotten here would make
 # every test in this file fail on the renderer's refusal rather than on its subject —
 # which is exactly what happened when the query layer gained a role.
-VALUES = {name: f"secret-for-{name.lower()}" for name in render_credentials.SECRET_NAMES}
+#
+# And then happened again, the same way, when the render learned to put the database
+# owner's secret into the DSNs: DATABASE_SECRET is deliberately not one of SECRET_NAMES,
+# which is the broker's role list and is looped over as such by deploy/lib/common.sh. So
+# the set this fixture needs is the set the renderer's own entry point resolves — see
+# `values` in render_credentials.main — and it is spelled the same way here for the same
+# reason, rather than listed a second time.
+VALUES = {
+    name: f"secret-for-{name.lower()}"
+    for name in (*render_credentials.SECRET_NAMES, render_credentials.DATABASE_SECRET)
+}
 
 
 def _rendered(tmp_path: Path) -> Path:
@@ -77,8 +87,31 @@ def test_the_render_puts_the_role_secret_into_the_url(scratch: Path) -> None:
     assert sensors["broker"]["url"] == f"mqtt://drogna_sensor:{sensor}@broker:1883"
 
 
-def test_nothing_but_the_broker_url_changes(scratch: Path) -> None:
-    """A render that altered anything else would make the running stack unreviewed."""
+def _without_credential_bearing_urls(node: Any) -> Any:
+    """The document with every URL the render is allowed to rewrite removed.
+
+    Two of them now: the broker URL, and any `dsn` at any depth. The DSN joined the list
+    when the render learned to put the database owner's secret into it, and it is matched
+    by key at any depth rather than by path because `features.store.dsn` and
+    `ingest.store.dsn` sit at different ones.
+    """
+    if isinstance(node, dict):
+        return {
+            key: _without_credential_bearing_urls(value)
+            for key, value in node.items()
+            if key != "dsn"
+        }
+    if isinstance(node, list):
+        return [_without_credential_bearing_urls(item) for item in node]
+    return node
+
+
+def test_nothing_but_the_credential_bearing_urls_change(scratch: Path) -> None:
+    """A render that altered anything else would make the running stack unreviewed.
+
+    The claim is unchanged and its scope is not: the render may write a secret into a URL
+    that names a role, and may touch nothing else. What counts as such a URL grew by one.
+    """
     directory = render_credentials.render_destination("local", VALUES, scratch)
     for rendered in sorted(directory.glob("*.json")):
         tracked = json.loads(
@@ -90,7 +123,9 @@ def test_nothing_but_the_broker_url_changes(scratch: Path) -> None:
             tracked["broker"].pop("url", None)
             produced["broker"] = dict(produced["broker"])
             produced["broker"].pop("url", None)
-        assert produced == tracked, f"{rendered.name} differs beyond its broker URL"
+        assert _without_credential_bearing_urls(produced) == _without_credential_bearing_urls(
+            tracked
+        ), f"{rendered.name} differs beyond the URLs the render is allowed to rewrite"
 
 
 def test_a_role_with_no_secret_stops_the_render(scratch: Path) -> None:
@@ -381,3 +416,44 @@ def test_a_second_render_does_not_need_to_own_the_file_it_replaces(scratch: Path
         + ". It must remove and recreate it — unlinking is a permission on the directory, "
         "which the deployer still has, and truncating is one on the file, which it does not"
     )
+
+
+def test_a_second_render_keeps_the_directory_every_container_mounts(scratch: Path) -> None:
+    """The rendered directory is a bind-mount source, so its inode is part of its contract.
+
+    `deploy/compose.yaml` binds this directory into every container as `/etc/drogna`. A
+    bind mount resolves to an inode and not to a path, so removing the directory does not
+    empty the mount — it orphans it, and every container already running sees an empty
+    `/etc/drogna` for the rest of its life. `scripts/up.sh` is required to converge, so a
+    second render happens over a stack that is already up as a matter of course.
+
+    This is the trap `CLAUDE.md` records about the broker password file, one directory up:
+    the first run works and the run after it is the one that breaks, so a test that renders
+    once can never see it. It cost a whole bring-up in which six containers reported healthy
+    while the proxy answered 403 to a valid credential, having no `proxy.htpasswd` to read.
+
+    Asserting on the contents is not enough and that is the point: the contents were always
+    right. What was wrong was which directory they were in.
+    """
+    first = render_credentials.render_destination("local", VALUES, scratch)
+    before = first.stat().st_ino
+
+    # A file no longer wanted, to prove the sweep is a sweep and not an overwrite: the
+    # cheap fix for the inode is to stop deleting anything, which would leave stale
+    # configuration mounted into a container that no longer expects it.
+    stale = first / "departed.json"
+    stale.write_text("{}\n", encoding="utf-8")
+
+    second = render_credentials.render_destination("local", VALUES, scratch)
+
+    assert second.stat().st_ino == before, (
+        "the second render replaced the directory that every container bind-mounts. "
+        "Every container already running now has a mount on the deleted inode and sees "
+        "/etc/drogna empty. Write the files in place and sweep the ones no longer wanted"
+    )
+    assert not stale.exists(), "a file the destination no longer declares was left mounted"
+
+    # And it is still a correct render, not merely the same directory.
+    document = json.loads((second / "clock.json").read_text(encoding="utf-8"))
+    control = VALUES[render_credentials.ROLE_SECRETS["drogna_control"]]
+    assert document["broker"]["url"] == f"mqtt://drogna_control:{control}@broker:1883"

@@ -16,6 +16,26 @@
     # tests/leakage/test_released_list.py. Nothing this file could say would constrain it.
     location = @{upgrade_prefix} {
         set $harness_rule "@{rule}";
+
+        # PROVISIONAL, and the one place in this file where the boundary is not this
+        # proxy's. See docs/agent-sessions/long-run-01/DECISIONS.md for 2026-08-28, and the
+        # amendment drafted against ADR-0001, which is marked *proposed* and has not been
+        # accepted. Authorised explicitly rather than taken on an agent's judgement.
+        #
+        # A browser cannot present an HTTP Basic credential on a WebSocket: the `WebSocket`
+        # constructor takes a URL and a subprotocol list and has nowhere to put a header,
+        # and mqtt.js in a browser builds on that same constructor. Server-level
+        # `auth_basic` therefore made this location unreachable by the only client that
+        # uses it — `GET /ctl status=401 rule=allow-upgrade` in this proxy's own access
+        # log, refused at the access phase before the upgrade ever happened.
+        #
+        # The clearance for the control namespace is delegated to the broker, which is not
+        # the absence of one: the broker runs `allow_anonymous false` with a per-role ACL,
+        # the client connects as `drogna_viewer` with a secret the render injects, and that
+        # identity is subscribe-only on ctl/ and carries no rule granting obs/. The
+        # released prefix is untouched and still binary at this proxy.
+        auth_basic off;
+
         proxy_pass @{upstream};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

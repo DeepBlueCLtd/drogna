@@ -67,11 +67,45 @@ def test_a_rate_of_zero_stops_simulated_time_and_stops_nothing_else(tmp_path: Pa
     service.command({"operation": "set_rate", "rate": 0.0})
     service.run(until=stop_after(8))
 
-    assert recorder.on(CLOCK_TOPIC) == []
+    samples = recorder.on(CLOCK_TOPIC)
+    assert [sample["rate"] for sample in samples] == [0.0], (
+        f"pinning is acknowledged once on ctl/clock and then nothing is emitted: {samples}"
+    )
     heartbeats = recorder.on(HEARTBEAT_TOPIC)
     assert len(heartbeats) > 1, "a pinned clock still has to say it is alive"
     assert {beat["status"] for beat in heartbeats} <= {"starting", "ok"}
     assert host.value > 0.0, "the heartbeats were spaced by host time, not by ticks"
+
+
+def test_a_command_that_stops_emission_is_acknowledged_on_the_topic_the_browser_follows(
+    tmp_path: Path,
+) -> None:
+    """FR-012: the rate in force arrives on ``ctl/clock`` and from nowhere else.
+
+    A rate of zero stops emission, so the browser that asked for it would otherwise wait
+    for a sample that can never arrive — the pin FR-53 needs for a capture would be the one
+    rate that could never be shown in force. The acknowledgement is the tick in force,
+    re-published with the new rate; the release needs none of its own, because emission
+    resumes and the next tick carries it.
+    """
+    service, recorder, _ = service_for(tmp_path)
+
+    service.run(ticks=3)
+    service.command({"operation": "set_rate", "rate": 0.0})
+
+    acknowledgement = recorder.on(CLOCK_TOPIC)[-1]
+    assert acknowledgement["tick"] == 2, "the acknowledgement is the tick in force, not a new tick"
+    assert acknowledgement["rate"] == 0.0
+    assert recorder.on(CLOCK_TOPIC)[-2]["tick"] == 2, "simulated time did not advance to say so"
+
+    service.command({"operation": "set_rate", "rate": 10.0})
+    assert recorder.on(CLOCK_TOPIC)[-1]["rate"] == 0.0, (
+        "a release is answered by the emission it resumes, not by a second acknowledgement"
+    )
+    service.run(ticks=1)
+    resumed = recorder.on(CLOCK_TOPIC)[-1]
+    assert resumed["tick"] == 3
+    assert resumed["rate"] == 10.0
 
 
 def test_pinning_and_releasing_leave_the_tick_sequence_unbroken(tmp_path: Path) -> None:

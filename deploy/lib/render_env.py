@@ -227,6 +227,12 @@ def values_for(
         "HARNESS_CONFIG_HOST_DIR": str(mounted_config_dir),
         "HARNESS_BROKER_CONFIG_HOST_DIR": str(root / host_paths["broker_config_dir"]),
         "HARNESS_RUNTIME_HOST_DIR": str(root / host_paths["runtime_dir"]),
+        # The store definitions, mounted read-only into the provisioning one-shot.
+        # They are not copied into any image: a store's SQL is deploy-time input,
+        # like the destination configuration beside it, and baking it into eleven
+        # service images would put provisioning code in ten that never provision.
+        "HARNESS_STORES_HOST_DIR": str(root / host_paths["stores_dir"]),
+        "HARNESS_STORES_DIR": paths["stores_root"],
         "HARNESS_PUBLIC_URL": _public_url(deployment),
         "HARNESS_DATABASE_NAME": deployment["database"]["name"],
         "HARNESS_DATABASE_USER": deployment["database"]["user"],

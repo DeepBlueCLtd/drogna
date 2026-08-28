@@ -134,6 +134,31 @@ active_services() {
   compose config --services 2>/dev/null | sort
 }
 
+# The active services that are expected to still be there once the stack is up.
+#
+# A one-shot says so in the Compose file, with `harness.lifecycle: one-shot`, and the label
+# is read from the rendered configuration rather than from a list here — a list would be a
+# second place to forget. `features` and `env-generator` carry it: both write what they owe
+# and exit 0, which is success, and asking `--wait` about them reports it as failure.
+long_lived_services() {
+  local one_shots
+  one_shots="$(
+    compose config --format json 2>/dev/null |
+      python3 -c '
+import json, sys
+
+document = json.load(sys.stdin)
+for name, service in sorted(document.get("services", {}).items()):
+    labels = service.get("labels") or {}
+    if isinstance(labels, list):
+        labels = dict(item.split("=", 1) for item in labels if "=" in item)
+    if labels.get("harness.lifecycle") == "one-shot":
+        print(name)
+'
+  )" || return 1
+  comm -23 <(active_services) <(printf '%s' "${one_shots}" | sort)
+}
+
 running_services() {
   compose ps --services --status running 2>/dev/null | sort
 }

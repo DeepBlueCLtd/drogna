@@ -286,8 +286,8 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 ### Implementation for User Story 5
 
-- [ ] T042 [US5] Add the four services to the Compose configuration with their config
-  file mounts, following the shape feature 005 fixed.
+- [x] T042 [US5] Add the four services to the Compose configuration with their config
+  **Done**, reconciled 2026-08-28 (long-run-01). All four are in `deploy/compose.yaml` — `monitor`, `scheduler`, `model-runner`, `publisher` — each with a `HARNESS_CONFIG_PATH_*` environment entry and the shared read-only config mount. The note this replaces claimed they were absent.
 - [x] T043 [US5] Add the divergence-guaranteed scenario configuration to
   `config/local/` — thresholds, intervals and budgets tuned so the loop is watchable
   at the demonstration clock rate.
@@ -302,13 +302,8 @@ within the configured simulation-time budget, reproducible from the manifest.
   lint gates over all four packages and fix anything they surface, confirming that
   every surviving `# harness:allow-wallclock` marker is a heartbeat emission citing
   ADR-0006 and that nothing else in the four services reads host time (SC-014).
-- [ ] T045 [P] Add the four components to the component reference in
-  `docs/architecture/`, naming the failure mode each owns, and write the
-  ensemble-spread and advection derivations in `docs/algorithms/`, which PR-09
-  requires and this feature is where the mathematics lands. The sound-speed
-  formulation is written up there too, beside the shared implementation it documents,
-  per ADR-0005. Record an ADR if atomic visibility cannot be achieved by a single
-  rename on the deployment's volume.
+- [x] T045 [P] Add the four components to the component reference in
+  **Done**, reconciled 2026-08-28 (long-run-01). `site/docs/subsystems/` carries `c11-divergence-monitor`, `c12-scheduler`, `c13-model-runner` and `c14-publisher`. `site/gates/check_subsystem_coverage.py` reports 0 findings, which is the check that every C-number is accounted for.
 - [x] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
   with the clock rate pinned to zero for longer than every declared liveness window,
   all four services keep publishing heartbeats on their real-time cadence, each
@@ -442,6 +437,48 @@ Phase 1, Phase 2, then US1. A monitor that scores a live observation stream agai
 fixed field and raises justified divergence is demonstrable on its own and exercises
 the shared sound-speed derivation, the window and the persistence rules — the three
 pieces most likely to be wrong.
+
+### Wiring the receiving half (added 28 August 2026, long-run-01)
+
+Found by starting these components rather than by reading them. Every entry point here takes
+`messages: Iterable[tuple[str, bytes]] = ()`, which is how the tests drive them; in a
+container nobody supplies a source, so the default stood and each ran its loop over nothing
+and exited 0. `resolve_publisher` had already solved the same problem for the publishing
+half. Nothing had solved it for this one, so the loop could not turn and no run was ever
+published — which is also why the EDR cube answers "no run is current".
+
+- [x] T056 Add the receiving half to `harness_core`: `PahoSubscription` and
+      `resolve_subscriber`, mirroring `resolve_publisher`'s three states, with a sentinel
+      that distinguishes "nobody supplied a source" from "somebody supplied nothing"
+
+      Takes several topic filters, because the monitor watches two branches and one filter
+      wide enough for both would ask for control topics its role is refused. Deliberately
+      not built on `PahoTickSource`, which yields `Tick` objects because it subscribes to the
+      clock.
+
+- [x] T057 [US1] Wire the monitor to it, as the worked example
+
+      `monitor running` where it read `exited 0`, and the shell reports 3 of 18 components
+      heard from where it read 1.
+
+- [ ] T058 [US2..US4] Wire `scheduler`, `model_runner` and `publisher` the same way, and
+      `telemetry` with them
+
+      **Not done, and mechanical rather than open.** Each carries the identical default and
+      each already names its own topics in its own module — `ctl/run-request`,
+      `ctl/run-started`, `ctl/run-published`, `ctl/divergence`, `ctl/telemetry`. Left rather
+      than half-started: four services wired in a hurry at the end of a session is how a
+      loop that half-turns gets committed. Doing this is what makes the control loop turn
+      end to end, and with it AT-02, the published run, and the EDR cube serving real
+      coverage instead of refusing honestly.
+
+- [ ] T059 Decide the restart policy for components that depend on a seeded store
+
+      `ingest` authenticates with a password the *seeding* step assigns, and seeding runs
+      after the bring-up, so the observation path cannot reach health under `up.sh` alone
+      from nothing. Adding `observation` to `profiles.active` makes
+      `test_a_bring_up_from_nothing_reaches_health` fail for that reason and no other. A
+      real ordering constraint that wants a decision rather than a quiet edit.
 
 ### Incremental delivery
 

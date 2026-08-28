@@ -44,6 +44,17 @@ x-config-mount: &config-mount
   target: ${HARNESS_CONFIG_DIR}
   read_only: true
 
+# The store definitions, read-only, for the provisioning one-shot alone. Mounted rather than
+# copied into the image: a store's SQL is deploy-time input like the configuration above it,
+# and a COPY would put provisioning code into ten images that never provision. C-07's
+# producer needs the workspace, so it runs in a container; what it reads still comes from the
+# checkout, which is where a destination's own values have always come from.
+x-stores-mount: &stores-mount
+  type: bind
+  source: ${HARNESS_STORES_HOST_DIR}
+  target: ${HARNESS_STORES_DIR}
+  read_only: true
+
 # Build context is the repository root for every image: the uv workspace lock and the
 # client sources both sit above `deploy/`.
 x-python-build: &python-build
@@ -88,6 +99,15 @@ services:
   env-generator:
     <<: *runtime
     profiles: [generator, full]
+    # C-02 authors the field once per scenario and exits; it is a one-shot in exactly the
+    # sense `features` is, and saying so is what stops `up.sh` waiting for it to become
+    # something it was never going to be. Without this label the bring-up reported
+    # "the container exited cleanly, having been expected to stay up" and failed, on a run
+    # where the generator had done its job perfectly and everything downstream of it was
+    # waiting on `service_completed_successfully`.
+    restart: "no"
+    labels:
+      harness.lifecycle: one-shot
     build:
       <<: *python-build
       args:
@@ -155,6 +175,14 @@ services:
         condition: service_healthy
       clock:
         condition: service_healthy
+      # A sensor samples the field C-02 authored, so it cannot start before that field
+      # exists. `service_completed_successfully` and not `service_healthy`: the generator
+      # is a one-shot that writes the manifest and exits, so it is never healthy and
+      # waiting for health would wait for ever. On a clean volume this raced and lost —
+      # `FileNotFoundError: environment.manifest.json`, from a component whose whole job
+      # is to read it.
+      env-generator:
+        condition: service_completed_successfully
     healthcheck: *python-healthcheck
 
   # C-05 ingest client, the single ingestion seam.
@@ -202,15 +230,39 @@ services:
         target: ${HARNESS_DATABASE_DATA_DIR}
     ports:
       - ${HARNESS_PUBLISH_OBSERVATIONS}
+    # Probed over TCP — `-h` is doing the work, and without it this check reports healthy
+    # on a store nothing can reach. The postgres entrypoint runs `initdb` against a
+    # temporary server listening on a unix socket and no TCP port, and a bare `pg_isready`
+    # uses that socket, so on a first bring-up the container was declared healthy during
+    # initialisation. Everything gated on `service_healthy` then started and met
+    # `connection refused` — `features` and `ingest` both died that way, on a clean volume,
+    # while the dependency they waited for was doing exactly what it was told.
     healthcheck:
       <<: *healthcheck-timing
-      test: ["CMD-SHELL", "pg_isready -U ${HARNESS_DATABASE_USER} -d ${HARNESS_DATABASE_NAME}"]
+      # `$$(hostname)` rather than an address: it is the container's own name on the
+      # network Compose made, so this file still holds no host and no literal of its own
+      # (Constitution IV), and the probe is a TCP connection because a hostname forces one.
+      test:
+        - CMD-SHELL
+        - pg_isready -h "$$(hostname)" -p ${HARNESS_PORT_OBSERVATIONS} -U ${HARNESS_DATABASE_USER}
+          -d ${HARNESS_DATABASE_NAME}
 
   # C-07 feature store. Static spatial reference, provisioned by script at scenario start
   # and read-only thereafter, so it is a one-shot job rather than a long-lived service.
+  #
+  # `provisioning` and deliberately not `full`. It is owned by the seeding step, not by the
+  # bring-up: `deploy/seed.d/020-features.sh` names its own profiles and invokes it with
+  # `compose run --rm`, which is how a one-shot returns its digests to the host. Starting it
+  # again as part of `full` runs it a second time and, worse, at the wrong moment — before
+  # `010-observations` has created the roles its grants name, which is `psycopg.errors.
+  # UndefinedObject: role "drogna_ingest" does not exist` on every clean bring-up.
+  #
+  # So `full` is every service the running stack has, and the two one-shots that prepare its
+  # stores are the seeding step's. `scripts/run_local.sh` does both in that order, which is
+  # why the store is still provisioned by the one command.
   features:
     <<: *runtime
-    profiles: [provisioning, full]
+    profiles: [provisioning]
     restart: "no"
     labels:
       harness.lifecycle: one-shot
@@ -221,8 +273,10 @@ services:
         HARNESS_SERVICE: harness_features
     environment:
       HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_FEATURES}
+      HARNESS_STORES_DIR: ${HARNESS_STORES_DIR}
     volumes:
       - *config-mount
+      - *stores-mount
     depends_on:
       observations:
         condition: service_healthy
@@ -379,6 +433,11 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+      # The ground truth this advects is C-02's, and the component says so itself when it
+      # is missing: "there is nothing to advect and a run would be invention". Same
+      # one-shot condition as the sensors, for the same reason.
+      env-generator:
+        condition: service_completed_successfully
     healthcheck: *python-healthcheck
 
   # C-14 publisher. Makes completed runs visible atomically.
@@ -431,6 +490,11 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+      # ADR-0002: every planning cell needs a decorrelation timescale and this component
+      # has no constant to substitute, so without C-02's manifest it refuses rather than
+      # inventing one. Same one-shot condition as the sensors, for the same reason.
+      env-generator:
+        condition: service_completed_successfully
     healthcheck: *python-healthcheck
 
   # C-16 telemetry. Turns the residual stream the monitor already produces into reported

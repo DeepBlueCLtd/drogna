@@ -79,22 +79,25 @@ jobs:
       - name: Gate — the site's own publication gates
         run: python site/gates/run_gates.py --site site/build
 
-      - name: Gate — the landing page carries the FR-01 statement
-        run: |
-          set -euo pipefail
-          index="site/build/index.html"
-          test -f "$index"
-          grep -qi "learning harness" "$index"
-          grep -qi "synthetic" "$index"
-          grep -qi "fake" "$index"
-          echo "Landing page statement present."
-
-      - name: Gate — indexing is declined
-        run: |
-          set -euo pipefail
-          grep -qi 'name="robots"' site/build/index.html
-          grep -qi 'Disallow: /' site/build/robots.txt
-          echo "noindex meta and robots.txt present."
+      # The two steps that used to sit here — a grep of the built index.html for the
+      # FR-01 statement, and a grep of index.html and robots.txt for the indexing refusal
+      # — are gone, because both are now gates that the step above discovers:
+      # site/gates/check_landing_page.py and site/gates/check_indexing.py. Keeping the
+      # greps as well would be two authorities over one property, and the weaker of the
+      # two is the one somebody would eventually satisfy.
+      #
+      # Each gate is stronger than the grep it replaces, in the way that mattered:
+      #
+      #   - the landing-page gate checks the statement is *first*, which the grep could
+      #     not — it matched three phrases anywhere in the file, so moving the statement
+      #     below a section of prose passed. FR-01's clause is "so no viewer mistakes it
+      #     for a candidate system", and a disclaimer three screens down is not that.
+      #   - the indexing gate reads every built page rather than index.html. The meta tag
+      #     reaches pages through one theme override, so the way it fails is by ceasing to
+      #     apply *somewhere*, which a check of the landing page alone cannot see.
+      #
+      # Both carry a committed control under site/gates/fixtures/ on which the old grep
+      # passes and the gate reports, and site/gates/tests/ asserts exactly that pairing.
 
       - name: Disable Jekyll processing
         # GitHub Pages runs Jekyll over a branch-served site by default, and

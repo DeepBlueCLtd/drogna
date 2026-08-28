@@ -95,19 +95,31 @@ then run the workflow on a branch and confirm the same output is pushed.
 
 ### Tests for User Story 1
 
-- [~] T008 [P] [US1] Write `site/gates/tests/test_landing_page.py` asserting the built landing page carries the learning-harness, synthetic-data, fake-numerics statement before any other content (FR-003).
-  **Partial, and confirmed still partial 2026-08-28** (lane E). The assertion exists, as the
-  workflow step "Gate — the landing page carries the FR-01 statement", which greps the built
-  `index.html` for "learning harness", "synthetic" and "fake". There is no
-  `site/gates/tests/test_landing_page.py`, and **nothing asserts the ordering**, which is the
-  half of FR-003 that matters: `site/docs/index.md` does put the statement before any other
-  content, by authoring rather than by a check, so an edit that moved it below a section of
-  prose would publish and nothing would say so.
-  **What genuinely remains:** the ordering assertion. The shape that fits this repository is
-  `site/gates/check_landing_page.py` — discovered by `run_gates.py` with no wiring, like every
-  other gate — plus its test and a control page with the statement in the wrong place. Not
-  taken here because lane E's remit is reconciliation rather than new gates, and because the
-  three greps in the workflow are not wrong, only weaker than the task asks for.
+- [x] T008 [P] [US1] Write `site/gates/tests/test_landing_page.py` asserting the built landing page carries the learning-harness, synthetic-data, fake-numerics statement before any other content (FR-003).
+  **Done** 2026-08-28 (lane E, second pass). Written as the shape the earlier note proposed:
+  `site/gates/check_landing_page.py` (discovered by `run_gates.py` with no wiring, like every
+  other gate), `site/gates/fixtures/landing_page/statement_late/` as the control, and
+  `site/gates/tests/test_landing_page.py` — fifteen tests, all passing.
+  **The ordering is what the gate adds, and the control is what proves it.** The rule is
+  stated once in the gate's docstring: in the built landing page's `<article>`, the first
+  element after the page heading must carry every required phrase. The heading may come first,
+  because every page on the site has one; and it is one element rather than a character budget,
+  because a budget would be a number typed into a gate when the document's own structure
+  already answers the question.
+  **Watched failing, twice.** Moving the statement below "What it is" in `site/docs/index.md`
+  and rebuilding gave three `statement-not-first` findings naming the element the statement
+  landed in (`<h2>`); reverted clean. And the committed control makes the point permanent:
+  `test_the_grep_this_gate_replaced_passes_the_control` asserts the old workflow grep finds
+  all three phrases in the fixture, in the same file as the gate's finding on it, because
+  either fact alone is not the argument.
+  **The gate is a reading of FR-01, not a second opinion about it.** `REQUIRED` is checked
+  against FR-01's own text in `harness-srd.md` on every run, so a reworded requirement is
+  reported as `requirement-drift` rather than silently enforced in its old form — watched, with
+  a probe requirements document saying "teaching rig with invented data".
+  **The workflow grep is gone**, from `.github/workflows/pages.yml`, with the reason recorded
+  there: two authorities over one property, and the weaker is the one somebody eventually
+  satisfies. As a consequence the property is now also reported pre-merge in `ci.yml`, which
+  the grep never was — `pages.yml` has no `pull_request` trigger by T012's design.
 - [x] T009 [P] [US1] Write `site/gates/check_external_refs.py` and its test: parse built HTML, CSS and JavaScript for any sub-resource reference to another origin, and fail on any hit while permitting outbound hyperlinks (FR-007, SC-004).
   **Done**, re-reconciled 2026-08-28 (lane E, `claude/evidence-reconciliation`). **The half that was missing was the
   one that mattered, and it is now closed.** The gate exists as
@@ -141,19 +153,29 @@ then run the workflow on a branch and confirm the same output is pushed.
   `develop` branch — `git branch -r` lists `origin/main` and nothing else — which is the same
   branch under a different name.
 - [x] T012 [US1] Restrict the workflow so a pull request from a fork cannot reach the publishing job, and record the restriction in the workflow itself as a comment naming PR-01 (FR-009).
-- [~] T013 [US1] Add `robots.txt` generation declining indexing, and a test asserting it is present in the built output (FR-008).
-  **Partial, and confirmed still partial 2026-08-28** (lane E). `site/docs/robots.txt` declines
-  indexing and `site/overrides/main.html` puts `noindex, nofollow` on every page, so the
-  property FR-008 asks for holds twice over and is asserted, by the workflow's "Gate — indexing
-  is declined" step, in both `pages.yml` and `ci.yml`.
-  **What genuinely remains is a judgement, not work.** Two words in the task are unmet and they
-  pull against each other. "Generation" would replace a committed two-line file with a hook
-  that produces it, which is more machinery guarding less; the committed file is the better
-  artefact and the task's word is the weaker part of it. "A test" is the half worth having, and
-  it is the same shape as T008's: a gate plus its control, so that the assertion lives beside
-  the others rather than in two workflow files. Left open on the same grounds as T008 — lane
-  E's remit is reconciliation rather than new gates — and recorded here so the next lane
-  inherits the reasoning rather than the task alone.
+- [x] T013 [US1] Add `robots.txt` generation declining indexing, and a test asserting it is present in the built output (FR-008).
+  **Done** 2026-08-28 (lane E, second pass). Closed as the earlier note proposed:
+  `site/gates/check_indexing.py`, `site/gates/fixtures/indexable_site/` as the control, and
+  `site/gates/tests/test_indexing.py` — fourteen tests, all passing.
+  **The gate reads every page, and that is the point.** The previous mechanism was two greps
+  over `index.html` and `robots.txt`. The meta tag reaches pages through one theme override, so
+  the way it fails is by ceasing to apply *somewhere* rather than everywhere — which a check of
+  the landing page alone cannot see. The gate reads all 79 built pages and reports per page.
+  **Watched failing three ways**, each by editing the real mechanism and rebuilding: weakening
+  `site/overrides/main.html` to `content="nofollow"` gave 79 `page-indexable` findings quoting
+  the directive; deleting its `extrahead` block gave 79 findings saying no tag at all; making
+  `site/docs/robots.txt` say `Allow: /` gave one `robots-permissive` finding. Clean on every
+  revert. The committed control is the harder case in miniature: a tree where both old greps
+  pass and two of its three pages are indexable.
+  **The generation half is deliberately not done, and this is the reason.** Replacing a
+  committed two-line file with a hook that writes it is more machinery guarding less, and the
+  file is the better artefact: it is readable in the tree, it is diffable, and mkdocs already
+  copies it into the build. What the task was reaching for through "generation" was the
+  assurance that the file arrives in the built output, and the gate now asserts exactly that,
+  over the built tree, rather than over the source. Recorded here rather than left to be
+  rediscovered as an omission.
+  **Both workflow greps are gone** from `.github/workflows/pages.yml`, for the reason given
+  against T008.
 - [x] T014 [US1] Document in `docs/index.md` and in the workflow that `gh-pages` is machine-written and that hand edits are overwritten by the next publication (FR-001).
 - [~] T015 [US1] Run the workflow on a throwaway branch publishing to a throwaway target, confirm the output matches a local build byte-for-byte, and record the check in the workflow's notes.
   **Partial, and confirmed still partial 2026-08-28** (lane E). The workflow's header comment
@@ -218,21 +240,38 @@ component identifier is accounted for.
 
 - [x] T023 [P] [US3] Write `site/gates/check_manifest.py` and its test: every page named in `docs/manifest.yaml` exists and exceeds its minimum length; a missing or stub page fails, named (FR-011, SC-002).
   **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_manifest.py` (237 lines) and `site/gates/tests/test_manifest.py` (411 lines).
-- [~] T024 [P] [US3] Write `site/gates/check_links.py` and its test: zero broken internal links, and a link to a repository file that is not published counts as broken (FR-019, SC-005).
-  **Partial, and confirmed still partial 2026-08-28** (lane E). The property is held, by
-  `mkdocs build --strict` with `validation` raising `omitted_files`, `absolute_links`,
-  `unrecognized_links` and `anchors` to warnings that `--strict` turns into errors — including
-  a link to a repository file that is not published, which is the case this task singles out.
-  There is no `site/gates/check_links.py` and no test of it.
-  **This one is left open deliberately, and the reason is a rule this repository already
-  keeps.** A second link checker would be a second authority over the same property, and
-  "two numbers for one bound is the drift this repository keeps paying for" is the argument
-  `docs/manifest.yaml` makes when it declines to restate the per-image cap. The gap that
-  remains is not coverage but evidence: `--strict` has never been *watched* rejecting a broken
-  internal link here, so the honest close is a control page under a fixture and a test that
-  builds it and expects a non-zero exit — not a reimplementation. Recorded as an open question
-  rather than answered, per the rule that a spec disagreeing with the code is not automatically
-  wrong.
+- [x] T024 [P] [US3] Write `site/gates/check_links.py` and its test: zero broken internal links, and a link to a repository file that is not published counts as broken (FR-019, SC-005).
+  **Done** 2026-08-28 (lane E, second pass). **Closed deliberately as a control rather than
+  as the gate the task names, and the difference is the substance.** There is still no
+  `site/gates/check_links.py` and there should not be: a second link checker would be a second
+  authority over one property, which is the argument `docs/manifest.yaml` already makes when it
+  declines to restate the per-image cap. The property is held by `mkdocs build --strict` with
+  `validation` raising `omitted_files`, `absolute_links`, `unrecognized_links` and `anchors`.
+  What was missing was never coverage; it was evidence, and that is what has been added.
+  `site/gates/fixtures/broken_link/` is a miniature site carrying **one fault per validation
+  rule**, including the case this task singles out — a link to a repository file that is not
+  published, written as a relative path out of the documentation tree, which resolves in an
+  editor and not on the site. `site/gates/tests/test_link_validation.py` builds it and expects
+  a refusal naming each fault, parametrised so a rule that stopped reporting is one named
+  failure rather than a disappearance inside a single assertion about the whole log.
+  **Three things keep it from proving less than it appears to.** It builds the same fixture
+  *without* `--strict` and expects success, so the refusal is attributable to the flag under
+  test rather than to a fixture that is simply unbuildable. It builds the fixture repaired and
+  expects success, because a checker that refuses everything is no more use than one that
+  refuses nothing. And it reads the `validation:` block out of both
+  `site/gates/fixtures/broken_link/mkdocs.yml` and `site/mkdocs.yml` and fails if they differ —
+  without which, relaxing the real site's validation would leave this control still green,
+  proving that settings the site no longer uses would have caught the fault.
+  **Watched failing in both directions.** Relaxing `unrecognized_links` to `ignore` in the real
+  `site/mkdocs.yml` failed the drift guard. Relaxing the fixture's own block turned
+  `--strict` quiet and failed the per-fault assertions for the absolute link, the dangling
+  anchor and the omitted file. Green again on revert.
+  **Where it runs.** mkdocs is outside the `uv` workspace (ADR-0010), so under
+  `uv run pytest` nine of the eleven tests **skip loudly with the reason** and never quietly
+  pass; the two that read configuration files run everywhere. `.github/workflows/ci.yml`'s
+  `site` job — which installs the pinned tooling — gains a report-only step that runs them for
+  real. Verified locally both ways: eleven passing under the site environment, nine skipping
+  with the reason under `uv run pytest`.
 - [x] T025 [P] [US3] Write `site/gates/check_glossary.py` and its test: every term in the glossary source list has a definition, every first use on a page links to it, and both directions are reported (FR-013, SC-007).
   **Done**, reconciled 2026-08-27 (long-run-01). `site/gates/check_glossary.py` (697 lines) and `site/gates/tests/test_glossary.py` (606 lines). It reports both directions, and prints two scope notes over the real site rather than silently excluding the pages they cover.
 - [x] T026 [P] [US3] Add a subsystem coverage test asserting every component identifier from C-01 to C-18 has a page or an explicit not-yet-built entry (FR-012, SC-006).
@@ -645,3 +684,58 @@ change and again after. Word counts by `wc -w` over the sources; page statuses b
 admonition at the head of each of the eighteen subsystem files; the coverage table read out of
 the built `blog/index.html` rather than the source; `tests/integration/test_sensorthings_conformance.py`
 run to confirm it no longer skips.
+
+### Second correction, 2026-08-28 — three of the five remaining partials are closed
+
+**Appended, not rewritten**, on the same terms as the block above it.
+
+The correction above grouped T008, T013 and T024 as "the same shape of gap in three places:
+a property that genuinely holds, asserted somewhere weaker than a gate with a control", and
+left them because that pass's remit was reconciliation rather than new gates. They are now
+closed, and the grouping turned out to be right — all three wanted the same thing and none
+of them wanted what its task text literally asked for.
+
+**44 of 46 ticked, 2 partial, none unticked.** T005 and T015 remain, for the reasons each
+records: T005's workspace script pulls against ADR-0010 and its base-URL parameter has no
+present need; T015 needs a workflow run against a throwaway target, which a checkout cannot
+do.
+
+**What was added.** Two gates, two committed controls, three test files, 40 tests.
+
+| Gate | Control | Tests | What it adds over the mechanism it replaces |
+|---|---|---|---|
+| `check_landing_page.py` | `fixtures/landing_page/statement_late/` | `test_landing_page.py`, 15 | the statement must be **first**, which a grep for three phrases anywhere could not see |
+| `check_indexing.py` | `fixtures/indexable_site/` | `test_indexing.py`, 14 | **every** built page, not `index.html`; the override fails by ceasing to apply somewhere |
+| — (`mkdocs --strict`) | `fixtures/broken_link/` | `test_link_validation.py`, 11 | evidence that `--strict` rejects, without a second link checker |
+
+`site/gates/run_gates.py` discovers the two new gates with no wiring, which is the runner's
+design: ten gates now run over `site/build`, all clean.
+
+**Each control is built so that the mechanism it replaced passes it.** That is the property
+that makes it a control rather than a fixture. `test_the_grep_this_gate_replaced_passes_the_control`
+and `test_both_greps_this_gate_replaced_pass_the_control` assert exactly that, in the same
+files as the gates' findings on the same trees, because either fact alone is not the
+argument for the gate existing.
+
+**T024 is closed as a control and not as the gate it names**, deliberately. Writing
+`site/gates/check_links.py` would put a second authority over a property `mkdocs --strict`
+already holds. The task's own text is the weaker artefact here, and the note against it now
+says so rather than dissolving the disagreement: what was missing was never coverage, it was
+that nobody had watched `--strict` reject anything, so a `validation:` block relaxed to
+`ignore` would have left every build green with broken links published.
+
+**Two workflow steps were deleted, and this is the part worth watching.** The landing-page
+and indexing greps in `.github/workflows/pages.yml` are gone, because keeping them beside
+the gates would be two authorities over one property and the weaker is the one somebody
+eventually satisfies. A comment where they were records what replaced them. One consequence
+is a gain rather than a trade: `pages.yml` has no `pull_request` trigger by T012's design,
+so those two properties were never reported before a merge; they are now, through the
+gate runner that `ci.yml` already ran.
+
+**Everything above was watched failing before it was believed.** The landing statement moved
+below a section of prose (3 findings, naming `<h2>`); the theme override weakened to
+`nofollow` and then deleted (79 findings each); `robots.txt` made permissive (1 finding); the
+real site's `validation:` block relaxed (drift guard red); the fixture's own block relaxed
+(`--strict` quiet, per-fault assertions red). Every one reverted clean, and
+`git diff --stat` confirmed each revert was complete rather than assumed.
+

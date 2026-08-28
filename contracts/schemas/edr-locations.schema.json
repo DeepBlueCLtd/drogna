@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/edr-locations.schema.json",
+  "title": "drogna EDR named locations",
+  "description": "The list the EDR locations query type serves: every named place the query layer will answer a location query for, as a GeoJSON-compatible FeatureCollection. Two kinds of entry, distinguished so a consumer never has to guess: the seeded synthetic features with a fixed horizontal position, and sensor platforms at the position of their latest reported observation — current position only. The harness holds no location history and this list never becomes one (Constitution V): one entry per place, no past positions, and the list itself refuses a datetime filter. Everything here is synthetic; the numerics are deliberately fake and no entry describes a real place.",
+  "type": "object",
+  "required": [
+    "type",
+    "features"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "FeatureCollection",
+      "description": "GeoJSON's own name for the shape, so any GeoJSON reader can draw the list."
+    },
+    "features": {
+      "type": "array",
+      "description": "The advertised locations. Bounded by the configured locations_maximum_locations: a longer list is refused with the count and the limit named, never truncated.",
+      "items": {
+        "$ref": "#/$defs/named_location"
+      }
+    }
+  },
+  "$defs": {
+    "named_location": {
+      "title": "Named location",
+      "description": "One server-advertised queryable place: an identifier the locations data query answers for, a point geometry, and the kind that says where the position came from.",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "geometry",
+        "properties"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "Feature"
+        },
+        "id": {
+          "type": "string",
+          "description": "The identifier a locations data query names: a seeded feature's own identifier, or a Thing's."
+        },
+        "geometry": {
+          "$ref": "#/$defs/point"
+        },
+        "properties": {
+          "$ref": "#/$defs/attributes"
+        }
+      }
+    },
+    "point": {
+      "title": "Location point",
+      "description": "Where the location is, as a GeoJSON Point: longitude then latitude, CRS84.",
+      "type": "object",
+      "required": [
+        "type",
+        "coordinates"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "Point"
+        },
+        "coordinates": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "attributes": {
+      "title": "Named location attributes",
+      "description": "What kind of place this is, and — for a sensor — when its position was current.",
+      "type": "object",
+      "required": [
+        "name",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "One line for a person reading the list."
+        },
+        "kind": {
+          "enum": [
+            "feature",
+            "sensor"
+          ],
+          "description": "feature: a seeded synthetic feature at its seeded position, from configuration. sensor: a sampling platform at the position of its latest reported observation, derived from the observation store at request time."
+        },
+        "as_of": {
+          "type": "string",
+          "description": "Sensor entries only: the phenomenon time of the observation the position comes from — simulation time, ISO-8601 UTC. The position is current as of this instant and no history is held behind it. Absent on feature entries, whose seeded position has no time."
+        }
+      }
+    }
+  }
+}

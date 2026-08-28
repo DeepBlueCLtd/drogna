@@ -35,6 +35,7 @@ from harness_types.messages.bundle_manifest import DrognaBundleManifest
 from harness_types.messages.clock import DrognaSimulationTimeSample
 from harness_types.messages.coverage_run_manifest import DrognaCoverageRunManifest
 from harness_types.messages.divergence import DrognaDivergenceEvent
+from harness_types.messages.edr_locations import DrognaEdrNamedLocations
 from harness_types.messages.heartbeat import DrognaComponentHeartbeat
 from harness_types.messages.ingest_telemetry import DrognaIngestTelemetry
 from harness_types.messages.manifest import DrognaGroundTruthManifest
@@ -88,6 +89,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "offload-telemetry.schema.json": DrognaOffloadTelemetry,
     "config.capture.schema.json": DrognaVisualCaptureConfiguration,
     "topology.schema.json": DrognaBrokerTopology,
+    "edr-locations.schema.json": DrognaEdrNamedLocations,
 }
 
 CLOCK_SAMPLE: dict[str, Any] = {

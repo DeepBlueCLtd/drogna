@@ -82,14 +82,32 @@ def _line_of(text: str, needle: str) -> int:
     return 1
 
 
+# Where subschemas live inside a schema node, by the 2020-12 vocabulary. The walk is
+# schema-aware rather than a walk over every dict, because a properties *map* is not a
+# schema: a master with a property literally named "properties" (GeoJSON requires one)
+# would otherwise have its map mistaken for an unclosed object schema — a false positive
+# this gate reported the day edr-locations.schema.json was written.
+_SUBSCHEMA_MAPS = ("$defs", "definitions", "properties", "patternProperties")
+_SUBSCHEMA_KEYS = ("items", "additionalProperties", "contains", "not", "if", "then", "else")
+_SUBSCHEMA_LISTS = ("oneOf", "anyOf", "allOf", "prefixItems")
+
+
 def _objects(node: Any, pointer: str = "") -> Iterable[tuple[str, dict[str, Any]]]:
-    if isinstance(node, dict):
-        yield pointer or "/", node
-        for key, value in node.items():
-            yield from _objects(value, f"{pointer}/{key}")
-    elif isinstance(node, list):
-        for index, value in enumerate(node):
-            yield from _objects(value, f"{pointer}/{index}")
+    """Every schema node in the document, with the pointer it sits at."""
+    if not isinstance(node, dict):
+        return
+    yield pointer or "/", node
+    for key in _SUBSCHEMA_MAPS:
+        if isinstance(node.get(key), dict):
+            for name, child in node[key].items():
+                yield from _objects(child, f"{pointer}/{key}/{name}")
+    for key in _SUBSCHEMA_KEYS:
+        if isinstance(node.get(key), dict):
+            yield from _objects(node[key], f"{pointer}/{key}")
+    for key in _SUBSCHEMA_LISTS:
+        if isinstance(node.get(key), list):
+            for index, child in enumerate(node[key]):
+                yield from _objects(child, f"{pointer}/{key}/{index}")
 
 
 def _registry(documents: dict[str, dict[str, Any]]):

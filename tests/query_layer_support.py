@@ -374,6 +374,10 @@ def settings(**overrides: Any) -> CoverageSettings:
         "limits": {
             "cube_maximum_cells": 250000,
             "trajectory_maximum_vertices": 91,
+            "radius_maximum_cells": 250000,
+            "area_maximum_cells": 250000,
+            "corridor_maximum_samples": 1001,
+            "locations_maximum_locations": 100,
             "page_size_default": 100,
             "page_size_maximum": 1000,
         },

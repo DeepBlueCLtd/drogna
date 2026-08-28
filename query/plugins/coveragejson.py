@@ -26,7 +26,9 @@ __all__ = [
     "TIME_UNITS_PREFIX",
     "Parameter",
     "TimeAxisEncoding",
+    "coverage_collection",
     "grid_coverage",
+    "multipoint_series_coverage",
     "parameter_block",
     "point_coverage",
     "referencing",
@@ -225,6 +227,63 @@ def grid_coverage(
         for parameter in parameters
     }
     return _coverage(domain, parameters, ranges)
+
+
+def multipoint_series_coverage(
+    *,
+    positions: Sequence[tuple[float, float, float]],
+    times_iso: Sequence[str],
+    parameters: Sequence[Parameter],
+    values: Mapping[str, Sequence[float | None]],
+) -> dict[str, Any]:
+    """Selected points through time: radius and area answers.
+
+    A ``Grid`` domain cannot carry "the nodes inside the drawn geometry" without either
+    misstating the shape or nulling the nodes outside it — and a null in these responses
+    must keep meaning exactly one thing, the refusal to extrapolate. So the spatial axis
+    is composite: one ``(x, y, z)`` tuple per selected node and depth, with time as its
+    own axis. The response contains the geometry's nodes and nothing else, which is what
+    "answer only with data inside the geometry" means. One domain type serves both a
+    single instant and a series, rather than two shapes that could disagree.
+
+    Values are ordered time-major: for each time, every position in the composite order.
+    """
+    domain: dict[str, Any] = {
+        "type": "Domain",
+        "domainType": "MultiPointSeries",
+        "axes": {
+            "composite": {
+                "dataType": "tuple",
+                "coordinates": ["x", "y", "z"],
+                "values": [list(position) for position in positions],
+            },
+            "t": {"values": list(times_iso)},
+        },
+        "referencing": referencing(),
+    }
+    shape = [len(times_iso), len(positions)]
+    ranges = {
+        parameter.name: _range(values[parameter.name], ["t", "composite"], shape)
+        for parameter in parameters
+    }
+    return _coverage(domain, parameters, ranges)
+
+
+def coverage_collection(
+    coverages: Sequence[Mapping[str, Any]],
+    *,
+    domain_type: str,
+) -> dict[str, Any]:
+    """Several coverages as one CoverageJSON document: the corridor's shape.
+
+    Each member is a complete coverage carrying its own parameters and ranges; the
+    collection adds nothing but the grouping, so nothing here can disagree with a member.
+    """
+    return {
+        "type": "CoverageCollection",
+        "domainType": domain_type,
+        "coverages": [dict(coverage) for coverage in coverages],
+    }
 
 
 def trajectory_coverage(

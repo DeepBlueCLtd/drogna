@@ -67,6 +67,10 @@ class CoverageSettings:
     parameters: tuple[Parameter, ...]
     cube_maximum_cells: int
     trajectory_maximum_vertices: int
+    radius_maximum_cells: int
+    area_maximum_cells: int
+    corridor_maximum_samples: int
+    locations_maximum_locations: int
     default_depth_metres: float
 
     @classmethod
@@ -79,6 +83,10 @@ class CoverageSettings:
             parameters=tuple(Parameter.from_config(entry) for entry in coverage["parameters"]),
             cube_maximum_cells=int(limits["cube_maximum_cells"]),
             trajectory_maximum_vertices=int(limits["trajectory_maximum_vertices"]),
+            radius_maximum_cells=int(limits["radius_maximum_cells"]),
+            area_maximum_cells=int(limits["area_maximum_cells"]),
+            corridor_maximum_samples=int(limits["corridor_maximum_samples"]),
+            locations_maximum_locations=int(limits["locations_maximum_locations"]),
             default_depth_metres=float(interpolation["default_depth_metres"]),
         )
 

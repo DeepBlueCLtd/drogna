@@ -199,8 +199,29 @@ both, no state is lost, and the depth axis is labelled depth, positive down.
   which this feature must not break).
 - [x] T036 [P] Run `pnpm lint`, `pnpm typecheck`, `pnpm typecheck:capture`, `pnpm test`
   and `pnpm build`.
-- [ ] T037 Bring the local stack up and take a glance capture against it, and record what
+- [x] T037 Bring the local stack up and take a glance capture against it, and record what
   the empty-stack map actually looks like rather than what it was expected to look like.
+  **Done, and it was worth doing four times.** The map is the first panel on the page: the
+  extent, its graticule at the spacing the destination declares, and the sentence saying no
+  field has been received. With the loop not yet live that is the whole picture, and it
+  reads as an empty ocean with a scale on it rather than as a panel that failed. Four
+  defects were visible there and in none of the tests:
+
+  - The rendering probe obtained a real WebGL context on every render, so Chromium
+    discarded the oldest — deck.gl's own — and the map went blank while every probe
+    reported success. The console said so and nothing else did.
+  - The served graticule spacing was configuration that did nothing: the surface chose its
+    own and never read the declared one.
+  - Volume mode with nothing published drew a blank rectangle, because the box was only
+    built when there was something to put in it. It is geometry, like the graticule, and is
+    now drawn either way with its depth range stated.
+  - The box was written as three paths and its four uprights were not drawn at all — a path
+    layer extrudes a ribbon along each segment's direction and a vertical edge has none — so
+    it appeared as two floating rectangles with nothing joining them. Drawn as twelve lines
+    now, with a test that was watched failing on the eight-edge version.
+
+  Three of the four were invisible to a test that did not open a browser, which is the
+  argument for this task existing at all.
 - [x] T038 Tick feature 012's `tasks.md` T032 and T038 with a note pointing here, as this
   feature's spec instructs, and record in `docs/architecture/delivery-plan.md` that 017 is
   no longer "specified; no plan or tasks".

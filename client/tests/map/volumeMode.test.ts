@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { DEPTH_AXIS_LABEL, drawnVolume, volumeLayers, volumeWords } from "../../src/map/layers";
+import { DEPTH_AXIS_LABEL, drawnVolume, volumeBoxLayer, volumeLayers, volumeWords } from "../../src/map/layers";
 import { cellCount, readFieldCube, sliceAt } from "../../src/map/fieldCube";
 
 import type { VolumePoint } from "../../src/map/layers";
@@ -113,6 +113,24 @@ describe("the volume", () => {
 });
 
 describe("the volume's layers", () => {
+  it("draw the box as twelve edges, four of them the uprights the depth axis lives on", () => {
+    // The box was written as three paths and the four vertical edges were not drawn at
+    // all: a path layer extrudes a ribbon along each segment's direction, and a segment
+    // whose ends differ only in depth has no direction to extrude along. What it drew was
+    // two floating rectangles with nothing joining them, and every test here passed. Found
+    // by looking at it in a browser, which is the only place it was visible.
+    const box = volumeBoxLayer();
+    const edges = layerProp<{ from: number[]; to: number[] }[]>(box, "data");
+    expect(edges).toHaveLength(12);
+    const uprights = edges.filter(
+      (edge) => edge.from[0] === edge.to[0] && edge.from[1] === edge.to[1],
+    );
+    expect(uprights).toHaveLength(4);
+    for (const upright of uprights) {
+      expect(upright.to[2]).toBeLessThan(upright.from[2] as number);
+    }
+  });
+
   it("are the point cloud and the box its depth axis is measured against", () => {
     const volume = drawnVolume(cube(), 0, 4096);
     const layers = volumeLayers(volume as NonNullable<typeof volume>);

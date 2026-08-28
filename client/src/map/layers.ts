@@ -26,7 +26,7 @@
  * (Constitution II, SC-004).
  */
 import { COORDINATE_SYSTEM, OrbitView, MapView } from "@deck.gl/core";
-import { PathLayer, PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { LineLayer, PathLayer, PointCloudLayer, ScatterplotLayer } from "@deck.gl/layers";
 
 import { layerInputs } from "../uncertainty/UncertaintyLayer";
 import { INK, encode, shade } from "./shading";
@@ -386,8 +386,23 @@ export function volumeLayers(volume: DrawnVolume): Layer[] {
   return [cloud, volumeBoxLayer()];
 }
 
-/** The box the volume sits in, so the depth axis has something to be measured against. */
-function volumeBoxLayer(): Layer {
+/**
+ * The box the volume sits in, so the depth axis has something to be measured against.
+ *
+ * Exported because it is drawn whether or not a field has arrived, exactly as the flat
+ * map's graticule is: it is geometry, derived from nothing that was measured, and an empty
+ * box with a labelled axis is a far better account of "no field has been received" than a
+ * blank rectangle is. Seen against the running stack, where volume mode with nothing
+ * published drew nothing whatsoever and read as a panel that had failed.
+ *
+ * Drawn as twelve lines rather than as three paths, and that is not a stylistic choice: a
+ * path layer extrudes a ribbon along each segment's direction, so the four vertical edges —
+ * whose two ends differ only in depth — came out with no width and were not drawn at all.
+ * The box appeared as two floating rectangles with nothing joining them, which is a
+ * peculiar way to show a volume. Found by looking at it; a line layer draws each edge as an
+ * edge and has no such degenerate case.
+ */
+export function volumeBoxLayer(): Layer {
   const half = VOLUME_WIDTH / 2;
   const top = 0;
   const bottom = -VOLUME_DEPTH;
@@ -397,22 +412,22 @@ function volumeBoxLayer(): Layer {
     [half, half],
     [-half, half],
   ];
-  const ring = (level: number): Position[] =>
-    [...corners, corners[0] as [number, number]].map(([x, y]) => [x, y, level] as Position);
-  const paths: { path: Position[] }[] = [{ path: ring(top) }, { path: ring(bottom) }];
-  for (const [x, y] of corners) {
-    paths.push({
-      path: [
-        [x, y, top] as Position,
-        [x, y, bottom] as Position,
-      ],
-    });
+  const edges: { from: Position; to: Position }[] = [];
+  for (let index = 0; index < corners.length; index += 1) {
+    const [x, y] = corners[index] as [number, number];
+    const [nextX, nextY] = corners[(index + 1) % corners.length] as [number, number];
+    for (const level of [top, bottom]) {
+      edges.push({ from: [x, y, level], to: [nextX, nextY, level] });
+    }
+    // The four uprights: the depth axis itself, one at each corner of the surface.
+    edges.push({ from: [x, y, top], to: [x, y, bottom] });
   }
-  return new PathLayer({
+  return new LineLayer({
     id: "volume-box",
-    data: paths,
+    data: edges,
     coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-    getPath: (entry: { path: Position[] }) => entry.path,
+    getSourcePosition: (edge: { from: Position }) => edge.from,
+    getTargetPosition: (edge: { to: Position }) => edge.to,
     getColor: [...INK.graticule],
     getWidth: GRATICULE_WIDTH,
     widthUnits: "pixels",

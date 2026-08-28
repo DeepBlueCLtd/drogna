@@ -78,4 +78,24 @@ describe("volume mode with nothing to draw", () => {
   it("offers no depth control, because there are no depths to choose between", () => {
     expect(render("volume")).not.toContain('data-testid="map-depth-control"');
   });
+
+  it("says it once rather than twice", () => {
+    // Seen against the running stack: the flat map's field statement was rendered in
+    // volume mode as well, so the same sentence about the same nothing appeared twice,
+    // one paragraph apart. Both were true and the pair read as a fault.
+    const markup = render("volume");
+    expect(markup).not.toContain('data-testid="map-field-state"');
+    expect(markup.split(NO_FIELD_RECEIVED.slice(0, 40))).toHaveLength(2);
+  });
+
+  it("labels the depth axis anyway, and says the box is drawn around nothing", () => {
+    // The box is geometry, like the graticule, and is drawn whether or not there is
+    // anything in it: volume mode with nothing published drew a blank rectangle against
+    // the running stack, which read as a panel that had failed rather than as an absence.
+    const markup = render("volume");
+    expect(markup).toContain('data-testid="map-depth-axis"');
+    expect(markup).toContain("positive downwards");
+    expect(markup).toContain("0 m to 1000 m");
+    expect(markup).toContain("nothing inside it is drawn");
+  });
 });

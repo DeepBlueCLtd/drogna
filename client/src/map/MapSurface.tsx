@@ -32,7 +32,7 @@ import { sliceAt } from "./fieldCube";
 // One line, because `scripts/check_no_literal_paths.py` recognises a module specifier by
 // the line it starts on: a wrapped import leaves `} from "./layers"` on a line of its own,
 // which the gate reads as a relative path in source rather than as a name in the build graph.
-import { DEPTH_AXIS_LABEL, FLAT_VIEW, VOLUME_VIEW, drawnVolume, fieldLayer, frameLayer, graticuleLayer, pickedCellLayer, routeLayers, volumeLayers, volumeWords } from "./layers";
+import { DEPTH_AXIS_LABEL, FLAT_VIEW, VOLUME_VIEW, drawnVolume, fieldLayer, frameLayer, graticuleLayer, pickedCellLayer, routeLayers, volumeBoxLayer, volumeLayers, volumeWords } from "./layers";
 import { exposeMapReadiness, readinessAttributes } from "./mapReadiness";
 import { pickedCell, pickedWords } from "./selection";
 import { renderingCapability } from "./renderingCapability";
@@ -207,8 +207,11 @@ export function MapSurface({
           }),
         );
       }
-    } else if (volume !== null) {
-      layers.push(...volumeLayers(volume));
+    } else {
+      // The box is drawn whether or not there is anything in it, for the same reason the
+      // graticule is: an empty box with a labelled depth axis says "nothing has been
+      // published", and a blank rectangle says nothing at all.
+      layers.push(...(volume === null ? [volumeBoxLayer()] : volumeLayers(volume)));
     }
   }
 
@@ -246,7 +249,7 @@ export function MapSurface({
             initialViewState={
               mode === "flat"
                 ? { longitude: fit.longitude, latitude: fit.latitude, zoom: fit.zoom }
-                : { target: [0, 0, -30], rotationX: 30, rotationOrbit: 20, zoom: 1.6 }
+                : { target: [0, 0, -30], rotationX: 30, rotationOrbit: 20, zoom: 1 }
             }
             controller={true}
             layers={layers}
@@ -255,7 +258,13 @@ export function MapSurface({
           />
         </div>
       ) : null}
-      <FieldStatement field={field} drawn={drawn} sliceReason={slice !== null && !slice.ok ? slice.reason : null} />
+      {mode === "flat" ? (
+        <FieldStatement
+          field={field}
+          drawn={drawn}
+          sliceReason={slice !== null && !slice.ok ? slice.reason : null}
+        />
+      ) : null}
       {cube === null || drawn === null ? null : (
         <>
           <p className="map-legend" data-testid="map-legend">
@@ -281,9 +290,19 @@ export function MapSurface({
         }}
       />
       {mode === "volume" ? (
-        <p className="map-volume" data-testid="map-volume-words">
-          {volume === null ? NO_FIELD_RECEIVED : `${volumeWords(volume)} ${DEPTH_AXIS_LABEL}`}
-        </p>
+        <>
+          <p className="map-volume" data-testid="map-volume-words">
+            {volume === null ? NO_FIELD_RECEIVED : volumeWords(volume)}
+          </p>
+          <p className="map-volume" data-testid="map-depth-axis">
+            {DEPTH_AXIS_LABEL}
+            {volume === null
+              ? extent.extent?.minimumDepthM === null || extent.extent === null
+                ? ""
+                : ` The box is drawn for ${extent.extent.minimumDepthM} m to ${extent.extent.maximumDepthM} m, which is the range the extent states; nothing inside it is drawn.`
+              : ` This volume spans ${volume.depthRange[0]} m to ${volume.depthRange[1]} m, as the run's own vertical axis states.`}
+          </p>
+        </>
       ) : null}
       <p className="map-route" data-testid="map-route-state">
         {route === null

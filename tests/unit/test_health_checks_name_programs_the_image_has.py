@@ -41,6 +41,10 @@ PROVIDED: dict[str, frozenset[str]] = {
     "client": frozenset({"wget", "sh"}),
     "broker": frozenset({"pidof", "sh", "mosquitto_sub", "mosquitto_pub"}),
     "observations": frozenset({"pg_isready", "psql", "sh"}),
+    # The upstream Python image, which is the whole of what the stub archive runs on.
+    # It ships neither wget nor curl — the exact image CLAUDE.md records a health check
+    # failing against — so the probe is python3, and this entry is what holds it to that.
+    "archive": frozenset({"python3", "sh"}),
 }
 
 # The shell forms Compose accepts, neither of which is the program being run.

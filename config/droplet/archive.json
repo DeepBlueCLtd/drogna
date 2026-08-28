@@ -1,0 +1,27 @@
+{
+  "component": {
+    "id": "archive",
+    "description": "The stub offload destination. Deliberately fake, like everything here: it holds objects in memory and forgets them on restart. What it does not fake is the digest — it computes its own over the bytes that arrived (014 T045).",
+    "heartbeat_interval_seconds": 5.0
+  },
+  "clock": {
+    "endpoint": "http://clock:8090",
+    "routes": {
+      "snapshot": "/clock/snapshot"
+    },
+    "timeout_seconds": 5.0
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "archive": {
+    "destination_id": "archive",
+    "bind": "0.0.0.0",
+    "port": 8110,
+    "routes": {
+      "upload": "/objects/{name}",
+      "commit": "/objects/{name}/commit",
+      "receipt": "/objects/{name}/receipt"
+    }
+  }
+}

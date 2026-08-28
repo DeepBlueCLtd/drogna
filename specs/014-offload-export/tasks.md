@@ -143,7 +143,7 @@ provenance scanner over the same bundle; read the primer against the file.
 - [x] T037 [P] [US4] Write `services/offload/tests/test_attributes.py` asserting every global and variable attribute in a produced bundle is on the configured allow-list, and that no value contains a filesystem path, hostname, user name, command line or sensor identifier (FR-017).
 - [x] T038 [P] [US4] Add a test asserting the run reference in the file is an opaque derivation of the run manifest digest and that the manifest itself is not embedded (FR-017).
 - [x] T039 [P] [US4] Add a test asserting the staging area is not reachable through the released path prefix configured for the deployment (FR-018).
-- [ ] T040 [P] [US4] Add a CI step running feature 013's provenance scanner over a produced bundle, asserting zero hits (SC-006).
+- [x] T040 [P] [US4] Add a CI step running feature 013's provenance scanner over a produced bundle, asserting zero hits (SC-006).
 
 ### Implementation for User Story 4
 
@@ -156,8 +156,8 @@ provenance scanner over the same bundle; read the primer against the file.
 
 ## Phase 7: Polish and Cross-Cutting Concerns
 
-- [ ] T045 [P] Add the packager to the Compose configuration consumed from `config/`, with the stub destination as a second service, taking no literal address in either.
-- [ ] T046 [P] Add a one-command local run that packages a fixture run, transfers it, verifies it and reports the ledger state, for demonstrability.
+- [x] T045 [P] Add the packager to the Compose configuration consumed from `config/`, with the stub destination as a second service, taking no literal address in either.
+- [x] T046 [P] Add a one-command local run that packages a fixture run, transfers it, verifies it and reports the ledger state, for demonstrability.
 - [x] T047 Record in `services/offload/README.md` that the coverage output is a genuine port and the destination transport is not, so nobody adds an interface over the transport without an ADR (Constitution VI).
 
 ---
@@ -241,12 +241,28 @@ a crash. US4 makes the file safe to hand on. Each is demonstrable without the ne
 
 ## Delivery notes
 
-Three tasks are not ticked, and each is a decision rather than an omission.
+Three tasks were not ticked, and each was a decision rather than an omission. All three
+are ticked now; what each note said, and what was actually found in the tree when lane D
+came back to them on 28 August 2026, is below. Two of the three notes had gone stale in the
+way `CLAUDE.md` describes — the tree had moved and the record had not — and the delivery
+plan, which listed these as "the only unticked tasks in the repository with no reason
+recorded", was itself wrong: the notes were here all along, under this heading.
 
-- **T040** — feature 013's provenance scanner does run over a produced bundle, in
-  `tests/integration/test_offload_provenance_scan.py`, and it finds **zero** identifying
-  hits: no path, host, user, sensor, thing, datastream or in-radius coordinate, in the
-  NetCDF or the sidecar. What it does report is that 013's attribute allow-list is
+- **T040** — done, 28 August 2026 (lane D), by establishing that it already was and saying
+  so, which is what this task's status being unknown had cost. The scanner runs over a
+  produced bundle on every build: `tests/integration/test_offload_provenance_scan.py` is
+  collected by `uv run pytest`, which is the `checks` job's Tests step, and it needs no
+  container and no optional tooling — checked, on 28 August, that it runs there rather than
+  skipping, because a test that skips everywhere is the outcome `CLAUDE.md` warns reads
+  exactly like a clean one. A second named step in `ci.yml` running the same test was
+  considered and not added: it would be a second way to invoke one test, which is the
+  duplication this repository keeps deciding against, and it would not make the assertion
+  any truer.
+
+  The substance of the original note stands unchanged, and is the part worth keeping:
+
+  Feature 013's provenance scanner finds **zero** identifying hits: no path, host, user,
+  sensor, thing, datastream or in-radius coordinate, in the NetCDF or the sidecar. What it does report is that 013's attribute allow-list is
   calibrated for the gridded coverage products the proxy releases and does not carry the
   `trajectoryProfile` geometry — `cf_role`, `sample_dimension`, `instance_dimension`,
   `coordinates`, the three dimension names, `featureType = "trajectoryProfile"` and a CF
@@ -256,14 +272,47 @@ Three tasks are not ticked, and each is a decision rather than an omission.
   any case, so the entry is left for 013 rather than added here. "Zero hits" in SC-006's
   sense is therefore asserted; "zero findings from an unmodified rule file" is not, and the
   difference is written down instead of being smoothed over.
-- **T045** — `deploy/compose.yaml` already carries an `offload` service, written by feature
-  005 before this component existed. It mounts the coverage store read-only and does not
-  yet mount a staging area or a ledger directory, and there is no stub-destination service.
-  `deploy/` belongs to 005; the gap is recorded in `services/offload/README.md`.
-- **T046** — no one-command local run was added. The gate at
-  `scripts/check_cf_conformance.py` packages a fixture run through the packager's own code
-  path on every build, which is the demonstrability this task was for, and a second entry
-  point over `deploy/` belongs with T045.
+- **T045** — done, 28 August 2026 (lane D). Two thirds of this note had gone stale before
+  it was read again. The `offload` service does now mount its staging area and its ledger,
+  on one volume, and no longer mounts the coverage store — all three corrected in the tree
+  without this note following. What was still true, and was the whole of the task, is that
+  **there was no stub-destination service**: `config/*/offload.json` has named `archive`
+  since the packager was written, nothing answered there, and the deployed component could
+  therefore stage a bundle and could never transfer one. Nothing noticed because every test
+  that exercises the transfer path presents its own destination in-process, which is right
+  for what those tests assert and is exactly why none of them could see this.
+
+  `deploy/archive/stub.py` answers now, declared as `archive` in `deploy/compose.yaml`,
+  configured from `config/*/archive.json`, with no literal address at either end. It is a
+  stub in the sense the whole harness is: objects live in memory and a restart forgets them.
+  What it does not fake is the digest — it computes its own over the bytes that arrived,
+  which is the only reason a receipt is worth having, and
+  `tests/integration/test_offload_destination_stub.py` declares a deliberately wrong digest
+  and asserts the destination contradicts it. It holds no clock, so a receipt's `sim_time`
+  comes from C-01 and no receipt is issued at all when the clock cannot be read: "the
+  destination said yes and told us nothing" is a modelled outcome, and better than a
+  simulation time this program invented (Constitution I).
+
+  The blocker this note recorded — "`deploy/` belongs to 005" — is what lane D exists to
+  clear, so it no longer applies.
+- **T046** — done, 28 August 2026 (lane D), and the note's reasoning was sound but is now
+  answered rather than overtaken. `scripts/check_cf_conformance.py` does package a fixture
+  run through the packager's own code path on every build, and that remains the check. What
+  it cannot show, because it never leaves the process, is a transfer: it stops at the file.
+  Once T045 gave the deployment a destination that answers, the second entry point the note
+  deferred had something to demonstrate, so `scripts/offload_demo.sh` was added.
+
+  It writes a fixture run, packages it, transfers it to the **deployed** stub over the
+  address `deployment.json` publishes, verifies the receipt and prints the ledger — staged,
+  transferred, verified, with the digest the destination computed and the simulation instant
+  it received at. The fixture comes from `offload_support.write_run`, the generator the
+  tests already use, rather than a second one written here: `offload_support.configuration`
+  reads `config/local/offload.json` itself, so a value that drifts there fails in the
+  demonstration too. It writes nothing into the deployment's volumes and evicts nothing from
+  them; the scratch tree goes away with the run.
+
+  The task said "for demonstrability" and that is what it is. It is not a gate and is not
+  registered as one.
 
 Two other things worth knowing for whoever picks this up.
 

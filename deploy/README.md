@@ -233,7 +233,7 @@ which is the thing ADR-0016 exists to warn about.
 | `control` | Monitor, scheduler, model runner, publisher. |
 | `planning` | The planner. |
 | `telemetry` | Telemetry. |
-| `offload` | The offload packager. |
+| `offload` | The offload packager, and the stub `archive` it transfers to. |
 | `shell` | The browser client. |
 | `full` | Every service, for the day they all exist. |
 
@@ -296,6 +296,7 @@ alive.** That is heartbeats, always.
 | C-15 planner | `planner` | `planning` | Declared, not built. |
 | C-16 telemetry | `telemetry` | `telemetry` | Declared, not built. |
 | C-17 offload packager | `offload` | `offload` | Declared, not built. |
+| — the stub destination it transfers to | `archive` | `offload` | Built and started, 28 August 2026 (014 T045). Not a component and has no C-number: deploy-time apparatus, twenty lines of stdlib in `deploy/archive/stub.py` mounted into the upstream Python image, holding its objects in memory and forgetting them on restart. It computes its own digest over the bytes that arrived rather than echoing the one it was sent, which is the only reason the receipt it issues is worth anything. `scripts/offload_demo.sh` runs a bundle through it in one command. |
 | C-18 browser client | `client` | `shell` | Declared, not built. The image definition is complete and has never been built, because `client/` does not exist yet. |
 
 "Declared, not built" means precisely this: the service entry is complete and correct as far

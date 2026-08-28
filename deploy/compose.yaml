@@ -594,6 +594,50 @@ services:
         condition: service_healthy
     healthcheck: *python-healthcheck
 
+  # The stub destination the packager offloads to. 014 T045.
+  #
+  # `config/<destination>/offload.json` has named `archive` as its destination since the
+  # packager was written and nothing answered there, so the deployed component could stage a
+  # bundle and could never transfer one. This is what answers.
+  #
+  # A stub, and it says so: objects live in memory and a restart forgets them. What it does
+  # not fake is the digest — `deploy/archive/stub.py` computes its own over the bytes that
+  # arrived, which is the only reason a receipt is worth having.
+  #
+  # The upstream Python image rather than a drogna one: this is deploy-time apparatus, not a
+  # component. It has no workspace dependency, so it needs no build, no wheel and no index —
+  # which also means no `RUN` that fetches and nothing for the proxy CA seam to cover.
+  archive:
+    <<: *runtime
+    profiles: [offload, full]
+    image: python:3.11-slim-bookworm@sha256:0bee7276f83efd4a1ee05bbbf4281d95ed28e079220a9457f25a93e3f1e3c31b
+    environment:
+      HARNESS_CONFIG: ${HARNESS_CONFIG_PATH_ARCHIVE}
+    volumes:
+      - *config-mount
+      # The program, read-only, from the checkout. Mounted rather than baked for the reason
+      # the store definitions are: it is deploy-time input, and an image built to carry
+      # twenty lines of stdlib would be an image to rebuild every time they changed.
+      - type: bind
+        source: ${HARNESS_ARCHIVE_HOST_DIR}
+        target: ${HARNESS_ARCHIVE_DIR}
+        read_only: true
+    command:
+      - python3
+      - ${HARNESS_ARCHIVE_ENTRYPOINT}
+    ports:
+      - ${HARNESS_PUBLISH_ARCHIVE}
+    # `python3`, because that is what this image carries. It ships neither wget nor curl,
+    # and a check naming one of those cannot pass and cannot say why — which is the trap
+    # CLAUDE.md records against this exact image. `$$(hostname)` rather than an address, so
+    # this file still holds none of its own, and a hostname forces a TCP connection.
+    healthcheck:
+      <<: *healthcheck-timing
+      test:
+        - CMD-SHELL
+        - python3 -c "import socket,sys; socket.create_connection((socket.gethostname(),
+          ${HARNESS_PORT_ARCHIVE}), 3).close()"
+
   # C-18 browser client. Static assets built from `client/` and served by nginx.
   client:
     <<: *runtime

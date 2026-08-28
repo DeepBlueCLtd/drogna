@@ -67,6 +67,11 @@ HTTP_HEALTH_SERVICES = ("query", "proxy", "client")
 # generate, carry or reconcile.
 SECRET_NAMES = render_credentials.SECRET_NAMES
 
+# The stub offload destination's program: the directory under `deploy/` that holds it, and
+# the file inside that directory the container is told to run.
+_ARCHIVE_DIRNAME = "archive"
+_ARCHIVE_PROGRAM = "stub.py"
+
 # Where the observation store's client authentication rules sit inside the stores mount.
 # `deploy/compose.yaml` names the file through HARNESS_DATABASE_HBA_FILE below.
 _HBA_RELATIVE = "observations/pg_hba.conf"
@@ -241,6 +246,16 @@ def values_for(
         # service images would put provisioning code in ten that never provision.
         "HARNESS_STORES_HOST_DIR": str(root / host_paths["stores_dir"]),
         "HARNESS_STORES_DIR": paths["stores_root"],
+        # The stub offload destination's program, and where it is mounted and invoked.
+        # Derived rather than declared, for the reason the hba file below is: one tracked
+        # file at a fixed place, and a second declaration would be a second thing that
+        # could disagree. `deploy/` is this deployment's own directory, so the container
+        # path is composed from the app root the destination already names.
+        "HARNESS_ARCHIVE_HOST_DIR": str(deploy_dir(root) / _ARCHIVE_DIRNAME),
+        "HARNESS_ARCHIVE_DIR": paths["app_root"].rstrip("/") + "/" + _ARCHIVE_DIRNAME,
+        "HARNESS_ARCHIVE_ENTRYPOINT": (
+            paths["app_root"].rstrip("/") + "/" + _ARCHIVE_DIRNAME + "/" + _ARCHIVE_PROGRAM
+        ),
         # The observation store's client authentication rules, inside the mount above.
         # Derived from the stores root rather than declared separately: it is one tracked
         # file at a fixed place within a directory the destination already names, and a

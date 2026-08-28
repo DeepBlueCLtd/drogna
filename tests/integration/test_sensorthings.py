@@ -61,6 +61,24 @@ def test_the_service_root_lists_every_served_entity_set_by_link(
         assert follow(service, entry["url"])["value"] is not None
 
 
+def test_the_conformance_statement_the_root_advertises_is_reachable_at_the_link_it_gives(
+    service: SensorThingsService,
+) -> None:
+    """The statement of what is not implemented is the one link a reader follows first.
+
+    The root advertises it by href, so it has to answer there. It did not: the service
+    knew the segment, built the link from it, and never routed it — a reader following
+    the link was told there is no entity set of that name, which is true and useless.
+    Followed rather than constructed, like every other link in this file.
+    """
+    root = service.root()
+    href = root["drogna:conformance"]["href"]
+    served = follow(service, href)
+    assert served["conformant"] is False
+    assert served["entity_sets_served"] == list(ENTITY_SETS)
+    assert set(served["entity_sets_absent"]) == set(ABSENT_ENTITY_SETS)
+
+
 def test_the_whole_entity_set_can_be_walked_from_the_root_through_links_alone(
     service: SensorThingsService,
 ) -> None:

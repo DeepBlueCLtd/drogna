@@ -291,20 +291,17 @@ def _verifies(entry: str, secret: str) -> bool:
     return produced == digest.strip()
 
 
-def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
-    values = dict(VALUES)
-    values[render_credentials.PROXY_SECRET] = "secret-for-the-reader"
-    render_credentials.render_destination("local", values, scratch)
-    written = render_credentials.write_proxy_credentials("local", values, scratch)
+def test_the_proxy_credential_entry_verifies() -> None:
+    """The content half, on the pure function, so it needs no privilege to run.
 
-    entry = written.read_text(encoding="utf-8").strip()
-    tracked = json.loads(
-        (REPO_ROOT / "config" / "local" / "proxy.json").read_text(encoding="utf-8")
-    )
-    user = tracked["proxy"]["credentials"]["user"]
-    assert entry.startswith(f"{user}:"), "the file must name the identity the configuration does"
+    The file half moved to the ownership tests below when the renderer learned to give the
+    file to the nginx workers: a test that reads the written file back can no longer run as
+    an unprivileged deployer, and the content never depended on the file anyway.
+    """
+    entry = render_credentials._proxy_credential_entry("drogna_reader", "secret-for-the-reader")
+    assert entry.startswith("drogna_reader:"), "the entry must name the identity it was asked for"
     assert "$apr1$" in entry, "nginx is given an apr1 hash, not a plaintext secret"
-    assert "secret-for-the-reader" not in entry, "the secret itself must not reach the file"
+    assert "secret-for-the-reader" not in entry, "the secret itself must not reach the entry"
     assert _verifies(entry, "secret-for-the-reader"), (
         "the hash does not verify against the secret it was made from, so nginx would "
         "refuse every reader"
@@ -312,7 +309,6 @@ def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
     assert not _verifies(entry, "not-the-secret"), (
         "a wrong secret verified, so this test proves nothing about the right one"
     )
-    assert written.stat().st_mode & 0o077 == 0, "a credential file is readable by its owner alone"
 
 
 def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:
@@ -323,6 +319,108 @@ def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:
     with pytest.raises(ConfigurationError) as raised:
         render_credentials.write_proxy_credentials("local", values, scratch)
     assert render_credentials.PROXY_SECRET in str(raised.value)
+
+
+def _proxy_values() -> dict[str, str]:
+    values = dict(VALUES)
+    values[render_credentials.PROXY_SECRET] = "secret-for-the-reader"
+    return values
+
+
+@pytest.mark.skipif(
+    os.getuid() != 0 and not shutil.which("docker"),
+    reason="giving a file away needs root, or a container runtime to be root in",
+)
+def test_the_proxy_credential_is_given_to_the_workers(scratch: Path) -> None:
+    """The other half of the broker's pwfile fault, one container over.
+
+    `auth_basic_user_file` is opened by an nginx *worker*, per request, after the master
+    has dropped to the image's `nginx` user — so a root-owned 0600 htpasswd is one the
+    workers cannot open. nginx does not stop dead the way the broker does: it starts,
+    reports healthy, and answers 500 to every request behind the clearance, with
+    `open() "/etc/drogna/proxy.htpasswd" failed (13: Permission denied)` in its error log.
+    Measured against the running local profile on 28 August 2026; invisible on macOS for
+    the same bind-mount reason as the broker's fault, which is why it survived this long.
+    """
+    shutil.copy2(REPO_ROOT / "deploy" / "compose.yaml", scratch / "deploy" / "compose.yaml")
+    values = _proxy_values()
+    render_credentials.render_destination("local", values, scratch)
+    written = render_credentials.write_proxy_credentials("local", values, scratch)
+
+    stat = written.stat()
+    assert stat.st_uid == render_credentials.PROXY_READER_UID, (
+        "the htpasswd does not belong to the nginx workers' uid. The workers read it per "
+        "request after privileges are dropped; a file they do not own is a 500 to every "
+        "cleared caller, reported healthy the whole time"
+    )
+    assert stat.st_mode & 0o177 == 0, "a credential file is readable by its owner alone"
+    if os.getuid() == 0:
+        # Only a privileged test can still read the file it just gave away; the identity
+        # binding to the tracked configuration is asserted here for that reason.
+        tracked = json.loads(
+            (REPO_ROOT / "config" / "local" / "proxy.json").read_text(encoding="utf-8")
+        )
+        user = tracked["proxy"]["credentials"]["user"]
+        content = written.read_text(encoding="utf-8").strip()
+        assert content.startswith(f"{user}:"), (
+            "the file must name the identity the configuration does"
+        )
+
+
+@pytest.mark.skipif(
+    os.getuid() != 0,
+    reason="reproducing the worker's read needs a privileged process able to drop to its uid",
+)
+def test_a_worker_uid_can_open_the_proxy_credential(scratch: Path) -> None:
+    """The fault itself, reproduced: read the file as the uid the workers run as.
+
+    Ownership alone is circumstantial — what broke was the `open()`. The child drops to
+    the workers' uid and opens the file the renderer wrote, which is exactly what a worker
+    does at the first authenticated request. Against the unfixed renderer this reports
+    `PermissionError: [Errno 13]`, the same errno the proxy's error log carried.
+    """
+    shutil.copy2(REPO_ROOT / "deploy" / "compose.yaml", scratch / "deploy" / "compose.yaml")
+    values = _proxy_values()
+    render_credentials.render_destination("local", values, scratch)
+    written = render_credentials.write_proxy_credentials("local", values, scratch)
+    # pytest's tmp root is 0700; without traversal the child reports a denial on the
+    # directory, which is a different fault wearing the same errno.
+    for ancestor in [written.parent, *written.parent.parents]:
+        if ancestor == Path(ancestor.root):
+            break
+        os.chmod(ancestor, 0o755)
+
+    read_fd, write_fd = os.pipe()
+    child = os.fork()
+    if child == 0:  # pragma: no cover - the assertions run in the parent
+        os.close(read_fd)
+        message = b""
+        try:
+            os.setgroups([])
+            os.setgid(render_credentials.PROXY_READER_GID)
+            os.setuid(render_credentials.PROXY_READER_UID)
+            try:
+                written.read_text(encoding="utf-8")
+            except PermissionError as error:
+                message = f"PermissionError: {error}".encode()
+            except Exception:  # anything else the child meets here is not the bug
+                pass
+        except Exception as error:
+            message = f"could not drop privileges: {error}".encode()
+        os.write(write_fd, message)
+        os.close(write_fd)
+        os._exit(0)
+
+    os.close(write_fd)
+    reported = os.read(read_fd, 4096).decode()
+    os.close(read_fd)
+    os.waitpid(child, 0)
+
+    assert "PermissionError" not in reported, (
+        "an nginx worker cannot open the htpasswd the renderer wrote: "
+        + reported
+        + ". That is a healthy-looking proxy answering 500 to every cleared request"
+    )
 
 
 NOBODY_UID = 65534

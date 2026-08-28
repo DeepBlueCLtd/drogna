@@ -95,6 +95,17 @@ SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)
 BROKER_UID = 1883
 BROKER_GID = 1883
 
+# The uid and gid the nginx workers in the pinned proxy base image (`nginx:1.27-alpine`,
+# deploy/images/proxy.Dockerfile) run as. `auth_basic_user_file` is opened by a *worker*,
+# per request, after the master has dropped privileges — so, exactly as with the broker's
+# password file above, a 0600 file owned by the deploying user is one the workers cannot
+# open. nginx does not stop dead the way the broker does: it starts, reports healthy, and
+# answers 500 to every request behind the clearance, with
+# `open() "/etc/drogna/proxy.htpasswd" failed (13: Permission denied)` in its error log.
+# Invisible on macOS for the same bind-mount reason, measured on Linux 28 August 2026.
+PROXY_READER_UID = 101
+PROXY_READER_GID = 101
+
 _RUNTIME_CONFIG_DIRNAME = "config"
 
 
@@ -392,6 +403,11 @@ def write_proxy_credentials(
     broker. The salt is derived from the secret rather than drawn, so that a second render
     of an unchanged secret produces an unchanged file — and since the secret is generated per
     installation, the salt still differs between installations, which is what a salt is for.
+
+    The file is then given to the nginx workers' uid, exactly as the broker's password file
+    is given to the broker's: `auth_basic_user_file` is opened by a worker per request, and
+    a worker refused by the kernel is a 500 to every cleared caller — measured, not
+    imagined, and invisible on macOS. See PROXY_READER_UID above.
     """
     base = root or repository_root()
     document = json.loads(
@@ -409,6 +425,20 @@ def write_proxy_credentials(
             f"no value for {PROXY_SECRET}, so the proxy would start with no credential file "
             "and answer 500 behind its authenticated location rather than refusing to start"
         )
+    entry = _proxy_credential_entry(user, secret)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Removed rather than truncated, for the reason write_password_file records: the last
+    # render gave this file away, so the deploying user can unlink it (a permission on the
+    # directory) and cannot open it for writing (a permission on the file).
+    target.unlink(missing_ok=True)
+    target.write_text(f"{entry}\n", encoding="utf-8")
+    target.chmod(0o600)
+    _give_to_proxy_workers(target, root)
+    return target
+
+
+def _proxy_credential_entry(user: str, secret: str) -> str:
+    """The htpasswd line for the one reader identity: `user:$apr1$...`. Pure, no file."""
     tool = shutil.which("openssl")
     if tool is None:
         raise ConfigurationError(
@@ -427,10 +457,62 @@ def write_proxy_credentials(
             f"openssl refused to hash the proxy credential: "
             f"{result.stderr.strip() or result.stdout.strip()}"
         )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(f"{user}:{result.stdout.strip()}\n", encoding="utf-8")
-    target.chmod(0o600)
-    return target
+    return f"{user}:{result.stdout.strip()}"
+
+
+def _give_to_proxy_workers(target: Path, root: Path | None = None) -> None:
+    """Give the htpasswd the owner the nginx workers read it as. The broker's `_restrict`,
+    for the proxy's file; kept separate because the broker's literal recipe is pinned to
+    `deploy/broker/README.md` by a test and this file answers to a different image.
+
+    The container route uses the pinned broker image only because it is the one pinned
+    image a render can always reach; the chown is numeric, so which image runs it is
+    irrelevant. The failure mode of skipping this quietly is the one this function exists
+    to prevent: a file the workers cannot read is a healthy-looking proxy answering 500
+    behind its clearance, three layers away from the cause.
+    """
+    detail = ""
+    runtime = shutil.which("docker")
+    if runtime is not None:
+        seen_at = str(Path("/work") / target.name)
+        try:
+            result = subprocess.run(
+                [
+                    runtime,
+                    "run",
+                    "--rm",
+                    "-v",
+                    f"{target.parent}:/work",
+                    broker_image(root),
+                    "sh",
+                    "-c",
+                    f"chown {PROXY_READER_UID}:{PROXY_READER_GID} {seen_at}"
+                    f" && chmod 0600 {seen_at}",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                return
+            detail = result.stderr.strip() or result.stdout.strip()
+        except (OSError, ConfigurationError) as error:
+            detail = str(error)
+
+    try:
+        os.chown(target, PROXY_READER_UID, PROXY_READER_GID)
+        target.chmod(0o600)
+        return
+    except OSError as error:
+        detail = (
+            f"{detail + '; and ' if detail else ''}{error}. Only root can give a file to "
+            f"uid {PROXY_READER_UID}, and no container runtime did it either"
+        )
+    raise ConfigurationError(
+        f"the proxy credential file was written but could not be given to the nginx "
+        f"workers: {detail}. Left as it is, the proxy would report healthy and answer 500 "
+        f"to every cleared request on any host whose bind mounts enforce ownership"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

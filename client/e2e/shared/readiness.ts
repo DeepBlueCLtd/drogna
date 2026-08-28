@@ -31,7 +31,7 @@
 import type { Page } from "@playwright/test";
 
 import type { CaptureClient } from "./config";
-import { COMPONENT_DIAGRAM, SPEED_CONTROL } from "./pages/shell";
+import { ALIVE_WHILE_RUNNING, COMPONENT_DIAGRAM, LIT_COUNT, SPEED_CONTROL } from "./pages/shell";
 
 /** Raised when a readiness signal never arrived. Never a timeout with nothing to say. */
 export class ReadinessError extends Error {}
@@ -78,15 +78,67 @@ export async function settled(page: Page, client: CaptureClient): Promise<Settle
     await document.fonts.ready;
   });
 
-  const outcome = await page.evaluate(
-    async ({ stableFrames, maximumFrames }) => {
+  // A fourth signal, and the only opportunistic one: give the page the chance to hear its
+  // first heartbeat before deciding it has settled.
+  //
+  // The three signals above are all satisfied about a second after load, which is before any
+  // component has published anything — so a glance of a perfectly healthy stack reported
+  // "0 of 18 components heard from", every time, because the page had genuinely heard
+  // nothing yet. Settled, and useless.
+  //
+  // Opportunistic because a glance must also work on a stack that is down, and one that is
+  // down will never light anything. So this waits for the count to become non-zero *or* for
+  // its share of the frame budget to run out, and either way the capture proceeds. Counted
+  // in frames like everything else here: FR-019 forbids a fixed sleep in a capture path, and
+  // a wait expressed in seconds would be one.
+  await page.evaluate(
+    async ({ selector, budget }) => {
       const frame = (): Promise<void> =>
         new Promise((announce) => {
           requestAnimationFrame(() => {
             announce();
           });
         });
-      const markup = (): string => document.body.innerHTML;
+      const heard = (): boolean =>
+        !/\b0\b/.test(document.querySelector(selector)?.textContent?.trim() ?? "0");
+      for (let watched = 0; watched < budget && !heard(); watched += 1) {
+        await frame();
+      }
+    },
+    { selector: LIT_COUNT, budget: Math.floor(client.maximumFrames / 2) },
+  );
+
+  const outcome = await page.evaluate(
+    async ({ stableFrames, maximumFrames, advancing }) => {
+      const frame = (): Promise<void> =>
+        new Promise((announce) => {
+          requestAnimationFrame(() => {
+            announce();
+          });
+        });
+      // The page's markup with the figures that advance on their own held aside. Everything
+      // else must still hold still; this asks whether the page has stopped *changing*, not
+      // whether the simulation has stopped *running*, and with an unpinned clock those are
+      // different questions. A glance must not pin (see scripts/capture/README.md), so
+      // without this the third signal can never arrive: the shell redrew 892 times in 900
+      // frames, which was the simulation clock advancing at rate 10 and nothing else.
+      //
+      // Under a pinned clock these values do not change and this costs nothing, so the pair
+      // and the curated shot are unaffected either way.
+      const markup = (): string => {
+        const held = new Map<Element, string>();
+        for (const selector of advancing) {
+          for (const node of document.querySelectorAll(selector)) {
+            held.set(node, node.innerHTML);
+            node.innerHTML = "";
+          }
+        }
+        const text = document.body.innerHTML;
+        for (const [node, content] of held) {
+          node.innerHTML = content;
+        }
+        return text;
+      };
 
       let previous = markup();
       let stable = 0;
@@ -109,7 +161,11 @@ export async function settled(page: Page, client: CaptureClient): Promise<Settle
       }
       return { settled: true, framesWatched: watched, changes, sample: previous.length };
     },
-    { stableFrames: client.stableFrames, maximumFrames: client.maximumFrames },
+    {
+      stableFrames: client.stableFrames,
+      maximumFrames: client.maximumFrames,
+      advancing: ALIVE_WHILE_RUNNING,
+    },
   );
 
   if (!outcome.settled) {

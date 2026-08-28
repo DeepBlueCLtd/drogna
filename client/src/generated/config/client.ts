@@ -69,6 +69,14 @@ export interface DrognaBrowserClientRuntimeConfiguration {
      * Which forecast parameters to ask for along a route. Named here rather than in source because what a destination serves is a property of the destination.
      */
     route_parameters?: string[];
+    /**
+     * Path under a collection at which an OGC API-EDR cube query is served. The map asks for one cube per announcement, at the extent the announcement stated, and draws that. Absent where the destination does not serve cube queries, in which case the map renders the extent and states that no field can be read rather than drawing a field it did not fetch.
+     */
+    cube_path?: string;
+    /**
+     * Which parameter the map draws as the uncertainty field. Named here for the same reason route_parameters is: which parameter carries the ensemble spread is a property of what the destination serves, not of the client. Absent means the map has not been told what to draw and says so.
+     */
+    field_parameter?: string;
   };
   /**
    * How long a received heartbeat is taken as evidence, when its sender did not declare that itself. Real time by ADR-0006: a rate of zero stops simulated time and stops nothing else, so a pinned clock keeps its lit components lit for the duration of a capture.
@@ -111,5 +119,30 @@ export interface DrognaBrowserClientRuntimeConfiguration {
      * Whether the render path may smooth the display between two received clock samples using the browser's animation frame timestamp, under the three rules of ADR-0007. False renders on clock samples alone, which costs smoothness and nothing else.
      */
     interpolate_between_samples?: boolean;
+  };
+  /**
+   * Where the scenario is, for a surface that must not invent geography. The extent a run's field is drawn in comes from the announcement's own grid bounds and never from here; this is what the map has to draw before any run has been announced, which is the state a harness whose loop has not yet turned is honestly in. Optional: a document that omits it renders the statement that no extent has been served rather than failing to start, and a client that has neither an announcement nor a declaration draws no frame at all.
+   */
+  map?: {
+    /**
+     * The destination's declaration of the scenario's horizontal extent, in CRS84 degrees. The same numbers the destination declares as its domain elsewhere; declared again here because the client cannot read that document and cannot enumerate collections through the boundary.
+     */
+    extent: {
+      minimum_longitude: number;
+      minimum_latitude: number;
+      maximum_longitude: number;
+      maximum_latitude: number;
+    };
+    /**
+     * The depth range the scenario covers, in metres, positive downwards, as the coverage's own vertical convention has it. Used to label the volume mode's depth axis before a run has been announced.
+     */
+    vertical?: {
+      minimum_depth_m: number;
+      maximum_depth_m: number;
+    };
+    /**
+     * Spacing of the graticule the map draws, in degrees. Absent means the map chooses a spacing from the extent's own span, which is what keeps a wide extent from being drawn as a black rectangle of meridians.
+     */
+    graticule_spacing_degrees?: number;
   };
 }

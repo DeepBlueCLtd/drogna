@@ -89,6 +89,11 @@
         "bind": "127.0.0.1",
         "host_port": 8091,
         "container_port": 8091
+      },
+      "archive": {
+        "bind": "127.0.0.1",
+        "host_port": 8110,
+        "container_port": 8110
       }
     }
   },

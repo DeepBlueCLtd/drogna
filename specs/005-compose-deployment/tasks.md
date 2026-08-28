@@ -210,7 +210,7 @@ independent instance.
       `tests/unit/test_seeding_record.py` names it in its own docstring as the place the
       end-to-end claim lives, so the gap is currently disguised by a reference to a file
       that was never written.
-- [ ] T028 [P] [US3] Add a case asserting that reset followed by reseed reproduces the seeding record of a freshly created instance
+- [x] T028 [P] [US3] Add a case asserting that reset followed by reseed reproduces the seeding record of a freshly created instance — `tests/integration/test_reset_reproduces_a_fresh_instance.py`, 28 August 2026 (lane D). It is the four-command ritual `deploy/README.md` documented, run by the build instead of by a person: down with volumes, up, seed, keep the record, `reset.sh`, compare. Byte for byte, which the record makes possible by carrying no timestamp. The trap this had to close first is that two records saying nothing compare equal, so the record is required to account for every installed seeding step, each with a digested artefact, before the comparison is allowed to mean anything — watched failing on a step made to draw a value the root seed does not fix, and on an empty record.
 
       **Not done**: nothing anywhere runs `scripts/reset.sh` and compares the record
       that follows against a fresh instance's. `deploy/README.md` sets out the comparison

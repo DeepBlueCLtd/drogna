@@ -72,21 +72,13 @@ compose() {
   fi
 }
 
-# The database password is generated once and then reused, so that a second bring-up does
-# not present a new password to a store initialised with the old one. Reset is what
-# regenerates it, because reset removes the store as well.
+# Every secret this deployment needs, generated once and then reused.
+#
+# The database's four used to be generated here — the owner's password and one per run-time
+# role — and ADR-0023 retired them. The observation store authenticates by trust for the
+# compose network, so there is no database password to generate, to keep in step with a
+# store initialised from an earlier one, or to reconcile with a DSN.
 ensure_secrets() {
-  if [ -f "${DROGNA_ENV_FILE}" ]; then
-    HARNESS_DATABASE_PASSWORD="$(
-      sed -n 's/^HARNESS_DATABASE_PASSWORD=\(.*\)$/\1/p' "${DROGNA_ENV_FILE}" | tail -n 1
-    )"
-  fi
-  if [ -z "${HARNESS_DATABASE_PASSWORD:-}" ]; then
-    HARNESS_DATABASE_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
-    log "generated a database password into the untracked environment file"
-  fi
-  export HARNESS_DATABASE_PASSWORD
-
   # One secret per broker role, on the same terms and for the same reason: the broker's
   # password file is written from these values, and presenting new ones to a broker whose
   # file was written from the old ones refuses every component. Reset regenerates them,

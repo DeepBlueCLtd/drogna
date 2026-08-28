@@ -30,6 +30,8 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Accepted |
 | [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Proposed |
 | [0022](0022-generator-selection-for-the-type-chain.md) | The type chain's generators, and why the TypeScript half is ours | Accepted |
+| [0023](0023-the-observation-store-authenticates-by-trust.md) | The observation store authenticates by trust, and models no database threat | Accepted |
+| [0024](0024-the-advisory-store-is-a-third-schema.md) | The advisory store is a third schema, not a second engine | Accepted |
 
 There is no ADR-0017. The number was never used — no file by that number appears anywhere
 in the history — and renumbering the records that exist would break references already in

@@ -466,3 +466,89 @@ main {
   font-size: 1.02rem;
   max-width: 46rem;
 }
+
+/*
+ * The map.
+ *
+ * Achromatic throughout, like everything else here and for the same reason: these images
+ * are printed in greyscale (PR-08), and the map's own encoding carries magnitude in tone
+ * and size rather than in hue, so the stylesheet must not reintroduce a colour the drawing
+ * deliberately does without.
+ *
+ * The canvas yields space rather than taking it. At a narrow viewport it shrinks and the
+ * statements around it wrap; what never happens is the honesty statement or the liveness
+ * panels being pushed out of view to keep a picture at its full size, which is the one
+ * trade this page is not allowed to make.
+ */
+.map-surface {
+  margin: 1rem 0;
+}
+
+.map-canvas {
+  position: relative;
+  max-width: 100%;
+  margin: 0.6rem 0;
+  border: 1px solid var(--line);
+  /* Marginally off the paper, so the drawn extent reads as a surface rather than as a gap. */
+  background: #eef0ef;
+  overflow: hidden;
+}
+
+.map-canvas canvas {
+  display: block;
+}
+
+.map-surface .map-extent {
+  font-weight: 600;
+}
+
+.map-surface .map-graticule,
+.map-surface .map-legend,
+.map-surface .map-volume,
+.map-surface .map-field {
+  color: var(--muted);
+}
+
+.map-surface .map-unavailable {
+  border-left: 3px solid var(--warning);
+  padding-left: 0.6rem;
+}
+
+.map-depths ol,
+.map-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+}
+
+.map-depths button,
+.map-mode button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.map-depths button[data-selected="true"],
+.map-mode button[data-selected="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.map-surface .map-picked {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 46rem) {
+  .map-canvas {
+    width: 100% !important;
+    height: 60vw !important;
+  }
+}

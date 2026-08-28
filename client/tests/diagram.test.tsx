@@ -51,7 +51,15 @@ describe("the control loop", () => {
 
 describe("bespoke and plumbing", () => {
   it("claims nothing as bespoke that is a broker, a store, a proxy or the query layer", () => {
-    const plumbing = ["broker", "observation_store", "feature_store", "coverage_store", "query", "proxy"];
+    const plumbing = [
+      "broker",
+      "observation_store",
+      "feature_store",
+      "coverage_store",
+      "advisory_store",
+      "query",
+      "proxy",
+    ];
     for (const id of plumbing) {
       expect(COMPONENTS_BY_ID.get(id)?.kind).toBe("plumbing");
     }

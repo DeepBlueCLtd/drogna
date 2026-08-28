@@ -71,6 +71,17 @@ interface over the transport without one is the exact move Constitution VI forbi
   by the platform and not only by the startup check in `config.py`. It no longer mounts the
   coverage store: this component names no directory inside it, and the read-only mount it
   carried was a guess that nothing was comparing against the configuration.
+- **The destination it transfers to is a stub, and it is now actually there.** Until 014
+  T045 landed, `config/*/offload.json` named `archive` and `deploy/compose.yaml` declared no
+  such service: this component could stage a bundle and could never transfer one, and no
+  test could see it, because every test that exercises the transfer path presents its own
+  destination in-process. `deploy/archive/stub.py` is what answers. It is deploy-time
+  apparatus rather than a component — no spec, no image of its own, twenty lines of stdlib
+  mounted into the upstream Python image — and it is a stub in the sense the whole harness
+  is. The one thing it does not fake is the digest: it computes its own over the bytes that
+  arrived, because a destination that echoed back what it was sent would make
+  `verify.py` agree with a sender whose bytes never arrived. `scripts/offload_demo.sh` runs
+  the whole cycle against it in one command.
 
 ## The primer
 

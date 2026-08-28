@@ -44,9 +44,19 @@ def _component_ids() -> set[str]:
 
 
 def test_the_regex_finds_the_boxes_at_all() -> None:
-    """A search that matched nothing would pass the assertion below for the wrong reason."""
+    """A search that matched nothing would pass the assertion below for the wrong reason.
+
+    The count is not asserted: the drawing gains boxes as the SRD gains components, and a
+    test that has to be edited for each one is a test that gets edited without being read.
+    What is asserted is that the search found things only this file could have supplied —
+    the broker and the coverage store are drawn here and appear in no topology, so finding
+    them proves the regex parsed the drawing rather than echoing the list it is compared to.
+    """
     found = _box_ids()
-    assert len(found) == 18, f"expected the eighteen boxes of the drawing, found {sorted(found)}"
+    assert {"broker", "coverage_store", "proxy"} <= found, (
+        f"the search did not find the plumbing boxes, so it is not reading the drawing: "
+        f"{sorted(found)}"
+    )
 
 
 def test_every_component_that_can_heartbeat_has_a_box_under_its_own_id() -> None:

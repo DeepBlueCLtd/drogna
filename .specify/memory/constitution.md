@@ -211,8 +211,13 @@ Exposure is opt-in, one path prefix at a time.
   format; `pytest` for tests.
 - **TypeScript 5 / React / Deck.gl** for the browser client; `pnpm`; `vitest`;
   Playwright for capture and end-to-end.
-- **Postgres + PostGIS** as one instance carrying two schemas — `observations` and
-  `features` — mirroring the conceptual split without doubling operational surface.
+- **Postgres + PostGIS** as one instance carrying three schemas — `observations`,
+  `features` and `advisories` — mirroring the conceptual split without multiplying
+  operational surface. The three do not share a rule: `features` is read-only for the
+  duration of a run, `observations` is written by the ingestion seam alone, and
+  `advisories` is written during a run through its own ingestion seam and by nothing
+  else. What separates them is a grant the database enforces rather than a process
+  boundary (ADR-0024, SRD FR-12).
 - **MQTT** as the single broker, with separate topic namespaces for observations and
   control, and ACLs confining sensors to the observation branch. Physical separation
   onto a second broker remains a documented fallback requiring configuration change
@@ -286,7 +291,7 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.4.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-27
+**Version**: 1.5.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-28
 
 *1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
 extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
@@ -300,3 +305,19 @@ obligation to state which subset of a standard is actually implemented.*
 *1.3.0 — Principle I gains a second bounded exemption for interpolating between
 received clock samples in the client's render path (ADR-0007), with the rule that a
 third such request is evidence of erosion rather than precedent.*
+
+*1.4.0 — Principle V narrows to the entity rather than the vocabulary: the harness holds
+no tracked entities, contacts or detections, and "track" returns to being ordinary
+navigational English for the path the simulated platform has travelled. The
+forbidden-vocabulary gate follows, dropping `track` and `tracking` from its word list
+along with the four permitted phrases that existed only to let ordinary English past.
+Entered in `f423913` on 27 August 2026; this line was written on 28 August 2026, when the
+next amendment found that the version had moved and the log had not. The reasoning is
+that commit's message. No ADR was written at the time, and governance asks for one — the
+debt is recorded here rather than an ADR invented after the fact by someone who did not
+take the decision.*
+
+*1.5.0 — the technology constraint names three schemas rather than two: `advisories`
+joins `observations` and `features` in the one Postgres instance, because the separation
+feature 020 needs is a grant the database enforces and not a second engine (ADR-0024).
+SRD FR-12 is amended in step.*

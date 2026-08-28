@@ -6,9 +6,9 @@ belongs to the publisher. A runner that wrote into the catalogue would make part
 visibility possible however careful the publisher then was, because the failure would
 already have happened by the time the publisher was asked.
 
-Even inside staging, a run appears whole or not at all: the directory is written under a
-``.partial`` name and moved into place with a single rename. The publisher then has one
-rule to apply — a directory in staging is a finished run — rather than a heuristic about
+Even inside staging, a run appears whole or not at all: the directory is written under the
+configured partial suffix and moved into place with a single rename. The publisher then has
+one rule to apply — a directory in staging is a finished run — rather than a heuristic about
 whether writing has stopped.
 
 The bytes are NetCDF classic, written by the one encoder in the repository. Two runs from
@@ -49,7 +49,6 @@ _SYNTHETIC = (
     "nothing here was forecast by a physical model, and nothing here is advice."
 )
 _MICROS_PER_SECOND = 1_000_000
-_PARTIAL_SUFFIX = ".partial"
 _NC_FLOAT_AXIS = "f"
 
 
@@ -171,6 +170,7 @@ class Staging:
         forecast_file: str,
         uncertainty_file: str,
         manifest_file: str,
+        partial_suffix: str,
         output: CoverageOutput | None = None,
         stored_dtype: str = "float32",
     ) -> None:
@@ -178,6 +178,10 @@ class Staging:
         self._forecast_file = forecast_file
         self._uncertainty_file = uncertainty_file
         self._manifest_file = manifest_file
+        # Configuration rather than a constant here, in the publisher and in the query
+        # layer alike: Constitution IV admits no filename in component source, and this one
+        # was stated three times as a literal before it was stated once in each schema.
+        self._partial_suffix = partial_suffix
         self._output = output or NetcdfCoverage()
         self._stored_dtype = stored_dtype
 
@@ -190,6 +194,7 @@ class Staging:
         outcome: EnsembleOutcome,
         *,
         run_id: str,
+        run_sequence: int | None,
         scenario_run_id: str,
         kernel: str,
         root_seed: int,
@@ -262,6 +267,10 @@ class Staging:
 
         descriptor = {
             "run_id": run_id,
+            # Which run of the scenario this is, carried from the request rather than parsed
+            # back out of the name. The coverage store's manifest asks for it, and before
+            # the request carried it there was nothing to answer with but a null.
+            "run_sequence": run_sequence,
             "scenario_run_id": scenario_run_id,
             "status": "complete",
             "kernel": kernel,
@@ -306,7 +315,7 @@ class Staging:
         """Write to a partial directory and move it into place in one operation."""
         self._directory.mkdir(parents=True, exist_ok=True)
         final = self._directory / run_id
-        partial = self._directory / (run_id + _PARTIAL_SUFFIX)
+        partial = self._directory / (run_id + self._partial_suffix)
         if partial.exists():
             for existing in partial.iterdir():
                 existing.unlink()

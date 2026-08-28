@@ -7,6 +7,7 @@ that silently passes without one would be worse than no test.
 
 from __future__ import annotations
 
+import json
 import socket
 import subprocess
 import sys
@@ -103,11 +104,57 @@ def test_a_second_bring_up_converges_rather_than_failing() -> None:
     assert compose("ps", "--services") == before
 
 
-def test_the_active_profile_starts_exactly_its_services_and_no_other() -> None:
-    selected = sorted(line for line in compose("config", "--services").split() if line)
-    running = sorted(line for line in compose("ps", "--services").split() if line)
+def one_shots() -> set[str]:
+    """The active services that write what they owe and exit, by their own declaration.
 
-    assert running == selected
+    Read from the rendered configuration's ``harness.lifecycle`` label rather than from a
+    list here, which is how ``long_lived_services`` in ``deploy/lib/common.sh`` reads it: a
+    list in a test is a second place to forget, and forgetting is what this function exists
+    to have already happened somewhere else.
+    """
+    document = json.loads(compose("config", "--format", "json"))
+    named = set()
+    for name, service in document.get("services", {}).items():
+        labels = service.get("labels") or {}
+        if isinstance(labels, list):
+            labels = dict(item.split("=", 1) for item in labels if "=" in item)
+        if labels.get("harness.lifecycle") == "one-shot":
+            named.add(name)
+    return named
+
+
+def test_the_active_profile_starts_exactly_its_services_and_no_other() -> None:
+    """Every long-lived service the profile selects is up, and nothing else is.
+
+    One-shots are excluded from the comparison and asserted separately, because they are
+    absent from `compose ps` by the time anything can look: they exit 0, which is success.
+    That was invisible while the local destination's active profiles happened to contain no
+    one-shot, and it failed the moment `generator` was added to them — the same shape as the
+    trap `up.sh` already carries, where `--wait` reported a generator that had done its job
+    perfectly as a failure.
+
+    Excluding them without checking them would be the weaker test this must not become: a
+    generator that never ran, or ran and failed, would then look exactly like one that
+    worked. So they are asserted to have run and to have exited 0, which is more than the
+    comparison they were removed from ever said about them.
+    """
+    completed = one_shots()
+    selected = {line for line in compose("config", "--services").split() if line}
+    running = {line for line in compose("ps", "--services").split() if line}
+
+    assert running == selected - completed
+
+    states = dict(
+        line.split(maxsplit=1)
+        for line in compose("ps", "--all", "--format", "{{.Service}} {{.ExitCode}}").split("\n")
+        if line.strip()
+    )
+    for service in sorted(completed):
+        assert service in states, f"the one-shot {service} never ran at all"
+        assert states[service] == "0", (
+            f"the one-shot {service} exited {states[service]}; it is absent from `compose ps` "
+            "either way, so nothing else here would have noticed"
+        )
 
 
 def test_an_occupied_port_fails_before_anything_starts() -> None:

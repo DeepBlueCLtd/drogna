@@ -5,7 +5,7 @@
 import type { DrognaDivergenceEvent, Region } from "./divergence";
 
 /**
- * The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run ordinal, so a replay requests the same run under the same name.
+ * The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was.
  */
 export interface DrognaModelRunRequest {
   /** The scheduler that published the request, matching config /component/id. */
@@ -22,6 +22,10 @@ export interface DrognaModelRunRequest {
    * Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store.
    */
   run_id: string;
+  /**
+   * Which run of this scenario this is, counting from zero. It is the other half of the identifier rule — run_id is a function of the root seed and this number — and it is carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse. Before it was carried the run manifest recorded a null here for want of anything to record.
+   */
+  run_sequence: number;
   /** The simulation instant the run initialises from. The forecast is valid forward of it. */
   initialisation_sim_time: string;
   /**

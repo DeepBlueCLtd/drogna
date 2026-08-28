@@ -152,19 +152,19 @@ const BOUNDARY_REASON: Readonly<Record<string, { kind: ComponentKind; because: s
     kind: "plumbing",
     because: "a NetCDF write against CF conventions, which is a standard part used as intended",
   },
-  [boundaryId("coverage_store", "query_layer")]: {
+  [boundaryId("coverage_store", "query")]: {
     kind: "plumbing",
     because: "OGC API-EDR: a standard read interface, even where drogna had to write the provider",
   },
-  [boundaryId("observation_store", "query_layer")]: {
+  [boundaryId("observation_store", "query")]: {
     kind: "plumbing",
     because: "SensorThings: a standard read interface over a standard store",
   },
-  [boundaryId("feature_store", "query_layer")]: {
+  [boundaryId("feature_store", "query")]: {
     kind: "plumbing",
     because: "static spatial reference, read as published",
   },
-  [boundaryId("query_layer", "proxy")]: {
+  [boundaryId("query", "proxy")]: {
     kind: "plumbing",
     because: "an HTTP hop behind one proxy under one policy",
   },
@@ -204,7 +204,7 @@ const BOUNDARY_REASON: Readonly<Record<string, { kind: ComponentKind; because: s
     kind: "bespoke",
     because: "the advisory write seam, where the schema and the size ceiling are enforced rather than documented",
   },
-  [boundaryId("advisory_store", "query_layer")]: {
+  [boundaryId("advisory_store", "query")]: {
     kind: "plumbing",
     because: "advisories read as received, through the same standard interface as everything else",
   },

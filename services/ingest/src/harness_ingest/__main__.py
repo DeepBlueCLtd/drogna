@@ -39,7 +39,13 @@ from harness_ingest.telemetry import TelemetryPublisher
 from harness_ingest.validation import RejectionLog
 from harness_ingest.writer import Connection, ObservationWriter, StoreTables
 
-__all__ = ["COMPONENT", "connect_to_store", "main", "service_from_config"]
+__all__ = [
+    "COMPONENT",
+    "connect_to_store",
+    "connect_when_seeded",
+    "main",
+    "service_from_config",
+]
 
 COMPONENT = "ingest"
 
@@ -48,6 +54,14 @@ EXIT_NO_BROKER = 71
 EXIT_NO_STORE = 72
 
 _DEFAULT_HEARTBEAT_SECONDS = 5.0
+
+# How long to wait between attempts on a store that is not ready yet, and how far to let the
+# wait grow. Ticks rather than seconds, and simulation time rather than the host's: this
+# component holds a tick stream and Constitution I admits no other clock. The bound exists so
+# that a store which is genuinely misconfigured is reported once a minute of simulated time
+# rather than once a tick, not so that waiting ever stops.
+_FIRST_WAIT_TICKS = 1
+_LONGEST_WAIT_TICKS = 600
 
 
 class StoreError(Exception):
@@ -81,6 +95,66 @@ def connect_to_store(section: Mapping[str, Any]) -> Connection:
             "client is the only role with insert permission and it must be that role"
         )
     return connection
+
+
+def connect_when_seeded(
+    section: Mapping[str, Any],
+    ticks: Iterator[Tick],
+    heartbeat: HeartbeatPublisher | None,
+    out: Any,
+) -> Connection | None:
+    """Open the store connection, waiting out the interval in which it does not exist yet.
+
+    009 T059, as the 28 August decision leaves it. Seeding is what creates this component's
+    schema and its role, and seeding runs *after* ``scripts/up.sh`` — so on a bring-up from
+    nothing this client starts against a database that has neither. That is not a failure and
+    it is not a degradation: it is the first minute of every instance's life, and treating it
+    as fatal is what kept the observation profile out of the local destination's active
+    profiles altogether.
+
+    So the attempt is repeated, the wait between attempts is spent in *simulation* time out
+    of the clock stream this component already holds — never on the host's clock, which
+    Constitution I forbids outright — and the wait doubles up to a bound so that a store
+    which is genuinely misconfigured is reported at a readable rate rather than once a tick.
+    Every attempt says on stderr exactly what the database said, and the heartbeat says
+    ``starting`` with the reason, so the client is visibly not-yet-ingesting rather than
+    silently absent. Nothing is invented: no queue is drained, no observation is
+    acknowledged, and this function does not return until there is a real connection.
+
+    It ends only if the clock stops, which is the one thing that means no amount of waiting
+    will help. The caller then exits with the store's own code.
+    """
+    wait = _FIRST_WAIT_TICKS
+    attempts = 0
+    while True:
+        try:
+            return connect_to_store(section)
+        except StoreError as failure:
+            attempts += 1
+            print(
+                f"{COMPONENT}: waiting on seeding, attempt {attempts}: {failure}",
+                file=out,
+            )
+        tick = _wait_ticks(ticks, wait)
+        if tick is None:
+            return None
+        if heartbeat is not None:
+            heartbeat.publish(
+                tick,
+                status=HeartbeatStatus.STARTING,
+                detail=f"waiting on seeding: the observation store is not ready ({attempts})",
+            )
+        wait = min(wait * 2, _LONGEST_WAIT_TICKS)
+
+
+def _wait_ticks(ticks: Iterator[Tick], count: int) -> Tick | None:
+    """Spend ``count`` ticks of simulation time, and hand back the last one seen."""
+    latest: Tick | None = None
+    for _ in range(count):
+        latest = next(ticks, None)
+        if latest is None:
+            return None
+    return latest
 
 
 def service_from_config(
@@ -161,15 +235,6 @@ def main(
             resource.close()
         return EXIT_NO_CLOCK
 
-    try:
-        if connection is None:
-            connection = connect_to_store(section["store"])
-    except StoreError as failure:
-        print(f"{COMPONENT}: {failure}", file=out)
-        for resource in owned:
-            resource.close()
-        return EXIT_NO_STORE
-
     publisher = broker
     heartbeat = (
         HeartbeatPublisher(
@@ -183,6 +248,22 @@ def main(
         if publisher is not None
         else None
     )
+
+    # The heartbeat is built before the store is reached, and that ordering is the point.
+    # Seeding runs after the bring-up, so this component starts against a store that has no
+    # roles and no tables in it, every time, from nothing. Waiting for one is a normal start
+    # and not a failure, and a component that is waiting has to be able to say so.
+    if connection is None:
+        connection = connect_when_seeded(section["store"], ticks, heartbeat, out)
+    if connection is None:
+        print(
+            f"{COMPONENT}: the clock stopped while the observation store was still not "
+            "ready, so nothing was ingested",
+            file=out,
+        )
+        for resource in owned:
+            resource.close()
+        return EXIT_NO_STORE
     telemetry = TelemetryPublisher(
         publisher,
         component=str(document["component"]["id"]),

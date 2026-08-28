@@ -149,7 +149,13 @@ export const COMPONENTS: readonly ComponentNode[] = [
     row: 1,
   },
   {
-    id: "query_layer",
+    // `query`, not `query_layer`. The id here is matched against the `component` field of
+    // an arriving heartbeat, which the schema defines as the component's own configured id
+    // — and C-09's configuration, like `contracts/topology.json`, calls it `query`. While
+    // this box said `query_layer` the heartbeat matched no box, so C-09 was drawn dark and
+    // listed among the components heard from but not on the diagram. Nobody saw it because
+    // C-09 published no heartbeat at all until 008 T064 constructed one.
+    id: "query",
     reference: "C-09",
     name: "Query layer",
     responsibility: "pygeoapi: SensorThings and OGC API-EDR read access",
@@ -268,10 +274,10 @@ export const EDGES: readonly ComponentEdge[] = [
   { from: "model_runner", to: "publisher", label: "ensemble", loop: true },
   { from: "publisher", to: "monitor", label: "run published", loop: true },
   { from: "model_runner", to: "coverage_store", label: "fields" },
-  { from: "coverage_store", to: "query_layer", label: "EDR" },
-  { from: "observation_store", to: "query_layer", label: "SensorThings" },
-  { from: "feature_store", to: "query_layer", label: "reference" },
-  { from: "query_layer", to: "proxy", label: "read" },
+  { from: "coverage_store", to: "query", label: "EDR" },
+  { from: "observation_store", to: "query", label: "SensorThings" },
+  { from: "feature_store", to: "query", label: "reference" },
+  { from: "query", to: "proxy", label: "read" },
   { from: "proxy", to: "client", label: "TLS, path policy" },
   { from: "broker", to: "proxy", label: "WebSocket upgrade" },
   { from: "coverage_store", to: "planner", label: "uncertainty", bow: 26 },
@@ -283,7 +289,7 @@ export const EDGES: readonly ComponentEdge[] = [
   // source sits apart from the cycle and reaches the broker by the long way round.
   { from: "shore_advisory", to: "broker", label: "ctl/advisory", bow: -40 },
   { from: "shore_advisory", to: "advisory_store", label: "validated, appended" },
-  { from: "advisory_store", to: "query_layer", label: "advisories", bow: -40 },
+  { from: "advisory_store", to: "query", label: "advisories", bow: -40 },
   { from: "broker", to: "system_controller", label: "ctl/, observed" },
   { from: "system_controller", to: "proxy", label: "operator REST", bow: -30 },
 ];

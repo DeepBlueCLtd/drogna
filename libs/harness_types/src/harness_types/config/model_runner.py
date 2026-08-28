@@ -92,9 +92,30 @@ class Staging(BaseModel):
         extra='forbid',
     )
     directory: str = Field(..., min_length=1)
+    partial_suffix: str = Field(
+        ...,
+        description="What an in-flight run directory ends in while it is being written. A run appears in staging whole or not at all: it is written under this suffix and moved into place in one rename, so the publisher applies one rule — a directory in staging is a finished run — rather than a heuristic about whether writing has stopped. It states the same value as the publisher's catalogue.partial_suffix and query.coverage_store.partial_suffix.",
+        min_length=1,
+    )
     forecast_file: str = Field(..., min_length=1)
     uncertainty_file: str = Field(..., min_length=1)
     manifest_file: str = Field(..., min_length=1)
+
+
+class InitialRun(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    run_id: str = Field(
+        ...,
+        description='What the initial run is called in the coverage store. A constant rather than a derived name, so a replay of the scenario produces the same store.',
+        min_length=1,
+    )
+    ensemble_size: int = Field(
+        ...,
+        description='Members the initial run is computed over. At least two, or there is no spread and the uncertainty field beside it would be a fiction.',
+        ge=2,
+    )
 
 
 class StoredDtype(StrEnum):
@@ -130,6 +151,11 @@ class ModelRunner(BaseModel):
         ...,
         description="The runner writes here and nowhere else. Nothing a reader can reach is touched by this component; making a run visible is the publisher's single operation.",
         title='Where a run is written while it is being written',
+    )
+    initial_run: InitialRun = Field(
+        ...,
+        description="Nothing can diverge from nothing: a monitor with no published field raises no divergence, so a coverage store with no run in it is a control loop that cannot start. The first field is therefore seed content, produced by this component's own kernel and ensemble when `deploy/seed.d/` asks for it, and published through the ordinary path. It is named rather than derived by the store's identifier rule, because it is not the nth run of the scenario in the loop's sense and a name from that rule would claim a sequence the scheduler is about to use.",
+        title="The scenario's first forecast, which no message asks for",
     )
     stored_dtype: StoredDtype = Field(
         ...,

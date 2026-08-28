@@ -24,14 +24,19 @@ class Catalogue(BaseModel):
         extra='forbid',
     )
     root_directory: str = Field(..., min_length=1)
-    run_directory_prefix: str = Field(
+    runs_dirname: str = Field(
         ...,
-        description="Prefixed to the run identifier to name a run's directory, so a run directory is recognisable as one.",
+        description='The subdirectory of the store root that holds the runs. The layout gives a run directory no prefix of its own — the directory is the run identifier, and the identifier already begins with the prefix its own rule states — so this names the directory they sit in. It replaces run_directory_prefix, which carried this value for want of a key of its own and which could not be empty.',
         min_length=1,
     )
     current_pointer: str = Field(
         ...,
         description="Name of the entry in the root that resolves to the current run's directory.",
+        min_length=1,
+    )
+    partial_suffix: str = Field(
+        ...,
+        description="What an in-flight name ends in. Anything under it is invisible to the catalogue, which is what lets a run be assembled and a pointer be replaced without a reader ever seeing either half-made. It states the same value as query.coverage_store.partial_suffix and the model runner's staging.partial_suffix; three statements rather than one because no component reads another's configuration.",
         min_length=1,
     )
     forecast_file: str = Field(..., min_length=1)

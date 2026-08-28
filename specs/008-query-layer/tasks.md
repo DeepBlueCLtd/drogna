@@ -320,10 +320,106 @@ is exporting.
       Observations 27, Sensors 3, ObservedProperties 3, FeaturesOfInterest 9, each observation
       carrying its own selfLink, navigation links and phenomenonTime.
 
-- [ ] T062 Serve real coverage on the EDR collections
+- [x] T062 Serve real coverage on the EDR collections
 
-      **Not done, and not this feature's to fix.** `/collections/forecast/cube` answers 400
-      with "no run is current: current names none", which is the correct answer: nothing has
-      ever published a run. That waits on the control loop turning — see
-      `specs/009-control-loop/tasks.md` T058.
+      Done, 28 August 2026, in wave 6 lane A with 009 T058. The half this task was waiting
+      on — "nothing has ever published a run" — is closed: the composed stack now stages a
+      first field at seeding time and the control loop publishes a second from a real
+      divergence, so `current` names `run-000000-7f80b47c7b91` and the collection resolves it.
+
+      **The other half turned out not to be waiting on anything, and had never been looked
+      at.** With a run finally in the store, `/collections/forecast/cube` answered 400 with
+      `run-000000-7f80b47c7b91 forecast carries no variable named 'sea_water_temperature';
+      it holds depth, latitude, longitude, salinity, temperature, time`. Both destinations'
+      `query.coverage.parameters` named variables no run has ever carried —
+      `sea_water_temperature`, `sea_water_practical_salinity`, `sea_water_pressure`,
+      `sea_water_temperature_uncertainty` — while the model runner writes `temperature` and
+      `salinity` into the forecast field and `temperature_spread` and `salinity_spread` into
+      the uncertainty one. Nothing had noticed because both sides were self-consistent: this
+      feature's own tests build a NetCDF carrying the names this feature's configuration
+      expects, and no real run had ever crossed between them.
+
+      The parameters now name the variables a run holds, and `salinity_uncertainty` is added
+      because the uncertainty field carries that spread too. `sea_water_pressure` is
+      **removed**: nothing writes a pressure and nothing derives one, and ADR-0005's argument
+      for not storing sound speed applies to it for the same reason — a collection that
+      advertises a parameter no run can carry is an untruth in the one document a consumer
+      reads to find out what is servable. Lane C should confirm that removal is what this
+      feature intends, and this feature's own fixtures still build the old names; that is
+      recorded as T063 below rather than changed from another lane.
+
+      Evidence, against the running local stack:
+      `curl 'http://127.0.0.1:8082/collections/forecast/cube?bbox=-4.6,48.9,-4.4,49.1&z=0/50&parameter-name=sea_water_temperature'`
+      answers 200 with a CoverageJSON Grid of real values.
+      `tests/integration/test_coverage_store_seam.py` now checks every advertised parameter
+      against the variables a real staged run holds, read out of one the model runner writes
+      rather than restated — watched failing on the configuration as it was, with the same
+      words the running query layer used.
+
+- [x] T064 Construct the heartbeat this feature already wrote
+
+      `query/plugins/heartbeat.py` has been in the tree since this feature landed, with a
+      careful docstring about C-09 being lit because it is heard from and for nothing else.
+      **Nothing ever constructed it.** No caller, and no test either — the whole finding is
+      one grep:
+
+          $ grep -rn "QueryLayerHeartbeat" query/ | grep -v heartbeat.py
+          (nothing)
+
+      So the box was grey for the life of every stack while the component behind it answered
+      every request put to it: the untruth Constitution VII exists to prevent, produced by the
+      one component whose whole job is answering truthfully. It is the same shape as 009 T058
+      — written, tested in isolation, never connected — and it was found the same way, by
+      looking at a running client rather than by reading anything.
+
+      `pygeoapi serve` owns the process for its lifetime, so there was nowhere to announce
+      from. `query/serve.py` is the missing caller: it starts the heartbeat and then runs
+      pygeoapi's own application, so what is lit is the process that serves and nothing else
+      can light it. The entry point in `deploy/images/query-layer-entrypoint.sh` runs it in
+      place of `pygeoapi serve`; the reloader is off, because it forks a second process that
+      would beat for one that is not answering requests.
+
+      **Time reaches this component over HTTP, deliberately.** Every other component takes it
+      by subscription (ADR-0009) and this role cannot: `deploy/broker/acl` gives `drogna_query`
+      one write and no read at all, and argues for it — a read-only query surface able to
+      subscribe to the control namespace is the cross-contamination C-03 owns as its failure
+      mode. Each beat reads the clock's snapshot endpoint, which this component's own
+      configuration already names. A snapshot that cannot be read skips the beat and says so,
+      because a heartbeat carrying an invented simulation time is worse than none.
+
+      A sidecar probing the HTTP surface was considered and rejected: it would be the
+      synthesised traffic `harness_core.heartbeat` forbids, and a second process cannot
+      honestly report that the first one is alive.
+
+      Watched failing: `tests/integration/test_the_query_layer_says_it_is_serving.py` reports
+      "the query layer published nothing at all" against a beating loop that publishes
+      nothing, which is what the absent caller amounted to.
+
+      **Constructing it was half of the fix, and the running client said so.** With the beat
+      arriving on `ctl/heartbeat` as `query`, C-09 was still drawn dark: the client's box was
+      `query_layer`, and every other name for this component — its own configuration,
+      `contracts/topology.json`, the heartbeat schema's definition of the field — is `query`.
+      So the message arrived, was understood, matched no box, and the client listed it under
+      the components it had heard from and could not place. Two features had each named the
+      component and nothing had ever compared the two names, because until this task there was
+      no heartbeat for the mismatch to spoil.
+
+      `tests/unit/test_every_component_has_a_box.py` now makes that comparison once, in the
+      direction that catches it: every component with source in this repository must have a
+      box under exactly its own id. Watched failing: it reports `['query'] publish a heartbeat
+      under an id the client draws no box for` against the id as it was.
+
+      Live, on the local stack: `query ok serving` on `ctl/heartbeat`, and the client at
+      10 of 18 with nothing left unmapped.
+
+- [ ] T063 Reconcile this feature's own fixtures with what a published run holds
+
+      `tests/query_layer_support.py` builds coverage files carrying `sea_water_temperature`,
+      `sea_water_practical_salinity`, `sea_water_pressure` and
+      `sea_water_temperature_uncertainty`, and the tests over them pass against a
+      configuration they also build. That is what let T062's mismatch survive: two sides each
+      self-consistent, with no test that crossed. The deployed configuration is corrected (see
+      above) and these fixtures are not, so the suite now models a field nothing produces.
+      Left for this feature's own lane rather than changed from lane A, because deciding what
+      the query layer's tests should be built on is a decision about this feature.
 

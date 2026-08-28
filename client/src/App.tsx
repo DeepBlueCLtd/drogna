@@ -455,8 +455,16 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     <main>
       <header className="masthead">
         <h1>drogna</h1>
+        {/*
+          No number here. This said "Eighteen components drogna intends to have" and the
+          drawing had grown to twenty-one, so the page opened by miscounting itself directly
+          above the line that counts correctly — `view.nodes.length`, which is the drawing.
+          A count written into prose is right until the day somebody adds a component, and
+          nothing fails when that day comes. The sentence now says what it is; the figure
+          below says how many, from the only place that knows.
+        */}
         <p className="strapline">
-          The component shell. Eighteen components drogna intends to have, lit only where a
+          The component shell: the components drogna intends to have, lit only where a
           heartbeat has arrived.
         </p>
         <p data-testid="lit-count">

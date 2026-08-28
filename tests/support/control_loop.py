@@ -26,6 +26,11 @@ from harness_core.clock import ClockMode, ManualClock, SimInstant
 RUNS_DIRNAME = "runs"
 CURRENT_POINTER = "current"
 FORECAST_FILE = "forecast.nc"
+PARTIAL_SUFFIX = ".partial"
+# The identifier rule both destinations configure. The scheduler computes a run's name from
+# it and the query layer's catalogue computes the same name from the same values, without
+# either importing the other's implementation.
+RUN_ID_RULE = {"rule": "drogna-coverage-run-id", "version": 1, "prefix": "run"}
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_DIRECTORY = REPOSITORY_ROOT / "contracts" / "schemas"
@@ -140,6 +145,7 @@ def scheduler_document(
         "outstanding_timeout_seconds": outstanding_timeout_seconds,
         "ensemble_size": ensemble_size,
         "initialisation_offset_seconds": initialisation_offset_seconds,
+        "run_id": RUN_ID_RULE,
     }
     return document
 
@@ -170,10 +176,14 @@ def model_runner_document(
         "ground_truth": {"directory": ground_truth, "manifest_file": "manifest.json"},
         "staging": {
             "directory": staging,
+            "partial_suffix": PARTIAL_SUFFIX,
             "forecast_file": "forecast.nc",
             "uncertainty_file": "uncertainty.nc",
             "manifest_file": "run.json",
         },
+        # The scenario's first forecast, which no message asks for: `deploy/seed.d/` does,
+        # because nothing can diverge from nothing.
+        "initial_run": {"run_id": "run-initial", "ensemble_size": 3},
         "stored_dtype": "float32",
     }
     return document
@@ -190,12 +200,12 @@ def publisher_document(*, staging: str = "staging", catalogue: str = "coverage")
         },
         # The coverage store's layout, which feature 008 owns and this component writes
         # into: runs under `runs/`, each directory named by the run identifier alone, and
-        # the current run named by a text pointer at the root. `run_directory_prefix`
-        # carries the subdirectory because the publisher's schema has no key for it.
+        # the current run named by a text pointer at the root.
         "catalogue": {
             "root_directory": catalogue,
-            "run_directory_prefix": "runs/",
-            "current_pointer": "current",
+            "runs_dirname": RUNS_DIRNAME,
+            "current_pointer": CURRENT_POINTER,
+            "partial_suffix": PARTIAL_SUFFIX,
             "forecast_file": "forecast.nc",
             "uncertainty_file": "uncertainty.nc",
             "manifest_file": "run-manifest.json",

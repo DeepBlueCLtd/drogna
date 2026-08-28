@@ -341,30 +341,64 @@ passed, because no test crossed. These tasks are the repair and what it uncovere
   path, resolve through feature 008's catalogue, and check both destinations' configuration
   files name one store. It fails on any of the pointer, the run directory, the manifest
   name, the manifest's contents or a configured root drifting apart.
-- [ ] T051 [US1] Change the monitor's coverage reader to resolve the pointer as the layout
+- [x] T051 [US1] Change the monitor's coverage reader to resolve the pointer as the layout
   defines it — read one identifier as text, then open the run under `runs/` — in
   `services/monitor/src/harness_monitor/coverage.py`, with the runs directory named in
-  `contracts/schemas/config.monitor.schema.json` and both `monitor.json` files. Until this
-  lands the monitor reads no published field, and
-  `tests/acceptance/test_at_02_threshold_breach_triggers_run.py` fails at its first
-  assertion. That failure is true and should not be worked around in the test.
-- [ ] T052 [US2] Adopt the coverage store's run identifier rule in
+  `contracts/schemas/config.monitor.schema.json` and both `monitor.json` files.
+  Done in `009b20d`; the note below it was left standing and was stale by the time the
+  delivery plan quoted it. Re-reconciled 28 August 2026 against the tree: `StoredForecasts._resolve`
+  reads the pointer with `read_text`, refuses anything but one line, and joins
+  `root / runs_dirname / identifier`; `runs_dirname` is required in the monitor's config
+  master and carried by both `monitor.json` files; and all seven AT-02 assertions pass.
+  The paragraph that followed — "until this lands the monitor reads no published field, and
+  the acceptance test fails at its first assertion" — described the state before that commit
+  and is kept here only as the record of what was fixed.
+- [x] T052 [US2] Adopt the coverage store's run identifier rule in
   `services/scheduler/src/harness_scheduler/run_id.py`. The store derives a name from the
-  root seed and the run sequence and puts the sequence in the name; the scheduler hashes an
-  ordinal, so a published run's name cannot be read back as the sequence it was, and the
-  run manifest records a null `run_sequence` for want of one.
-- [ ] T053 [US2] Carry the run ordinal on `ctl/run-request` and through the staged
+  root seed and the run sequence and puts the sequence in the name; the scheduler hashed an
+  ordinal, so a published run's name could not be read back as the sequence it was.
+  Done. `run_identifier` now computes `<prefix>-<sequence:06d>-<sha256("rule|version|seed|
+  sequence")[:12]>`, with the rule, its version and the prefix in a new required
+  `scheduler.run_id` section of the config master and both `scheduler.json` files.
+  `services/scheduler/tests/test_run_id.py` asserts the four worked examples
+  `stores/coverage/layout.md` publishes, so the scheduler and the query layer are held to
+  the same stated values rather than to a shared module. `handle_run_published` also
+  advances the sequence past whatever has been published, which is what stops a restarted
+  scheduler computing a name the store already holds.
+- [x] T053 [US2] Carry the run ordinal on `ctl/run-request` and through the staged
   descriptor, so the publisher records which run of the scenario a manifest describes
   rather than the absence of one.
-- [ ] T054 [US4] Give the publisher's configuration master its own keys for the runs
+  Done. `run_sequence` is a required field of `run-request.schema.json`, carried by
+  `publish.run_request_message`, read by the runner and written into the staged descriptor,
+  and `manifest.sequence_of` now prefers it to parsing the name. The parse is kept as the
+  fallback for a run named some other way, and where neither answers the manifest still
+  records a null. `services/publisher/tests/test_manifest.py` covers all three.
+- [x] T054 [US4] Give the publisher's configuration master its own keys for the runs
   subdirectory and the partial suffix, in
-  `contracts/schemas/config.publisher.schema.json`. Today the subdirectory is carried in
+  `contracts/schemas/config.publisher.schema.json`. The subdirectory was carried in
   `run_directory_prefix` — the layout gives a run directory no prefix of its own and the
-  key cannot be empty — and the partial suffix is a constant in three components.
-- [ ] T055 [US4] Write the run manifest's master as
+  key cannot be empty — and the partial suffix was a constant in three components.
+  Done. `catalogue.runs_dirname` replaces `run_directory_prefix` and
+  `catalogue.partial_suffix` is new; the model runner's `staging.partial_suffix` is the
+  second of the three statements and the query layer's `coverage_store.partial_suffix` the
+  third. No component reads another's configuration, so the three are compared instead:
+  `tests/integration/test_coverage_store_seam.py` now checks the suffix at all three ends
+  and the runs directory at both, per destination.
+- [x] T055 [US4] Write the run manifest's master as
   `contracts/schemas/coverage-run-manifest.schema.json`, which Constitution III requires and
   `stores/coverage/layout.md` records as an outstanding gap. Its absence is why the shape is
   stated twice, in the publisher that writes it and the catalogue that reads it.
+  Done. The master is registered in `contracts/openapi/generators.toml` (both the generated
+  models and a package copy for the publisher) and in `tests/unit/test_generated_models.py`,
+  and `write_run_manifest` validates against it *before* writing rather than after — a
+  manifest the query layer would refuse is a run that reaches the store, is announced, and
+  is never catalogued, which is the least legible failure this component has.
+  Watched failing: with only the required keys declared, the "a manifest the query layer
+  would refuse is refused here instead" test did not raise for an empty valid-time extent;
+  the master gained `minLength` on the strings the catalogue treats as substantive, and the
+  test then failed the unfixed code and passes the fixed. The ordering constraint the
+  catalogue also checks — begin not after end — is not expressible in JSON Schema and is
+  recorded in the master's description as still living in the reader.
 - [x] T056 [US4] Put staging on the volume the coverage store is on. Both destinations name
   a staging directory that no Compose volume mounts, so the model runner writes into its own
   container and the publisher sees nothing; and a move between volumes is a copy, which the
@@ -461,24 +495,199 @@ published — which is also why the EDR cube answers "no run is current".
       `monitor running` where it read `exited 0`, and the shell reports 3 of 18 components
       heard from where it read 1.
 
-- [ ] T058 [US2..US4] Wire `scheduler`, `model_runner` and `publisher` the same way, and
+- [x] T058 [US2..US4] Wire `scheduler`, `model_runner` and `publisher` the same way, and
       `telemetry` with them
 
-      **Not done, and mechanical rather than open.** Each carries the identical default and
-      each already names its own topics in its own module — `ctl/run-request`,
-      `ctl/run-started`, `ctl/run-published`, `ctl/divergence`, `ctl/telemetry`. Left rather
-      than half-started: four services wired in a hurry at the end of a session is how a
-      loop that half-turns gets committed. Doing this is what makes the control loop turn
-      end to end, and with it AT-02, the published run, and the EDR cube serving real
-      coverage instead of refusing honestly.
+      Done, and extended to `planner`, which carried the same default and the same two
+      topics as the monitor. `offload` is deliberately not included: it takes no message
+      source at all — its loop is over staged bundles and its cycle is a batch — and
+      `specs/014-offload-export/tasks.md` asks for a Compose entry and a one-command local
+      run rather than a subscription. Lane D owns `services/offload/` in the wave 6 table,
+      so it is left there rather than half-touched from here.
 
-- [ ] T059 Decide the restart policy for components that depend on a seeded store
+      Each service now resolves its source through `harness_core.broker.resolve_subscriber`
+      exactly as the monitor does: `scheduler` on `ctl/divergence` and `ctl/run-published`,
+      `model_runner` on `ctl/run-request`, `telemetry` on `ctl/telemetry/#` and
+      `ctl/run-published`, `planner` on `obs/#` and `ctl/run-published`.
 
-      `ingest` authenticates with a password the *seeding* step assigns, and seeding runs
-      after the bring-up, so the observation path cannot reach health under `up.sh` alone
-      from nothing. Adding `observation` to `profiles.active` makes
-      `test_a_bring_up_from_nothing_reaches_health` fail for that reason and no other. A
-      real ordering constraint that wants a decision rather than a quiet edit.
+      **Two things this needed that the task did not say.**
+
+      The publisher's input is a directory rather than a message, and it had no loop at all:
+      it took whatever staging held at start-up — nothing, on a stack that has just come up —
+      and exited 0. It subscribes to `ctl/run-started`, which says a run is *coming*, and
+      takes whatever staging holds on every turn, because a run is announced started before
+      its ensemble is computed and the directory appearing is the only thing that says it is
+      finished.
+
+      And a loop written over arriving messages alone is silent on a quiet branch, which
+      `ctl/` is between runs: each component published one heartbeat at start-up and then
+      went dark — running perfectly, and greyed out in the client, which is the one untruth
+      the liveness display exists to prevent. So a subscription now yields
+      `harness_core.broker.IDLE` when its interval elapses with nothing received, and each
+      loop does its own work on that turn: a heartbeat, an expired outstanding request, a
+      staged run. The interval is half the component's declared heartbeat cadence, so a beat
+      is never missed by a whole cadence.
+
+      Watched failing: `tests/integration/test_idle_turns_keep_the_loop_alive.py` reports
+      "scheduler beat once at start-up and then went silent" against a loop that beats only
+      when a message arrives, and "monitor counted the idle turn as a message it could not
+      read" against a routing predicate written the wrong way round; and
+      `libs/harness_core/tests/test_broker_subscription.py` hangs to its timeout against a
+      subscription that ignores its idle interval, which is the defect in its purest form.
+
+
+- [x] T059 Decide the restart policy for components that depend on a seeded store
+
+      **Decided, 28 August 2026** (`docs/architecture/delivery-plan.md`, "Decisions taken").
+      The credential half is dissolved rather than solved: the observation store binds to
+      127.0.0.1 at every destination and the harness models no database threat, so Postgres
+      moves to trust authentication, DSNs name a role and carry no password, and there is no
+      longer any value that seeding has to assign before a component can connect. That
+      change lands in lane D and is not this lane's to make.
+
+      What remained for the loop's services is the *unseeded store*, which is not an ordering
+      constraint at all but the state every bring-up genuinely starts in: seeding runs after
+      `up.sh`, so the coverage store is empty when the monitor, telemetry, the planner and
+      the publisher start, every time. The resolution is that this is a normal start — no
+      exit, no invented field, no degraded mode, and a heartbeat that says what is true.
+      `tests/integration/test_empty_store_is_a_normal_start.py` asserts it against the real
+      readers and a real empty directory rather than an injected stub, including that no
+      component names a run in its heartbeat when the store holds none.
+
+      The two components that depend on the *environment* store rather than the coverage
+      store — the model runner's ground truth, the planner's decorrelation timescale — keep
+      their startup failure and their distinct exit codes, deliberately. That store is
+      written by a one-shot component and Compose orders it with
+      `service_completed_successfully`, so there is no window in which a container can start
+      before it; a retry there would duplicate an ordering the platform already guarantees
+      and would hide a genuinely broken generator behind a spinner.
+
+### What starting it actually needed (added 28 August 2026, wave 6 lane A)
+
+Three things the loop needed that no task here had asked for, each found by starting the
+composed stack rather than by reading it. They are recorded as tasks because each is a
+decision with a consequence, and because "T058 was mechanical" was true of the wiring and
+false of the loop.
+
+- [x] T060 Seed the coverage store's first run
+
+      **Nothing can diverge from nothing.** The monitor scores observations against the
+      *published* field; with no field it reports `warming` and raises nothing, which
+      `spec.md` states as its cold-start edge case and which every test of this loop works
+      around by publishing a first run before it starts. In the composed stack nothing did,
+      so the loop was wired end to end and still could not turn. The delivery plan's
+      expectation that "008 T062 then flips on its own" missed this.
+
+      The first field is content, and every piece of content in a running drogna comes from
+      `deploy/seed.d/` (NFR-07). `030-coverage.sh` produces it through the ordinary image and
+      the ordinary entry point — `python -m harness_model_runner --initialise-store` — and
+      leaves it in staging for the running publisher to make visible by the ordinary rename.
+      Nothing new can produce a field. The run takes no broker connection, because MQTT
+      identifies a client per role and a second connection under the model runner's name
+      would have the broker close the incumbent without telling either party.
+
+      It is named rather than derived by the store's identifier rule (`model_runner.
+      initial_run.run_id`, `run-initial` at both destinations): it is not the nth run of the
+      scenario in the loop's sense, and a name from that rule would claim the sequence the
+      scheduler is about to use. Its manifest records `run_sequence: null`, which is what
+      the layout says an absence looks like. It initialises at the ground truth's own time
+      origin rather than at whatever the clock says now, so the store a replay produces is
+      the store this one produced (Constitution II).
+
+      Idempotent, as the seeding contract requires: the step does nothing at all if the store
+      already names a current run. Watched converging — a second `run_local.sh` reported
+      "the coverage store already names run-000000-7f80b47c7b91 as current; nothing to seed",
+      which is the run the *loop* published rather than the one seeding staged.
+
+- [x] T061 Retain the announcement of a published run
+
+      A run identifier is a pure function of the root seed and the run sequence (T052), which
+      is what makes a replay diffable — and it is also what makes a restarted scheduler
+      compute a name the store already holds. Watched happening: after a restart the
+      scheduler asked for `run-000000-7f80b47c7b91` again, the publisher refused it with "a
+      run identifier names one run", and the loop stalled with `scheduler ok awaiting
+      run-000000-7f80b47c7b91` against `publisher ok current run-000000-7f80b47c7b91` until
+      the outstanding timeout expired. One wasted run of the scenario per restart.
+
+      Which run is current is *state* rather than an event, and every component connects after
+      the last announcement at least once, because every component restarts. `ctl/run-published`
+      is therefore published retained, and a starting scheduler reads the sequence back out of
+      the name it is handed — which it can only do because the store's rule puts the sequence
+      in the name, which is the other half of T052. The announcement stays a notification and
+      not a source of truth: every consumer of it re-reads the coverage store, so a retained
+      message left over from a store that has since been reset costs a read and nothing else.
+
+      Watched failing in `tests/integration/test_a_restarted_scheduler_does_not_reuse_a_name.py`,
+      both halves separately: the scheduler that does not advance, and the publisher that does
+      not ask for retention.
+
+- [x] T062 Report waiting on seeding rather than exiting, in the ingest client
+
+      The other half of T059's original note, and the thing that had kept `observation` out of
+      the local destination's active profiles altogether: seeding creates the ingest client's
+      schema and its role, seeding runs *after* `scripts/up.sh`, and the client exited 72 at
+      the first attempt with `password authentication failed for user "drogna_ingest"`. With
+      the observation profile inactive there were no sensors, and with no sensors there is no
+      observation traffic and nothing for the monitor to score — so the loop could not turn
+      for this reason as well.
+
+      `connect_when_seeded` repeats the attempt, spends the wait in *simulation* time out of
+      the tick stream this component already holds — never on the host's clock, which
+      Constitution I forbids — doubles it to a bound, reports what the database said on every
+      attempt, and heartbeats `starting` with the reason so a component that is waiting is
+      visibly waiting rather than absent. It invents nothing: there is no connection until
+      there is a real one, and it ends only if the clock stops.
+
+      This is `services/ingest/`, which is feature 007's and no lane's in the wave 6 table. It
+      is recorded here because it is the remaining half of this task's own note, and because
+      lane D's move to trust authentication removes the password without removing the case:
+      with trust, the connection succeeds and the tables are still not there yet.
+
+      Watched failing: `services/ingest/tests/test_waits_for_seeding.py` against a first
+      refusal treated as fatal, which is what it was.
+
+- [x] T063 Give the loop-side components a clock that moves
+
+      **The loop turned exactly once and then stopped for ever**, in a stack where every
+      container reported healthy and every heartbeat kept arriving. Found by watching a
+      running client rather than by reading anything: the clock said `07:40` and six
+      components said `06:31`–`06:34`, which were the instants their containers started.
+
+      Each was built with a tick source that yields nothing — a placeholder that was harmless
+      while the process ran for a second and exited, and load-bearing the moment T058 wired
+      them to stay up. Each took one HTTP snapshot at start-up and held that instant for
+      life. The visible half was a heartbeat carrying a stale simulation time. The half that
+      mattered is the scheduler's, because its whole policy is stated in simulation time:
+      `RunPolicy.consider` computes `elapsed = now - last_requested`, which with a frozen
+      `now` is zero for ever, so every divergence after the first is declined for want of a
+      minimum interval that can never elapse; and `OutstandingRegister.expire(now)` never
+      fires, so a request that produced no publication holds the slot for ever too.
+
+      `harness_core.clock.FollowedClock` is a remote clock and the `ctl/clock` samples a
+      component's own loop hands it — no second connection and no second thread — and
+      `resolve_clock` settles which of three states a component starts in, mirroring
+      `resolve_publisher` and `resolve_subscriber` exactly. All six loop-side components
+      subscribe to `ctl/clock` and take each sample as an ordinary turn. The filter is at
+      quality of service 0 while the control filters stay at 1: a lost clock sample is
+      replaced by the next one a tenth of a second later, and six components acknowledging
+      ten a second would be a round trip per message the harness has no use for. Staleness
+      a stale clock becomes reportable in these components for the first time, because until
+      now there was no subscription for a gap to appear in.
+
+      That `resolve_clock` admits a `FollowedClock` a caller supplies is the point rather
+      than a convenience: it is what makes the wiring assertable over an ordinary message
+      list, with no broker and no HTTP server. Its absence is the whole reason this survived
+      — every acceptance test drives these services with a `ManualClock` the test itself
+      advances, so the clock always moved and the thing that should have moved it was never
+      exercised.
+
+      Watched failing: `tests/integration/test_the_loop_turns_more_than_once.py` against a
+      loop that receives clock samples and does not hand them over, on both halves — one run
+      requested where two were due, and a last heartbeat carrying the same simulation time as
+      the first.
+
+      `env_generator` and `offload` keep the placeholder, and should: one authors a world and
+      exits, the other runs a batch cycle. Neither is a loop with a policy in simulation time.
 
 ### Incremental delivery
 

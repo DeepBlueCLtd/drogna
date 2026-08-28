@@ -163,3 +163,28 @@ a thin CLI over it, because it is the only one that does not put store code into
 unrelated images or reshape the workspace, and because it is the move `CLAUDE.md` already
 prescribes for exactly this situation. But it is a refactor across a boundary and I would
 rather you said so than assume it.
+
+## 2026-08-28T10:15 — three things stand between here and "the whole application"
+
+**Where**: `services/{monitor,scheduler,model_runner,publisher,telemetry,offload,planner}`,
+`client/src` (no map), `query/` (SensorThings routing)
+
+**What I found**, all after the observation path came up:
+
+1. **Seven services exit 0 immediately.** monitor, scheduler, model-runner, publisher,
+   telemetry, offload and planner run and return. `full` therefore cannot report every
+   service healthy — not an ordering fault, a missing run loop in each. This is the
+   `publisher=None` shape PR #14 recorded.
+2. **No coverage is ever published**, which follows from (1). The EDR cube answers 400 and
+   says why — "no run is current: current names none" — which is correct behaviour and not
+   a 500. Goal 2's "no 500s on seeded collections" holds; "serves real coverage" does not.
+3. **The SensorThings entity sets 404 everywhere.** `/collections/observations/items` says
+   they are at "this path followed by its name" and its own links advertise
+   `<public>/query/Things`; both 404 against the running query layer. The two disagree, so
+   one of them is wrong rather than merely unreachable.
+4. **There is no map.** deck.gl is a declared dependency that nothing under `client/src`
+   imports, and no map component exists. "The client draws data on the map" is a feature to
+   build, not a fault to fix.
+
+**What I did**: logged and routed around, per the 30-minute rule. (1) and (4) are feature
+work well beyond a night; (3) is a real bug and the cheapest of the four to chase next.

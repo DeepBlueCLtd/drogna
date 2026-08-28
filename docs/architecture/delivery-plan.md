@@ -194,3 +194,140 @@ line deliberately: it does not punish lateness.
 | The coverage store layout is contested between 008 and 009 | 008 owns it, records it in `stores/coverage/`, and an ADR captures the argument |
 | Parallel workers drift on message shapes | 006 exists precisely to prevent this, and the drift check is a CI gate |
 | The client outgrows one worker | 003 builds the shell and the liveness substrate; 012 adds panels on top and touches no file 003 owns |
+
+---
+
+# Realignment, 28 August 2026
+
+Everything above this line was written before features 001–016 were built. Waves 1–5
+are delivered — 745 tasks recorded, 685 ticked, all four acceptance tests passing —
+and the plan's forward-looking half stopped being a plan when it ran out of waves.
+Features 017–020 have specifications and no place in the graph. This section is the
+graph's continuation, written against the tree as of this date, with the stale records
+found on the way corrected rather than trusted.
+
+## Where the goals and the work have drifted apart
+
+The SRD gives the harness three purposes in strict priority order: understanding,
+demonstration, evidence (§1). Scored against the tree today:
+
+**Understanding** is the strongest leg. Seven spikes with findings, nineteen ADRs, and
+session logs that record not just what was decided but what it cost. Nothing here needs
+refocusing.
+
+**Demonstration is the weakest leg, and it is the second priority, not the third.**
+The constitution's own bar is "runnable from a clean checkout with one command, and
+visible in the client". The four acceptance tests pass — in one process, with the
+broker stood in by a recorder, which is what they claim and no more. The composed
+stack, brought up by that one command, cannot yet show the system's central property:
+
+- Six of the seven loop-side services — scheduler, model runner, publisher, telemetry,
+  offload, planner — run their loop over an empty message iterable and exit 0. Only the
+  monitor opens a broker subscription. This is 009 T058, recorded there as "mechanical
+  rather than open", and it is the keystone: until it lands, no divergence becomes a
+  run, no run is ever published live, and 008 T062 (the EDR collections serving real
+  coverage) stays correctly answering "no run is current".
+- The SensorThings entity sets answer 404 against the running query layer, and the
+  collection's own links disagree with its items about where they live
+  (long-run-01 BLOCKED, 2026-08-28T10:15; nothing has touched the routing since).
+- deck.gl is a declared dependency that nothing under `client/src` imports. The
+  uncertainty and route displays are built and tested to the waterline (012 T032, T038)
+  and have no surface to draw on. That surface is feature 017.
+
+**Evidence** is mostly sound, and its hazard is the familiar one: records that have
+fallen behind the tree (inventoried below).
+
+Meanwhile the two newest work packages, 019 (coverage holdings) and 020 (shore
+advisories), each state in their own Assumptions that they extend scope beyond the SRD.
+019's P1 story retains and enumerates published forecast runs — in a stack where, live,
+no run has ever been published. The specification frontier has moved past the
+demonstration frontier. The refocus is not to abandon the new features; it is to put
+the loop's first live turn ahead of them, which is what the SRD's own ordering
+criterion — cost of getting it wrong late, purposes in priority order — already says.
+
+## Stale records found during this review
+
+The tree is the authority and the record is a claim about it. Claims found wrong on
+this pass, so nobody re-litigates them:
+
+| Record | It says | The tree says |
+|---|---|---|
+| 009 T051 note | the monitor reads no published field and AT-02 fails at its first assertion | landed in `009b20d`; all four acceptance tests pass |
+| 006 T029–T031 note | blocked because "feature 008 does not exist" | 008 is built, 61 of 62 ticked; the three tasks are actionable now |
+| 015 T029 note | eighteen subsystem pages open with "Status: not yet built" | sixteen say "built", two "partly built" |
+| 015 reconciliation outcome block | "there is no `site/gates/` directory", "US2 does not exist" | contradicted by the per-task notes above it; trust those |
+| 014 T040, T045, T046 | nothing — no note at all | unknown; the only unticked tasks in the repository with no reason recorded |
+
+Each lane below re-reconciles its own `tasks.md` as it goes; nobody inherits these.
+
+## The genuinely outstanding work, consolidated
+
+| Cluster | Items | Why it matters |
+|---|---|---|
+| The loop, live | 009 T052–T055, T058 (keystone), T059 (a decision); then 008 T062 follows | AT-02's SRD wording — "visibly, end to end, within the client" — becomes true of the running stack |
+| The read path's bug | SensorThings 404 (BLOCKED 2026-08-28T10:15) | FR-19 is half-served until it answers |
+| The map | 017 (spec exists; plan and tasks do not) | closes 012's recorded partials; first thing a visitor looks at |
+| Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
+| Generated types carry-over | 006 T029–T031, T039, T040 | note was stale; unblocked since 008 shipped |
+| Unevidenced success criteria | 003 T040, 004 T044, 005 T028 | measured claims the record asserts and nothing measures |
+| Replay's weaker claim | 001 T033, T042, T047 | AT-04 today scores generator reproducibility, not the two-participant byte-identical scenario the SRD describes; do T042 or amend the claim, not neither |
+| Documentation carry-overs | 007 T045, 008 primer, 015 partial re-reconciliation | evidence hygiene; smaller than the record claims |
+| Scope decision | SRD amendment for 019/020 | both specs name it part of their delivery; it is the owner's, not a lane's |
+
+## Wave 6 — the loop turns where a person can watch it
+
+Five lanes, disjoint trees, all startable now. The shared surfaces are the usual
+append-only files, under the usual rules.
+
+| Lane | Owns | Work |
+|---|---|---|
+| A — control loop | `services/{scheduler,model_runner,publisher,telemetry,offload,planner}/` | 009 T052–T055, T058, T059; the T059 restart-policy decision comes first because the wiring depends on it. Then 008 T062 flips on its own. |
+| B — map | `client/src/` (map-owned area) | 017: plan and tasks via spec-kit, then build. Shares only the shell integration point, append-only. |
+| C — query | `query/`, `contracts/openapi/` | the SensorThings 404, then 006 T029–T031 (generated types for the query contract). |
+| D — deploy and offload | `deploy/`, `services/offload/` | establish 014 T040/T045/T046's real status and either do or note them; 005 T028; the T047-geometry ownership question goes to the owner. |
+| E — evidence | `site/`, `docs/` | re-reconcile 015's partials with evidence per tick; 006 T039/T040; 007 T045; blog entries for finished features per PR-08. |
+
+**Wave 6 exit criterion:** from a clean checkout, `./scripts/run_local.sh`, and a
+browser: a threshold breach becomes a divergence, a run request, a published run, and a
+field refresh drawn on the map — AT-02 as the SRD wrote it, live, with every component
+lit by its own heartbeat. That is the demonstration purpose §1 ranks second, and it is
+currently the thing the harness cannot do.
+
+## Wave 7 — the read-side teaching layer, and the scope decision
+
+| Item | Blocked on | Notes |
+|---|---|---|
+| 018 read-path boundaries | Story 2's scanner and gate: nothing. Stories 1, 3, 4: wave 6 lanes B/C freeing the client integration point | the topology gate is this repository's own medicine applied to its own topology |
+| SRD amendment for 019/020 | the owner | either the SRD grows the holdings and advisories with the argument recorded, or the features are re-scoped; the specs themselves require this before their plans pass a Constitution Check |
+| 001 T042/T047 replay scenario | nothing | upgrades AT-04 from the weaker claim to the stated one |
+| 003 T040, 004 T044 measurements | a destination | the droplet half needs the droplet |
+
+## Wave 8 — the data landscape grows
+
+Runs only after the wave 7 scope decision, and lands on a stack where runs genuinely
+publish — which is what makes 019's accumulation real rather than retention of runs
+that never happen.
+
+| Feature | Owns | Parallel with |
+|---|---|---|
+| 019 coverage holdings | services-side authoring, `stores/coverage/` convention, query configuration | 020 stories 1–3 (shared files are append-only) |
+| 020 shore advisories, stories 1–3 | advisory schema, topic, store, authoring, collection | 019 |
+| 020 story 4 | the map | after 017; deliberately separable |
+
+## What is deliberately not parallelised, updated
+
+- **009's remaining wiring stays one lane.** The reason above holds: one cycle, one
+  set of invariants, one reading of "current".
+- **019 and 020 wait on a decision, not on code.** Starting them before the SRD
+  amendment is how a spec stops describing the system.
+- **The client shell's integration point is append-only for 017 and 018 alike.** Both
+  specs name it the one shared surface; hold them to it.
+
+## Risks to this schedule
+
+| Risk | Mitigation |
+|---|---|
+| The record rots again while five lanes run | each lane ticks as it goes and re-reconciles its own file; the wave does not close on green CI alone but on the record matching the tree |
+| T059's restart-policy decision stalls lane A | it is first in the lane and flagged to the owner now, not discovered mid-wire |
+| The viewer credential served world-readable (DECISIONS 2026-08-28T08:30) reaches the droplet unreviewed | the review is named a wave 6 exit condition for any droplet demonstration, alongside the ADR-0001 amendment sitting at *proposed* |
+| 017 grows a data dependency on the loop lane | it must not: the map draws fetched data and states absence; an empty stack renders the extent and the statement, which is demonstrable on its own |

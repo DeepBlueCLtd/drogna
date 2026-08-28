@@ -60,6 +60,8 @@ const PERTURBATION_ID = "capture-determinism-control";
 interface Half {
   readonly image: Buffer;
   readonly record: ReturnType<typeof fingerprint>;
+  /** The simulation time on the page when this half was taken, for the premise check. */
+  readonly simTime: string;
 }
 
 /** One capture through the same steps the pair mechanism uses, minus the pin. */
@@ -70,6 +72,7 @@ async function half(page: Page, side: string, version: string): Promise<Half> {
   const image = await page.screenshot();
   return {
     image,
+    simTime: clock.simTime,
     record: fingerprint({
       browser: {
         name: capture.browser.name,
@@ -127,6 +130,18 @@ async function captureNoChangeRuns(
     const after = await half(page, `no-change-${attempt}-after`, version);
     const outcome = difference(before, after);
     expect(outcome.refused, JSON.stringify(outcome.reasons ?? [])).toBe(false);
+    // The premise before the property: these are two captures of an *unchanging* view
+    // only if simulated time held still between them. When it did not, the honest report
+    // is that the clock was running unpinned — the exact state CI caught when the pin
+    // step decided "no clock answered" an instant before the first sample arrived — and
+    // blaming frame-to-frame noise would send a reader after the wrong fault.
+    expect(
+      after.simTime,
+      `run ${attempt} of 3: simulated time advanced between the two halves ` +
+        `("${before.simTime}" then "${after.simTime}"), so this was not a capture of an ` +
+        "unchanging view: the clock was running while this spec believed it was not. " +
+        `The pin step had concluded: ${pinned}`,
+    ).toBe(before.simTime);
     runs.push(outcome.differingPixels);
     expect(
       outcome.differingPixels,
@@ -280,6 +295,7 @@ async function halfWithoutSettling(page: Page, side: string, version: string): P
   const image = await page.screenshot();
   return {
     image,
+    simTime: clock.simTime,
     record: fingerprint({
       browser: {
         name: capture.browser.name,
@@ -331,16 +347,48 @@ async function restore(page: Page, previous: number | null): Promise<void> {
 }
 
 async function pinIfAClockAnswers(page: Page): Promise<string> {
-  const observed = await readRate(page);
+  let observed = await readRate(page);
   if (observed.acknowledged === null) {
-    return "no clock answered: no ctl/clock sample has arrived, so simulated time is not advancing and there is no rate to pin";
+    // The first ctl/clock sample can lag the page's settle: the stack is up, the clock
+    // is genuinely running, and this page just has not heard it yet — which is how a CI
+    // runner concluded "no clock answered" one instant before samples began painting the
+    // clock panel at the destination's real rate, and run 2 compared two frames of a
+    // ticking display. So wait for a first acknowledgement or for the readiness budget,
+    // frame-polled like every other wait in a capture path (FR-019), and only then
+    // conclude that no clock is answering.
+    await page
+      .waitForFunction(
+        (selector) => {
+          const value = document
+            .querySelector(selector)
+            ?.getAttribute("data-acknowledged-rate");
+          return value !== null && value !== undefined && value !== "";
+        },
+        SPEED_CONTROL,
+        { timeout: capture.client.readinessTimeoutMs, polling: "raf" },
+      )
+      .catch(() => undefined);
+    observed = await readRate(page);
+  }
+  if (observed.acknowledged === null) {
+    return "no clock answered: no ctl/clock sample has arrived within the readiness budget, so simulated time is not advancing and there is no rate to pin";
   }
   if (observed.pinned) {
     return "the clock was already pinned at zero when this test began";
   }
   await askForRate(page, 0);
+  // Steady alone is not the pin: data-steady can still be true from the *previous*
+  // acknowledgement in the instant after the click, and a wait that accepts it lets the
+  // captures start while the zero is still in flight — or lost. Only an acknowledged
+  // zero (data-pinned) is the state this spec's premise needs.
   await page.waitForFunction(
-    (selector) => document.querySelector(selector)?.getAttribute("data-steady") === "true",
+    (selector) => {
+      const element = document.querySelector(selector);
+      return (
+        element?.getAttribute("data-pinned") === "true" &&
+        element.getAttribute("data-steady") === "true"
+      );
+    },
     SPEED_CONTROL,
     { timeout: capture.client.readinessTimeoutMs, polling: "raf" },
   );

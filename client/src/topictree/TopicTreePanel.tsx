@@ -24,9 +24,11 @@ import type { ClockState } from "../transport/clock";
 
 import type { ActivityState } from "./activity";
 import { emptyActivity, filterPhase, recordArrival, stampFor } from "./activity";
+import { describeSelection } from "./detail";
+import { DetailView } from "./DetailView";
 import { RoleColumn } from "./RoleColumn";
 import type { Tier } from "./skeleton";
-import { buildSkeleton, classify, withGrafts } from "./skeleton";
+import { buildSkeleton, classify, findNode, withGrafts } from "./skeleton";
 import { describeHonesty } from "./state";
 import type { PanelState } from "./state";
 import { TOPOLOGY } from "./topology";
@@ -213,6 +215,7 @@ export function TopicTreePanel({
   );
   const honesty = describeHonesty(snap.state, config !== null, configurationFailure);
   const sample = snap.state.clock.sample;
+  const selectedNode = selected === null ? null : findNode(tree, selected);
 
   return (
     <section className="panel topic-tree" data-testid="topic-tree">
@@ -283,6 +286,11 @@ export function TopicTreePanel({
           <RoleColumn roles={skeleton.roles} activity={snap.state.activity} now={snap.instant} />
         </div>
       ) : null}
+      {selectedNode === null ? null : (
+        <DetailView
+          detail={describeSelection(selectedNode, snap.state.activity, TOPOLOGY.roles)}
+        />
+      )}
     </section>
   );
 }

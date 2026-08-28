@@ -173,6 +173,20 @@ export function buildSkeleton(topology: DrognaBrokerTopology): Skeleton {
   return { root: frozen(root), roles, declaredPaths };
 }
 
+/** The node at a path, or null — a selection can outlive the shape that offered it. */
+export function findNode(root: TreeNode, path: string): TreeNode | null {
+  if (root.path === path) {
+    return root;
+  }
+  for (const child of root.children) {
+    const found = findNode(child, path);
+    if (found !== null) {
+      return found;
+    }
+  }
+  return null;
+}
+
 /**
  * How a heard topic stands to the declared topology. Declared topics are rows (or their
  * ancestors); a topic covered by any declared filter is observed under declaration; a

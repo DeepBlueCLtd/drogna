@@ -721,3 +721,52 @@ main {
     display: none;
   }
 }
+
+.tt-detail {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+}
+
+.tt-detail h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+}
+
+.tt-detail-tier {
+  color: var(--muted);
+}
+
+.tt-detail dl {
+  display: grid;
+  grid-template-columns: minmax(12rem, max-content) 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.tt-detail dt {
+  color: var(--muted);
+}
+
+.tt-detail dd {
+  margin: 0;
+}
+
+.tt-detail ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tt-payload {
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  padding: 0.5rem;
+  background: var(--paper);
+  font-size: 0.8rem;
+}
+
+.tt-payload-reason {
+  margin: 0 0 0.3rem;
+  color: var(--muted);
+}

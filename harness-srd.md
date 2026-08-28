@@ -480,10 +480,17 @@ here as everywhere, and the shore is this harness talking to itself. The argumen
   subscription alone: creation is already announced (FR-31), and the offload
   packager shall additionally announce each verified transmission on the control
   namespace, so a subscriber can watch products leave as well as arrive.
-- **FR-76** The client shall present the throughput display beside the simulation
-  speed control, so cause and effect share a screen. Illumination remains driven by
-  liveness alone: a component stopped by command goes dark because its heartbeats
-  cease, never because the plane says it is stopped.
+- **FR-76** The client shall present the operator plane's surfaces in the web UI
+  itself, not in a tool beside it: the throughput display beside the simulation
+  speed control, so cause and effect share a screen; a per-component detail view
+  carrying the deeper account of FR-67 — last heartbeat, reported status, counters
+  and the recent window — reached from the components already drawn; and command
+  surfaces for the clock, trigger and lifecycle operations of FR-71 and FR-72, each
+  showing the acknowledgement or refusal as it arrived. Where the plane is not
+  deployed, these surfaces state their absence and disable, as the speed control
+  already does without a control route. Illumination remains driven by liveness
+  alone: a component stopped by command goes dark because its heartbeats cease,
+  never because the plane says it is stopped.
 
 *The operator plane exists so the harness can be interrogated and provoked while it
 runs — the rate turned up, the pace watched, a component stopped mid-cycle — which is

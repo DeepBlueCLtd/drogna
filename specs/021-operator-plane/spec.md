@@ -63,19 +63,22 @@ client.
 An operator, or a script, asks the operator plane's REST surface for a deeper account
 of any component than the shell displays: the last heartbeat and reported status, the
 component's own published counters, and a rolling recent window of the same — enough
-to see a trend across a rate change without a store behind it. Event-style monitoring
-needs no REST at all: a plain subscriber on the control namespace sees data products
-announced as they are created, and now also as they are transmitted.
+to see a trend across a rate change without a store behind it. The same account is on
+screen: selecting a component in the client opens its detail view, carrying the same
+facts the REST surface serves. Event-style monitoring needs no REST at all: a plain
+subscriber on the control namespace sees data products announced as they are created,
+and now also as they are transmitted.
 
 **Why this priority**: "deeper querying of status" is the feature's second half, and
 the transmission announcement closes the one gap in event observability — creation is
 already announced, departure is not.
 
 **Independent Test**: query the controller for a live component and receive its last
-heartbeat, counters and recent window; query for a component that has never spoken
-and receive "unheard", not an error and not an invention; subscribe to the control
-namespace, drive one offload transfer to verified receipt, and observe the
-transmission announcement.
+heartbeat, counters and recent window; select the same component in the client and
+read the same account; query for a component that has never spoken and receive
+"unheard", not an error and not an invention; subscribe to the control namespace,
+drive one offload transfer to verified receipt, and observe the transmission
+announcement.
 
 **Acceptance Scenarios**:
 
@@ -88,7 +91,12 @@ transmission announcement.
 3. **Given** a controller restarted mid-scenario, **When** its window is queried
    before it has re-observed, **Then** the window says it is empty and young rather
    than presenting a gap as a quiet period.
-4. **Given** an offload bundle reaching verified receipt, **When** the control
+4. **Given** the client with the plane deployed, **When** a drawn component is
+   selected, **Then** its detail view shows the deeper account — last heartbeat,
+   reported status, counters, recent window — every fact one the component
+   published; a component never heard from shows as unheard, and with the plane
+   absent the view states that and disables rather than disappearing.
+5. **Given** an offload bundle reaching verified receipt, **When** the control
    namespace is watched, **Then** one transmission announcement appears for it,
    schema-validated, and re-delivery changes nothing.
 
@@ -120,29 +128,32 @@ well-formed, resume, and confirm downstream components followed without complain
 
 ### User Story 4 - Components can be commanded, and the display stays honest (Priority: P4)
 
-The operator pushes commands at components: a trigger — request a model run now, as
+The operator pushes commands at components from the client's own command surfaces —
+in the web UI, beside the state they act on: a trigger — request a model run now, as
 an ordinary control-namespace message — or process-level lifecycle, stopping,
 starting or restarting a named component's container through the container runtime.
-The display never takes the plane's word for any of it: a stopped component goes dark
-because its heartbeats cease within the liveness window, and lights again on its
-first real heartbeat after restart.
+Every acknowledgement or refusal is shown as it arrived. The display never takes the
+plane's word for any of it: a stopped component goes dark because its heartbeats
+cease within the liveness window, and lights again on its first real heartbeat after
+restart.
 
 **Why this priority**: deliberately last. It carries the feature's only privileged
 surface (the runtime socket) and its only interaction with the replay claim, and the
 demonstration value of the first three stories stands without it.
 
-**Independent Test**: stop a component from the plane and watch it go dark by
-liveness alone; restart it and watch it return on a real heartbeat; issue a trigger
-and watch the ordinary loop machinery answer it; confirm an uncommanded replay of the
-scenario is byte-identical as before.
+**Independent Test**: stop a component from the client and watch it go dark by
+liveness alone; restart it from the client and watch it return on a real heartbeat;
+issue a trigger and watch the ordinary loop machinery answer it; confirm an
+uncommanded replay of the scenario is byte-identical as before.
 
 **Acceptance Scenarios**:
 
-1. **Given** a running component, **When** the plane stops its container, **Then**
-   the component goes dark only when its liveness window lapses, and nothing in the
-   client consulted the plane to decide that.
-2. **Given** a stopped component, **When** the plane starts it, **Then** it is lit
-   only on its first real heartbeat, arriving with a status of its own choosing.
+1. **Given** a running component, **When** the operator stops its container from the
+   client, **Then** the component goes dark only when its liveness window lapses,
+   and nothing in the client consulted the plane to decide that.
+2. **Given** a stopped component, **When** the operator starts it from the client,
+   **Then** it is lit only on its first real heartbeat, arriving with a status of
+   its own choosing.
 3. **Given** a trigger requesting a model run, **When** it is dispatched, **Then** it
    travels as an ordinary control-namespace message, subject to the scheduler's
    existing right to refuse (duplicate or too-soon requests), and the outcome is
@@ -224,10 +235,16 @@ scenario is byte-identical as before.
 - **FR-010**: The offload packager MUST announce each verified transmission on the
   control namespace, schema-validated, idempotent under re-delivery, so that product
   creation and departure are each observable by subscription alone.
-- **FR-011**: The client MUST present the throughput display beside the simulation
-  speed control, every displayed figure being one a component published. Component
-  illumination MUST remain liveness-driven; no state served by the plane may light,
-  darken or re-describe a component in the client.
+- **FR-011**: The client MUST present the operator plane's surfaces in the web UI
+  itself: the throughput display beside the simulation speed control; a
+  per-component detail view — last heartbeat, reported status, counters, recent
+  window — opened by selecting a drawn component; and command surfaces for the
+  clock, trigger and lifecycle operations, each showing the acknowledgement or
+  refusal as it arrived. Every displayed figure MUST be one a component published.
+  Where the plane is not deployed, each surface MUST state its absence and disable,
+  as the speed control already does without a control route. Component illumination
+  MUST remain liveness-driven; no state served by the plane may light, darken or
+  re-describe a component in the client.
 - **FR-012**: Operator commands MUST be ephemeral — absent from the run record — and
   any surface claiming deterministic replay MUST withhold the claim for a run in
   which lifecycle or trigger commands were issued, visibly. Rate and pause changes
@@ -262,14 +279,16 @@ scenario is byte-identical as before.
 - **SC-002**: For every live component, the REST answer agrees with the broker: no
   fact appears in the aggregate that cannot be matched to a published message, and a
   never-heard component queries as unheard. Verified by test against recorded
-  traffic, not by inspection.
+  traffic, not by inspection. Selecting the same component in the client shows the
+  same account, and no fact appears on screen that the REST surface does not serve.
 - **SC-003**: With the loop running at two different rates within capacity, each
   component's per-simulation-second throughput agrees between the two runs within a
   stated tolerance — the figures measure the work, not the acceleration — and the
   tolerance is derived from recorded runs, not typed into the test.
-- **SC-004**: A component stopped from the plane goes dark within its liveness
-  window and returns only on a real heartbeat after start; a reviewer finds no path
-  by which the plane's served state could have driven either transition.
+- **SC-004**: A component stopped from the client's command surface goes dark within
+  its liveness window and returns only on a real heartbeat after start; a reviewer
+  finds no path by which the plane's served state could have driven either
+  transition.
 - **SC-005**: Every offload transfer reaching verified receipt produces exactly one
   transmission announcement observable by a plain subscriber, and replaying delivery
   produces no second one.
@@ -313,11 +332,13 @@ scenario is byte-identical as before.
   control profile, and the `full` profile still names a service that does not exist.
   Demonstrating the P1 story end to end therefore assumes the control-loop services
   are brought up alongside the local profile, and the plan must say how.
-- Where the operator console's command surfaces live in the client codebase — inside
-  the shell beside the speed control, or as a separate surface as the spike's cost
-  table suggests — is a plan-phase decision. What is settled here is only what the
-  shell must show (FR-011) and what no client code may do (light a component from
-  served state).
+- The operator plane's surfaces are part of the drogna web UI itself, not a console
+  beside it — decided in review of this specification, tightening what the spike's
+  cost table had left open. The detail view, the command surfaces and the throughput
+  display are the shell's to show (FR-011); how the client's code organises them,
+  and how they are tested within the no-mocked-traffic rule, remains the plan's
+  decision, as does nothing else: what the shell shows is settled, and what no
+  client code may do (light a component from served state) is settled with it.
 - The store browser the spike weighed is out of scope entirely, for the spike's own
   reason: a generic browsing surface is the inverse of the boundary the harness
   exists to demonstrate. Its absence blocks nothing here.

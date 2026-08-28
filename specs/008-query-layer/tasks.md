@@ -356,6 +356,17 @@ is exporting.
       rather than restated — watched failing on the configuration as it was, with the same
       words the running query layer used.
 
+      **Watched, 28 August 2026, wave 7 lane H.** The half the tick above could only claim
+      from a curl is now the SRD §10 observation: a threshold breach became
+      `ctl/divergence` → `ctl/run-request` → `ctl/run-started` → `ctl/run-published`,
+      live in the composed stack from one command, traversing the client's loop view
+      (sense, decide, act, publish each lit by its own message), and
+      `/collections/forecast/cube` then served the watched run's coverage — the cube's time
+      axis begins at that run's initialisation instant. Evidence, captures and the exact
+      timeline are in `spikes/watched-turn/FINDING.md` and its `results/`; the announcement
+      observed live carries the link-5 shape (fixed collection identifier beside the run
+      identifier, decided on issue #34).
+
 - [x] T064 Construct the heartbeat this feature already wrote
 
       `query/plugins/heartbeat.py` has been in the tree since this feature landed, with a

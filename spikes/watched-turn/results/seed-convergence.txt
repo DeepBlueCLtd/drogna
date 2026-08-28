@@ -1,0 +1,9 @@
+/tmp/run_local_1.log:  step 030-coverage
+/tmp/run_local_1.log:    the coverage store now names run-initial as current; the loop has a field to diverge from
+/tmp/run_local_1.log:== Seeded after 22s; record at /home/user/drogna/deploy/.runtime/seeding-record.json
+/tmp/run_local_2.log:  step 030-coverage
+/tmp/run_local_2.log:    the coverage store already names run-000000-7f80b47c7b91 as current; nothing to seed
+/tmp/run_local_2.log:== Seeded after 9s; record at /home/user/drogna/deploy/.runtime/seeding-record.json
+/tmp/run_local_3.log:  step 030-coverage
+/tmp/run_local_3.log:    the coverage store now names run-initial as current; the loop has a field to diverge from
+/tmp/run_local_3.log:== Seeded after 23s; record at /home/user/drogna/deploy/.runtime/seeding-record.json

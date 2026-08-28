@@ -1,0 +1,24 @@
+{
+  "mechanism": "glance",
+  "image": "/home/user/drogna/.capture/glance/glance-0003.png",
+  "rateBefore": {
+    "acknowledged": 10,
+    "pinned": false,
+    "awaiting": false,
+    "steady": false
+  },
+  "rateAfter": {
+    "acknowledged": 10,
+    "pinned": false,
+    "awaiting": false,
+    "steady": false
+  },
+  "clock": {
+    "simTime": "2026-01-01T00:26:38.000000Z",
+    "runId": "local-001",
+    "display": "stale"
+  },
+  "litCount": "2 of 21 components heard from within the window each declared.",
+  "framesWatched": 19,
+  "address": "http://127.0.0.1:8080"
+}

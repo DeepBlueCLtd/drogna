@@ -184,6 +184,45 @@ def test_the_browser_cannot_read_observation_traffic(broker: support.Broker) -> 
     assert "not-for-the-browser" not in log
 
 
+# The topic tree's identity (ADR-0025) ------------------------------------------------------
+
+
+def test_the_observer_reads_the_observation_branch(broker: support.Broker) -> None:
+    """Feature 022: the topic tree hears observation arrivals through its own identity."""
+    log = received(
+        broker,
+        "drogna_observer",
+        "obs/#",
+        ("drogna_sensor", "obs/platform-a/ds-temperature", "an-arrival-for-the-tree"),
+    )
+    assert "an-arrival-for-the-tree" in log
+
+
+def test_the_observer_reads_the_control_branch(broker: support.Broker) -> None:
+    log = received(
+        broker,
+        "drogna_observer",
+        "ctl/#",
+        ("drogna_control", "ctl/heartbeat", "a-beat-for-the-tree"),
+    )
+    assert "a-beat-for-the-tree" in log
+
+
+def test_the_observer_can_publish_nowhere(broker: support.Broker) -> None:
+    """The property that makes the credential publishable (ADR-0025, after ADR-0020's
+    argument for the viewer): holding it, a caller may watch and may not say one word."""
+    refused = (
+        "ctl/clock",
+        "ctl/heartbeat",
+        "ctl/run-request",
+        "obs/platform-a/ds-temperature",
+        "anything",
+    )
+    for topic in refused:
+        result = broker.publish("drogna_observer", topic, "{}")
+        assert b"Not authorized" in result.stderr, f"{topic} was not refused"
+
+
 # Identity ---------------------------------------------------------------------------------
 
 

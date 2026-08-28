@@ -125,3 +125,28 @@ topic write ctl/heartbeat
 
 user drogna_viewer
 topic read ctl/#
+
+# --- the topic tree (C-18), through the same upgrade location -----------------------------
+#
+# ADR-0025: the topic-tree panel (feature 022) draws the declared topology lit by live
+# traffic, and a tree restricted to the control namespace would misrepresent the system it
+# exists to demonstrate. So the browser gains a second identity: read on both namespaces,
+# and — the property that makes the credential publishable, exactly as ADR-0020 argued for
+# the viewer — *publish on nothing at all*. Mosquitto's default deny supplies every refusal;
+# tests/integration/test_topic_isolation.py asserts the grants and the refusals at a running
+# broker rather than reading this file back.
+#
+# drogna_viewer above is unchanged and keeps ADR-0020's obligations: it remains the narrow
+# identity for anything needing only the control namespace, and it may never gain a
+# permission. This role carries the same second obligation for the same reason: its secret
+# is rendered into the world-readable client document, so a write rule added here would turn
+# a documented non-secret into a real one. The objection ADR-0008 raised against the viewer
+# reading obs/# — the write path read over a connection the proxy does not inspect per
+# message — is answered rather than waved off: the connection still cannot write (this file),
+# the observation payloads are the synthetic measurements of a demonstration harness, and
+# the released products behind the proxy's clearance are a different credential on a
+# different route, untouched (ADR-0025 records the argument in full).
+
+user drogna_observer
+topic read obs/#
+topic read ctl/#

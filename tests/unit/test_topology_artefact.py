@@ -103,7 +103,14 @@ def test_the_sensors_are_confined_to_the_observation_branch() -> None:
     writable = {entry["topic"] for entry in document["topics"] if "sensors" in entry["publishers"]}
     readable = {entry["topic"] for entry in document["topics"] if "sensors" in entry["subscribers"]}
 
-    assert writable == {"obs/#", "ctl/heartbeat"}
+    # The claim is confinement, so it is asserted as confinement: the writable set is the
+    # observation branch — the filter and the concrete topics feature 022's expansion
+    # spells under it — plus the one argued control topic, and nothing else. An
+    # enumeration of the concrete topics here would be a second copy of the sensor
+    # configuration, going stale the day a datastream is added.
+    assert "obs/#" in writable
+    assert "ctl/heartbeat" in writable
+    assert all(topic.startswith("obs/") or topic == "ctl/heartbeat" for topic in writable)
     assert readable == {"ctl/clock"}
 
 
@@ -117,7 +124,12 @@ def test_the_query_layer_subscribes_to_nothing() -> None:
 
 
 def test_the_browser_can_publish_nowhere() -> None:
-    """ADR-0008: the viewer identity has no write rule, and gaining one would be a voice."""
+    """ADR-0008, extended by ADR-0025: the browser's identity has no write rule.
+
+    The client now authenticates as `drogna_observer` (feature 022), which reads both
+    namespaces — and the property that made its credential publishable is the one this
+    test holds: gaining any write rule would be a voice.
+    """
     published = [
         entry["topic"] for entry in artefact()["topics"] if "client" in entry["publishers"]
     ]

@@ -50,6 +50,7 @@ ROLES = frozenset(
         "drogna_control",
         "drogna_viewer",
         "drogna_query",
+        "drogna_observer",
     }
 )
 

@@ -53,6 +53,7 @@ ROLES: dict[str, str] = {
     "drogna_ingest": "ingest-secret",
     "drogna_control": "control-secret",
     "drogna_viewer": "viewer-secret",
+    "drogna_observer": "observer-secret",
 }
 
 DATABASE = "drogna"

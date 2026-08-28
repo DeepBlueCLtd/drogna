@@ -78,6 +78,7 @@ ROLE_SECRETS: dict[str, str] = {
     "drogna_control": "HARNESS_BROKER_SECRET_CONTROL",
     "drogna_viewer": "HARNESS_BROKER_SECRET_VIEWER",
     "drogna_query": "HARNESS_BROKER_SECRET_QUERY",
+    "drogna_observer": "HARNESS_BROKER_SECRET_OBSERVER",
 }
 
 SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)

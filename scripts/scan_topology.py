@@ -20,7 +20,12 @@ something else depends on:
 ``config/<destination>/*.json``
     Which role each component authenticates as, from the user name in its broker URL.
     Every destination is read and they are required to agree; a disagreement stops the
-    scan rather than being resolved silently in favour of one.
+    scan rather than being resolved silently in favour of one. The same files carry the
+    deployed sensor configuration, from which the concrete observation topics under the
+    declared ``obs/#`` wildcard are derived — feature 022's topic tree draws its declared
+    skeleton from this artefact, and a skeleton is the concrete topics a deployment will
+    speak on, not only the branch that covers them. The destinations-must-agree rule
+    applies to that derivation unchanged.
 
 component source
     Which topics the tree actually names, with the file, line and constant. Module-level
@@ -252,6 +257,66 @@ def read_components(root: Path) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------------
+# The configured expansion of declared wildcards
+# ---------------------------------------------------------------------------------
+
+
+def configured_topics(root: Path) -> set[str]:
+    """The concrete observation topics the deployed configuration names.
+
+    The observation branch is declared as a wildcard, and a tree drawn from this artefact
+    should show the topics a deployment will actually speak on: ``obs/<thing-id>/
+    <datastream-id>``, spelled from the platform and datastreams the sensor configuration
+    declares (feature 022, FR-001). The section is found by its shape — a ``sensors``
+    object naming a platform and datastreams — rather than by filename, for the same
+    reason components are keyed by their declared id and not by the file that carries it.
+
+    Every destination that carries such a section must derive the same set. That is the
+    roles rule applied again: a disagreement stops the scan rather than being resolved
+    silently in favour of one destination.
+    """
+    derived: dict[str, set[str]] = {}
+    destinations = sorted(entry for entry in (root / CONFIG_DIRECTORY).iterdir() if entry.is_dir())
+    for destination in destinations:
+        for path in sorted(destination.glob("*.json")):
+            document = json.loads(read_text(path))
+            sensors = document.get("sensors") if isinstance(document, Mapping) else None
+            if not isinstance(sensors, Mapping):
+                continue
+            platform = sensors.get("platform")
+            datastreams = sensors.get("datastreams")
+            if not isinstance(platform, Mapping) or not isinstance(datastreams, list):
+                continue
+            thing = platform.get("id")
+            if not isinstance(thing, str) or not thing:
+                raise ScanError(
+                    f"{path.relative_to(root)}: the sensors section names no platform id, "
+                    "so the topics it would speak on cannot be spelled"
+                )
+            topics = derived.setdefault(destination.name, set())
+            for entry in datastreams:
+                stream = entry.get("id") if isinstance(entry, Mapping) else None
+                if not isinstance(stream, str) or not stream:
+                    raise ScanError(
+                        f"{path.relative_to(root)}: a datastream names no id, so the "
+                        "topic it would speak on cannot be spelled"
+                    )
+                topics.add(f"obs/{thing}/{stream}")
+    if not derived:
+        return set()
+    (first_name, first), *rest = sorted(derived.items())
+    for name, topics in rest:
+        if topics != first:
+            differing = ", ".join(sorted(first ^ topics))
+            raise ScanError(
+                "the destinations disagree about the configured observation topics "
+                f"({first_name} and {name} differ on: {differing}); one of the "
+                "configurations is wrong and the scan will not choose"
+            )
+    return first
+
+
+# ---------------------------------------------------------------------------------
 # The topics the tree names
 # ---------------------------------------------------------------------------------
 
@@ -416,7 +481,16 @@ def _topic_of(root: Path, site: Mapping[str, Any]) -> str:
 def resolve_schema(root: Path, topic: str) -> str | None:
     """The master governing a topic, by the repository layout's naming convention."""
     parts = topic.split("/")
-    noun = parts[0] if len(parts) == 2 and parts[1] == "#" else parts[-1]
+    if parts[0] == "obs":
+        # The whole observation branch carries one shape. The layout names the topics
+        # obs/<thing-id>/<datastream-id> and one master governs them all, so a concrete
+        # topic resolves as the branch filter always has — its last segment names a
+        # datastream, not a shape.
+        noun = parts[0]
+    elif len(parts) == 2 and parts[1] == "#":
+        noun = parts[0]
+    else:
+        noun = parts[-1]
     alias = SCHEMA_ALIASES.get(noun)
     candidate = SCHEMA_DIRECTORY / f"{alias or noun}{SCHEMA_SUFFIX}"
     if (root / candidate).is_file():
@@ -461,8 +535,15 @@ def build(root: Path = REPO_ROOT) -> tuple[dict[str, Any], list[str]]:
         for rule in role["rules"]
         if "#" not in rule["filter"] and "+" not in rule["filter"]
     }
+    # And a concrete topic the deployed configuration names under a declared wildcard is a
+    # topic somebody meant in the same sense: granted by the branch filter, spelled by the
+    # sensor configuration, and spoken on by the deployment whether or not any source
+    # names it. `named_by` stays empty for these — no source names them; the
+    # configuration does — and the permission columns come from the access control list's
+    # wildcard matching like every other row's.
+    configured = configured_topics(root)
     topics: list[dict[str, Any]] = []
-    for topic in sorted(named | declared):
+    for topic in sorted(named | declared | configured):
         namespace = topic.split("/")[0]
         if namespace not in NAMESPACES:
             findings.append(

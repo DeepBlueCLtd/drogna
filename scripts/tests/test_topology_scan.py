@@ -60,6 +60,12 @@ topic read obs/#
 SENSOR_CONFIG = {
     "component": {"id": "widget"},
     "broker": {"url": "mqtt://probe_sensor@broker:1883", "client_id": "widget"},
+    # The deployed shape of the observation branch: what turns the declared `obs/#`
+    # wildcard into the concrete topics a deployment will speak on (feature 022).
+    "sensors": {
+        "platform": {"id": "rig-a"},
+        "datastreams": [{"id": "ds-alpha"}, {"id": "ds-beta"}],
+    },
 }
 CONTROL_CONFIG = {
     "component": {"id": "warden"},
@@ -273,6 +279,51 @@ def test_the_schema_is_resolved_by_the_naming_convention(tree: Path) -> None:
 
     assert topic(document, "obs/#")["schema"] == "contracts/schemas/observation.schema.json"
     assert topic(document, "ctl/heartbeat")["schema"] is None
+
+
+def test_the_configured_expansion_names_the_concrete_observation_topics(tree: Path) -> None:
+    """The declared wildcard expands only as far as deployed configuration names segments.
+
+    Feature 022's tree draws its skeleton from this artefact, so the concrete
+    `obs/<thing>/<datastream>` topics the sensor configuration spells must be rows —
+    permissions from the access control list's wildcard matching, `named_by` empty
+    because the configuration names them and no source does, and the branch's master
+    governing each.
+    """
+    document, findings = build(tree)
+
+    assert findings == []
+    for name in ("obs/rig-a/ds-alpha", "obs/rig-a/ds-beta"):
+        entry = topic(document, name)
+        assert entry["publishers"] == ["widget"]
+        assert entry["subscribers"] == ["warden"]
+        assert entry["named_by"] == []
+        assert entry["schema"] == "contracts/schemas/observation.schema.json"
+
+
+def test_destinations_must_agree_about_the_configured_topics(tree: Path) -> None:
+    """The roles rule, applied to the expansion: the scan will not choose a destination."""
+    other = json.loads((tree / "config" / "there" / "widget.json").read_text())
+    other["sensors"]["datastreams"].append({"id": "ds-gamma"})
+    (tree / "config" / "there" / "widget.json").write_text(json.dumps(other))
+
+    with pytest.raises(ScanError, match="disagree about the configured observation topics"):
+        build(tree)
+
+
+def test_a_sensors_section_that_cannot_spell_its_topics_stops_the_scan(tree: Path) -> None:
+    """A platform with no id would silently derive nothing, which reads as complete."""
+    broken = json.loads((tree / "config" / "here" / "widget.json").read_text())
+    del broken["sensors"]["platform"]["id"]
+    (tree / "config" / "here" / "widget.json").write_text(json.dumps(broken))
+
+    with pytest.raises(ScanError, match="names no platform id"):
+        build(tree)
+
+
+def test_a_concrete_observation_topic_resolves_to_the_branch_master(tree: Path) -> None:
+    """The last segment names a datastream, not a shape; the branch's master governs."""
+    assert resolve_schema(tree, "obs/rig-a/ds-alpha") == "contracts/schemas/observation.schema.json"
 
 
 def test_an_alias_that_stops_resolving_is_loud(tmp_path: Path) -> None:

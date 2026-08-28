@@ -69,12 +69,25 @@
           "filter": "ctl/#"
         }
       ]
+    },
+    {
+      "role": "drogna_observer",
+      "rules": [
+        {
+          "access": "read",
+          "filter": "obs/#"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/#"
+        }
+      ]
     }
   ],
   "components": [
     {
       "id": "client",
-      "role": "drogna_viewer",
+      "role": "drogna_observer",
       "source_root": "client"
     },
     {
@@ -573,6 +586,7 @@
         "sensors"
       ],
       "subscribers": [
+        "client",
         "clock",
         "env_generator",
         "ingest",
@@ -604,6 +618,72 @@
           "constant": "OBSERVATION_PREFIX"
         }
       ]
+    },
+    {
+      "topic": "obs/platform-a/ds-pressure",
+      "namespace": "obs",
+      "schema": "contracts/schemas/observation.schema.json",
+      "publishers": [
+        "sensors"
+      ],
+      "subscribers": [
+        "client",
+        "clock",
+        "env_generator",
+        "ingest",
+        "model_runner",
+        "monitor",
+        "offload",
+        "planner",
+        "publisher",
+        "scheduler",
+        "telemetry"
+      ],
+      "named_by": []
+    },
+    {
+      "topic": "obs/platform-a/ds-salinity",
+      "namespace": "obs",
+      "schema": "contracts/schemas/observation.schema.json",
+      "publishers": [
+        "sensors"
+      ],
+      "subscribers": [
+        "client",
+        "clock",
+        "env_generator",
+        "ingest",
+        "model_runner",
+        "monitor",
+        "offload",
+        "planner",
+        "publisher",
+        "scheduler",
+        "telemetry"
+      ],
+      "named_by": []
+    },
+    {
+      "topic": "obs/platform-a/ds-temperature",
+      "namespace": "obs",
+      "schema": "contracts/schemas/observation.schema.json",
+      "publishers": [
+        "sensors"
+      ],
+      "subscribers": [
+        "client",
+        "clock",
+        "env_generator",
+        "ingest",
+        "model_runner",
+        "monitor",
+        "offload",
+        "planner",
+        "publisher",
+        "scheduler",
+        "telemetry"
+      ],
+      "named_by": []
     }
   ]
 }

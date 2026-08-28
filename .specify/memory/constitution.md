@@ -217,7 +217,7 @@ Exposure is opt-in, one path prefix at a time.
   duration of a run, `observations` is written by the ingestion seam alone, and
   `advisories` is written during a run through its own ingestion seam and by nothing
   else. What separates them is a grant the database enforces rather than a process
-  boundary (ADR-0023, SRD FR-12).
+  boundary (ADR-0024, SRD FR-12).
 - **MQTT** as the single broker, with separate topic namespaces for observations and
   control, and ACLs confining sensors to the observation branch. Physical separation
   onto a second broker remains a documented fallback requiring configuration change
@@ -319,5 +319,5 @@ take the decision.*
 
 *1.5.0 — the technology constraint names three schemas rather than two: `advisories`
 joins `observations` and `features` in the one Postgres instance, because the separation
-feature 020 needs is a grant the database enforces and not a second engine (ADR-0023).
+feature 020 needs is a grant the database enforces and not a second engine (ADR-0024).
 SRD FR-12 is amended in step.*

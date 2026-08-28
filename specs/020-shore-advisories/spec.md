@@ -236,9 +236,9 @@ its absence is a statement of validity, not a bug.
   say three schemas rather than two, and FR-63 records the argument — what has to be
   separate here is who may write and when, which is a rule rather than an engine, and a
   second engine would buy that rule at the price of a second operational surface. The
-  record is **ADR-0023**, and the constitution's technology line was amended with it —
+  record is **ADR-0024**, and the constitution's technology line was amended with it —
   three schemas rather than two, at version 1.5.0. What still belongs to this feature's
-  plan is the consequence ADR-0023 names: a test that asserts the negative from a
+  plan is the consequence ADR-0024 names: a test that asserts the negative from a
   run-time role, because what keeps `features` read-only beside a deliberately writable
   `advisories` is a grant, and a migration that granted too widely would be invisible to
   any test that only reads. Extend `tests/integration/test_feature_store_readonly.py`

@@ -86,8 +86,7 @@ def test_each_service_has_a_name_for_its_configuration_file_in_the_environment()
 def test_the_environment_template_and_the_renderer_agree() -> None:
     """A name with no value, or a value with no name, is an error rather than an empty
     string quietly reaching a container. Rendering is what proves the two sides agree."""
-    supplied = {"HARNESS_DATABASE_PASSWORD": "x" * 8}
-    supplied.update({variable: "y" * 8 for variable in render_credentials.SECRET_NAMES})
+    supplied = {variable: "y" * 8 for variable in render_credentials.SECRET_NAMES}
     for name in ("local", "droplet"):
         text = render_env.render(name, REPOSITORY_ROOT, supplied)
         assert "COMPOSE_PROFILES=" in text

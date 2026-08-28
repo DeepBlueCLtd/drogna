@@ -212,7 +212,7 @@ G. 020 inherits two component identifiers — C-19, the shore advisory source, a
 the advisory store — which `docs/manifest.yaml` records as not yet built and which want
 a subsystem page each when they exist. FR-12 now names three schemas in the one Postgres
 instance rather than two, and the constitution's technology line was amended with it
-(1.5.0, ADR-0023); what that record leaves to 020's plan is the test that asserts the
+(1.5.0, ADR-0024); what that record leaves to 020's plan is the test that asserts the
 negative — `features` still refused to every run-time role, beside an `advisories` that
 is deliberately writable — because what separates them is a grant.
 

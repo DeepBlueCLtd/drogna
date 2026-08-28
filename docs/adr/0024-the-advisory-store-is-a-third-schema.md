@@ -1,4 +1,4 @@
-# ADR-0023: The advisory store is a third schema, not a second engine
+# ADR-0024: The advisory store is a third schema, not a second engine
 
 **Status:** Accepted
 **Date:** 28 August 2026

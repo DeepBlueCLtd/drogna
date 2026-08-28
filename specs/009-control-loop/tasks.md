@@ -438,6 +438,48 @@ fixed field and raises justified divergence is demonstrable on its own and exerc
 the shared sound-speed derivation, the window and the persistence rules — the three
 pieces most likely to be wrong.
 
+### Wiring the receiving half (added 28 August 2026, long-run-01)
+
+Found by starting these components rather than by reading them. Every entry point here takes
+`messages: Iterable[tuple[str, bytes]] = ()`, which is how the tests drive them; in a
+container nobody supplies a source, so the default stood and each ran its loop over nothing
+and exited 0. `resolve_publisher` had already solved the same problem for the publishing
+half. Nothing had solved it for this one, so the loop could not turn and no run was ever
+published — which is also why the EDR cube answers "no run is current".
+
+- [x] T056 Add the receiving half to `harness_core`: `PahoSubscription` and
+      `resolve_subscriber`, mirroring `resolve_publisher`'s three states, with a sentinel
+      that distinguishes "nobody supplied a source" from "somebody supplied nothing"
+
+      Takes several topic filters, because the monitor watches two branches and one filter
+      wide enough for both would ask for control topics its role is refused. Deliberately
+      not built on `PahoTickSource`, which yields `Tick` objects because it subscribes to the
+      clock.
+
+- [x] T057 [US1] Wire the monitor to it, as the worked example
+
+      `monitor running` where it read `exited 0`, and the shell reports 3 of 18 components
+      heard from where it read 1.
+
+- [ ] T058 [US2..US4] Wire `scheduler`, `model_runner` and `publisher` the same way, and
+      `telemetry` with them
+
+      **Not done, and mechanical rather than open.** Each carries the identical default and
+      each already names its own topics in its own module — `ctl/run-request`,
+      `ctl/run-started`, `ctl/run-published`, `ctl/divergence`, `ctl/telemetry`. Left rather
+      than half-started: four services wired in a hurry at the end of a session is how a
+      loop that half-turns gets committed. Doing this is what makes the control loop turn
+      end to end, and with it AT-02, the published run, and the EDR cube serving real
+      coverage instead of refusing honestly.
+
+- [ ] T059 Decide the restart policy for components that depend on a seeded store
+
+      `ingest` authenticates with a password the *seeding* step assigns, and seeding runs
+      after the bring-up, so the observation path cannot reach health under `up.sh` alone
+      from nothing. Adding `observation` to `profiles.active` makes
+      `test_a_bring_up_from_nothing_reaches_health` fail for that reason and no other. A
+      real ordering constraint that wants a decision rather than a quiet edit.
+
 ### Incremental delivery
 
 1. Setup and Foundational — contracts fixed, types generated.

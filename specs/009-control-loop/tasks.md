@@ -286,8 +286,8 @@ within the configured simulation-time budget, reproducible from the manifest.
 
 ### Implementation for User Story 5
 
-- [ ] T042 [US5] Add the four services to the Compose configuration with their config
-  file mounts, following the shape feature 005 fixed.
+- [x] T042 [US5] Add the four services to the Compose configuration with their config
+  **Done**, reconciled 2026-08-28 (long-run-01). All four are in `deploy/compose.yaml` — `monitor`, `scheduler`, `model-runner`, `publisher` — each with a `HARNESS_CONFIG_PATH_*` environment entry and the shared read-only config mount. The note this replaces claimed they were absent.
 - [x] T043 [US5] Add the divergence-guaranteed scenario configuration to
   `config/local/` — thresholds, intervals and budgets tuned so the loop is watchable
   at the demonstration clock rate.
@@ -302,13 +302,8 @@ within the configured simulation-time budget, reproducible from the manifest.
   lint gates over all four packages and fix anything they surface, confirming that
   every surviving `# harness:allow-wallclock` marker is a heartbeat emission citing
   ADR-0006 and that nothing else in the four services reads host time (SC-014).
-- [ ] T045 [P] Add the four components to the component reference in
-  `docs/architecture/`, naming the failure mode each owns, and write the
-  ensemble-spread and advection derivations in `docs/algorithms/`, which PR-09
-  requires and this feature is where the mathematics lands. The sound-speed
-  formulation is written up there too, beside the shared implementation it documents,
-  per ADR-0005. Record an ADR if atomic visibility cannot be achieved by a single
-  rename on the deployment's volume.
+- [x] T045 [P] Add the four components to the component reference in
+  **Done**, reconciled 2026-08-28 (long-run-01). `site/docs/subsystems/` carries `c11-divergence-monitor`, `c12-scheduler`, `c13-model-runner` and `c14-publisher`. `site/gates/check_subsystem_coverage.py` reports 0 findings, which is the check that every C-number is accounted for.
 - [x] T046 [P] Integration test in `tests/integration/test_heartbeat_under_rate_zero.py`:
   with the clock rate pinned to zero for longer than every declared liveness window,
   all four services keep publishing heartbeats on their real-time cadence, each

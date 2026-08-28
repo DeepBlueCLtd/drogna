@@ -313,3 +313,52 @@ line away.
 invokes it, which is more than a tidy-up and touches `deploy/compose.yaml`. Do you want me
 to build `services/features`, or would you rather take B for now and leave the feature
 store unprovisioned with a note saying so? I have not touched `compose.yaml` either way.
+
+## 2026-08-28T08:50 — item 2 built: `services/features`, and the database half of ADR-0016's gap
+
+**Where**: `services/features/`, `deploy/compose.yaml`, `deploy/lib/render_credentials.py`,
+`contracts/schemas/config.features.schema.json`, `deploy/seed.d/020-features.sh`
+
+**What I found**: I had stopped on this and logged it as blocked, on the ground that every
+route needed `stores/` inside the image. That was the wrong call — the issue authorised
+building it, and the rule is to take the reversible option and keep going. Resuming it:
+`stores/` does not need to be *copied* into the image. It can be *mounted*, exactly as the
+destination configuration already is, because the `features` service is a deploy-time
+one-shot that only ever runs from a checkout. No Dockerfile change, no dockerignore change,
+no relocation, no workspace reshaping.
+
+Then the one-shot reached the database and stopped on
+`fe_sendauth: no password supplied`. `render_credentials.py` injects broker secrets into
+`broker.url` and had never touched a DSN, so **every tracked DSN named a role and carried no
+secret** — the observation store's exact analogue of the broker gap ADR-0016 records, and
+invisible until now because nothing in the active profile had ever opened a connection.
+
+**Options for the DSN half**: give every database role a generated password (widest, and
+`stores/observations/roles.sql` creates `drogna_ingest`, `drogna_read` and
+`drogna_telemetry` with `LOGIN` and no password, so it means changing what the store's SQL
+declares); inject only the owner's, which is the one role that *does* have a generated
+secret; or leave it and let provisioning fail.
+
+**What I did**: the middle one. `_with_database_secret` is the sibling of `_with_secret`
+beside it and rewrites a DSN only where it names `database.user` from the destination's own
+declaration. DSNs naming the other three roles are left exactly as they are, because there
+is no secret to put in them and inventing a variable would produce a credential the database
+has never been told about. The gap for those three is real and is recorded below rather than
+papered over. Tracked files still carry the role and never the secret.
+
+One thing I got right by being made to: the component first read its store path from a
+`HARNESS_STORES_DIR` environment variable, and the literal-path gate refused it — NFR-04
+admits one variable. Moving it to `features.store.definitions_directory` in the document
+named by `HARNESS_CONFIG` was not just compliance: because the key ends in `_directory` and
+holds a container path, `mount_lint.py` now checks the deployment actually mounts it. I
+watched both refuse — the component on an unmounted path, the gate on an undeclared one.
+
+**Result**: `full` builds; the feature store holds 651 bathymetry rows and a coastline; two
+consecutive seeding runs give identical digests; both seed steps report into the seeding
+record. All 13 gates clean, client green.
+
+**What I need from you**: `drogna_ingest`, `drogna_read` and `drogna_telemetry` are created
+`LOGIN` with no password and their DSNs carry none. Nothing exercises them in the active
+profile today, so nothing is failing — but the first component that connects as one of them
+will hit exactly what I hit. Should they get generated secrets on the broker's model, or is
+the intent that they authenticate another way?

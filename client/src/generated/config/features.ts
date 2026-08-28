@@ -25,6 +25,10 @@ export interface DrognaFeatureStoreProvisioningConfiguration {
       /** The schema provisioned. features, beside observations in the same instance. */
       schema: string;
       /**
+       * Where the store's own definitions — provision.py, the migrations and roles.sql — are readable from inside the provisioning container. Declared here rather than passed as an environment variable because Constitution IV admits one variable, HARNESS_CONFIG, and everything else arrives inside the document it names. Being a `_directory` key under a declared container path, deploy/lib/mount_lint.py also checks that the deployment actually mounts it, which is the failure that would otherwise be silent: an unmounted directory still exists inside a container, so a provisioning run would find nothing and have no way to say why.
+       */
+      definitions_directory: string;
+      /**
        * The role the script connects as. It holds write permission; nothing running during a scenario does.
        */
       provisioning_role: string;

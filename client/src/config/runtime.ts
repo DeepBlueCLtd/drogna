@@ -75,6 +75,19 @@ export interface RuntimeConfig {
         readonly graticuleSpacingDegrees: number | undefined;
       }
     | undefined;
+  /**
+   * Where the published site's standards section is, for the badges to link to.
+   *
+   * A link a viewer follows, never a location this client fetches from: the page issues
+   * no request to it. Undefined where the document declares none, which the badges render
+   * as a statement — the standard is named and the absence of a link is said — rather
+   * than a location guessed in source (Constitution IV, 018 FR-008).
+   */
+  readonly site:
+    | {
+        readonly standardsUrl: string;
+      }
+    | undefined;
 }
 
 /** A horizontal extent in CRS84 degrees, in the client's own vocabulary. */
@@ -177,8 +190,11 @@ function adopt(document: Record<string, unknown>): RuntimeConfig {
   const query = section(document, "query");
   const parameters = query["route_parameters"];
 
+  const site = document["site"] as Record<string, unknown> | undefined;
+
   return {
     map: adoptMap(document["map"] as Record<string, unknown> | undefined),
+    site: site === undefined ? undefined : { standardsUrl: site["standards_url"] as string },
     broker: {
       url: broker["url"] as string,
       clientId: broker["client_id"] as string,

@@ -51,6 +51,12 @@ export const ALIVE_WHILE_RUNNING = [
   '[data-testid="transit-canvas"]',
   // One per edge the loop draws a transit along, named for the edge, so matched by prefix.
   '[data-testid^="transit-"]',
+  // The topology matrix (018) counts every arrival on the page's subscription per topic
+  // row, so its heard column advances with each clock sample and heartbeat, and its flash
+  // attribute rides the same frame batch the transits do. Established the same way as the
+  // rest of this list: a running stack, the glance refusing to settle, and the matrix the
+  // only new thing moving.
+  '[data-testid="topology-matrix"]',
 ];
 
 /** The node for one component. Lit or not is read from it, never written to it. */

@@ -231,14 +231,15 @@ its absence is a statement of validity, not a bug.
   (advisory store), §10 places this feature below the line until the control loop's
   turn is demonstrable live, and §11 records the resolved question. The plan's
   Constitution Check therefore cites the amendment rather than proposing one.
-- The constitution's technology constraint names one database instance carrying two
-  schemas; where the advisory store lands relative to that constraint is a plan-phase
-  decision that must be argued explicitly — either within the stated technology under
-  an amended wording, or as a deliberately lighter store — and carries an ADR either
-  way, because planning chose "a store of its own" for structural provenance, not any
-  particular engine. The SRD amendment deliberately left that open in the same terms:
-  FR-63 delegates the choice to this feature's plan, and the constitution was not
-  amended by lane G, so the wording note belongs to that ADR.
+- Where the advisory store lands is now decided: it is a **third schema in the one
+  Postgres instance**, alongside `observations` and `features`. SRD FR-12 was amended to
+  say three schemas rather than two, and FR-63 records the argument — what has to be
+  separate here is who may write and when, which is a rule rather than an engine, and a
+  second engine would buy that rule at the price of a second operational surface. Two
+  things still belong to this feature's plan: the ADR (the decision was contested, and a
+  lighter store outside the database was the rejected alternative), and the matching
+  amendment to the constitution's technology line, which still reads "one instance
+  carrying two schemas". Lane G did not amend the constitution; that is this plan's.
 - "Shore" is a role played deterministically by the harness itself, and every surface
   that names it says it is synthetic; no external party or link is modelled beyond the
   message fabric already present. SRD FR-59 now states this in the requirement itself.

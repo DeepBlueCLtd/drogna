@@ -7,11 +7,17 @@
  * (Constitution VII). Adding a node here adds a grey box to a diagram and nothing else,
  * which is why the diagram carries a label saying so in words.
  *
- * The components are the SRD's component table, C-01 to C-18, and the arrangement is the
+ * The components are the SRD's component table, C-01 to C-20, and the arrangement is the
  * SRD's own organising picture: a flow chart with a loop in it. The loop — monitor,
  * scheduler, model runner, publisher, and back to the monitor — is the architecture's
  * interesting property, and a structural diagram that flattened it into a row of boxes
  * would hide the one thing worth showing.
+ *
+ * The count is not written down twice. `layout.test.tsx` reads the identifiers out of
+ * `harness-srd.md` and fails when the table and this file disagree in either direction,
+ * because a number typed into a test is satisfied by the wrong twenty as readily as by
+ * the right ones. C-19 and C-20 arrived with the SRD's v0.4 scope amendment and nothing
+ * implements them: they are drawn dark, like anything else nobody has heard from.
  *
  * `kind` records SRD §2.2's distinction. Bespoke means the component holds logic written
  * for drogna that could not be had off the shelf: the divergence rules, the scheduling
@@ -212,6 +218,24 @@ export const COMPONENTS: readonly ComponentNode[] = [
     column: 4,
     row: 1,
   },
+  {
+    id: "shore_advisory",
+    reference: "C-19",
+    name: "Shore advisory source",
+    responsibility: "A shore role the harness plays for itself: authors advisories, and the seam that admits them",
+    kind: "bespoke",
+    column: 4,
+    row: 2,
+  },
+  {
+    id: "advisory_store",
+    reference: "C-20",
+    name: "Advisory store",
+    responsibility: "Advisories as received, appended and never revised, in Postgres beside the other two schemas",
+    kind: "plumbing",
+    column: 4,
+    row: 3,
+  },
 ];
 
 /**
@@ -244,6 +268,11 @@ export const EDGES: readonly ComponentEdge[] = [
   { from: "publisher", to: "broker", label: "ctl/run-published", bow: -64 },
   { from: "coverage_store", to: "offload", label: "export" },
   { from: "telemetry", to: "broker", label: "ctl/telemetry", bow: 80 },
+  // The advisory arrives from outside the loop and joins the fabric, which is why its
+  // source sits apart from the cycle and reaches the broker by the long way round.
+  { from: "shore_advisory", to: "broker", label: "ctl/advisory", bow: -40 },
+  { from: "shore_advisory", to: "advisory_store", label: "validated, appended" },
+  { from: "advisory_store", to: "query_layer", label: "advisories", bow: -40 },
 ];
 
 /** The layout, by id, for the view model to join against what has been heard. */

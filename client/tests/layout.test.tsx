@@ -31,8 +31,26 @@ const shell = describeShell({
 const markup = renderToStaticMarkup(<ComponentDiagram views={shell.nodes} />);
 
 describe("the layout with nothing heard from", () => {
-  it("draws every component in the SRD's component table", () => {
-    expect(COMPONENTS).toHaveLength(18);
+  it("draws every component in the SRD's component table, and nothing else", async () => {
+    // The identifiers are read out of the requirements document rather than counted to
+    // eighteen here, for the reason site/gates/check_subsystem_coverage.py gives about
+    // itself: a count is satisfied by eighteen of the wrong ones, and says nothing at
+    // all on the day a C-19 is added — which is the day it is most needed. It was added,
+    // and this file's comment went on saying C-01 to C-18 because nobody had to change
+    // anything for it to be wrong.
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const requirements = await readFile(
+      fileURLToPath(new URL("../../harness-srd.md", import.meta.url)),
+      "utf8",
+    );
+    const declared = [...requirements.matchAll(/^\| (C-\d{2}) \|/gm)].map((match) => match[1]);
+    // An empty read is not a clean one: a table this stopped recognising would otherwise
+    // agree with a layout that had also lost every box.
+    expect(declared.length).toBeGreaterThan(0);
+    expect([...COMPONENTS].map((component) => component.reference).sort()).toEqual(
+      [...declared].sort(),
+    );
     for (const component of COMPONENTS) {
       expect(markup).toContain(`data-testid="component-node-${component.id}"`);
     }

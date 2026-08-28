@@ -75,9 +75,11 @@ documentation.
 
 Inside the boundary sits only the genuinely bespoke logic: residual and divergence
 rules, scheduling policy, sound speed computation, quality flagging, the uncertainty
-and planning mathematics, and the data dictionary made executable. Everything else —
-broker, query layer, proxy, stores — is well-chosen plumbing, and the visualisation
-makes that distinction visible rather than hiding it.
+and planning mathematics, the data dictionary made executable, and the advisory
+authoring of §5.11 — which seeded feature to describe, at what fidelity, and inside
+what size ceiling. Everything else — broker, query layer, proxy, stores — is
+well-chosen plumbing, and the visualisation makes that distinction visible rather than
+hiding it.
 
 ---
 
@@ -160,11 +162,12 @@ them is retrofittable at acceptable cost.*
 | C-17 | Offload packager | NetCDF+CF export with integrity guarantee | Premature eviction |
 | C-18 | Browser client | Visualisation and control (React/TS/Deck.gl) | — |
 | C-19 | Shore advisory source | Deterministic shore-role authoring and publication of advisories; the advisory ingestion seam | Being mistaken for a real external party |
-| C-20 | Advisory store | Append-only holding of issued advisories, read by the query layer alone | Silent supersession |
+| C-20 | Advisory store | Append-only holding of issued advisories, read by the query layer alone (Postgres, third schema) | Silent supersession |
 
-- **FR-12** The observation and feature stores shall run as two schemas in one
-  Postgres instance, mirroring the conceptual split (punishing write path versus
-  read-mostly reference data) without doubling the operational surface.
+- **FR-12** The observation, feature and advisory stores shall run as three schemas in
+  one Postgres instance, mirroring the conceptual split — a punishing write path,
+  read-mostly reference data, and the run-time append-only record of §5.11 — without
+  multiplying the operational surface.
 - **FR-13** The feature store shall be read-only during a scenario run, provisioned
   by script at scenario start — the harness analogue of pre-sail loading.
 
@@ -386,9 +389,11 @@ safe. The stories, the edge cases and the argument are in
 - **FR-63** Advisories shall be held in a store of their own: writable during a run only
   through the advisory ingestion seam, append-only, and read by the query layer alone.
   The feature store of FR-13 is untouched — read-only during a run, in rule, content and
-  provisioning. Whether the advisory store is a third schema in the single instance of
-  FR-12 or a deliberately lighter holding is a decision for the feature's plan and earns
-  an ADR under PR-03.
+  provisioning. That store is the third schema of FR-12. The alternative — a
+  deliberately lighter holding outside the database — was considered and rejected: what
+  has to be separate here is who may write and when, which is a rule rather than an
+  engine, and a second engine would buy that rule at the price of a second operational
+  surface. This decision earns an ADR under PR-03.
 - **FR-64** The query layer shall serve advisories read-only as a feature-data
   collection, enumerated alongside the coverage holdings, with a temporal extent
   verified against the store. Before any advisory has been issued the collection shall
@@ -555,7 +560,8 @@ has to be turning before there is anything to update.
 | Does the greyed-out shell need mocked traffic for early Playwright work? | No. The simulation clock's heartbeat is the first real liveness signal, and capture pins the clock rate to zero so comparison stays meaningful. | FR-52, FR-53 |
 | What is this thing called? | drogna. | §1.2 |
 | Does the harness hold more than the current forecast, and does it hold any era but the future? | Yes to both. Published runs are retained as instances for the length of a scenario, and the holdings span three eras: a monthly historic archive, a now-cast, and the accumulating forecasts. Accumulation changes what is kept and not what "current" means. | §5.10, FR-54 to FR-58; `specs/019-coverage-holdings/spec.md` |
-| Can a forecast update reach the vessel as something smaller than a gridded field, and where would it live? | Yes: a shore-issued vector advisory describing a seeded feature, travelling the message fabric and held in a store of its own, so that what was aboard at departure stays structurally distinct from what was sent en route. Shore is a role the harness plays itself. | §5.11, FR-59 to FR-66; `specs/020-shore-advisories/spec.md`; the store's engine earns an ADR under PR-03 |
+| Can a forecast update reach the vessel as something smaller than a gridded field, and where would it live? | Yes: a shore-issued vector advisory describing a seeded feature, travelling the message fabric and held in a store of its own, so that what was aboard at departure stays structurally distinct from what was sent en route. Shore is a role the harness plays itself. | §5.11, FR-59 to FR-66; `specs/020-shore-advisories/spec.md` |
+| Where does the advisory store live, given one database instance carrying two schemas? | It is a third schema in that instance. The separation the feature needs is a rule about who may write and when, not a second engine, and a lighter store outside the database would have bought the rule at the price of a second operational surface. | FR-12, FR-63; ADR required, with 020's plan |
 
 Nothing in this document is currently open. Questions are raised in this section as
 they arise and struck from it when they are answered, with the answer landing in a

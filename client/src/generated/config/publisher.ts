@@ -43,11 +43,13 @@ export interface DrognaPublisherConfiguration {
       manifest_file: string;
     };
     /**
-     * Identifiers are derived from the run identifier by prefix, so that a new run is addressable the moment it is catalogued and no collection is ever enumerated in a configuration file.
+     * The fixed identifier under which the query layer serves every published run. It is stated here rather than derived from the run identifier, because the query layer's design is one collection whose current run changes and whose past runs are EDR instances — publishing a run adds no collection, so there is no per-run name to derive. It states the same identifier the destination's query configuration serves; two statements rather than one because no component reads another's configuration.
      */
     collections: {
-      forecast_prefix: string;
-      uncertainty_prefix: string;
+      /**
+       * The fixed collection identifier, carrying the forecast parameters and the uncertainty parameter together.
+       */
+      forecast: string;
     };
   };
 }

@@ -18,8 +18,11 @@ prefix its own rule states — so the store's runs subdirectory was carried in
 has its own ``runs_dirname`` now, and this joins the store root to it rather than prefixing
 a name with a directory and relying on the slash.
 
-Collection identifiers are derived from the run identifier by prefix, which is what makes
-them predictable to a consumer that has only the announcement.
+Collection identifiers are no business of this module any more. The announcement carries
+the fixed collection identifier the query layer serves — stated in configuration, beside
+the run identifier rather than derived from it — because the query layer's design is one
+collection whose current run changes and whose past runs are EDR instances, so there is no
+per-run collection name to derive.
 """
 
 from __future__ import annotations
@@ -37,8 +40,6 @@ class Catalogue:
     root: Path
     runs_dirname: str
     current_pointer: str
-    forecast_prefix: str
-    uncertainty_prefix: str
 
     def runs_directory(self) -> Path:
         return self.root / self.runs_dirname
@@ -65,9 +66,3 @@ class Catalogue:
         if len(named) != 1:
             return None
         return named[0]
-
-    def forecast_collection(self, run_id: str) -> str:
-        return f"{self.forecast_prefix}{run_id}"
-
-    def uncertainty_collection(self, run_id: str) -> str:
-        return f"{self.uncertainty_prefix}{run_id}"

@@ -210,10 +210,9 @@ def publisher_document(*, staging: str = "staging", catalogue: str = "coverage")
             "uncertainty_file": "uncertainty.nc",
             "manifest_file": "run-manifest.json",
         },
-        "collections": {
-            "forecast_prefix": "forecast-",
-            "uncertainty_prefix": "uncertainty-",
-        },
+        # The fixed collection the query layer serves every run under. Stated, never
+        # derived from the run identifier: publishing a run adds no collection.
+        "collections": {"forecast": "forecast"},
     }
     return document
 

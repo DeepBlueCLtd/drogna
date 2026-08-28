@@ -1,8 +1,10 @@
 """The naming convention, and the mark-current operation that makes a run the one served.
 
 FR-023 and SRD FR-21: a published run is servable without a collection being enumerated
-anywhere, which means the names have to be derivable from the run identifier alone. These
-tests are about the names and the pointer; the atomicity of the swap is tested in
+anywhere. The store's names are derivable from the run identifier alone; the collection is
+the fixed one the query layer serves, carried in the announcement beside the run identifier
+rather than derived from it (the link-5 decision recorded on issue #34). These tests are
+about the names and the pointer; the atomicity of the swap is tested in
 ``tests/integration/test_publication_atomicity.py``, where there is a reader to be atomic
 towards.
 """
@@ -62,7 +64,14 @@ def test_a_superseded_run_stays_addressable(tmp_path: Path) -> None:
     assert forecast.read_bytes() == b"first field"
 
 
-def test_the_collection_identifiers_are_derived_from_the_run_identifier(tmp_path: Path) -> None:
+def test_the_announcement_carries_the_fixed_collection_and_the_run_separately(
+    tmp_path: Path,
+) -> None:
+    """The collection is the configured fixed identifier; the run is named by run_id alone.
+
+    There is no uncertainty entry to assert on: the master removed it, because it named a
+    collection that will never exist — the uncertainty is a parameter of the one collection.
+    """
     from control_loop import Recorder
 
     recorder = Recorder()
@@ -72,10 +81,8 @@ def test_the_collection_identifiers_are_derived_from_the_run_identifier(tmp_path
     message = service.take("run-abc")
 
     assert message is not None
-    assert message["collections"] == {
-        "forecast": "forecast-run-abc",
-        "uncertainty": "uncertainty-run-abc",
-    }
+    assert message["collections"] == {"forecast": "forecast"}
+    assert message["run_id"] == "run-abc"
     assert recorder.on("ctl/run-published") == [message]
 
 

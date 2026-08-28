@@ -20,7 +20,7 @@ import { readFieldCube, sliceAt } from "../../src/map/fieldCube";
 
 import { CUBE_PARAMETER, cubeResponse } from "./cubeResponse";
 
-const ASKED = { runId: "run-0007", collection: "uncertainty-run-0007", parameter: CUBE_PARAMETER };
+const ASKED = { runId: "run-0007", collection: "forecast", parameter: CUBE_PARAMETER };
 const READ = readFieldCube(cubeResponse(), ASKED);
 if (!READ.ok) {
   throw new Error(READ.reason);

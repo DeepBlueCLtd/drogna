@@ -3,7 +3,7 @@
 // Edit the master and run that script; scripts/check_types_drift.sh fails the build on a hand edit.
 
 /**
- * The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.
+ * The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the fixed collection identifier the query layer serves runs under and the run identifier separately, so a consumer can address the current run at the collection itself and a specific run as the EDR instance run_id names, without a configuration file having been edited anywhere.
  */
 export interface DrognaModelRunPublished {
   /** The publisher, matching config /component/id. */
@@ -47,13 +47,13 @@ export interface GridBounds {
 }
 
 /**
- * The identifiers under which the query layer serves this run's two fields. They are resolved from the store's layout at request time, so publishing a run adds collections without editing any configuration.
+ * The fixed collection identifier under which the query layer serves every published run. One collection carries the forecast parameters and the uncertainty parameter together, rather than two collections that could disagree about the run they describe, and publishing a run adds no collection: the current run is served at the collection itself, and a specific run as the EDR instance this announcement's run_id names. The identifier is carried beside the run identifier rather than derived from it, which is what makes the pair addressable by a consumer that has only this message.
  */
 export interface Collections {
-  /** Collection identifier of the ensemble mean. */
+  /**
+   * The fixed collection identifier. Its parameters carry the ensemble mean and the per-cell ensemble spread together; there is no separate uncertainty collection, and this document deliberately has nowhere to name one.
+   */
   forecast: string;
-  /** Collection identifier of the per-cell ensemble spread. */
-  uncertainty: string;
 }
 
 /**

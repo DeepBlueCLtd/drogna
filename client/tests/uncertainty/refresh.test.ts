@@ -23,7 +23,7 @@ describe("the overlay's run", () => {
   it("moves to the announced run and marks the field as needing a read", () => {
     const state = announceRun(emptyOverlay, runPublished());
     expect(state.runId).toBe("run-0007");
-    expect(state.collection).toBe("uncertainty-run-0007");
+    expect(state.collection).toBe("forecast");
     expect(state.stale).toBe(true);
     expect(state.announcements).toBe(1);
   });

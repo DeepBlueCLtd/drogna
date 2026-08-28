@@ -3,8 +3,10 @@
 FR-024 and FR-025 are one decision seen from two sides. The publisher says on
 ``ctl/run-published`` that a run is current, and nothing in the harness asks the query layer
 whether anything has changed. So the message has to be sufficient: the run's identifier, the
-span it is valid for, the grid it covers, the collection identifiers under which its two
-fields are servable, and the digests by which a reader can say which run it read.
+span it is valid for, the grid it covers, the fixed collection identifier the query layer
+serves runs under — carried beside the run identifier, never derived from it, per the
+decision recorded on issue #34 — and the digests by which a reader can say which run it
+read.
 
 If the message is lost, consumers stay on the previous field. That is the honest outcome and
 the harness does not add polling to soften it: a stalled loop is visible in the client, and a
@@ -48,7 +50,6 @@ def announcement(
     component: str,
     tick: Tick,
     forecast_collection: str,
-    uncertainty_collection: str,
     current: bool = True,
 ) -> dict[str, Any]:
     """Build the ``ctl/run-published`` payload from the run's own descriptor."""
@@ -67,7 +68,7 @@ def announcement(
             end_sim_time=str(valid["end_sim_time"]),
         ),
         grid_bounds=GridBounds(**{key: float(value) for key, value in bounds.items()}),
-        collections=Collections(forecast=forecast_collection, uncertainty=uncertainty_collection),
+        collections=Collections(forecast=forecast_collection),
         digests=Digests(forecast=str(digests["forecast"]), uncertainty=str(digests["uncertainty"])),
     )
     return message.model_dump(mode="json")

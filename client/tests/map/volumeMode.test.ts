@@ -21,7 +21,7 @@ import type { VolumePoint } from "../../src/map/layers";
 import { CUBE_PARAMETER, cubeResponse } from "./cubeResponse";
 import { layerProp } from "./layerProps";
 
-const ASKED = { runId: "run-0007", collection: "uncertainty-run-0007", parameter: CUBE_PARAMETER };
+const ASKED = { runId: "run-0007", collection: "forecast", parameter: CUBE_PARAMETER };
 
 function cube(shape = {}) {
   const outcome = readFieldCube(cubeResponse(shape), ASKED);

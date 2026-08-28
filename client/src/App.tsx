@@ -178,7 +178,7 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     () =>
       async (drawn: RouteDisplay): Promise<void> => {
         const config = configuration.current;
-        const collection = overlay.current.forecastCollection;
+        const collection = overlay.current.collection;
         if (config?.query.trajectoryPath === undefined || collection === null) {
           return;
         }

@@ -18,7 +18,7 @@ import { drawnField, layerInputs } from "../../src/uncertainty/UncertaintyLayer"
 
 import { CUBE_PARAMETER, cubeResponse } from "./cubeResponse";
 
-const ASKED = { runId: "run-0007", collection: "uncertainty-run-0007", parameter: CUBE_PARAMETER };
+const ASKED = { runId: "run-0007", collection: "forecast", parameter: CUBE_PARAMETER };
 
 function read(document: unknown) {
   const outcome = readFieldCube(document, ASKED);

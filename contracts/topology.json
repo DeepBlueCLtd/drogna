@@ -367,7 +367,7 @@
         {
           "component": "publisher",
           "path": "services/publisher/src/harness_publisher/publish.py",
-          "line": 41,
+          "line": 43,
           "constant": "RUN_PUBLISHED_TOPIC"
         },
         {
@@ -542,7 +542,7 @@
         {
           "component": "publisher",
           "path": "services/publisher/src/harness_publisher/publish.py",
-          "line": 42,
+          "line": 44,
           "constant": "TELEMETRY_TOPIC"
         },
         {

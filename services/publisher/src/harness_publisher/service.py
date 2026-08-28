@@ -66,9 +66,8 @@ class PublisherService:
             root=Path(section.catalogue.root_directory),
             runs_dirname=section.catalogue.runs_dirname,
             current_pointer=section.catalogue.current_pointer,
-            forecast_prefix=section.collections.forecast_prefix,
-            uncertainty_prefix=section.collections.uncertainty_prefix,
         )
+        self._forecast_collection = section.collections.forecast
         self._heartbeat = (
             None
             if publisher is None
@@ -151,8 +150,7 @@ class PublisherService:
             inspection.descriptor,
             component=self._component,
             tick=self._clock.tick(),
-            forecast_collection=self._catalogue.forecast_collection(inspection.run_id),
-            uncertainty_collection=self._catalogue.uncertainty_collection(inspection.run_id),
+            forecast_collection=self._forecast_collection,
             current=current,
         )
         self._published += 1

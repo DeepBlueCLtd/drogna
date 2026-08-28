@@ -50,8 +50,8 @@ describe("the request an announcement causes", () => {
     if (!isRequest(asked)) {
       throw new Error(asked.missing);
     }
-    expect(asked.collection).toBe("uncertainty-run-0007");
-    expect(asked.url).toContain("/released/uncertainty-run-0007/cube?");
+    expect(asked.collection).toBe("forecast");
+    expect(asked.url).toContain("/released/forecast/cube?");
   });
 
   it("asks at the bounds the announcement stated, in west, south, east, north order", () => {
@@ -93,7 +93,7 @@ describe("the request an announcement causes", () => {
   it("names what it has not been told, rather than assembling a request without it", () => {
     const withoutPath = fieldRequest(
       runtimeConfig({ fieldParameter: CUBE_PARAMETER }),
-      "uncertainty-run-0007",
+      "forecast",
       extentFromAnnouncement(runPublished()),
       "2026-08-26T00:10:00.000000Z",
     );
@@ -102,7 +102,7 @@ describe("the request an announcement causes", () => {
 
     const withoutParameter = fieldRequest(
       runtimeConfig({ cubePath: "/cube" }),
-      "uncertainty-run-0007",
+      "forecast",
       extentFromAnnouncement(runPublished()),
       "2026-08-26T00:10:00.000000Z",
     );
@@ -132,9 +132,9 @@ describe("announcements, counted against requests", () => {
     announce(runPublished());
     announce(runPublished({ run_id: "run-0008", current: false }));
     announce({ run_id: "run-0009" });
-    announce(runPublished({ run_id: "run-0010", collections: { forecast: "f", uncertainty: "u" } }));
+    announce(runPublished({ run_id: "run-0010", collections: { forecast: "f" } }));
     expect(asked).toHaveLength(2);
-    expect(asked[1]).toContain("/released/u/cube?");
+    expect(asked[1]).toContain("/released/f/cube?");
   });
 });
 

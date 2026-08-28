@@ -75,7 +75,7 @@ export function fieldRequest(
   simTime: string | null,
 ): FieldRequestOutcome {
   if (collection === null) {
-    return { missing: "which collection carries this run's uncertainty field" };
+    return { missing: "which collection the query layer serves published runs under" };
   }
   if (config.query.cubePath === undefined) {
     return { missing: "where a cube query is served under a collection" };

@@ -119,7 +119,8 @@ export function runPublished(
       minimum_depth_m: 0,
       maximum_depth_m: 500,
     },
-    collections: { forecast: "forecast-run-0007", uncertainty: "uncertainty-run-0007" },
+    // The fixed collection identifier and the run identifier travel separately (link 5).
+    collections: { forecast: "forecast" },
     digests: { forecast: DIGEST, uncertainty: DIGEST },
     ...overrides,
   };

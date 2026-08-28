@@ -22,7 +22,7 @@ so a second sensor needs no new credential and gains no new permission.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from queue import Queue
 from typing import Any
@@ -33,12 +33,16 @@ from harness_core.heartbeat import MessagePublisher
 
 __all__ = [
     "FROM_CONFIGURATION",
+    "FROM_CONFIGURATION_MESSAGES",
     "BrokerEndpoint",
     "BrokerError",
     "PahoPublisher",
+    "PahoSubscription",
     "PahoTickSource",
     "connect_publisher",
+    "connect_subscriber",
     "resolve_publisher",
+    "resolve_subscriber",
 ]
 
 _DEFAULT_KEEPALIVE = 60
@@ -199,6 +203,91 @@ class PahoTickSource:
             client.disconnect()
 
 
+class PahoSubscription:
+    """Messages on one topic filter, as ``(topic, payload)`` pairs.
+
+    The sibling of ``PahoPublisher``, and the thing seven components were missing. Their
+    entry points take ``messages: Iterable[tuple[str, bytes]] = ()`` and nothing ever passed
+    one, so each ran its loop over an empty tuple, reported nothing, and exited 0 — which
+    Compose reports as "the container exited cleanly, having been expected to stay up" and a
+    reader reports as a component that does not work. A publisher had been wired for all of
+    them; a subscriber had not, and half a connection is not a connection.
+
+    Deliberately not built on ``PahoTickSource``. That class yields ``Tick`` objects because
+    what it subscribes to is the clock, and generalising it would mean a class that sometimes
+    parses its payload and sometimes does not. This yields bytes and leaves every question of
+    meaning to the component, which is where the schema lives.
+
+    The client identifier carries a suffix, because MQTT requires it to be unique across a
+    broker's clients and a component that also publishes is already using the bare one. A
+    collision is not reported to either party: the broker accepts the newcomer and closes the
+    incumbent, and what the component then sees is its *other* connection failing.
+    """
+
+    def __init__(
+        self,
+        endpoint: BrokerEndpoint,
+        *,
+        topic: str | Sequence[str],
+        qos: int = 1,
+        purpose: str = "subscription",
+    ) -> None:
+        self._endpoint = endpoint
+        # One filter or several. Several because a component's interest is not always one
+        # branch — the monitor watches `obs/#` for what was measured and `ctl/run-published`
+        # for what was forecast, and subscribing to a filter wide enough to cover both would
+        # ask for control topics its role is refused and does not want.
+        self._topics: tuple[str, ...] = (topic,) if isinstance(topic, str) else tuple(topic)
+        self._qos = qos
+        self._purpose = purpose
+        self._messages: Queue[tuple[str, bytes]] = Queue()
+        self._client: Any | None = None
+
+    def connect(self) -> None:
+        try:
+            from paho.mqtt import client as mqtt
+        except ImportError as error:  # pragma: no cover - the image installs it
+            raise BrokerError("no MQTT client is installed, so nothing can be received") from error
+
+        client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id=f"{self._endpoint.client_id}-{self._purpose}",
+            protocol=mqtt.MQTTv5,
+        )
+        if self._endpoint.username is not None:
+            client.username_pw_set(self._endpoint.username, self._endpoint.password)
+
+        def on_message(_client: Any, _userdata: Any, message: Any) -> None:
+            self._messages.put((message.topic, message.payload))
+
+        client.on_message = on_message
+        try:
+            client.connect(
+                self._endpoint.host,
+                self._endpoint.port,
+                keepalive=self._endpoint.keepalive_seconds,
+            )
+        except OSError as error:
+            raise BrokerError(f"the broker is not reachable: {error}") from error
+        for filter_ in self._topics:
+            client.subscribe(filter_, qos=self._qos)
+        client.loop_start()
+        self._client = client
+
+    def messages(self) -> Iterator[tuple[str, bytes]]:
+        """Yield messages as they arrive. Blocks; ends only when the process does."""
+        if self._client is None:
+            self.connect()
+        while True:
+            yield self._messages.get()
+
+    def close(self) -> None:
+        client, self._client = self._client, None
+        if client is not None:
+            client.loop_stop()
+            client.disconnect()
+
+
 class _FromConfiguration:
     """The default a component's ``publisher`` parameter carries: build one from config.
 
@@ -221,6 +310,13 @@ class _FromConfiguration:
 
 FROM_CONFIGURATION: MessagePublisher = _FromConfiguration()
 """Nobody supplied a publisher, so the component builds one from its own configuration."""
+
+FROM_CONFIGURATION_MESSAGES: Any = _FromConfiguration()
+"""Nobody supplied a message source, so the component subscribes using its own configuration.
+
+The same object serves both sentinels because it stands for the same thing — "nobody said" —
+and because a second class would be a second place to compare against.
+"""
 
 
 def connect_publisher(
@@ -289,3 +385,75 @@ def resolve_publisher(
         )
         return None, None
     return opened, opened
+
+
+def connect_subscriber(
+    document: Mapping[str, Any],
+    *,
+    topic: str | Sequence[str],
+    qos: int = 1,
+    purpose: str = "subscription",
+) -> PahoSubscription:
+    """Open a subscription on the broker this component's own configuration names, or raise."""
+    subscription = PahoSubscription(
+        BrokerEndpoint.from_config(document["broker"]), topic=topic, qos=qos, purpose=purpose
+    )
+    subscription.connect()
+    return subscription
+
+
+def resolve_subscriber(
+    supplied: Iterable[tuple[str, bytes]] | None,
+    document: Mapping[str, Any],
+    *,
+    component: str,
+    topic: str | Sequence[str],
+    report: Any,
+    qos: int = 1,
+    purpose: str = "subscription",
+) -> tuple[Iterable[tuple[str, bytes]], PahoSubscription | None]:
+    """Settle where a component's messages come from. The mirror of ``resolve_publisher``.
+
+    Returns the message source and the subscription this call opened, which the caller is
+    responsible for closing and which is ``None`` in every case but the third.
+
+    The three states are the publisher's three, read the other way round:
+
+    1. *A caller supplied a source.* Taken as given, empty tuple included — that is how every
+       test in this repository drives these components, feeding a fixed list of messages and
+       asserting what came out, and it must keep working exactly as it did.
+    2. *Nobody supplied one and the configuration names no broker.* The component has nothing
+       to react to and says so in its own words. It does not invent a source and does not
+       subscribe to a stub (Constitution VII).
+    3. *Nobody supplied one and the configuration names a broker.* A subscription is built
+       from that configuration and the component reacts to what actually arrives.
+
+    Case 1 is why the default is a sentinel rather than ``()``. "Nobody supplied one" and
+    "somebody supplied nothing" are different states, and collapsing them is precisely the
+    bug this repairs: the parameter defaulted to an empty tuple, so every component in a
+    container looked like a caller who had asked for silence, ran its loop over nothing, and
+    exited 0 while reporting no error of any kind.
+
+    A failure to connect is reported and is not fatal, on the same reasoning
+    ``resolve_publisher`` sets out: these components have work that is not reacting, and none
+    of them holds a tick stream to spend a backoff in.
+    """
+    if supplied is not FROM_CONFIGURATION_MESSAGES:
+        return (() if supplied is None else supplied), None
+    if "broker" not in document:
+        print(
+            f"{component}: no broker is configured, so nothing is subscribed to and this "
+            "component reacts to nothing. That is truthful, not a degradation",
+            file=report,
+        )
+        return (), None
+    try:
+        opened = connect_subscriber(document, topic=topic, qos=qos, purpose=purpose)
+    except BrokerError as failure:
+        print(
+            f"{component}: {failure}, so this component receives nothing and reacts to "
+            "nothing rather than falsely reporting itself at work",
+            file=report,
+        )
+        return (), None
+    return opened.messages(), opened

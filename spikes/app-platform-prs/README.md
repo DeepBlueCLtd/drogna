@@ -5,11 +5,15 @@ Platform integrates with GitHub and, since the 2024 overhaul of `digitalocean/ap
 can stand up a preview app per pull request. Should drogna use that — for the hosted
 backend, for pull-request previews, or for both?
 
-**The answer**: use App Platform exactly where it runs drogna unchanged — the client,
-which is a static bundle — and nowhere it would run a translation. A per-PR preview of the
-client on App Platform's free static tier is cheap, real value; the hosted backend stays a
-droplet running the Compose file; full-stack previews are priced here and shelved rather
-than rejected. Read [FINDING.md](FINDING.md).
+**The answer**: no. One DigitalOcean instance — the droplet, running the Compose file —
+and no App Platform. The one integration App Platform could offer without translating
+drogna is a per-PR preview of the client, and the owner declined it on the day this was
+written: the reviews that happen here are frequently of backend capabilities, which a
+client preview never shows. Pull-request review of the backend stays where it already
+happens — CI's bring-up and tests, the pair captures, and the local stack. Full-stack
+per-PR previews are priced and shelved rather than rejected, and re-platforming the
+backend is weighed and declined with what would reopen it recorded. Read
+[FINDING.md](FINDING.md), including the dated decision near the top.
 
 ## The requirements it was given
 
@@ -24,6 +28,7 @@ is a new spike rather than an amendment to that one:
 | Must survive, non-negotiable | Local Docker bring-up for local testing, **and** agent sessions bringing the stack up in-container for feature testing. Both run `deploy/compose.yaml`. |
 | Purpose of the DO hosting | A hosted backend for demonstrations when away from a development laptop. |
 | Appetite for change | "I don't mind a degree of disruption to drogna if it delivers overall value." |
+| Stated after the first draft, same day | One DigitalOcean instance, not two — and a client-side preview app brings no value, because the reviews here are frequently of backend capabilities. This decided the finding; see its dated decision block. |
 
 The second row does most of the work in the finding. Because the Compose file must keep
 serving local and agent sessions whatever else happens, no option here ever *replaces* it —

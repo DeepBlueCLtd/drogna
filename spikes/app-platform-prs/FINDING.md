@@ -1,4 +1,4 @@
-# Finding: App Platform earns a place where it runs drogna unchanged — the client — and nowhere else
+# Finding: one DigitalOcean instance, and App Platform's PR integration declined with its price on the record
 
 **Date**: 28 August 2026
 **Kind**: desk spike. Nothing was deployed; see [README.md](README.md) on what the evidence is.
@@ -14,10 +14,32 @@ option D were ever taken — the constitution's one-configuration-two-destinatio
 ## The result, in one sentence
 
 **Yes, App Platform integrates with GitHub and can deploy a preview app per pull request —
-and the one piece of drogna it can host without translation is the client, so: keep the
-hosted backend on the droplet as already planned, add free App Platform preview apps for
-the client's pull requests, and decline to re-describe the backend in an app spec that
-neither CI nor a local session could ever execute.**
+but the only piece of drogna it can host without translation is the client, and the owner
+has ruled that a client-only preview does not pay here (see the dated decision below), so:
+one DigitalOcean instance, the droplet, running the Compose file; pull-request review of
+backend capabilities stays where it already happens — the CI bring-up, the test suite,
+the pair captures, and the local stack — and no app spec is written.**
+
+### Decided: no client preview apps — 28 August 2026, by the owner
+
+This finding as first drafted recommended free App Platform preview apps for the client's
+pull requests (option B below, kept in full because it is the answer to the question that
+prompted the spike). The owner declined it the same day, for a reason the options table
+cannot see and the interview had not surfaced: **what is being reviewed is frequently a
+backend capability, and a client preview never shows one** — it renders `main`'s backend
+behind whatever client change is proposed, so for the reviews that actually happen here
+it adds a URL that demonstrates nothing under review. A second DigitalOcean surface —
+account wiring, an app spec, two armed workflows, CORS on the exposure boundary — is not
+worth buying for that. (For the record's accuracy: preview apps are ephemeral per-PR
+things on the free static tier, not a second standing instance — but the value side of
+the decision does not depend on that, and the boundary and workflow costs are real
+either way.)
+
+The consequence runs through the rest of this document: option B's analysis stands as
+written, its **Benefits** paragraph now describes value this project does not want, and
+the recommendation is A — with option C, not B, as the shape interactive per-PR review
+would take if it is ever wanted, precisely because C is the only option that previews
+the thing actually under review.
 
 Two facts changed since `backend-hosting` was written yesterday, and one constraint
 arrived today; the finding below is what survives all three. Let's Encrypt made
@@ -100,7 +122,7 @@ unattended upgrades, disk, and the certificate renewal are real, if small, and
 `backend-hosting` priced them at about a day. The whole path is still unexercised —
 `deploy/README.md` says so itself.
 
-### B. A, plus client preview apps on App Platform — the recommendation
+### B. A, plus client preview apps on App Platform — analysed, then declined by the owner
 
 Add `.do/app.yaml` describing **one static-site component**: build the client with pnpm,
 serve `client/dist`. Two workflows: on client pull requests, `app_action` with
@@ -225,24 +247,32 @@ said the same of Fly.io; both stay on the record as the reasoned alternatives.
 
 ## Recommendation
 
+Amended 28 August 2026 after the owner's decision above; the original item 3 — adopt
+option B — is withdrawn, and with it the promotion of the certificate from polish to
+blocking.
+
 1. **Stand the droplet up by hand first.** Unchanged from both prior spikes, still first,
-   and still the cheapest retirement of the largest unknown in any column above.
-2. **Write the certificate sidecar against an IP-address certificate** — `shortlived`
-   ACME profile, 160-hour lifetime, renewal unattended. This was already the plan with a
-   domain; Let's Encrypt's January GA removed the domain from the critical path. It is
-   also the precondition for item 3, which is what promotes it from polish to blocking.
-3. **Adopt option B as a feature**: `.do/app.yaml` with the one static component, the
-   preview and delete workflows, the CORS widening on the proxy's released locations, and
-   the preview `config.json` pointing at the demonstration backend. Through the usual
-   route — specify, plan, tasks — because it touches the exposure boundary and arms
-   workflows.
-4. **Leave C shelved with a named trigger**: build it when a reviewer can point at a pull
-   request that the CI bring-up, the pair captures and a client preview together failed
-   to serve. Its preconditions (registry images, an exercised droplet path) are items the
-   standing plan wants anyway.
+   and still the cheapest retirement of the largest unknown in any column above. One
+   DigitalOcean instance, and the only one.
+2. **Review backend capabilities where they already run**: the CI bring-up and test suite
+   on every pull request, the pair captures for what the change looks like, and
+   `scripts/run_local.sh` — locally or in an agent session — when a reviewer wants to
+   drive the capability rather than read its evidence. That is the standing two-PR,
+   backend-first model, unchanged.
+3. **The certificate returns to "when somebody feels like it"**, where
+   `DEPLOYMENT-WORKFLOW.md` put it: one origin over plain `http` works end to end, and
+   nothing now on the path needs more. When TLS is wanted, the January GA of Let's
+   Encrypt IP-address certificates (`shortlived` profile, 160-hour lifetime) means it
+   waits on a renewal sidecar, not on a domain — that fact stays worth having.
+4. **Leave C shelved with a sharpened trigger**: it is now the *only* shelved option that
+   previews the thing this project actually reviews — a backend capability, live, per
+   pull request. Build it if and when a reviewer can point at a pull request that the CI
+   bring-up, the pair captures and a local bring-up together failed to serve. Its
+   preconditions (registry images, an exercised droplet path) are items the standing
+   plan wants anyway.
 5. **Leave D on the record as the zero-ops alternative**, to be argued as a constitution
    amendment if the droplet's ops burden proves real in use — not acquired as a side
-   effect of wanting PR previews, which option B delivers for free.
+   effect of wanting PR previews.
 
 ---
 
@@ -251,20 +281,19 @@ said the same of Fly.io; both stay on the record as the reasoned alternatives.
 - This spike **amends nothing**: no workflow files, no app spec, no proxy change, no
   constitution edit. `CLAUDE.md`'s spike count moves from seven to eight, and that is the
   only tracked file it touches.
-- Option B is a feature, not a chore: exposure-boundary policy, two armed workflows, an
-  account credential, and a build-time configuration document. Specify it.
-- **An ADR is owed if and only if B (or any option) is adopted** — hosting and boundary
-  policy are hard to reverse, which is the repository's bar. Not written here: a spike
-  recommends; an ADR records a decision taken.
-- Open questions, recorded as open rather than dissolved:
-  1. Whether the CORS widening names the preview origins (`*.ondigitalocean.app` is not
-     wildcardable per-app; the action knows each preview's URL) or admits any origin —
-     drogna is a toy that says so, but the proxy's README treats every widening as policy.
+- **No option is adopted, so no ADR is owed.** The one decision taken — no client preview
+  apps, no second DigitalOcean surface — is the owner's, dated above with its reason, and
+  this document is its record; it decided against a proposal, not for an architecture,
+  which is below the repository's bar for `docs/adr/`. If C or D is ever taken up, an ADR
+  is owed then.
+- Open questions:
+  1. ~~The shape of the CORS widening for preview origins.~~ **Closed by the decision of
+     28 August 2026**: no preview origins exist, so no widening is proposed. The analysis
+     stays in option B for whoever reopens it.
   2. Whether the development database tier can enable PostGIS, which decides $7 or $15 in
-     option D's arithmetic. Matters only if D is ever reopened.
-  3. Whether client preview workflows should trigger on every pull request or only those
-     touching `client/` — a filter is cheaper, but a proxy-policy PR also changes what
-     the client experiences.
+     option D's arithmetic. Matters only if D is ever reopened; recorded as open.
+  3. ~~Whether preview workflows trigger on every pull request or only `client/` ones.~~
+     **Closed by the same decision**: there are no preview workflows.
 
 ---
 

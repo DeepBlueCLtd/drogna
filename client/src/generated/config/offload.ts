@@ -33,6 +33,10 @@ export interface DrognaOffloadPackagerConfiguration {
       /** Appended to the bundle identifier to name the sidecar manifest. */
       manifest_suffix: string;
       /**
+       * Appended to the bundle identifier to name the run-manifest sibling: the copy of the run manifest, carrying the window's measurement geometry, that travels beside a bundle and is never a member of it. The sidecar names the sibling without membership; the leakage gate's updated-region half is the consumer (FR-015, FR-42).
+       */
+      run_manifest_suffix: string;
+      /**
        * Appended while a file is being written, so a half-written bundle can never be mistaken for a staged one.
        */
       partial_suffix: string;
@@ -102,6 +106,10 @@ export interface DrognaOffloadPackagerConfiguration {
          */
         length_simulation_seconds: number;
       };
+      /**
+       * The identification radius the run is released under, written into the measurement geometry of the run-manifest sibling. The run-manifest master requires the radius to travel with the geometry rather than be read from a deployment's policy later, so the packager declares its own value — and a parity test holds it equal to the proxy's declared identification_radius_m at the same destination, because a run scored on a radius it was not released under is scored on nothing.
+       */
+      identification_radius_m: number;
     };
   };
 }

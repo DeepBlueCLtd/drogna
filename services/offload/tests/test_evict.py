@@ -27,12 +27,15 @@ def candidate(
 ):
     path = tmp_path / f"{name}.nc"
     sidecar = tmp_path / f"{name}.manifest.json"
+    run_manifest = tmp_path / f"{name}.run-manifest.json"
     path.write_bytes(payload)
     sidecar.write_text("{}", encoding="utf-8")
+    run_manifest.write_text("{}", encoding="utf-8")
     return Candidate(
         bundle_id=name,
         path=path,
         sidecar_path=sidecar,
+        run_manifest_path=run_manifest,
         verified_digest=digest_of(payload),
         byte_length=len(payload),
         verified_at=SimInstant.from_iso(EPOCH).plus_micros(-age * 1_000_000),
@@ -132,6 +135,7 @@ def test_a_bundle_verified_against_a_different_digest_is_not_deleted(tmp_path) -
         bundle_id=one.bundle_id,
         path=one.path,
         sidecar_path=one.sidecar_path,
+        run_manifest_path=one.run_manifest_path,
         verified_digest=digest_of(b"bytes the destination never saw"),
         byte_length=one.byte_length,
         verified_at=one.verified_at,

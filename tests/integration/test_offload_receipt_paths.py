@@ -122,7 +122,11 @@ def test_an_unreachable_destination_leaves_everything_where_it_is(tmp_path: Path
     assert set(after) == {
         name
         for bundle_id in report.staged
-        for name in (f"{bundle_id}.nc", f"{bundle_id}.manifest.json")
+        for name in (
+            f"{bundle_id}.nc",
+            f"{bundle_id}.manifest.json",
+            f"{bundle_id}.run-manifest.json",
+        )
     }
     assert report.failures
 

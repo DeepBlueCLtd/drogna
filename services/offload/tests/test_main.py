@@ -63,7 +63,9 @@ def test_a_window_with_no_profiles_produces_no_bundle_and_records_the_skip(tmp_p
 
     assert len(report.staged) == 2
     assert set(snapshot(packager.settings.staging.directory)) == {
-        name for b in report.staged for name in (f"{b}.nc", f"{b}.manifest.json")
+        name
+        for b in report.staged
+        for name in (f"{b}.nc", f"{b}.manifest.json", f"{b}.run-manifest.json")
     }
 
 

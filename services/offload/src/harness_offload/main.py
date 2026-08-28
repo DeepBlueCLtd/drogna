@@ -41,6 +41,7 @@ from harness_offload.attributes import DisallowedAttributeError
 from harness_offload.conformance import check_conformance
 from harness_offload.evict import Candidate, EvictionOutcome, RetentionPolicy, delete_verified
 from harness_offload.evict import due_for_eviction as _due_for_eviction
+from harness_offload.geometry import run_manifest_sibling
 from harness_offload.ledger import BundleState, Ledger, LedgerRecord
 from harness_offload.profiles import (
     ProfileSet,
@@ -71,6 +72,7 @@ class PackagerSettings:
     allowlist: tuple[str, ...]
     convention_version: str
     window_seconds: float
+    identification_radius_m: float
 
     @classmethod
     def from_config(cls, document: Mapping[str, Any]) -> PackagerSettings:
@@ -89,6 +91,7 @@ class PackagerSettings:
             allowlist=tuple(offload["attributes"]["allowlist"]),
             convention_version=str(offload["compliance"]["convention_version"]),
             window_seconds=float(offload["export"]["window"]["length_simulation_seconds"]),
+            identification_radius_m=float(offload["export"]["identification_radius_m"]),
         )
 
 
@@ -253,6 +256,23 @@ class Packager:
             digest=digest,
             byte_length=len(payload),
         )
+        # The run-manifest sibling: the manifest copy carrying this window's measurement
+        # geometry. Staged beside the bundle, named by the sidecar under its own key,
+        # never a member — the members list is the artefact the provenance scanner
+        # scores, and this document is the one a release withholds (014 T047, FR-42).
+        manifest, _, _ = self._run()
+        sibling_payload = run_manifest_sibling(
+            manifest,
+            profiles,
+            window_start=start,
+            identification_radius_m=self.settings.identification_radius_m,
+            interval_seconds=self.settings.window_seconds,
+        )
+        sibling = bundle_module.BundleMember(
+            name=self.settings.staging.run_manifest_name(bundle_id),
+            digest=bundle_module.digest_of(sibling_payload),
+            byte_length=len(sibling_payload),
+        )
         sidecar = bundle_module.sidecar_manifest(
             bundle_id=bundle_id,
             run_manifest_digest=manifest_digest,
@@ -263,6 +283,7 @@ class Packager:
             variables=list(VARIABLE_ORDER),
             profile_count=len(profiles.profiles),
             level_count=profiles.level_count,
+            run_manifest=sibling,
         )
         # Write-ahead: the ledger hears about the bundle before the bytes exist, so a kill
         # between the two leaves a staged record with no file — which recovery re-stages —
@@ -276,7 +297,11 @@ class Packager:
             detail=f"window {window_index}, format {FORMAT_VERSION}",
         )
         return self.settings.staging.write(
-            bundle_id, payload=payload, sidecar=sidecar.payload(), digest=digest
+            bundle_id,
+            payload=payload,
+            sidecar=sidecar.payload(),
+            run_manifest=sibling_payload,
+            digest=digest,
         )
 
     def transfer(self, report: CycleReport) -> None:
@@ -625,6 +650,7 @@ def _candidate_from(staging: StagingArea, record: LedgerRecord) -> Candidate:
         bundle_id=record.bundle_id,
         path=staging.bundle_path(record.bundle_id),
         sidecar_path=staging.sidecar_path(record.bundle_id),
+        run_manifest_path=staging.run_manifest_path(record.bundle_id),
         verified_digest=str(record.digest),
         byte_length=int(record.byte_length or 0),
         verified_at=SimInstant.from_iso(record.sim_time),

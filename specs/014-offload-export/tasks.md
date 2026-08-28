@@ -328,7 +328,7 @@ replaced rather than a second primer created.
 
 ## Added after delivery: the measurement geometry producer
 
-- [ ] T047 [US4] Write the run's measurement geometry into the bundle's copy of the run
+- [x] T047 [US4] Write the run's measurement geometry into the bundle's copy of the run
   manifest, in `services/offload/src/harness_offload/`, as the optional
   `measurement_geometry` block declared in `contracts/schemas/run-manifest.schema.json`:
   the identification radius the run was released under, the interval in simulation seconds,
@@ -417,3 +417,40 @@ Left unimplemented deliberately, and this is the reason, recorded at the moment 
 taken. The recorded ownership decision of 2026-08-27 settles that this component is the
 producer and that is not reopened; what it does not settle is whether a bundle grows a
 member carrying exact measurement positions, which is a question for 013 and 014 together.
+
+### Decision, 28 August 2026: the geometry travels beside the bundle, never inside it
+
+The question the proposal left for 013 and 014 together is settled, per the owner, as
+option 1: the run's measurement geometry travels **beside** the bundle as its own staged
+`run-manifest.json`, never as a bundle member. The four steps, as taken:
+
+1. **The sidecar names it without membership.** The bundle-manifest master grew an
+   optional `run_manifest` block — name, digest, byte length — deliberately outside
+   `members`, and the packager stages `<bundle_id>.run-manifest.json` beside the bundle
+   (`offload.staging.run_manifest_suffix`; sidecar still written last, so it remains the
+   completion marker; eviction removes the sibling with the bundle it describes).
+2. **SC-006 stays as written.** The artefact the provenance scanner scores is the
+   bundle — its members and the sidecar — and the sibling is not in it.
+   `tests/integration/test_offload_provenance_scan.py` scans exactly that artefact,
+   asserts the sibling stays outside it and is named by the sidecar without membership,
+   and — the guard on the guard — asserts the scanner is *not* silent should the sibling
+   ever stray inside (the run identifier it necessarily carries is flagged). 013's rule
+   file is untouched.
+3. **The packager declares its own `identification_radius_m`** at
+   `offload.export.identification_radius_m` (both destinations, 2000.0), and
+   `tests/unit/test_offload_release_parity.py` holds it equal to the proxy's declared
+   value per destination — watched failing against a planted 1500/2000 skew before being
+   trusted. The radius travels with the geometry, as the master requires.
+4. **The producer** is `harness_offload/geometry.py`: the block is built from the
+   window's `ProfileSet` (`simulation_seconds` counted from the window's start), the
+   sibling validates through `DrognaRunManifest` before a byte is written, and an empty
+   `measurements` is refused rather than serialised (`EmptyGeometryError`), with the
+   master's own refusals — a latitude of 95, a document that is not a manifest — asserted
+   in `services/offload/tests/test_geometry.py`.
+
+The consumer needed no change, which is what the proposal predicted and why option 1 won:
+`tests/integration/test_offload_geometry_consumer.py` reads a staged sibling through
+`tests/leakage/updated_region.load_geometry` unchanged, and asserts the manifest C-01
+writes is still refused rather than read as an empty geometry. `scripts/check_leakage.py`
+was run before and after: clean both times, every control still caught, and the
+updated-region half now scores a document shape something in the harness genuinely writes.

@@ -178,8 +178,16 @@ def sidecar_manifest(
     variables: Sequence[str],
     profile_count: int,
     level_count: int,
+    run_manifest: BundleMember | None = None,
 ) -> BundleManifest:
-    """Build and validate the sidecar for one bundle."""
+    """Build and validate the sidecar for one bundle.
+
+    ``run_manifest`` is the run-manifest sibling: the copy that carries the window's
+    measurement geometry, staged beside the bundle. It is recorded under its own key and
+    deliberately never appended to ``members`` — the sidecar names it without membership,
+    because the sibling is the document a release withholds and the members list is the
+    artefact the provenance scanner scores (014 T047, SC-006).
+    """
     document: dict[str, Any] = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "bundle_id": bundle_id,
@@ -196,6 +204,8 @@ def sidecar_manifest(
         "profile_count": profile_count,
         "level_count": level_count,
     }
+    if run_manifest is not None:
+        document["run_manifest"] = run_manifest.as_document()
     validate_manifest(document)
     manifest = BundleManifest(document)
     manifest.model()

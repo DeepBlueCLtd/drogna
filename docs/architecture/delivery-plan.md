@@ -12,7 +12,7 @@ outcomes rather than plans.
 
 | # | Feature | SRD anchor | Status |
 |---|---|---|---|
-| 001 | Deterministic replay foundations | C-01, FR-09..FR-11, NFR-04 | Delivered. T033/T042/T047 open: AT-04 scores the weaker replay claim |
+| 001 | Deterministic replay foundations | C-01, FR-09..FR-11, NFR-04 | Delivered. ~~T033/T042/T047 open~~ closed 28 Aug (lane K): AT-04 scores the two-participant lockstep replay, byte for byte |
 | 002 | EDR trajectory provider (proof) | FR-20, FR-50, FR-51 | Delivered; finding recorded in `spikes/edr-trajectory/FINDING.md` |
 | 003 | Component shell client | FR-01, FR-45, FR-52, C-18 | Delivered. T040 first-paint measurement never taken |
 | 004 | Environment generator | C-02, FR-02..FR-05 | Delivered. T044 size/time measurement never taken |
@@ -168,12 +168,12 @@ documented as a non-secret. PR-08's gap is closed: seven entries were written fo
 | The read path's other half | the proxy's upstream still names `/query/collections/…`, which 404s, and releases two names the query layer does not serve — `spikes/map-to-ocean/FINDING.md`, tracked in #34 | lane C's fix corrected the advertised links and closed the item; this half was never in that reading, and now has no owner |
 | The browser cannot reach `/released` | the page is served off the proxy's origin and the released prefix answers 401 with no CORS — **decided 28 August**: serve the page through the proxy, one door, one clearance (`spikes/map-to-ocean/FINDING.md`, tracked in #34) | the map and the route's conditions both fetch through it. The clock is fine — it opts into cross-origin and works. The droplet is worse, not better: its proxy fronts neither the page nor the clock, so the address `public_url` advertises has never served anything |
 | Deploy simplification | trust auth per the decision above; 005 T028 | retires the DSN-secret machinery; proves the reset-reseed claim |
-| Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
+| Offload unknowns | 014 T040, T045, T046 unnoted; ~~T047-geometry half-closed~~ T047 closed 28 Aug (lane K): the geometry travels beside the bundle as a staged run-manifest sibling, per the decision recorded in the feature's tasks.md | three tasks of unknown status is how the last reconciliation debt started |
 | ~~Generated types carry-over~~ | ~~006 T029–T031, T039, T040~~ — done, lane C, 28 August | the query layer's contract is vendored and generated from; ADR-0022 records the generator selection |
 | The topology contract | 018 story 2 (scanner, artefact, drift gate) | this repository's own medicine applied to its own topology; blocks nothing and is blocked by nothing |
 | The scope amendment | SRD growth for 019/020 | drafted as SRD v0.4; with the owner for review |
 | Unevidenced success criteria | 003 T040, 004 T044 | measured claims the record asserts and nothing measures |
-| Replay's weaker claim | 001 T033, T042, T047 | do T042 or amend the claim, not neither |
+| ~~Replay's weaker claim~~ | ~~001 T033, T042, T047~~ done, lane K, 28 August | T042 was done rather than the claim amended: AT-04 now scores the lockstep scenario byte for byte |
 | Documentation carry-overs | 007 T045, 008 T006/T058 truth, 015 re-reconciliation, ADR-0001 acceptance | evidence hygiene; smaller than the record claims |
 
 ## Wave 6 — the loop turns where a person can watch it
@@ -204,7 +204,7 @@ its pull request closes.
 | Item | Blocked on | Notes |
 |---|---|---|
 | 018 stories 1, 3, 4 | 017 landing the shell integration; lane F's artefact | the read-path view, the matrix lit by real traffic, the badges |
-| 001 T042/T047 replay scenario | nothing | upgrades AT-04 from the weaker claim to the stated one |
+| ~~001 T042/T047 replay scenario~~ | done, lane K, 28 August | AT-04 scores the stated claim; `scripts/replay_proof.py` is the one-command proof |
 | 003 T040, 004 T044 measurements | a destination | the droplet halves need the droplet |
 
 ## Wave 8 — the data landscape grows

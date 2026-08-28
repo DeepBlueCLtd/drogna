@@ -41,6 +41,21 @@ misbehaves in one specific way; a stub that misbehaves is not a second implement
 anything. **A second real destination — an object store, say — needs an ADR.** Adding an
 interface over the transport without one is the exact move Constitution VI forbids.
 
+## The run-manifest sibling (014 T047)
+
+Beside every bundle the packager stages a third file, `<bundle_id>.run-manifest.json`: the
+run manifest plus this window's `measurement_geometry` — the identification radius the run
+is released under, the interval, and every position and simulation time a measurement was
+taken at (`geometry.py`). It is the ground truth the leakage gate's updated-region half
+scores a change mask against (FR-015), and it is **beside the bundle, never inside it**:
+the sidecar names it under its own `run_manifest` key, deliberately outside `members`,
+because the document holds exactly what a release must not contain and the members list is
+the artefact the provenance scanner scores (SC-006). The packager declares the radius at
+`offload.export.identification_radius_m`, and a parity test holds it equal to the proxy's
+declared value — a run scored on a radius it was not released under is scored on nothing.
+The decision, and the proposal it settles, are recorded in
+`specs/014-offload-export/tasks.md` under T047.
+
 ## Loose ends, recorded rather than hidden
 
 - **The query layer still has its own reader.** `encode_netcdf` moved to `harness_core`

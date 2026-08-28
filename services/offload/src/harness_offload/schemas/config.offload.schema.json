@@ -45,7 +45,13 @@
           "title": "The offload staging area",
           "description": "Where bundles are written, transferred from and eventually evicted. A bundle exists here and nowhere else until a receipt justifies its removal, so this is the only area the eviction path may delete from.",
           "type": "object",
-          "required": ["directory", "bundle_suffix", "manifest_suffix", "partial_suffix"],
+          "required": [
+            "directory",
+            "bundle_suffix",
+            "manifest_suffix",
+            "run_manifest_suffix",
+            "partial_suffix"
+          ],
           "additionalProperties": false,
           "properties": {
             "directory": { "type": "string", "minLength": 1 },
@@ -58,6 +64,11 @@
               "type": "string",
               "minLength": 1,
               "description": "Appended to the bundle identifier to name the sidecar manifest."
+            },
+            "run_manifest_suffix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Appended to the bundle identifier to name the run-manifest sibling: the copy of the run manifest, carrying the window's measurement geometry, that travels beside a bundle and is never a member of it. The sidecar names the sibling without membership; the leakage gate's updated-region half is the consumer (FR-015, FR-42)."
             },
             "partial_suffix": {
               "type": "string",
@@ -168,7 +179,7 @@
         "export": {
           "title": "How a run is divided into bundles",
           "type": "object",
-          "required": ["window"],
+          "required": ["window", "identification_radius_m"],
           "additionalProperties": false,
           "properties": {
             "window": {
@@ -182,6 +193,11 @@
                   "description": "The simulation-time span one bundle covers. Window boundaries are counted from the run's simulation epoch, so a bundle's logical position is a function of the manifest and not of when the packager happened to run."
                 }
               }
+            },
+            "identification_radius_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "The identification radius the run is released under, written into the measurement geometry of the run-manifest sibling. The run-manifest master requires the radius to travel with the geometry rather than be read from a deployment's policy later, so the packager declares its own value — and a parity test holds it equal to the proxy's declared identification_radius_m at the same destination, because a run scored on a radius it was not released under is scored on nothing."
             }
           }
         }

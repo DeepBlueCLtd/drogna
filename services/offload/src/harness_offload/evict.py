@@ -73,6 +73,7 @@ class Candidate:
     bundle_id: str
     path: Path
     sidecar_path: Path
+    run_manifest_path: Path
     verified_digest: str
     byte_length: int
     verified_at: SimInstant
@@ -149,7 +150,10 @@ def delete_verified(candidate: Candidate) -> EvictionOutcome:
 
     The sidecar goes with it, and only after the bundle itself is gone: a sidecar without
     its bundle is a description of nothing, while a bundle without its sidecar is at least
-    still the data.
+    still the data. The run-manifest sibling goes last, for the same reason the sidecar
+    that names it does not outlive the bundle: a geometry describing an evicted bundle is
+    a description of nothing, and one left behind would accumulate exact measurement
+    positions in a staging area whose bundles are long gone.
     """
     try:
         current_digest, _ = digest_of_file(candidate.path)
@@ -177,4 +181,6 @@ def delete_verified(candidate: Candidate) -> EvictionOutcome:
     os.remove(candidate.path)
     with contextlib.suppress(FileNotFoundError):
         os.remove(candidate.sidecar_path)
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(candidate.run_manifest_path)
     return EvictionOutcome(candidate.bundle_id, deleted=True)

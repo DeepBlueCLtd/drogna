@@ -36,6 +36,7 @@
       "directory": "/var/lib/drogna/offload/staging",
       "bundle_suffix": ".nc",
       "manifest_suffix": ".manifest.json",
+      "run_manifest_suffix": ".run-manifest.json",
       "partial_suffix": ".partial"
     },
     "release": {
@@ -88,7 +89,8 @@
     "export": {
       "window": {
         "length_simulation_seconds": 3600.0
-      }
+      },
+      "identification_radius_m": 2000.0
     }
   }
 }

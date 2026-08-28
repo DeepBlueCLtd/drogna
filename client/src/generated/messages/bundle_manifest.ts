@@ -57,4 +57,13 @@ export interface DrognaBundleManifest {
   profile_count: number;
   /** Total depth levels across every profile: the length of the ragged sample dimension. */
   level_count: number;
+  /**
+   * The copy of the run manifest the packager stages beside this bundle, carrying the window's measurement geometry. Named here — deliberately outside 'members' — because it travels beside the bundle and is never part of it: it holds every exact position a measurement was taken at, which is exactly what a release must not contain, so listing it as a member would put the withheld document into the artefact the provenance scanner scores (SC-006, FR-42). The name, digest and length are recorded so the sibling can be tied to the bundle and checked without being inside it. Optional, because a sidecar written before this field existed is still a valid sidecar.
+   */
+  run_manifest?: {
+    /** The sibling's name beside the bundle. A name, not a location. */
+    name: string;
+    digest: string;
+    byte_length: number;
+  };
 }

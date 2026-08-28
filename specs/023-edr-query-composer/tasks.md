@@ -59,14 +59,14 @@ everything it needs.
 
 ## Phase 2: Foundational — geometry and response assemblies
 
-- [ ] T005 Implement `query/plugins/edr_geometry.py`: haversine distance with the Earth
+- [x] T005 Implement `query/plugins/edr_geometry.py`: haversine distance with the Earth
   radius stated, ray-casting point-in-ring, per-vertex perpendicular offset for corridor
   routes, and distance-unit parsing (`km`, `m`; anything else refused with the unit
   named). Pure functions, no framework, no I/O.
-- [ ] T006 [P] Grow `query/plugins/coveragejson.py` additively: a composite-axis
+- [x] T006 [P] Grow `query/plugins/coveragejson.py` additively: a composite-axis
   `MultiPointSeries` assembly for radius/area answers and a `CoverageCollection` assembly
   for corridor answers, both reusing the existing parameter and referencing blocks.
-- [ ] T007 [P] Unit tests `tests/unit/test_edr_geometry.py`: haversine against known
+- [x] T007 [P] Unit tests `tests/unit/test_edr_geometry.py`: haversine against known
   figures, ring membership including boundary cases, offsets against closed-form
   expectations.
 
@@ -77,7 +77,7 @@ pygeoapi in the room.
 
 ## Phase 3: Radius and area (US1, US2)
 
-- [ ] T008 [US1] Implement `query/plugins/edr_region.py`: node selection inside a polygon
+- [x] T008 [US1] Implement `query/plugins/edr_region.py`: node selection inside a polygon
   ring (area) or within a great-circle distance (radius); depths and times resolved as
   cube resolves them; cells counted **before** interpolation and refused over
   `area_maximum_cells` / `radius_maximum_cells` with the measured count and the limit
@@ -86,7 +86,7 @@ pygeoapi in the room.
 - [ ] T009 [US1] Area accepts a single-ring `POLYGON` and refuses holes and multipolygons
   with the shape named; radius requires `within`/`within-units` and refuses a missing or
   unparseable distance naming the parameter.
-- [ ] T010 [P] [US1] Unit tests `tests/unit/test_edr_region.py`: selection semantics
+- [x] T010 [P] [US1] Unit tests `tests/unit/test_edr_region.py`: selection semantics
   against the analytic field, budget refusals watched failing (plant an over-budget
   query, see the named refusal), empty-selection refusal, response shape.
 

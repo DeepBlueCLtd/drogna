@@ -47,6 +47,30 @@ COMPONENT = "query"
 # harness:allow-literal-path a JSON pointer into the configuration, not a filesystem path
 _QUERY_POINTER = "/query"
 
+# Where pygeoapi routes the SensorThings provider, in the URL space it advertises.
+#
+# The provider builds every link it serves — the entity-set urls at the service root, every
+# @iot.selfLink, every @iot.navigationLink, every @iot.nextLink — from one base. That base
+# has to be the path pygeoapi actually reaches the provider at, which is the collection's
+# `items` resource: `<server.url>/collections/<collection>/items`, with the SensorThings
+# resource path following as pygeoapi's `<path:item_id>`.
+#
+# It was the server url, one collection short, and so every link the interface served named
+# a path nothing routed. Nothing in-process could see it: the tests walk the links through
+# the service object, which strips whatever base it was handed, so a base that resolved
+# nowhere walked exactly as well as one that resolved. Only a request to the running stack
+# told the difference, and it told it as a 404 on every entity set.
+#
+# The collection name is spelt here and in the template. `test_config_rendering.py` reads
+# the rendered document, finds the collection the SensorThings provider is actually in, and
+# asserts the base matches it, so the two cannot drift apart in silence.
+#
+# Held as segments rather than as a path fragment. Joining them is one line either way, and
+# a tuple cannot be mistaken for — or grow into — a location: there is no destination in it
+# to configure, only the shape of the route pygeoapi publishes, which is the framework's and
+# not this deployment's.
+_SENSORTHINGS_ROUTE = ("collections", "observations", "items")
+
 
 class MissingConfigurationValueError(Exception):
     """A placeholder the configuration has no value for. Names the key and where it belongs."""
@@ -104,8 +128,9 @@ def _values(document: Mapping[str, Any]) -> dict[str, str]:
         "limits": dict(limits),
         "interpolation": dict(_require(document, "query", "interpolation")),
     }
+    public_url = f"{base}/{prefix}" if prefix else base
     sensorthings_options = {
-        "base_url": f"{base}/{prefix}" if prefix else base,
+        "base_url": "/".join((public_url, *_SENSORTHINGS_ROUTE)),
         "observations": dict(observations),
         "limits": dict(limits),
     }
@@ -113,7 +138,7 @@ def _values(document: Mapping[str, Any]) -> dict[str, str]:
     return {
         "bind_host": str(_require(document, "query", "bind", "host")),
         "bind_port": str(_require(document, "query", "bind", "port")),
-        "public_url": f"{base}/{prefix}" if prefix else base,
+        "public_url": public_url,
         "page_size_default": str(limits["page_size_default"]),
         "page_size_maximum": str(limits["page_size_maximum"]),
         "log_level": str(logging_section["level"]),

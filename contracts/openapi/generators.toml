@@ -357,3 +357,68 @@ target = "services/offload/src/harness_offload/schemas/offload-telemetry.schema.
 # component in a container: it runs from the checkout with `contracts/` to hand, and it
 # validates through the generated model rather than against a schema document at all. A copy
 # would be a second thing to keep in step for no reader.
+
+# ---------------------------------------------------------------------------------
+# Per-document generator policy (006 T029, T030, T031)
+# ---------------------------------------------------------------------------------
+#
+# Two OpenAPI documents live in this directory now, and they are not the same kind of
+# thing. Reading them under one rule is what T031 forbids, and the reason is concrete
+# rather than stylistic:
+#
+#   `harness.openapi.yaml`         OpenAPI 3.1, hand-written here, and authoritative.
+#                                  Its schema dialect is JSON Schema 2020-12, which is why
+#                                  it can `$ref` a master by file. Every `components/
+#                                  schemas` entry must be such a reference, and what is
+#                                  generated for it is an alias of the type already
+#                                  generated from that master (NFR-02).
+#
+#   `query-layer.openapi.json`     OpenAPI 3.0.2, emitted by pygeoapi about itself and
+#                                  vendored by `scripts/refresh_query_layer_spec.sh`. Its
+#                                  dialect is 3.0's own bounded JSON Schema variant — not
+#                                  2020-12 — and its `components/schemas` are pygeoapi's,
+#                                  stated inline. They cannot reference our masters and
+#                                  cannot be made to: hand-editing it would make it the
+#                                  approximation NFR-01 exists to remove.
+#
+# So the documents are never merged and never generated under one policy. `kind` below is
+# what the chain branches on, and it is recorded here rather than in the script so that the
+# whole reason a generated file looks the way it does stays in one file.
+#
+# What is generated from a document with paths, whatever its kind, is its **surface**: the
+# paths it serves, and for each the methods and operation identifiers it declares. That is
+# the operation-level generation this directory's README said the first document with paths
+# would extend the chain to, and it is what a client needs from a service contract — a path
+# it cannot mistype, and a removed path that becomes a compile error rather than a 404 in
+# somebody's browser.
+#
+# What is deliberately **not** generated from either document is parameters. In the
+# vendored document most of them are `$ref`s into OGC's published schema documents on the
+# internet: `.../parameters/bbox.yaml`, `z.yaml`, `instanceId.yaml`. FR-016 forbids the
+# chain a network fetch and SC-007 requires it to pass with networking disabled, so those
+# references cannot be resolved here. The last segment of such a URL looks like the
+# parameter's name and very nearly is one — which is exactly the plausible-but-unverified
+# guess this whole feature exists to remove. A parameter list is generated when a document
+# states its parameters inline, and not before.
+
+[[document]]
+path = "contracts/openapi/harness.openapi.yaml"
+kind = "authored"
+openapi = "3.1"
+# `components/schemas` must reference a master; generation emits aliases, never definitions.
+schemas = "alias-masters"
+
+[[document]]
+path = "contracts/openapi/query-layer.openapi.json"
+kind = "vendored"
+openapi = "3.0"
+emitted_by = "pygeoapi"
+refresh = "scripts/refresh_query_layer_spec.sh"
+# Its `components/schemas` are the emitter's own, not drogna's boundary shapes, so no model
+# is generated from them. All four that pygeoapi emits here — `queryable`, `queryables`,
+# `tilematrixsetlink`, `tiles` — describe endpoints this query layer does not serve: there
+# is no `/tiles` and no `/queryables` among its nineteen paths. One of them, `tiles`,
+# `$ref`s a document on schemas.opengis.net and could not be generated at all without the
+# fetch FR-016 forbids. Generating a model nothing serves, from a reference nobody may
+# follow, would be three kinds of approximation at once.
+schemas = "not-generated"

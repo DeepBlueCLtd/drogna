@@ -72,3 +72,13 @@ Constitution IV — every named directory is mounted (droplet)|uv run python dep
 # and is not. Both were found one at a time, each after a full rebuild. This gate finds them
 # together, and was watched reporting exactly those two against the tree before the fix.
 SRD NFR-06 — every network-reaching build step takes the proxy_ca secret|uv run python scripts/check_proxy_ca_seam.py
+
+# The pub/sub topology used to be four lines of prose in docs/architecture/repo-layout.md,
+# extended by whichever feature remembered to. It is derived now — from deploy/broker/acl,
+# which mosquitto enforces, from the roles the destination configurations name, and from the
+# topics the components' own source binds to module-level constants — and this gate is what
+# keeps the derived document from becoming the fifth hand-kept record. It reads files and
+# nothing else: no broker, no service, no network. It was watched failing on a phantom topic
+# planted in a component's source before it was believed, and scripts/tests/test_topology_scan.py
+# keeps that observation repeatable.
+018-read-path-boundaries FR-002 — the topology artefact matches a fresh scan|uv run python scripts/check_topology_drift.py

@@ -278,6 +278,12 @@ class SensorThingsService:
     ) -> dict[str, Any]:
         """Answer one resource path, or refuse with the cause named."""
         query = dict(parameters or {})
+        if path.strip("/") == CONFORMANCE_SEGMENT:
+            # The one resource that is not an entity set. The root advertises it by href
+            # and this is where that href lands, so it is routed here rather than falling
+            # through to the path grammar — which used to answer it with "there is no
+            # entity set called 'conformance'", a true statement about the wrong question.
+            return self.conformance()
         resolved = parse_path(path)
         entity = (
             ENTITY_SETS[resolved.navigation.target]

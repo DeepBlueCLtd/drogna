@@ -1,0 +1,3 @@
+# Correct on purpose: the fixture's fault is in its pages, not in this file.
+User-agent: *
+Disallow: /

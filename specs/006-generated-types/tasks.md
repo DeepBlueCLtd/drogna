@@ -122,9 +122,9 @@ HTTP types follow and that the diff is reviewable.
 ### Implementation for User Story 3
 
 - [x] T028 [US3] Write `scripts/refresh_query_layer_spec.sh`, preferring the query layer's offline emission command and falling back to bringing it up in the local destination, capturing, canonicalising and tearing down
-- [ ] T029 [US3] Add OpenAPI to TypeScript generation for `contracts/openapi/query-layer.openapi.json`, writing into `client/src/generated/http/`
-- [ ] T030 [US3] Add OpenAPI to Python generation for the same document where a service needs to call the query layer, writing into `libs/harness_types/`
-- [ ] T031 [US3] Handle the version difference between the vendored document and the hand-written one by invoking the generators separately with per-document options recorded in the manifest; do not merge the documents
+- [x] T029 [US3] Add OpenAPI to TypeScript generation for `contracts/openapi/query-layer.openapi.json`, writing into `client/src/generated/http/` — `client/src/generated/http/query_layer.ts`: the nineteen paths as a union type, and their methods and operation identifiers as an `as const` object. `pnpm exec tsc --noEmit`, `pnpm lint` and 447 client tests green
+- [x] T030 [US3] Add OpenAPI to Python generation for the same document where a service needs to call the query layer, writing into `libs/harness_types/` — `libs/harness_types/src/harness_types/http/query_layer.py`: the same surface as a `Literal` and a frozen mapping. Registered in `tests/unit/test_generated_models.py`, which reads the paths back out of the vendored document rather than listing them
+- [x] T031 [US3] Handle the version difference between the vendored document and the hand-written one by invoking the generators separately with per-document options recorded in the manifest; do not merge the documents — `[[document]]` entries in `generators.toml` carry `kind` and `schemas` per document: 3.1 authored, aliasing masters; 3.0.2 vendored, generating no models. Watched failing on an unknown `kind` and on a policy naming a document that is not there
 - [x] T032 [US3] Document the refresh routine in `contracts/openapi/README.md`: when to refresh, how to read the diff, and why the drift check never needs a running query layer
 
 **Checkpoint**: The served interface, not an idea of it, is what the client is typed against.
@@ -156,8 +156,8 @@ and confirm each language carries exactly one definition of the shape.
 
 ## Phase 7: Polish
 
-- [ ] T039 [P] Write `docs/architecture/generated-types.md` describing the chain end to end: masters, bundling, generators, banners, normalisation, drift, and how to add a shape
-- [ ] T040 [P] Record an ADR for the generator selection, naming the alternatives considered and why each generator was chosen, since replacing one later is a whole-tree regeneration
+- [x] T039 [P] Write `docs/architecture/generated-types.md` describing the chain end to end: masters, bundling, generators, banners, normalisation, drift, and how to add a shape — written, with the two OpenAPI documents' policies as a table and the refresh routine's destination-dependence stated
+- [x] T040 [P] Record an ADR for the generator selection, naming the alternatives considered and why each generator was chosen, since replacing one later is a whole-tree regeneration — ADR-0022, indexed in `docs/adr/README.md`. It records the one place the specification's assumption was overruled, and the condition for revisiting it
 - [x] T041 Run the full quality-gate set over this feature's files and fix what they report
 - [x] T042 Rehearse the failure modes in `spec.md`: a colliding type name, an unresolvable reference, a non-deterministic generator, and a hand-written boundary type; confirm each fails with the message the specification promises
 
@@ -279,15 +279,28 @@ at all.
   check that no scratch path leaks into the output, pinned generator and formatter versions
   verified before generation, and `--disable-timestamp`. The remaining risk is a genuine
   gap and is named here rather than claimed as covered.
-- **T029, T030, T031 — generation from the query layer's specification.** There is no
-  vendored document to generate from: feature 008 does not exist. `scripts/
-  refresh_query_layer_spec.sh` is written and its canonicalisation is tested; its capture
-  half fails with a message saying why until there is a query layer to capture from. The
-  chain already reads each OpenAPI document separately and never merges them, which is the
-  half of T031 that can be settled before a second document exists.
-- **T039, T040 — the architecture note and the ADR.** Both live under `docs/`, which this
-  session was not given. The material for both is written: `contracts/openapi/README.md`
-  and `contracts/schemas/README.md` describe the chain end to end and the routine for
-  adding a shape, and `contracts/openapi/generators.toml` carries the generator selection
-  with the alternatives and the reason for each. Moving that into `docs/architecture/` and
-  an ADR is a copy-and-edit for whoever owns `docs/`.
+- **T029, T030, T031 — generation from the query layer's specification. Done, 28 August
+  2026.** The note that stood here said "there is no vendored document to generate from:
+  feature 008 does not exist", and it was true when written and stale by the time anyone
+  read it: 008 shipped, and the note went on being read as a reason not to look. It is
+  corrected rather than deleted, because what it got wrong is the useful part — a blocking
+  reason has a shelf life, and nothing in this file made anyone re-check it.
+
+  The document is vendored now, and the capture turned out to be the harder half. Both of
+  `scripts/refresh_query_layer_spec.sh`'s routes were wrong, each about a different file,
+  in the way a route nobody has run is wrong: the offline one handed pygeoapi drogna's own
+  configuration document instead of the rendered pygeoapi one, and the served one fetched
+  the destination's public URL, which is the client — whose single-page application answers
+  every unrecognised path with its own index, so `curl --fail` succeeded and returned HTML.
+  Only the canonicaliser's refusal stopped a web page being vendored as a specification.
+  Both are repaired and both are exercised; they produce the committed document byte for
+  byte. T028's tick was honest about what was written and could not have been about what
+  was run, which is the shape of the whole episode.
+
+- **T039, T040 — the architecture note and the ADR. Done, 28 August 2026.** Written from
+  the material this note named, which was indeed all there:
+  `docs/architecture/generated-types.md` and ADR-0022. It was not a copy-and-edit in one
+  respect — `contracts/openapi/README.md` had three statements the tree no longer
+  supported, including "its `paths` are empty today because no component in the harness
+  serves HTTP yet", which the clock's control interface had made false. Those are corrected
+  in the same commit.

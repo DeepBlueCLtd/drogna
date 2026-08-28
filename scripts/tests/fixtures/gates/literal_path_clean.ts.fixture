@@ -1,0 +1,4 @@
+// Locations arrive from configuration; the component holds none of its own.
+export async function fetchField(endpoint: string): Promise<Response> {
+  return fetch(endpoint);
+}

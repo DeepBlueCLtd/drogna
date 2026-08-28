@@ -1,0 +1,4 @@
+-- A literal filesystem path in SQL, which belongs in the component's config file.
+-- Planted for scripts/tests/test_gates_fail.py; the `.fixture` suffix keeps it out of
+-- the repository-wide walk.
+COPY observation FROM '/var/lib/drogna/observations.csv';

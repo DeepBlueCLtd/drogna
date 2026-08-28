@@ -1,0 +1,5 @@
+// A marker with no reason, in TypeScript comment syntax, which must exempt nothing.
+export function interpolate(): number {
+  // harness:allow-wallclock
+  return performance.now();
+}

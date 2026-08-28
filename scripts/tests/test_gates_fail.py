@@ -44,6 +44,15 @@ CAUGHT = [
     ("check_seeded_rng", "seeded_rng_violation.py", "random.random"),
     ("check_no_literal_paths", "literal_path_violation.py", "/var/lib/drogna"),
     ("check_forbidden_vocabulary", "vocabulary_violation.py", "contact"),
+    # The pattern-matching halves. Each gate names TypeScript and SQL constructs that no
+    # syntax tree examines, so each pattern needs its own planted violation: a regular
+    # expression that has quietly stopped matching looks exactly like a clean tree (T033).
+    ("check_no_wallclock", "wallclock_violation.ts", "Date.now"),
+    ("check_no_wallclock", "wallclock_violation.sql", "now()"),
+    ("check_seeded_rng", "seeded_rng_violation.ts", "Math.random"),
+    ("check_seeded_rng", "seeded_rng_violation.sql", "gen_random_uuid"),
+    ("check_no_literal_paths", "literal_path_violation.ts", "query.local"),
+    ("check_no_literal_paths", "literal_path_violation.sql", "/var/lib/drogna"),
 ]
 
 
@@ -60,6 +69,13 @@ def test_the_gate_reports_a_planted_violation(
 PERMITTED = [
     ("check_no_wallclock", "wallclock_clean.py"),
     ("check_seeded_rng", "seeded_rng_clean.py"),
+    ("check_no_literal_paths", "literal_path_clean.py"),
+    ("check_no_wallclock", "wallclock_clean.ts"),
+    ("check_no_wallclock", "wallclock_clean.sql"),
+    ("check_seeded_rng", "seeded_rng_clean.ts"),
+    ("check_seeded_rng", "seeded_rng_clean.sql"),
+    ("check_no_literal_paths", "literal_path_clean.ts"),
+    ("check_no_literal_paths", "literal_path_clean.sql"),
 ]
 
 
@@ -73,17 +89,38 @@ def test_the_gate_passes_correct_code(gate: str, fixture: str, tmp_path: Path) -
     )
 
 
-def test_an_exemption_with_a_reason_is_honoured(tmp_path: Path) -> None:
-    result = run_gate("check_no_wallclock", "wallclock_exempt_with_reason.py", tmp_path)
+EXEMPT_WITH_REASON = [
+    # Python markers are read from comment tokens; TypeScript and SQL markers are read
+    # from a line scan over their own comment syntaxes. Each parsing path gets a fixture,
+    # because each is a place the marker could quietly stop being recognised (T033).
+    ("check_no_wallclock", "wallclock_exempt_with_reason.py"),
+    ("check_no_wallclock", "wallclock_exempt_with_reason.ts"),
+    ("check_no_literal_paths", "literal_path_exempt_with_reason.sql"),
+]
+
+
+@pytest.mark.parametrize(("gate", "fixture"), EXEMPT_WITH_REASON)
+def test_an_exemption_with_a_reason_is_honoured(gate: str, fixture: str, tmp_path: Path) -> None:
+    result = run_gate(gate, fixture, tmp_path)
 
     assert result.returncode == 0, (
-        f"the ADR-0006 heartbeat exemption was rejected:\n{result.stdout}{result.stderr}"
+        f"a reasoned exemption was rejected by {gate}:\n{result.stdout}{result.stderr}"
     )
 
 
-def test_an_exemption_without_a_reason_exempts_nothing(tmp_path: Path) -> None:
+EXEMPT_BARE = [
+    ("check_no_wallclock", "wallclock_exempt_bare.py"),
+    ("check_no_wallclock", "wallclock_exempt_bare.ts"),
+    ("check_no_literal_paths", "literal_path_exempt_bare.sql"),
+]
+
+
+@pytest.mark.parametrize(("gate", "fixture"), EXEMPT_BARE)
+def test_an_exemption_without_a_reason_exempts_nothing(
+    gate: str, fixture: str, tmp_path: Path
+) -> None:
     """The marker is a place to record why, not a way to switch the gate off."""
-    result = run_gate("check_no_wallclock", "wallclock_exempt_bare.py", tmp_path)
+    result = run_gate(gate, fixture, tmp_path)
 
     assert result.returncode != 0, "a bare marker silently disabled the gate"
     assert "no reason" in result.stdout + result.stderr

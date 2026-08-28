@@ -1,0 +1,3 @@
+-- A marker with no reason, in SQL comment syntax, which must exempt nothing.
+-- harness:allow-literal-path
+COPY observation FROM '/var/lib/drogna/seed.csv';

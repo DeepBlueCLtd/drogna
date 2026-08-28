@@ -58,6 +58,13 @@ proof does not exist (T042, T047). AT-04 today
 scores the environment generator's reproducibility of values, under a different file name, which is
 a narrower claim than the one T042 was written for.
 
+**Closed 28 August 2026 (wave 7, lane K).** The three remaining tasks are done: the TypeScript
+and SQL fixture halves exist and are exercised by `scripts/tests/test_gates_fail.py` (T033), the
+two-participant lockstep scenario lives in `tests/acceptance/participants/` and AT-04 scores it —
+watched failing against three separately planted determinism violations before being trusted
+(T042) — and `uv run python scripts/replay_proof.py` is the one-command replay proof, seen
+exiting 1 on a planted violation (T047). Per-task notes below.
+
 ---
 
 ## Phase 1: Setup
@@ -244,11 +251,16 @@ different sequences from a different root; reconstruction from the manifest alon
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Create the fixture tree `scripts/tests/fixtures/gates/` with violating and
+- [x] T033 [P] [US4] Create the fixture tree `scripts/tests/fixtures/gates/` with violating and
       clean Python, TypeScript and SQL files for each of the three rules, including a marker with a
       reason and a marker without one. **Partly done**: the Python fixtures exist, with both markers;
       TypeScript and SQL fixtures do not, so the pattern-matching halves of the wall-clock and
-      literal-path gates are exercised by nothing.
+      literal-path gates are exercised by nothing. **Done 2026-08-28 (lane K)**: violating and clean
+      TypeScript and SQL fixtures for all three rules, a Python clean fixture for the literal-path
+      gate that was also missing, and marker fixtures in `//` and `--` comment syntax (with a reason
+      honoured, bare refused), because the non-Python marker parsing is a line scan the Python
+      fixtures never touched. All parametrised into `scripts/tests/test_gates_fail.py`; each planted
+      violation was watched being caught, with the expected expression asserted in the output.
 - [x] T034 [P] [US4] `scripts/tests/test_gates_fail.py`: each gate exits non-zero on each violation
       fixture, zero on each clean fixture, and treats a reasonless marker as a violation.
 
@@ -293,13 +305,22 @@ byte-identical output.
 - [x] T041 [P] [US5] `services/clock/tests/test_lockstep.py`: tick `n+1` waits for every registered
       participant's acknowledgement of tick `n`; a silent participant stalls the clock, is named in
       the reported state and in a `stalled` heartbeat; no tick is skipped.
-- [ ] T042 [US5] Write the two toy participants under `tests/acceptance/participants/`, each drawing
+- [x] T042 [US5] Write the two toy participants under `tests/acceptance/participants/`, each drawing
       from a named RNG stream and writing an output file keyed to tick values rather than to counts
       of received ticks, and the acceptance test asserting byte-identical output across two runs from
       one manifest. **Not done**: `tests/acceptance/test_at04_deterministic_replay.py` exists and
       scores the environment generator's reproducibility of *values*, which is the weaker claim. The
       lockstep barrier the stronger claim rests on is now implemented and unit-tested, so what is
       missing is the scenario, not the mechanism.
+      **Done 2026-08-28 (lane K)**: `tests/acceptance/participants/` holds the two toys
+      (`alpha` drifts a position, `beta` reports a noisy reading, both through `rng_for` on named
+      streams) and the lockstep driver; AT-04 runs the scenario twice from one serialised manifest
+      over 1,000 ticks and compares output files byte for byte and manifests field for field via
+      `compare_manifests`. Tick-value keying is falsifiable, not asserted: a redelivery run delivers
+      every seventh tick twice and must change no byte. The test was watched failing against three
+      separately planted violations — receipt-count keying (caught by the redelivery test), an
+      unseeded generator (caught byte-for-byte), and a driver ignoring the manifest's seed (caught
+      by the different-seed test) — each caught by exactly the test written for it, then reverted.
 
 ### Implementation for User Story 5
 
@@ -327,11 +348,15 @@ later.
 - [x] T046 [P] Write the ADR for lockstep mode: recorded in the same document, ADR-0009, rather
       than a second one — why byte-identical replay needs a barrier, and that the free-running modes
       claim reproducibility of values only.
-- [ ] T047 Add a one-command run of the clock service and the replay proof to `scripts/`, so the
+- [x] T047 Add a one-command run of the clock service and the replay proof to `scripts/`, so the
       feature is demonstrable from a clean checkout as the constitution requires. **Partly done**:
       feature 005's `scripts/run_local.sh` brings the clock up under Compose with its `foundation`
       profile, so the service is demonstrable; the replay proof T042 describes is not, because it
-      does not exist.
+      does not exist. **Done 2026-08-28 (lane K)**: `uv run python scripts/replay_proof.py` runs
+      T042's scenario twice from one manifest plus a redelivery variant, prints per-file digests,
+      and exits 0 only when every comparison is identical. It was watched exiting 1 — naming the
+      file and the first differing line — against a planted unseeded generator, because a proof
+      that could not fail would prove nothing.
 
 ---
 

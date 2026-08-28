@@ -1,0 +1,7 @@
+-- A schema defaulting a column to the host clock. Planted for
+-- scripts/tests/test_gates_fail.py; the `.fixture` suffix keeps it out of the
+-- repository-wide walk.
+CREATE TABLE observation (
+    observation_id TEXT PRIMARY KEY,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

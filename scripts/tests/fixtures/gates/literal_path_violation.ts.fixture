@@ -1,0 +1,6 @@
+// A literal location in component source, which config exists to carry. Planted for
+// scripts/tests/test_gates_fail.py; the `.fixture` suffix keeps it out of the
+// repository-wide walk.
+export async function fetchField(): Promise<Response> {
+  return fetch("http://query.local:8080/collections");
+}

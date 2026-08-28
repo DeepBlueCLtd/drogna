@@ -1,0 +1,6 @@
+// A component reading the host clock for an operational purpose. Planted for
+// scripts/tests/test_gates_fail.py; the `.fixture` suffix keeps it out of the
+// repository-wide walk.
+export function stampObservation(): number {
+  return Date.now();
+}

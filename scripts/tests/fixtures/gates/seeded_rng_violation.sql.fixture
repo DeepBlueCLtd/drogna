@@ -1,0 +1,6 @@
+-- An identifier drawn from the database's entropy. Planted for
+-- scripts/tests/test_gates_fail.py; the `.fixture` suffix keeps it out of the
+-- repository-wide walk.
+CREATE TABLE observation (
+    observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+);

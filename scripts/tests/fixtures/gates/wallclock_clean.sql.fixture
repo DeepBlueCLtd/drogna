@@ -1,0 +1,7 @@
+-- A schema that records simulation time as a value the writer supplies, never a default
+-- the database computes from its own clock.
+CREATE TABLE observation (
+    observation_id TEXT PRIMARY KEY,
+    sim_time TEXT NOT NULL,
+    tick BIGINT NOT NULL
+);

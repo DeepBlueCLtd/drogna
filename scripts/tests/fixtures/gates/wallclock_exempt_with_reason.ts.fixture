@@ -1,0 +1,6 @@
+// The client's render-path exemption, marked with its reason. The marker is read from a
+// line-based comment scan for TypeScript, which is what this fixture exercises.
+export function interpolate(sample: { simTime: string }): number {
+  // harness:allow-wallclock ADR-0007 render interpolation between received clock samples
+  return performance.now();
+}

@@ -1,0 +1,5 @@
+// A component reading time from the clock port, as Principle I requires: the sample
+// arrives on ctl/clock and the render path interpolates between samples it was handed.
+export function stampObservation(sample: { simTime: string; tick: number }): string {
+  return sample.simTime;
+}

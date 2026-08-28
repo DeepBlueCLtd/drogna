@@ -1,0 +1,5 @@
+// Perturbation from a value the server derived from the run's root seed and handed
+// over with the message: the client draws nothing of its own.
+export function perturb(value: number, derivedJitter: number): number {
+  return value + derivedJitter;
+}

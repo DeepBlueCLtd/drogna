@@ -1,0 +1,4 @@
+-- An exemption in SQL comment syntax, carrying its reason: the marker parsing for SQL is
+-- line-based, and this fixture is what exercises it.
+-- harness:allow-literal-path a packaged seed resource, not a deployment location
+COPY observation FROM '/var/lib/drogna/seed.csv';

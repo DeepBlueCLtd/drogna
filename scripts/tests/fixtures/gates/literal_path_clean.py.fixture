@@ -1,0 +1,11 @@
+"""A component whose every location arrives from the file HARNESS_CONFIG names."""
+
+import os
+
+
+def config_path():
+    return os.environ["HARNESS_CONFIG"]
+
+
+def store_path(document):
+    return document["store"]["directory"]

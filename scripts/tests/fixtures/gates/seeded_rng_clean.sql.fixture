@@ -1,0 +1,5 @@
+-- Identifiers arrive as values the writer derived from seed and logical position with
+-- harness_core.rng.identifier_for; the database generates nothing.
+CREATE TABLE observation (
+    observation_id TEXT PRIMARY KEY
+);

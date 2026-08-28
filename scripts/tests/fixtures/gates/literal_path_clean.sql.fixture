@@ -1,0 +1,6 @@
+-- A schema that names tables and columns and no location at all.
+CREATE TABLE observation (
+    observation_id TEXT PRIMARY KEY,
+    observed_property TEXT NOT NULL,
+    result DOUBLE PRECISION NOT NULL
+);

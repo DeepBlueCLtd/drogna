@@ -105,4 +105,5 @@ pythonpath = [
     "services/offload/tests",
     "services/telemetry/tests",
     "tests/support",
+    "tests/acceptance",
 ]

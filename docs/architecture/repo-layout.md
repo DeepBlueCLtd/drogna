@@ -195,4 +195,6 @@ lights a component from heartbeats alone (Constitution VII).
 - Unit tests beside the code they test, in `tests/` within each package.
 - Cross-component tests in `tests/integration/` at the repository root.
 - Acceptance tests AT-01 to AT-04 live in `tests/acceptance/` and are named for their
-  identifiers.
+  identifiers. `tests/acceptance/participants/` holds the two toy lockstep participants
+  and the scenario driver AT-04 scores (001 T042); `scripts/replay_proof.py` runs the
+  same scenario as the one-command replay proof (001 T047).

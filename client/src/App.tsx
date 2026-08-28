@@ -179,7 +179,7 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         if (
           route.current !== null &&
           config.query.trajectoryPath !== undefined &&
-          overlay.current.forecastCollection !== null
+          overlay.current.collection !== null
         ) {
           return { kind: "trajectory", unavailableBecause: null, gate };
         }

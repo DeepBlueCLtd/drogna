@@ -5,7 +5,7 @@ loop that assimilates what they report, and a query layer that serves the result
 OGC API-EDR and SensorThings. Everything in it is deliberately fake and says so.
 
 Sixteen features, eleven services, 1799 Python tests and 446 client tests, fourteen gates
-and thirteen ADRs. All four SRD acceptance criteria pass.
+and twenty-two ADRs. All four SRD acceptance criteria pass.
 
 ## Where the answers already are
 
@@ -14,8 +14,8 @@ reason a fresh session can pick this up without archaeology.
 
 | Question | Where |
 |---|---|
-| What may I never do? | `.specify/memory/constitution.md` — ten principles, currently at 1.4.0 |
-| Why is it built like this? | `docs/adr/` — 13 records, each with the alternative it rejected |
+| What may I never do? | `.specify/memory/constitution.md` — ten principles, currently at 1.5.0 |
+| Why is it built like this? | `docs/adr/` — 23 records (numbered to 0024; there is no 0017), each with the alternative it rejected |
 | What does this feature do, and what is deliberately not done? | `specs/<nnn>-*/spec.md` and `tasks.md` |
 | Where does a file live, and who owns it? | `docs/architecture/repo-layout.md` |
 | What does a store look like on disk? | `stores/coverage/layout.md` |

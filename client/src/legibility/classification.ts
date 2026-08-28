@@ -19,8 +19,14 @@
  * divergence rule's verdict, a scheduling decision, a plan, a quality flag, a derived
  * sound speed. It is **plumbing** when what crosses it is moved rather than judged: an
  * announcement, a standard read interface, a store write, a transport hop. By that rule
- * eight of the twenty-two boundaries are bespoke, which is the honest proportion and the
- * one §2.2 wants a reader to see.
+ * eleven of the twenty-seven boundaries are bespoke, which is the honest proportion and
+ * the one §2.2 wants a reader to see.
+ *
+ * That figure is prose and nothing derives it, which is why it was wrong: it read "eight
+ * of the twenty-two" from the day it was written, when the table below already classified
+ * nine. What is actually held is the bound `classification.test.ts` asserts — fewer than
+ * half — and a reader who wants the exact number should count the table rather than trust
+ * this sentence.
  */
 import { COMPONENTS, EDGES } from "../layout/components";
 import type { ComponentKind } from "../layout/components";
@@ -36,7 +42,8 @@ export type BespokeConcern =
   | "scheduling-policy"
   | "uncertainty-mathematics"
   | "planning-mathematics"
-  | "quality-flagging";
+  | "quality-flagging"
+  | "advisory-authoring";
 
 /** What each named concern is, in a sentence a viewer can read against the component. */
 export const CONCERN_WORDS: Readonly<Record<BespokeConcern, string>> = {
@@ -55,6 +62,8 @@ export const CONCERN_WORDS: Readonly<Record<BespokeConcern, string>> = {
     "the planning mathematics: where sampling would most reduce uncertainty, as a recommendation",
   "quality-flagging":
     "the quality flagging: forecast skill scored against a persistence reference, and said in words",
+  "advisory-authoring":
+    "the advisory authoring: which seeded feature to describe, at what fidelity, and inside what size ceiling",
 };
 
 /**
@@ -73,6 +82,7 @@ export const BESPOKE_LOGIC: Readonly<Record<string, readonly BespokeConcern[]>> 
   model_runner: ["uncertainty-mathematics"],
   planner: ["planning-mathematics"],
   telemetry: ["quality-flagging"],
+  shore_advisory: ["advisory-authoring", "executable-data-dictionary"],
 };
 
 /** The identifier a boundary is addressed by: the pair of components it joins. */
@@ -185,6 +195,26 @@ const BOUNDARY_REASON: Readonly<Record<string, { kind: ComponentKind; because: s
   [boundaryId("telemetry", "broker")]: {
     kind: "bespoke",
     because: "forecast skill against a persistence reference: a quality judgement drogna makes itself",
+  },
+  [boundaryId("shore_advisory", "broker")]: {
+    kind: "bespoke",
+    because: "an advisory: drogna's own statement about a feature it seeded, at a fidelity it chose",
+  },
+  [boundaryId("shore_advisory", "advisory_store")]: {
+    kind: "bespoke",
+    because: "the advisory write seam, where the schema and the size ceiling are enforced rather than documented",
+  },
+  [boundaryId("advisory_store", "query_layer")]: {
+    kind: "plumbing",
+    because: "advisories read as received, through the same standard interface as everything else",
+  },
+  [boundaryId("broker", "system_controller")]: {
+    kind: "plumbing",
+    because: "what components already publish about themselves, observed and aggregated; the controller invents nothing (FR-67)",
+  },
+  [boundaryId("system_controller", "proxy")]: {
+    kind: "plumbing",
+    because: "an operator's REST surface behind the same boundary as every other read",
   },
 };
 

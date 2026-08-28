@@ -12,7 +12,13 @@ import { describe, expect, it } from "vitest";
 import { COMPONENTS, EDGES } from "../../src/layout/components";
 import { BESPOKE_LOGIC, BOUNDARIES, BOUNDARIES_BY_ID, boundaryId, CONCERN_WORDS, concernsFor, overclaimedComponents, unclassifiedBoundaries, unexplainedBespokeComponents } from "../../src/legibility/classification";
 
-/** The six items SRD §2.2 names as drogna's own, which FR-017 requires be attributed. */
+/**
+ * The items SRD §2.2 names as drogna's own, which FR-017 requires be attributed.
+ *
+ * Eight of them, not the six this comment used to claim — it was written against a
+ * shorter list and nobody recounted when the list grew. `advisory-authoring` is the
+ * newest, added by the SRD's v0.4 scope amendment along with C-19.
+ */
 const NAMED_IN_THE_SRD = [
   "residual-and-divergence-rules",
   "scheduling-policy",
@@ -21,6 +27,7 @@ const NAMED_IN_THE_SRD = [
   "uncertainty-mathematics",
   "planning-mathematics",
   "executable-data-dictionary",
+  "advisory-authoring",
 ] as const;
 
 describe("classification coverage", () => {

@@ -30,8 +30,8 @@ outcomes rather than plans.
 | 016 | Visual capture | PR-10, FR-53 | Delivered |
 | 017 | Map surface | FR-47, FR-48 lineage; closes 012 T032/T038 | Planned and tasked; stories P1–P3 built, wave 6 lane B |
 | 018 | Read-path boundaries | §2.2's boundary story, PR-09 | Specified; no plan or tasks |
-| 019 | Coverage holdings | SRD amendment, in flight (see decisions) | Specified; gated |
-| 020 | Shore advisories | SRD amendment, in flight (see decisions) | Specified; gated |
+| 019 | Coverage holdings | §5.10, FR-54 to FR-58 | Specified; gated on wave 6's exit criterion |
+| 020 | Shore advisories | §5.11, FR-59 to FR-66 | Specified; gated on wave 6's exit criterion |
 
 Progress at consolidation: 745 recorded tasks, 685 ticked, all four acceptance tests
 passing, 14 gates clean.
@@ -74,7 +74,7 @@ here is what stops a lane re-litigating them; the ADRs land with the lanes named
 |---|---|---|
 | **Database authentication needs no secrets.** The observation store binds to 127.0.0.1 at every destination; the harness models no database threat. Postgres moves to trust authentication for the compose network; DSNs name a role and carry no password; `_with_database_secret` is retired rather than extended. | **Dissolves 009 T059**: there is no credential-ordering constraint. What remains is the unseeded-schema case — a service starting before seeding treats missing tables as a transient, retries with backoff, and reports truthfully. Also resolves the three passwordless roles flagged in DECISIONS 2026-08-28T08:50. | Lane D, with an ADR (the broker's credential path, ADR-0016, is unchanged) |
 | **The control namespace is public-read by design.** The `/ctl` `auth_basic` exemption and the world-readable viewer credential are the intended boundary: binary clearance for `/released`, delegation to the broker's ACL for the control upgrade. | ADR-0001's amendment moves from *proposed* to *accepted*; the viewer credential is documented as a non-secret (subscribe-only on `ctl/`, public by design). No code changes. | Lane E |
-| **The SRD is amended to name both 019 and 020.** The holdings and the advisory product become SRD requirements with the argument recorded, per both specs' own delivery condition. | 019/020 planning can pass a Constitution Check once the amendment merges. | Lane G, as a PR for the owner's review |
+| **The SRD is amended to name both 019 and 020.** The holdings and the advisory product become SRD requirements with the argument recorded, per both specs' own delivery condition. | 019/020 planning can pass a Constitution Check once the amendment merges. Landed as SRD v0.4: §5.10 (FR-54 to FR-58), §5.11 (FR-59 to FR-66), two component rows, and two §11 rows. | Lane G, as a PR for the owner's review |
 | **019 and 020 start only after the loop turns live** and the SRD amendment has merged. | Wave 8 is gated on wave 6's exit criterion plus one merge, not on a calendar. | Wave 8 preconditions |
 
 ## Dependency graph
@@ -171,7 +171,7 @@ documented as a non-secret. PR-08's gap is closed: seven entries were written fo
 | Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
 | ~~Generated types carry-over~~ | ~~006 T029–T031, T039, T040~~ — done, lane C, 28 August | the query layer's contract is vendored and generated from; ADR-0022 records the generator selection |
 | The topology contract | 018 story 2 (scanner, artefact, drift gate) | this repository's own medicine applied to its own topology; blocks nothing and is blocked by nothing |
-| The scope amendment | SRD growth for 019/020 | decided; wants drafting and the owner's review |
+| The scope amendment | SRD growth for 019/020 | drafted as SRD v0.4; with the owner for review |
 | Unevidenced success criteria | 003 T040, 004 T044 | measured claims the record asserts and nothing measures |
 | Replay's weaker claim | 001 T033, T042, T047 | do T042 or amend the claim, not neither |
 | Documentation carry-overs | 007 T045, 008 T006/T058 truth, 015 re-reconciliation, ADR-0001 acceptance | evidence hygiene; smaller than the record claims |
@@ -209,9 +209,18 @@ its pull request closes.
 
 ## Wave 8 — the data landscape grows
 
-Preconditions, per the decisions above: the wave 6 exit criterion holds, and the SRD
-amendment has merged. 019's accumulation story then builds on runs that genuinely
-publish, rather than retention of runs that never happen.
+Preconditions, per the decisions above: the wave 6 exit criterion holds, and SRD v0.4
+has merged. 019's accumulation story then builds on runs that genuinely publish, rather
+than retention of runs that never happen.
+
+Two of the amendment's own consequences land with these features rather than with lane
+G. 020 inherits two component identifiers — C-19, the shore advisory source, and C-20,
+the advisory store — which `docs/manifest.yaml` records as not yet built and which want
+a subsystem page each when they exist. FR-12 now names three schemas in the one Postgres
+instance rather than two, and the constitution's technology line was amended with it
+(1.5.0, ADR-0024); what that record leaves to 020's plan is the test that asserts the
+negative — `features` still refused to every run-time role, beside an `advisories` that
+is deliberately writable — because what separates them is a grant.
 
 | Feature | Branch | Owns | Parallel with |
 |---|---|---|---|

@@ -1,196 +1,219 @@
 # Delivery plan: dependency graph and parallel waves
 
-The SRD puts all eighteen components in scope and observes that this is a large
-surface for spare-time work, with ordering treated as a commitment (§10). This
-document turns that ranking into a dependency graph, and identifies which features
-can genuinely be built at the same time.
-
-The ordering criterion from the SRD is **cost of getting it wrong late**, not size and
-not enthusiasm.
+Updated and consolidated 28 August 2026. The SRD puts the harness's purposes in strict
+priority order — understanding, demonstration, evidence (§1) — and treats ordering as a
+commitment, ranked by **cost of getting it wrong late** (§10). This document turns that
+into a dependency graph, a record of what is delivered, and the waves that remain. It
+was first written before feature 001 existed; the pre-delivery wave tables it carried
+then are in this file's history, and their exit criteria are summarised below as
+outcomes rather than plans.
 
 ## Features
 
-| # | Feature | SRD anchor | §10 rank |
+| # | Feature | SRD anchor | Status |
 |---|---|---|---|
-| 001 | Deterministic replay foundations | C-01, FR-09..FR-11, NFR-04 | 1 |
-| 002 | EDR trajectory provider (proof) | FR-20, FR-50, FR-51 | 2 |
-| 003 | Component shell client | FR-01, FR-45, FR-52, C-18 | 3 |
-| 004 | Environment generator | C-02, FR-02..FR-05 | 4 |
-| 005 | Compose deployment | NFR-05..NFR-07 | 5 |
-| 006 | Generated types | NFR-01..NFR-03 | 6 |
-| 007 | Observation path | C-03..C-07, FR-12..FR-18 | — |
-| 008 | Query layer | C-08, C-09, FR-19..FR-21 | — |
-| 009 | Control loop | C-11..C-14, FR-22..FR-31 | — |
-| 010 | Telemetry and quality | C-16, FR-37, FR-38 | — |
-| 011 | Adaptive planner | C-15, FR-32..FR-36 | below the line |
-| 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | — |
-| 013 | Security proxy | C-10, FR-39..FR-42 | below the line |
-| 014 | Offload export | C-17, FR-43, FR-44 | below the line |
-| 015 | Published site | PR-06..PR-09 | below the line |
-| 016 | Visual capture | PR-10, FR-53 | — |
+| 001 | Deterministic replay foundations | C-01, FR-09..FR-11, NFR-04 | Delivered. T033/T042/T047 open: AT-04 scores the weaker replay claim |
+| 002 | EDR trajectory provider (proof) | FR-20, FR-50, FR-51 | Delivered; finding recorded in `spikes/edr-trajectory/FINDING.md` |
+| 003 | Component shell client | FR-01, FR-45, FR-52, C-18 | Delivered. T040 first-paint measurement never taken |
+| 004 | Environment generator | C-02, FR-02..FR-05 | Delivered. T044 size/time measurement never taken |
+| 005 | Compose deployment | NFR-05..NFR-07 | Delivered. T028 reset-then-reseed proof still a human ritual |
+| 006 | Generated types | NFR-01..NFR-03 | Delivered. T029–T031 unblocked since 008 shipped; note was stale |
+| 007 | Observation path | C-03..C-07, FR-12..FR-18 | Delivered, live |
+| 008 | Query layer | C-08, C-09, FR-19..FR-21 | Delivered. T062 waits on a live published run; SensorThings sets 404 |
+| 009 | Control loop | C-11..C-14, FR-22..FR-31 | Passes in-process; **not wired live** — T052–T058 outstanding |
+| 010 | Telemetry and quality | C-16, FR-37, FR-38 | Delivered |
+| 011 | Adaptive planner | C-15, FR-32..FR-36 | Delivered |
+| 012 | Visualisation | FR-46..FR-49, FR-52, FR-53 | Delivered except the map-mounted layers (T032, T038 → 017) |
+| 013 | Security proxy | C-10, FR-39..FR-42 | Delivered |
+| 014 | Offload export | C-17, FR-43, FR-44 | Delivered. T040/T045/T046 carry no note — status unknown |
+| 015 | Published site | PR-06..PR-09 | Delivered; 19 partial marks want re-reconciliation against the built site |
+| 016 | Visual capture | PR-10, FR-53 | Delivered |
+| 017 | Map surface | FR-47, FR-48 lineage; closes 012 T032/T038 | Specified; no plan or tasks |
+| 018 | Read-path boundaries | §2.2's boundary story, PR-09 | Specified; no plan or tasks |
+| 019 | Coverage holdings | SRD amendment, in flight (see decisions) | Specified; gated |
+| 020 | Shore advisories | SRD amendment, in flight (see decisions) | Specified; gated |
+
+Progress at consolidation: 745 recorded tasks, 685 ticked, all four acceptance tests
+passing, 14 gates clean.
+
+## Where the goals and the work stand
+
+**Understanding** (the SRD's first purpose) is the strongest leg: seven spikes with
+findings, nineteen ADRs, session logs that record what decisions cost. **Evidence**
+(third) is mostly sound, and its hazard is records that fall behind the tree.
+**Demonstration (second) is the weakest leg**, and the constitution's bar for it is
+"runnable from a clean checkout with one command, and visible in the client":
+
+- The four acceptance tests pass **in one process, with the broker stood in by a
+  recorder** — which is what they claim, and no more.
+- In the composed stack, six of the seven loop-side services — scheduler, model
+  runner, publisher, telemetry, offload, planner — run their loop over an empty
+  message iterable and exit 0. Only the monitor opens a broker subscription (009
+  T058). No divergence becomes a run; no run is ever published live; 008 T062
+  correctly answers "no run is current".
+- The SensorThings entity sets 404 against the running query layer
+  (long-run-01 BLOCKED, 2026-08-28T10:15).
+- deck.gl is a declared dependency nothing under `client/src` imports; the
+  uncertainty and route displays are built and tested with no surface to draw on.
+
+Features 019 and 020 extend scope beyond the SRD by their own statement, on top of
+that gap. The refocus is not to abandon them; it is to put the loop's first live turn
+ahead of them, which is what §10's own ordering criterion already says.
+
+## Decisions taken, 28 August 2026
+
+Four questions this plan surfaced were put to the owner and answered. Recording them
+here is what stops a lane re-litigating them; the ADRs land with the lanes named.
+
+| Decision | Consequence | Lands in |
+|---|---|---|
+| **Database authentication needs no secrets.** The observation store binds to 127.0.0.1 at every destination; the harness models no database threat. Postgres moves to trust authentication for the compose network; DSNs name a role and carry no password; `_with_database_secret` is retired rather than extended. | **Dissolves 009 T059**: there is no credential-ordering constraint. What remains is the unseeded-schema case — a service starting before seeding treats missing tables as a transient, retries with backoff, and reports truthfully. Also resolves the three passwordless roles flagged in DECISIONS 2026-08-28T08:50. | Lane D, with an ADR (the broker's credential path, ADR-0016, is unchanged) |
+| **The control namespace is public-read by design.** The `/ctl` `auth_basic` exemption and the world-readable viewer credential are the intended boundary: binary clearance for `/released`, delegation to the broker's ACL for the control upgrade. | ADR-0001's amendment moves from *proposed* to *accepted*; the viewer credential is documented as a non-secret (subscribe-only on `ctl/`, public by design). No code changes. | Lane E |
+| **The SRD is amended to name both 019 and 020.** The holdings and the advisory product become SRD requirements with the argument recorded, per both specs' own delivery condition. | 019/020 planning can pass a Constitution Check once the amendment merges. | Lane G, as a PR for the owner's review |
+| **019 and 020 start only after the loop turns live** and the SRD amendment has merged. | Wave 8 is gated on wave 6's exit criterion plus one merge, not on a calendar. | Wave 8 preconditions |
 
 ## Dependency graph
 
 ```mermaid
 graph TD
-  F001[001 Deterministic foundations]
-  F002[002 EDR trajectory proof]
-  F003[003 Component shell client]
-  F004[004 Environment generator]
-  F005[005 Compose deployment]
-  F006[006 Generated types]
-  F007[007 Observation path]
-  F008[008 Query layer]
-  F009[009 Control loop]
-  F010[010 Telemetry and quality]
-  F011[011 Adaptive planner]
-  F012[012 Visualisation]
-  F013[013 Security proxy]
-  F014[014 Offload export]
-  F015[015 Published site]
-  F016[016 Visual capture]
+  subgraph delivered
+    F001[001 Deterministic foundations]
+    F002[002 EDR trajectory proof]
+    F003[003 Component shell client]
+    F004[004 Environment generator]
+    F005[005 Compose deployment]
+    F006[006 Generated types]
+    F007[007 Observation path]
+    F008[008 Query layer]
+    F010[010 Telemetry and quality]
+    F011[011 Adaptive planner]
+    F012[012 Visualisation]
+    F013[013 Security proxy]
+    F014[014 Offload export]
+    F015[015 Published site]
+    F016[016 Visual capture]
+  end
+  F009[009 Control loop, live wiring]
+  F017[017 Map surface]
+  F018[018 Read-path boundaries]
+  F019[019 Coverage holdings]
+  F020[020 Shore advisories]
+  SRD[SRD amendment for 019 and 020]
 
-  F001 --> F004
-  F001 --> F007
   F001 --> F009
-  F001 --> F010
-  F001 --> F011
-  F001 --> F014
-  F006 --> F007
   F006 --> F009
-  F006 --> F012
-  F003 --> F012
-  F003 --> F016
-  F004 --> F008
-  F004 --> F009
-  F005 --> F007
-  F005 --> F008
-  F005 --> F013
-  F007 --> F008
   F007 --> F009
-  F008 --> F012
-  F008 --> F013
-  F008 --> F014
-  F009 --> F010
-  F009 --> F011
-  F009 --> F012
-  F002 -.finding constrains.-> F008
-  F002 -.finding constrains.-> F012
-  F016 --> F015
+  F003 --> F017
+  F012 --> F017
+  F006 --> F018
+  F012 --> F018
+  F008 --> F019
+  F009 --> F019
+  F007 --> F020
+  F008 --> F020
+  SRD --> F019
+  SRD --> F020
+  F017 -.client stories follow.-> F018
+  F017 -.story 4 only.-> F020
 ```
 
-Dotted edges are constraint rather than code: the spike's finding decides the shape of
-the read path and the client's centrepiece, but nothing waits on its artefacts.
+Dotted edges order work without blocking a feature's core: 018's server-side artefact
+and gate depend only on 006, and 020's stories 1–3 need nothing from 017.
 
-## Waves
+## Delivered: waves 1–5, in summary
 
-A wave is a set of features whose implementation touches disjoint directories and
-whose inputs are already satisfied. Everything within a wave can proceed at once.
+The original five waves ran 001–016 to delivery. Their exit criteria hold with two
+caveats that shape everything below: wave 3's criterion (AT-01, AT-02) holds
+**in-process**, with the transport stood in, because the loop services were never
+wired to the broker in the composed stack; and wave 4's (AT-03, AT-04) holds with
+AT-04 scoring generator reproducibility — the weaker claim — because 001 T042's
+two-participant replay scenario was never built. The stale-record episode `CLAUDE.md`
+documents (196 done / 33 partly / 23 outstanding against 248 unticked) happened across
+these waves; the claims found stale on this consolidation are tabled below so nobody
+re-litigates them.
 
-### Wave 1 — foundations and unknowns
-
-| Feature | Owns | Why it can start now |
+| Record | It says | The tree says |
 |---|---|---|
-| 001 Deterministic foundations | `libs/harness_core/`, common config schema, lint gates | Depends on nothing. Everything depends on it, and it is the one thing §10 says cannot be retrofitted. |
-| 002 EDR trajectory proof | `spikes/edr-trajectory/` | Depends on nothing but a pygeoapi container. Now a narrow proof rather than an open question; feature 008 builds the provider on its finding. |
-| 003 Component shell client | `client/` | Needs only the heartbeat message shape, which it defines. The feedback surface and the always-showable artefact. |
-| 005 Compose deployment | `deploy/`, `config/local/`, `config/droplet/` | Needs only the list of components, which the SRD already fixes. Drift between local and droplet is cheaper to prevent than to remove. |
-| 006 Generated types | `contracts/openapi/`, `libs/harness_types/`, `client/src/generated/` | The generator chain can be stood up against the schemas that exist; §10 requires it before any message has a second consumer. |
+| 009 T051 note | the monitor reads no published field and AT-02 fails at its first assertion | landed in `009b20d`; all four acceptance tests pass |
+| 006 T029–T031 note | blocked because "feature 008 does not exist" | 008 is built, 61 of 62 ticked; the three tasks are actionable now |
+| 015 T029 note | eighteen subsystem pages open with "Status: not yet built" | sixteen say "built", two "partly built" |
+| 015 reconciliation outcome block | "there is no `site/gates/` directory", "US2 does not exist" | contradicted by the per-task notes above it; trust those |
+| 014 T040, T045, T046 | nothing — no note at all | unknown; the only unticked tasks in the repository with no reason recorded |
 
-Wave 1 is five features across five disjoint trees. The only shared surface is
-`contracts/schemas/`, and additions there are additive: 001 adds the common config
-schema, 003 adds the heartbeat schema, 006 adds the OpenAPI documents that reference
-them.
+## The genuinely outstanding work, consolidated
 
-**Wave 1 exit criterion:** the greyed-out shell is live on the droplet, all components
-dark, driven by real heartbeats — of which there are none yet, which is the point. The
-lint gates fail the build on a planted wall-clock call.
-
-### Wave 2 — the data spine
-
-| Feature | Blocked on | Owns |
+| Cluster | Items | Why it matters |
 |---|---|---|
-| 004 Environment generator | 001 (RNG, manifest) | `services/env_generator/` |
-| 007 Observation path | 001, 005, 006 | `services/sensors/`, `services/ingest/`, `stores/` |
-| 016 Visual capture | 003 | `client/e2e/`, `scripts/capture/` |
+| The loop, live | 009 T052–T055, T058 (keystone); then 008 T062 follows | AT-02's SRD wording — "visibly, end to end, within the client" — becomes true of the running stack |
+| The read path's bug | SensorThings 404 (BLOCKED 2026-08-28T10:15) | FR-19 is half-served until it answers |
+| The map | 017 (spec exists; plan and tasks do not) | closes 012's recorded partials; first thing a visitor looks at |
+| Deploy simplification | trust auth per the decision above; 005 T028 | retires the DSN-secret machinery; proves the reset-reseed claim |
+| Offload unknowns | 014 T040, T045, T046 unnoted; T047-geometry half-closed | three tasks of unknown status is how the last reconciliation debt started |
+| Generated types carry-over | 006 T029–T031, T039, T040 | note was stale; unblocked since 008 shipped |
+| The topology contract | 018 story 2 (scanner, artefact, drift gate) | this repository's own medicine applied to its own topology; blocks nothing and is blocked by nothing |
+| The scope amendment | SRD growth for 019/020 | decided; wants drafting and the owner's review |
+| Unevidenced success criteria | 003 T040, 004 T044 | measured claims the record asserts and nothing measures |
+| Replay's weaker claim | 001 T033, T042, T047 | do T042 or amend the claim, not neither |
+| Documentation carry-overs | 007 T045, 008 T006/T058 truth, 015 re-reconciliation, ADR-0001 acceptance | evidence hygiene; smaller than the record claims |
 
-004 and 007 are disjoint and run together. 016 joins them because the shell exists by
-then and the capture pipeline wants exercising early, not at the end.
+## Wave 6 — the loop turns where a person can watch it
 
-**Wave 2 exit criterion:** synthetic observations flow from sensors through the single
-ingestion seam into the store, the generator's ground truth is on disk beside the
-field, and the sensor and ingest components are lit in the client.
+Seven lanes, disjoint trees, all startable now — each is one agent session on its own
+branch with its own pull request. The shared surfaces are the usual append-only files,
+under the usual rules.
 
-### Wave 3 — read path and cycle
+| Lane | Branch | Owns | Work |
+|---|---|---|---|
+| A — control loop | `claude/loop-live-wiring` | `services/{scheduler,model_runner,publisher,telemetry,offload,planner}/` | 009 T052–T055, T058; unseeded-schema tolerance per the auth decision. 008 T062 then flips on its own |
+| B — map | `claude/017-map-surface` | `client/src/` (map-owned area) | 017: plan and tasks via spec-kit, then stories P1–P3. Shares only the shell integration point, append-only |
+| C — query | `claude/query-read-path` | `query/`, `contracts/openapi/` | the SensorThings 404, then 006 T029–T031, T039, T040 |
+| D — deploy | `claude/offload-and-deploy-debts` | `deploy/`, `stores/` (auth only), `services/offload/` | trust auth + its ADR; 014 T040/T045/T046 status established then done or noted; 005 T028 |
+| E — record | `claude/evidence-reconciliation` | `site/`, `docs/`, the named `tasks.md` files | ADR-0001 amendment accepted and the viewer credential documented as public; 015 re-reconciled; 007 T045; 008 T006/T058 truth; missing blog entries |
+| F — topology gate | `claude/018-topology-gate` | `contracts/` and `scripts/` (appends), `docs/architecture/repo-layout.md` | 018 story 2 only: master, scanner, generated artefact, drift gate watched failing |
+| G — scope | `claude/srd-holdings-advisories` | `harness-srd.md`, the two specs' Assumptions | the SRD amendment for 019/020, as a PR for the owner's review |
 
-| Feature | Blocked on | Owns |
+**Wave 6 exit criterion:** from a clean checkout, `./scripts/run_local.sh`, and a
+browser: a threshold breach becomes a divergence, a run request, a published run, and a
+field refresh drawn on the map — AT-02 as the SRD wrote it, live, with every component
+lit by its own heartbeat. Lanes A and D both change bring-up behaviour without sharing
+code; whichever merges second re-runs `run_local.sh` twice on the merged result before
+its pull request closes.
+
+## Wave 7 — the read-side client, and the residue
+
+| Item | Blocked on | Notes |
 |---|---|---|
-| 008 Query layer | 004, 005, 007, and the 002 finding | `query/`, `stores/coverage/` |
-| 009 Control loop | 001, 004, 006, 007 | `services/monitor/`, `scheduler/`, `model_runner/`, `publisher/` |
+| 018 stories 1, 3, 4 | 017 landing the shell integration; lane F's artefact | the read-path view, the matrix lit by real traffic, the badges |
+| 001 T042/T047 replay scenario | nothing | upgrades AT-04 from the weaker claim to the stated one |
+| 003 T040, 004 T044 measurements | a destination | the droplet halves need the droplet |
 
-These two are the largest pieces and they are genuinely independent in code: the
-control loop subscribes to the broker and writes the coverage store, and the query
-layer reads it. They share only the coverage store layout convention, which 008 owns
-and 009 consumes. Sequence them if the coverage layout proves contentious; otherwise
-run them together.
+## Wave 8 — the data landscape grows
 
-**Wave 3 exit criterion:** AT-01 and AT-02. A trajectory query returns correct values
-along a four-dimensional route verified against the manifest, and a threshold breach
-triggers a model run visibly, end to end, in the client.
+Preconditions, per the decisions above: the wave 6 exit criterion holds, and the SRD
+amendment has merged. 019's accumulation story then builds on runs that genuinely
+publish, rather than retention of runs that never happen.
 
-### Wave 4 — what the cycle makes possible
-
-| Feature | Blocked on | Owns |
-|---|---|---|
-| 010 Telemetry and quality | 009 | `services/telemetry/` |
-| 011 Adaptive planner | 009 | `services/planner/` |
-| 012 Visualisation | 003, 008, 009 | `client/src/` additions |
-| 013 Security proxy | 005, 008 | `proxy/`, `tests/leakage/` |
-| 014 Offload export | 008 | `services/offload/` |
-
-Five features, five disjoint trees, all unblocked at the same moment. This is the
-widest wave and the one where parallel work pays most.
-
-**Wave 4 exit criterion:** AT-03 and AT-04. The seeded eddy is recoverable with a known
-and reported error, and the whole scenario replays deterministically from its seed.
-
-### Blog and site, pulled forward
-
-PR-08 puts one blog entry per feature after the feature works, and §10 puts the blog
-machinery below the line. The *machinery* has nonetheless been pulled into wave 1, on
-the author's instruction, for one reason: a publishing pipeline that has never
-published is not known to work, and finding that out after fifteen features is worse
-than finding it out now. The MkDocs site, the `gh-pages` workflow and one inaugural
-post ship in wave 1; the per-feature posts still follow their features.
-
-### Wave 5 — the record
-
-| Feature | Blocked on | Owns |
-|---|---|---|
-| 015 Published site | 016, and one working feature to write about | `docs/`, `site/` |
-
-PR-08 requires one blog entry per feature, written after the feature works. The
-machinery can be built in wave 1 if it is convenient, but the SRD puts it below the
-line deliberately: it does not punish lateness.
+| Feature | Branch | Owns | Parallel with |
+|---|---|---|---|
+| 019 coverage holdings | `claude/019-coverage-holdings` | services-side authoring, `stores/coverage/` convention, query configuration | 020 stories 1–3 (shared files are append-only) |
+| 020 shore advisories, stories 1–3 | `claude/020-shore-advisories` | advisory schema, topic, store, authoring, collection | 019 |
+| 020 story 4 | — | the map | after 017; deliberately separable |
 
 ## What is deliberately not parallelised
 
-- **001 before anything that keeps time or draws a random number.** Not a scheduling
-  preference; a correctness constraint. A component written against the host clock is
-  not cheaply repaired later.
-- **The 002 finding before 008 commits to a read-path shape.** Narrower than it was —
-  the question is now only whether the M ordinate survives WKT parsing — but 008's
-  bespoke provider is built against that answer, so it still goes first.
-- **009's four services among themselves.** Monitor, scheduler, model runner and
-  publisher form one cycle with one set of invariants. Splitting them across
-  simultaneous workers invites four different readings of what "current" means.
+- **009's remaining wiring stays one lane.** Monitor, scheduler, model runner and
+  publisher form one cycle with one set of invariants; splitting them invites four
+  readings of what "current" means.
+- **019 and 020 wait on the two stated gates, not on enthusiasm.** Starting them
+  before the SRD amendment is how a spec stops describing the system.
+- **The client shell's integration point is append-only for 017 and 018 alike**, and
+  018's client stories follow 017 rather than racing it.
 
-## Risks to the schedule
+## Risks to this schedule
 
 | Risk | Mitigation |
 |---|---|
-| The M ordinate does not survive WKT parsing at the pinned versions | FR-51 pins Shapely >= 2.1 / GEOS >= 3.12 with the reason inline and a test asserting M survives; below those versions the failure is silent, which is the actual risk |
-| The Shapely / GEOS pin is removed as housekeeping by someone who cannot see why it is there | The pin carries its reason at the pin, ADR-0003 records it, and the test fails loudly if it is lost |
-| The coverage store layout is contested between 008 and 009 | 008 owns it, records it in `stores/coverage/`, and an ADR captures the argument |
-| Parallel workers drift on message shapes | 006 exists precisely to prevent this, and the drift check is a CI gate |
-| The client outgrows one worker | 003 builds the shell and the liveness substrate; 012 adds panels on top and touches no file 003 owns |
+| The record rots again while seven lanes run | each lane ticks as it goes and re-reconciles its own file; a wave does not close on green CI alone but on the record matching the tree |
+| Lanes A and D interleave on bring-up behaviour | no shared code, but the second to merge re-runs the converge-twice check on the merged result before closing |
+| 017 grows a data dependency on the loop lane | it must not: the map draws fetched data and states absence; an empty stack renders the extent and the statement, which is demonstrable on its own |
+| The SRD amendment stalls in review | it gates only wave 8; wave 6 and 7 lanes proceed regardless, and the gate is a merge, not a date |

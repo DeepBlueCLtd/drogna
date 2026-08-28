@@ -65,8 +65,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _compose(*arguments: str) -> str:
-    result = subprocess.run(
+def _compose_result(*arguments: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         (
             "docker",
             "compose",
@@ -78,18 +78,44 @@ def _compose(*arguments: str) -> str:
         ),
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=timeout,
         cwd=REPOSITORY_ROOT,
     )
+
+
+def _compose(*arguments: str) -> str:
+    result = _compose_result(*arguments)
     assert result.returncode == 0, result.stderr
     return result.stdout
 
 
 @pytest.fixture(scope="module")
 def store() -> dict[str, object]:
-    """The running store's own account of itself, or a skip naming what was missing."""
-    if "observations" not in _compose("ps", "--services").split():
-        pytest.skip("the observation store is not running; bring the stack up with run_local.sh")
+    """The running store's own account of itself, having started it if it was not up.
+
+    Started here rather than assumed, and that is not a convenience. `pytest` runs these
+    files in name order, `test_compose_bringup.py` sorts before this one and takes the stack
+    down with its volumes at module teardown, so a fixture that skipped on a stopped store
+    would skip on every full run — including in CI, where the whole point is that what skips
+    locally runs somewhere. A test that skips everywhere reads exactly like a clean one,
+    which is the failure CLAUDE.md opens with.
+    """
+    for script in ("up.sh", "seed.sh"):
+        # Both, and seeding is not optional: the run-time roles are created by
+        # `stores/observations/roles.sql`, which the seeding step applies. A store that is
+        # merely up answers `role "drogna_read" does not exist` — which is itself a passing
+        # grade for trust auth, since the connection got as far as the role check with no
+        # password, and is not what this file is asserting. Both scripts converge, so this
+        # is a no-op against a stack that is already up and seeded.
+        done = subprocess.run(
+            (str(REPOSITORY_ROOT / "scripts" / script), DESTINATION),
+            capture_output=True,
+            text=True,
+            timeout=1800,
+            cwd=REPOSITORY_ROOT,
+        )
+        if done.returncode != 0:
+            pytest.skip(f"{script} could not prepare the observation store: {done.stderr[-400:]}")
     deployment = load_deployment(DESTINATION, REPOSITORY_ROOT)
     publish = deployment["network"]["publish"]["observations"]
     return {

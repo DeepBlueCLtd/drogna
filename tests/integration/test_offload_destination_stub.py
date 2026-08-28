@@ -105,12 +105,21 @@ def archive() -> Iterator[HttpDestination]:
     routes = json.loads(
         (REPOSITORY_ROOT / "config" / DESTINATION / "offload.json").read_text(encoding="utf-8")
     )["offload"]["destination"]["routes"]
-    yield HttpDestination(
-        identifier="archive",
-        endpoint=f"http://{entry['bind']}:{entry['host_port']}",
-        routes=routes,
-        timeout_seconds=10.0,
-    )
+    try:
+        yield HttpDestination(
+            identifier="archive",
+            endpoint=f"http://{entry['bind']}:{entry['host_port']}",
+            routes=routes,
+            timeout_seconds=10.0,
+        )
+    finally:
+        # Stopped, and it has to be. `archive` is in the `offload` profile, which the local
+        # destination does not activate, so leaving it up makes
+        # `test_compose_bringup.test_the_active_profile_starts_exactly_its_services_and_no_
+        # other` fail — the running set would hold a service the selected profiles do not.
+        # That test is right and this fixture would have been the thing breaking it.
+        _compose("stop", "archive")
+        _compose("rm", "--force", "archive")
 
 
 def test_a_transfer_reaches_the_deployed_destination_and_is_acknowledged(

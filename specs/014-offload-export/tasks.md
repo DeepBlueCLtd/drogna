@@ -357,3 +357,63 @@ component has no such dependency and acquiring one is a real change: `stores/` i
 this feature's path conventions, and Constitution VI says the observation store is not a
 port to be dressed as one. That is the work T047 is, and it is why it is a task rather than
 an omission.
+
+### Re-read 28 August 2026 (lane D): the blocker above is not the blocker
+
+Checked against the tree rather than against this note, and **the paragraph above is
+wrong**. No observation-store dependency is needed. `profiles.Profile` already carries
+`latitude`, `longitude` and `when`, and the packager already reads a whole `ProfileSet` out
+of the recorded observation stream through `RunSource.read_profiles` before it stages
+anything. `stage()` already knows the window's `start`, so `simulation_seconds` from the
+interval's start is a subtraction. `interval_seconds` is
+`offload.export.window.length_simulation_seconds`, which the packager already holds.
+Constitution VI never came into it. Whoever picks this up should not go looking for a store
+port; the data is in hand.
+
+**What is actually blocking is something this note did not mention: there is no bundle copy
+of the run manifest to write the block into.** A bundle is the NetCDF and a sidecar
+(`bundle.sidecar_manifest`), and the sidecar carries `run_manifest_digest` — a *digest* of
+the run manifest, deliberately, "useless to anyone who does not hold the manifest"
+(FR-017). Nothing copies the manifest itself. So T047 as worded has no target, and giving
+it one is a change to what a bundle **is**, not a producer added to an existing document.
+
+That change is not lane D's to make unilaterally, and the reason is the boundary rather
+than the ownership. The document T047 asks for holds every exact position a measurement was
+taken at — the schema itself says it is "exactly what a release must not contain" — so
+adding it as a bundle member puts those coordinates into the artefact feature 013's
+provenance scanner scans, and SC-006's "zero identifying hits" is asserted over that
+artefact by `tests/integration/test_offload_provenance_scan.py`. The in-radius coordinate
+rule is the one that would then fire, by design and correctly. 013 owns that rule file, and
+T040's note above already declined to widen it from here.
+
+**The concrete proposal, for whoever holds both features.** Four decisions, in this order,
+and none of them is large once taken:
+
+1. **Does the geometry travel inside the bundle or beside it?** Beside it is the cheaper
+   answer and probably the right one: a second staged file, `run-manifest.json`, named in
+   the sidecar's member list but not inside the NetCDF, transferred as its own object.
+   `tests/leakage/updated_region.load_geometry` already reads exactly that — a
+   `run-manifest.json` beside the products — so the consumer needs no change at all.
+2. **Then say what the provenance scanner should do with it.** If the manifest copy is a
+   bundle member, SC-006's assertion has to be restated as "zero hits in the NetCDF and the
+   sidecar", with the manifest copy named as carrying the geometry deliberately — a
+   one-line change to the test above and an entry in 013's rules, which is 013's to make.
+   If it is a sibling object rather than a member, nothing about SC-006 changes, which is
+   the strongest argument for option 1.
+3. **Where does `identification_radius_m` come from?** It is in `config/*/proxy.json`
+   (`2000.0`) and nowhere in the packager's configuration. The schema is explicit that it
+   must travel with the geometry rather than be read from a deployment's policy later, so
+   the packager needs its own declared value — and something must then check the two agree,
+   or the run is scored on a radius it was not released under. A parity test of the kind
+   `tests/unit/test_offload_destination_routes.py` now does for the archive's two ends is
+   the shape that fits.
+4. **The producer itself is then small**: build the block from the window's `ProfileSet`,
+   validate through `DrognaRunManifest` like every other document this component writes, and
+   refuse to write an empty `measurements` — the schema's `minItems: 1` exists because an
+   empty geometry makes every comparison inconclusive, and the recorded observation stream
+   still has no writer, so an empty window is the case that will actually occur.
+
+Left unimplemented deliberately, and this is the reason, recorded at the moment it was
+taken. The recorded ownership decision of 2026-08-27 settles that this component is the
+producer and that is not reopened; what it does not settle is whether a bundle grows a
+member carrying exact measurement positions, which is a question for 013 and 014 together.

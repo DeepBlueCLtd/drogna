@@ -82,7 +82,14 @@ class Store:
 
 
 def _clock_sim_time(settings: dict[str, Any]) -> dict[str, Any] | None:
-    """The simulation instant, from C-01, or nothing when it will not answer."""
+    """The simulation instant, from C-01, or nothing when it will not answer.
+
+    Only the snapshot route is read. The configuration declares the control route beside it
+    because every component's `clock` block carries the whole set — it is the destination
+    saying where the clock is, not a component saying what it calls, and
+    `tests/integration/test_clock_liveness.py` holds all of them to one shape so that a
+    route the clock does not serve cannot appear in any of them.
+    """
     clock = settings["clock"]
     url = clock["endpoint"].rstrip("/") + clock["routes"]["snapshot"]
     try:

@@ -183,3 +183,68 @@ def test_a_document_without_the_credentials_shape_is_left_alone(tmp_path: Path) 
     )
 
     assert _rendered(root, "clock.json") == {"client": {"note": "no credentials shape, left alone"}}
+
+
+# --- the proxy credential file's reader --------------------------------------------------
+
+
+def _can_change_ownership() -> bool:
+    import os
+    import shutil as _shutil
+
+    return os.geteuid() == 0 or _shutil.which("docker") is not None
+
+
+@pytest.mark.skipif(
+    not _can_change_ownership(),
+    reason="giving a file away needs root or a container runtime; neither is available",
+)
+def test_the_proxy_credential_file_is_given_to_the_worker_that_reads_it(tmp_path: Path) -> None:
+    """`auth_basic_user_file` is opened by an nginx *worker*, per request, after privileges
+    drop — so a 0600 file owned by the deployer answers 500 behind the clearance, on Linux
+    only, while the proxy's own health listener reports healthy throughout. Found live, the
+    first time a credential was ever presented to a Linux bring-up: every earlier
+    measurement was either uncleared (401 needs no file read) or taken on a loopback port
+    beside the proxy. The broker's password file taught the same lesson (exit 13)."""
+    root = _root(
+        tmp_path,
+        {
+            "deployment.json": {"tls": {"terminate": False, "hostname": ""}},
+            "proxy.json": {
+                "proxy": {
+                    "credentials": {
+                        "realm": "drogna",
+                        "file": "/etc/drogna/proxy.htpasswd",
+                        "user": "drogna_reader",
+                    }
+                }
+            },
+        },
+    )
+    # The Dockerfile the image pin is read from, reproduced in the probe tree.
+    dockerfile = REPOSITORY_ROOT / "deploy" / "images" / "proxy.Dockerfile"
+    target_dir = root / "deploy" / "images"
+    target_dir.mkdir(parents=True)
+    (target_dir / "proxy.Dockerfile").write_text(
+        dockerfile.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    render_credentials.render_destination(DESTINATION, {}, root)
+    written = render_credentials.write_proxy_credentials(
+        DESTINATION, {render_credentials.PROXY_SECRET: "generated-value"}, root
+    )
+
+    stat = written.stat()
+    assert stat.st_uid == render_credentials.PROXY_READER_UID, (
+        "the credential file must belong to the worker identity that opens it per request; "
+        "owned by anyone else it is a 500 behind the clearance on every Linux bring-up"
+    )
+    assert stat.st_mode & 0o777 == 0o600
+
+    # The second render must also survive: the file now belongs to the worker, so it is
+    # unlinked and recreated rather than truncated in place — the same second-run lesson
+    # the broker's password file taught.
+    again = render_credentials.write_proxy_credentials(
+        DESTINATION, {render_credentials.PROXY_SECRET: "generated-value"}, root
+    )
+    assert again.read_text(encoding="utf-8") == written.read_text(encoding="utf-8")

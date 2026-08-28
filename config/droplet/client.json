@@ -7,14 +7,14 @@
   },
   "clock": {
     "stale_after_seconds": 10,
-    "endpoint": "https://drogna.invalid",
+    "endpoint": "",
     "routes": {
       "snapshot": "/clock/snapshot",
       "control": "/clock/control"
     }
   },
   "query": {
-    "endpoint": "https://drogna.invalid",
+    "endpoint": "",
     "collections_path": "/released",
     "trajectory_path": "/trajectory",
     "route_parameters": [

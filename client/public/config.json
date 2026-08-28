@@ -7,17 +7,20 @@
   },
   "clock": {
     "stale_after_seconds": 10,
-    "endpoint": "http://localhost:8081",
+    "endpoint": "",
     "routes": {
       "snapshot": "/clock/snapshot",
       "control": "/clock/control"
     }
   },
   "query": {
-    "endpoint": "http://localhost:8081",
+    "endpoint": "",
     "collections_path": "/released",
     "trajectory_path": "/trajectory",
-    "route_parameters": ["sea_water_temperature", "sea_water_practical_salinity"],
+    "route_parameters": [
+      "sea_water_temperature",
+      "sea_water_practical_salinity"
+    ],
     "cube_path": "/cube",
     "field_parameter": "temperature_uncertainty"
   },

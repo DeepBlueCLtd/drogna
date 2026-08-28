@@ -81,17 +81,31 @@ def test_the_client_uses_the_path_the_proxy_will_upgrade() -> None:
     )
 
 
-def test_the_client_reads_the_query_layer_through_the_proxy_too() -> None:
+def test_the_client_reads_the_query_layer_at_its_own_origin() -> None:
+    """One door: the page is served through the proxy, and its reads stay same-origin.
+
+    An empty endpoint makes every query URL relative, so the request goes wherever the
+    page came from — which is the proxy, the only server that serves the page — whatever
+    host name the viewer arrived by. An absolute URL here broke the captures the day the
+    page went behind the clearance: the capture loads the page by 127.0.0.1, the document
+    named localhost, and the cross-origin request was refused at the boundary (a preflight
+    carries no credential) before anything upstream was ever asked.
+    """
     served = _document("client", "public", "config.json")
-    published = _published()
 
-    port = urlsplit(served["query"]["endpoint"]).port
-
-    assert port == published["proxy"]["host_port"], (
-        "the query layer is reached through the proxy under one policy (Constitution X); "
-        "naming its own published port would put a second way into the system"
+    assert served["query"]["endpoint"] == "", (
+        "the query endpoint must be the page's own origin. Naming any absolute host makes "
+        "the read cross-origin for a viewer who arrived by a different name for the same "
+        "door, and the boundary refuses what a browser will not send credentials for"
     )
-    assert port != published["query"]["host_port"]
+
+
+def test_the_clock_is_read_at_the_pages_own_origin_too() -> None:
+    """FR-74's strand (ADR-0025): the clock is behind the same door, addressed the same way."""
+    served = _document("client", "public", "config.json")
+
+    assert served["clock"]["endpoint"] == ""
+    assert served["clock"]["routes"]["snapshot"].startswith("/")
 
 
 def test_the_clients_collection_path_is_a_released_prefix() -> None:

@@ -341,13 +341,21 @@ def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
 
 
 def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:
-    """Absent, this file used to be missing silently and nginx answered 500 behind it."""
+    """Absent, this file used to be missing silently and nginx answered 500 behind it.
+
+    The refusal now comes at the render itself as well: the capture clearance in the
+    rendered tree is filled from the same secret (issue #34, link 6), so a render with no
+    value stops before producing a tree whose captures could only fail their challenge.
+    """
     values = dict(VALUES)
     values[render_credentials.PROXY_SECRET] = ""
-    render_credentials.render_destination("local", values, scratch)
-    with pytest.raises(ConfigurationError) as raised:
+    with pytest.raises(ConfigurationError) as at_render:
+        render_credentials.render_destination("local", values, scratch)
+    assert render_credentials.PROXY_SECRET in str(at_render.value)
+    # And the credential writer refuses on its own, for a caller that never rendered.
+    with pytest.raises(ConfigurationError) as at_write:
         render_credentials.write_proxy_credentials("local", values, scratch)
-    assert render_credentials.PROXY_SECRET in str(raised.value)
+    assert render_credentials.PROXY_SECRET in str(at_write.value)
 
 
 NOBODY_UID = 65534

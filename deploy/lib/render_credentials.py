@@ -104,6 +104,18 @@ SECRET_NAMES: tuple[str, ...] = (*ROLE_SECRETS.values(), PROXY_SECRET)
 BROKER_UID = 1883
 BROKER_GID = 1883
 
+# The uid and gid the proxy image's nginx workers run as. `auth_basic_user_file` is opened
+# by a *worker*, per request, after the master has dropped privileges — so a 0600 file
+# owned by the deploying user is one the worker cannot open, and nginx answers 500 behind
+# the clearance while reporting healthy on its own health listener. This is the broker's
+# password-file fault wearing nginx's hat, and it was invisible for the same reason: on a
+# Docker Desktop bind mount every file reads as root, and on Linux nobody had ever
+# *presented* the credential to a running boundary — every measured request was either
+# uncleared (401, which needs no file read) or made on a loopback port beside the proxy —
+# until the one-door change made the cleared path the only way to the page.
+PROXY_READER_UID = 101
+PROXY_READER_GID = 101
+
 _RUNTIME_CONFIG_DIRNAME = "config"
 
 
@@ -317,6 +329,25 @@ def broker_image(root: Path | None = None) -> str:
     )
 
 
+def proxy_image(root: Path | None = None) -> str:
+    """The nginx image the proxy is built from, read from its own Dockerfile's FROM line.
+
+    Read rather than repeated, for the reason `broker_image` reads the Compose pin: the
+    uid being granted is an identity *inside this image*, and a second spelling here would
+    be a pin that could fall behind the one the build uses. The proxy service is built,
+    not pulled, so the pin lives in the Dockerfile rather than in the Compose file.
+    """
+    base = root or repository_root()
+    text = (base / "deploy" / "images" / "proxy.Dockerfile").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.startswith("FROM "):
+            return line.split()[1]
+    raise ConfigurationError(
+        "deploy/images/proxy.Dockerfile declares no FROM line, so the identity that reads "
+        "the proxy's credential file cannot be taken from the image that defines it"
+    )
+
+
 def _passwd_command(target: Path, root: Path | None) -> tuple[list[str], Path]:
     """How to run `mosquitto_passwd`, and the path it will see the file at.
 
@@ -391,11 +422,25 @@ def _restrict(target: Path, command: list[str], root: Path | None = None) -> Non
     password file as `mosquitto`, not as root, and not as whoever deployed. That is exit 13
     with `Error: Unable to open pwfile`, and it is what Linux CI reported while macOS,
     whose bind mounts enforce neither owner nor mode, reported a healthy broker.
+    """
+    _give_file_to(target, BROKER_UID, BROKER_GID, broker_image, "the broker", root)
 
-    Done inside the container wherever there is a container runtime, which is the form
-    `deploy/broker/README.md` documents and the only form that works: the deploying user is
-    not root, cannot give a file away, and cannot change the mode of a file the
-    containerised tool wrote as root. The container is root and can do both.
+
+def _give_file_to(
+    target: Path,
+    uid: int,
+    gid: int,
+    image_reference: Any,
+    reader: str,
+    root: Path | None = None,
+) -> None:
+    """Hand a credential file to the in-container identity that will read it, at mode 0600.
+
+    Done inside a container wherever there is a container runtime, which is the only form
+    that generally works: the deploying user is not root, cannot give a file away, and
+    cannot change the mode of a file a containerised tool wrote as root. The container is
+    root and can do both. ``image_reference`` is a callable returning the image to do it in — the
+    image whose identity is being granted, so the uid means what that image says it means.
     """
     # Both routes are tried, because a `docker` on PATH is not a daemon that answers and the
     # two failures are indistinguishable from here. A machine with the client installed and
@@ -414,10 +459,10 @@ def _restrict(target: Path, command: list[str], root: Path | None = None) -> Non
                     "--rm",
                     "-v",
                     f"{target.parent}:/work",
-                    broker_image(root),
+                    image_reference(root),
                     "sh",
                     "-c",
-                    f"chown {BROKER_UID}:{BROKER_GID} {seen_at} && chmod 0600 {seen_at}",
+                    f"chown {uid}:{gid} {seen_at} && chmod 0600 {seen_at}",
                 ],
                 capture_output=True,
                 text=True,
@@ -427,24 +472,24 @@ def _restrict(target: Path, command: list[str], root: Path | None = None) -> Non
                 return
             detail = result.stderr.strip() or result.stdout.strip()
         except (OSError, ConfigurationError) as error:
-            # No compose file to read the image pin out of, or the client could not be run.
+            # No file to read the image pin out of, or the client could not be run.
             detail = str(error)
 
     # The host itself. Only root can hand a file to another user; anyone else gets the mode
     # right and the owner wrong, which is the failure this function exists to prevent, so it
-    # is reported rather than left to the broker to discover.
+    # is reported rather than left to the reader to discover at request time.
     try:
-        os.chown(target, BROKER_UID, BROKER_GID)
+        os.chown(target, uid, gid)
         target.chmod(0o600)
         return
     except OSError as error:
         detail = (
             f"{detail + '; and ' if detail else ''}{error}. Only root can give a file to "
-            f"uid {BROKER_UID}, and no container runtime did it either"
+            f"uid {uid}, and no container runtime did it either"
         )
     raise ConfigurationError(
-        f"the broker password file was written but could not be given the owner and mode "
-        f"the broker needs: {detail}. A credential file the broker cannot read, or one "
+        f"the credential file was written but could not be given the owner and mode "
+        f"{reader} needs: {detail}. A credential file its reader cannot open, or one "
         f"left world-readable, is not left in place silently"
     )
 
@@ -504,8 +549,17 @@ def write_proxy_credentials(
             f"{result.stderr.strip() or result.stdout.strip()}"
         )
     target.parent.mkdir(parents=True, exist_ok=True)
+    # Unlinked before it is written, never truncated in place: the file this function last
+    # wrote belongs to the proxy's worker identity, so a non-root deployer cannot reopen it
+    # for writing — but can remove it, because unlinking is a permission on the directory,
+    # which the deployer keeps. The same second-run lesson the broker's file taught.
+    target.unlink(missing_ok=True)
     target.write_text(f"{user}:{result.stdout.strip()}\n", encoding="utf-8")
-    target.chmod(0o600)
+    # Given to the worker that reads it, not merely restricted. `auth_basic_user_file` is
+    # opened by an nginx *worker*, per request, after privileges drop — so a 0600 file
+    # owned by the deployer is answered as 500 behind the clearance, on Linux only, while
+    # the proxy's own health listener reports healthy throughout (see PROXY_READER_UID).
+    _give_file_to(target, PROXY_READER_UID, PROXY_READER_GID, proxy_image, "the proxy", root)
     return target
 
 

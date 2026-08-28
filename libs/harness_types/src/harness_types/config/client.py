@@ -54,9 +54,9 @@ class Clock(BaseModel):
         description='How long, in host seconds, the client waits for a time sample before reporting the clock stale. Staleness is the absence of samples and is not the same as a rate of zero, which is a state the clock reports and which stops emission legitimately (FR-53).',
         gt=0.0,
     )
-    endpoint: AnyUrl | None = Field(
+    endpoint: str | None = Field(
         None,
-        description="Base URL of the clock service's HTTP interface, where the deployment exposes it to the browser. Absent means the client waits for the first sample instead.",
+        description="Base URL of the clock service's HTTP interface as the browser reaches it. Empty means the page's own origin — the one-door topology routes the clock through the proxy (ADR-0025), and a relative URL is what keeps the request same-origin whatever host name the viewer arrived by; an absolute URL naming a different host is preflighted, and a preflight carries no credential, so the boundary's clearance refuses it before the clock is ever asked. Absent means the client waits for the first sample instead.",
     )
     routes: Routes | None = Field(
         None,
@@ -72,9 +72,9 @@ class Query(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    endpoint: AnyUrl = Field(
+    endpoint: str = Field(
         ...,
-        description="Base URL of the query layer as the browser reaches it: the proxy's released prefix, never the query layer's own port.",
+        description="Base URL of the query layer as the browser reaches it: the boundary, never the query layer's own port. Empty means the page's own origin, which is the boundary once the page is served through it — and is the only form a browser can read the answer of, since the released prefix sends no CORS grant and a cross-origin read is refused by the viewer's own browser however the request fares.",
     )
     collections_path: str = Field(
         ...,

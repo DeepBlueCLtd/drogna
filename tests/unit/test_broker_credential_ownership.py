@@ -64,12 +64,19 @@ def test_the_renderer_sets_the_owner_and_not_only_the_mode() -> None:
     locks the broker out.
     """
     source = SOURCE.read_text(encoding="utf-8")
-    assert re.search(r"chown \{BROKER_UID\}:\{BROKER_GID\} \{seen_at\} && chmod 0600", source), (
-        "render_credentials no longer gives the password file its owner and its mode in one "
+    # The chown-and-chmod-in-one-step recipe is generalised now — the proxy's credential
+    # file needed the same treatment for the same fault — so the broker's grant is the
+    # generic step plus the call that binds it to the broker's identity and image.
+    assert re.search(r"chown \{uid\}:\{gid\} \{seen_at\} && chmod 0600", source), (
+        "render_credentials no longer gives a credential file its owner and its mode in one "
         "step. deploy/broker/README.md: 'Create the file with its final owner and mode "
         "inside the container, and do not touch it from the host afterwards'"
     )
-    assert "os.chown(target, BROKER_UID, BROKER_GID)" in source, (
+    assert re.search(r"_give_file_to\(target, BROKER_UID, BROKER_GID, broker_image", source), (
+        "the broker's password file is no longer handed to the broker's own identity in the "
+        "broker's own image"
+    )
+    assert "os.chown(target, uid, gid)" in source, (
         "the host route must set the owner too; it is the one taken where there is no "
         "container runtime, and the mode alone is what caused this"
     )

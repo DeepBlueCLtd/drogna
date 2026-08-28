@@ -146,6 +146,38 @@ a permission on the directory, which the deployer keeps, not on the file, which 
 given away. This was missed locally because every trial run began by deleting the file —
 **never clear the artefact before re-running, or you only ever test the case that works.**
 
+**The broker's permission fault has a sibling at the boundary, and it hid for a subtler
+reason: nobody had ever presented the credential.** `auth_basic_user_file` is opened by an
+nginx *worker*, per request, after the master drops privileges — so the rendered
+`proxy.htpasswd`, 0600 and owned by the deployer, was `Permission denied` and **500 behind
+the clearance on every Linux bring-up the proxy ever had**, while the proxy reported healthy
+throughout (its health listener carries no clearance). It hid because every measurement ever
+taken was either *uncleared* — a 401 challenge reads no file — or made on a loopback port
+beside the proxy; the first cleared request in this repository's history was made the day
+the page went behind the door, and it found the fault in seconds. The fix is the broker's
+fix: give the file to the identity that reads it (uid 101 in the proxy's own base image),
+inside a container, and unlink-not-truncate on re-render. The lesson on top of the broker's:
+**a boundary that has never been entered is untested from the inside — measure at least one
+cleared request, not only the refusals.**
+
+**nginx's own canonicalising redirect names the listen port, which is a container port.** A
+slash-terminated proxied location answers its bare prefix (`/clock`) with a 301 nginx builds
+absolutely from the *listen* port — `Location: http://127.0.0.1:8080/clock/` from a proxy
+published at `:8081`, a door nothing stands behind on any destination that maps ports, which
+is all of them. It surfaced in the request matrix as a connection refused three tests away
+from the cause (urllib followed the redirect to the unpublished port). `absolute_redirect
+off` in the server block makes the redirect relative, and the matrix now pins that.
+
+**An endpoint behind Basic clearance cannot serve a cross-origin browser, structurally.** A
+preflight carries no credential by specification, so `auth_basic` answers it 401 and the
+real request is never sent; Playwright's `httpCredentials` cannot help because the browser
+never asks it. The pair capture found this live: the page loaded by `127.0.0.1`, its
+document named `localhost` for the clock — same door, different origin — and the pin's
+POST died at the preflight. The fix is structural, not configurational: behind the one
+door, the client document's endpoints are **empty strings**, so every fetch is relative and
+same-origin whatever host name the viewer arrived by. An absolute URL in `client.json` is
+now a bug at every destination.
+
 **A health check can name a program the image does not carry.** `wget --spider` against
 `python:3.11-slim-bookworm`, which ships neither wget nor curl. Such a check cannot pass and
 cannot say why: the query layer answered 200 to everything that asked while Compose waited out

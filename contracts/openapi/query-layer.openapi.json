@@ -379,6 +379,84 @@
         ]
       }
     },
+    "/collections/forecast/area": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryAreaForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/areaCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by area",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
+    "/collections/forecast/corridor": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryCorridorForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/corridorCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by corridor",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
     "/collections/forecast/cube": {
       "get": {
         "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
@@ -475,6 +553,90 @@
           }
         },
         "summary": "Get The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. instance",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
+    "/collections/forecast/instances/{instanceId}/area": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryAreaInstanceForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/instanceId.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/areaCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by area",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
+    "/collections/forecast/instances/{instanceId}/corridor": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryCorridorInstanceForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/instanceId.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/corridorCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by corridor",
         "tags": [
           "forecast"
         ]
@@ -577,6 +739,48 @@
         ]
       }
     },
+    "/collections/forecast/instances/{instanceId}/radius": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryRadiusInstanceForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/instanceId.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/radiusCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by radius",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
     "/collections/forecast/instances/{instanceId}/trajectory": {
       "get": {
         "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
@@ -619,6 +823,74 @@
         ]
       }
     },
+    "/collections/forecast/locations": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "getLocationsForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/bbox.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/Features"
+          },
+          "400": {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/responses/ServerError"
+          }
+        },
+        "summary": "Get pre-defined locations of The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
+    "/collections/forecast/locations/{locId}": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "getLocationForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/locationId.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by location",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
     "/collections/forecast/position": {
       "get": {
         "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
@@ -653,6 +925,45 @@
           }
         },
         "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by position",
+        "tags": [
+          "forecast"
+        ]
+      }
+    },
+    "/collections/forecast/radius": {
+      "get": {
+        "description": "The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one.",
+        "operationId": "queryRadiusForecast",
+        "parameters": [
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/radiusCoords.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/features/part1/1.0/openapi/ogcapi-features-1.yaml#/components/parameters/datetime"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/parameter-name.yaml"
+          },
+          {
+            "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/parameters/z.yaml"
+          },
+          {
+            "$ref": "#/components/parameters/f"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/prs.coverage+json": {
+                "schema": {
+                  "$ref": "https://schemas.opengis.net/ogcapi/edr/1.0/openapi/schemas/coverageJSON.yaml"
+                }
+              }
+            },
+            "description": "Response"
+          }
+        },
+        "summary": "query The model run the coverage store currently names, with the forecast parameters and the uncertainty parameter together as parameters of one collection. Synthetic data. Earlier runs remain addressable as instances of this collection, so two runs can be compared. There is no freshness endpoint: a consumer hears about a new run on ctl/run-published, because this service has no notification mechanism and polling it would invent one. by radius",
         "tags": [
           "forecast"
         ]

@@ -167,15 +167,15 @@ is stubbed.
 - [x] T022 [P] [US6] Unit tests `tests/unit/test_sensorthings_spatial.py`: parse,
   compose, refusals by name, malformed WKT refused, in-memory correctness, the SQL
   statement's shape; the refusal watched failing.
-- [ ] T023 [US6] Verify FR-81's serving half against the running stack: are a retained
+- [x] T023 [US6] Verify FR-81's serving half against the running stack: are a retained
   run's own bounds genuinely discoverable through what exists (the instances document,
   the manifest-quoting refusals, the responses' own domains)? Record the finding below,
   build nothing ahead of the client.
-- [ ] T024 Refresh the vendored contract through the chain against the running stack —
+- [x] T024 Refresh the vendored contract through the chain against the running stack —
   `scripts/refresh_query_layer_spec.sh`, then `./scripts/generate_types.sh` — so the
   advertised query types, the emitted OpenAPI document and the served account widen
   together; update `query/README.md`'s path space and limits table in the same commit.
-- [ ] T025 Integration tests over a built store for each new type
+- [x] T025 Integration tests over a built store for each new type
   (`tests/integration/test_edr_region.py`, `test_edr_corridor.py`,
   `test_edr_locations.py`, spatial filtering added to `test_sensorthings.py` coverage),
   plus a stack-level answer per new query type through the running boundary; every check
@@ -220,6 +220,48 @@ exists to build on (SRD §10). Unticked below by decision, not by neglect.
 
 ## Findings
 
-*(recorded as the work lands)*
+*(recorded as the work lands, 28 August 2026, against the running local stack — the loop
+live, two runs catalogued, `run-initial` current)*
 
-- T023 —
+- **T023 — a retained run's own bounds are genuinely discoverable, but not from the
+  instances listing.** The instances document (pygeoapi 0.20.0's own shape) carries per
+  instance an `id`, `links` and `data_queries` — no extents. The run's own bounds
+  surface through what exists in three ways, each verified live: a query with no
+  `datetime` is answered over the instance's own valid time from its manifest (the
+  response's `t` axis is the run's); every refusal quotes `run.extent()` verbatim (an
+  empty-selection area refusal quoted the live run's January valid time); and the
+  run-published announcement carries `valid_time` and `grid_bounds`. So the client half
+  can learn a run's bounds by asking the instance or from the announcement, and nothing
+  new needs serving — which is the answer FR-81 wanted. Noted rather than built ahead:
+  if the composer's catalogue picker wants bounds *in the listing*, that is a later
+  decision against pygeoapi's instances shape, not a gap in the store.
+- **T023/T025 — the configured scenario envelope disagrees with the live scenario, and
+  every `datetime`-carrying query pays for it.** `config/local/query.json` advertises a
+  temporal domain of 2026-09-01T00:00–12:00; the seeded live scenario runs from
+  2026-01-01. pygeoapi validates `datetime` against the *configured* collection extent
+  before any provider code runs, so `cube`, `position`, `locations/<id>` — any query
+  naming an instant of the live run — is refused "datetime parameter out of range"
+  while the same query without `datetime` answers correctly over the run's own valid
+  time. Pre-existing (it binds cube and position exactly as it binds the new types),
+  owned by the destination configuration rather than by `query/`, and load-bearing for
+  the composer's time controls: recorded here and raised as its own task rather than
+  patched past in this branch.
+- **T025 — every new type answered through the running stack, and the refusals were
+  seen live.** Against the query service (the proxy's released names are lane I's
+  concurrent work, and the uncleared boundary answers 401 as it should):
+  `radius` (65 node-depth positions in a 40 km circle), `area` (15 nodes in a drawn
+  polygon), `corridor` (5 member trajectories at ±10 km edges and the grid's 7.3 km
+  step, declined vertices named per member), `locations` (three entries, two kinds,
+  the sensor at its latest reported position with `as_of`), `locations/eddy_a` (the
+  column, run's own times), instance-addressed `radius` and `locations` on
+  `run-000000-7f80b47c7b91`, and SensorThings `st_within` against real PostGIS
+  (27 of 36 observations in a drawn ring; composed with `phenomenonTime ge` it
+  narrows to the true intersection both at 0 and at 18). Refused live, each naming
+  its cause: missing `within`, unit `mi`, polygon with a hole, empty selection,
+  missing `corridor-width`, `corridor-height` by name, a 700 km × 12-vertex corridor
+  at HTTP 413 naming 1164 samples against corridor_maximum_samples 1001, `datetime`
+  on the locations list (Constitution V), an unknown location naming the known ones,
+  and `st_intersects` by name. The radius/area cell budgets cannot be exceeded on the
+  local destination — the whole live grid is 177,723 cells against a 250,000 budget,
+  deliberately — so those two refusals were watched failing in the unit tests, with
+  the bound checks planted out, rather than live.

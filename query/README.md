@@ -24,6 +24,11 @@ Everything served here is synthetic. The numerics are deliberately fake.
 | `plugins/coveragejson.py` | Point, Grid and Trajectory domains, and the referencing. |
 | `plugins/edr_coverage.py` | The EDR provider: position and cube. |
 | `plugins/edr_trajectory.py` | The bespoke trajectory provider: per-vertex arrival times. |
+| `plugins/edr_geometry.py` | Pure geometry for the grown types: distance, membership, offsets, units. |
+| `plugins/edr_region.py` | Radius and area: the grid's own nodes inside a drawn geometry. |
+| `plugins/edr_corridor.py` | Corridor: a route with a width, as parallel trajectories. |
+| `plugins/edr_locations.py` | The named-locations list, and the column a named location answers. |
+| `plugins/edr_composer.py` | The provider the collection names: all seven data query types, and instances. |
 | `plugins/sensorthings_entities.py` | The entity model, the path grammar, the navigation links. |
 | `plugins/sensorthings_options.py` | The implemented query options, and the refusals. |
 | `plugins/sensorthings_provider.py` | The SensorThings provider and its row sources. |
@@ -40,8 +45,13 @@ directory and does not cover `config/` or `deploy/`.
 ```text
 <public base>/<collection prefix>/collections/forecast
 <public base>/<collection prefix>/collections/forecast/position
+<public base>/<collection prefix>/collections/forecast/radius
+<public base>/<collection prefix>/collections/forecast/area
 <public base>/<collection prefix>/collections/forecast/cube
 <public base>/<collection prefix>/collections/forecast/trajectory
+<public base>/<collection prefix>/collections/forecast/corridor
+<public base>/<collection prefix>/collections/forecast/locations
+<public base>/<collection prefix>/collections/forecast/locations/<location id>
 <public base>/<collection prefix>/collections/forecast/instances/<run id>/...
 <public base>/<collection prefix>/collections/observations
 <public base>/<collection prefix>/collections/observations/items
@@ -63,6 +73,38 @@ reached as EDR *instances* of that same collection. Publishing a run therefore e
 adds no collection and restarts nothing (FR-017, FR-021). `stores/coverage/layout.md` is the
 contract the publisher honours to make that true, and it is normative.
 
+## The seven query types, and what each one means here
+
+Feature 023 grew radius, area, corridor and locations beside position, cube and
+trajectory, so that every type the EDR composer offers is genuinely served — an
+offered-but-stubbed query type would be the exact dishonesty the harness exists to avoid
+(SRD FR-78). The advertised set, the vendored OpenAPI document and this account move
+together. The interface remains GET-only.
+
+- **radius** and **area** answer the run's own grid nodes inside the drawn geometry — a
+  great-circle distance (`within`/`within-units`, `km` or `m`) or a single-ring polygon —
+  at the requested depths and times, as a `MultiPointSeries` with a composite spatial
+  axis: the response contains the geometry's nodes and nothing else, so a null keeps
+  meaning refusal-to-extrapolate and absence keeps meaning "not asked for". Holes and
+  multipolygons are refused naming the shape. An empty selection is refused naming the
+  geometry and the run's domain.
+- **corridor** is the drawn route with a width whose answer genuinely depends on the
+  width: parallel routes at signed cross-track offsets — centreline, both edges at
+  ±width/2, interior offsets at the run's own grid resolution — each sampled exactly as a
+  trajectory, per-vertex arrival times and declined vertices included, returned as a
+  `CoverageCollection` labelled with the offsets. `corridor-width` and `width-units` are
+  read from the request (pygeoapi passes corridor queries no width; measured, not
+  assumed); `corridor-height`, `height-units`, `resolution-x` and `resolution-z` are
+  refused with the option named.
+- **locations** serves the named-locations list — two kinds, distinguished: the seeded
+  features with a fixed horizontal position, from configuration, and each reporting
+  platform at the position of its **latest observation by phenomenon time**. Current
+  position only: the harness holds no location history, the list never becomes one
+  (Constitution V), and a `datetime` on the list itself is refused with that reason.
+  `.../locations/<id>` answers the water column at the advertised point, with cells
+  counted against `cube_maximum_cells`. The list's shape is
+  `contracts/schemas/edr-locations.schema.json`, generated into both languages.
+
 ## There is no freshness endpoint
 
 Deliberately. The query layer has no notification mechanism, and polling it for freshness
@@ -80,6 +122,10 @@ smaller, which is the only difference between the two.
 |---|---|---|---|
 | `cube_maximum_cells` | 250,000 | 120,000 | Refused, with the cell count and the limit stated. Never truncated. |
 | `trajectory_maximum_vertices` | 91 | 91 | Refused, with the vertex count and the limit stated. Never truncated. |
+| `radius_maximum_cells` | 250,000 | 120,000 | Refused, with the cell count (times × depths × selected nodes) and the limit stated. |
+| `area_maximum_cells` | 250,000 | 120,000 | Refused, counted exactly as radius is. |
+| `corridor_maximum_samples` | 1,001 | 455 | Refused, with both factors (offset routes × route vertices) and the limit stated. |
+| `locations_maximum_locations` | 100 | 50 | The list refused whole, with the entry count and the limit stated — never truncated into a list that looks complete. |
 | `page_size_default` | 100 | 100 | The page size when `$top` names none. |
 | `page_size_maximum` | 1,000 | 500 | `$top` above this is bounded to it. |
 

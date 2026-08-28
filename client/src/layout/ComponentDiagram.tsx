@@ -33,6 +33,13 @@ export const LAYOUT_CAPTION =
  * the rendered output differ frame to frame, so two captures of the same pinned state
  * would never be identical (SC-009). The elapsed figure remains in the view model, where
  * liveness reasons about it; it is simply not drawn.
+ *
+ * They are two lines because they do not fit on one. Joined with a separator the text runs
+ * to about 250px inside a 208px box, and SVG text neither wraps nor clips: it simply
+ * overflowed, and the next column's box — painted afterwards — covered the tail. What was
+ * lost was the end of the instant, so a reader saw a time that was missing its seconds and
+ * had no way to tell it was truncated rather than reported that way. An instant drawn short
+ * is worse than one not drawn: it reads as precision the component did not claim.
  */
 function nodeLines(view: ComponentView): readonly string[] {
   const lines: string[] = [];
@@ -62,20 +69,23 @@ function NodeBox({ view }: { view: ComponentView }): JSX.Element {
         height={NODE_HEIGHT}
         rx={node.kind === "bespoke" ? 4 : 22}
       />
-      <text className="node-reference" x={box.x + 12} y={box.y + 20}>
+      <text className="node-reference" x={box.x + 12} y={box.y + 18}>
         {node.reference}
       </text>
-      <text className="node-mark" x={box.x + NODE_WIDTH - 12} y={box.y + 20} textAnchor="end">
+      <text className="node-mark" x={box.x + NODE_WIDTH - 12} y={box.y + 18} textAnchor="end">
         {appearance.glyph}
       </text>
-      <text className="node-name" x={box.x + 12} y={box.y + 42}>
+      <text className="node-name" x={box.x + 12} y={box.y + 38}>
         {node.name}
       </text>
-      <text className="node-state" x={box.x + 12} y={box.y + 62}>
+      <text className="node-state" x={box.x + 12} y={box.y + 55}>
         {appearance.label}
       </text>
-      <text className="node-detail" x={box.x + 12} y={box.y + 78}>
-        {lines.join(" · ")}
+      <text className="node-detail" x={box.x + 12} y={box.y + 69}>
+        {lines[0] ?? ""}
+      </text>
+      <text className="node-detail node-instant" x={box.x + 12} y={box.y + 81}>
+        {lines[1] ?? ""}
       </text>
       <title>
         {`${node.reference} ${node.name}. ${node.responsibility}. ${appearance.label}.`}

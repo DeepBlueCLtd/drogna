@@ -1,9 +1,9 @@
 # Software Requirements Document
 ## drogna
 
-**Status:** Draft v0.3 — open questions resolved
+**Status:** Draft v0.4 — scope amended: the coverage holdings and the shore advisories
 **Author:** Doc
-**Date:** 26 August 2026
+**Date:** 28 August 2026
 
 ---
 
@@ -48,7 +48,8 @@ harness" is a description of the thing, not a name for it, and is used only as s
 
 The system is an event-driven **control loop** with command-query separation:
 
-- Writes travel a direct path into storage via a single ingestion seam.
+- Writes travel a direct path into storage through one ingestion seam per store,
+  with a single writer behind each.
 - Reads are served exclusively through a standards-based query layer.
 - A sense → decide → act → publish cycle drives forecast regeneration.
 
@@ -141,23 +142,25 @@ them is retrofittable at acceptable cost.*
 | ID | Component | Responsibility | Owns the failure mode of |
 |---|---|---|---|
 | C-01 | Simulation clock | Single source of time, rate-controllable | Hidden wall-clock dependencies |
-| C-02 | Environment generator | Synthetic 4D fields + ground-truth manifest | Unverifiable truth |
+| C-02 | Environment generator | Synthetic 4D fields + ground-truth manifest; the historic archive, authored at provisioning | Unverifiable truth |
 | C-03 | Broker (MQTT) | Pub/sub transport, namespaced topics | Cross-contamination of flows |
 | C-04 | Simulated sensors | Publish observations in SensorThings vocabulary | — |
-| C-05 | Ingest client | Validate, batch-write; the single ingestion seam | Ingest backpressure |
+| C-05 | Ingest client | Validate, batch-write; the observation store's ingestion seam | Ingest backpressure |
 | C-06 | Observation store | Persist point observations (Postgres + PostGIS) | — |
 | C-07 | Feature store | Static spatial reference: bathymetry, coastlines | — |
-| C-08 | Coverage store | Gridded forecast + uncertainty fields (NetCDF) | — |
-| C-09 | Query layer (pygeoapi) | SensorThings + EDR read access | — |
+| C-08 | Coverage store | Gridded forecast and uncertainty fields, the retained run instances, the archive and the now-cast (NetCDF) | Unbounded accumulation |
+| C-09 | Query layer (pygeoapi) | SensorThings + EDR read access; enumeration of every holding and of the advisories | Declaring an extent it cannot answer |
 | C-10 | Reverse proxy (nginx) | TLS, authentication, path policy | Accidental exposure |
 | C-11 | Monitor | Detect forecast divergence from observations | Over-sensitivity |
 | C-12 | Scheduler | Decide whether a model run is warranted | Thrashing |
 | C-13 | Model runner | Analytic advection + noise, ensemble member runs | Being irreplaceable |
-| C-14 | Publisher | Make completed runs visible, atomically; announce | Partial visibility |
+| C-14 | Publisher | Make completed runs visible, atomically; retain them as instances; announce | Partial visibility |
 | C-15 | Planner | Adaptive sampling recommendations | Crossing into tactical advice |
 | C-16 | Telemetry | Health and forecast-skill indicators | Silent degradation |
 | C-17 | Offload packager | NetCDF+CF export with integrity guarantee | Premature eviction |
 | C-18 | Browser client | Visualisation and control (React/TS/Deck.gl) | — |
+| C-19 | Shore advisory source | Deterministic shore-role authoring and publication of advisories; the advisory ingestion seam | Being mistaken for a real external party |
+| C-20 | Advisory store | Append-only holding of issued advisories, read by the query layer alone | Silent supersession |
 
 - **FR-12** The observation and feature stores shall run as two schemas in one
   Postgres instance, mirroring the conceptual split (punishing write path versus
@@ -327,6 +330,95 @@ never changes, so the capture pipeline is shown to run but never shown to
 discriminate. One genuinely live component supplies the change, and the clock is
 already first in the delivery order for unrelated reasons.*
 
+### 5.10 Coverage holdings
+
+- **FR-54** Every published forecast run shall be retained and discoverable as an
+  instance of the forecast collection, carrying its issue time and its valid-time
+  extent, for the duration of a scenario. A query naming no instance shall continue to
+  be answered by the current run: accumulation changes what is kept, never what
+  "current" means.
+- **FR-55** The harness shall carry a **historic archive**: one collection whose time
+  axis spans a configured multi-decade past at monthly intervals, authored
+  deterministically from the root seed when a scenario is provisioned, with ground
+  truth recorded in a manifest as FR-04 requires.
+- **FR-56** The harness shall serve a **now-cast**: one collection whose single instance
+  is replaced on a configured cadence, taking its validity from the simulation clock of
+  FR-09 and recording in its own manifest what it was derived from, so that no consumer
+  can mistake it for an independent measurement of truth.
+- **FR-57** Each holding's discovery document shall state its temporal and spatial
+  extent truthfully, and a test shall compare what a collection declares against what
+  its store holds. A reader of the collections can then tell which era is able to answer
+  for a named instant without issuing a single query.
+- **FR-58** All holdings shall answer through the same query machinery under the same
+  rules — linear interpolation inside the domain, declined outside it, never snapped and
+  never extrapolated — and retention, with any storage ceiling, shall be configuration
+  validated against schema, a breach being a refusal that names the limit rather than a
+  silent eviction.
+
+*Three eras — past, present, future — are what make discovery worth exercising at all.
+A collection list carrying one forecast run teaches nothing about choosing between
+holdings, and which of several overlapping forecasts should answer for the moment of
+arrival is the question a voyage actually asks. Two things deliberately need no new
+rule: AT-04 already binds the whole scenario, so the archive, the instance set and the
+now-cast replay with it; and FR-41's default-deny means a holding joins the released
+path only by explicit opt-in, which is the property that makes adding three of them
+safe. The stories, the edge cases and the argument are in
+`specs/019-coverage-holdings/spec.md`.*
+
+### 5.11 Shore advisories
+
+- **FR-59** The harness shall issue **shore advisories**: concise vector descriptions of
+  a dominant environmental feature — a front's line, an eddy's centre and extent — each
+  carrying its feature kind, geometry, issue time, validity period and provenance.
+  *Shore* is a role the harness plays deterministically for itself. No external party
+  and no external link is modelled, and every surface that names shore shall say that it
+  is synthetic, in the spirit FR-01 requires of the harness as a whole.
+- **FR-60** An advisory shall describe only features the generator seeded (FR-03), at a
+  stated fidelity, and its schema shall admit no field capable of naming an entity the
+  harness did not place — §1.1's prohibition applied at a new schema boundary.
+- **FR-61** Advisories shall be authored deterministically from the seeded generators of
+  FR-11 and from simulation time, on a configured cadence, so that a replay reproduces
+  the advisory set exactly and re-delivery of an advisory message changes nothing.
+- **FR-62** Advisories shall travel the message fabric on a declared topic within the
+  control namespace of FR-14, with the sensors' confinement to the observation branch
+  unchanged. A malformed advisory shall be refused at its ingestion seam with the
+  violation named, shall not be persisted, and the refusal shall be observable.
+- **FR-63** Advisories shall be held in a store of their own: writable during a run only
+  through the advisory ingestion seam, append-only, and read by the query layer alone.
+  The feature store of FR-13 is untouched — read-only during a run, in rule, content and
+  provisioning. Whether the advisory store is a third schema in the single instance of
+  FR-12 or a deliberately lighter holding is a decision for the feature's plan and earns
+  an ADR under PR-03.
+- **FR-64** The query layer shall serve advisories read-only as a feature-data
+  collection, enumerated alongside the coverage holdings, with a temporal extent
+  verified against the store. Before any advisory has been issued the collection shall
+  be present and shall state that it is empty — the absence of advisories, not the
+  absence of the collection.
+- **FR-65** An advisory size ceiling shall be stated in validated configuration and
+  enforced at authoring by a refusal that names the limit, and each scenario's recorded
+  outputs shall carry the advisory sizes measured against the smallest gridded update
+  carrying comparable information. Conciseness is the product's whole reason to exist,
+  so the harness measures it rather than asserting it.
+- **FR-66** Where the map surface is present, advisories valid at the displayed
+  simulation time shall be drawn on it, visibly distinct from measured and forecast data
+  and legible in greyscale, with kind, issue time, validity and provenance readable on
+  selection. An advisory outside its validity shall not be drawn and shall remain
+  queryable: display honours validity, the record honours history. This extends FR-47
+  and FR-48 and shall be separable from the rest of §5.11, so that its absence blocks
+  nothing.
+
+*The advisory is a second kind of forecast update — small where a field is large, and
+sent rather than carried — which is what makes it worth building at all: it exercises
+the same fabric with a payload of a different order. It takes a new mutable path rather
+than relaxing FR-13, so that what was aboard at departure and what was sent en route
+stay structurally distinct and no consumer has to remember the difference; that is also
+why FR-63 asks for a store rather than a table added to one that already has a rule, and
+why §2 now speaks of one ingestion seam per store rather than one seam. A second write
+path is a real change and is better said than glossed. The vessel on a constrained link
+is a device for asking what the architecture must carry, and names nobody: PR-01 holds
+here as everywhere, and the shore is this harness talking to itself. The argument is in
+`specs/020-shore-advisories/spec.md`.*
+
 ---
 
 ## 6. Interfaces and shared types
@@ -419,7 +511,7 @@ already first in the delivery order for unrelated reasons.*
 
 ## 10. Delivery priorities
 
-All eighteen components are in scope, which is a large surface for spare-time work;
+All twenty components are in scope, which is a large surface for spare-time work;
 the discipline is ordering, treated as a commitment, with each stage demonstrable
 before the next begins. Ranked by cost-of-getting-it-wrong-late:
 
@@ -442,6 +534,16 @@ before the next begins. Ranked by cost-of-getting-it-wrong-late:
 Deliberately below the line: the blog machinery, the planner, nginx and offload. All
 in scope; none punishes lateness.
 
+Below it too, and with a condition attached rather than merely a rank: the coverage
+holdings (§5.10) and the shore advisories (§5.11). Neither begins until the control
+loop's turn is demonstrable in the running system — a threshold breach becoming a
+published run, watched from the client, which is AT-02 as it is written above. The
+criterion is unchanged and is not novelty: getting either of these wrong late costs a
+store's layout and a collection's configuration, both recoverable, while getting the
+loop wrong late costs the harness its first purpose. Retaining runs that never happen
+would be an accumulation of nothing, and an advisory is an *update* to a forecast that
+has to be turning before there is anything to update.
+
 ---
 
 ## 11. Resolved questions
@@ -452,6 +554,8 @@ in scope; none punishes lateness.
 | Is the decorrelation timescale a property of the seeded feature or of the region? | Neither exclusively. It is a field, authored per feature over a background and evaluated per location, advecting with a moving feature. | FR-05; ADR required |
 | Does the greyed-out shell need mocked traffic for early Playwright work? | No. The simulation clock's heartbeat is the first real liveness signal, and capture pins the clock rate to zero so comparison stays meaningful. | FR-52, FR-53 |
 | What is this thing called? | drogna. | §1.2 |
+| Does the harness hold more than the current forecast, and does it hold any era but the future? | Yes to both. Published runs are retained as instances for the length of a scenario, and the holdings span three eras: a monthly historic archive, a now-cast, and the accumulating forecasts. Accumulation changes what is kept and not what "current" means. | §5.10, FR-54 to FR-58; `specs/019-coverage-holdings/spec.md` |
+| Can a forecast update reach the vessel as something smaller than a gridded field, and where would it live? | Yes: a shore-issued vector advisory describing a seeded feature, travelling the message fabric and held in a store of its own, so that what was aboard at departure stays structurally distinct from what was sent en route. Shore is a role the harness plays itself. | §5.11, FR-59 to FR-66; `specs/020-shore-advisories/spec.md`; the store's engine earns an ADR under PR-03 |
 
 Nothing in this document is currently open. Questions are raised in this section as
 they arise and struck from it when they are answered, with the answer landing in a

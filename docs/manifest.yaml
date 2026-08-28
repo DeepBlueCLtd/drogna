@@ -125,10 +125,13 @@ pages:
 #
 #   C-19: not yet built — the SRD names it, no code exists, no page written.
 #
-# The map is empty because all eighteen identifiers in the SRD today are claimed by a
-# page. An entry here is an admission, not a default: it has to be typed.
+# The map was empty until 2026-08-28, when the SRD's v0.4 scope amendment added C-19 and
+# C-20 for feature 020. Neither is built and neither has a page, so both are typed out
+# below with the reason. An entry here is an admission, not a default.
 
-components: {}
+components:
+  C-19: not yet built — added by SRD v0.4 (§5.11, FR-59 to FR-62); feature 020 writes the page when the component exists.
+  C-20: not yet built — added by SRD v0.4 (§5.11, FR-63); feature 020 writes the page when the store exists.
 
 # ---------------------------------------------------------------------------
 # Architecture Decision Records (FR-021)

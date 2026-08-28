@@ -221,18 +221,27 @@ its absence is a statement of validity, not a bug.
 
 ## Assumptions
 
-- The SRD does not currently name shore advisories; this feature extends scope beyond
-  it, and recording that extension is part of delivery, addressed in the plan's
-  Constitution Check (as for feature 019).
+- The SRD now names shore advisories. The scope extension this specification was
+  written against was recorded by the v0.4 amendment of 28 August 2026:
+  `harness-srd.md` §5.11 carries FR-59 to FR-66 (the advisory and its synthetic shore,
+  seeded-feature vocabulary only, deterministic authoring, the message fabric and its
+  ingestion seam, the store of its own, the read-only collection, the measured size
+  ceiling, and the separable map rendering), §2's write story becomes one ingestion
+  seam per store, §4's component table gains C-19 (shore advisory source) and C-20
+  (advisory store), §10 places this feature below the line until the control loop's
+  turn is demonstrable live, and §11 records the resolved question. The plan's
+  Constitution Check therefore cites the amendment rather than proposing one.
 - The constitution's technology constraint names one database instance carrying two
   schemas; where the advisory store lands relative to that constraint is a plan-phase
   decision that must be argued explicitly — either within the stated technology under
   an amended wording, or as a deliberately lighter store — and carries an ADR either
   way, because planning chose "a store of its own" for structural provenance, not any
-  particular engine.
+  particular engine. The SRD amendment deliberately left that open in the same terms:
+  FR-63 delegates the choice to this feature's plan, and the constitution was not
+  amended by lane G, so the wording note belongs to that ADR.
 - "Shore" is a role played deterministically by the harness itself, and every surface
   that names it says it is synthetic; no external party or link is modelled beyond the
-  message fabric already present.
+  message fabric already present. SRD FR-59 now states this in the requirement itself.
 - A vector-product schema for fronts and eddies can borrow vocabulary from the
   generator's own feature parameters (the entities the harness places), keeping
   authoring honest against ground truth (Constitution IX) — the advisory describes what

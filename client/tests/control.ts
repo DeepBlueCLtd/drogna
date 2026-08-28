@@ -65,6 +65,9 @@ export function runRequest(overrides: Partial<DrognaModelRunRequest> = {}): Drog
     sim_time: "2026-08-26T00:10:05.000000Z",
     tick: 605,
     run_id: RUN,
+    // Required since 009 T053: the run ordinal travels on the request, so the coverage
+    // store's manifest records which run of the scenario a field is rather than a null.
+    run_sequence: 0,
     initialisation_sim_time: "2026-08-26T00:10:00.000000Z",
     ensemble_size: 12,
     region: {

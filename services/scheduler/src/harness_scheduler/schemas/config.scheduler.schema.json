@@ -19,7 +19,8 @@
         "minimum_interval_seconds",
         "outstanding_timeout_seconds",
         "ensemble_size",
-        "initialisation_offset_seconds"
+        "initialisation_offset_seconds",
+        "run_id"
       ],
       "additionalProperties": false,
       "properties": {
@@ -41,6 +42,30 @@
         "initialisation_offset_seconds": {
           "type": "number",
           "description": "Offset from the divergence's simulation time to the instant the run initialises from. Zero initialises at the divergence."
+        },
+        "run_id": {
+          "title": "The coverage store's run identifier rule",
+          "description": "How a run is named. The rule is the coverage store's, stated in stores/coverage/layout.md, and it is carried here rather than imported so that this component computes the same string from the same five values as the query layer does — root seed, run sequence, rule, version and prefix. Naming the rule and its version in configuration is what makes a change to either change every identifier visibly.",
+          "type": "object",
+          "required": ["rule", "version", "prefix"],
+          "additionalProperties": false,
+          "properties": {
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The named rule the digest is taken over. Matches query.coverage_store.run_id.rule."
+            },
+            "version": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The rule's version. Bumping it changes every identifier the rule produces."
+            },
+            "prefix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What a run identifier begins with, so a run directory is recognisable as one."
+            }
+          }
         }
       }
     }

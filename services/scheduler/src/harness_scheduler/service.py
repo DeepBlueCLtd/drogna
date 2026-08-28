@@ -13,13 +13,13 @@ because they are statements about the scenario and not about the host.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from typing import Any
 
 from harness_core.clock import Tick
 from harness_core.heartbeat import HeartbeatStatus, MessagePublisher
 from harness_core.ports import Clock
-from harness_core.rng import RandomStreams
 from harness_types.config.scheduler import DrognaSchedulerConfiguration
 
 from harness_scheduler import publish
@@ -31,6 +31,11 @@ __all__ = ["DIVERGENCE_TOPIC", "RUN_PUBLISHED_TOPIC", "SchedulerService"]
 
 DIVERGENCE_TOPIC = "ctl/divergence"
 RUN_PUBLISHED_TOPIC = "ctl/run-published"
+
+# The shape the store's identifier rule produces: a prefix, the run sequence padded to six
+# digits, and twelve hex digits of a digest. Stated here to read a sequence back out of an
+# announcement, which is the only thing a run publication tells this component.
+_LAYOUT_IDENTIFIER = re.compile(r"^[A-Za-z0-9]+-(\d{6})-[0-9a-f]{12}$")
 
 
 class SchedulerService:
@@ -48,7 +53,7 @@ class SchedulerService:
         self._component = settings.component.id
         self._clock = clock
         self._publisher = publisher
-        self._randomness = RandomStreams(settings.seed.root)
+        self._run_id = settings.scheduler.run_id
         self._register = OutstandingRegister(
             timeout_seconds=settings.scheduler.outstanding_timeout_seconds
         )
@@ -66,7 +71,7 @@ class SchedulerService:
                 config_digest=config_digest,
             )
         )
-        self._ordinal = 0
+        self._sequence = 0
         self._decisions: list[dict[str, Any]] = []
         self._requests: list[dict[str, Any]] = []
 
@@ -110,12 +115,14 @@ class SchedulerService:
         run_id = None
         request = None
         if verdict.accepted:
-            run_id = run_identifier(self._randomness, self._ordinal)
+            sequence = self._sequence
+            run_id = self._identifier(sequence)
             request = publish.run_request_message(
                 divergence,
                 component=self._component,
                 tick=tick,
                 run_id=run_id,
+                run_sequence=sequence,
                 ensemble_size=self._settings.scheduler.ensemble_size,
                 initialisation_offset_seconds=(
                     self._settings.scheduler.initialisation_offset_seconds
@@ -125,7 +132,7 @@ class SchedulerService:
                 run_id, at_micros=now, justified_by=str(divergence.get("divergence_id", ""))
             )
             self._policy.requested(now_micros=now)
-            self._ordinal += 1
+            self._sequence += 1
             self._requests.append(request)
             if self._publisher is not None:
                 publish.publish_run_request(self._publisher, request)
@@ -134,9 +141,22 @@ class SchedulerService:
         return request
 
     def handle_run_published(self, payload: bytes | str | Mapping[str, Any]) -> bool:
-        """The run we asked for exists. Clear the slot; the loop may turn again."""
+        """The run we asked for exists. Clear the slot; the loop may turn again.
+
+        The sequence is advanced past whatever has been published, which is what stops this
+        component naming a run the store already holds. A run identifier is a pure function
+        of the root seed and the sequence, so a scheduler that started counting from zero
+        against a store with runs in it would compute a name that is already taken — and the
+        publisher would refuse it, correctly and unhelpfully, on every run of the scenario
+        this process had not itself requested. The number is read out of the announced name
+        rather than tracked, because the name is the only thing this component is told.
+        """
         message = _decode(payload)
-        return self._register.close(str(message.get("run_id", "")))
+        announced = str(message.get("run_id", ""))
+        published = _sequence_in(announced)
+        if published is not None and published >= self._sequence:
+            self._sequence = published + 1
+        return self._register.close(announced)
 
     def advance(self) -> None:
         """Let simulation time pass. An outstanding request that has timed out is abandoned."""
@@ -175,6 +195,16 @@ class SchedulerService:
 
     # ------------------------------------------------------------ internals
 
+    def _identifier(self, sequence: int) -> str:
+        rule = self._run_id
+        return run_identifier(
+            root_seed=self._settings.seed.root,
+            sequence=sequence,
+            rule=rule.rule,
+            version=rule.version,
+            prefix=rule.prefix,
+        )
+
     def _record(
         self,
         verdict: Verdict,
@@ -193,6 +223,17 @@ class SchedulerService:
         self._decisions.append(record)
         if self._publisher is not None:
             publish.publish_decision(self._publisher, record)
+
+
+def _sequence_in(run_id: str) -> int | None:
+    """The run sequence a store-rule identifier carries, or nothing if it carries none.
+
+    Only the shape is read. Recomputing the digest would prove the name as well as parse it,
+    and would refuse a run published under a different rule — which is a judgement about
+    another component's configuration that this one is not in a position to make.
+    """
+    found = _LAYOUT_IDENTIFIER.match(run_id)
+    return int(found.group(1)) if found else None
 
 
 def _decode(payload: bytes | str | Mapping[str, Any]) -> Mapping[str, Any]:

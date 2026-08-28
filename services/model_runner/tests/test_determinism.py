@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from control_loop import manual_clock, model_runner_document
+from control_loop import PARTIAL_SUFFIX, manual_clock, model_runner_document
 from harness_model_runner.service import RUN_REQUEST_TOPIC, ModelRunnerService
 from harness_model_runner.staging import Staging
 from harness_types.config.model_runner import DrognaModelRunnerConfiguration
@@ -25,6 +25,7 @@ def runner(directory: Path, **overrides: Any) -> ModelRunnerService:
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",
         manifest_file="run.json",
+        partial_suffix=PARTIAL_SUFFIX,
     )
     return ModelRunnerService(
         settings, clock=manual_clock(), ground_truth=ground_truth(), staging=staging
@@ -67,6 +68,7 @@ def test_a_different_seed_produces_a_different_field(tmp_path: Path) -> None:
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",
         manifest_file="run.json",
+        partial_suffix=PARTIAL_SUFFIX,
     )
     second = ModelRunnerService(
         DrognaModelRunnerConfiguration.model_validate(other),

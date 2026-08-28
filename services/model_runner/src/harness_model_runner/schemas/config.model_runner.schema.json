@@ -15,7 +15,15 @@
     "model_runner": {
       "title": "The run",
       "type": "object",
-      "required": ["kernel", "ensemble", "forecast", "ground_truth", "staging", "stored_dtype"],
+      "required": [
+        "kernel",
+        "ensemble",
+        "forecast",
+        "ground_truth",
+        "staging",
+        "initial_run",
+        "stored_dtype"
+      ],
       "additionalProperties": false,
       "properties": {
         "kernel": {
@@ -111,13 +119,43 @@
           "title": "Where a run is written while it is being written",
           "description": "The runner writes here and nowhere else. Nothing a reader can reach is touched by this component; making a run visible is the publisher's single operation.",
           "type": "object",
-          "required": ["directory", "forecast_file", "uncertainty_file", "manifest_file"],
+          "required": [
+            "directory",
+            "partial_suffix",
+            "forecast_file",
+            "uncertainty_file",
+            "manifest_file"
+          ],
           "additionalProperties": false,
           "properties": {
             "directory": { "type": "string", "minLength": 1 },
+            "partial_suffix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What an in-flight run directory ends in while it is being written. A run appears in staging whole or not at all: it is written under this suffix and moved into place in one rename, so the publisher applies one rule — a directory in staging is a finished run — rather than a heuristic about whether writing has stopped. It states the same value as the publisher's catalogue.partial_suffix and query.coverage_store.partial_suffix."
+            },
             "forecast_file": { "type": "string", "minLength": 1 },
             "uncertainty_file": { "type": "string", "minLength": 1 },
             "manifest_file": { "type": "string", "minLength": 1 }
+          }
+        },
+        "initial_run": {
+          "title": "The scenario's first forecast, which no message asks for",
+          "description": "Nothing can diverge from nothing: a monitor with no published field raises no divergence, so a coverage store with no run in it is a control loop that cannot start. The first field is therefore seed content, produced by this component's own kernel and ensemble when `deploy/seed.d/` asks for it, and published through the ordinary path. It is named rather than derived by the store's identifier rule, because it is not the nth run of the scenario in the loop's sense and a name from that rule would claim a sequence the scheduler is about to use.",
+          "type": "object",
+          "required": ["run_id", "ensemble_size"],
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What the initial run is called in the coverage store. A constant rather than a derived name, so a replay of the scenario produces the same store."
+            },
+            "ensemble_size": {
+              "type": "integer",
+              "minimum": 2,
+              "description": "Members the initial run is computed over. At least two, or there is no spread and the uncertainty field beside it would be a fiction."
+            }
           }
         },
         "stored_dtype": {

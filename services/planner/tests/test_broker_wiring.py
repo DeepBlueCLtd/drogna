@@ -46,6 +46,14 @@ def _run(
         clock=support.manual_clock(),
         fields=support.OneField(support.Spread(0.8)),
         timescales=support.Timescales(),
+        # An empty source, supplied deliberately. What these three tests are about is the
+        # publishing half — the component connects as a real role and its heartbeat is read
+        # back — and a component left to subscribe from its own configuration would block on
+        # the broker for the life of the process, which is correct for a service and fatal
+        # for a test that asserts an exit code. The subscribing half is asserted where it can
+        # be: `libs/harness_core/tests/test_broker_subscription.py` for the transport, and
+        # `tests/integration/test_idle_turns_keep_the_loop_alive.py` for the loops it drives.
+        messages=(),
         stderr=stderr or io.StringIO(),
     )
 

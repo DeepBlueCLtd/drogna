@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/coverage-run-manifest.schema.json",
+  "title": "drogna coverage run manifest",
+  "description": "The document that sits beside a published run in the coverage store, and the reason a served value can be traced back to what produced it. Constitution III requires a shape that crosses a boundary to have a master, and this one crosses the widest boundary in the harness: the publisher writes it and the query layer refuses to catalogue a run without it, which is why its rules were stated twice — in stores/coverage/layout.md and in each of the two implementations — before this file existed. It is not run-manifest.schema.json, which is C-01's record of how to replay a whole scenario; this one describes one forecast run and is read by a catalogue rather than by a replay.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "root_seed",
+    "run_sequence",
+    "generator_version",
+    "model_version",
+    "sim_time",
+    "valid_time",
+    "ensemble"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bumped when the shape changes in a way a reader must notice."
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "This run's identifier. It must equal the name of the directory holding this file: a run whose manifest disagrees with its directory is refused rather than catalogued, because nothing in a response would then say which of the two names it was answering under."
+    },
+    "root_seed": {
+      "type": "integer",
+      "description": "The seed the run derives from. With run_sequence it determines run_id, by the rule stores/coverage/layout.md states."
+    },
+    "run_sequence": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Which run of this scenario this is. Null where nothing carried it — a run named by a rule other than the store's cannot have its sequence read back out of its name, and a guess here would look like a fact that reproduced the run."
+    },
+    "generator_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What produced the initial state this run was advected from."
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The model kernel that produced the forecast, and the version of the analytic form it used."
+    },
+    "sim_time": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The simulation time the run was made at. Simulation time, never host time (Constitution I)."
+    },
+    "valid_time": {
+      "title": "The extent the forecast is valid over",
+      "description": "Load-bearing beyond documentation: an EDR query that names no time is answered over this extent, taken from this document rather than from a host clock — there is no now here, and reading one to decide what a forecast says would be Constitution I broken at the one place the answer would still look right.",
+      "type": "object",
+      "required": ["begin", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "begin": { "type": "string", "minLength": 1, "description": "Start of the valid extent, in simulation time." },
+        "end": { "type": "string", "minLength": 1, "description": "End of the valid extent, in simulation time. Not before begin — an ordering this document cannot express and the catalogue checks besides." }
+      }
+    },
+    "ensemble": {
+      "title": "How many members, and how they were combined",
+      "type": "object",
+      "required": ["members", "method"],
+      "additionalProperties": false,
+      "properties": {
+        "members": {
+          "type": ["integer", "null"],
+          "minimum": 2,
+          "description": "Members the run was computed over. At least two, or there is no spread and the uncertainty field beside this manifest would be a fiction."
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How the members were combined into the published fields."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schema_version": 1,
+      "run_id": "run-000000-7f80b47c7b91",
+      "root_seed": 20260826,
+      "run_sequence": 0,
+      "generator_version": "model_runner 0.1.0",
+      "model_version": "analytic 1",
+      "sim_time": "2026-01-01T00:00:00.000000Z",
+      "valid_time": {
+        "begin": "2026-01-01T00:00:00.000000Z",
+        "end": "2026-01-01T07:00:00.000000Z"
+      },
+      "ensemble": { "members": 8, "method": "analytic" }
+    }
+  ]
+}

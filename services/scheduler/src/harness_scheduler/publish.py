@@ -39,6 +39,7 @@ def run_request_message(
     component: str,
     tick: Tick,
     run_id: str,
+    run_sequence: int,
     ensemble_size: int,
     initialisation_offset_seconds: float,
 ) -> dict[str, Any]:
@@ -58,6 +59,7 @@ def run_request_message(
         sim_time=tick.instant.iso(),
         tick=tick.index,
         run_id=run_id,
+        run_sequence=run_sequence,
         initialisation_sim_time=initialisation.iso(),
         ensemble_size=ensemble_size,
         region=event.region,

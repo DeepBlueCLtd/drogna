@@ -9,6 +9,27 @@ from pydantic import BaseModel, ConfigDict, Field
 from . import common
 
 
+class RunId(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    rule: str = Field(
+        ...,
+        description='The named rule the digest is taken over. Matches query.coverage_store.run_id.rule.',
+        min_length=1,
+    )
+    version: int = Field(
+        ...,
+        description="The rule's version. Bumping it changes every identifier the rule produces.",
+        ge=1,
+    )
+    prefix: str = Field(
+        ...,
+        description='What a run identifier begins with, so a run directory is recognisable as one.',
+        min_length=1,
+    )
+
+
 class Scheduler(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -31,6 +52,11 @@ class Scheduler(BaseModel):
     initialisation_offset_seconds: float = Field(
         ...,
         description="Offset from the divergence's simulation time to the instant the run initialises from. Zero initialises at the divergence.",
+    )
+    run_id: RunId = Field(
+        ...,
+        description="How a run is named. The rule is the coverage store's, stated in stores/coverage/layout.md, and it is carried here rather than imported so that this component computes the same string from the same five values as the query layer does — root seed, run sequence, rule, version and prefix. Naming the rule and its version in configuration is what makes a change to either change every identifier visibly.",
+        title="The coverage store's run identifier rule",
     )
 
 

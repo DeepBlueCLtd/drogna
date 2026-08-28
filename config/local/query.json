@@ -82,7 +82,7 @@
       "parameters": [
         {
           "name": "sea_water_temperature",
-          "variable": "sea_water_temperature",
+          "variable": "temperature",
           "source": "forecast",
           "unit": "degree_C",
           "label": "forecast sea water temperature",
@@ -90,26 +90,25 @@
         },
         {
           "name": "sea_water_practical_salinity",
-          "variable": "sea_water_practical_salinity",
+          "variable": "salinity",
           "source": "forecast",
           "unit": "1e-3",
           "label": "forecast sea water practical salinity",
           "standard_name": "sea_water_practical_salinity"
         },
         {
-          "name": "sea_water_pressure",
-          "variable": "sea_water_pressure",
-          "source": "forecast",
-          "unit": "dbar",
-          "label": "forecast sea water pressure",
-          "standard_name": "sea_water_pressure"
-        },
-        {
           "name": "temperature_uncertainty",
-          "variable": "sea_water_temperature_uncertainty",
+          "variable": "temperature_spread",
           "source": "uncertainty",
           "unit": "degree_C",
           "label": "one standard deviation of the temperature forecast"
+        },
+        {
+          "name": "salinity_uncertainty",
+          "variable": "salinity_spread",
+          "source": "uncertainty",
+          "unit": "1e-3",
+          "label": "one standard deviation of the salinity forecast"
         }
       ]
     },

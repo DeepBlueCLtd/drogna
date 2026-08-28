@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 from random import Random
 
-from control_loop import Recorder, manual_clock, model_runner_document
+from control_loop import PARTIAL_SUFFIX, Recorder, manual_clock, model_runner_document
 from harness_model_runner.ensemble import MemberFailedError, run_ensemble
 from harness_model_runner.kernel import GriddedField, InitialisationState
 from harness_model_runner.service import RUN_REQUEST_TOPIC, ModelRunnerService
@@ -82,6 +82,7 @@ def test_nothing_is_staged_when_a_member_fails(tmp_path: Path) -> None:
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",
         manifest_file="run.json",
+        partial_suffix=PARTIAL_SUFFIX,
     )
     service = ModelRunnerService(
         settings,
@@ -109,6 +110,7 @@ def test_a_run_larger_than_this_runner_admits_is_refused(tmp_path: Path) -> None
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",
         manifest_file="run.json",
+        partial_suffix=PARTIAL_SUFFIX,
     )
     service = ModelRunnerService(
         settings,
@@ -133,6 +135,7 @@ def test_the_runner_writes_only_into_staging(tmp_path: Path) -> None:
         forecast_file="forecast.nc",
         uncertainty_file="uncertainty.nc",
         manifest_file="run.json",
+        partial_suffix=PARTIAL_SUFFIX,
     )
     settings = DrognaModelRunnerConfiguration.model_validate(model_runner_document())
     service = ModelRunnerService(

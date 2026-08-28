@@ -46,7 +46,7 @@ from destination import ConfigurationError  # noqa: E402
 # every test in this file fail on the renderer's refusal rather than on its subject —
 # which is exactly what happened when the query layer gained a role.
 #
-# It once needed the database's secrets too. ADR-0022 retired them: the observation store
+# It once needed the database's secrets too. ADR-0023 retired them: the observation store
 # authenticates by trust for the compose network, so SECRET_NAMES is again the whole set
 # the renderer's entry point resolves — see `values` in render_credentials.main.
 VALUES = {name: f"secret-for-{name.lower()}" for name in render_credentials.SECRET_NAMES}

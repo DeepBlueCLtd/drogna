@@ -60,7 +60,7 @@ __all__ = [
 # is generated beside the broker's.
 PROXY_SECRET = "HARNESS_PROXY_SECRET"
 
-# The database has no secrets here, deliberately. ADR-0022: the observation store
+# The database has no secrets here, deliberately. ADR-0023: the observation store
 # authenticates by trust for the compose network, so a DSN naming a role is a complete
 # credential and there is nothing for this module to put into one.
 #
@@ -200,7 +200,7 @@ def render_destination(destination: str, values: dict[str, str], root: Path | No
         broker = document.get("broker") if isinstance(document, dict) else None
         if isinstance(broker, dict) and isinstance(broker.get("url"), str):
             broker["url"] = _with_secret(broker["url"], values, source=source)
-        # A DSN is copied through untouched, and ADR-0022 is why: the observation store
+        # A DSN is copied through untouched, and ADR-0023 is why: the observation store
         # authenticates by trust for the compose network, so a tracked DSN naming a role
         # and no secret is already a complete credential. The walk that used to find
         # every `dsn` at any depth and inject a password is gone with the passwords.

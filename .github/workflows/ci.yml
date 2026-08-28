@@ -141,6 +141,40 @@ jobs:
           echo "::warning title=Site build::mkdocs build --strict failed; see the job summary"
           exit 0
 
+      # 015 T024. The link-integrity property belongs to `mkdocs build --strict` above,
+      # and a second link checker would be a second authority over it. What was missing was
+      # evidence that --strict rejects anything at all: a `validation:` block relaxed to
+      # `ignore` would leave every build green with broken links published. These tests
+      # build a control site carrying one fault per validation rule and expect a refusal
+      # naming each, then build it repaired and expect success.
+      #
+      # They live here rather than in the `checks` job because mkdocs is outside the uv
+      # workspace (ADR-0010), so under `uv run pytest` they skip — loudly, with the reason.
+      # This is the environment that has mkdocs, so this is where they run for real.
+      - name: Report — --strict still rejects a broken internal link
+        run: |
+          set -uo pipefail
+          python -m pip install pytest
+          report="$(mktemp)"
+          if python -m pytest site/gates/tests/test_link_validation.py -q >"$report" 2>&1; then
+            cat "$report"
+            exit 0
+          fi
+          cat "$report"
+          {
+            echo "### Link validation is no longer proven"
+            echo
+            echo "Report-only: this does not block the pull request. It means either that"
+            echo "\`--strict\` has stopped rejecting the planted faults, or that the"
+            echo "fixture's \`validation:\` block no longer matches \`site/mkdocs.yml\`."
+            echo
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Link validation::the control did not behave; see the job summary"
+          exit 0
+
       - name: Report — the site's own publication gates
         run: |
           set -uo pipefail

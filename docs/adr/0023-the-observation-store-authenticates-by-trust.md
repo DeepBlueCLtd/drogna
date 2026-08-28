@@ -1,4 +1,4 @@
-# ADR-0022: The observation store authenticates by trust, and models no database threat
+# ADR-0023: The observation store authenticates by trust, and models no database threat
 
 **Status:** Accepted
 **Date:** 28 August 2026

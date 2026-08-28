@@ -62,7 +62,7 @@ HTTP_HEALTH_SERVICES = ("query", "proxy", "client")
 # control list defines them, that module maps each to its variable, and this list is
 # derived rather than retyped.
 #
-# The database's secrets used to head this tuple. ADR-0022 retired them: the store
+# The database's secrets used to head this tuple. ADR-0023 retired them: the store
 # authenticates by trust for the compose network, so there is no database password to
 # generate, carry or reconcile.
 SECRET_NAMES = render_credentials.SECRET_NAMES

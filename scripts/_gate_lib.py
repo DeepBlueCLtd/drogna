@@ -96,6 +96,18 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
     #
     # `.claude` and `.specify` are vendored tooling. Scanning them finds spec-kit's
     # prose about detection and tracking, which says nothing about drogna's data model.
+    #
+    # `contracts/openapi/query-layer.openapi.json` is vendored too, in the same sense as
+    # the generated trees in SHARED_EXCLUSIONS: it is what pygeoapi says about the
+    # interface, captured by `scripts/refresh_query_layer_spec.sh` and never hand-edited,
+    # because a hand-edit would make it the approximation NFR-01 exists to remove. It
+    # cannot carry an inline exemption either — JSON has no comments. What it trips on is
+    # OpenAPI's own `info.contact`, the object naming who to ask about an API, which is a
+    # different word from the one Constitution V forbids and arrives from
+    # `metadata.contact` in the pygeoapi configuration rather than from anything in the
+    # data model. The masters under `contracts/schemas/` and the hand-written
+    # `harness.openapi.yaml` are still scanned, which is where a shape drogna actually
+    # declares would appear.
     "forbidden-vocabulary": (
         "scripts",
         "specs",
@@ -105,6 +117,7 @@ GATE_EXCLUSIONS: dict[str, tuple[str, ...]] = {
         ".specify",
         "harness-srd.md",
         "README.md",
+        "contracts/openapi/query-layer.openapi.json",
     ),
     # The inventory lists exemptions that exempt something. A specification quoting the
     # marker is prose, not permission, so the documents are not walked for it.

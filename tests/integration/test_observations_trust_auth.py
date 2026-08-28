@@ -1,6 +1,6 @@
 """The observation store authenticates by trust for the compose network, and only for it.
 
-ADR-0022. The claim has two halves and they pull in opposite directions, which is why both
+ADR-0023. The claim has two halves and they pull in opposite directions, which is why both
 are asserted here rather than one being taken on trust from the other.
 
 **Authentication is given away, deliberately.** Every DSN in `config/*/` names a role and
@@ -187,7 +187,7 @@ def test_every_loaded_rule_is_trust_and_scoped_to_this_network(
     for rule in rules:
         assert rule["error"] is None, f"the server could not parse a rule: {rule['error']}"
         assert rule["auth_method"] == "trust", (
-            f"a rule asks for {rule['auth_method']}; ADR-0022 says this store authenticates "
+            f"a rule asks for {rule['auth_method']}; ADR-0023 says this store authenticates "
             "by trust, and a rule that asks for a password is one no DSN carries"
         )
         address = rule["address"]

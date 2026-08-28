@@ -51,7 +51,19 @@ on one or both.
 **Critical**: No user story work begins until this phase is complete.
 
 - [x] T005 Write `stores/coverage/layout.md` as the normative convention: a directory per run named for its deterministic run identifier, containing the forecast field, the uncertainty field and the run manifest, with the current run named by a pointer that can be replaced in one operation
-- [x] T006 Define the run manifest shape and author `contracts/schemas/run-manifest.schema.json` — run identifier, root seed, generator and model versions, simulation time of the run, forecast valid-time extent, ensemble configuration — obeying the schema conventions, and regenerate types — **not done**: `contracts/` is outside this feature's ownership in the current parallel checkout, and adding a master regenerates `libs/harness_types/` and `client/src/generated/`, which it also does not own. The shape is fixed normatively in `stores/coverage/layout.md`, enforced by `validate_manifest`, and illustrated by `stores/coverage/run-manifest.example.json`, which a test validates. Note the existing `contracts/schemas/run-manifest.schema.json` is feature 001's *run* manifest and is a different document; the new master wants the name `coverage-run-manifest.schema.json`.
+- [ ] T006 Define the run manifest shape and author `contracts/schemas/run-manifest.schema.json` — run identifier, root seed, generator and model versions, simulation time of the run, forecast valid-time extent, ensemble configuration — obeying the schema conventions, and regenerate types — **not done**: `contracts/` is outside this feature's ownership in the current parallel checkout, and adding a master regenerates `libs/harness_types/` and `client/src/generated/`, which it also does not own. The shape is fixed normatively in `stores/coverage/layout.md`, enforced by `validate_manifest`, and illustrated by `stores/coverage/run-manifest.example.json`, which a test validates. Note the existing `contracts/schemas/run-manifest.schema.json` is feature 001's *run* manifest and is a different document; the new master wants the name `coverage-run-manifest.schema.json`.
+  **Unticked 2026-08-28** (lane E). The tick contradicted the note's own "not done" and the
+  note was the true half: `contracts/schemas/coverage-run-manifest.schema.json` does not
+  exist, and the only three manifest masters in `contracts/schemas/` are
+  `manifest.schema.json`, `bundle-manifest.schema.json` and feature 001's
+  `run-manifest.schema.json`. Everything else the note claims was checked and holds — the
+  shape is fixed normatively in `stores/coverage/layout.md`, which records the gap against
+  its own text at line 131, and `query/plugins/coverage_catalogue.py` names the absent master
+  in the same terms. **The outstanding master is `specs/009-control-loop` T055**, which is
+  itself unticked and carries it; this task is the same work seen from the other side, and
+  whichever lane writes the master closes both. It is not lane E's to write: authoring it
+  regenerates `libs/harness_types/` and `client/src/generated/`, which this lane does not
+  own.
 - [x] T007 Specify deterministic run identifier derivation from root seed plus run sequence in `stores/coverage/layout.md`, with worked examples, so this feature and the publisher agree without sharing code
 - [x] T008 [P] Write `stores/coverage/validate_layout.py` checking a store against the convention: complete runs, exactly one current pointer, manifests that validate, no stray files
 - [x] T009 [P] Write `tests/unit/test_coverage_catalogue.py` fixtures covering a complete run, an incomplete run, two current pointers and an empty store
@@ -185,7 +197,17 @@ and the harness says exactly how much of SensorThings it implements.
 ## Phase 7: Polish
 
 - [x] T057 [P] Emit the query layer's OpenAPI specification reproducibly and hand it to the generated-types feature's refresh script, confirming the drift check passes over the result — **emitted and proved reproducible, not vendored**: the built image emits its specification (`pygeoapi openapi generate`), two emissions canonicalise byte-identically, and `scripts/canonicalise_openapi.py` accepts it. Writing it to `contracts/openapi/query-layer.openapi.json` and regenerating types is feature 006's tree, which this feature does not own.
-- [x] T058 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, where this harness uses each, and — carried from `query/conformance.md` so the two cannot disagree — which subset of SensorThings Part 1 drogna implements and which parts are absent (FR-030) — **not done**: `docs/standards/` is outside this feature's ownership. `query/conformance.md` is the source it must be carried from, and `tests/integration/test_sensorthings_conformance.py` already contains the test that will compare the two — it skips, with the reason, until the primer exists.
+- [x] T058 [P] Write `docs/standards/edr-and-sensorthings.md` as the primer promised by PR-09, covering what each standard is for, what CoverageJSON is, where this harness uses each, and — carried from `query/conformance.md` so the two cannot disagree — which subset of SensorThings Part 1 drogna implements and which parts are absent (FR-030) — ~~**not done**: `docs/standards/` is outside this feature's ownership. `query/conformance.md` is the source it must be carried from, and `tests/integration/test_sensorthings_conformance.py` already contains the test that will compare the two — it skips, with the reason, until the primer exists.~~
+  **Struck 2026-08-28** (lane E): the tick was right and the note had gone stale. The primer
+  was written by feature 015 and is published at `site/docs/standards/sensorthings.md` —
+  `site/docs/` being where the published documentation lives, the repository's `docs/` being
+  architecture notes and decision records — with `site/docs/standards/ogc-api-edr.md` and
+  `site/docs/standards/coveragejson.md` beside it covering the EDR half and what a coverage
+  is. `tests/integration/test_sensorthings_conformance.py` now names that path in its own
+  comment and **runs rather than skips**: eleven tests pass, comparing every entity set,
+  absent entity set, implemented option and excluded option in the served conformance
+  statement against `query/conformance.md`, so the two cannot disagree. Verified by running
+  it on 2026-08-28.
 - [x] T059 Run the full quality-gate set over this feature's files and fix what they report
 - [x] T060 Measure and record the response times for a position query, a hundred-vertex trajectory query and a full SensorThings page on the droplet, and adjust the documented limits to what the droplet can actually serve — **measured on a development host, not the droplet**: position 3.5 ms, 91-vertex trajectory 6.2 ms, whole-domain cube 21.7 ms, recorded in `query/README.md`. The droplet has not been provisioned; quoting these as its figures would be a claim this repository exists not to make.
 

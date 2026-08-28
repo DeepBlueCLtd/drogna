@@ -75,7 +75,7 @@ compose() {
 # Every secret this deployment needs, generated once and then reused.
 #
 # The database's four used to be generated here — the owner's password and one per run-time
-# role — and ADR-0022 retired them. The observation store authenticates by trust for the
+# role — and ADR-0023 retired them. The observation store authenticates by trust for the
 # compose network, so there is no database password to generate, to keep in step with a
 # store initialised from an earlier one, or to reconcile with a DSN.
 ensure_secrets() {

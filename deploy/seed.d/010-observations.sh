@@ -48,7 +48,7 @@ python3 "${root}/stores/observations/apply.py" > "${sql}"
 echo "    observation store provisioned; SQL in ${DROGNA_ARTEFACT_DIR##*/}/observations.sql"
 
 # The run-time roles need nothing further. They are created by `roles.sql` with LOGIN and
-# no password, and ADR-0022 is what makes that sufficient: the store authenticates by trust
+# no password, and ADR-0023 is what makes that sufficient: the store authenticates by trust
 # for the compose network, so a role that can log in is a role whose DSN works.
 #
 # What stood here was an ALTER ROLE per role, assigning each the generated password that

@@ -9,7 +9,7 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 
 | # | Title | Status |
 |---|---|---|
-| [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Accepted |
+| [0001](0001-binary-access.md) | Binary access rather than tiered or per-field | Accepted, amended by ADR-0020 |
 | [0002](0002-decorrelation-timescale-as-a-field.md) | Decorrelation timescale is a field, authored per feature | Accepted |
 | [0003](0003-bespoke-edr-trajectory-provider.md) | Trajectory queries are served by a bespoke pygeoapi provider | Accepted |
 | [0004](0004-bespoke-sensorthings-provider.md) | SensorThings is served by a bespoke pygeoapi provider | Accepted |
@@ -27,9 +27,10 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0016](0016-the-broker-credential-path-is-half-built.md) | No component could authenticate, and the credential path is now whole | Accepted, amended same day |
 | [0018](0018-common-json-is-a-root-seed-not-a-set-of-defaults.md) | `common.json` is a root seed, and the defaults mechanism it describes does not exist | Accepted |
 | [0019](0019-the-planner-threshold-is-absolute-and-was-never-checked.md) | The planner's threshold stays absolute, and now has something to check it against | Accepted |
-| [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Proposed |
+| [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Accepted |
 | [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Proposed |
-| [0022](0022-the-observation-store-authenticates-by-trust.md) | The observation store authenticates by trust, and models no database threat | Accepted |
+| [0022](0022-generator-selection-for-the-type-chain.md) | The type chain's generators, and why the TypeScript half is ours | Accepted |
+| [0023](0023-the-observation-store-authenticates-by-trust.md) | The observation store authenticates by trust, and models no database threat | Accepted |
 
 There is no ADR-0017. The number was never used — no file by that number appears anywhere
 in the history — and renumbering the records that exist would break references already in

@@ -191,10 +191,14 @@ one instance, not an accumulation.
 
 ## Assumptions
 
-- The SRD does not currently name these holdings; this feature extends scope beyond it.
-  Recording that extension — an SRD amendment or an argued scope note — is part of this
-  feature's delivery, and the plan's Constitution Check must address it rather than
-  leave the spec silently wider than the SRD.
+- The SRD now names these holdings. The scope extension this specification was written
+  against was recorded by the v0.4 amendment of 28 August 2026: `harness-srd.md` §5.10
+  carries FR-54 to FR-58 (retained instances, the historic archive, the now-cast,
+  truthful discovery documents, one set of interpolation and retention rules), §4's
+  component table gains the holdings in C-02, C-08, C-09 and C-14's responsibilities,
+  §10 places this feature below the line until the control loop's turn is demonstrable
+  live, and §11 records the resolved question. The plan's Constitution Check therefore
+  cites the amendment rather than proposing one, and nothing here is wider than the SRD.
 - "Departure" is scenario start; no separate pre-departure phase is modelled.
 - The archive's parameters are the forecast's parameters (temperature, salinity, and the
   uncertainty treatment as applicable); introducing archive-only parameters is out of

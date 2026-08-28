@@ -220,7 +220,7 @@ services:
     # HARNESS_CONFIG; it is a third-party image and reads no drogna configuration file.
     # Every value below still comes from the destination configuration.
     #
-    # No password. ADR-0022: this store's port is published to loopback at every
+    # No password. ADR-0023: this store's port is published to loopback at every
     # destination, the harness models no database threat, and authentication is trust for
     # the compose network. POSTGRES_HOST_AUTH_METHOD is what makes the image's entrypoint
     # accept the absence of POSTGRES_PASSWORD; the file named by `command` below is what

@@ -188,3 +188,48 @@ rather you said so than assume it.
 
 **What I did**: logged and routed around, per the 30-minute rule. (1) and (4) are feature
 work well beyond a night; (3) is a real bug and the cheapest of the four to chase next.
+
+## 2026-08-28T12:55 — item 3 above is closed: the routing was sound and the links were wrong
+
+**Where**: `query/render_config.py`, `query/plugins/sensorthings_provider.py`; closes item 3
+of the 10:15 entry
+
+Appended rather than edited, like every entry here. This does not report a blocker; it
+records the answer to one, because an open item nobody can see closed is read as still open.
+
+**What I found**: the 10:15 entry put it exactly right — "the two disagree, so one of them
+is wrong rather than merely unreachable" — and it is the links. pygeoapi's `<path:item_id>`
+route serves the whole SensorThings grammar unchanged:
+`/collections/observations/items/Things`, `.../Things('platform-a')` and
+`.../Things('platform-a')/Datastreams` all answer 200 against the running stack. What did
+not answer was every URL the interface advertised, because `render_config.py` handed the
+provider the server url as its link base — one collection short of where pygeoapi routes
+it — and the provider builds every `@iot.selfLink`, `@iot.navigationLink`, entity-set url
+and `@iot.nextLink` from that base. The `drogna:note` on the collection ("this path
+followed by its name") was the half that was right, and `query/README.md`'s path space had
+said so all along.
+
+A second link of the same family, found while proving the first: the service root
+advertises its conformance statement by href and nothing ever routed the segment, so
+following the link was refused with "there is no entity set called 'conformance'" — a true
+statement about the wrong question. The href also collided with pygeoapi's own
+`/conformance`, which serves a different document entirely.
+
+**Why nothing caught it.** The integration test walks the entity set by following links,
+deliberately and correctly — a test that built the paths itself would pass over an interface
+nobody could navigate. But it follows them through the service object, which strips whatever
+base it was handed, so a base that resolved nowhere walked exactly as well as one that
+resolved. Every in-process test was green over an interface no client could use. The guard
+added with the fix reads the *rendered* configuration, finds the collection the SensorThings
+provider is actually in, and asserts the base matches it; it fails on the unfixed tree
+naming both strings. That is the static half `CLAUDE.md` asks for — reason about the
+container's configuration as well as running it — and it needs no container.
+
+**What I did**: fixed both, and proved it live in the shape the fault had. Before: every
+advertised URL 404. After: 23 links followed transitively from the service root over HTTP,
+all 200, including the conformance statement. Six synthetic rows were inserted into the
+observation store to have something to walk — the loop publishes none yet, which is item 1
+of the same entry and lane A's — and removed afterwards.
+
+**What I need from you**: nothing. The other three items of the 10:15 entry stand as
+written: (1) and (4) are feature work in other lanes, and (2) follows from (1).

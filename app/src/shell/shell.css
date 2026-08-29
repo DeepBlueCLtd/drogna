@@ -1,0 +1,237 @@
+@import 'dockview-react/dist/styles/dockview.css';
+
+:root {
+  color-scheme: dark;
+  --shell-bg: #10151b;
+  --shell-fg: #d5dde5;
+  --shell-dim: #6b7785;
+  --shell-accent: #4cc2ff;
+  --shell-lit: #58d68d;
+  --shell-refused: #ff7b6b;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--shell-bg);
+  color: var(--shell-fg);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  padding: 0.4em 0.9em;
+  border-bottom: 1px solid #232c36;
+  flex-wrap: wrap;
+}
+
+.shell-title {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.shell-disclaimer {
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
+.shell-run {
+  color: var(--shell-dim);
+  font-family: monospace;
+}
+
+.shell-refusal {
+  color: var(--shell-refused);
+}
+
+.clock-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-left: auto;
+}
+
+.clock-time {
+  font-family: monospace;
+  color: var(--shell-accent);
+}
+
+.clock-rate {
+  color: var(--shell-dim);
+}
+
+.shell-header button,
+.shell-import {
+  background: #1a2229;
+  color: var(--shell-fg);
+  border: 1px solid #2c3742;
+  border-radius: 3px;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.shell-header button.rate-active {
+  border-color: var(--shell-accent);
+  color: var(--shell-accent);
+}
+
+.shell-import input {
+  display: none;
+}
+
+.shell-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.shell-body .dockview-theme-abyss {
+  height: 100%;
+}
+
+.panel {
+  height: 100%;
+  overflow: auto;
+  padding: 1em;
+  box-sizing: border-box;
+}
+
+.panel-prose {
+  max-width: 46em;
+  line-height: 1.55;
+}
+
+.panel-prose a {
+  color: var(--shell-accent);
+}
+
+.disclaimer {
+  border-left: 3px solid var(--shell-refused);
+  padding-left: 0.8em;
+  color: var(--shell-dim);
+}
+
+.not-landed {
+  color: var(--shell-dim);
+}
+
+.panel-footnote {
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
+.system-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.system-grid th,
+.system-grid td {
+  text-align: left;
+  padding: 0.35em 0.8em;
+  border-bottom: 1px solid #1d252e;
+}
+
+.system-grid th {
+  color: var(--shell-dim);
+  font-weight: 500;
+}
+
+.component-dark td {
+  color: var(--shell-dim);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  margin-right: 0.5em;
+  background: #333d47;
+}
+
+.status-ok {
+  background: var(--shell-lit);
+}
+
+.status-degraded,
+.status-starting,
+.status-stopping {
+  background: #e8c268;
+}
+
+.status-stalled {
+  background: var(--shell-refused);
+}
+
+.messages-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.messages-counters {
+  margin: 0 0 0.6em;
+  color: var(--shell-dim);
+}
+
+.messages-split {
+  display: flex;
+  flex: 1;
+  gap: 1em;
+  min-height: 0;
+}
+
+.messages-list {
+  flex: 1;
+  border-collapse: collapse;
+  align-self: flex-start;
+  font-family: monospace;
+  font-size: 0.85em;
+}
+
+.messages-list td {
+  padding: 0.15em 0.6em;
+  border-bottom: 1px solid #1d252e;
+  white-space: nowrap;
+  max-width: 28em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.message-seq {
+  color: var(--shell-dim);
+}
+
+.message-topic {
+  color: var(--shell-accent);
+}
+
+.message-refused .message-topic {
+  color: var(--shell-refused);
+}
+
+.message-detail {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.message-detail pre {
+  font-size: 0.85em;
+}
+
+.map-pending {
+  color: var(--shell-dim);
+}

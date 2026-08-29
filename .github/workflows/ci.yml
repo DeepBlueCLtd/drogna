@@ -1,0 +1,76 @@
+# The constitution's quality gates, run on every change (constitution 2.0.0,
+# Development Workflow). One toolchain now: everything below is pnpm and TypeScript.
+#
+# The gates run as one step, not six: the set lives in scripts/gates.registry and the
+# runner reads that list, so the build and a contributor's terminal run the same set.
+# A second copy of the list here would be a copy that could fall behind.
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Types
+        run: pnpm -C app run typecheck
+
+      - name: Lint
+        run: pnpm -C app run lint
+
+      # App tests before the gates, for the reason V1 recorded: the gates' own tests
+      # are what prove a gate still catches its planted violation, and a gate that has
+      # stopped matching looks exactly like a clean tree.
+      - name: App tests
+        run: pnpm -C app run test
+
+      - name: Gate tests (each gate watched failing on its planted violation)
+        run: pnpm run test
+
+      - name: Gates (Constitution I, II, III, IV, V, XI)
+        run: pnpm run gates
+
+      - name: Build
+        run: pnpm -C app run build
+
+      # The glance proves the built shell actually runs in a browser — loads, answers
+      # a seam request, pins the clock — not merely that it compiled (E15's lesson:
+      # "delivered" is not "wired").
+      - name: Install the capture browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Glance capture of the built shell
+        run: pnpm run capture:glance system
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glance
+          path: .capture/
+          if-no-files-found: error

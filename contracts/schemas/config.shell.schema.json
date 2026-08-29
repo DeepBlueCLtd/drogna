@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.shell.schema.json",
+  "title": "drogna shell configuration (V2-C19)",
+  "description": "The shell's configuration document: the views it hosts, the declared component layout the System panel renders greyed-out (structure from declaration, illumination only from received heartbeats — Constitution VII), the topics it reads and the seam endpoints it calls. The shell connects under a role that may read every namespace and may never publish (E13).",
+  "type": "object",
+  "required": ["id", "role", "views", "components", "topics", "message_schemas", "endpoints", "liveness", "messages"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "role": {
+      "$ref": "config.common.schema.json#/$defs/component_id",
+      "description": "The broker role the shell connects under. Its declaration in the broker's rules must carry an empty publish list."
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The top-level tabs, in first-run order. The view id is the unit of URL addressability (FR-15): '#/view/<id>' opens the shell at that view.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+          "label": { "type": "string" }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The declared component layout, rendered from day one, greyed out until each is genuinely heard from. Declaration provides structure and captions only; nothing here can light anything.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "beat"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+          "label": { "type": "string" },
+          "beat": {
+            "type": "integer",
+            "minimum": 101,
+            "maximum": 109,
+            "description": "The narrative beat (feature number) at which this component lands."
+          }
+        }
+      }
+    },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "heartbeat", "all"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+        "heartbeat": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+        "all": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The Messages panel's subscription: everything, because a display may not show cold where there is traffic (E13)."
+        }
+      }
+    },
+    "message_schemas": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Which master governs the messages on each topic, for the client-side validation and refusal counter of E4. A received message whose topic matches no entry is itself counted refused: every crossing has a master or is a finding.",
+      "items": {
+        "type": "object",
+        "required": ["filter", "schema"],
+        "additionalProperties": false,
+        "properties": {
+          "filter": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+            "description": "The master's stem under contracts/schemas, e.g. 'heartbeat'."
+          }
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "required": ["clock_rate"],
+      "additionalProperties": false,
+      "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
+      "properties": {
+        "clock_rate": { "$ref": "config.common.schema.json#/$defs/relative_path" }
+      }
+    },
+    "liveness": {
+      "type": "object",
+      "required": ["default_window_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "default_window_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The window applied to a heartbeat that declares none of its own (heartbeat.schema.json): a tolerance, never a table of components."
+        }
+      }
+    },
+    "messages": {
+      "type": "object",
+      "required": ["buffer"],
+      "additionalProperties": false,
+      "properties": {
+        "buffer": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How many recent seam messages the Messages panel retains for display."
+        }
+      }
+    }
+  }
+}

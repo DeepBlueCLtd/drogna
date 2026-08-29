@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.common.schema.json",
+  "title": "drogna configuration vocabulary",
+  "description": "Shared $defs for the V2 component configuration documents. Constitution IV: no component source carries a literal path, URL or topic string, so every such string arrives through a configuration document validated against one of the config.* masters, and the recurring shapes are defined once here. This file describes configuration only; message shapes crossing the seam have their own masters.",
+  "$defs": {
+    "topic": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_/-]*$",
+      "description": "A concrete MQTT-semantics topic: segments joined by '/', no wildcards."
+    },
+    "topic_filter": {
+      "type": "string",
+      "pattern": "^([a-z0-9_+-]+|#)(/([a-z0-9_+-]+|#))*$",
+      "description": "An MQTT-semantics subscription filter: '+' matches one segment, '#' the remainder and only as the last segment."
+    },
+    "relative_path": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9_/.-]*$",
+      "description": "A relative, same-origin URL path. Absolute URLs are forbidden in client configuration by SRD-v2 FR-04: relative and same-origin is what makes the page portable across any host and clearance."
+    },
+    "component_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "heartbeat": {
+      "type": "object",
+      "required": ["topic", "interval_seconds", "liveness_window_seconds"],
+      "additionalProperties": false,
+      "description": "How a component announces it is alive. Cadence and window are host seconds by ADR-0006: liveness is a fact about the machinery with no simulation-time answer even in principle.",
+      "properties": {
+        "topic": { "$ref": "#/$defs/topic" },
+        "interval_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "liveness_window_seconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

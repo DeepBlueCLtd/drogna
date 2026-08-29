@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.clock.schema.json",
+  "title": "drogna clock configuration (V2-C01)",
+  "description": "The one configuration document the simulation clock receives at construction (Constitution IV). The clock is the single source of time (SRD-v2 FR-09): it publishes samples of clock.schema.json shape on its declared topic, supports realtime, accelerated, paused and lockstep modes with bounded arbitrary rates and a step operation, and exposes exactly one HTTP interface — setting the rate — as in V1 (see clock.schema.json). Tick values follow from epoch and interval alone and are unaffected by rate.",
+  "type": "object",
+  "required": ["id", "epoch", "tick_interval_us", "mode", "rate", "min_rate", "max_rate", "topics", "http", "heartbeat"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "epoch": {
+      "type": "string",
+      "description": "Simulation epoch, ISO-8601 UTC with microsecond precision."
+    },
+    "tick_interval_us": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Simulation microseconds between ticks."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["realtime", "accelerated", "paused", "lockstep"]
+    },
+    "rate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Initial emission rate. Zero is a legitimate rate: it pins the clock (capture, FR-19) without stopping anything else."
+    },
+    "min_rate": { "type": "number", "minimum": 0 },
+    "max_rate": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "A rate command outside [min_rate, max_rate] is refused with the bound named (FR-36's discipline, present from 101)."
+    },
+    "topics": {
+      "type": "object",
+      "required": ["clock"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" }
+      }
+    },
+    "http": {
+      "type": "object",
+      "required": ["rate_path"],
+      "additionalProperties": false,
+      "properties": {
+        "rate_path": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "The seam route for setting the rate: PUT with a JSON body {\"rate\": number}."
+        }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" }
+  }
+}

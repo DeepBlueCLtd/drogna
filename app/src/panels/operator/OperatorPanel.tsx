@@ -43,6 +43,17 @@ interface Heard {
   heardAtHostMs: number;
 }
 
+/**
+ * What a component says about itself, and the two different silences. A heartbeat with
+ * no detail line is not an absent heartbeat: the clock, the broker and the release gate
+ * publish none, and reading them as never heard was the display inventing a silence
+ * that had not happened. Found by looking at the running page, not by a test.
+ */
+function detailOf(entry: Heard | undefined): string {
+  if (!entry) return 'no heartbeat has ever arrived';
+  return entry.heartbeat.detail ?? 'beating, and saying nothing beyond that';
+}
+
 const BAND_CAPTION: Record<Band, string> = {
   loop: 'the loop — assimilation',
   path: 'the path — sensing to serving',
@@ -239,15 +250,19 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
                         <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
                         <span className="flow-node-name">{node.label}</span>
                         {record && !record.stoppable ? (
-                          <span className="flow-node-lock" title="protected from the operator plane by rule">
-                            ⌷
-                          </span>
+                          <svg
+                            className="flow-node-lock"
+                            viewBox="0 0 12 14"
+                            role="img"
+                            aria-label="protected from the operator plane by rule"
+                          >
+                            <path d="M 3 6 a 3 3 0 0 1 6 0" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                            <rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                          </svg>
                         ) : null}
                       </span>
                       <span className="flow-node-state">{word}</span>
-                      <span className="flow-node-detail">
-                        {entry?.heartbeat.detail ?? 'no heartbeat has ever arrived'}
-                      </span>
+                      <span className="flow-node-detail">{detailOf(entry)}</span>
                       <span className="flow-node-heard">
                         {entry ? displayInstant(entry.heartbeat.sim_time) : '—'}
                       </span>
@@ -329,7 +344,7 @@ function ListView({
               </td>
               <td>{word}</td>
               <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>
-              <td>{entry?.heartbeat.detail ?? 'no heartbeat has ever arrived'}</td>
+              <td>{detailOf(entry)}</td>
               <td>
                 {record?.stoppable ? (
                   <>
@@ -399,7 +414,7 @@ function Drawer({
         {state.word}
         {entry ? ` · heard at ${displayInstant(entry.heartbeat.sim_time)}` : ' · nothing has ever arrived'}
       </p>
-      <p className="flow-drawer-detail">{entry?.heartbeat.detail ?? '—'}</p>
+      <p className="flow-drawer-detail">{detailOf(entry)}</p>
 
       {node.id === 'platform' ? (
         <>

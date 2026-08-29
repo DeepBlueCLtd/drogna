@@ -491,6 +491,26 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   current position. Where no ownship observations have been served the panel says so
   rather than drawing a stub or the configured loiter.
 
+### 5.12 The walkthrough (feature 110)
+
+`docs/v2/plan.md` §5 reserved feature 110 for interactive walkthrough machinery and
+left the slot named but unclaimed. It is spent. The specification is
+`specs/110-walkthrough/`.
+
+- **FR-56** The shell shall carry a **help control**, visually distinct from the
+  controls that operate the harness, which walks a reader through the components one at
+  a time: what each does, and what its panel shows. The steps shall be keyed to the
+  declared component list and presented in the order the Operator flow chart draws
+  them, so a component with no step — or a step for something that is not a component —
+  is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
+  covering a component would read as a complete tour.
+- **FR-57** The walkthrough **teaches and does not report**: it shall not claim any
+  particular component's live state, and a test shall hold it to that. It stands in for
+  no component, which is why Constitution VII is not engaged by it (feature 111's
+  precedent) — and the reason that stays true is the rule above, not the intention. The
+  control shall be parameterised by the tour it starts and shall open that tour's view
+  before running, so a tour for another view is a tour and not a second control.
+
 ---
 
 ## 6. Interfaces and shared types

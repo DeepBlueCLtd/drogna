@@ -193,6 +193,22 @@ describe('the Operator flow chart (feature 112)', () => {
     expect(screen.getByTestId('platform-binding').textContent).not.toMatch(/turn rate/);
   });
 
+  it('a heartbeat with no detail is not an absent heartbeat', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    // The clock, the broker and the release gate publish no detail line. Reading that
+    // as "no heartbeat has ever arrived" was the display inventing a silence that had
+    // not happened — found by looking at the running page, and held here.
+    const clock = document.querySelector('[data-flow-node="clock"]');
+    expect(clock?.getAttribute('data-lit')).toBe('true');
+    expect(clock?.textContent).not.toContain('no heartbeat has ever arrived');
+    expect(clock?.textContent).toContain('beating, and saying nothing beyond that');
+    // A component that genuinely says something says it instead.
+    expect(document.querySelector('[data-flow-node="platform"]')?.textContent).toContain('m/s');
+  });
+
   it('an empty series says it is empty rather than drawing a flat line at zero', async () => {
     render(<OperatorPanel {...panelProps(config, runtime)} />);
     await act(async () => {

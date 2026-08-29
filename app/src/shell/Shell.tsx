@@ -23,6 +23,8 @@ import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
 import { MapPanel } from '../panels/map/MapPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { ClockStrip } from './ClockStrip.js';
+import { HelpButton } from './walkthrough/HelpButton.js';
+import { componentTour } from './walkthrough/tour.js';
 import './shell.css';
 
 export interface ShellProps {
@@ -86,6 +88,15 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
     [config, client, validator, manifest],
   );
 
+  /**
+   * Open a view by id, through the same path a link does. The walkthrough uses it to
+   * reach the tab its steps highlight: a step pointing at an element on a tab you are
+   * not looking at points at nothing.
+   */
+  const openView = useCallback((view: string) => {
+    apiRef.current?.getPanel(view)?.api.setActive();
+  }, []);
+
   useEffect(() => {
     const onHashChange = () => {
       const requested = viewFromHash(window.location.hash);
@@ -141,6 +152,9 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
           />
         </label>
         {importRefusal && <span className="shell-refusal">{importRefusal}</span>}
+        {/* Last in the header, so it sits at the top right: the one control here that
+            is for the reader rather than for the harness (feature 110). */}
+        <HelpButton tour={componentTour(config)} onOpenView={openView} />
       </header>
       <div className="shell-body">
         <DockviewReact

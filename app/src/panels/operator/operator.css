@@ -86,6 +86,9 @@
 
 .flow-node-lock {
   margin-left: auto;
+  width: 11px;
+  height: 13px;
+  flex: none;
   color: var(--shell-accent);
 }
 

@@ -163,6 +163,13 @@ the architecture rests on, reading no run state and depending only on 101's shel
 took 111 rather than 110 so that the walkthrough candidate above keeps its named slot;
 if that candidate is dropped, reconcile the numbers here rather than quietly.
 
+**The candidate was not dropped: feature 110 is spent** (`specs/110-walkthrough/`,
+SRD-v2 §5.12). A yellow help control in the shell header walks a reader through the
+components one at a time — what each does and what its panel shows — stepping over the
+Operator flow chart, whose one-node-per-component layout is what gave the tour something
+to point at. It teaches and does not report: no step claims a component's live state,
+and a test holds it there.
+
 **Feature 112, the Operator flow chart and the platform**, is specified
 (`specs/112-operator-flowchart/`, SRD-v2 §5.11) and also sits outside the arc, though it
 reaches into it: it gives the sampling platform its own component with a motion

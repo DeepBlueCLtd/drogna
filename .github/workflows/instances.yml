@@ -56,13 +56,30 @@ jobs:
           rm -rf "estate/instances/${slug}"
           mkdir -p "estate/instances/${slug}"
           cp -r app/dist/. "estate/instances/${slug}/"
+          # What this instance was built from, written beside it. An instance outlives
+          # the branch it came from — that is the point of retaining it once the pull
+          # request completes — so its provenance has to travel with it rather than be
+          # looked up later against a ref that may be gone.
+          cat > "estate/instances/${slug}/instance.json" <<JSON
+          {
+            "ref": "${GITHUB_REF_NAME}",
+            "sha": "${GITHUB_SHA}",
+            "built": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+      # The index is what makes the instances a place rather than a set of URLs somebody
+      # has to already know (NFR-04). It is regenerated from what the estate holds, so it
+      # lists retired branches' instances too, for as long as the estate keeps them.
+      - name: Regenerate the instance index
+        run: pnpm run estate:index estate
 
       - name: Push, additively
         run: |
           cd estate
           git config user.name "drogna-instances"
           git config user.email "actions@users.noreply.github.com"
-          git add "instances/${slug}"
+          git add "instances/${slug}" instances/index.html
           if git diff --cached --quiet; then
             echo "instance unchanged; nothing to push"
             exit 0

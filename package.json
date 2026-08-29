@@ -11,9 +11,13 @@
     "gates": "tsx scripts/run-gates.ts",
     "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
     "capture:glance": "tsx scripts/capture/glance.ts",
-    "replay-proof": "tsx scripts/replay-proof.ts"
+    "replay-proof": "tsx scripts/replay-proof.ts",
+    "site:build": "tsx scripts/build-site.ts",
+    "site:publish": "tsx scripts/publish-site.ts",
+    "estate:index": "tsx scripts/estate-index.ts"
   },
   "devDependencies": {
+    "markdown-it": "^15.0.1",
     "playwright": "^1.62.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

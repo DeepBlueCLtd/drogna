@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
@@ -17,6 +19,18 @@ const dirty = (git('git status --porcelain') ?? '') !== '';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Two pages, one application. `mobile.html` frames the built shell at a phone's
+    // viewport size so the narrow presentation can be reviewed from a desktop browser
+    // (feature 112, FR-021). It is an entry rather than a copied asset because Vite has
+    // to rewrite its relative reference to index.html for the published estate.
+    rollupOptions: {
+      input: {
+        main: resolve(dirname(fileURLToPath(import.meta.url)), 'index.html'),
+        mobile: resolve(dirname(fileURLToPath(import.meta.url)), 'mobile.html'),
+      },
+    },
+  },
   // Relative asset URLs, so an instance serves from any path of the gh-pages estate
   // (NFR-04) as well as from the site root.
   base: './',

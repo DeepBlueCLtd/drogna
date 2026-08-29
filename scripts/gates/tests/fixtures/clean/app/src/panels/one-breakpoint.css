@@ -1,0 +1,13 @@
+/* Clean: the declared threshold, and one deliberate exception that says why it is one. */
+@media (max-width: 720px) {
+  .fine {
+    display: none;
+  }
+}
+
+/* harness:allow-breakpoint print is not a viewport; the shell's threshold means nothing here */
+@media print and (max-width: 1000px) {
+  .also-fine {
+    display: block;
+  }
+}

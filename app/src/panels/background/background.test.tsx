@@ -365,6 +365,37 @@ describe('the narrow panel (FR-021, FR-024)', () => {
     expect(document.querySelector('[data-testid="figure-floor"]')).toBeNull();
   });
 
+  it('pans a drawing it cannot widen, instead of advice that cannot be taken (112 FR-019)', () => {
+    // The fault this closes: "widen the panel" is sound advice to a viewer with a window
+    // to widen and an instruction that cannot be followed on a phone — a claim the tab
+    // makes that stops being true. Where the column already has the viewport there is
+    // nowhere to widen to, so the drawing is rendered at its own minimum inside a frame
+    // that scrolls: full size, labels intact, panned rather than shrunk.
+    const figure = { minWidth: 480, label: 'a drawing', draw: () => <svg /> };
+    const realInner = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    try {
+      render(<Figure figure={figure} width={366} context={{ poke: undefined, onPoke: () => {} }} />);
+      expect(screen.getByTestId('figure-pan')).toBeTruthy();
+      expect(document.querySelector('[data-testid="figure-floor"]')).toBeNull();
+      expect(document.body.textContent).not.toMatch(/Widen the panel/);
+      // At its own minimum, not at the width that could not hold it.
+      expect(
+        (document.querySelector('.bg-figure-pan-inner') as HTMLElement).style.minWidth,
+      ).toBe('480px');
+      cleanup();
+
+      // And where there *is* a wider width to be had, the advice is unchanged, because
+      // there it can be taken.
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+      render(<Figure figure={figure} width={366} context={{ poke: undefined, onPoke: () => {} }} />);
+      expect(screen.getByTestId('figure-floor').textContent).toMatch(/needs about 480px/);
+      expect(document.querySelector('[data-testid="figure-pan"]')).toBeNull();
+    } finally {
+      if (realInner) Object.defineProperty(window, 'innerWidth', realInner);
+    }
+  });
+
   it('collapses the rail to a dropdown that still names every explainer and its length', () => {
     render(<Rail course={COURSE} current="mqtt" onSelect={() => {}} width={RAIL_WIDTH_THRESHOLD - 1} />);
     const options = [...document.querySelectorAll('option')];

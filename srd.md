@@ -184,17 +184,27 @@ directed → the machinery is interrogated → advice travels light → it is se
 ### 5.1 Foundations and shell (feature 101)
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
-  **Intro, Background, System, Holdings, Map, Messages** at first run,
+  **Intro, Background, System, Holdings, Operator, Map, Messages** at first run,
   user-rearrangeable by drag and drop. Background is specified by §5.10 and built by
   feature 111; it is named here because a tab that arrives without a requirement behind
   it is exactly the divergence V2 exists to end. **Holdings** was named here with the debt
   admitted — it shipped with feature 102 and this list did not follow it — and §5.2
-  now carries FR-46, written from the tab as built.
+  now carries FR-46, written from the tab as built. **Operator** is named here by feature
+  112 for the third instance of the same fault: it shipped with feature 107, `§5.7`
+  specifies it in FR-36 to FR-38, and this list still said six tabs while the
+  configuration served seven. The tree is the authority; this line is the claim, and it
+  is now checked — a test enumerates `config.shell.views` and both presentations render
+  what it names (feature 112, SC-004).
   The layout library is **dockview 8.x**, chosen by feature 101's spike
   (`spikes/layout-manager/FINDING.md`) and recorded with its React-hosting pattern in
   ADR-0028. Panel arrangement is presentation only: no arrangement changes what any
   component does, and a saved arrangement is a per-viewer convenience, never state the
   system depends on.
+  *Amended by feature 112.* dockview hosts the layout **at and above a width threshold**;
+  below it the same views are presented one at a time behind the same tabs (§5.11,
+  ADR-0033). Both presentations render from one panel registry and share one address
+  vocabulary, and drag rearrangement is offered only where docking means something —
+  which this paragraph already permits, arrangement being presentation only.
 - **FR-15** Views shall be URL-addressable from feature 101: an anchor URL opens the
   shell in a named view (a tab, a panel arrangement, a beat's demonstration), so a PR
   comment or a blog post can link a reader straight into the running instance at the
@@ -419,6 +429,49 @@ directed → the machinery is interrogated → advice travels light → it is se
   architecture. Through-life-cost claims are stated as qualitative arguments and marked
   as unmeasured. The slide mechanism is built in feature 111; NFR-05's toolchain is
   unchanged.
+
+### 5.11 The shell at a phone's width (feature 112)
+
+- **FR-47** The shell shall have two presentations of the same views: the dockable layout
+  of FR-14 where there is room to dock, and a **stack** where there is not, showing one
+  view at a time. The presentation shall be chosen from the measured width of the shell's
+  own body, never from a user agent, a device class or a build flag, so that a panel
+  docked narrow on a large display is treated the same as a phone. Either axis is enough
+  on its own: docking divides space in both, so a viewport below the declared width *or*
+  below the declared height is presented as a stack — a phone turned sideways passes the
+  width test and has no room to dock at all. Each threshold is declared once in one module
+  and every partnering CSS breakpoint carries the same number, held by a gate.
+- **FR-48** The tabs are kept. The stack shall render every configured view as a tab, in
+  configured order and with its configured label, in a strip that scrolls horizontally
+  when the labels do not fit; no view is hidden behind an overflow control and no label
+  is abbreviated or replaced by an icon. Both presentations render from one panel
+  registry and share FR-15's address vocabulary, so crossing the threshold preserves the
+  shown view and writes nothing to the address.
+- **FR-49** At a narrow width each panel shall show one primary surface and keep every
+  other surface it offers reachable behind a labelled disclosure, closed at rest, opening
+  in place, operable by keyboard, and named for its content rather than for the existence
+  of more content. Nothing is removed; it moves one gesture away. Whether a disclosure is
+  open is a per-viewer convenience: it enters neither the address nor the manifest, and
+  changes nothing about what any component does. The one element that shall never be
+  disclosed away is the statement that the data is synthetic.
+- **FR-50** The narrow presentation shall change where a panel is and never whether it is
+  running: every view is mounted in both presentations, exactly as the layout manager
+  mounts an inactive panel, so a panel that accumulates does so whether or not it is
+  shown. Where a figure cannot be drawn legibly in the width available and the panel is
+  already as wide as the viewport, it shall be drawn at its own minimum inside a
+  scrollable frame rather than replaced by an instruction to widen a window that cannot
+  be widened — amending FR-45's presentation rule for the case that advice cannot be
+  taken, and leaving its guarantees (never scaled past legibility, never silently
+  dropping labels) intact.
+- **FR-51** The static build shall publish a **preview page** beside the app that frames
+  the built shell at a standard mobile size, so the narrow presentation can be reviewed
+  from a desktop browser and linked from a pull request (NFR-03, NFR-04). It carries
+  FR-15's address vocabulary in both directions, offers a small set of common sizes and
+  an orientation control, holds no copy of the shell or its configuration, and states
+  plainly that it mocks a viewport size and is not a device: it reproduces neither touch
+  input, nor browser chrome, nor safe areas, nor device pixel ratio.
+
+---
 
 ---
 

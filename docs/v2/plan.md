@@ -172,6 +172,12 @@ reconciliation this paragraph asks for is owed by whoever drops the candidate, a
 note exists so that the debt is visible from the plan rather than only from the spec's
 open questions.
 
+**Feature 112, the shell at a phone's width**, also sits outside the arc and claims no
+beat: it adds no component and no capability, and presents the seven views that already
+exist at a width they were never designed for (`specs/112-mobile-support/spec.md`,
+SRD-v2 §5.11, ADR-0033). It took the next free number rather than a slot in the arc,
+and, like 111, leaves the named 110 candidate alone.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

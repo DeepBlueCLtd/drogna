@@ -1,0 +1,13 @@
+/* Planted for check-one-breakpoint: a second breakpoint, which is what drift looks like
+   from the outside — one stylesheet switching at a width the shell does not. */
+@media (max-width: 640px) {
+  .planted {
+    display: none;
+  }
+}
+
+@container (min-width: 900px) {
+  .planted-too {
+    display: block;
+  }
+}

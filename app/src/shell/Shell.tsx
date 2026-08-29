@@ -1,9 +1,23 @@
 /**
- * The shell (V2-C19): the dockable multi-panel front-end (FR-14, ADR-0028).
- * dockview owns the layout; each panel is a React component; the four first-run tabs
- * come from the shell's configuration document, never from literals here.
+ * The shell (V2-C19): the dockable multi-panel front-end (FR-14, ADR-0028), in two
+ * presentations of one set of views (FR-47, ADR-0033).
+ *
+ * Above a declared width the dock is dockview's, exactly as feature 101 built it. Below
+ * it the same panels, from the same registry and behind the same addresses, are stacked
+ * one at a time behind the same tabs (`Stack.tsx`). The choice is made from the measured
+ * width of the shell's own body — never a user agent, never a build flag — so a panel
+ * docked narrow on a large display is treated the same as a phone.
+ *
+ * The panels are told nothing about which presentation they are in. Each measures its
+ * own root and discloses its own secondary surfaces, which is what keeps this feature to
+ * one switch here and a rule each panel applies to itself.
+ *
+ * Crossing the threshold is a remount: React swaps one tree for the other, so panel-local
+ * state (a selected message, a scroll position) does not survive it. Said plainly rather
+ * than left to be discovered — what does survive is the address, and therefore the view,
+ * which is the thing a link promised.
  */
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   DockviewDefaultTab,
   DockviewReact,
@@ -15,14 +29,12 @@ import {
 import type { ConfigShell, RunManifest } from '../generated/types.js';
 import type { SeamClient } from '../seam/transport.js';
 import type { SeamValidator } from '../seam/validate.js';
-import { createPanelAddress, hashOnActivation, viewFromHash, type PanelAddress } from './views.js';
-import { IntroPanel } from '../panels/intro/IntroPanel.js';
-import { SystemPanel } from '../panels/system/SystemPanel.js';
-import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
-import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
-import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
-import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
+import { createPanelAddress, hashForView, hashOnActivation, viewFromHash } from './views.js';
+import { DEFERRED_VIEWS, panelComponents, type PanelParams } from './registry.js';
+import { Disclosure } from './Disclosure.js';
+import { Stack } from './Stack.js';
 import { ClockStrip } from './ClockStrip.js';
+import { presentationFor, useMeasuredSize, viewportHeight, viewportWidth } from './viewport.js';
 import './shell.css';
 
 export interface ShellProps {
@@ -34,39 +46,24 @@ export interface ShellProps {
   onImportManifest: (candidate: unknown) => string | undefined;
 }
 
-export interface PanelParams {
-  config: ConfigShell;
-  client: SeamClient;
-  validator: SeamValidator;
-  manifest: RunManifest;
-  /**
-   * The panel's own slice of the address (FR-15, ADR-0032). What the remainder means
-   * is the panel's business: a panel that does not address positions inside itself
-   * simply never reads this.
-   */
-  address: PanelAddress;
+export type { PanelParams };
+
+/** The views are the harness's faces, not documents: rearrangeable, never closable. */
+function PermanentTab(props: IDockviewPanelHeaderProps) {
+  return <DockviewDefaultTab hideClose {...props} />;
 }
 
 /**
- * The map is the one panel loaded on demand (spike `spikes/load-time`). Its
- * deck.gl/luma.gl stack is about a third of the bundle and is reachable from no other
- * view, so a visitor who opens the intro — the front door — was waiting for a renderer
- * they had not asked for.
+ * How the dock observes "first shown", for a view the registry defers (`DEFERRED_VIEWS`).
+ * dockview mounts every panel's React tree at once — detached, as `panels/map/attach.ts`
+ * records — so the panel API's own activity is the only thing that says whether the
+ * viewer has actually asked for this view. A deep link naming it activates it during
+ * layout restore, so arriving at that address still loads it at once.
  *
- * Two things together, because either alone leaves the cost where it was. `lazy` puts
- * the stack in its own chunk; `WhenFirstActive` withholds the render until the tab is
- * first selected, because dockview mounts every panel's React tree at once (detached,
- * as `panels/map/attach.ts` records) and a mounted lazy component fetches its chunk
- * immediately. A deep link naming the map activates it during layout restore, so
- * arriving at `#/view/map` still loads it at once.
- *
- * The panel is mounted once and never unmounted again: `seen` latches, so switching
- * away does not tear down the canvas or lose what the panel has accumulated.
+ * `seen` latches: the panel is mounted once and never unmounted again, so switching away
+ * neither tears down the canvas nor loses what the panel has accumulated. The stack does
+ * the same thing against the shown view, which is what it has instead of this API.
  */
-const LazyMapPanel = lazy(async () => ({
-  default: (await import('../panels/map/MapPanel.js')).MapPanel,
-}));
-
 function WhenFirstActive({
   api,
   children,
@@ -92,35 +89,58 @@ function WhenFirstActive({
   return <>{children}</>;
 }
 
-function MapPanel(props: IDockviewPanelProps<PanelParams>) {
-  return (
-    <WhenFirstActive api={props.api}>
-      <Suspense fallback={<div className="panel"><p className="not-landed">bringing up the map…</p></div>}>
-        <LazyMapPanel {...props} />
-      </Suspense>
-    </WhenFirstActive>
+/**
+ * The registry's components, wrapped for dockview. Every view renders from the one
+ * registry (FR-005); the wrapper adds only what dockview alone can supply — the panel
+ * API a deferred view is gated on.
+ */
+const dockComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> =
+  Object.fromEntries(
+    Object.entries(panelComponents).map(([id, Panel]) => [
+      id,
+      DEFERRED_VIEWS.has(id)
+        ? (props: IDockviewPanelProps<PanelParams>) => (
+            <WhenFirstActive api={props.api}>
+              <Panel params={props.params} />
+            </WhenFirstActive>
+          )
+        : (props: IDockviewPanelProps<PanelParams>) => <Panel params={props.params} />,
+    ]),
   );
-}
-
-/** Which React component renders each configured view id. */
-const panelComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> = {
-  intro: IntroPanel,
-  background: BackgroundPanel,
-  system: SystemPanel,
-  holdings: HoldingsPanel,
-  operator: OperatorPanel,
-  map: MapPanel,
-  messages: MessagesPanel,
-};
-
-/** The four views are the harness's faces, not documents: rearrangeable, never closable. */
-function PermanentTab(props: IDockviewPanelHeaderProps) {
-  return <DockviewDefaultTab hideClose {...props} />;
-}
 
 export function Shell({ config, client, validator, manifest, onImportManifest }: ShellProps) {
   const apiRef = useRef<DockviewApi>();
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [importRefusal, setImportRefusal] = useState<string | undefined>();
+  const [active, setActive] = useState(() => viewFromHash(window.location.hash) ?? config.views[0].id);
+
+  const measured = useMeasuredSize(bodyRef);
+  // Before anything has been measured the viewport is the best guess there is; without
+  // it a phone mounts the dock for a frame and then throws it away, deck.gl included.
+  const presentation = presentationFor(
+    measured.width ?? viewportWidth(),
+    measured.height ?? viewportHeight(),
+  );
+  const narrow = presentation === 'stack';
+
+  /**
+   * One `PanelParams` per view, built once. A fresh object per render would remount
+   * every panel on every render of the shell, and `createPanelAddress` would hand out a
+   * new address seam each time.
+   */
+  const params = useMemo(() => {
+    const table: Record<string, PanelParams> = {};
+    for (const view of config.views) {
+      table[view.id] = {
+        config,
+        client,
+        validator,
+        manifest,
+        address: createPanelAddress(view.id),
+      };
+    }
+    return table;
+  }, [config, client, validator, manifest]);
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -133,7 +153,7 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
           id: view.id,
           component: view.id,
           title: view.label,
-          params: { config, client, validator, manifest, address: createPanelAddress(view.id) },
+          params: params[view.id],
         });
       }
       const requested = viewFromHash(window.location.hash);
@@ -141,22 +161,33 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
       event.api.getPanel(initial)?.api.setActive();
       event.api.onDidActivePanelChange(({ panel }) => {
         if (!panel) return;
+        setActive(panel.id);
         // Undefined means the address already names this panel — possibly at a
         // position below it, which an activation must not erase (views.ts).
         const rewritten = hashOnActivation(window.location.hash, panel.id);
         if (rewritten !== undefined) window.history.replaceState(null, '', rewritten);
       });
     },
-    [config, client, validator, manifest],
+    [config, params],
   );
 
   useEffect(() => {
     const onHashChange = () => {
       const requested = viewFromHash(window.location.hash);
-      if (requested) apiRef.current?.getPanel(requested)?.api.setActive();
+      if (!requested) return;
+      setActive(requested);
+      apiRef.current?.getPanel(requested)?.api.setActive();
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  /** A tab in the stack. The address is written the same way an activation writes it. */
+  const selectView = useCallback((viewId: string) => {
+    setActive(viewId);
+    const rewritten = hashOnActivation(window.location.hash, viewId);
+    if (rewritten !== undefined) window.history.replaceState(null, '', rewritten);
+    else if (window.location.hash === '') window.history.replaceState(null, '', hashForView(viewId));
   }, []);
 
   const exportManifest = useCallback(() => {
@@ -185,34 +216,51 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
   );
 
   return (
-    <div className="shell">
-      <header className="shell-header">
+    <div className="shell" data-presentation={presentation}>
+      <header className="shell-header" data-narrow={narrow}>
         <span className="shell-title">drogna</span>
-        <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
         <ClockStrip config={config} client={client} />
-        <span className="shell-run" title="run id">{manifest.run_id}</span>
-        <button onClick={exportManifest}>export manifest</button>
-        <label className="shell-import">
-          import manifest
-          <input
-            type="file"
-            accept="application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) importManifestFile(file);
-              event.target.value = '';
-            }}
-          />
-        </label>
-        {importRefusal && <span className="shell-refusal">{importRefusal}</span>}
+        {/*
+          The run id and the manifest controls disclose at a narrow width; the
+          disclaimer does not, and never will. Chrome may be compacted or moved behind a
+          label — the statement that the data is synthetic may not (FR-007). It is the
+          same sentence at both widths rather than a shorter second copy.
+        */}
+        <Disclosure label="run and manifest" narrow={narrow} className="shell-run-controls">
+          <span className="shell-run" title="run id">{manifest.run_id}</span>
+          <button onClick={exportManifest}>export manifest</button>
+          <label className="shell-import">
+            import manifest
+            <input
+              type="file"
+              accept="application/json"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) importManifestFile(file);
+                event.target.value = '';
+              }}
+            />
+          </label>
+          {importRefusal && <span className="shell-refusal">{importRefusal}</span>}
+        </Disclosure>
+        <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
       </header>
-      <div className="shell-body">
-        <DockviewReact
-          className="dockview-theme-abyss"
-          components={panelComponents}
-          defaultTabComponent={PermanentTab}
-          onReady={onReady}
-        />
+      <div className="shell-body" ref={bodyRef}>
+        {narrow ? (
+          <Stack
+            config={config}
+            active={active}
+            onSelect={selectView}
+            paramsFor={(viewId) => params[viewId]}
+          />
+        ) : (
+          <DockviewReact
+            className="dockview-theme-abyss"
+            components={dockComponents}
+            defaultTabComponent={PermanentTab}
+            onReady={onReady}
+          />
+        )}
       </div>
     </div>
   );

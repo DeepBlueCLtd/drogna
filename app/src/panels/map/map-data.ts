@@ -1,0 +1,144 @@
+/**
+ * The Map panel's data builders (FR-40), pure and testable without WebGL: grid
+ * cells from an area-query Coverage, advisory validity against the displayed
+ * instant, the route as a four-dimensional curve with the platform's position
+ * interpolated at the displayed time, and the projection's H3 cells. Everything
+ * here transforms documents that crossed the seam; nothing reads a store.
+ */
+import { cellToBoundary } from 'h3-js';
+import type { Advisory, FeaturesResponseFeature, Plan } from '../../generated/types.js';
+
+/** The Grid-domain Coverage subset the area query serves (coveragejson master). */
+export interface GridCoverage {
+  domain: {
+    domainType: string;
+    axes: { x: { values: number[] }; y: { values: number[] }; z: { values: number[] }; t: { values: string[] } };
+  };
+  ranges: Record<string, { shape: number[]; values: number[] }>;
+}
+
+export interface GridCell {
+  /** [west, south, east, north] of the cell, centred on the grid point. */
+  bounds: [number, number, number, number];
+  value: number;
+}
+
+/** The coverage's grid points as drawable cells, with the value range observed. */
+export function gridCells(
+  coverage: GridCoverage,
+  parameter: string,
+): { cells: GridCell[]; minimum: number; maximum: number } | undefined {
+  const range = coverage.ranges[parameter];
+  if (!range || coverage.domain.domainType !== 'Grid') return undefined;
+  const lons = coverage.domain.axes.x.values;
+  const lats = coverage.domain.axes.y.values;
+  const lonHalf = lons.length > 1 ? (lons[1] - lons[0]) / 2 : 0.125;
+  const latHalf = lats.length > 1 ? (lats[1] - lats[0]) / 2 : 0.1;
+  const cells: GridCell[] = [];
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+  for (let latIndex = 0; latIndex < lats.length; latIndex++) {
+    for (let lonIndex = 0; lonIndex < lons.length; lonIndex++) {
+      const value = range.values[latIndex * lons.length + lonIndex];
+      if (value < minimum) minimum = value;
+      if (value > maximum) maximum = value;
+      cells.push({
+        bounds: [
+          lons[lonIndex] - lonHalf,
+          lats[latIndex] - latHalf,
+          lons[lonIndex] + lonHalf,
+          lats[latIndex] + latHalf,
+        ],
+        value,
+      });
+    }
+  }
+  return { cells, minimum, maximum };
+}
+
+/**
+ * A perceptual single-hue ramp, legible in greyscale because lightness carries
+ * the value: low is dark, high is light, with a blue-to-warm drift for colour.
+ */
+export function rampColour(value: number, minimum: number, maximum: number): [number, number, number] {
+  const span = maximum - minimum;
+  const t = span > 0 ? Math.min(Math.max((value - minimum) / span, 0), 1) : 0.5;
+  return [Math.round(40 + 200 * t), Math.round(60 + 130 * t), Math.round(120 + 60 * (1 - t))];
+}
+
+export type AdvisoryFeature = FeaturesResponseFeature & {
+  properties: Omit<Advisory, 'region'>;
+};
+
+/** Whether the advisory is valid at the displayed simulation instant (FR-40). */
+export function validAt(advisory: Pick<Advisory, 'valid_time'>, displayedSimTime: string): boolean {
+  return (
+    advisory.valid_time.start_sim_time <= displayedSimTime && displayedSimTime < advisory.valid_time.end_sim_time
+  );
+}
+
+export interface RoutePosition {
+  longitude: number;
+  latitude: number;
+  depthM: number;
+  /** The vertex the platform is travelling toward at the displayed instant. */
+  towardSequence: number | null;
+}
+
+/**
+ * Where along the committed route the platform stands at the displayed instant:
+ * linear interpolation between successive arrival times — before the first
+ * vertex it sits at the plan's platform position, after the last it holds there.
+ */
+export function routePositionAt(plan: Plan, displayedSimTime: string): RoutePosition | undefined {
+  const vertices = plan.route.vertices;
+  if (vertices.length === 0) return undefined;
+  const legs: { longitude: number; latitude: number; depth_m: number; arrival_sim_time: string }[] = [
+    { ...plan.platform, arrival_sim_time: plan.horizon.start_sim_time },
+    ...vertices,
+  ];
+  if (displayedSimTime <= legs[0].arrival_sim_time) {
+    return { longitude: legs[0].longitude, latitude: legs[0].latitude, depthM: legs[0].depth_m, towardSequence: vertices[0].sequence };
+  }
+  for (let i = 1; i < legs.length; i++) {
+    if (displayedSimTime <= legs[i].arrival_sim_time) {
+      const from = legs[i - 1];
+      const to = legs[i];
+      const t0 = Date.parse(from.arrival_sim_time.slice(0, 23) + 'Z');
+      const t1 = Date.parse(to.arrival_sim_time.slice(0, 23) + 'Z');
+      const now = Date.parse(displayedSimTime.slice(0, 23) + 'Z');
+      const t = t1 > t0 ? (now - t0) / (t1 - t0) : 1;
+      return {
+        longitude: from.longitude + t * (to.longitude - from.longitude),
+        latitude: from.latitude + t * (to.latitude - from.latitude),
+        depthM: from.depth_m + t * (to.depth_m - from.depth_m),
+        towardSequence: vertices[i - 1].sequence,
+      };
+    }
+  }
+  const last = legs[legs.length - 1];
+  return { longitude: last.longitude, latitude: last.latitude, depthM: last.depth_m, towardSequence: null };
+}
+
+export interface ProjectionCell {
+  boundary: [number, number][];
+  /** 0 (collapsed) to 1 (at saturation): how much doubt stands in the cell now. */
+  fraction: number;
+  state: Plan['projection']['regions'][number]['state'];
+  depthBand: number;
+}
+
+/** The projection's H3 cells as polygons, the uncertainty fraction to shade by. */
+export function projectionCells(plan: Plan, depthBand: number): ProjectionCell[] {
+  return plan.projection.regions
+    .filter((region) => region.depth_band === depthBand)
+    .map((region) => ({
+      boundary: cellToBoundary(region.h3_index, true).map(([lon, lat]) => [lon, lat] as [number, number]),
+      fraction:
+        region.saturated_uncertainty > 0
+          ? Math.min(region.uncertainty_now / region.saturated_uncertainty, 1)
+          : 0,
+      state: region.state,
+      depthBand: region.depth_band,
+    }));
+}

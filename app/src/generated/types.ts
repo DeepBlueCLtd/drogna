@@ -550,6 +550,9 @@ export type ConfigShell = {
     "heartbeat": ConfigCommonTopicFilter;
     "holdings": ConfigCommonTopicFilter;
     "all": ConfigCommonTopicFilter;
+    "plan": ConfigCommonTopicFilter;
+    "run_published": ConfigCommonTopicFilter;
+    "advisories": ConfigCommonTopicFilter;
   };
   "message_schemas": {
     "filter": ConfigCommonTopicFilter;
@@ -562,6 +565,9 @@ export type ConfigShell = {
     "telemetry": ConfigCommonRelativePath;
     "clock_step": ConfigCommonRelativePath;
     "component_command": ConfigCommonRelativePath;
+    "edr": ConfigCommonRelativePath;
+    "features": ConfigCommonRelativePath;
+    "query_subsets": ConfigCommonRelativePath;
   };
   "liveness": {
     "default_window_seconds": number;
@@ -612,7 +618,7 @@ export type Coveragejson = {
   "type": "Coverage";
   "domain": {
     "type": "Domain";
-    "domainType": "Point" | "Trajectory";
+    "domainType": "Point" | "Trajectory" | "Grid";
     "axes": {
       "x"?: CoveragejsonNumericAxis;
       "y"?: CoveragejsonNumericAxis;
@@ -735,6 +741,7 @@ export type EdrCollectionsCollection = {
   "data_queries": {
     "position"?: EdrCollectionsDataQuery;
     "trajectory"?: EdrCollectionsDataQuery;
+    "area"?: EdrCollectionsDataQuery;
   };
   "parameter_names": {
     [key: string]: unknown;

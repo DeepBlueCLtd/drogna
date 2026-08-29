@@ -461,6 +461,9 @@
       "clock": "ctl/clock",
       "heartbeat": "ctl/heartbeat",
       "holdings": "cov/holdings",
+      "plan": "ctl/plan",
+      "run_published": "ctl/run/published",
+      "advisories": "adv/advisories",
       "all": "#"
     },
     "message_schemas": [
@@ -484,7 +487,10 @@
       "components": "/api/ctl/components",
       "telemetry": "/api/ctl/telemetry",
       "clock_step": "/api/ctl/clock/step",
-      "component_command": "/api/ctl/components"
+      "component_command": "/api/ctl/components",
+      "edr": "/api/edr",
+      "features": "/api/features",
+      "query_subsets": "/api/ctl/query-subsets"
     },
     "liveness": { "default_window_seconds": 6 },
     "messages": { "buffer": 200 }

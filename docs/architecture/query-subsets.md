@@ -12,10 +12,10 @@ thing refused — the option, the shape, the property, the extent (E9).
   "schema_version": 1,
   "edr": {
     "standard": "OGC API - Environmental Data Retrieval 1.1",
-    "query_types": ["position", "trajectory"],
+    "query_types": ["position", "trajectory", "area"],
     "parameters": ["temperature", "salinity"],
-    "interpolation": "nearest neighbour on the stored grid, in all four dimensions; the snapped grid point is reported in the domain",
-    "refused_by_name": ["radius", "area", "cube", "corridor", "items", "locations", "instances", "crs", "f", "within", "within-units", "resolution-x", "resolution-y"]
+    "interpolation": "nearest neighbour on the stored grid, in all four dimensions; the snapped grid point is reported in the domain — an area query returns the stored grid points inside the requested bounding box, at one depth and one instant",
+    "refused_by_name": ["radius", "cube", "corridor", "items", "locations", "instances", "crs", "f", "within", "within-units", "resolution-x", "resolution-y"]
   },
   "sensorthings": {
     "standard": "OGC SensorThings API Part 1: Sensing 1.1, read-only",
@@ -36,6 +36,10 @@ thing refused — the option, the shape, the property, the extent (E9).
 - **EDR** serves the coverage store's holdings as collections by convention
   (`archive`, `nowcast`, and each forecast instance by holding id from feature
   105) — a new holding is servable without editing query configuration (FR-29).
+  The `area` query (grown at 109 for the map, one capability at a time per E9)
+  takes `coords=POLYGON((lon lat, …))` and samples the ring's bounding box at one
+  `z` and one `datetime`, returning a Grid-domain Coverage of the stored points —
+  never a resampling.
   Responses are CoverageJSON in the committed subset (`coveragejson.schema.json`).
   Trajectory coordinates are `LINESTRINGZM(lon lat depth posix_seconds, …)`:
   per-vertex depth and time, conditions at the moment of arrival (FR-28). Values

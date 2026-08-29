@@ -10,7 +10,8 @@
     "test": "vitest run -c scripts/vitest.config.ts",
     "gates": "tsx scripts/run-gates.ts",
     "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
-    "capture:glance": "tsx scripts/capture/glance.ts"
+    "capture:glance": "tsx scripts/capture/glance.ts",
+    "replay-proof": "tsx scripts/replay-proof.ts"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

@@ -19,6 +19,7 @@ import { SystemPanel } from './system/SystemPanel.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
+import { MapPanel } from './map/MapPanel.js';
 
 const validator = createSeamValidator();
 
@@ -146,6 +147,39 @@ describe('the panels against a live backend', () => {
     act(() => rogue.publish('obs/platform-a/mystery', { not: 'declared' }));
     const undeclared = document.querySelector('[data-topic-path="obs/platform-a/mystery"]');
     expect(undeclared?.className).toMatch(/topic-undeclared/);
+  });
+
+  it('Map states WebGL absence honestly, lists advisories as present-and-stating-empty, and the composer offers only what is served', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    try {
+      render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // jsdom has no WebGL: the canvas says so instead of pretending (FR-40).
+      expect(screen.getByText(/WebGL is unavailable here/)).toBeTruthy();
+      // The advisories collection is present and stating empty (108's claim, read here).
+      expect(screen.getByText(/present and stating empty/)).toBeTruthy();
+      // Open the composer: it enumerates from the served subset statement and
+      // collections list, never a stub (FR-41).
+      act(() => screen.getByText('EDR composer').click());
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      const collectionOptions = [...document.querySelectorAll('.composer select')].flatMap((select) =>
+        [...select.querySelectorAll('option')].map((option) => option.value),
+      );
+      expect(collectionOptions).toContain('nowcast');
+      expect(collectionOptions).toContain('archive');
+      expect(collectionOptions).toContain('area');
+      // The missing step is named until the URL can assemble.
+      expect(screen.getByTestId('composer-url').textContent).toMatch(/choose a collection/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it('Intro states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {

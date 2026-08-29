@@ -158,11 +158,40 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           <a href={hashForView('messages')}>Messages</a>.
         </p>
       </section>
-      <section className="not-landed">
-        <h3>What has not landed yet</h3>
+      <section>
+        <h3>109 — it is seen</h3>
         <p>
-          The <a href={hashForView('map')}>map</a> (109) arrives as its beat is
-          built. Until then, nothing here lights without a heartbeat.
+          The <a href={hashForView('map')}>Map</a> draws only documents that crossed
+          the seam: the field from a genuine EDR <em>area</em> query (the subset grew
+          one capability for it, stated in the conformance statement like every
+          other), the planner&rsquo;s doubt as H3 cells that refresh with each plan
+          and shade by how far each region has regrown toward saturation, the
+          committed route as a four-dimensional curve — slide the time control and
+          the platform moves along it; click a stop for the conditions at the moment
+          of arrival, fetched at that place and that instant — and advisories drawn
+          only while valid at the displayed time, undrawn outside validity yet still
+          listed and queryable. The <em>EDR composer</em> is a mode of the map: a
+          guided sequence with the literal request URL always visible, assembling
+          live and copyable, offering only what the server&rsquo;s own metadata
+          states it serves; the response renders where it was asked for, with null,
+          declined and absent kept as three different facts. Where WebGL is
+          unavailable the canvas says so instead of pretending.
+        </p>
+      </section>
+      <section>
+        <h3>The walkthrough, whole</h3>
+        <p>
+          Every beat above is live in this page, and this tab is the demo script:
+          start at <a href={hashForView('system')}>System</a> to watch the machinery
+          light, read the run&rsquo;s holdings in{' '}
+          <a href={hashForView('holdings')}>Holdings</a>, watch the traffic argue
+          with its masters in <a href={hashForView('messages')}>Messages</a>,
+          interrogate and interrupt the components in{' '}
+          <a href={hashForView('operator')}>Operator</a>, and end at the{' '}
+          <a href={hashForView('map')}>Map</a>, where the whole loop is visible at
+          once. Export the manifest from the header to replay this run
+          byte-identically; your interventions are ephemeral and deliberately
+          outside that claim. Everything is synthetic, and says so.
         </p>
       </section>
     </div>

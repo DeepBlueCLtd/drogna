@@ -21,10 +21,10 @@ import { FeaturesComponent } from './features.js';
 export const SUBSET_STATEMENT: Omit<QuerySubsets, 'schema_version'> = {
   edr: {
     standard: 'OGC API - Environmental Data Retrieval 1.1',
-    query_types: ['position', 'trajectory'],
+    query_types: ['position', 'trajectory', 'area'],
     parameters: ['temperature', 'salinity'],
-    interpolation: 'nearest neighbour on the stored grid, in all four dimensions; the snapped grid point is reported in the domain',
-    refused_by_name: ['radius', 'area', 'cube', 'corridor', 'items', 'locations', 'instances', 'crs', 'f', 'within', 'within-units', 'resolution-x', 'resolution-y'],
+    interpolation: 'nearest neighbour on the stored grid, in all four dimensions; the snapped grid point is reported in the domain — an area query returns the stored grid points inside the requested bounding box, at one depth and one instant',
+    refused_by_name: ['radius', 'cube', 'corridor', 'items', 'locations', 'instances', 'crs', 'f', 'within', 'within-units', 'resolution-x', 'resolution-y'],
   },
   sensorthings: {
     standard: 'OGC SensorThings API Part 1: Sensing 1.1, read-only',

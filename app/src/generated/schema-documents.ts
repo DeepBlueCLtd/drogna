@@ -2464,7 +2464,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "heartbeat",
           "holdings",
-          "all"
+          "all",
+          "plan",
+          "run_published",
+          "advisories"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2480,6 +2483,15 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "all": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
             "description": "The Messages panel's subscription: everything, because a display may not show cold where there is traffic (E13)."
+          },
+          "plan": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "advisories": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
           }
         }
       },
@@ -2514,7 +2526,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "components",
           "telemetry",
           "clock_step",
-          "component_command"
+          "component_command",
+          "edr",
+          "features",
+          "query_subsets"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -2536,6 +2551,18 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "component_command": {
             "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "edr": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "The EDR prefix the Map panel and the composer issue genuine GETs against."
+          },
+          "features": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "The Features prefix the Map panel reads advisories and reference geometry from."
+          },
+          "query_subsets": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Where the subset statement is served; the composer offers only what it states."
           }
         }
       },
@@ -2734,7 +2761,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coveragejson.schema.json",
     "title": "drogna CoverageJSON subset",
-    "description": "The CoverageJSON the EDR component serves (SRD-v2 FR-26): the honest subset, stated — Coverage documents with Point and Trajectory domains, NdArray ranges, and the harness's two parameters. This master is the shape a response is validated against in tests and behind the debug flag; it deliberately closes what the harness emits rather than describing everything CoverageJSON permits, so an accidental extra field is a finding, not a feature.",
+    "description": "The CoverageJSON the EDR component serves (SRD-v2 FR-26): the honest subset, stated — Coverage documents with Point, Trajectory and Grid domains, NdArray ranges, and the harness's two parameters. This master is the shape a response is validated against in tests and behind the debug flag; it deliberately closes what the harness emits rather than describing everything CoverageJSON permits, so an accidental extra field is a finding, not a feature.",
     "type": "object",
     "required": [
       "type",
@@ -2766,7 +2793,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "enum": [
               "Point",
-              "Trajectory"
+              "Trajectory",
+              "Grid"
             ]
           },
           "axes": {
@@ -3369,6 +3397,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 "$ref": "#/$defs/data_query"
               },
               "trajectory": {
+                "$ref": "#/$defs/data_query"
+              },
+              "area": {
                 "$ref": "#/$defs/data_query"
               }
             }

@@ -15,9 +15,17 @@ on:
 permissions:
   contents: write
 
-# Serialised, never cancelled: two estate pushes racing would drop one instance.
+# Grouped per branch, and deliberately NOT shared with the site workflow. GitHub holds
+# at most ONE queued run per concurrency group: `cancel-in-progress: false` protects the
+# run that is already going, and the next arrival evicts and CANCELS the one waiting
+# behind it. A group shared across workflows therefore drops runs rather than
+# serialising them — which is how the V2 site publication was lost, cancelled four
+# seconds after it queued behind an instance deployment. Within one branch the eviction
+# is harmless and wanted: the run that displaces a waiting one carries the newer build.
+# Estate writers now race instead, and the push step below resolves that by re-placing
+# on the winner's state.
 concurrency:
-  group: gh-pages-estate
+  group: gh-pages-instances-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -49,48 +57,54 @@ jobs:
           ref: gh-pages
           path: estate
 
-      - name: Place this branch's instance
+      - name: Place this branch's instance and push, additively
         run: |
+          set -euo pipefail
           slug="$(echo "${GITHUB_REF_NAME}" | tr '/' '-')"
           echo "slug=${slug}" >> "$GITHUB_ENV"
-          rm -rf "estate/instances/${slug}"
-          mkdir -p "estate/instances/${slug}"
-          cp -r app/dist/. "estate/instances/${slug}/"
-          # What this instance was built from, written beside it. An instance outlives
-          # the branch it came from — that is the point of retaining it once the pull
-          # request completes — so its provenance has to travel with it rather than be
-          # looked up later against a ref that may be gone.
-          cat > "estate/instances/${slug}/instance.json" <<JSON
-          {
-            "ref": "${GITHUB_REF_NAME}",
-            "sha": "${GITHUB_SHA}",
-            "built": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Placement is a function of this build and whatever the estate holds right
+          # now, so a losing attempt re-does it on the winner's state rather than
+          # rebasing onto it. Both workflows regenerate instances/index.html, and
+          # rebasing one generated file onto another run's version of it conflicts,
+          # where re-deriving it from the estate just fetched cannot.
+          place() {
+            rm -rf "estate/instances/${slug}"
+            mkdir -p "estate/instances/${slug}"
+            cp -r app/dist/. "estate/instances/${slug}/"
+            # What this instance was built from, written beside it. An instance outlives
+            # the branch it came from — that is the point of retaining it once the pull
+            # request completes — so its provenance has to travel with it rather than be
+            # looked up later against a ref that may be gone.
+            printf '{\n  "ref": "%s",\n  "sha": "%s",\n  "built": "%s"\n}\n' \
+              "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              > "estate/instances/${slug}/instance.json"
+            # The index is what makes the instances a place rather than a set of URLs
+            # somebody has to already know (NFR-04). It is regenerated from what the
+            # estate holds, so it lists retired branches' instances too, for as long as
+            # the estate keeps them.
+            pnpm run estate:index estate
           }
-          JSON
 
-      # The index is what makes the instances a place rather than a set of URLs somebody
-      # has to already know (NFR-04). It is regenerated from what the estate holds, so it
-      # lists retired branches' instances too, for as long as the estate keeps them.
-      - name: Regenerate the instance index
-        run: pnpm run estate:index estate
+          git -C estate config user.name "drogna-instances"
+          git -C estate config user.email "actions@users.noreply.github.com"
 
-      - name: Push, additively
-        run: |
-          cd estate
-          git config user.name "drogna-instances"
-          git config user.email "actions@users.noreply.github.com"
-          git add "instances/${slug}" instances/index.html
-          if git diff --cached --quiet; then
-            echo "instance unchanged; nothing to push"
-            exit 0
-          fi
-          git commit -m "instance: ${slug} @ ${GITHUB_SHA}"
           for delay in 2 4 8 16; do
-            if git push; then exit 0; fi
-            git pull --rebase origin gh-pages
-            sleep "$delay"
+            place
+            git -C estate add "instances/${slug}" instances/index.html
+            if git -C estate diff --cached --quiet; then
+              echo "instance unchanged; nothing to push"
+              exit 0
+            fi
+            git -C estate commit -m "instance: ${slug} @ ${GITHUB_SHA}"
+            if git -C estate push; then exit 0; fi
+            echo "another writer moved the estate; taking its state and placing again"
+            git -C estate fetch origin gh-pages
+            git -C estate reset --hard origin/gh-pages
+            sleep "${delay}"
           done
-          git push
+          echo "could not push the instance into the estate after four attempts" >&2
+          exit 1
 
       # D17: the author is told when something is ready to look at. The topic is a CI
       # secret (PR-01): with no secret configured, this step says so and does nothing.

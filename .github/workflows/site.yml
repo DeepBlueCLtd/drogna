@@ -30,10 +30,16 @@ on:
 permissions:
   contents: write
 
-# Serialised with the instance deployments, never cancelled: two estate pushes racing
-# would drop one of them.
+# This workflow's own group, deliberately NOT shared with the instance deployments.
+# GitHub holds at most ONE queued run per concurrency group: `cancel-in-progress: false`
+# protects the run already going, and the next arrival evicts and CANCELS the one
+# waiting behind it. Sharing `gh-pages-estate` with a workflow that fires on every
+# push to every `claude/**` branch therefore did not serialise this one — it dropped
+# it. The V2 site publication queued at 12:34:45 and was cancelled at 12:34:49, and the
+# site simply never appeared. Estate writers now race, and the push step below resolves
+# that by re-placing the site on the winner's state.
 concurrency:
-  group: gh-pages-estate
+  group: gh-pages-site
   cancel-in-progress: false
 
 jobs:
@@ -68,34 +74,44 @@ jobs:
           ref: gh-pages
           path: estate
 
-      - name: Place the site
-        run: pnpm run site:publish estate
-
-      # Regenerated here as well as in instances.yml, so the index is current whichever
-      # workflow last touched the estate. It is read from what the estate holds, so
-      # running it twice cannot produce two different answers.
-      - name: Regenerate the instance index
-        run: pnpm run estate:index estate
-
-      - name: Push, additively
+      - name: Place the site and push, additively
         run: |
-          cd estate
-          git config user.name "drogna-site"
-          git config user.email "actions@users.noreply.github.com"
-          # Precisely the site's own ground, plus the one file in the other tenant's
-          # that this workflow legitimately regenerates. `git add -A` at the root would
-          # be a workflow staging whatever it happened to find, which is the habit that
-          # produced three red runs in V1.
-          git add -A -- . ':(exclude)instances'
-          git add instances/index.html
-          if git diff --cached --quiet; then
-            echo "site unchanged; nothing to push"
-            exit 0
-          fi
-          git commit -m "site: ${GITHUB_SHA}"
+          set -euo pipefail
+
+          # Placement is a function of this build and whatever the estate holds right
+          # now, so a losing attempt re-does it on the winner's state rather than
+          # rebasing onto it. Both workflows regenerate instances/index.html, and
+          # rebasing one generated file onto another run's version of it conflicts,
+          # where re-deriving it from the estate just fetched cannot.
+          place() {
+            pnpm run site:publish estate
+            # Regenerated here as well as in instances.yml, so the index is current
+            # whichever workflow last touched the estate. It is read from what the
+            # estate holds, so running it twice cannot produce two different answers.
+            pnpm run estate:index estate
+          }
+
+          git -C estate config user.name "drogna-site"
+          git -C estate config user.email "actions@users.noreply.github.com"
+
           for delay in 2 4 8 16; do
-            if git push; then exit 0; fi
-            git pull --rebase origin gh-pages
-            sleep "$delay"
+            place
+            # Precisely the site's own ground, plus the one file in the other tenant's
+            # that this workflow legitimately regenerates. `git add -A` at the root would
+            # be a workflow staging whatever it happened to find, which is the habit that
+            # produced three red runs in V1.
+            git -C estate add -A -- . ':(exclude)instances'
+            git -C estate add instances/index.html
+            if git -C estate diff --cached --quiet; then
+              echo "site unchanged; nothing to push"
+              exit 0
+            fi
+            git -C estate commit -m "site: ${GITHUB_SHA}"
+            if git -C estate push; then exit 0; fi
+            echo "another writer moved the estate; taking its state and placing again"
+            git -C estate fetch origin gh-pages
+            git -C estate reset --hard origin/gh-pages
+            sleep "${delay}"
           done
-          git push
+          echo "could not push the site into the estate after four attempts" >&2
+          exit 1

@@ -1,0 +1,13 @@
+# The planted violation: two workflows claiming one group, believing it serialises them.
+name: Rare
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: gh-pages-estate
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo publish

@@ -1,0 +1,18 @@
+{
+  "image": "107-telemetry-by-region.png",
+  "run_id": "loiter-cbi1cz",
+  "view": "operator",
+  "sim_time": "2026-01-01T02:08:48Z",
+  "clock_pinned": "rate 0",
+  "lit_components": "not readable from this view",
+  "warmed": "run at rate 600 for 45000 ms of host time before the clock was pinned",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The Operator tab after two simulated hours: the telemetry block reads skill against persistence, residual statistics, throughput per simulated second, a latency line reading zero with the reason for it, and a by-region table holding a single row — the one region of six the loitering platform has sampled."
+}

@@ -4,8 +4,9 @@
  * installs the fetch shim (ADR-0029), and mounts the shell — handing each half only
  * configuration and seam interfaces. Nothing imports this module.
  */
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, RunManifest } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
@@ -33,6 +34,47 @@ function freshRootSeed(): number {
 }
 
 let runtime: BackendRuntime | undefined;
+
+/**
+ * Building the backend is one unbroken task — validating twenty-one configuration
+ * documents, constructing every component, then provisioning the archive on the clock's
+ * first sample — and until it returns the page has painted nothing but the background
+ * colour in `index.html`. On a mid-range laptop that is over a second of blank screen
+ * before the shell exists (`spikes/load-time`, §3).
+ *
+ * So the shell's frame is painted first and the construction runs after it. Nothing about
+ * the construction changes: the same order, the same clock sample, the same bytes a
+ * replay must reproduce (AT-04). What changes is only that the browser is let up for air
+ * in between, which it cannot do from inside a synchronous stretch.
+ *
+ * Two frames deep because one only guarantees the callback runs *before* the next paint,
+ * not after it; the second fires once that paint has happened.
+ */
+function whenPainted(proceed: () => void): void {
+  // harness:allow-wallclock a yield until the shell's first frame is on screen — the frame timestamp is not read, and no simulation time exists yet
+  requestAnimationFrame(() => requestAnimationFrame(proceed));
+}
+
+/**
+ * What the page shows while the backend is being built. It says the harness is starting
+ * rather than leaving the screen dark; the seam is already honest behind it, because the
+ * fetch shim answers 503 until a run is provisioned.
+ */
+function Starting(): ReactNode {
+  return (
+    <div className="shell">
+      <header className="shell-header">
+        <span className="shell-title">drogna</span>
+        <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
+      </header>
+      <div className="shell-body">
+        <div className="panel">
+          <p className="not-landed">provisioning the run…</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function boot(rootSeed: number): void {
   runtime?.stop();
@@ -78,4 +120,9 @@ installSeamFetch(config.boundary.api_prefix, {
 const container = document.getElementById('root');
 if (!container) throw new Error('no #root element to mount into');
 const root = createRoot(container);
-boot(freshRootSeed());
+// flushSync, because `root.render` only schedules: React 18 would otherwise still be
+// holding the starting frame uncommitted when the yield below expires, and the first
+// thing painted would be the finished shell — measured, and the reason this is not a
+// plain render (spikes/load-time).
+flushSync(() => root.render(<Starting />));
+whenPainted(() => boot(freshRootSeed()));

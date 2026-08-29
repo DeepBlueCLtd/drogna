@@ -3,7 +3,7 @@
  * dockview owns the layout; each panel is a React component; the four first-run tabs
  * come from the shell's configuration document, never from literals here.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   DockviewDefaultTab,
   DockviewReact,
@@ -20,7 +20,6 @@ import { IntroPanel } from '../panels/intro/IntroPanel.js';
 import { SystemPanel } from '../panels/system/SystemPanel.js';
 import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
 import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
-import { MapPanel } from '../panels/map/MapPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
 import { ClockStrip } from './ClockStrip.js';
@@ -46,6 +45,61 @@ export interface PanelParams {
    * simply never reads this.
    */
   address: PanelAddress;
+}
+
+/**
+ * The map is the one panel loaded on demand (spike `spikes/load-time`). Its
+ * deck.gl/luma.gl stack is about a third of the bundle and is reachable from no other
+ * view, so a visitor who opens the intro — the front door — was waiting for a renderer
+ * they had not asked for.
+ *
+ * Two things together, because either alone leaves the cost where it was. `lazy` puts
+ * the stack in its own chunk; `WhenFirstActive` withholds the render until the tab is
+ * first selected, because dockview mounts every panel's React tree at once (detached,
+ * as `panels/map/attach.ts` records) and a mounted lazy component fetches its chunk
+ * immediately. A deep link naming the map activates it during layout restore, so
+ * arriving at `#/view/map` still loads it at once.
+ *
+ * The panel is mounted once and never unmounted again: `seen` latches, so switching
+ * away does not tear down the canvas or lose what the panel has accumulated.
+ */
+const LazyMapPanel = lazy(async () => ({
+  default: (await import('../panels/map/MapPanel.js')).MapPanel,
+}));
+
+function WhenFirstActive({
+  api,
+  children,
+}: {
+  api: IDockviewPanelProps<PanelParams>['api'];
+  children: React.ReactNode;
+}) {
+  const seen = useRef(false);
+  const active = useSyncExternalStore(
+    useCallback(
+      (onChange) => {
+        const subscription = api.onDidActiveChange(() => onChange());
+        return () => subscription.dispose();
+      },
+      [api],
+    ),
+    () => {
+      seen.current ||= api.isActive;
+      return seen.current;
+    },
+  );
+  if (!active) return null;
+  return <>{children}</>;
+}
+
+function MapPanel(props: IDockviewPanelProps<PanelParams>) {
+  return (
+    <WhenFirstActive api={props.api}>
+      <Suspense fallback={<div className="panel"><p className="not-landed">bringing up the map…</p></div>}>
+        <LazyMapPanel {...props} />
+      </Suspense>
+    </WhenFirstActive>
+  );
 }
 
 /** Which React component renders each configured view id. */

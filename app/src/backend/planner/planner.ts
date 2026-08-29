@@ -39,6 +39,8 @@ export class Planner {
   private simTime = { value: '', tick: 0 };
   private lastPlanTick = -1;
   private planOrdinal = 0;
+  /** Stops on the route last recommended. Zero until one has been. */
+  lastRouteStops = 0;
   private previousPlanId: string | null = null;
   private previousRoute: { h3: string; band: number }[] = [];
   private previousValue = 0;
@@ -77,6 +79,11 @@ export class Planner {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `state ${this.state}; ${this.planOrdinal} recommendation(s) emitted`,
+        figures: [
+          { key: 'plans_emitted', value: this.planOrdinal, label: 'plans' },
+          { key: 'route_stops', value: this.lastRouteStops, label: 'stops' },
+          { key: 'soundings', value: this.soundingsInformed, label: 'soundings' },
+        ],
       }),
       runId,
       configDigest(config),
@@ -343,6 +350,7 @@ export class Planner {
     const now = this.posixNow();
     const horizonEnd = now + this.config.budget_seconds;
 
+    this.lastRouteStops = route.length;
     const vertices: PlanVertex[] = route.map((cell, index) => ({
       sequence: index,
       h3_index: cell.h3,

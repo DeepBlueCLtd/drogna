@@ -20,6 +20,7 @@ import { topology } from '../../generated/topology.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { OperatorPanel } from './OperatorPanel.js';
 import { buildFlow } from './graph.js';
+import { componentsWithoutFaces } from './faces.js';
 
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
@@ -164,7 +165,8 @@ describe('the Operator flow chart (feature 112)', () => {
 
     // The platform darkens because its heartbeats ceased, not because the command said so.
     expect(document.querySelector('[data-flow-node="platform"]')?.getAttribute('data-lit')).toBe('false');
-    // And two nodes along, the consequence is on screen in the sensors' own words.
+    // And two nodes along, the consequence is on the sensors' own face — drawn from
+    // the position age they report, not parsed out of a sentence.
     expect(sensorsNode()?.textContent).toContain('ticks old');
     // The ocean sampling stopped: one more sample at most, then nothing.
     expect(oceanRows()).toBeLessThanOrEqual(before + 1);
@@ -179,9 +181,13 @@ describe('the Operator flow chart (feature 112)', () => {
     await act(async () => {
       fireEvent.click(document.querySelector('[data-flow-node="platform"]') as HTMLElement);
     });
-    expect(screen.getByTestId('flow-drawer').getAttribute('data-drawer-component')).toBe('platform');
+    const drawer = () => screen.getByTestId('flow-drawer');
+    expect(drawer().getAttribute('data-drawer-component')).toBe('platform');
+    // The instrument is on the node AND at full size in the drawer, so assertions
+    // scope to one of them rather than matching both.
+    const binding = () => within(drawer()).getByTestId('platform-binding');
     // No demand yet: the face says so rather than showing a demand equal to current.
-    expect(screen.getByTestId('platform-binding').textContent).toContain('no demand heard');
+    expect(binding().textContent).toContain('no demand heard');
 
     // A demand that cannot be reached: applied to the limit, and the shortfall stated.
     await act(async () => {
@@ -191,14 +197,14 @@ describe('the Operator flow chart (feature 112)', () => {
       });
       for (let i = 0; i < 5; i++) runtime.clock.tickOnce();
     });
-    expect(screen.getByTestId('platform-binding').textContent).toMatch(/binding: turn rate/);
-    expect(screen.getByTestId('platform-shortfall').textContent).toMatch(/demanded 12 m\/s/);
+    expect(binding().textContent).toMatch(/binding: turn rate/);
+    expect(within(drawer()).getByTestId('platform-shortfall').textContent).toMatch(/demanded 12 m\/s/);
 
     // Turn all the way: the limit stops binding when the platform gets there.
     await act(async () => {
       for (let i = 0; i < 400; i++) runtime.clock.tickOnce();
     });
-    expect(screen.getByTestId('platform-binding').textContent).not.toMatch(/turn rate/);
+    expect(binding().textContent).not.toMatch(/turn rate/);
   });
 
   it('a heartbeat with no detail is not an absent heartbeat', async () => {
@@ -208,13 +214,87 @@ describe('the Operator flow chart (feature 112)', () => {
     });
     // The clock, the broker and the release gate publish no detail line. Reading that
     // as "no heartbeat has ever arrived" was the display inventing a silence that had
-    // not happened — found by looking at the running page, and held here.
+    // not happened — found by looking at the running page, and held here in the
+    // drawer, which is where the detail sentence now lives.
     const clock = document.querySelector('[data-flow-node="clock"]');
     expect(clock?.getAttribute('data-lit')).toBe('true');
-    expect(clock?.textContent).not.toContain('no heartbeat has ever arrived');
-    expect(clock?.textContent).toContain('beating, and saying nothing beyond that');
-    // A component that genuinely says something says it instead.
-    expect(document.querySelector('[data-flow-node="platform"]')?.textContent).toContain('m/s');
+    await act(async () => {
+      fireEvent.click(clock as HTMLElement);
+    });
+    const drawer = screen.getByTestId('flow-drawer');
+    expect(drawer.textContent).not.toContain('no heartbeat has ever arrived');
+    expect(drawer.textContent).toContain('beating, and saying nothing beyond that');
+    // A component that has genuinely reported something draws it instead. The
+    // platform has not published state yet at this point, and its face says exactly
+    // that rather than drawing a dial at zero.
+    expect(document.querySelector('[data-flow-node="platform"]')?.textContent).toContain(
+      'nothing heard from the platform yet',
+    );
+    await act(async () => {
+      runtime.clock.tickOnce();
+    });
+    // Now it draws its own instrument: speed and depth against their declared
+    // maxima, with no demanded mark because nothing has demanded anything.
+    const platform = document.querySelector('[data-flow-node="platform"]');
+    expect(platform?.textContent).toContain('speed');
+    expect(platform?.textContent).toContain('depth');
+    expect(platform?.querySelector('.face-dial')).toBeTruthy();
+    expect(platform?.querySelector('.face-tape-demanded')).toBeNull();
+  });
+
+  it('every component wears a face of its own — none falls back to a blank', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+      for (let i = 0; i < 40; i++) runtime.clock.tickOnce();
+      vi.advanceTimersByTime(2100);
+    });
+    // Twenty components, twenty bespoke instruments. The first cut of this panel drew
+    // the same card twenty times, which told a reader nothing the table had not.
+    expect(componentsWithoutFaces(config.shell.components.map((c) => c.id))).toEqual([]);
+    for (const component of config.shell.components) {
+      const node = document.querySelector(`[data-flow-node="${component.id}"]`);
+      expect(node, component.id).toBeTruthy();
+      // Something beyond the chrome: a figure, a bar, or the honest statement that
+      // the component has reported nothing countable yet.
+      expect(node?.querySelector('.flow-node-face')?.children.length, component.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('draws the wires between the components, derived from the topology', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    const drawn = [...document.querySelectorAll('[data-flow-edge]')];
+    // One drawn path per derived edge: the picture is the wiring, not a sketch of it.
+    expect(drawn.length).toBe(buildFlow(config.shell, topology).edges.length);
+    // Ports are drawn dashed, because they carry no broker traffic and can never pulse.
+    const ports = drawn.filter((edge) => edge.getAttribute('data-edge-kind') === 'port');
+    expect(ports.length).toBeGreaterThan(0);
+    for (const port of ports) expect(port.getAttribute('stroke-dasharray')).toBeTruthy();
+    // And every path actually has geometry, rather than being an empty element.
+    for (const edge of drawn) expect(edge.getAttribute('d')?.length ?? 0).toBeGreaterThan(10);
+  });
+
+  it('selecting a node dims the wires that do not touch it', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-flow-node="scheduler"]') as HTMLElement);
+    });
+    const opacityOf = (edge: Element) => Number(edge.getAttribute('opacity'));
+    const touching = [...document.querySelectorAll('[data-flow-edge*="scheduler"]')];
+    const others = [...document.querySelectorAll('[data-flow-edge]')].filter(
+      (edge) => !(edge.getAttribute('data-flow-edge') ?? '').includes('scheduler'),
+    );
+    expect(touching.length).toBeGreaterThan(0);
+    expect(others.length).toBeGreaterThan(0);
+    // With fifty wires over twenty components, a picture that shouted equally
+    // everywhere would say nothing.
+    expect(Math.min(...touching.map(opacityOf))).toBeGreaterThan(Math.max(...others.map(opacityOf)));
   });
 
   it('an empty series says it is empty rather than drawing a flat line at zero', async () => {

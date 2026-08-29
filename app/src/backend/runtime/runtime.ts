@@ -347,6 +347,10 @@ export function buildBackend(
         tick: boundaryTime.tick,
         status: 'ok',
         detail: `${gate.denials} denied by default-deny`,
+        figures: [
+          { key: 'allowed', value: gate.allowed, label: 'allowed' },
+          { key: 'denied', value: gate.denials, label: 'denied' },
+        ],
       }),
       runId,
       configDigest(config.boundary),

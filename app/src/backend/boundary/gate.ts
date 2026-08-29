@@ -15,6 +15,8 @@ import type { Router } from '../runtime/router.js';
 export class ReleaseGate implements SeamHttpBackend {
   /** Denials refused so far; the System panel reads this via the heartbeat detail. */
   denials = 0;
+  /** Crossings the gate let through, so its face can draw both sides of the rule. */
+  allowed = 0;
 
   constructor(
     private readonly config: ConfigBoundary,
@@ -25,6 +27,7 @@ export class ReleaseGate implements SeamHttpBackend {
   async handle(request: SeamRequest): Promise<SeamHttpResponse> {
     const pathOnly = request.path.split('?')[0];
     const cleared = this.config.allow_prefixes.some((prefix) => pathOnly.startsWith(prefix));
+    if (cleared) this.allowed += 1;
     if (!cleared) {
       this.denials += 1;
       this.client.publish(this.config.topics.denial, {

@@ -91,6 +91,21 @@ export class Sensors {
         tick: this.simTime.tick,
         status: 'ok',
         detail: this.detail(),
+        figures: [
+          { key: 'published', value: this.publishedCount, label: 'published' },
+          { key: 'instruments', value: this.config.instruments.length, label: 'instruments' },
+          ...(this.heardPosition
+            ? [
+                {
+                  key: 'position_age_ticks',
+                  value: Math.max(0, this.simTime.tick - this.heardPosition.tick),
+                  of: this.config.sample_interval_ticks,
+                  unit: 'ticks',
+                  label: 'position age',
+                },
+              ]
+            : []),
+        ],
       }),
       runId,
       configDigest(config),

@@ -18,51 +18,69 @@
   margin-bottom: 0.8em;
 }
 
-.flow-bands {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9em;
+/* ---- the canvas: wires behind, nodes over ---- */
+.flow-canvas-scroll {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--flow-line);
+  border-radius: 3px;
+  background: #10151b;
 }
 
-.flow-band-caption {
-  margin: 0 0 0.35em;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--flow-dim);
-  font-weight: 500;
+.flow-canvas {
+  position: relative;
 }
 
-.flow-row {
-  display: flex;
-  gap: 0.5em;
-  flex-wrap: wrap;
+.flow-wires-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.flow-band-caption-text {
+  fill: var(--flow-dim);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  font-family: monospace;
+}
+
+.flow-node-slot {
+  position: absolute;
 }
 
 .flow-node {
-  flex: 1 1 150px;
-  min-width: 150px;
-  max-width: 220px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15em;
-  padding: 0.45em 0.6em;
-  border: 1px solid var(--flow-line);
-  border-radius: 3px;
-  background: #18202a;
-  color: var(--flow-fg);
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
   font: inherit;
-  font-size: 0.82rem;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
+  display: block;
 }
 
 .flow-node:focus-visible {
   outline: 2px solid var(--shell-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* State is carried by weight and by a word as well as by hue, so the picture survives
+.flow-node-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  height: 100%;
+  padding: 0.4em 0.55em 0.3em;
+  border: 1px solid var(--flow-line);
+  border-radius: 4px;
+  background: #18202a;
+  font-size: 0.78rem;
+  overflow: hidden;
+}
+
+/* State carries in weight and in a word as well as in hue, so the picture survives
    greyscale (FR-054). */
 .flow-node-dark {
   background: #141a21;
@@ -70,37 +88,75 @@
   border-style: dashed;
 }
 
-.flow-node[aria-pressed='true'] {
+.flow-node[aria-pressed='true'] .flow-node-body {
   border-color: var(--shell-accent);
+  box-shadow: 0 0 0 1px var(--shell-accent);
 }
 
 .flow-node-head {
   display: flex;
   align-items: center;
-  gap: 0.4em;
+  gap: 0.35em;
 }
 
 .flow-node-name {
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .flow-node-lock {
   margin-left: auto;
-  width: 11px;
-  height: 13px;
+  width: 10px;
+  height: 12px;
   flex: none;
   color: var(--shell-accent);
 }
 
+.flow-node-face {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: block;
+}
+
 .flow-node-state {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4em;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: var(--flow-dim);
+  border-top: 1px solid var(--flow-line);
+  padding-top: 0.2em;
+}
+
+.flow-node-state i {
+  font-style: normal;
+  font-family: monospace;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ---- the faces ---- */
+.face {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22em;
+}
+
+.face-quiet {
+  margin: 0;
+  font-size: 0.7rem;
+  font-style: italic;
   color: var(--flow-dim);
 }
 
-.flow-node-detail {
-  font-size: 0.72rem;
+.face-note {
+  margin: 0;
+  font-size: 0.66rem;
   color: var(--flow-dim);
   overflow: hidden;
   display: -webkit-box;
@@ -108,10 +164,317 @@
   -webkit-box-orient: vertical;
 }
 
-.flow-node-heard {
-  font-family: monospace;
-  font-size: 0.68rem;
+.face-declared {
+  margin: 0;
+  font-size: 0.66rem;
   color: var(--flow-dim);
+  border: 1px solid var(--flow-dim);
+  border-radius: 2px;
+  padding: 0 0.3em;
+  align-self: flex-start;
+}
+
+.face-counted {
+  margin: 0;
+  font-size: 0.66rem;
+  color: var(--flow-pts);
+  border-bottom: 1.5px dotted var(--flow-pts);
+  align-self: flex-start;
+}
+
+.face-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--flow-dim);
+}
+
+.face-big {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  font-size: 1.5rem;
+  font-family: monospace;
+  line-height: 1.1;
+  color: var(--flow-fg);
+}
+
+.face-big span {
+  font-size: 0.66rem;
+  font-family: inherit;
+  color: var(--flow-dim);
+}
+
+.face-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1em 0.7em;
+}
+
+.face-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2em;
+  font-size: 0.66rem;
+  color: var(--flow-dim);
+}
+
+.face-stat b {
+  font-family: monospace;
+  font-size: 0.86rem;
+  color: var(--flow-fg);
+}
+
+.face-stat i {
+  font-style: normal;
+  font-size: 0.62rem;
+}
+
+.face-bar {
+  display: block;
+  height: 7px;
+  background: #222c36;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.face-bar-fill {
+  display: block;
+  height: 100%;
+}
+
+.face-lane {
+  display: grid;
+  grid-template-columns: 3.6em 1fr auto;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.64rem;
+  color: var(--flow-dim);
+}
+
+.face-lane b {
+  font-family: monospace;
+  color: var(--flow-fg);
+}
+
+.face-instrument {
+  display: grid;
+  grid-template-columns: 7.4em 1fr auto;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.62rem;
+  color: var(--flow-dim);
+}
+
+.face-instrument > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.face-instrument b {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: var(--flow-fg);
+}
+
+.face-spark {
+  width: 100%;
+  height: 18px;
+}
+
+.face-spark-empty {
+  font-size: 0.62rem;
+  font-style: italic;
+  color: var(--flow-dim);
+}
+
+.face-drift {
+  position: relative;
+}
+
+/* The breach threshold, drawn across the residuals it will fire on. */
+.face-threshold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30%;
+  border-top: 1px dashed var(--shell-refused);
+  pointer-events: none;
+}
+
+.face-streak {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
+  font-size: 0.62rem;
+  color: var(--flow-dim);
+}
+
+.face-slot {
+  width: 14px;
+  height: 8px;
+  border: 1px solid var(--shell-refused);
+}
+
+.face-slot-filled {
+  background: var(--shell-refused);
+}
+
+.face-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.face-stack-bar {
+  height: 5px;
+  background: var(--flow-fld);
+  opacity: 0.42;
+}
+
+.face-stack-newest {
+  opacity: 1;
+}
+
+.face-ensemble {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 26px;
+}
+
+.face-member {
+  flex: 1;
+  height: 100%;
+  border: 1px solid var(--flow-fld);
+  border-radius: 1px;
+}
+
+.face-member-done {
+  background: var(--flow-fld);
+  opacity: 0.6;
+}
+
+.face-gauge {
+  position: relative;
+  display: block;
+  height: 9px;
+  background: #222c36;
+}
+
+.face-gauge-zero {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  border-left: 1px solid var(--flow-dim);
+}
+
+.face-gauge-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.face-pill {
+  align-self: flex-start;
+  font-size: 0.6rem;
+  border: 1px solid var(--flow-cy);
+  color: var(--flow-cy);
+  border-radius: 99px;
+  padding: 0 0.5em;
+}
+
+.face-platform-top {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.face-dial {
+  width: 46px;
+  height: 46px;
+  flex: none;
+}
+
+.face-tapes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  min-width: 0;
+}
+
+.face-tape {
+  display: grid;
+  grid-template-columns: 2.6em 1fr;
+  gap: 0.3em 0.4em;
+  align-items: center;
+  font-size: 0.6rem;
+  color: var(--flow-dim);
+}
+
+.face-tape-track {
+  position: relative;
+  display: block;
+  height: 7px;
+  background: #222c36;
+}
+
+.face-tape-fill {
+  display: block;
+  height: 100%;
+  background: var(--flow-own);
+  opacity: 0.85;
+}
+
+/* Demanded is hollow wherever it appears, so "asked for" reads the same way. */
+.face-tape-demanded {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 0;
+  border-left: 2px dashed var(--flow-own);
+}
+
+.face-tape-value {
+  grid-column: 2;
+  font-family: monospace;
+  font-size: 0.62rem;
+  color: var(--flow-fg);
+}
+
+.face-binding {
+  margin: 0;
+  font-size: 0.64rem;
+  color: var(--flow-own);
+}
+
+.face-shortfall {
+  margin: 0;
+  font-size: 0.62rem;
+  color: var(--shell-refused);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.flow-drawer-face {
+  margin: 0.6em 0;
+  padding: 0.6em;
+  border: 1px solid var(--flow-line);
+  border-radius: 3px;
+  background: #18202a;
+  font-size: 0.9rem;
+}
+
+.flow-drawer-counted {
+  font-size: 0.8rem;
+  color: var(--flow-pts);
+  border-bottom: 1.5px dotted var(--flow-pts);
+  display: inline-block;
 }
 
 .flow-drawer {

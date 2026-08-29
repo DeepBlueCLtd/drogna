@@ -31,6 +31,7 @@ export class FeatureStore {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.featuresById.size} reference feature(s), read-only`,
+        figures: [{ key: 'features', value: this.featuresById.size, label: 'features' }],
       }),
       runId,
       configDigest(config),

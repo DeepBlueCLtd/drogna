@@ -40,6 +40,10 @@ export class AdvisorySource {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.sequence} advisory(ies) authored, every ${this.config.cadence_ticks} tick(s)`,
+        figures: [
+          { key: 'authored', value: this.sequence, label: 'authored' },
+          { key: 'cadence_ticks', value: this.config.cadence_ticks, unit: 'ticks', label: 'cadence' },
+        ],
       }),
       runId,
       configDigest(config),

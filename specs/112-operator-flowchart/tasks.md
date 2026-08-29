@@ -118,14 +118,14 @@ composition root (ADR-0030), the operator surface and the map all come from them
 - [x] T043 The graph surface: nodes, edges, lit and dark from heartbeats alone, dead and
       carrying edges, pan and zoom, the two densities, `prefers-reduced-motion`, and
       greyscale legibility by shape and weight as well as hue.
-- [x] T044 The faces, to the design in `mockup.html`. **Partly done, and the remainder
-      is named rather than implied:** the shared vocabulary landed (the three kinds of
-      figure as components, the bounded series, the sparkline that states an empty
-      window), and the bespoke instruments for the platform and the monitor — the two
-      the request asked for by name — are built. The other eighteen components draw
-      their own reported sentence and their wires in the drawer rather than a bespoke
-      instrument each; those are additive, one module at a time, and each needs the
-      component to report the figure it would draw. **T044b** carries them.
+- [x] T044 **All twenty bespoke faces**, to the table in `spec.md`. The first cut
+      shipped two of them and twenty near-identical cards in bands with no wires drawn
+      at all — the table with rounded corners — and was sent back. What unblocked the
+      rest was not more panel code but the missing half of the pattern: `heartbeat`
+      grew an optional `figures` array, every component now reports its own counts as
+      numbers, and each face draws those. Parsing the detail sentence would have been
+      the display inventing figures nobody published; reporting them is the same move
+      the monitor's breach state made.
 - [x] T045 The detail drawer: last heartbeat verbatim, declared configuration, the face at
       full size, the controls, the last refusal.
 - [x] T046 The list view (FR-015): today's table, kept and fed from `graph.ts`, with its

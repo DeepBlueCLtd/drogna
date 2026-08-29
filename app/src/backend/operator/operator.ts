@@ -53,6 +53,11 @@ export class OperatorSurface {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.commandsDispatched} command(s) dispatched, ${this.commandsRefused} refused by rule`,
+        figures: [
+          { key: 'dispatched', value: this.commandsDispatched, label: 'dispatched' },
+          { key: 'refused', value: this.commandsRefused, label: 'refused' },
+          { key: 'demands', value: this.demandsPublished, label: 'demands' },
+        ],
       }),
       runId,
       configDigest(config),

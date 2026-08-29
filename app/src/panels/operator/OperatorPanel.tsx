@@ -40,7 +40,8 @@ import { topology } from '../../generated/topology.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
 import { Series } from './series.js';
-import { Figure, MonitorFace, PlatformFace, Spark } from './faces.js';
+import { FACES, type FaceContext } from './faces.js';
+import { FlowCanvas } from './FlowCanvas.js';
 import { DemandControl } from './DemandControl.js';
 import './operator.css';
 
@@ -78,6 +79,17 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const [selected, setSelected] = useState<string | undefined>();
   const [asList, setAsList] = useState(false);
   const [heard, setHeard] = useState<ReadonlyMap<string, Heard>>(new Map());
+  const [clock, setClock] = useState<{ tick: number | null; rate: number | undefined }>({
+    tick: null,
+    rate: undefined,
+  });
+  const holdingSizesRef = useRef<number[]>([]);
+  /**
+   * Ocean datastreams the shell has genuinely heard, in arrival order. Kept rather
+   * than typed into the sensors' face: a hardcoded list drew the pressure instrument
+   * as silent while it had been publishing all along.
+   */
+  const oceanStreamsRef = useRef<string[]>([]);
   const [, setSweep] = useState(0);
 
   // The rolling windows. Held in a ref rather than in state: they are drawn from, not
@@ -114,8 +126,20 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
   useEffect(() => {
     void refresh();
     const stop = [
+      client.subscribe(config.topics.all, (message) => {
+        // Counted here, and marked as counted here: nobody publishes a throughput.
+        const namespace = message.topic.split('/')[0];
+        countedRef.current.set(namespace, (countedRef.current.get(namespace) ?? 0) + 1);
+        countedRef.current.set('all', (countedRef.current.get('all') ?? 0) + 1);
+      }),
       client.subscribe(config.topics.heartbeat, (message) => {
         const heartbeat = message.payload as Heartbeat;
+        const rows = heartbeat.figures?.find((entry) => entry.key === 'rows');
+        if (heartbeat.component === 'observation-store' && rows && heartbeat.tick !== null && heartbeat.tick !== undefined) {
+          // The store's own count, followed over simulation time: the growth line is
+          // a series of reported figures, not a rate the shell worked out.
+          series('store:rows').push(heartbeat.tick, rows.value);
+        }
         setHeard((previous) => {
           const next = new Map(previous);
           // harness:allow-wallclock liveness evaluation measures arrival in host time (ADR-0006)
@@ -129,6 +153,18 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
         setPlatformState(state);
         series('platform:course').push(state.tick, state.current.course_degrees);
         series('platform:speed').push(state.tick, state.current.speed_m_per_s);
+      }),
+      client.subscribe(config.topics.clock, (message) => {
+        const sample = message.payload as { tick: number; rate?: number };
+        setClock({ tick: sample.tick, rate: sample.rate });
+      }),
+      client.subscribe(config.topics.holdings, (message) => {
+        // The store announces; the face draws the sizes the announcement carries.
+        const published = message.payload as { holding?: { field?: { byte_length?: number } } };
+        const bytes = published.holding?.field?.byte_length;
+        if (typeof bytes === 'number') {
+          holdingSizesRef.current = [bytes, ...holdingSizesRef.current].slice(0, 12);
+        }
       }),
       client.subscribe(config.topics.telemetry, (message) => {
         const payload = message.payload as Telemetry;
@@ -150,12 +186,21 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
         );
         countedRef.current.set('obs:all', (countedRef.current.get('obs:all') ?? 0) + 1);
         series(`obs:${observation.datastream_id}`).push(observation.tick, observation.result);
+        if (
+          observation.thing_id !== 'ownship' &&
+          !oceanStreamsRef.current.includes(observation.datastream_id)
+        ) {
+          oceanStreamsRef.current = [...oceanStreamsRef.current, observation.datastream_id];
+        }
       }),
     ];
     return () => stop.forEach((unsubscribe) => unsubscribe());
   }, [
     client,
+    config.topics.all,
+    config.topics.clock,
     config.topics.heartbeat,
+    config.topics.holdings,
     config.topics.observations,
     config.topics.platform_state,
     config.topics.telemetry,
@@ -194,10 +239,23 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
     return { lit, word, entry, record };
   };
 
-  const bands = BANDS.map((band) => ({
-    band,
-    nodes: flow.nodes.filter((node) => node.band === band),
-  })).filter((row) => row.nodes.length > 0);
+  /**
+   * What a face is allowed to draw from: the component's own heartbeat figures, the
+   * messages the shell subscribes to, and counts the shell made of traffic it heard
+   * itself. Nothing else — a face that reached past this would be drawing something
+   * nobody published (FR-008).
+   */
+  const faceContext = (id: string, heartbeat: Heartbeat | undefined): FaceContext => ({
+    id,
+    heartbeat,
+    platformState,
+    breach,
+    series,
+    counted: (key) => countedRef.current.get(key) ?? 0,
+    holdingSizes: holdingSizesRef.current,
+    oceanDatastreams: oceanStreamsRef.current,
+    clock,
+  });
 
   const selectedNode = flow.nodes.find((node) => node.id === selected);
 
@@ -234,51 +292,50 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
           config={config}
         />
       ) : (
-        <div className="flow-bands" data-testid="flow-chart">
-          {bands.map(({ band, nodes }) => (
-            <section key={band} className={`flow-band flow-band-${band}`}>
-              <h4 className="flow-band-caption">{BAND_CAPTION[band]}</h4>
-              <div className="flow-row">
-                {nodes.map((node) => {
-                  const { lit, word, entry, record } = stateOf(node.id);
-                  return (
-                    <button
-                      key={node.id}
-                      type="button"
-                      className={`flow-node ${lit ? 'flow-node-lit' : 'flow-node-dark'}`}
-                      data-flow-node={node.id}
-                      data-lit={lit}
-                      data-state={word}
-                      aria-pressed={selected === node.id}
-                      onClick={() => setSelected(node.id === selected ? undefined : node.id)}
+        <FlowCanvas
+          nodes={flow.nodes}
+          edges={flow.edges}
+          bandOrder={BANDS}
+          bandCaption={(band) => BAND_CAPTION[band as Band]}
+          selected={selected}
+          stateOf={(id) => {
+            const { lit, word } = stateOf(id);
+            return { lit, word };
+          }}
+          onSelect={(id) => setSelected(id === selected ? undefined : id)}
+          renderNode={(node) => {
+            const { lit, word, entry, record } = stateOf(node.id);
+            const face = FACES[node.id];
+            return (
+              <span className={lit ? 'flow-node-body flow-node-lit' : 'flow-node-body flow-node-dark'}>
+                <span className="flow-node-head">
+                  <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
+                  <span className="flow-node-name">{node.label}</span>
+                  {record && !record.stoppable ? (
+                    <svg
+                      className="flow-node-lock"
+                      viewBox="0 0 12 14"
+                      role="img"
+                      aria-label="protected from the operator plane by rule"
                     >
-                      <span className="flow-node-head">
-                        <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
-                        <span className="flow-node-name">{node.label}</span>
-                        {record && !record.stoppable ? (
-                          <svg
-                            className="flow-node-lock"
-                            viewBox="0 0 12 14"
-                            role="img"
-                            aria-label="protected from the operator plane by rule"
-                          >
-                            <path d="M 3 6 a 3 3 0 0 1 6 0" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                            <rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                          </svg>
-                        ) : null}
-                      </span>
-                      <span className="flow-node-state">{word}</span>
-                      <span className="flow-node-detail">{detailOf(entry)}</span>
-                      <span className="flow-node-heard">
-                        {entry ? displayInstant(entry.heartbeat.sim_time) : '—'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+                      <path d="M 3 6 a 3 3 0 0 1 6 0" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                      <rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                  ) : null}
+                </span>
+                {/* Lit or dark, the face draws only what was reported; a dark node's
+                    figures keep the simulation time they were reported at. */}
+                <span className="flow-node-face">
+                  {face ? face(faceContext(node.id, entry?.heartbeat)) : null}
+                </span>
+                <span className="flow-node-state">
+                  {word}
+                  <i>{entry ? displayInstant(entry.heartbeat.sim_time) : 'never heard'}</i>
+                </span>
+              </span>
+            );
+          }}
+        />
       )}
 
       {selectedNode ? (
@@ -287,10 +344,8 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
           state={stateOf(selectedNode.id)}
           flow={flow}
           config={config}
-          platformState={platformState}
-          breach={breach}
+          faceContext={faceContext}
           report={report}
-          series={series}
           counted={(key) => countedRef.current.get(key) ?? 0}
           command={command}
           onClose={() => setSelected(undefined)}
@@ -384,10 +439,8 @@ function Drawer({
   state,
   flow,
   config,
-  platformState,
-  breach,
+  faceContext,
   report,
-  series,
   counted,
   command,
   onClose,
@@ -396,10 +449,8 @@ function Drawer({
   state: StateOf;
   flow: ReturnType<typeof buildFlow>;
   config: PanelParams['config'];
-  platformState: PlatformState | undefined;
-  breach: TelemetryResidualSampleReport['breach'];
+  faceContext: (id: string, heartbeat: Heartbeat | undefined) => FaceContext;
   report: TelemetryReport | undefined;
-  series: (key: string) => Series;
   counted: (key: string) => number;
   command: (path: string, method?: string) => void | Promise<void>;
   onClose: () => void;
@@ -422,37 +473,10 @@ function Drawer({
       </p>
       <p className="flow-drawer-detail">{detailOf(entry)}</p>
 
-      {node.id === 'platform' ? (
-        <>
-          <PlatformFace
-            state={platformState}
-            series={series('platform:course')}
-            stride={config.flow.series_samples}
-          />
-          <DemandControl config={config} onRefusal={() => undefined} />
-        </>
-      ) : null}
-      {node.id === 'monitor' ? (
-        breach ? (
-          <MonitorFace
-            series={series('residual')}
-            stride={config.flow.series_samples}
-            threshold={breach.threshold_m_per_s}
-            streak={breach.streak}
-            streakOf={breach.persistence_count}
-          />
-        ) : (
-          <p className="flow-face-quiet">no residual has been reported yet</p>
-        )
-      ) : null}
-      {node.id === 'sensors' ? (
-        <Spark
-          series={series('obs:temperature-050m')}
-          stride={config.flow.series_samples}
-          hue="var(--flow-pts)"
-          label="temperature at 50 m, recent samples"
-        />
-      ) : null}
+      {/* The node's own instrument again at full size: the drawer is where a reader
+          goes to read it rather than to glance at it. */}
+      <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
+      {node.id === 'platform' ? <DemandControl config={config} onRefusal={() => undefined} /> : null}
       {node.id === 'telemetry' && report ? (
         <div className="operator-telemetry">
           <p className="flow-drawer-detail" data-testid="skill-statement">
@@ -520,8 +544,8 @@ function Drawer({
         </div>
       ) : null}
       {node.id === 'observation-store' ? (
-        <p className="flow-drawer-detail">
-          <Figure kind="observed" label="observations heard" value={counted('obs:all')} />
+        <p className="flow-drawer-counted">
+          {counted('obs:all')} observations counted here, from traffic the shell heard itself
         </p>
       ) : null}
 

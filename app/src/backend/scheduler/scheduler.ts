@@ -23,6 +23,15 @@ export class Scheduler {
   requested: { run_id: string; cause: 'divergence' | 'scheduled' }[] = [];
   private lastDecision = 'quiet: nothing has breached and the cadence floor has not come due';
 
+  /**
+   * Simulation ticks before another divergence could be accepted. Zero means the
+   * minimum interval is spent and the next breach can be acted on.
+   */
+  ticksToMinimumInterval(): number {
+    if (this.lastRequestTick === undefined) return 0;
+    return Math.max(0, this.config.min_interval_ticks - (this.simTime.tick - this.lastRequestTick));
+  }
+
   constructor(
     private readonly config: ConfigScheduler,
     private readonly client: SeamClient,
@@ -37,6 +46,17 @@ export class Scheduler {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.lastDecision}; ${this.requested.length} run(s) requested, ${this.declinedByPolicy} declined by policy`,
+        figures: [
+          { key: 'requested', value: this.requested.length, label: 'requested' },
+          { key: 'declined', value: this.declinedByPolicy, label: 'declined' },
+          {
+            key: 'ticks_to_minimum',
+            value: this.ticksToMinimumInterval(),
+            of: this.config.min_interval_ticks,
+            unit: 'ticks',
+            label: 'minimum interval',
+          },
+        ],
       }),
       runId,
       configDigest(config),

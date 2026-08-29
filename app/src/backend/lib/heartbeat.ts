@@ -10,14 +10,22 @@
  * last heard from the clock.
  */
 import type { SeamClient } from '../../seam/transport.js';
-import type { ConfigCommonHeartbeat } from '../../generated/types.js';
+import type { ConfigCommonHeartbeat, Heartbeat } from '../../generated/types.js';
 
 export interface HeartbeatBody {
   sim_time: string;
   tick: number | null;
   status: 'starting' | 'ok' | 'degraded' | 'stalled' | 'stopping';
   detail?: string;
+  /**
+   * What this component counts about itself, as numbers rather than prose. The
+   * Operator's faces draw these; the detail line stays for a reader. A display that
+   * parsed the sentence would be inventing figures nobody published (FR-53).
+   */
+  figures?: HeartbeatFigure[];
 }
+
+export type HeartbeatFigure = NonNullable<Heartbeat['figures']>[number];
 
 export class HeartbeatEmitter {
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -54,6 +62,7 @@ export class HeartbeatEmitter {
       heartbeat_interval_seconds: this.config.interval_seconds,
       liveness_window_seconds: this.config.liveness_window_seconds,
       ...(body.detail === undefined ? {} : { detail: body.detail }),
+      ...(body.figures === undefined ? {} : { figures: body.figures }),
     });
   }
 }

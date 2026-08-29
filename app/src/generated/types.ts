@@ -885,6 +885,13 @@ export type Heartbeat = {
   "heartbeat_interval_seconds"?: number;
   "liveness_window_seconds"?: number;
   "detail"?: string;
+  "figures"?: {
+    "key": string;
+    "value": number;
+    "unit"?: string;
+    "of"?: number;
+    "label"?: string;
+  }[];
 };
 
 /** drogna holding-published announcement — from holding-published.schema.json */

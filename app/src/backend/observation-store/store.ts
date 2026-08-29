@@ -29,6 +29,10 @@ export class ObservationStore {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.byId.size} observation(s)`,
+        figures: [
+          { key: 'rows', value: this.byId.size, label: 'rows' },
+          { key: 'datastreams', value: this.datastreamCount(), label: 'datastreams' },
+        ],
       }),
       runId,
       configDigest(config),
@@ -68,6 +72,11 @@ export class ObservationStore {
       result.set(observation.thing_id, { thing_id: observation.thing_id, ...observation.context.thing });
     }
     return result;
+  }
+
+  /** How many distinct datastreams have landed. The share each holds is below. */
+  datastreamCount(): number {
+    return this.datastreams().size;
   }
 
   datastreams(): Map<string, Observation> {

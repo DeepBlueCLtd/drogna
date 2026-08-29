@@ -4081,6 +4081,41 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "detail": {
         "type": "string",
         "description": "One line for a human. Never a substitute for status."
+      },
+      "figures": {
+        "type": "array",
+        "maxItems": 8,
+        "description": "What this component reports about itself, as numbers rather than as prose (SRD-v2 FR-53). The detail line above is for a reader; these are for a display that wants to draw a bar, a stack or a sparkline without parsing a sentence — and parsing a sentence is exactly how a display starts inventing figures nobody published. Optional: a component with nothing countable to say omits it, and a face with no figures says so rather than drawing zeroes.",
+        "items": {
+          "type": "object",
+          "required": [
+            "key",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "description": "Names the quantity, stable across heartbeats so a consumer can follow one figure over time."
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "description": "The unit as a reader would write it, so a display need hold no table of units."
+            },
+            "of": {
+              "type": "number",
+              "description": "The bound this value is measured against, where one exists — a staging limit, a cadence, an ensemble size. A bar without a bound is a bar that means nothing, so a face draws one only where this is present."
+            },
+            "label": {
+              "type": "string",
+              "description": "Short caption for a reader. Absent means the key, spaced out, will do."
+            }
+          }
+        }
       }
     }
   },

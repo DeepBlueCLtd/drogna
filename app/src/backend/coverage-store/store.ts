@@ -37,6 +37,20 @@ export interface PublicationVerdict {
 
 export class CoverageStore {
   private readonly holdingsById = new Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }>();
+
+  /** Bytes the store is actually holding, summed over the holdings it has. */
+  totalBytes(): number {
+    let total = 0;
+    for (const holding of this.holdingsById.values()) total += holding.bytes.byteLength;
+    return total;
+  }
+
+  /** Each holding's size, newest first: the stack the Operator's face draws. */
+  holdingSizes(): { id: string; bytes: number }[] {
+    return [...this.holdingsById.values()]
+      .map((holding) => ({ id: holding.descriptor.holding_id, bytes: holding.bytes.byteLength }))
+      .reverse();
+  }
   /** The era pointers: 'nowcast' names the one current now-cast holding. */
   private readonly eraPointers = new Map<string, string>();
   readonly heartbeat: HeartbeatEmitter;
@@ -62,6 +76,10 @@ export class CoverageStore {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.holdingsById.size} holding(s)`,
+        figures: [
+          { key: 'holdings', value: this.holdingsById.size, label: 'holdings' },
+          { key: 'bytes', value: this.totalBytes(), unit: 'B', label: 'stored' },
+        ],
       }),
       runId,
       configDigest(config),

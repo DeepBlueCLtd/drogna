@@ -76,6 +76,10 @@ export class QueryComponent {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `serving ${coverageStore.holdings().length} collection(s) and ${observationStore.count()} observation(s)`,
+        figures: [
+          { key: 'collections', value: coverageStore.holdings().length, label: 'collections' },
+          { key: 'observations', value: observationStore.count(), label: 'observations' },
+        ],
       }),
       runId,
       configDigest(config),

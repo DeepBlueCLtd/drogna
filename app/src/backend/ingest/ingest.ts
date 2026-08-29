@@ -49,6 +49,12 @@ export class Ingest {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.stored} stored, ${this.refused} refused by their schema, ${this.flagged} flagged out of range, ${this.absorbed} redeliveries absorbed`,
+        figures: [
+          { key: 'stored', value: this.stored, label: 'stored' },
+          { key: 'refused', value: this.refused, label: 'refused' },
+          { key: 'flagged', value: this.flagged, label: 'flagged' },
+          { key: 'absorbed', value: this.absorbed, label: 'redeliveries' },
+        ],
       }),
       runId,
       configDigest(config),

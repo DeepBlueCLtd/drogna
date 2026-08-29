@@ -64,6 +64,12 @@ export class EnvGenerator {
   private lastNowcastTick = 0;
   private nowcastCount = 0;
   private published = 0;
+
+  /** Ticks until the next now-cast is authored, from the cadence it declares. */
+  ticksToNextNowcast(): number {
+    const elapsed = this.simTime.tick - this.lastNowcastTick;
+    return Math.max(0, this.config.nowcast.interval_ticks - elapsed);
+  }
   private readonly ownDigest: string;
 
   constructor(
@@ -124,6 +130,16 @@ export class EnvGenerator {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.published} holding(s) authored; now-cast every ${config.nowcast.interval_ticks} tick(s)`,
+        figures: [
+          { key: 'holdings_authored', value: this.published, label: 'authored' },
+          {
+            key: 'ticks_to_nowcast',
+            value: this.ticksToNextNowcast(),
+            of: config.nowcast.interval_ticks,
+            unit: 'ticks',
+            label: 'next now-cast in',
+          },
+        ],
       }),
       runId,
       this.ownDigest,

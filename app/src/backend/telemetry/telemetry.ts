@@ -9,11 +9,22 @@
  * the classic baseline — and the skill message carries its formula and a plain
  * sentence, emitted here so every consumer says the same thing about a model that
  * is not earning its compute.
+ *
+ * Residuals are aggregated twice over: once for the scenario, and once per cell of
+ * the configured region grid (issue #61), which is laid over the extent of the very
+ * holding the residuals were scored against rather than over a second copy of the
+ * domain in configuration. A region below the configured minimum says
+ * 'insufficient-samples' and keeps its own figures; it is never folded into the
+ * scenario figure, where nobody could tell it was thin. And every fold records its
+ * own latency in SIMULATION seconds — from the instant the observation was taken to
+ * the instant its residual was folded — because a wall-clock figure would measure
+ * the host and the rate dial rather than the harness (Constitution I).
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type { SeamHttpResponse } from '../../seam/http.js';
 import type {
   ConfigTelemetry,
+  CoverageHolding,
   RunPublished,
   TelemetryForecastSkill,
   TelemetryResidualSampleReport,
@@ -28,6 +39,20 @@ import type { Router } from '../runtime/router.js';
 
 const EQUATION = 'Mackenzie 1981 nine-term equation';
 
+/** One region cell's running ledger, held in bounded memory like the scenario's. */
+interface RegionLedger {
+  regionId: string;
+  bounds: {
+    minimum_latitude: number;
+    maximum_latitude: number;
+    minimum_longitude: number;
+    maximum_longitude: number;
+  };
+  residuals: number[];
+  firstSampleTime: string;
+  lastSampleTime: string;
+}
+
 export class Telemetry {
   private readonly heartbeat: HeartbeatEmitter;
   private simTime = { value: '', tick: 0 };
@@ -36,6 +61,12 @@ export class Telemetry {
   private persistenceErrors: number[] = [];
   private firstSampleTime: string | null = null;
   private lastSampleTime: string | null = null;
+  /** One running ledger per region cell that has seen a residual. Bounded by the
+   * configured grid: rows × columns, fixed before the run starts. */
+  private readonly regions = new Map<string, RegionLedger>();
+  /** Latency in simulation seconds, folded incrementally: sum, worst and count. */
+  private latency = { count: 0, totalSeconds: 0, maximumSeconds: 0 };
+  lastRegionStatistics: TelemetryResidualStatistics[] = [];
   private observationCount = 0;
   private telemetryMessageCount = 0;
   private windowStartTick = 0;
@@ -90,6 +121,8 @@ export class Telemetry {
       this.persistenceErrors = [];
       this.firstSampleTime = null;
       this.lastSampleTime = null;
+      this.regions.clear();
+      this.latency = { count: 0, totalSeconds: 0, maximumSeconds: 0 };
     });
     this.client.subscribe(this.config.topics.telemetry, (message) => {
       this.telemetryMessageCount += 1;
@@ -109,10 +142,13 @@ export class Telemetry {
     if (!forecast) return;
     const origin = timeAxisPosixOrigin(forecast.descriptor.manifest);
     const order = forecast.descriptor.manifest.variables.map((variable) => variable.name);
+    const grid = forecast.descriptor.manifest.grid;
     for (const sample of report.samples) {
       this.residuals.push(sample.residual_m_per_s);
       this.firstSampleTime ??= sample.sim_time;
       this.lastSampleTime = sample.sim_time;
+      this.foldRegion(grid, sample);
+      this.foldLatency(sample.sim_time);
       // Persistence: the run's initial step held constant — sampled at the run's
       // own origin instant, whatever the observation's time.
       const initial = sampleHolding(forecast, {
@@ -130,6 +166,79 @@ export class Telemetry {
         this.persistenceErrors.push(sample.measured_m_per_s - persisted);
       }
     }
+  }
+
+  /**
+   * The region cell a sample falls in, over the extent of the holding it was scored
+   * against. The grid is closed on its west and south edges and open on the others,
+   * with the far edges belonging to the last cell, so every sample inside the extent
+   * lands in exactly one region and none lands in two.
+   */
+  private regionOf(
+    grid: CoverageHolding['manifest']['grid'],
+    longitude: number,
+    latitude: number,
+  ): RegionLedger | undefined {
+    const { rows, columns } = this.config.regions;
+    const west = grid.longitude.minimum;
+    const east = grid.longitude.maximum;
+    const south = grid.latitude.minimum;
+    const north = grid.latitude.maximum;
+    if (longitude < west || longitude > east || latitude < south || latitude > north) return undefined;
+    const columnWidth = (east - west) / columns;
+    const rowHeight = (north - south) / rows;
+    const column = Math.min(columns - 1, Math.floor((longitude - west) / columnWidth));
+    const row = Math.min(rows - 1, Math.floor((latitude - south) / rowHeight));
+    const regionId = `r${row}c${column}`;
+    const existing = this.regions.get(regionId);
+    if (existing) return existing;
+    const ledger: RegionLedger = {
+      regionId,
+      bounds: {
+        minimum_longitude: round6(west + column * columnWidth),
+        maximum_longitude: round6(west + (column + 1) * columnWidth),
+        minimum_latitude: round6(south + row * rowHeight),
+        maximum_latitude: round6(south + (row + 1) * rowHeight),
+      },
+      residuals: [],
+      firstSampleTime: '',
+      lastSampleTime: '',
+    };
+    this.regions.set(regionId, ledger);
+    return ledger;
+  }
+
+  private foldRegion(
+    grid: CoverageHolding['manifest']['grid'],
+    sample: TelemetryResidualSampleReport['samples'][number],
+  ): void {
+    const ledger = this.regionOf(grid, sample.longitude, sample.latitude);
+    // A sample outside the scored holding's extent belongs to no region and is not
+    // put in one: the scenario figure already holds it, and inventing a region for
+    // it would put a figure somewhere the holding does not cover.
+    if (!ledger) return;
+    ledger.residuals.push(sample.residual_m_per_s);
+    if (ledger.firstSampleTime === '') ledger.firstSampleTime = sample.sim_time;
+    ledger.lastSampleTime = sample.sim_time;
+  }
+
+  /**
+   * Latency, in simulation seconds, between the instant an observation was taken and
+   * the instant its residual was folded in here — the clock's own instant, never the
+   * host's. A fold that appears to arrive before its observation would be a clock
+   * fault rather than a negative latency, so it is not folded and does not average
+   * a real delay away.
+   */
+  private foldLatency(sampleSimTime: string): void {
+    if (!this.simTime.value) return;
+    const taken = Date.parse(sampleSimTime.slice(0, 23) + 'Z') / 1000;
+    const folded = Date.parse(this.simTime.value.slice(0, 23) + 'Z') / 1000;
+    if (!Number.isFinite(taken) || !Number.isFinite(folded)) return;
+    const span = folded - taken;
+    if (span < 0) return;
+    this.latency.count += 1;
+    this.latency.totalSeconds += span;
+    this.latency.maximumSeconds = Math.max(this.latency.maximumSeconds, span);
   }
 
   private freshness(): { freshness: 'fresh' | 'stale'; staleSpanSeconds: number | null } {
@@ -176,6 +285,58 @@ export class Telemetry {
     };
     this.client.publish(this.config.topics.telemetry, statistics);
     this.lastStatistics = statistics;
+    this.publishRegionStatistics(freshness, staleSpanSeconds);
+  }
+
+  /**
+   * One message per region that has seen a residual (issue #61). A region nobody
+   * sampled is not published: an unsampled region and a region scoring zero are
+   * different facts, and publishing the first as the second would be the failure
+   * this component exists to prevent.
+   */
+  private publishRegionStatistics(
+    freshness: 'fresh' | 'stale',
+    staleSpanSeconds: number | null,
+  ): void {
+    const published: TelemetryResidualStatistics[] = [];
+    for (const ledger of [...this.regions.values()].sort((a, b) => a.regionId.localeCompare(b.regionId))) {
+      const count = ledger.residuals.length;
+      if (count === 0) continue;
+      const mean = ledger.residuals.reduce((a, b) => a + b, 0) / count;
+      const meanAbs = ledger.residuals.reduce((a, b) => a + Math.abs(b), 0) / count;
+      const rms = Math.sqrt(ledger.residuals.reduce((a, b) => a + b * b, 0) / count);
+      const statistics: TelemetryResidualStatistics = {
+        component: this.config.id,
+        scenario_run_id: this.runId,
+        sim_time: this.simTime.value,
+        tick: this.simTime.tick,
+        kind: 'residual-statistics',
+        forecast_run_id: this.forecastRunId,
+        state: count < this.config.regions.minimum_samples ? 'insufficient-samples' : 'reporting',
+        closed: false,
+        scope: { level: 'region', region_id: ledger.regionId, bounds: ledger.bounds },
+        basis: 'samples',
+        count,
+        mean_m_per_s: mean,
+        mean_absolute_m_per_s: meanAbs,
+        root_mean_square_m_per_s: rms,
+        minimum_m_per_s: Math.min(...ledger.residuals),
+        maximum_m_per_s: Math.max(...ledger.residuals),
+        first_sim_time: ledger.firstSampleTime,
+        last_sim_time: ledger.lastSampleTime,
+        last_updated_sim_time: ledger.lastSampleTime,
+        freshness,
+        stale_span_seconds: staleSpanSeconds,
+        implausible: rms > 100,
+        implausible_reason:
+          rms > 100
+            ? 'root-mean-square residual above 100 m/s: something upstream is broken, not the ocean'
+            : null,
+      };
+      this.client.publish(this.config.topics.telemetry, statistics);
+      published.push(statistics);
+    }
+    this.lastRegionStatistics = published;
   }
 
   private publishSkill(): void {
@@ -247,6 +408,15 @@ export class Telemetry {
         window_sim_seconds: windowSeconds,
         observations_per_sim_second: round6(this.observationCount / windowSeconds),
         telemetry_messages_per_sim_second: round6(this.telemetryMessageCount / windowSeconds),
+      },
+      regions: this.lastRegionStatistics,
+      latency: {
+        basis:
+          "from the simulation instant an observation was taken to the simulation instant its residual was folded into these statistics; simulation time throughout, never the host's clock",
+        sample_count: this.latency.count,
+        mean_sim_seconds:
+          this.latency.count === 0 ? null : round6(this.latency.totalSeconds / this.latency.count),
+        maximum_sim_seconds: this.latency.count === 0 ? null : round6(this.latency.maximumSeconds),
       },
     };
     return { status: 200, body: JSON.stringify(body) };

@@ -358,7 +358,8 @@
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
     "cadence_ticks": 300,
     "staleness_window_seconds": 1800,
-    "minimum_skill_samples": 5
+    "minimum_skill_samples": 5,
+    "regions": { "rows": 2, "columns": 3, "minimum_samples": 3 }
   },
   "operator": {
     "id": "operator",

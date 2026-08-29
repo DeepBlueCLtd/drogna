@@ -20,6 +20,7 @@ import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
 import { MapPanel } from './map/MapPanel.js';
+import { OperatorPanel } from './operator/OperatorPanel.js';
 
 const validator = createSeamValidator();
 
@@ -331,6 +332,36 @@ describe('the panels against a live backend', () => {
       // did not would be named as declined rather than quietly missing.
       expect(screen.queryByText(/level\(s\) declined/)).toBeNull();
     } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('Operator shows the region table and the latency figure the report carries (#61)', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let mounted: ReturnType<typeof render> | undefined;
+    try {
+      // Turn the loop until telemetry has region figures to serve — driven before
+      // the panel mounts, so what the display shows is what the report already had.
+      for (let tick = 0; tick < 8000 && runtime.telemetry.lastRegionStatistics.length === 0; tick++) {
+        runtime.clock.tickOnce();
+      }
+      expect(runtime.telemetry.lastRegionStatistics.length).toBeGreaterThan(0);
+      mounted = render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+      });
+      const table = screen.getByTestId('region-statistics');
+      const rows = [...table.querySelectorAll('tbody tr')];
+      expect(rows).toHaveLength(runtime.telemetry.lastRegionStatistics.length);
+      expect(rows.map((row) => row.getAttribute('data-region'))).toEqual(
+        runtime.telemetry.lastRegionStatistics.map((region) => region.scope.region_id),
+      );
+      // Latency reads in simulation seconds and says what it measured.
+      expect(screen.getByTestId('latency').textContent).toMatch(/sim-s/);
+      expect(screen.getByTestId('latency').textContent).toMatch(/simulation instant/);
+    } finally {
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });

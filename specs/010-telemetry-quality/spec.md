@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Feature Specification: Telemetry and Forecast Quality
 
 **Feature Branch**: `010-telemetry-quality`

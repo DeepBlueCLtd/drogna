@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Finding: a fault is a state the component enters, and the display already knows how to show it
 
 **The question.** An operator plane: force components to fail, throttle or surge; track

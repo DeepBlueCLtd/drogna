@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0024: The advisory store is a third schema, not a second engine
 
 **Status:** Accepted

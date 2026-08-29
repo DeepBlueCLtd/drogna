@@ -1,10 +1,10 @@
 # Software Requirements Document
 ## drogna, Version 2
 
-**Status:** Draft v0.2 — written against the endorsed plan (`docs/v2/plan.md`), folding
-in its emergent requirements (E1–E15), the resolved questions (§9) and the third-round
-process decisions (D15–D17). Adopted only when it replaces `harness-srd.md` at the
-repository root as `srd.md`.
+**Status:** Adopted 29 August 2026 — written against the endorsed plan
+(`docs/v2/plan.md`), folding in its emergent requirements (E1–E15), the resolved
+questions (§9) and the third-round process decisions (D15–D17). Supersedes
+`harness-srd.md`, which is archived in place as the V1 record.
 **Author:** Doc
 **Date:** 29 August 2026
 

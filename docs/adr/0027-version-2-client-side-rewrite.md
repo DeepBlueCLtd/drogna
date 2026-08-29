@@ -1,10 +1,9 @@
-# ADR draft — Version 2 is a client-side rewrite behind a wire-protocol seam
+# ADR 0027 — Version 2 is a client-side rewrite behind a wire-protocol seam
 
-**Status:** Proposed — accepted, and numbered, when constitution 2.0.0 is adopted. The
-number is assigned at adoption because two open V1 pull requests (#44, #46) each
-currently claim ADR-0027; `site/gates/check_adr_numbers.py` polices the collision, and
-this file moves to `docs/adr/<next-free>-version-2-client-side-rewrite.md` when it
-lands.
+**Status:** Accepted, 29 August 2026, with the adoption of constitution 2.0.0. The
+number was assigned at adoption: the two V1 pull requests that each claimed ADR-0027
+(#44, #46) closed without merging — their findings were carried into the plan as
+E-items instead — so 0027 was free on the default branch.
 **Date:** 29 August 2026
 
 ## Context
@@ -111,5 +110,5 @@ in the plan (D1–D17, §9):
   the single-PR review model and the blog's embedded demos depend on both.
 - Offload's real transfer and verified-receipt eviction, and the second-broker
   fallback, are deferred to V3 with reasons recorded in SRD-v2 §11.
-- Until this record is Accepted, constitution 1.6.0 governs and nothing in `docs/v2/`
-  is binding.
+- With this record Accepted, constitution 2.0.0 governs; 1.6.0 is archived at
+  `docs/v1/constitution-1.6.0.md` and `docs/v2/plan.md` remains the planning record.

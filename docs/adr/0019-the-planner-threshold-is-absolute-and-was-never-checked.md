@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0019: The planner's threshold stays absolute, and now has something to check it against
 
 **Status:** Accepted

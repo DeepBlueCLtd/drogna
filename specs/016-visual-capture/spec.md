@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Feature Specification: Visual Capture — Three Mechanisms, One Browser
 
 **Feature Branch**: `016-visual-capture`

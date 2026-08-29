@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0016: No component could authenticate, and the credential path is now whole
 
 **Status:** Accepted, and amended the same day — see "What changed a few hours later"

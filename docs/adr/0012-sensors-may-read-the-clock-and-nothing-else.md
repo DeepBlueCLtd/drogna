@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0012: Sensors and the ingest client may read the clock, and nothing else on the control branch
 
 **Status:** Accepted

@@ -13,6 +13,11 @@
  * images is the check V2 gave up (ADR-0031) — the discipline it was traded for is this
  * one, so the mechanism writes the record rather than asking an author to remember.
  *
+ * A view's own controls can be set before the shot — a mode selector, a toggle — and
+ * what was set is recorded in the sidecar, because a picture of a mode nobody can see
+ * the switch for is a picture whose state is a mystery. Only the controls the page
+ * itself offers: the capture drives the shell, it never reaches past it.
+ *
  * Usage: pnpm capture:glance [view-id] [out.png]
  * The optional view id deep-links the capture (FR-15): e.g. `system`, `messages`.
  * DROGNA_GLANCE_CAPTION, if set, is recorded in the sidecar as the picture's caption.
@@ -96,6 +101,27 @@ try {
     return rate?.textContent?.includes('rate 0') ?? false;
   });
 
+  // Set the view's own controls, if the caller named any. Each step is a selector
+  // and either a value to select or a click, applied through the page exactly as a
+  // reader would, and each is recorded in the sidecar beside the image.
+  const controls = JSON.parse(process.env.DROGNA_GLANCE_CONTROLS ?? '[]') as {
+    select?: string;
+    value?: string;
+    click?: string;
+    /** Where in the element to click, for a canvas that has no other handle. */
+    position?: { x: number; y: number };
+  }[];
+  for (const step of controls) {
+    if (step.select !== undefined && step.value !== undefined) {
+      await page.selectOption(step.select, step.value);
+    } else if (step.click !== undefined) {
+      await page.click(step.click, step.position ? { position: step.position } : undefined);
+    } else {
+      throw new Error(`a control step is neither a selection nor a click: ${JSON.stringify(step)}`);
+    }
+    await page.waitForTimeout(Number(process.env.DROGNA_GLANCE_CONTROL_SETTLE_MS ?? 1200));
+  }
+
   // Let one full heartbeat cadence pass before looking: liveness is real time
   // (ADR-0006), so a shot taken inside the first interval shows an honest dark
   // board — true, but not the moment worth capturing.
@@ -122,6 +148,7 @@ try {
     sim_time: simTime ?? 'unknown',
     clock_pinned: rateText ?? 'unknown',
     lit_components: litComponents.length > 0 ? litComponents : 'not readable from this view',
+    controls: controls.length > 0 ? controls : 'none: the view is as it opens',
     warmed:
       warmRate > 0 && warmMillis > 0
         ? `run at rate ${warmRate} for ${warmMillis} ms of host time before the clock was pinned`

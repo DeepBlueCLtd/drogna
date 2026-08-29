@@ -162,7 +162,7 @@ mode; the ancestry column is the map back into the archived record.
 | V2-C18 | Operator surface | Aggregated component state; commands with observable refusals | C-21 (sans container runtime) |
 | V2-C19 | Shell | Dockable multi-panel front-end: Intro, Background, System, Holdings, Map, Messages | C-18 |
 | V2-C20 | Offload packager | Export shape and departure announcements; no real transfer until V3 | C-17 |
-| V2-C21 | Platform | Ownship motion simulator: demanded and current course, speed and depth; state published as measurements | new in feature 112 |
+| V2-C21 | Platform | Ownship motion simulator: demanded and current course, speed and depth; state published as measurements | new in feature 113 |
 
 - **FR-12** Store semantics carry although the engines do not: one writer per store
   through its ingestion seam; the feature store read-only during a run; the advisory
@@ -341,9 +341,13 @@ directed → the machinery is interrogated → advice travels light → it is se
   stopped component goes dark because its heartbeats cease, never because the surface
   says so *(v1 FR-67, FR-71, FR-72, FR-76)*. Commands are ephemeral and outside
   AT-04's replay claim, stated wherever replay is claimed *(v1 FR-73)*. **Amended by feature
-  112:** the surface's behaviour is unchanged, and its *presentation* moves to §5.11 —
-  the tab becomes the flow chart of FR-52 to FR-54, of which the table specified here is
-  one of two equal views.
+  113:** the surface's behaviour is unchanged, and its *presentation* moves to §5.12 —
+  the tab becomes the flow chart of FR-57 to FR-59, of which the table specified here is
+  one of two equal views. A **platform demand** (FR-53) is a command of this kind and
+  carries the same boundary: the manifest replays the run, not the demands issued into
+  it. What is new in 113 is that the platform's own motion *is* inside the claim, and
+  that the sensors' output now depends on delivery order rather than on a closed form —
+  deterministic in lockstep, and asserted there (`platform/replay.test.ts`).
 
 ### 5.8 Shore advisories and the boundary (feature 108)
 

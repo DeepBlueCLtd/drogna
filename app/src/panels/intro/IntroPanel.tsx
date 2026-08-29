@@ -133,7 +133,8 @@ export function IntroPanel({ params }: PanelProps) {
           skill figure against persistence, in its own sentence — the display says
           plainly when the model is not earning its compute. Commands are ephemeral
           and outside the replay claim: an exported manifest replays the run, not
-          your interventions.
+          your interventions — and since feature 113 a demand issued to the
+          platform is a command of exactly that kind.
         </p>
       </section>
       <section>

@@ -88,13 +88,17 @@ composition root (ADR-0030), the operator surface and the map all come from them
       spec's FR-029 is amended to match the tree.
 - [x] T019 Regenerate `contracts/topology.json` and check the drift gate: the platform
       role, the operator's demand publish rule, the sensors' new subscription.
-- [ ] T020 Replay: a scenario with the platform in the loop and a demand issued at a
+- [x] T020 Replay: a scenario with the platform in the loop and a demand issued at a
       recorded tick, byte-identical; `pnpm replay-proof` extended to cover it, and the
-      new delivery-order dependency stated in the claim's boundary (plan.md §5). *Not
-      done. The sensors' output now depends on delivery order, which is deterministic in
-      lockstep — the existing replay tests pass — but AT-04's claim has not been
-      re-stated to say so, and a claim that has not been re-read against a change it
-      covers is a claim nobody has checked.*
+      new delivery-order dependency stated in the claim's boundary (plan.md §5).
+      `platform/replay.test.ts`, three tests, picked up by the proof without a change to
+      it because it runs every test named `replay`. The boundary is now stated in the
+      three places the claim is made — the proof's own preamble, the Intro panel, and
+      SRD §5.7 — and says two things: a demand is an operator command and therefore
+      outside the claim, while the platform's motion and the sensors' sampling
+      positions are inside it. Each test was watched failing: entropy planted in the
+      platform's noise broke the first two, and a platform that ignored demands broke
+      the last two.
 
 ## The map
 

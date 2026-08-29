@@ -303,6 +303,21 @@ Something appears in a quarter to a third of the time it used to, and on localho
 boot phases put first paint at 240 ms at 4× and 300 ms at 6× — against 2060 ms and 3024 ms
 in §3's table.
 
+**One number here is an observation of the published estate rather than a model**, which
+is the first in this document and closes part of §4's and §6's caveat. GitHub Pages was
+asked for both instances' entry chunks over gzip, as a browser would receive them:
+
+| Deployed instance | initial chunk, as served |
+|---|---:|
+| `instances/main/` | 580,191 bytes gzipped |
+| `instances/claude-website-load-time-qqzuil/` | **373,084 bytes gzipped** |
+
+A 36% cut in what every visitor must have before anything can run, on the real artifacts
+at the real addresses. The map's chunk is absent from the entry document, as a dynamic
+import should be. What still has not been observed is the *timing* of a real first load,
+because a browser here cannot reach the estate; the bytes could be counted with `curl`,
+and were.
+
 Full interactivity moved much less. `buildBackend` still costs ~1.38 s at 4× and ~2.09 s at
 6×, so the shell is usable at roughly 2.4–5.2 s depending on the line. **The wait was not
 removed so much as taken out from behind a blank page** — which is the honest description

@@ -14,6 +14,9 @@ on:
 
 permissions:
   contents: write
+  # The instance is of no use to a reviewer who cannot find it, so the job also
+  # writes the address onto the pull request open on this branch.
+  pull-requests: write
 
 # Serialised, never cancelled: two estate pushes racing would drop one instance.
 concurrency:
@@ -74,6 +77,45 @@ jobs:
             sleep "$delay"
           done
           git push
+
+      # A reviewer should not have to reconstruct the address of the thing under
+      # review. One comment per pull request, rewritten in place on every push, so a
+      # branch pushed ten times leaves one link rather than ten. The view list is read
+      # from the configuration the shell itself reads (Constitution IV): a list typed
+      # in here would be a copy that could fall behind. Missing on a push with no pull
+      # request open — which is the normal case for main — is not a failure.
+      - name: Link the instance from the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          number="$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number')"
+          if [ -z "${number}" ]; then
+            echo "no pull request open on ${GITHUB_REF_NAME}; nothing to link"
+            exit 0
+          fi
+          url="https://deepbluecltd.github.io/drogna/instances/${slug}/"
+          # Joined by jq, not by paste: paste -d takes a list of single characters and
+          # cycles through the bytes of a multi-byte one, which turned the separator
+          # into mojibake when this was first run.
+          views="$(jq -r --arg url "${url}" \
+            '[.shell.views[] | "[\(.label)](\($url)#/view/\(.id))"] | join(" · ")' \
+            app/config/run.json)"
+          body="$(printf '%s\n' \
+            '<!-- drogna-instance -->' \
+            "### This branch, running: <${url}>" \
+            '' \
+            "${views}" \
+            '' \
+            "Built from \`${GITHUB_SHA}\`, and replaced in place by every further push to this branch. Synthetic throughout, as the header says.")"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${number}/comments" --paginate \
+            --jq 'map(select(.body | startswith("<!-- drogna-instance -->"))) | .[0].id // empty')"
+          if [ -n "${existing}" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="${body}" > /dev/null
+            echo "instance link updated on #${number}: ${url}"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${number}/comments" -f body="${body}" > /dev/null
+            echo "instance link posted on #${number}: ${url}"
+          fi
 
       # D17: the author is told when something is ready to look at. The topic is a CI
       # secret (PR-01): with no secret configured, this step says so and does nothing.

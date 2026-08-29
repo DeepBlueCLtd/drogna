@@ -51,6 +51,10 @@ back, so the address bar always names the active view. <strong>Amended by ADR-00
 address is now a view id and an opaque remainder the shell hands to the panel and
 never parses, so a panel may address positions inside itself. <code>#/view/&lt;id&gt;</code> and every
 link of that shape are unchanged.</li>
+<li><strong>Amended by ADR-0033</strong>: dockview owns the layout <em>at and above a width threshold</em>.
+Below it the same views, from the same registry and behind the same addresses, are
+presented one at a time as a stack. Docking is what a phone cannot do, and a docking
+manager is the wrong thing to squeeze into 390px.</li>
 <li>Layout serialisation (<code>api.toJSON</code>) is presentation only. It is never persisted by
 the harness and never consulted by any component; a deep link selects what is
 shown, never what happened.</li>

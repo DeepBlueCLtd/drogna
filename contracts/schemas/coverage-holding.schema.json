@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
+  "title": "drogna coverage holding",
+  "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. Three eras (SRD-v2 FR-21): the historic archive authored at provisioning, the now-cast replaced on its cadence, and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+  "type": "object",
+  "required": ["schema_version", "holding_id", "era", "run_id", "published_at", "field", "manifest"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "holding_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "Deterministic: derived from era, run and the tick of publication, never from entropy."
+    },
+    "era": { "type": "string", "enum": ["archive", "nowcast", "instance"] },
+    "run_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "published_at": {
+      "type": "object",
+      "required": ["sim_time", "tick"],
+      "additionalProperties": false,
+      "description": "Simulation time of publication, from the clock port. No host time.",
+      "properties": {
+        "sim_time": { "type": "string", "minLength": 1 },
+        "tick": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "field": {
+      "type": "object",
+      "required": ["format", "sha256", "byte_length"],
+      "additionalProperties": false,
+      "description": "The stored bytes: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated.",
+      "properties": {
+        "format": { "type": "string", "const": "drogna-f32-v1" },
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "byte_length": { "type": "integer", "minimum": 8 }
+      }
+    },
+    "manifest": {
+      "$ref": "manifest.schema.json",
+      "description": "The ground-truth manifest, embedded whole: a holding is inspectable without a second fetch, and AT-01/AT-03 score against exactly what the catalogue serves."
+    }
+  }
+}

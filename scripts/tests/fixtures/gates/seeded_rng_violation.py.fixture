@@ -1,6 +1,0 @@
-"""Perturbation drawn from an unseeded global generator."""
-import random
-
-
-def perturb(value):
-    return value + random.random()

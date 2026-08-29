@@ -1,7 +1,0 @@
-# A fixture. The marker carries a reason, so the step is exempt and appears in the
-# inventory rather than in the findings. It sits on the line directly above the step it
-# covers, because that is the whole of what a marker reaches.
-FROM alpine:3
-
-# harness:allow-proxy-ca-seam this fixture's index is a local mirror presenting no certificate
-RUN apk add --no-cache python3

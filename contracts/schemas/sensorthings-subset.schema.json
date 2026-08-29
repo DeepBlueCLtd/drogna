@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/sensorthings-subset.schema.json",
+  "title": "drogna SensorThings subset responses",
+  "description": "The OGC SensorThings (Part 1, Sensing) responses the query component serves over the observation store (SRD-v2 FR-26): the service root, and value collections of Things, Datastreams and Observations. Read-only, and a genuine subset with the subset stated: entity shapes carry exactly what the observation master carries, because the store is a function of the traffic and nothing else.",
+  "type": "object",
+  "$defs": {
+    "service_root": {
+      "type": "object",
+      "required": ["value"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "url"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string", "pattern": "^[^:]*$" }
+            }
+          }
+        }
+      }
+    },
+    "things_response": {
+      "type": "object",
+      "required": ["@iot.count", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.count": { "type": "integer", "minimum": 0 },
+        "value": { "type": "array", "items": { "$ref": "#/$defs/thing" } }
+      }
+    },
+    "thing": {
+      "type": "object",
+      "required": ["@iot.id", "name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "datastreams_response": {
+      "type": "object",
+      "required": ["@iot.count", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.count": { "type": "integer", "minimum": 0 },
+        "value": { "type": "array", "items": { "$ref": "#/$defs/datastream" } }
+      }
+    },
+    "datastream": {
+      "type": "object",
+      "required": ["@iot.id", "name", "description", "observationType", "unitOfMeasurement", "observedProperty"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "observationType": { "type": "string" },
+        "unitOfMeasurement": {
+          "type": "object",
+          "required": ["name", "symbol", "definition"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "symbol": { "type": "string" },
+            "definition": { "type": "string" }
+          }
+        },
+        "observedProperty": {
+          "type": "object",
+          "required": ["name", "definition"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "definition": { "type": "string" }
+          }
+        }
+      }
+    },
+    "observations_response": {
+      "type": "object",
+      "required": ["@iot.count", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The total matching the query before $top/$skip, so a consumer can page honestly."
+        },
+        "value": { "type": "array", "items": { "$ref": "#/$defs/observation_entity" } }
+      }
+    },
+    "observation_entity": {
+      "type": "object",
+      "required": ["@iot.id", "phenomenonTime", "result", "resultTime", "Datastream@iot.navigationLink", "FeatureOfInterest"],
+      "additionalProperties": false,
+      "properties": {
+        "@iot.id": { "type": "string" },
+        "phenomenonTime": { "type": "string" },
+        "resultTime": {
+          "type": ["string", "null"],
+          "description": "Null, stated: the harness records phenomenon time only, and inventing a result time would be a claim the write path never made."
+        },
+        "result": { "type": "number" },
+        "Datastream@iot.navigationLink": { "type": "string", "pattern": "^[^:]*$" },
+        "FeatureOfInterest": {
+          "type": "object",
+          "required": ["name", "feature"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "feature": {
+              "type": "object",
+              "required": ["type", "coordinates"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "const": "Point" },
+                "coordinates": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": { "type": "number" },
+                  "description": "lon, lat, depth in metres positive down — the third coordinate is depth, stated here because GeoJSON's default reading is altitude."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

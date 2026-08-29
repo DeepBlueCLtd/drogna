@@ -1,155 +1,38 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.common.schema.json",
-  "title": "drogna common configuration sections",
-  "description": "The sections every drogna component's configuration carries. A component schema does not reference this document's root; it references the entries under $defs, lists them among its own properties, and sets additionalProperties to false so that a typo in a key is a startup failure rather than a silent default. The root here validates a component that has no section of its own.",
-  "type": "object",
-  "required": ["component", "clock", "seed", "logging"],
-  "additionalProperties": false,
-  "properties": {
-    "component": { "$ref": "#/$defs/component" },
-    "clock": { "$ref": "#/$defs/clock" },
-    "seed": { "$ref": "#/$defs/seed" },
-    "broker": { "$ref": "#/$defs/broker" },
-    "logging": { "$ref": "#/$defs/logging" }
-  },
+  "title": "drogna configuration vocabulary",
+  "description": "Shared $defs for the V2 component configuration documents. Constitution IV: no component source carries a literal path, URL or topic string, so every such string arrives through a configuration document validated against one of the config.* masters, and the recurring shapes are defined once here. This file describes configuration only; message shapes crossing the seam have their own masters.",
   "$defs": {
-    "component": {
-      "title": "Component identity",
-      "description": "Who this process is. The id is deterministic and appears in heartbeats, in the clock's participant registry and in the run manifest.",
-      "type": "object",
-      "required": ["id"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_-]*$",
-          "description": "Stable component id, for example clock or env_generator."
-        },
-        "description": {
-          "type": "string",
-          "description": "One line for a human reading a heartbeat."
-        },
-        "heartbeat_interval_seconds": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "Declared liveness interval, in host seconds. Real time by ADR-0006: measured in simulation time, a rate of zero would expire every liveness window and grey out a running system during exactly the capture FR-53 exists to make meaningful."
-        }
-      }
-    },
-    "clock": {
-      "title": "Clock port configuration",
-      "description": "How this component reaches the simulation clock. Time arrives by subscription to ctl/clock on the broker (ADR-0009); the HTTP interface here is for two things a subscription cannot do, setting the rate and asking what the time is now at startup. The routes are configuration rather than code because they are part of the clock's published interface and because Constitution IV admits no URL or path literal in component source.",
-      "type": "object",
-      "required": ["endpoint", "routes", "mode"],
-      "additionalProperties": false,
-      "properties": {
-        "endpoint": {
-          "type": "string",
-          "format": "uri",
-          "description": "Base URL of the clock service's HTTP interface (C-01). Not a way to read time in a loop."
-        },
-        "routes": {
-          "type": "object",
-          "required": ["snapshot", "control"],
-          "additionalProperties": false,
-          "description": "Routes relative to the endpoint. Read and control routes sit under distinct prefixes so the reverse proxy can apply policy by prefix without enumerating routes.",
-          "properties": {
-            "snapshot": { "type": "string", "description": "What the time is now, for startup and for catching up after a restart." },
-            "control": { "type": "string", "description": "Mode, rate, registration and acknowledgement: commands, not reads." }
-          }
-        },
-        "mode": {
-          "$ref": "#/$defs/clock_mode",
-          "description": "The mode this component expects the run to be in. It does not set the mode; the clock does."
-        },
-        "stale_after_gap": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Tolerated gap in tick indices before the clock port reports itself stale. Gaps are normal in accelerated mode, so this is a per-component tolerance, not a constant."
-        },
-        "timeout_seconds": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "Socket timeout for clock requests. A transport parameter, not a source of time."
-        },
-        "participant": {
-          "type": "object",
-          "required": ["id", "role"],
-          "additionalProperties": false,
-          "description": "Present when this component registers with the clock. Absent means it only listens.",
-          "properties": {
-            "id": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$",
-              "description": "Deterministic participant id, recorded in the run manifest."
-            },
-            "role": { "$ref": "#/$defs/participant_role" }
-          }
-        }
-      }
-    },
-    "seed": {
-      "title": "Randomness configuration",
-      "description": "The run's root seed and this component's stream prefix. Every generator in the process derives from these through harness_core.rng.",
-      "type": "object",
-      "required": ["root", "stream"],
-      "additionalProperties": false,
-      "properties": {
-        "root": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The run's root seed, recorded in the run manifest."
-        },
-        "stream": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_-]*$",
-          "description": "This component's stream prefix. Stream names are <component>.<purpose>."
-        }
-      }
-    },
-    "broker": {
-      "title": "Broker connection",
-      "description": "MQTT connection details. Topics are namespaced obs/ and ctl/; the namespaces are conventions of the harness and are not configurable.",
-      "type": "object",
-      "required": ["url", "client_id"],
-      "additionalProperties": false,
-      "properties": {
-        "url": { "type": "string", "format": "uri", "description": "Broker URL." },
-        "client_id": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_-]*$",
-          "description": "Deterministic client id. Never derived from entropy or from a host clock."
-        },
-        "keepalive_seconds": {
-          "type": "integer",
-          "exclusiveMinimum": 0,
-          "description": "Transport keepalive. A socket parameter, not simulation time."
-        }
-      }
-    },
-    "logging": {
-      "title": "Logging",
-      "type": "object",
-      "required": ["level"],
-      "additionalProperties": false,
-      "properties": {
-        "level": {
-          "type": "string",
-          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-          "description": "Log level. Log line decoration may carry host time; nothing else may."
-        }
-      }
-    },
-    "clock_mode": {
+    "topic": {
       "type": "string",
-      "enum": ["realtime", "accelerated", "paused", "lockstep"],
-      "description": "realtime and accelerated are free-running; paused emits nothing; lockstep advances only when every registered participant has acknowledged the current tick."
+      "pattern": "^[a-z0-9][a-z0-9_/-]*$",
+      "description": "A concrete MQTT-semantics topic: segments joined by '/', no wildcards."
     },
-    "participant_role": {
+    "topic_filter": {
       "type": "string",
-      "enum": ["observer", "lockstep"],
-      "description": "An observer reads ticks. A lockstep participant additionally acknowledges each one, and the clock will not advance without it."
+      "pattern": "^([a-z0-9_+-]+|#)(/([a-z0-9_+-]+|#))*$",
+      "description": "An MQTT-semantics subscription filter: '+' matches one segment, '#' the remainder and only as the last segment."
+    },
+    "relative_path": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9_/.-]*$",
+      "description": "A relative, same-origin URL path. Absolute URLs are forbidden in client configuration by SRD-v2 FR-04: relative and same-origin is what makes the page portable across any host and clearance."
+    },
+    "component_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "heartbeat": {
+      "type": "object",
+      "required": ["topic", "interval_seconds", "liveness_window_seconds"],
+      "additionalProperties": false,
+      "description": "How a component announces it is alive. Cadence and window are host seconds by ADR-0006: liveness is a fact about the machinery with no simulation-time answer even in principle.",
+      "properties": {
+        "topic": { "$ref": "#/$defs/topic" },
+        "interval_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "liveness_window_seconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
     }
   }
 }

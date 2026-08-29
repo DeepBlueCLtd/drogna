@@ -1,186 +1,108 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.monitor.schema.json",
-  "title": "drogna monitor configuration",
-  "description": "Configuration for C-11, the divergence monitor. Every number that decides whether the harness spends a model run is here, because over-sensitivity is the failure this component owns and a threshold buried in source is a threshold nobody tunes. The common sections are referenced from config.common.schema.json rather than restated, and unknown keys are rejected so that a typo is a startup failure rather than a silent default.",
+  "title": "drogna monitor configuration (V2-C11)",
+  "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried.",
   "type": "object",
   "required": [
-    "component",
-    "clock",
-    "seed",
-    "logging",
-    "monitor"
+    "id",
+    "topics",
+    "heartbeat",
+    "pairs",
+    "threshold_m_per_s",
+    "persistence_count",
+    "region"
   ],
   "additionalProperties": false,
   "properties": {
-    "component": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component"
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
     },
-    "clock": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock"
-    },
-    "seed": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed"
-    },
-    "broker": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker"
-    },
-    "logging": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging"
-    },
-    "monitor": {
-      "title": "Divergence monitoring",
+    "topics": {
       "type": "object",
       "required": [
-        "window",
-        "residual",
-        "persistence",
-        "warmup",
-        "coverage"
+        "clock",
+        "observations",
+        "divergence",
+        "telemetry"
       ],
       "additionalProperties": false,
       "properties": {
-        "window": {
-          "title": "The rolling window",
-          "description": "Bounded in both simulation-time span and sample count, so it cannot grow with the length of the scenario. Eviction is by simulation time; the count bound is what holds the memory footprint at a high clock rate.",
-          "type": "object",
-          "required": [
-            "span_seconds",
-            "maximum_samples",
-            "maximum_pending"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "span_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "How far back the window reaches, in seconds of simulation time."
-            },
-            "maximum_samples": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Hard bound on samples held. The oldest is evicted when it is reached."
-            },
-            "maximum_pending": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Bound on observations accepted but not yet paired into a scoreable sample. Beyond it the oldest are shed and counted, because falling behind unboundedly at a high clock rate is worse than a reported drop."
-            }
-          }
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "residual": {
-          "title": "The residual and its threshold",
-          "description": "The residual is defined on sound speed, derived from the observed temperature, salinity and pressure by the single implementation in harness_core (ADR-0005). There is no threshold on temperature here, and there is not meant to be.",
-          "type": "object",
-          "required": [
-            "threshold_m_per_s"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "threshold_m_per_s": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Residual magnitude above which a sample counts towards persistence, in metres per second. Of the order of 1.5 to 2 m/s, which is roughly half a degree Celsius at the scenario's nominal conditions."
-            }
-          }
+        "observations": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter"
         },
-        "persistence": {
-          "title": "What makes a divergence rather than a spike",
-          "description": "Either rule may be satisfied. Both counts are at least two, because a single sample above threshold is an outlier and raising a run for it is the failure this component owns.",
-          "type": "object",
-          "required": [
-            "neighbourhood_radius_m",
-            "spatial_sample_count",
-            "temporal_sample_count",
-            "temporal_span_seconds"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "neighbourhood_radius_m": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Radius within which samples count as neighbours, in metres. A radius and not a spatial index: indexing belongs to the planner, and coupling the monitor to it would buy nothing."
-            },
-            "spatial_sample_count": {
-              "type": "integer",
-              "minimum": 2,
-              "description": "Distinct samples above threshold inside one neighbourhood that satisfy the spatial rule."
-            },
-            "temporal_sample_count": {
-              "type": "integer",
-              "minimum": 2,
-              "description": "Consecutive samples above threshold that satisfy the temporal rule."
-            },
-            "temporal_span_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Simulation-time span those consecutive samples must cover, in seconds. Without it a burst arriving in one instant would satisfy a rule about persistence over time."
-            }
-          }
+        "divergence": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "warmup": {
-          "title": "Starting and restarting",
-          "description": "On start or restart the monitor has no window. It either observes a span of simulation time or issues exactly one catch-up query against the observation store, and publishes no divergence until that completes.",
-          "type": "object",
-          "required": [
-            "mode",
-            "span_seconds"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "mode": {
-              "type": "string",
-              "enum": [
-                "span",
-                "catchup"
-              ],
-              "description": "span: wait out the declared simulation-time span. catchup: one query to the observation store, and no further query for the life of the process."
-            },
-            "span_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "The warm-up span in seconds of simulation time, and in catchup mode the span the single query covers."
-            },
-            "catchup_sample_limit": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Bound on the rows the single catch-up query returns, so a restart cannot pull the store into memory."
-            }
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        }
+      }
+    },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
+    "pairs": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Which datastreams form a sound-speed sample: a temperature and a salinity series at one depth on one platform.",
+      "items": {
+        "type": "object",
+        "required": [
+          "thing_id",
+          "temperature_datastream",
+          "salinity_datastream",
+          "depth_m"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "thing_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "temperature_datastream": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "salinity_datastream": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "depth_m": {
+            "type": "number",
+            "minimum": 0
           }
+        }
+      }
+    },
+    "threshold_m_per_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "persistence_count": {
+      "type": "integer",
+      "minimum": 2,
+      "description": "Consecutive breaching samples before a divergence is raised: never a single spike."
+    },
+    "region": {
+      "type": "object",
+      "required": [
+        "radius_m",
+        "depth_pad_m"
+      ],
+      "additionalProperties": false,
+      "description": "How the diverged region is stated: centred on the breaching samples' mean position, with this radius and this pad about the pair's depth.",
+      "properties": {
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "coverage": {
-          "title": "Reading the current forecast",
-          "description": "The monitor samples the forecast through the coverage read port, not through the query layer: it sits inside the boundary, and routing an internal consumer out through the external read path and back would claim a seam that is not there.",
-          "type": "object",
-          "required": [
-            "root_directory",
-            "current_pointer",
-            "runs_dirname",
-            "forecast_file"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "root_directory": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Root of the coverage store."
-            },
-            "current_pointer": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the text file in the root holding one run identifier on one line (ADR-0011). Two identifiers means two runs claim to be current, and the reader reports no current forecast rather than choosing one."
-            },
-            "runs_dirname": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the directory under the root holding the run directories. The pointer names a run, not a path, so the reader needs this to find it."
-            },
-            "forecast_file": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the forecast field inside a run's directory."
-            }
-          }
+        "depth_pad_m": {
+          "type": "number",
+          "minimum": 0
         }
       }
     }

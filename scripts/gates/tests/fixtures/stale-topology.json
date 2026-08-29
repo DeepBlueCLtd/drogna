@@ -1,0 +1,6 @@
+{
+  "generator": "scripts/derive-topology.ts",
+  "roles": [],
+  "components": [],
+  "topics": []
+}

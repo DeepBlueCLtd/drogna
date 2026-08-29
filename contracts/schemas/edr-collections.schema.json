@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/edr-collections.schema.json",
+  "title": "drogna EDR collections subset",
+  "description": "The OGC API-EDR discovery documents the query component serves (SRD-v2 FR-26, FR-21): the landing page, the conformance declaration, the collections list and one collection. Each collection's extent states what the store genuinely holds, verified against the store by test \u2014 a discovery document that flatters its holdings is the dishonesty the harness exists to avoid.",
+  "type": "object",
+  "$defs": {
+    "landing": {
+      "type": "object",
+      "required": [
+        "title",
+        "description",
+        "links"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "required": [
+        "conformsTo"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "conformsTo": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "collections": {
+      "type": "object",
+      "required": [
+        "links",
+        "collections"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
+        "collections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/collection"
+          }
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "description",
+        "links",
+        "extent",
+        "data_queries",
+        "parameter_names",
+        "crs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
+        "extent": {
+          "type": "object",
+          "required": [
+            "spatial",
+            "vertical",
+            "temporal"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "spatial": {
+              "type": "object",
+              "required": [
+                "bbox",
+                "crs"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "bbox": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "crs": {
+                  "type": "string"
+                }
+              }
+            },
+            "vertical": {
+              "type": "object",
+              "required": [
+                "interval",
+                "vrs"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "interval": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "vrs": {
+                  "type": "string",
+                  "description": "States that depth is positive downwards; a vertical axis that leaves it implicit will be read upside down by somebody."
+                }
+              }
+            },
+            "temporal": {
+              "type": "object",
+              "required": [
+                "interval",
+                "trs"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "interval": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "trs": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "data_queries": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Exactly the query types genuinely served for this collection; an entry here is a capability, and an absent entry is refused by name when asked for.",
+          "properties": {
+            "position": {
+              "$ref": "#/$defs/data_query"
+            },
+            "trajectory": {
+              "$ref": "#/$defs/data_query"
+            },
+            "area": {
+              "$ref": "#/$defs/data_query"
+            }
+          }
+        },
+        "parameter_names": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "type",
+              "description",
+              "unit",
+              "observedProperty"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Parameter"
+              },
+              "description": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "unit": {
+                "type": "object",
+                "required": [
+                  "symbol"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "symbol": {
+                    "type": "string"
+                  }
+                }
+              },
+              "observedProperty": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "crs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "data_query": {
+      "type": "object",
+      "required": [
+        "link"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "link": {
+          "$ref": "#/$defs/link"
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": [
+        "href",
+        "rel"
+      ],
+      "additionalProperties": false,
+      "description": "hrefs are relative and same-origin by requirement (FR-04, E7): an absolute URL here would break behind a clearance at the preflight.",
+      "properties": {
+        "href": {
+          "type": "string",
+          "pattern": "^[^:]*$"
+        },
+        "rel": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

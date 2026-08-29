@@ -1,458 +1,192 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.planner.schema.json",
-  "title": "drogna planner configuration",
-  "description": "Configuration for C-15, the adaptive sampling planner. Every number that decides where sampling would most reduce uncertainty is here, because the sensing model is required to be explicit rather than an accident of the grid resolution (SRD FR-32) and because a decay length buried in source is a decay length nobody tunes. The common sections are referenced from config.common.schema.json rather than restated, and unknown keys are rejected so that a typo is a startup failure rather than a silent default. Nothing here names an addressee or a recipient: this component recommends, and configuring it to command would be a change to Constitution VIII rather than a change to this document.",
+  "title": "drogna planner configuration (V2-C14)",
+  "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code.",
   "type": "object",
   "required": [
-    "component",
-    "clock",
-    "seed",
-    "logging",
-    "planner"
+    "id",
+    "stream",
+    "topics",
+    "heartbeat",
+    "replan_interval_ticks",
+    "region_feature",
+    "h3_resolution",
+    "depth_bands",
+    "budget_seconds",
+    "speeds",
+    "footprint",
+    "usable_threshold",
+    "restarts",
+    "shortlist",
+    "projection"
   ],
   "additionalProperties": false,
   "properties": {
-    "component": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component"
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
     },
-    "clock": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock"
+    "stream": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The stream the restart draws come from; with restarts = 1 no draw is taken at all."
     },
-    "seed": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed"
-    },
-    "broker": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker"
-    },
-    "logging": {
-      "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging"
-    },
-    "planner": {
-      "title": "Adaptive sampling planning",
+    "topics": {
       "type": "object",
       "required": [
-        "indexing",
-        "uncertainty",
-        "sensing",
-        "platform",
-        "horizon",
-        "commitment",
-        "projection",
-        "search",
-        "coverage",
-        "environment"
+        "clock",
+        "observations",
+        "run_published",
+        "plan"
       ],
       "additionalProperties": false,
       "properties": {
-        "indexing": {
-          "title": "How the domain is indexed",
-          "description": "H3 in the horizontal at one resolution, layered with a separate depth index (SRD FR-35). A planning cell is the pairing of an H3 index with a depth band. The resolution is configuration because the domain's size and the sensing footprint's decay length together decide a sensible value, and because the granularity of a recommendation must be visible rather than implied.",
-          "type": "object",
-          "required": [
-            "h3_resolution",
-            "depth_bands",
-            "maximum_cells"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "h3_resolution": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 15,
-              "description": "The H3 resolution every planning cell belongs to."
-            },
-            "depth_bands": {
-              "type": "array",
-              "minItems": 1,
-              "description": "The vertical index, shallowest first. Adjacent bands are expected to meet rather than overlap; the planner refuses a vertical index whose bands are out of order or inverted.",
-              "items": {
-                "type": "object",
-                "required": [
-                  "minimum_depth_m",
-                  "maximum_depth_m"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "minimum_depth_m": {
-                    "type": "number",
-                    "minimum": 0,
-                    "description": "Shallow edge in metres, positive downwards."
-                  },
-                  "maximum_depth_m": {
-                    "type": "number",
-                    "minimum": 0,
-                    "description": "Deep edge in metres, positive downwards."
-                  }
-                }
-              }
-            },
-            "maximum_cells": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Bound on the horizontal cells the domain is covered with. A resolution one step too fine multiplies the cell count by seven, and an unbounded cover would turn a misconfiguration into an unbounded search rather than a startup failure."
-            }
-          }
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "uncertainty": {
-          "title": "The field planned against",
-          "description": "One scalar spread field is scored, not both: combining degrees Celsius with practical salinity units needs a weighting between them that nothing in the requirements supplies. The threshold is the value above which confidence is no longer usable, and the SRD fixes no number for it.",
-          "type": "object",
-          "required": [
-            "variable",
-            "usable_threshold"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "variable": {
-              "type": "string",
-              "enum": [
-                "temperature_spread",
-                "salinity_spread"
-              ],
-              "description": "Which published per-cell ensemble spread variable the planner scores."
-            },
-            "usable_threshold": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Uncertainty above which confidence is no longer usable, in the units of the scored variable. A cell already below it is worth approximately nothing to visit, which is what stops the planner recommending motion for its own sake."
-            }
-          }
+        "observations": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter"
         },
-        "sensing": {
-          "title": "The sensing footprint",
-          "description": "Which cells a visit informs and by how much, in the horizontal and in depth. SRD FR-32 requires this to be an explicit configured model rather than an implicit consequence of the grid resolution, so it is stated here in full and derived in docs/algorithms/informative-path-planning.md.",
-          "type": "object",
-          "required": [
-            "horizontal_decay_m",
-            "vertical_decay_m",
-            "peak_reduction",
-            "maximum_rings",
-            "maximum_band_separation"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "horizontal_decay_m": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Horizontal e-folding distance of the footprint in metres."
-            },
-            "vertical_decay_m": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Vertical e-folding separation of the footprint in metres."
-            },
-            "peak_reduction": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "maximum": 1,
-              "description": "The fraction of a cell's uncertainty a visit removes at the visited cell itself. Strictly below one leaves residual uncertainty at a sampled cell, which is honest: an instrument reading does not resolve a cell exactly."
-            },
-            "maximum_rings": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "How many H3 rings out from the visited cell the footprint is evaluated over. The kernel is unbounded and the cover is not, so the extent is stated rather than left to a tolerance."
-            },
-            "maximum_band_separation": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "How many depth bands either side of the visited band the footprint is evaluated over."
-            }
-          }
+        "run_published": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "platform": {
-          "title": "The sampling platform",
-          "description": "A position, a depth and a budget, and nothing else (Constitution V). No identity is carried between recommendations, and there is no history here because a recommended route over cells is not a history of anything.",
-          "type": "object",
-          "required": [
-            "horizontal_speed_m_per_s",
-            "vertical_speed_m_per_s",
-            "budget_seconds",
-            "start"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "horizontal_speed_m_per_s": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Nominal horizontal speed. The budget is expressed in seconds and converted to distance here, because the SRD says 'under a budget' without fixing its units."
-            },
-            "vertical_speed_m_per_s": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Nominal rate of change of depth. Changing band costs time even where it costs no distance, which is why a route's distance and its consumption are reported separately."
-            },
-            "budget_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Traversal budget in seconds of simulation time. A route exceeding it is a defect, not a suggestion."
-            },
-            "start": {
-              "type": "object",
-              "required": [
-                "latitude",
-                "longitude",
-                "depth_m"
-              ],
-              "additionalProperties": false,
-              "description": "Where the platform is when the scenario begins. Later recommendations plan from where it has since been reported to be.",
-              "properties": {
-                "latitude": {
-                  "type": "number",
-                  "minimum": -90,
-                  "maximum": 90,
-                  "description": "Degrees north, WGS 84."
-                },
-                "longitude": {
-                  "type": "number",
-                  "minimum": -180,
-                  "maximum": 180,
-                  "description": "Degrees east, WGS 84."
-                },
-                "depth_m": {
-                  "type": "number",
-                  "minimum": 0,
-                  "description": "Depth below the surface in metres, positive downwards."
-                }
-              }
-            }
-          }
-        },
-        "horizon": {
-          "title": "The receding horizon",
-          "description": "How far forward a recommendation reasons, and how often it is recomputed. Both are simulation time: a planner pacing itself on the host clock would recommend differently on a fast machine, which is exactly the failure Constitution I exists to prevent.",
-          "type": "object",
-          "required": [
-            "span_seconds",
-            "replan_cadence_seconds"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "span_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Length of the planning horizon in seconds of simulation time."
-            },
-            "replan_cadence_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Simulation time between cadence-driven replans. A new uncertainty field and the arrival of measurements also trigger one, so this is the longest a recommendation may stand rather than the only reason it is replaced."
-            }
-          }
-        },
-        "commitment": {
-          "title": "Holding a commitment",
-          "description": "SRD FR-33 asks for a single committed route, and commitment without hysteresis is not commitment. The window says how much of the route is held; the margin says what an alternative must beat to justify abandoning it. Both are this feature's choice and both are configuration.",
-          "type": "object",
-          "required": [
-            "window_seconds",
-            "improvement_margin"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "window_seconds": {
-              "type": "number",
-              "minimum": 0,
-              "description": "How far forward from a recommendation's start the committed prefix reaches, in seconds of simulation time. Zero commits to nothing, which is a legitimate configuration and a visible one."
-            },
-            "improvement_margin": {
-              "type": "number",
-              "minimum": 0,
-              "description": "How much better the freely replanned route must be, in the units of the route's value, before the committed prefix is abandoned. A departure is recorded with this margin so that a reader can see the planner changed its mind and by how much."
-            }
-          }
-        },
-        "projection": {
-          "title": "Projecting confidence forward",
-          "description": "SRD FR-34: every region is reported with the simulation time at which its confidence lapses, or with an explicit statement that it does not within the horizon. The march is stepped rather than solved because a growth law without a closed form would then need no new machinery.",
-          "type": "object",
-          "required": [
-            "step_seconds"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "step_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Step of the forward march in seconds of simulation time. A crossing instant is resolved to this step, and the projection's accuracy is stated against it rather than claimed exact."
-            },
-            "horizon_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "How far forward the march runs, in seconds of simulation time. Absent, the planning horizon's own span is used, which is the case where the recommendation and the projection cover the same span."
-            }
-          }
-        },
-        "search": {
-          "title": "The selection heuristic",
-          "description": "Orienteering is NP-hard and nothing in the requirements asks for optimality. What they ask for is the right formulation (SRD FR-35) and determinism (Constitution II), so the search is a greedy insertion with a fixed number of seeded randomised restarts. Every draw comes through the RNG port; a bare generator anywhere in this package is a constitution violation rather than a shortcut.",
-          "type": "object",
-          "required": [
-            "restarts",
-            "maximum_candidates",
-            "shortlist"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "restarts": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "How many randomised restarts the search runs. One is a pure greedy insertion with no draw taken at all."
-            },
-            "maximum_candidates": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Bound on the planning cells considered in one search, taken as the most valuable at the horizon's start. The count considered and the count chosen are both published, so the bound is visible in the recommendation rather than hidden in a configuration file."
-            },
-            "shortlist": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "How many of the best insertions a randomised restart draws its next move from. One reduces every restart to the same greedy answer, so a restart count above one with a shortlist of one is stated as such rather than silently wasted."
-            }
-          }
-        },
-        "coverage": {
-          "title": "Reading the published uncertainty field",
-          "description": "The planner reads the field through the coverage read port and not through the query layer: it sits inside the boundary SRD 2.2 draws, and routing an internal consumer out through the external read path and back would claim a seam that is not there. It learns that a new field exists from the announcement on the control namespace; nothing here polls anything for freshness.",
-          "type": "object",
-          "required": [
-            "root_directory",
-            "current_pointer",
-            "runs_dirname",
-            "uncertainty_file"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "root_directory": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Root of the coverage store."
-            },
-            "current_pointer": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the text file in the root holding one run identifier on one line (ADR-0011)."
-            },
-            "runs_dirname": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the directory under the root holding the run directories. The pointer names a run, not a path."
-            },
-            "uncertainty_file": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the per-cell ensemble spread field inside a run's directory."
-            }
-          }
-        },
-        "environment": {
-          "title": "Where the decorrelation timescale is evaluated from",
-          "description": "ADR-0002 makes tau a field, authored per feature over a domain-wide background and evaluated per location, and its last consequence forbids the authored representation reaching a consumer. The planner therefore reads the generator's ground-truth manifest and asks the generator's own evaluation for a number at a point, rather than blending background and features itself. Every planning cell has a defined tau, background water included, and there is no fallback constant in this component to configure.",
-          "type": "object",
-          "required": [
-            "directory",
-            "manifest_file"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "directory": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Directory holding the environment generator's output."
-            },
-            "manifest_file": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Name of the ground-truth manifest inside that directory."
-            }
+        "plan": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        }
+      }
+    },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
+    "replan_interval_ticks": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "region_feature": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "The feature-store feature whose polygon the planning cover is built over — the loiter region in the shipped scenario. Read through the store interface; the cover is by overlap, so edge water is inside it."
+    },
+    "h3_resolution": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 15
+    },
+    "depth_bands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "minimum_depth_m",
+          "maximum_depth_m"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minimum_depth_m": {
+            "type": "number",
+            "minimum": 0
+          },
+          "maximum_depth_m": {
+            "type": "number",
+            "minimum": 0
           }
         }
       }
-    }
-  },
-  "examples": [
-    {
-      "component": {
-        "id": "planner",
-        "description": "C-15: recommends where sampling would most reduce uncertainty.",
-        "heartbeat_interval_seconds": 5.0
-      },
-      "clock": {
-        "endpoint": "http://clock:8090",
-        "routes": {
-          "snapshot": "/clock/snapshot",
-          "control": "/clock/control"
+    },
+    "budget_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "speeds": {
+      "type": "object",
+      "required": [
+        "horizontal_m_per_s",
+        "vertical_m_per_s"
+      ],
+      "additionalProperties": false,
+      "description": "Traversal cost is time: horizontal and vertical added, the conservative reading of a budget.",
+      "properties": {
+        "horizontal_m_per_s": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "mode": "accelerated",
-        "stale_after_gap": 4,
-        "timeout_seconds": 5.0
-      },
-      "seed": {
-        "root": 20260826,
-        "stream": "planner"
-      },
-      "broker": {
-        "url": "mqtt://broker:1883",
-        "client_id": "planner",
-        "keepalive_seconds": 30
-      },
-      "logging": {
-        "level": "INFO"
-      },
-      "planner": {
-        "indexing": {
-          "h3_resolution": 6,
-          "depth_bands": [
-            { "minimum_depth_m": 0.0, "maximum_depth_m": 50.0 },
-            { "minimum_depth_m": 50.0, "maximum_depth_m": 150.0 }
-          ],
-          "maximum_cells": 4096
+        "vertical_m_per_s": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "footprint": {
+      "type": "object",
+      "required": [
+        "peak",
+        "horizontal_efolding_m",
+        "vertical_efolding_m",
+        "rings",
+        "band_reach"
+      ],
+      "additionalProperties": false,
+      "description": "The explicit sensing model: a product of two decays about the visited cell, evaluated over the stated rings and bands rather than a tolerance nobody wrote down.",
+      "properties": {
+        "peak": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
         },
-        "uncertainty": {
-          "variable": "temperature_spread",
-          "usable_threshold": 0.35
+        "horizontal_efolding_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "sensing": {
-          "horizontal_decay_m": 9000.0,
-          "vertical_decay_m": 60.0,
-          "peak_reduction": 0.8,
-          "maximum_rings": 2,
-          "maximum_band_separation": 1
+        "vertical_efolding_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "platform": {
-          "horizontal_speed_m_per_s": 2.0,
-          "vertical_speed_m_per_s": 0.5,
-          "budget_seconds": 10800.0,
-          "start": { "latitude": 49.0, "longitude": -4.5, "depth_m": 0.0 }
+        "rings": {
+          "type": "integer",
+          "minimum": 0
         },
-        "horizon": {
-          "span_seconds": 10800.0,
-          "replan_cadence_seconds": 1800.0
+        "band_reach": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "usable_threshold": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "θ: the usable-confidence threshold excess is measured against. Where nothing exceeds it, the honest recommendation is no route at all, stated with its reason."
+    },
+    "restarts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "shortlist": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "projection": {
+      "type": "object",
+      "required": [
+        "step_seconds",
+        "horizon_seconds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "step_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "commitment": {
-          "window_seconds": 1800.0,
-          "improvement_margin": 2.0
-        },
-        "projection": {
-          "step_seconds": 300.0,
-          "horizon_seconds": 10800.0
-        },
-        "search": {
-          "restarts": 8,
-          "maximum_candidates": 128,
-          "shortlist": 3
-        },
-        "coverage": {
-          "root_directory": "/var/lib/drogna/coverage",
-          "current_pointer": "current",
-          "runs_dirname": "runs",
-          "uncertainty_file": "uncertainty.nc"
-        },
-        "environment": {
-          "directory": "/var/lib/drogna/environment",
-          "manifest_file": "environment.manifest.json"
+        "horizon_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
         }
       }
     }
-  ]
+  }
 }

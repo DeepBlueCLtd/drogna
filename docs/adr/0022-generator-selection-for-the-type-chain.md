@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0022: The type chain's generators, and why the TypeScript half is ours
 
 **Status:** Accepted

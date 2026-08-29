@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Finding: the M ordinate survives WKT parsing at the pin, and is lost silently below it
 
 **Run date**: 26 August 2026

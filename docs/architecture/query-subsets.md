@@ -1,0 +1,61 @@
+# The query seam's subsets
+
+The query components (V2-C09) implement genuine subsets of three OGC standards, and
+this page is the documented half of the agreement FR-27 requires: the served
+statement (`GET /api/ctl/query-subsets`, of `query-subsets.schema.json` shape) and
+the JSON below are held equal by a test, so amending one without the other fails
+the build. The subset grows one capability at a time, and every refusal names the
+thing refused — the option, the shape, the property, the extent (E9).
+
+```json
+{
+  "schema_version": 1,
+  "edr": {
+    "standard": "OGC API - Environmental Data Retrieval 1.1",
+    "query_types": ["position", "trajectory", "area"],
+    "parameters": ["temperature", "salinity"],
+    "interpolation": "nearest neighbour on the stored grid, in all four dimensions; the snapped grid point is reported in the domain — an area query returns the stored grid points inside the requested bounding box, at one depth and one instant",
+    "refused_by_name": ["radius", "cube", "corridor", "items", "locations", "instances", "crs", "f", "within", "within-units", "resolution-x", "resolution-y"]
+  },
+  "sensorthings": {
+    "standard": "OGC SensorThings API Part 1: Sensing 1.1, read-only",
+    "resources": ["Things", "Datastreams", "Observations", "Datastreams('id')/Observations"],
+    "query_options": ["$top", "$skip"],
+    "refused_by_name": ["$filter", "$orderby", "$select", "$expand", "$count", "Sensors", "ObservedProperties", "FeaturesOfInterest", "Locations", "HistoricalLocations"]
+  },
+  "features": {
+    "standard": "OGC API - Features Part 1: Core 1.0, read-only",
+    "resources": ["collections", "collections/{id}", "collections/{id}/items"],
+    "refused_by_name": ["conformance", "items/{featureId}", "bbox", "datetime", "limit", "crs", "f"]
+  }
+}
+```
+
+## What the words above commit to
+
+- **EDR** serves the coverage store's holdings as collections by convention
+  (`archive`, `nowcast`, and each forecast instance by holding id from feature
+  105) — a new holding is servable without editing query configuration (FR-29).
+  The `area` query (grown at 109 for the map, one capability at a time per E9)
+  takes `coords=POLYGON((lon lat, …))` and samples the ring's bounding box at one
+  `z` and one `datetime`, returning a Grid-domain Coverage of the stored points —
+  never a resampling.
+  Responses are CoverageJSON in the committed subset (`coveragejson.schema.json`).
+  Trajectory coordinates are `LINESTRINGZM(lon lat depth posix_seconds, …)`:
+  per-vertex depth and time, conditions at the moment of arrival (FR-28). Values
+  come from the **stored bytes**, nearest-neighbour; the domain reports the grid
+  point the request snapped to. Sound speed is not a parameter and never will be
+  (ADR-0005).
+- **SensorThings** is read-only over the observation store: the write path is the
+  broker, and no server takes part in it (the V1 stance, carried). Entity content
+  is a function of the traffic; `resultTime` is null, stated, because the harness
+  records phenomenon time only.
+- **Features** serves two collections read-only: `advisories` (every advisory the
+  advisory store has ingested, geometry = the advised region's bbox as a Polygon,
+  properties = the advisory minus its region) and `reference` (the feature
+  store's provisioned geometry — the serving deferred from 104 lands here). The
+  advisories collection is present-and-stating-empty before any advisory exists.
+  No filtering: an items page carries every feature, and every filter option is
+  refused with its own name.
+- Discovery documents state extents read from the store and verified against it by
+  test; the collection landing carries only relative hrefs (FR-04, E7).

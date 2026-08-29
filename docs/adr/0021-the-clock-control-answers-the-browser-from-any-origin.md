@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0021: The clock's HTTP interface answers the browser from any origin
 
 **Status:** Accepted (by the owner, 28 August 2026, by structured interview) — to be superseded by ADR-0025 when the clock's control surface is routed through the boundary (wave 7, lane I); it records the running system's shape until then

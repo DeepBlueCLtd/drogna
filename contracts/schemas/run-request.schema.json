@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/run-request.schema.json",
   "title": "drogna model run request",
-  "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was.",
+  "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was. Amended for V2 (SRD-v2 FR-31, E1 resolved plan §9.7): the scheduler holds a cadence floor, so a run can be warranted on schedule alone — such a request carries cause \"scheduled\" with divergence and region null, and every display labels runs by this cause.",
   "type": "object",
   "required": [
     "component",
@@ -14,7 +14,8 @@
     "initialisation_sim_time",
     "ensemble_size",
     "region",
-    "divergence"
+    "divergence",
+    "cause"
   ],
   "additionalProperties": false,
   "properties": {
@@ -31,7 +32,11 @@
       "type": "string",
       "description": "Simulation time at which the request was published, ISO-8601 UTC with microsecond precision."
     },
-    "tick": { "type": "integer", "minimum": 0, "description": "The tick index the scheduler had observed." },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the scheduler had observed."
+    },
     "run_id": {
       "type": "string",
       "description": "Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store."
@@ -51,12 +56,34 @@
       "description": "How many perturbed members the run is asked for. At least two, or there is no spread to publish and the uncertainty field would be a fiction."
     },
     "region": {
-      "$ref": "https://schemas.harness.invalid/divergence.schema.json#/$defs/region",
-      "description": "The region that diverged. It does not bound the run's domain, which is the whole grid; it records where the disagreement was."
+      "oneOf": [
+        {
+          "$ref": "https://schemas.harness.invalid/divergence.schema.json#/$defs/region"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The region that diverged, or null for a scheduled run. It does not bound the run’s domain, which is the whole grid."
     },
     "divergence": {
-      "$ref": "https://schemas.harness.invalid/divergence.schema.json",
-      "description": "The divergence event that justified this request, carried whole."
+      "oneOf": [
+        {
+          "$ref": "https://schemas.harness.invalid/divergence.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The divergence event that justified this request, carried whole; null exactly when cause is \"scheduled\"."
+    },
+    "cause": {
+      "type": "string",
+      "enum": [
+        "divergence",
+        "scheduled"
+      ],
+      "description": "Why this run is warranted: a sustained divergence, or the cadence floor alone (FR-31). Labelled wherever runs are shown."
     }
   }
 }

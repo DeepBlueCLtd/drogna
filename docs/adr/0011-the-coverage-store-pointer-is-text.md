@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0011: The current-run pointer is a text file, not a symlink
 
 **Status:** Accepted

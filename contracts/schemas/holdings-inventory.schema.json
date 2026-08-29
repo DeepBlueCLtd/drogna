@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/holdings-inventory.schema.json",
+  "title": "drogna holdings inventory",
+  "description": "The HTTP answer to 'what does the coverage store hold': every holding's descriptor with its ground-truth manifest embedded (SRD-v2 FR-20's inspectability). Served through the seam and the release gate like everything else; the query components of feature 104 serve the same holdings through EDR, and this inventory is the control-plane view of them.",
+  "type": "object",
+  "required": ["schema_version", "holdings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "holdings": {
+      "type": "array",
+      "items": { "$ref": "coverage-holding.schema.json" }
+    }
+  }
+}

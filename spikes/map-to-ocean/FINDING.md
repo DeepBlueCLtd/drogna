@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Finding: six links between the map and the ocean, five of them broken, none of them the map
 
 **Run date**: 28 August 2026

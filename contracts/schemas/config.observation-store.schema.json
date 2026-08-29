@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.observation-store.schema.json",
+  "title": "drogna observation store configuration (V2-C06)",
+  "description": "The observation store: in-memory point observations behind a store interface, written only by the ingestion seam, keyed by the deterministic observation_id so redelivery is a no-op. Its heartbeat carries its row count, which is how the shell can say what it holds without reaching past the seam.",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock"],
+      "additionalProperties": false,
+      "properties": { "clock": { "$ref": "config.common.schema.json#/$defs/topic" } }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" }
+  }
+}

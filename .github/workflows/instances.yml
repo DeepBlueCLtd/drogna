@@ -1,0 +1,92 @@
+# Per-branch instances of the app, published into the gh-pages estate (SRD-v2
+# NFR-04, D16, D18). The estate GROWS: each deployment replaces only its own
+# instances/<branch-slug>/ subtree and touches nothing else, so review instances stay
+# addressable after their PR completes and the V1 site remains published beside them.
+# A wholesale rebuild of the estate is exactly what D18 forbids.
+name: Instances
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Serialised, never cancelled: two estate pushes racing would drop one instance.
+concurrency:
+  group: gh-pages-estate
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -C app run build
+        env:
+          DROGNA_REVISION: ${{ github.sha }}
+
+      - name: Check out the estate
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: estate
+
+      - name: Place this branch's instance
+        run: |
+          slug="$(echo "${GITHUB_REF_NAME}" | tr '/' '-')"
+          echo "slug=${slug}" >> "$GITHUB_ENV"
+          rm -rf "estate/instances/${slug}"
+          mkdir -p "estate/instances/${slug}"
+          cp -r app/dist/. "estate/instances/${slug}/"
+
+      - name: Push, additively
+        run: |
+          cd estate
+          git config user.name "drogna-instances"
+          git config user.email "actions@users.noreply.github.com"
+          git add "instances/${slug}"
+          if git diff --cached --quiet; then
+            echo "instance unchanged; nothing to push"
+            exit 0
+          fi
+          git commit -m "instance: ${slug} @ ${GITHUB_SHA}"
+          for delay in 2 4 8 16; do
+            if git push; then exit 0; fi
+            git pull --rebase origin gh-pages
+            sleep "$delay"
+          done
+          git push
+
+      # D17: the author is told when something is ready to look at. The topic is a CI
+      # secret (PR-01): with no secret configured, this step says so and does nothing.
+      - name: ntfy the author
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
+        run: |
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "no NTFY_TOPIC secret configured; skipping the notice"
+            exit 0
+          fi
+          url="https://deepbluecltd.github.io/drogna/instances/${slug}/"
+          curl -fsS -d "drogna instance updated: ${url}#/view/system" \
+            "${NTFY_SERVER:-https://ntfy.sh}/${NTFY_TOPIC}" > /dev/null
+          echo "notice sent"

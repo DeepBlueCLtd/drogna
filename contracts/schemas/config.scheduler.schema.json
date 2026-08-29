@@ -1,73 +1,66 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
-  "title": "drogna scheduler configuration",
-  "description": "Configuration for C-12, the run scheduler. Thrashing is the failure this component owns, so the two numbers that prevent it — the minimum interval between runs and the timeout after which an outstanding request is abandoned — are configuration rather than constants, and both are measured in simulation time. The common sections are referenced from config.common.schema.json rather than restated.",
+  "title": "drogna scheduler configuration (V2-C12)",
+  "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name.",
   "type": "object",
-  "required": ["component", "clock", "seed", "logging", "scheduler"],
+  "required": [
+    "id",
+    "topics",
+    "heartbeat",
+    "min_interval_ticks",
+    "max_interval_ticks",
+    "ensemble_size"
+  ],
   "additionalProperties": false,
   "properties": {
-    "component": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/component" },
-    "clock": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/clock" },
-    "seed": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/seed" },
-    "broker": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/broker" },
-    "logging": { "$ref": "https://schemas.harness.invalid/config.common.schema.json#/$defs/logging" },
-    "scheduler": {
-      "title": "Run policy",
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
+    },
+    "topics": {
       "type": "object",
       "required": [
-        "minimum_interval_seconds",
-        "outstanding_timeout_seconds",
-        "ensemble_size",
-        "initialisation_offset_seconds",
-        "run_id"
+        "clock",
+        "divergence",
+        "run_request",
+        "run_published",
+        "telemetry"
       ],
       "additionalProperties": false,
       "properties": {
-        "minimum_interval_seconds": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Least simulation time between successive run requests. A divergence arriving inside it is declined with a recorded reason, not dropped."
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "outstanding_timeout_seconds": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "Simulation time after which a request that has produced no publication is abandoned, so that a run which never completes cannot block the loop for ever."
+        "divergence": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "ensemble_size": {
-          "type": "integer",
-          "minimum": 2,
-          "description": "Members to ask each run for. The scheduler owns this number rather than the runner, so that one request carries one answer and two components cannot disagree about how large a run was."
+        "run_request": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "initialisation_offset_seconds": {
-          "type": "number",
-          "description": "Offset from the divergence's simulation time to the instant the run initialises from. Zero initialises at the divergence."
+        "run_published": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         },
-        "run_id": {
-          "title": "The coverage store's run identifier rule",
-          "description": "How a run is named. The rule is the coverage store's, stated in stores/coverage/layout.md, and it is carried here rather than imported so that this component computes the same string from the same five values as the query layer does — root seed, run sequence, rule, version and prefix. Naming the rule and its version in configuration is what makes a change to either change every identifier visibly.",
-          "type": "object",
-          "required": ["rule", "version", "prefix"],
-          "additionalProperties": false,
-          "properties": {
-            "rule": {
-              "type": "string",
-              "minLength": 1,
-              "description": "The named rule the digest is taken over. Matches query.coverage_store.run_id.rule."
-            },
-            "version": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "The rule's version. Bumping it changes every identifier the rule produces."
-            },
-            "prefix": {
-              "type": "string",
-              "minLength": 1,
-              "description": "What a run identifier begins with, so a run directory is recognisable as one."
-            }
-          }
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         }
       }
+    },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
+    "min_interval_ticks": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "No two runs closer than this; a breach inside it is declined by policy, and the decline is legible (FR-32)."
+    },
+    "max_interval_ticks": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "The cadence floor (FR-31): the interval after which, with the current run's validity lapsed (or no run at all), a run is warranted on schedule alone."
+    },
+    "ensemble_size": {
+      "type": "integer",
+      "minimum": 2
     }
   }
 }

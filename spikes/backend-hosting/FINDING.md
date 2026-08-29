@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Finding: the hosting question is settled by the deployment description, not by the host
 
 **Date**: 27 August 2026

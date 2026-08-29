@@ -486,19 +486,19 @@ export const topology: Topology = {
         {
           "component": "advisory-source",
           "path": "app/config/run.json",
-          "line": 377,
+          "line": 378,
           "constant": "/advisory_source/topics/advisory"
         },
         {
           "component": "advisory-store",
           "path": "app/config/run.json",
-          "line": 377,
+          "line": 378,
           "constant": "/advisory_store/topics/advisory"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 466,
+          "line": 467,
           "constant": "/shell/topics/advisories"
         }
       ]
@@ -523,7 +523,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 463,
+          "line": 464,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -770,7 +770,7 @@ export const topology: Topology = {
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 396,
+          "line": 397,
           "constant": "/offload/topics/offload"
         }
       ]

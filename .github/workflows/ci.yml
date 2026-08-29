@@ -69,6 +69,14 @@ jobs:
       - name: Glance capture of the built shell
         run: pnpm run capture:glance system
 
+      # Feature 111's SC-005 and SC-006 are made by capture rather than by assertion,
+      # and a proof nobody runs is a check that has never been seen to fail. This walks
+      # all eleven explainers by keyboard alone, shoots each in colour and in greyscale,
+      # and fails if a label is drawn outside its frame or a diagram refuses to draw at
+      # a width that is plainly enough (FR-024).
+      - name: Background course proofs (keyboard, greyscale, labels)
+        run: pnpm run capture:background
+
       - uses: actions/upload-artifact@v4
         with:
           name: glance

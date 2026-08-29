@@ -593,6 +593,11 @@ export type ConfigTelemetry = {
   "cadence_ticks": number;
   "staleness_window_seconds": number;
   "minimum_skill_samples": number;
+  "regions": {
+    "rows": number;
+    "columns": number;
+    "minimum_samples": number;
+  };
 };
 
 /** drogna coverage holding — from coverage-holding.schema.json */
@@ -1532,6 +1537,13 @@ export type TelemetryReport = {
     "window_sim_seconds": number;
     "observations_per_sim_second": number;
     "telemetry_messages_per_sim_second": number;
+  };
+  "regions": TelemetryResidualStatistics[];
+  "latency": {
+    "basis": string;
+    "sample_count": number;
+    "mean_sim_seconds": number | null;
+    "maximum_sim_seconds": number | null;
   };
 };
 

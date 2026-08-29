@@ -44,6 +44,7 @@ pnpm generate     # regenerate app/src/generated/ from contracts/ masters
 pnpm -C app dev   # the shell, live, at a local URL
 pnpm -C app build # the static site V2 delivers
 pnpm site:build   # the published site, into site/build/ (ADR-0031)
+pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped labels
 ```
 
 `pnpm gates` runs the gates listed in `scripts/gates.registry`, one per line. **A new

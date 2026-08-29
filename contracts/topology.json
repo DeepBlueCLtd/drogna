@@ -480,19 +480,19 @@
         {
           "component": "advisory-source",
           "path": "app/config/run.json",
-          "line": 377,
+          "line": 378,
           "constant": "/advisory_source/topics/advisory"
         },
         {
           "component": "advisory-store",
           "path": "app/config/run.json",
-          "line": 377,
+          "line": 378,
           "constant": "/advisory_store/topics/advisory"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 466,
+          "line": 468,
           "constant": "/shell/topics/advisories"
         }
       ]
@@ -517,7 +517,7 @@
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 463,
+          "line": 465,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -764,7 +764,7 @@
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 396,
+          "line": 397,
           "constant": "/offload/topics/offload"
         }
       ]

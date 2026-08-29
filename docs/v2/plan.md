@@ -157,11 +157,20 @@ walkthrough script. Interactive walkthrough machinery (a step-through mode drivi
 other panels) is deliberately not in this series; it is a candidate feature 110 once the
 arc exists to walk through.
 
-**Feature 111, the Background tab**, is specified (`specs/111-background-tab/spec.md`,
-SRD-v2 §5.10) and sits outside the arc: eight self-contained explainers of the standards
-the architecture rests on, reading no run state and depending only on 101's shell. It
-took 111 rather than 110 so that the walkthrough candidate above keeps its named slot;
-if that candidate is dropped, reconcile the numbers here rather than quietly.
+**Feature 111, the Background tab**, is built (`specs/111-background-tab/spec.md`,
+SRD-v2 §5.10) and sits outside the arc: eleven self-contained explainers of the standards
+the architecture rests on and of what it takes to use them honestly, reading no run state
+and depending only on 101's shell — except the addressing, which it extended below the
+panel (ADR-0032, amending ADR-0028). It took 111 rather than 110 so that the walkthrough
+candidate above keeps its named slot; if that candidate is dropped, reconcile the numbers
+here rather than quietly.
+
+**The 110 slot is still named and still unclaimed** (`spec.md` Q4). Feature 111 did not
+drop it, so there is nothing to reconcile yet: it built explainers, which explain, and
+not the machinery that drives the other panels, which is what 110 would be. The
+reconciliation this paragraph asks for is owed by whoever drops the candidate, and this
+note exists so that the debt is visible from the plan rather than only from the spec's
+open questions.
 
 ## 6. Emergent requirements from the open pull requests
 

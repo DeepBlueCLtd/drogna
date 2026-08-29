@@ -48,12 +48,26 @@ throughput per simulation second. Every request is a genuine seam GET/POST.
 
 ## Deliberately not in this feature
 
-- Per-region residual statistics (`scope.level: 'region'`): the scenario-level
-  scope serves the demo; the master carries the region shape for when a consumer
-  wants it.
-- `run_failed` / `publication_refused` telemetry kinds: no failure path produces
-  them yet — the runner throws on a store refusal, which is a defect signal, not
-  telemetry. Wired when 108's offload gives refusals a consumer.
-- Keeping-up latency displays: throughput per sim-second lands; end-to-end latency
-  in simulation time waits for a consumer that reads it (109's map is the
-  candidate).
+- ~~Per-region residual statistics~~ — built (issue #61). The grid is laid over the
+  extent of the very holding the residuals were scored against, so no second copy
+  of the domain enters configuration; a region below the configured minimum says
+  `insufficient-samples` and keeps its own figures rather than being folded into
+  the scenario figure where nobody could tell it was thin; and a region nobody
+  sampled is **absent** rather than published with zeroes, because an unsampled
+  region and a region scoring zero are different facts. The Operator surface is the
+  consumer: it draws one row per sampled region.
+- `run_failed` / `publication_refused` telemetry kinds: still unproduced, and
+  deliberately (issue #61 leaves this half open). No failure path produces them —
+  the runner throws on a store refusal, which is a defect signal rather than
+  telemetry, and 108's offload declines are announcement-only. Publishing either
+  kind now would mean inventing the failure that justifies it. V3's real transfer
+  is the producer that will earn them.
+- ~~Keeping-up latency displays~~ — end-to-end latency built (issue #61), measured
+  from the simulation instant an observation was taken to the simulation instant its
+  residual was folded in, and displayed on the Operator surface. In this harness it
+  reads **zero**, and that is a measurement rather than a placeholder: the monitor
+  scores within the tick the observation was taken, so the loop carries no transport
+  delay, and the display says so in those words. A test folds the monitor's own
+  report again with its samples dated an hour earlier in simulation time and holds
+  that the figure moves by exactly that hour — which is what tells a real zero from
+  an arithmetic that always returns one.

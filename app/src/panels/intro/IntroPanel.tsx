@@ -193,6 +193,13 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           byte-identically; your interventions are ephemeral and deliberately
           outside that claim. Everything is synthetic, and says so.
         </p>
+        <p>
+          For why any of this is standards-based rather than bespoke,{' '}
+          <a href={hashForView('background')}>Background</a> is a course of eleven short
+          illustrated explainers — SensorThings, OGC API-EDR, NetCDF, MQTT and what it
+          takes to use them honestly. It reads nothing from the running system, so it
+          reads the same whether the machinery above is turning or stopped.
+        </p>
       </section>
     </div>
   );

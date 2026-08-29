@@ -19,3 +19,14 @@
       now span generator, loop and planner, and the proof script's one remaining
       job is packaging them behind `pnpm replay-proof` with the command-exclusion
       statement; it belongs beside the wrap-up rather than mid-beat.*
+- [x] T608 Per-region residual statistics and end-to-end latency (issue #61). The
+      region grid comes from the telemetry component's own configuration (rows,
+      columns, minimum samples) and is laid over the scored holding's extent, so the
+      domain is not copied into configuration a second time. Latency is measured in
+      simulation seconds from the observation instant to the fold instant; it reads
+      zero here because the monitor scores within the tick, and the display says
+      that rather than presenting a bare zero. Watched failing: the thin-region state
+      forced to `reporting` (red), unsampled regions published with zeroes (red), the
+      latency subtraction reversed (red), and the fold instant taken from something
+      other than the clock (red). `run_failed`/`publication_refused` stay unproduced,
+      with the reason written where the next reader will look.

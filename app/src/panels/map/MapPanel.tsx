@@ -45,6 +45,7 @@ import {
   type AdvisoryFeature,
   type GridCoverage,
 } from './map-data.js';
+import { whenInDocument } from './attach.js';
 import { areaRing, pickedPosition, type ComposerChoices } from './composer.js';
 import { axisValues, cubeFrame, volumeEdges, type CubeFrame } from './cube.js';
 import { ComposerPane } from './ComposerPane.js';
@@ -126,6 +127,18 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const volumeRef = useRef<CubeFrame | undefined>(undefined);
   volumeRef.current = volume.frame;
   const canDraw = useMemo(webglAvailable, []);
+  /**
+   * dockview mounts an inactive tab's content detached, and deck.gl built against a
+   * detached canvas takes no pointer events for the rest of its life (see attach.ts).
+   * So the canvas is held back until this host is in the document.
+   */
+  const canvasHost = useRef<HTMLDivElement>(null);
+  const [hostInDocument, setHostInDocument] = useState(false);
+  useEffect(() => {
+    const host = canvasHost.current;
+    if (!canDraw || !host || hostInDocument) return;
+    return whenInDocument(host, () => setHostInDocument(true));
+  }, [canDraw, hostInDocument]);
 
   useEffect(() => {
     const stops = [
@@ -873,8 +886,8 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
       </p>
       {arrival && <p className="map-arrival">{arrival}</p>}
       <div className="map-body">
-        <div className="map-canvas">
-          {canDraw ? (
+        <div className="map-canvas" ref={canvasHost}>
+          {canDraw && hostInDocument ? (
             <DeckGL
               key={projection}
               views={
@@ -900,7 +913,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
             >
               {null}
             </DeckGL>
-          ) : (
+          ) : canDraw ? null : (
             <div className="map-no-webgl">
               <p>
                 WebGL is unavailable here, so the canvas draws nothing — and says so rather than

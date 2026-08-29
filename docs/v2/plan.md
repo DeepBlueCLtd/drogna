@@ -163,6 +163,15 @@ the architecture rests on, reading no run state and depending only on 101's shel
 took 111 rather than 110 so that the walkthrough candidate above keeps its named slot;
 if that candidate is dropped, reconcile the numbers here rather than quietly.
 
+**Feature 112, the Operator flow chart and the platform**, is specified
+(`specs/112-operator-flowchart/`, SRD-v2 §5.11) and also sits outside the arc, though it
+reaches into it: it gives the sampling platform its own component with a motion
+simulator — demanded and current course, speed and depth, commandable over the broker —
+publishes ownship state as ordinary SensorThings measurements so the map can draw the
+track, and redraws the Operator tab as the picture §2 of the V1 SRD always said the
+architecture is: a flow chart with a loop in it, every component wearing an instrument
+designed for what it does. It took 112 for the same reason 111 took 111.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

@@ -358,6 +358,10 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
       const levels: VolumeLevel[] = [];
       const refusals: string[] = [];
       for (const requestedDepthM of axisValues(grid.depth)) {
+        // A panel that has gone away, or a view that has changed, is not owed the
+        // rest of the stack: the levels are asked for one at a time, so the check
+        // belongs inside the loop rather than after it.
+        if (abandoned) return;
         const query = new URLSearchParams({
           coords: wkt,
           z: String(requestedDepthM),

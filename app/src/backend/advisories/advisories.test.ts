@@ -69,7 +69,7 @@ function stringNodes(node: unknown, path: string, found: { path: string; node: R
   }
 }
 
-describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }, () => {
+describe('shore advisories and the boundary (feature 108)', () => {
   it('the advisory master admits no free text: every string is an enum, a const, or a bounded pattern', () => {
     const found: { path: string; node: Record<string, unknown> }[] = [];
     stringNodes(schemaDocuments['advisory'], '', found);

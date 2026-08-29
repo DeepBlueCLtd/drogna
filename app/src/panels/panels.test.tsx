@@ -117,9 +117,28 @@ describe('the panels against a live backend', () => {
     expect(Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1])).toBeGreaterThan(0);
     expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
     // The toggle is display-only: checking it reveals the buffered heartbeats.
-    const toggle = screen.getByRole('checkbox');
-    act(() => toggle.click());
+    act(() => screen.getByLabelText('show heartbeats').click());
     expect(listedTopics()).toContain(config.shell.topics.heartbeat);
+  });
+
+  it('Messages hides clock samples from the list by default and its own toggle displays them; both stay counted', () => {
+    render(<MessagesPanel {...panelProps(config, runtime)} />);
+    // Provoke clock traffic: the lockstep clock advances only when stepped.
+    act(() => runtime.clock.step());
+    act(() => vi.advanceTimersByTime(2100));
+    const listedTopics = () =>
+      [...document.querySelectorAll('.message-topic')].map((cell) => cell.textContent);
+    const received = () =>
+      Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1]);
+    // Clock samples arrived and are counted, but are not rendered.
+    expect(received()).toBeGreaterThan(0);
+    expect(listedTopics()).not.toContain(config.shell.topics.clock);
+    const countedBefore = received();
+    // Its toggle is independent of the heartbeat one and display-only.
+    act(() => screen.getByLabelText('show clock').click());
+    expect(listedTopics()).toContain(config.shell.topics.clock);
+    expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
+    expect(received()).toBe(countedBefore);
   });
 
   it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {

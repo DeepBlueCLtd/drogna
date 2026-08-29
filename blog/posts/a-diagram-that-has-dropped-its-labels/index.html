@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Explaining why a system uses the standards it uses is a slide deck that goes stale. Building the explanation into the running system instead turned out to be the easy part; the hard part was that a broken drawing and a correct one are the same picture until something measures them.">
+<title>A diagram that has dropped its labels looks finished — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="a-diagram-that-has-dropped-its-labels-looks-finished">A diagram that has dropped its labels looks finished</h1>
+<h2 id="the-background">The background</h2>
+<p>Someone evaluating a system asks a question that its documentation is bad at answering:
+not <em>what does it do</em>, but <em>why is it built that way</em>. Why go to the trouble of serving
+data through interfaces defined by a committee somewhere, when a bespoke API would fit
+the data exactly and ship sooner?</p>
+<p>The usual answer is a slide deck. A deck is written once, presented three times, and
+then rots quietly in a shared drive while the system moves underneath it. Nobody
+notices, because nobody re-reads a deck. The parts that go stale first are the parts
+that were most specific — the very parts that made it convincing.</p>
+<p>The obvious fix is to put the explanation inside the running system, so it travels with
+the thing it describes. That turns out to raise a harder question than it answers: an
+explanation that lives inside a live system is now something else that can break, and it
+breaks in a way nobody sees. A page that fails to load announces itself. A diagram that
+has quietly lost a caption does not.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>A new tab in the shell, carrying a course of short illustrated explainers — one per
+standard the system rests on, plus the arrangements around them that no standard covers.
+Each one had to be completable in about a minute, be reachable by a link that opens it at
+a particular step, be readable with colour removed and without a mouse, and — the
+constraint that shaped everything — read nothing at all from the running system. It had
+to render identically whether the machinery behind it was turning or stopped.</p>
+<p>That last one is not modesty. An explainer that reads live state is a component, with a
+component's failure modes, and it would fail exactly when someone was being shown around.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>The inertness could have been a rule in a document. It is instead two checks that fail
+differently, because during the build it became clear that one of them could not see
+half of what it was for. A source scan catches an import of the transport layer; it
+cannot catch a call that arrives by a route it does not model. So there is also a test
+that mounts the tab with a client whose every method throws, and walks all sixty-nine
+steps. Each is watched failing against a planted fault that only the other one misses.</p>
+<p>Colour was the same shape of problem. The drawings are designed in colour and have to
+survive greyscale, and &quot;we will check&quot; is the kind of promise that decays. Instead a
+category — an observation, a computed field, the coarse archive — is a colour <em>together
+with</em> a texture and a line weight, drawn from one table, so a distinction that exists
+only in hue cannot be written down. A gate rejects a colour literal in a drawing.</p>
+<p>Then the interesting part. Two claims were left to visual review because they seemed
+like the sort of thing only eyes can judge: that every drawing is legible with colour
+removed, and that every step can be reached by keyboard. A script walks the course
+headless, shooting each explainer twice and pressing nothing but Tab and Enter. Since it
+was already visiting every step, it also measured every text label against the frame it
+was drawn in.</p>
+<p>It found twenty-seven labels, across nine of the eleven explainers, drawn outside their
+own frames and silently cut off. Text set inside a drawing does not wrap: a sentence
+runs past the edge and the rest is simply not painted. Every one of those diagrams
+looked finished. Several had been looked at.</p>
+<p>The fix was structural rather than twenty-seven repairs — a drawing keeps its labels and
+says its sentences in ordinary text beside itself, where they wrap — but the finding is
+the measurement, not the fix.</p>
+<h2 id="the-demo">The demo</h2>
+<p>The course runs in the browser with nothing behind it. Open it at the step that took the
+longest to get right:</p>
+<p><a href="https://deepbluecltd.github.io/drogna/instances/claude-background-tab-spec-6zalbi/#/view/background/sensorthings/6">Open it at the SensorThings walk</a></p>
+<p>Every step has its own address, so that link opens that step and not the tab's front
+door. The rail on the left shows each explainer's length before you start it.</p>
+<p><img src="../../assets/111-labels-a-diagram-has-dropped.png" alt="The Background tab of the drogna shell, open at the sixth step of the SensorThings
+explainer. A numbered rail down the left lists eleven explainers with their lengths, with
+SensorThings highlighted. The main area shows the step's prose beside a diagram: four
+boxes joined top to bottom by a solid line — Observation, Datastream, Thing, Location —
+with Location outlined in orange and carrying a filled dot, reading &quot;46.1°N, 11.2°W at
+09:14&quot;. Two further boxes, ObservedProperty and Sensor, hang off Datastream on dashed
+lines to the right. Beneath the diagram a line of text reads &quot;Observation — 8.4 °C at
+09:14. On the walk from the reading to where the platform was&quot;, followed by a request
+path. The previous and next controls sit pinned at the foot of the
+panel."></p>
+<p>The image comes from the same capture mechanism the checks use, and carries a sidecar
+recording the run, the revision, the viewport and the browser. Its clock entry reads
+<em>not read</em> — which is the tab's whole claim about itself, written down by the thing that
+took the picture.</p>
+<h2 id="what-is-now-known">What is now known</h2>
+<p>A drawing that has lost a label is indistinguishable from a correct one, and reviewing it
+does not help, because what is missing is not on the screen to be noticed. The same
+turned out to be true of a layout: the panel had a rule that replaced a diagram too
+narrow to read with a statement of the width it needed, that rule had tests, the tests
+passed, and the behaviour had never once occurred. It was measuring an element that its
+own measurement removed from the page, so it flickered and settled on drawing. Every test
+of it supplied the width directly and none ran the measuring path.</p>
+<p>Both were found the same way: by planting the fault a check was written for and watching
+whether the check noticed. Neither was found by looking. The reviewable claim and the
+measurable one are different claims, and it is worth knowing which sort you have.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

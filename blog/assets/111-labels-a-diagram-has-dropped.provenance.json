@@ -1,0 +1,14 @@
+{
+  "image": "111-labels-a-diagram-has-dropped.png",
+  "run_id": "loiter-utogk2",
+  "revision": "9817df1",
+  "viewport": {
+    "width": 1440,
+    "height": 980
+  },
+  "browser": "chromium 141.0.7390.37",
+  "clock": "not read — Background renders identically with every component stopped",
+  "address": "#/view/background/sensorthings/6",
+  "rendering": "as served",
+  "captured_by": "pnpm capture:background"
+}

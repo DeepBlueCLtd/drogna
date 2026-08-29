@@ -128,6 +128,26 @@ export interface ProjectionCell {
   depthBand: number;
 }
 
+/**
+ * A graticule for the globe: meridians and parallels as paths, generated here
+ * rather than fetched — the page's one sphere reference, no tiles, no third
+ * party. Meridians are split at the poles' approach so paths stay renderable.
+ */
+export function graticule(stepDegrees: number): [number, number][][] {
+  const paths: [number, number][][] = [];
+  for (let lon = -180; lon < 180; lon += stepDegrees) {
+    const meridian: [number, number][] = [];
+    for (let lat = -80; lat <= 80; lat += 5) meridian.push([lon, lat]);
+    paths.push(meridian);
+  }
+  for (let lat = -80; lat <= 80; lat += stepDegrees) {
+    const parallel: [number, number][] = [];
+    for (let lon = -180; lon <= 180; lon += 5) parallel.push([lon, lat]);
+    paths.push(parallel);
+  }
+  return paths;
+}
+
 /** The projection's H3 cells as polygons, the uncertainty fraction to shade by. */
 export function projectionCells(plan: Plan, depthBand: number): ProjectionCell[] {
   return plan.projection.regions

@@ -185,6 +185,11 @@ body,
   color: var(--shell-dim);
 }
 
+.messages-heartbeat-toggle {
+  margin-left: 1.2em;
+  user-select: none;
+}
+
 .messages-split {
   display: flex;
   flex: 1;

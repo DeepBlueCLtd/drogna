@@ -5,7 +5,15 @@
 import { describe, expect, it } from 'vitest';
 import { latLngToCell } from 'h3-js';
 import type { Plan } from '../../generated/types.js';
-import { gridCells, projectionCells, rampColour, routePositionAt, validAt, type GridCoverage } from './map-data.js';
+import {
+  graticule,
+  gridCells,
+  projectionCells,
+  rampColour,
+  routePositionAt,
+  validAt,
+  type GridCoverage,
+} from './map-data.js';
 
 const coverage: GridCoverage = {
   domain: {
@@ -108,6 +116,19 @@ describe('the map data builders (feature 109)', () => {
 
     const after = routePositionAt(plan, '2026-01-01T05:00:00.000000Z');
     expect(after).toMatchObject({ longitude: -11.4, latitude: 46.4, towardSequence: null });
+  });
+
+  it('generates the graticule locally: full longitude sweep, latitudes short of the poles', () => {
+    const paths = graticule(15);
+    // 24 meridians (360/15) and 11 parallels (-80 stepping 15 up to 70).
+    expect(paths.length).toBe(24 + 11);
+    for (const path of paths) {
+      for (const [lon, lat] of path) {
+        expect(lon).toBeGreaterThanOrEqual(-180);
+        expect(lon).toBeLessThanOrEqual(180);
+        expect(Math.abs(lat)).toBeLessThanOrEqual(80);
+      }
+    }
   });
 
   it('shades projection cells by the fraction of saturation, capped at one', () => {

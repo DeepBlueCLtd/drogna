@@ -10,7 +10,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 import DeckGL from '@deck.gl/react';
-import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { MapView, _GlobeView as GlobeView } from '@deck.gl/core';
+import { PathLayer, PolygonLayer, ScatterplotLayer, SolidPolygonLayer } from '@deck.gl/layers';
 import type { PanelParams } from '../../shell/Shell.js';
 import type {
   Advisory,
@@ -20,6 +21,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import {
+  graticule,
   gridCells,
   projectionCells,
   rampColour,
@@ -64,6 +66,8 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const [composing, setComposing] = useState(false);
   const [selectedAdvisory, setSelectedAdvisory] = useState<string | undefined>();
   const [arrival, setArrival] = useState<string | undefined>();
+  /** Globe by default: drag rotates the sphere; flat keeps the plan view. */
+  const [projection, setProjection] = useState<'globe' | 'flat'>('globe');
   const canDraw = useMemo(webglAvailable, []);
 
   useEffect(() => {
@@ -174,6 +178,31 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   );
 
   const layers = [
+    // The sphere itself, globe mode only: a world-covering rectangle (it wraps)
+    // and a generated graticule — the page's one sphere reference, no tiles.
+    projection === 'globe' &&
+      new SolidPolygonLayer({
+        id: 'sphere',
+        data: [
+          [
+            [-180, -90],
+            [180, -90],
+            [180, 90],
+            [-180, 90],
+          ] as [number, number][],
+        ],
+        getPolygon: (ring) => ring,
+        getFillColor: [206, 210, 216, 255],
+      }),
+    projection === 'globe' &&
+      new PathLayer({
+        id: 'graticule',
+        data: graticule(15),
+        getPath: (path) => path,
+        getColor: [150, 155, 165, 160],
+        getWidth: 1,
+        widthUnits: 'pixels',
+      }),
     grid &&
       new PolygonLayer({
         id: 'field',
@@ -312,6 +341,13 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
             onChange={(event) => setTimeOffset(Number(event.target.value))}
           />
         </label>
+        <label>
+          view{' '}
+          <select value={projection} onChange={(event) => setProjection(event.target.value as 'globe' | 'flat')}>
+            <option value="globe">globe (drag to rotate)</option>
+            <option value="flat">flat</option>
+          </select>
+        </label>
         <button onClick={() => setComposing((previous) => !previous)}>
           {composing ? 'close the composer' : 'EDR composer'}
         </button>
@@ -328,7 +364,13 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
         <div className="map-canvas">
           {canDraw ? (
             <DeckGL
-              initialViewState={{ longitude: -11, latitude: 46, zoom: 5.2 }}
+              key={projection}
+              views={projection === 'globe' ? new GlobeView() : new MapView()}
+              initialViewState={
+                projection === 'globe'
+                  ? { longitude: -11, latitude: 46, zoom: 3.2 }
+                  : { longitude: -11, latitude: 46, zoom: 5.2 }
+              }
               controller
               layers={layers}
             >

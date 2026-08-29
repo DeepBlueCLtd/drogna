@@ -108,6 +108,20 @@ describe('the panels against a live backend', () => {
     expect(Number(/^(\d+) received/.exec(counter.textContent ?? '')?.[1])).toBeGreaterThan(0);
   });
 
+  it('Messages hides heartbeats from the list by default and the toggle displays them; both stay counted', () => {
+    render(<MessagesPanel {...panelProps(config, runtime)} />);
+    act(() => vi.advanceTimersByTime(2100));
+    const listedTopics = () =>
+      [...document.querySelectorAll('.message-topic')].map((cell) => cell.textContent);
+    // Heartbeats arrived (the counter proves it) but are not rendered.
+    expect(Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1])).toBeGreaterThan(0);
+    expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
+    // The toggle is display-only: checking it reveals the buffered heartbeats.
+    const toggle = screen.getByRole('checkbox');
+    act(() => toggle.click());
+    expect(listedTopics()).toContain(config.shell.topics.heartbeat);
+  });
+
   it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);

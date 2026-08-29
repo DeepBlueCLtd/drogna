@@ -148,6 +148,24 @@ jobs:
             echo "instance link posted on #${number}: ${url}"
           fi
 
+      # The pull request template asks for this URL, opened at the view the change is
+      # in. Writing it into the run summary is what makes it available without being
+      # assembled by hand from the branch name — a link a reviewer has to construct is
+      # a link that does not get pasted, which is how the estate came to hold instances
+      # no pull request pointed at.
+      - name: Say where the instance is
+        run: |
+          url="https://deepbluecltd.github.io/drogna/instances/${slug}/"
+          {
+            echo "## This branch's instance"
+            echo
+            echo "<${url}>"
+            echo
+            echo "Link it in the pull request **opened at the view the change is in**:"
+            echo "append \`#/view/map\`, \`#/view/messages\` or whichever view the change"
+            echo "shows in, rather than linking the shell's front door."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # D17: the author is told when something is ready to look at. The topic is a CI
       # secret (PR-01): with no secret configured, this step says so and does nothing.
       - name: ntfy the author

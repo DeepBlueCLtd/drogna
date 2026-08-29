@@ -17,6 +17,14 @@ takes the fixed shape D19 sets, and the fourth part is the one that carries the 
    reads the component through the seam and exercises it across its range; the wire
    shape is what makes such a page an ordinary consumer rather than a special build.
 
+The entry is written in the pull request that delivers the component, not afterwards.
+Afterwards is how V2 reached feature 111 with the estate publishing instances, the
+template and this note in place, and no entries at all: nothing was refused, the moment
+simply passed each time and the reason it was worth writing about went with it. The
+pull request template asks for the entry or for the reason there is none, and the
+coverage table on the blog index counts what exists against the feature directories
+under `specs/`, so an unwritten entry is published as a gap rather than forgotten.
+
 Terse, in other words. The advice below on *how* to write is unchanged from V1 and still
 right; what has changed is how much of it there should be.
 

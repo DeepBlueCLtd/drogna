@@ -68,3 +68,39 @@ which is what lets a feature add one without touching the others.
 - **A specification that disagrees with the code is not automatically wrong.** Four
   times in V1 the code was right and the requirement loose, and once the reverse.
   Establish which before amending either; record genuine open questions as open.
+
+## Showing the work, not describing it
+
+Both of these are already built and neither was being used. Every push to `main` or to a
+`claude/**` branch has published an instance of the shell into the estate since feature
+101, the first V2 beat, and the blog template and its authoring note have been on disk
+almost as long. What was missing was the habit, and the tree said so plainly when this
+was written: of 61 pull requests, two linked a hosted instance, and
+`site/docs/blog/posts/` did not exist. Nothing had been refused — the moment simply
+passed each time — which is why the habit is written down here rather than left to be
+noticed.
+
+- **A pull request with anything visible in it links its own instance.** CI has already
+  built one by the time the pull request opens, at
+  `https://deepbluecltd.github.io/drogna/instances/<branch-with-slashes-as-hyphens>/`,
+  and the Instances run writes the exact URL into its job summary so it need not be
+  assembled by hand. Link it **opened at the view the change is in** — `#/view/map`,
+  `#/view/messages` — because a link to the shell's front door asks the reviewer to go
+  and find the change, which is the work the link was supposed to save (D16; views are
+  addressable from feature 101 for exactly this reason). A screenshot is the fallback
+  for something that cannot be reached by URL, not the deliverable: a picture of a
+  running system is a claim about it, and the instance is the system. Prose describing
+  a visual change is the weakest of the three.
+- **A significant component arrives with its blog entry, in the same pull request.**
+  Not one per feature — one per new face in the shell or piece of backend simulation
+  worth watching work (D17). Copy `site/authoring/blog-entry-template.md` to
+  `site/docs/blog/posts/<slug>.md` and write the four parts D19 fixes: the background,
+  the requirement, the options considered, the demo. It is terse by design; the running
+  thing carries the weight the prose used to. `site/authoring/README.md` is the
+  authoring note, and the coverage table on the blog index counts entries against the
+  feature directories under `specs/`, so a beat with no entry is published as a gap
+  rather than quietly missing.
+
+Deciding a change needs neither is a fine answer and a common one — plumbing, a gate, a
+specification. Say so in the pull request, in the sentence it takes: the reason is the
+part that cannot be reconstructed later, and an empty section is a claim too.

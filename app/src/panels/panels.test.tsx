@@ -376,6 +376,24 @@ describe('the panels against a live backend', () => {
     }
   });
 
+  /**
+   * Vitest's default 5000 ms is not a budget these two can meet. Both turn the harness
+   * for thousands of simulation ticks before they can assert anything — the loop has to
+   * run before there is a published run to query or a region figure to display — and a
+   * probe against this tree measured the Operator one reaching its first region
+   * statistics after 2100 ticks in 3207 ms, at 1.53 ms/tick, on a four-core machine with
+   * nothing else running. That leaves a margin of about 1.5x, and a two-core CI runner
+   * carrying the rest of the suite does not have it: these two, and only these two, are
+   * what `panels.test.tsx` has been failing on in CI for weeks, on `main` as much as on
+   * any branch, always as a 5000 ms timeout and never as a wrong answer.
+   *
+   * So the timeout is raised to fit the work rather than the work trimmed to fit the
+   * timeout: nothing here is skipped, shortened or made to assert less. If either test
+   * ever approaches THIS bound it is a real regression in the loop's cost and should be
+   * read as one.
+   */
+  const TURNS_THE_LOOP = 30_000;
+
   it('doubt as the run\'s spread is a genuine query against the run\'s own instance and axis (#60)', async () => {
     const realFetch = globalThis.fetch;
     const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
@@ -469,7 +487,7 @@ describe('the panels against a live backend', () => {
       mounted?.unmount();
       globalThis.fetch = realFetch;
     }
-  });
+  }, TURNS_THE_LOOP);
 
   it('the depth cube asks one area query per level of the holding\'s own depth axis (#59)', async () => {
     const realFetch = globalThis.fetch;
@@ -615,7 +633,7 @@ describe('the panels against a live backend', () => {
       mounted?.unmount();
       globalThis.fetch = realFetch;
     }
-  });
+  }, TURNS_THE_LOOP);
 
   it('Intro states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {
     render(<IntroPanel {...panelProps(config, runtime)} />);

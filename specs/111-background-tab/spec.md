@@ -48,7 +48,7 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 
 Ordered as a course: what shape the data is → how it is stored → what a holding actually
 contains → the two ways it is served → the server that serves both → how consumers hear
-about it → the whole thing turning. **63 steps, roughly eleven minutes end to end.**
+about it → the whole thing turning. **69 steps.**
 
 | # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
@@ -60,8 +60,9 @@ about it → the whole thing turning. **63 steps, roughly eleven minutes end to 
 | 6 | OGC API-EDR | interactive | 7 | The query *is* a geometry |
 | 7 | pygeoapi | slides | 5 | One server, many standards; new capability is configuration |
 | 8 | MQTT | interactive | 7 | A new consumer is a subscription, not a producer change |
-| 9 | The control loop | interactive | 7 | Every transition is a message you can watch |
-| 10 | What is allowed to leave | interactive | 7 | Deny by default, withhold by absence, publish the refusal |
+| 9 | Reads and writes are separate | interactive | 6 | Two paths, one store; the loads never contend |
+| 10 | The control loop | interactive | 7 | Every transition is a message you can watch |
+| 11 | What is allowed to leave | interactive | 7 | Deny by default, withhold by absence, publish the refusal |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -193,7 +194,7 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002**: Background MUST contain the ten explainers named above, in the order
+- **FR-002**: Background MUST contain the eleven explainers named above, in the order
   given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
@@ -209,14 +210,20 @@ loop steps through a full cycle from the viewer's input alone.
   library is adopted, and SRD-v2 NFR-05's toolchain is unchanged by this feature.
 - **FR-007**: Each explainer's headline path MUST be completable in 60–90 seconds. Depth
   beyond that belongs in the linked ADRs and site pages, not in the tab.
-- **FR-008**: Each explainer MUST close on the same value panel, in the same position,
-  with the same three axes: **through-life cost**, **interoperability**, and **what you
-  do not have to build**. An axis carrying little weight for a topic MUST be omitted with
-  the reason stated, never padded.
+- **FR-008**: Each explainer MUST close on the same panel, headed **Consequences**, in the
+  same position, with the same three axes: **through-life cost**, **interoperability**, and
+  **what you do not have to build**. An axis MUST be free to record a **cost** rather than a
+  benefit where one exists — the panel reports consequences, it does not advertise. An axis
+  carrying little weight for a topic MUST be omitted with the reason stated, never padded.
 - **FR-009**: Every through-life-cost claim MUST be marked as a qualitative argument and
   not a measurement. No figure appears that the repository cannot support.
 - **FR-010**: Language MUST be domain-first. A software concept is introduced through the
   ocean example that motivates it, never through its own vocabulary first.
+- **FR-026**: Prose is written engineer-to-engineer: short declarative sentences that state
+  the mechanism and its consequence. No aphorisms, no closing flourishes, no rhetorical
+  reversals, no superlatives about the architecture. A reader who would wince at a sales
+  deck is the intended reader. Two short sentences beat one long one, and a step that needs
+  three is usually carrying two ideas.
 - **FR-011**: Illustrations MUST be schematic and visually distinct from the Map panel.
   They are designed in colour, and every distinction they draw MUST survive rendering in
   greyscale. That guarantee MUST be structural rather than a promise kept by review:
@@ -333,7 +340,7 @@ so that eight of them read as one course rather than eight bespoke toys.
 - **SC-008**: A reader who has completed the course can state why SensorThings and OGC
   API-EDR both exist, in terms of the shape of the data rather than the names of the
   standards. Assessed by asking one, not by a test.
-- **SC-009**: A reader can state, after explainer 10, why withholding by absence fails more
+- **SC-009**: A reader can state, after explainer 11, why withholding by absence fails more
   safely than withholding by filtering. This is the question a sceptical evaluator asks
   first, and the course was silent on it until this pass.
 

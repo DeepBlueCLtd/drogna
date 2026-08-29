@@ -42,6 +42,15 @@ and this branch now carries them.
       the point at no cost in steps. And the boundary earns its own explainer, closing the
       course: for an evaluator in this domain it is the first question asked, and the
       course was silent on it.
+- [x] T009 Add the read/write separation explainer at position 9, after MQTT, so both paths
+      are on the table before the separation is named. Its beat is that the two loads never
+      contend. Also: the closing panel becomes Consequences and may record a cost (FR-008),
+      and the prose is rewritten engineer-to-engineer (FR-026) — the first draft read as a
+      sales deck, which would alienate the colleagues most likely to review it.
+- [ ] T010 Explainer 9 asserts independent scaling with a drawn diagram, not a measurement.
+      Either mark it argued-not-measured as the cost claims are, or have the running system
+      produce the curves. An unmeasured performance claim is the same shape as an unwatched
+      check.
 - [ ] T008 Settle what the third storyboard left open: whether ten explainers and sixty-three
       steps is defensible against a time-poor reader; whether closing on the boundary rather
       than on the loop actually turning is the right last impression; and what bar a fourth

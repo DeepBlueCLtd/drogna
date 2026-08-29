@@ -5,3 +5,5 @@ gates/check-literal-paths.ts
 gates/check-vocabulary.ts
 gates/check-import-boundary.ts
 gates/check-topology-drift.ts
+gates/check-background-inert.ts
+gates/check-background-marks.ts

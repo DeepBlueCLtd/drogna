@@ -1,0 +1,312 @@
+/**
+ * The shared category vocabulary (FR-011) and the marks for the seeded features
+ * (FR-012).
+ *
+ * A category is a hue **together with** a texture and a line weight. That is the
+ * whole point of this module: an explainer asks for a category and receives all
+ * three, so a distinction that exists only in hue cannot be written. Greyscale
+ * legibility is then a property of the vocabulary rather than a promise kept by
+ * review — the fault this repository has watched rot before.
+ *
+ * Three meanings, not two. The third is the **archive**: the coarse multi-decade
+ * prior the system already holds (SRD FR-21). It is not "truth you never have" —
+ * drogna records ground truth in a manifest and scores recovery against it
+ * (Constitution IX), and an explainer must not teach otherwise.
+ *
+ * There is deliberately no shared scene. Eleven arguments want eleven framings; what
+ * carries between them is this vocabulary, so the eddy drawn here is the eddy a
+ * viewer met in the Map.
+ */
+import type { ReactNode, SVGProps } from 'react';
+
+export type Category = 'points' | 'fields' | 'archive';
+
+export interface CategoryStyle {
+  readonly stroke: string;
+  /** The texture, as a reference to a pattern defined by <MarkDefs/>. */
+  readonly fill: string;
+  readonly strokeWidth: number;
+  readonly strokeDasharray?: string;
+  /** What this category means, for legends and for prose that names it. */
+  readonly meaning: string;
+}
+
+/**
+ * The one table. Each row differs from every other in hue, in texture and in weight,
+ * so any two categories stay apart when the hue is taken away.
+ */
+const CATEGORIES: Readonly<Record<Category, CategoryStyle>> = {
+  points: {
+    stroke: '#e39a44',
+    fill: 'url(#mark-texture-points)',
+    strokeWidth: 2.6,
+    meaning: 'observations — casts, readings, what a sensor sampled',
+  },
+  fields: {
+    stroke: '#5fb8ac',
+    fill: 'url(#mark-texture-fields)',
+    strokeWidth: 1.3,
+    meaning: 'fields — gridded and computed, a value everywhere',
+  },
+  archive: {
+    stroke: '#93a8b0',
+    fill: 'url(#mark-texture-archive)',
+    strokeWidth: 1,
+    strokeDasharray: '5 3',
+    meaning: 'the archive — the coarse prior already held',
+  },
+};
+
+export function categoryStyle(category: Category): CategoryStyle {
+  return CATEGORIES[category];
+}
+
+export const CATEGORY_ORDER: readonly Category[] = ['points', 'fields', 'archive'];
+
+/** Neutral ink for the parts of a drawing that carry no category. */
+export const INK = {
+  line: '#7d909b',
+  strong: '#d5dde5',
+  quiet: '#61707c',
+  /** A refusal, a fault, a cost. Never a category. */
+  warn: '#e08a76',
+} as const;
+
+/**
+ * The dashed outline every region that responds to the viewer carries (FR-025).
+ * Static, so nothing animates on arrival (FR-019); learned once, so free play is
+ * discoverable across all eleven explainers; and it survives greyscale like any
+ * other mark.
+ */
+export const POKE_OUTLINE: SVGProps<SVGRectElement> = {
+  stroke: INK.quiet,
+  strokeDasharray: '3 3',
+  strokeWidth: 1,
+  fill: 'none',
+};
+
+/**
+ * The pattern definitions the category fills reference. Every figure renders this
+ * once inside its own <svg>, because an SVG pattern is resolved within its document
+ * fragment and a figure must be legible on its own.
+ */
+export function MarkDefs(): ReactNode {
+  return (
+    <defs>
+      <pattern id="mark-texture-points" width="6" height="6" patternUnits="userSpaceOnUse">
+        <circle cx="1.6" cy="1.6" r="1.25" fill={CATEGORIES.points.stroke} />
+      </pattern>
+      <pattern
+        id="mark-texture-fields"
+        width="6"
+        height="6"
+        patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)"
+      >
+        <line x1="0" y1="0" x2="0" y2="6" stroke={CATEGORIES.fields.stroke} strokeWidth="2.4" />
+      </pattern>
+      <pattern id="mark-texture-archive" width="7" height="7" patternUnits="userSpaceOnUse">
+        <path d="M0 0H7M0 0V7" stroke={CATEGORIES.archive.stroke} strokeWidth="0.8" fill="none" />
+      </pattern>
+    </defs>
+  );
+}
+
+/** The legend, drawn from the same table the marks are: it cannot disagree with them. */
+export function CategoryKey(): ReactNode {
+  return (
+    <ul className="bg-key">
+      {CATEGORY_ORDER.map((category) => {
+        const style = categoryStyle(category);
+        return (
+          <li key={category}>
+            <svg width="26" height="14" aria-hidden="true">
+              <MarkDefs />
+              <rect
+                x="1"
+                y="1"
+                width="24"
+                height="12"
+                fill={style.fill}
+                stroke={style.stroke}
+                strokeWidth={style.strokeWidth}
+                strokeDasharray={style.strokeDasharray}
+              />
+            </svg>
+            <span>
+              <b>{category}</b> — {style.meaning}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * A region of a drawing the viewer may poke (FR-018), wearing the one affordance
+ * (FR-025) and reachable without a pointer (FR-014).
+ *
+ * Free play is a second route to states the spine already reaches, so nothing here
+ * is the only way to anything. The outline is static: it is the only signal that a
+ * diagram responds, because nothing animates on arrival (FR-019).
+ */
+export function PokeRegion({
+  x,
+  y,
+  width,
+  height,
+  label,
+  active,
+  onPoke,
+  children,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+  active: boolean;
+  onPoke: () => void;
+  children?: ReactNode;
+}): ReactNode {
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      aria-pressed={active}
+      style={{ cursor: 'pointer' }}
+      onClick={onPoke}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        onPoke();
+      }}
+    >
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        {...POKE_OUTLINE}
+        strokeWidth={active ? 2 : POKE_OUTLINE.strokeWidth}
+        stroke={active ? INK.strong : (POKE_OUTLINE.stroke as string)}
+      />
+      {children}
+    </g>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * The seeded features (SRD FR-06), drawn the same way wherever they   *
+ * appear, so a viewer moving between Background and Map recognises    *
+ * the thing named even in an unfamiliar frame.                        *
+ * ------------------------------------------------------------------ */
+
+export interface MarkPlacement {
+  readonly x: number;
+  readonly y: number;
+  /** 1 draws the mark at its natural size; the figure scales it to its own frame. */
+  readonly scale?: number;
+  readonly label?: string;
+}
+
+function labelFor(placement: MarkPlacement, dy: number): ReactNode {
+  if (!placement.label) return null;
+  return (
+    <text x={0} y={dy} fontSize={9} textAnchor="middle" fill={INK.quiet}>
+      {placement.label}
+    </text>
+  );
+}
+
+/** The warm-core eddy: a closed spiral, always drawn in the fields vocabulary. */
+export function Eddy(placement: MarkPlacement): ReactNode {
+  const style = categoryStyle('fields');
+  const scale = placement.scale ?? 1;
+  return (
+    <g transform={`translate(${placement.x} ${placement.y}) scale(${scale})`}>
+      <circle r="18" fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} />
+      <path
+        d="M0 -11 A11 11 0 1 1 -8 8 A8 8 0 1 0 5 3"
+        fill="none"
+        stroke={style.stroke}
+        strokeWidth={style.strokeWidth}
+      />
+      {labelFor(placement, 32)}
+    </g>
+  );
+}
+
+/** The front: a steep gradient, drawn as a doubled boundary line. */
+export function Front(placement: MarkPlacement): ReactNode {
+  const style = categoryStyle('fields');
+  const scale = placement.scale ?? 1;
+  return (
+    <g transform={`translate(${placement.x} ${placement.y}) scale(${scale})`}>
+      <path d="M-26 12 C -8 4, 8 -4, 26 -12" fill="none" stroke={style.stroke} strokeWidth={style.strokeWidth * 2} />
+      <path d="M-26 18 C -8 10, 8 2, 26 -6" fill="none" stroke={style.stroke} strokeWidth={style.strokeWidth} />
+      {labelFor(placement, 34)}
+    </g>
+  );
+}
+
+/** The thermocline: the layer boundary, drawn across the frame at its depth. */
+export function Thermocline(placement: MarkPlacement & { readonly width: number }): ReactNode {
+  const style = categoryStyle('fields');
+  const half = placement.width / 2;
+  return (
+    <g transform={`translate(${placement.x} ${placement.y})`}>
+      <path
+        d={`M${-half} 0 Q ${-half / 2} -5, 0 0 T ${half} 0`}
+        fill="none"
+        stroke={style.stroke}
+        strokeWidth={style.strokeWidth * 2}
+      />
+      <path
+        d={`M${-half} 5 Q ${-half / 2} 0, 0 5 T ${half} 5`}
+        fill="none"
+        stroke={style.stroke}
+        strokeWidth={style.strokeWidth}
+        strokeDasharray="4 3"
+      />
+      {placement.label ? (
+        <text x={-half + 2} y={-8} fontSize={9} fill={INK.quiet}>
+          {placement.label}
+        </text>
+      ) : null}
+    </g>
+  );
+}
+
+/** The drifting feature: the eddy's mark with a displacement arrow off it. */
+export function DriftingFeature(placement: MarkPlacement): ReactNode {
+  const style = categoryStyle('fields');
+  const scale = placement.scale ?? 1;
+  return (
+    <g transform={`translate(${placement.x} ${placement.y}) scale(${scale})`}>
+      <circle r="11" fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} strokeDasharray="4 3" />
+      <path d="M13 0 H30 M25 -4 L30 0 L25 4" fill="none" stroke={INK.line} strokeWidth="1.2" />
+      {labelFor(placement, 26)}
+    </g>
+  );
+}
+
+/** 0…n-1, for a drawing that repeats a mark across a grid. */
+export function range(count: number): number[] {
+  return [...Array(count).keys()];
+}
+
+/** One observation: the points vocabulary at its smallest. */
+export function Sample(placement: MarkPlacement): ReactNode {
+  const style = categoryStyle('points');
+  const scale = placement.scale ?? 1;
+  return (
+    <g transform={`translate(${placement.x} ${placement.y}) scale(${scale})`}>
+      <circle r="4.5" fill={style.stroke} stroke={style.stroke} strokeWidth={style.strokeWidth} />
+      {labelFor(placement, 16)}
+    </g>
+  );
+}

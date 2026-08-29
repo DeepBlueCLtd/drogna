@@ -430,6 +430,7 @@
     "role": "shell",
     "views": [
       { "id": "intro", "label": "Intro" },
+      { "id": "background", "label": "Background" },
       { "id": "system", "label": "System" },
       { "id": "holdings", "label": "Holdings" },
       { "id": "operator", "label": "Operator" },

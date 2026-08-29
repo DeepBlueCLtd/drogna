@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 import type { PanelParams } from '../../shell/Shell.js';
 import type { Heartbeat } from '../../generated/types.js';
+import { displayInstant } from '../../shell/display.js';
 
 interface Heard {
   heartbeat: Heartbeat;
@@ -70,7 +71,7 @@ export function SystemPanel({ params }: IDockviewPanelProps<PanelParams>) {
                   <span className={`status-dot status-${lit ? entry.heartbeat.status : 'dark'}`} />
                   {status}
                 </td>
-                <td>{entry?.heartbeat.sim_time ?? '—'}</td>
+                <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>
                 <td>{entry?.heartbeat.detail ?? ''}</td>
               </tr>
             );

@@ -21,6 +21,11 @@ export function MessagesPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const { config, client, validator } = params;
   const [rows, setRows] = useState<readonly Row[]>([]);
   const [selected, setSelected] = useState<Row | undefined>();
+  // Heartbeats are most of the traffic and rarely what a reader came for: hidden
+  // from the list by default, displayable by the toggle. Display only — every
+  // message, heartbeats included, is still received, validated and counted, so
+  // the refusal claim keeps its full coverage either way.
+  const [showHeartbeats, setShowHeartbeats] = useState(false);
   const counters = useRef({ received: 0, refused: 0 });
 
   useEffect(() => {
@@ -50,22 +55,32 @@ export function MessagesPanel({ params }: IDockviewPanelProps<PanelParams>) {
     <div className="panel messages-panel">
       <p className="messages-counters" data-testid="refusal-counter">
         {counters.current.received} received · {counters.current.refused} refused by their schema
+        <label className="messages-heartbeat-toggle">
+          <input
+            type="checkbox"
+            checked={showHeartbeats}
+            onChange={(event) => setShowHeartbeats(event.target.checked)}
+          />{' '}
+          show heartbeats (counted and validated either way)
+        </label>
       </p>
       <div className="messages-split">
         <TopicTree client={client} />
         <table className="messages-list">
           <tbody>
-            {rows.map((row) => (
-              <tr
-                key={row.seq}
-                className={row.refusals.length > 0 ? 'message-refused' : ''}
-                onClick={() => setSelected(row)}
-              >
-                <td className="message-seq">{row.seq}</td>
-                <td className="message-topic">{row.topic}</td>
-                <td className="message-summary">{row.summary}</td>
-              </tr>
-            ))}
+            {rows
+              .filter((row) => showHeartbeats || row.topic !== config.topics.heartbeat)
+              .map((row) => (
+                <tr
+                  key={row.seq}
+                  className={row.refusals.length > 0 ? 'message-refused' : ''}
+                  onClick={() => setSelected(row)}
+                >
+                  <td className="message-seq">{row.seq}</td>
+                  <td className="message-topic">{row.topic}</td>
+                  <td className="message-summary">{row.summary}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
         <div className="message-detail">

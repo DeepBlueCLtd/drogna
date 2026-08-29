@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.offload.schema.json",
+  "title": "drogna offload packager configuration (V2-C20)",
+  "description": "The offload packager (SRD-v2 FR-39): announcement-only in V2, keeping the export's shape. On each published run it stages the bundle (bundle-manifest.schema.json beside the released field bytes) and the run-manifest SIBLING carrying the measurement geometry — the identification radius and every sampled position and simulation time in the window, beside the bundle and never inside it (E11) — then announces the staged departure on its declared topic (offload-telemetry.schema.json). No real transfer and no verified-receipt eviction until V3.",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat", "identification_radius_m", "format_version", "staging_bound_bytes"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "run_published", "offload"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "run_published": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "offload": { "$ref": "config.common.schema.json#/$defs/topic" }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "identification_radius_m": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Travels in the sibling's measurement geometry, so a release is scored on the radius it was released under; producer/boundary parity is held by a test (E11)."
+    },
+    "format_version": { "type": "string", "minLength": 1 },
+    "staging_bound_bytes": { "type": "integer", "exclusiveMinimum": 0 }
+  }
+}

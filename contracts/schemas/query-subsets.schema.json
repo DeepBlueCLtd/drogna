@@ -4,35 +4,113 @@
   "title": "drogna query subset statement",
   "description": "The served account of exactly which subset of each standard the query component implements (SRD-v2 FR-27, E9, Constitution VI). Served on the control plane, and held equal to the documented account (docs/architecture/query-subsets.md) by a test — the conformance statement is amended in the same commit as the code, and a divergence between the served and documented accounts fails the build.",
   "type": "object",
-  "required": ["schema_version", "edr", "sensorthings"],
+  "required": [
+    "schema_version",
+    "edr",
+    "sensorthings",
+    "features"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "type": "integer", "const": 1 },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
     "edr": {
       "type": "object",
-      "required": ["standard", "query_types", "parameters", "interpolation", "refused_by_name"],
+      "required": [
+        "standard",
+        "query_types",
+        "parameters",
+        "interpolation",
+        "refused_by_name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "standard": { "type": "string" },
-        "query_types": { "type": "array", "items": { "type": "string" } },
-        "parameters": { "type": "array", "items": { "type": "string" } },
-        "interpolation": { "type": "string" },
+        "standard": {
+          "type": "string"
+        },
+        "query_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "interpolation": {
+          "type": "string"
+        },
         "refused_by_name": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Query types and options that exist in the standard, are not implemented, and are refused with their own name in the refusal."
         }
       }
     },
     "sensorthings": {
       "type": "object",
-      "required": ["standard", "resources", "query_options", "refused_by_name"],
+      "required": [
+        "standard",
+        "resources",
+        "query_options",
+        "refused_by_name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "standard": { "type": "string" },
-        "resources": { "type": "array", "items": { "type": "string" } },
-        "query_options": { "type": "array", "items": { "type": "string" } },
-        "refused_by_name": { "type": "array", "items": { "type": "string" } }
+        "standard": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "query_options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "refused_by_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "required": [
+        "standard",
+        "resources",
+        "refused_by_name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "standard": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "refused_by_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   }

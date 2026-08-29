@@ -2,6 +2,30 @@
 // Source of truth: contracts/schemas/*.schema.json (Constitution III).
 // Regenerate with: pnpm generate. CI fails on drift.
 
+/** drogna shore advisory — from advisory.schema.json */
+export type Advisory = {
+  "advisory_id": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "sequence": number;
+  "kind": "sound-speed-outlook" | "sampling-window" | "caution-region";
+  "valid_time": {
+    "start_sim_time": string;
+    "end_sim_time": string;
+  };
+  "region": {
+    "bbox": number[];
+  };
+  "guidance": {
+    "confidence": "low" | "moderate" | "high";
+    "recommended_minimum_depth_m": number;
+    "recommended_maximum_depth_m": number;
+    "expected_sound_speed_minimum_m_per_s": number;
+    "expected_sound_speed_maximum_m_per_s": number;
+  };
+};
+
 /** drogna boundary denial — from boundary-denial.schema.json */
 export type BoundaryDenial = {
   "component": string;
@@ -39,6 +63,33 @@ export type Clock = {
   "sim_time": string;
   "mode": "realtime" | "accelerated" | "paused" | "lockstep";
   "rate": number;
+};
+
+/** drogna shore advisory source configuration (V2-C16) — from config.advisory-source.schema.json */
+export type ConfigAdvisorySource = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "advisory": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "cadence_ticks": number;
+  "valid_seconds": number;
+  "region_feature": string;
+  "depth_span_m": number;
+  "sound_speed_half_width_m_per_s": number;
+};
+
+/** drogna advisory store configuration (V2-C17) — from config.advisory-store.schema.json */
+export type ConfigAdvisoryStore = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "advisory": ConfigCommonTopicFilter;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "size_ceiling_bytes": number;
 };
 
 /** drogna release-gate configuration (V2-C10) — from config.boundary.schema.json */
@@ -293,6 +344,7 @@ export type ConfigMonitor = {
     "clock": ConfigCommonTopic;
     "observations": ConfigCommonTopicFilter;
     "divergence": ConfigCommonTopic;
+    "telemetry": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "pairs": {
@@ -318,6 +370,76 @@ export type ConfigObservationStore = {
   "heartbeat": ConfigCommonHeartbeat;
 };
 
+/** drogna offload packager configuration (V2-C20) — from config.offload.schema.json */
+export type ConfigOffload = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+    "offload": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "identification_radius_m": number;
+  "format_version": string;
+  "staging_bound_bytes": number;
+};
+
+/** drogna operator surface configuration (V2-C18) — from config.operator.schema.json */
+export type ConfigOperator = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "heartbeat": ConfigCommonTopicFilter;
+  };
+  "http": {
+    "components_path": ConfigCommonRelativePath;
+    "step_path": ConfigCommonRelativePath;
+    "command_prefix": ConfigCommonRelativePath;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "protected": ConfigCommonComponentId[];
+};
+
+/** drogna planner configuration (V2-C14) — from config.planner.schema.json */
+export type ConfigPlanner = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+    "run_published": ConfigCommonTopic;
+    "plan": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "replan_interval_ticks": number;
+  "region_feature": string;
+  "h3_resolution": number;
+  "depth_bands": {
+    "index": number;
+    "minimum_depth_m": number;
+    "maximum_depth_m": number;
+  }[];
+  "budget_seconds": number;
+  "speeds": {
+    "horizontal_m_per_s": number;
+    "vertical_m_per_s": number;
+  };
+  "footprint": {
+    "peak": number;
+    "horizontal_efolding_m": number;
+    "vertical_efolding_m": number;
+    "rings": number;
+    "band_reach": number;
+  };
+  "usable_threshold": number;
+  "restarts": number;
+  "shortlist": number;
+  "projection": {
+    "step_seconds": number;
+    "horizon_seconds": number;
+  };
+};
+
 /** drogna query components configuration (V2-C09) — from config.query.schema.json */
 export type ConfigQuery = {
   "id": ConfigCommonComponentId;
@@ -328,6 +450,7 @@ export type ConfigQuery = {
     "edr_prefix": ConfigCommonRelativePath;
     "st_prefix": ConfigCommonRelativePath;
     "subsets_path": ConfigCommonRelativePath;
+    "features_prefix": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
 };
@@ -348,6 +471,12 @@ export type ConfigRun = {
   "monitor": ConfigMonitor;
   "scheduler": ConfigScheduler;
   "model_runner": ConfigModelRunner;
+  "planner": ConfigPlanner;
+  "telemetry": ConfigTelemetry;
+  "operator": ConfigOperator;
+  "advisory_source": ConfigAdvisorySource;
+  "advisory_store": ConfigAdvisoryStore;
+  "offload": ConfigOffload;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
 };
@@ -360,6 +489,7 @@ export type ConfigScheduler = {
     "divergence": ConfigCommonTopic;
     "run_request": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
+    "telemetry": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "min_interval_ticks": number;
@@ -420,6 +550,9 @@ export type ConfigShell = {
     "heartbeat": ConfigCommonTopicFilter;
     "holdings": ConfigCommonTopicFilter;
     "all": ConfigCommonTopicFilter;
+    "plan": ConfigCommonTopicFilter;
+    "run_published": ConfigCommonTopicFilter;
+    "advisories": ConfigCommonTopicFilter;
   };
   "message_schemas": {
     "filter": ConfigCommonTopicFilter;
@@ -428,6 +561,13 @@ export type ConfigShell = {
   "endpoints": {
     "clock_rate": ConfigCommonRelativePath;
     "holdings": ConfigCommonRelativePath;
+    "components": ConfigCommonRelativePath;
+    "telemetry": ConfigCommonRelativePath;
+    "clock_step": ConfigCommonRelativePath;
+    "component_command": ConfigCommonRelativePath;
+    "edr": ConfigCommonRelativePath;
+    "features": ConfigCommonRelativePath;
+    "query_subsets": ConfigCommonRelativePath;
   };
   "liveness": {
     "default_window_seconds": number;
@@ -435,6 +575,24 @@ export type ConfigShell = {
   "messages": {
     "buffer": number;
   };
+};
+
+/** drogna telemetry configuration (V2-C15) — from config.telemetry.schema.json */
+export type ConfigTelemetry = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "telemetry": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+  };
+  "http": {
+    "report_path": ConfigCommonRelativePath;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "cadence_ticks": number;
+  "staleness_window_seconds": number;
+  "minimum_skill_samples": number;
 };
 
 /** drogna coverage holding — from coverage-holding.schema.json */
@@ -460,7 +618,7 @@ export type Coveragejson = {
   "type": "Coverage";
   "domain": {
     "type": "Domain";
-    "domainType": "Point" | "Trajectory";
+    "domainType": "Point" | "Trajectory" | "Grid";
     "axes": {
       "x"?: CoveragejsonNumericAxis;
       "y"?: CoveragejsonNumericAxis;
@@ -583,6 +741,7 @@ export type EdrCollectionsCollection = {
   "data_queries": {
     "position"?: EdrCollectionsDataQuery;
     "trajectory"?: EdrCollectionsDataQuery;
+    "area"?: EdrCollectionsDataQuery;
   };
   "parameter_names": {
     [key: string]: unknown;
@@ -597,6 +756,54 @@ export type EdrCollectionsDataQuery = {
 
 /** edr-collections.schema.json #/$defs/link */
 export type EdrCollectionsLink = {
+  "href": string;
+  "rel": string;
+  "type"?: string;
+  "title"?: string;
+};
+
+/** drogna Features subset responses — from features-response.schema.json */
+export type FeaturesResponse = {
+  [key: string]: unknown;
+};
+
+/** features-response.schema.json #/$defs/collections */
+export type FeaturesResponseCollections = {
+  "links": FeaturesResponseLink[];
+  "collections": FeaturesResponseCollection[];
+};
+
+/** features-response.schema.json #/$defs/collection */
+export type FeaturesResponseCollection = {
+  "id": string;
+  "title": string;
+  "description": string;
+  "itemType": "feature";
+  "links": FeaturesResponseLink[];
+};
+
+/** features-response.schema.json #/$defs/feature_collection */
+export type FeaturesResponseFeatureCollection = {
+  "type": "FeatureCollection";
+  "features": FeaturesResponseFeature[];
+  "numberReturned": number;
+};
+
+/** features-response.schema.json #/$defs/feature */
+export type FeaturesResponseFeature = {
+  "type": "Feature";
+  "id": string;
+  "geometry": {
+    "type": "Polygon";
+    "coordinates": number[][][];
+  };
+  "properties": {
+    [key: string]: unknown;
+  };
+};
+
+/** features-response.schema.json #/$defs/link */
+export type FeaturesResponseLink = {
   "href": string;
   "rel": string;
   "type"?: string;
@@ -967,6 +1174,18 @@ export type OffloadTelemetry = {
   };
 };
 
+/** drogna operator components report — from operator-components.schema.json */
+export type OperatorComponents = {
+  "schema_version": 1;
+  "components": {
+    "id": string;
+    "heard": boolean;
+    "stoppable": boolean;
+    "running": boolean;
+    "last_heartbeat": (Heartbeat) | (null);
+  }[];
+};
+
 /** drogna sampling recommendation — from plan.schema.json */
 export type Plan = {
   "component": string;
@@ -1102,6 +1321,11 @@ export type QuerySubsets = {
     "standard": string;
     "resources": string[];
     "query_options": string[];
+    "refused_by_name": string[];
+  };
+  "features": {
+    "standard": string;
+    "resources": string[];
     "refused_by_name": string[];
   };
 };
@@ -1296,6 +1520,18 @@ export type SensorthingsSubsetObservationEntity = {
       "type": "Point";
       "coordinates": number[];
     };
+  };
+};
+
+/** drogna telemetry report — from telemetry-report.schema.json */
+export type TelemetryReport = {
+  "schema_version": 1;
+  "statistics": (TelemetryResidualStatistics) | (null);
+  "skill": (TelemetryForecastSkill) | (null);
+  "throughput": {
+    "window_sim_seconds": number;
+    "observations_per_sim_second": number;
+    "telemetry_messages_per_sim_second": number;
   };
 };
 

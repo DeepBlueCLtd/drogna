@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/telemetry-report.schema.json",
+  "title": "drogna telemetry report",
+  "description": "The telemetry component's current account, served on its seam path (SRD-v2 FR-35): the latest residual statistics and forecast skill exactly as last published on the telemetry topic (telemetry.schema.json shapes, embedded whole), and throughput counted per simulation second — the only rate that means anything in a harness whose pace is a dial.",
+  "type": "object",
+  "required": ["schema_version", "statistics", "skill", "throughput"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "statistics": {
+      "oneOf": [
+        { "$ref": "telemetry.schema.json#/$defs/residual_statistics" },
+        { "type": "null" }
+      ]
+    },
+    "skill": {
+      "oneOf": [
+        { "$ref": "telemetry.schema.json#/$defs/forecast_skill" },
+        { "type": "null" }
+      ]
+    },
+    "throughput": {
+      "type": "object",
+      "required": ["window_sim_seconds", "observations_per_sim_second", "telemetry_messages_per_sim_second"],
+      "additionalProperties": false,
+      "properties": {
+        "window_sim_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "observations_per_sim_second": { "type": "number", "minimum": 0 },
+        "telemetry_messages_per_sim_second": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

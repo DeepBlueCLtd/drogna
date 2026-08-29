@@ -59,6 +59,8 @@ describe('the backend runtime', () => {
     });
     vi.advanceTimersByTime(2500);
     expect([...heard.keys()].sort()).toEqual([
+      'advisory-source',
+      'advisory-store',
       'boundary',
       'broker',
       'clock',
@@ -69,9 +71,13 @@ describe('the backend runtime', () => {
       'model-runner',
       'monitor',
       'observation-store',
+      'offload',
+      'operator',
+      'planner',
       'query',
       'scheduler',
       'sensors',
+      'telemetry',
     ]);
     expect(heard.get('broker')?.sim_time).toBe('2026-01-01T00:00:00.000000Z');
     runtime.stop();

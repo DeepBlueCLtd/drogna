@@ -3,6 +3,128 @@
 // Regenerate with: pnpm generate. CI fails on drift.
 
 export const schemaDocuments: Record<string, Record<string, unknown>> = {
+  "advisory": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/advisory.schema.json",
+    "title": "drogna shore advisory",
+    "description": "One shore advisory (SRD-v2 FR-37), authored deterministically from seeds and simulation time on a configured cadence, travelling on its declared control topic into the append-only advisory store. The shape's one structural rule, held by a test over this document itself: NO field admits free text — every string is an enum, a bounded pattern, or a timestamp — so no field is capable of naming an entity the harness did not place (Constitution V). Advice travels light: the size ceiling is enforced at the store's seam with the limit named, and measured against the smallest comparable gridded update by test.",
+    "type": "object",
+    "required": [
+      "advisory_id",
+      "scenario_run_id",
+      "sim_time",
+      "tick",
+      "sequence",
+      "kind",
+      "valid_time",
+      "region",
+      "guidance"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "advisory_id": {
+        "type": "string",
+        "pattern": "^adv-[a-z0-9][a-z0-9-]*-[0-9]+$",
+        "description": "Deterministic: the source id and the sequence, never entropy."
+      },
+      "scenario_run_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$"
+      },
+      "sim_time": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "sequence": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "sound-speed-outlook",
+          "sampling-window",
+          "caution-region"
+        ],
+        "description": "Closed deliberately; a new kind is an amendment to this master, never a free label."
+      },
+      "valid_time": {
+        "type": "object",
+        "required": [
+          "start_sim_time",
+          "end_sim_time"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "start_sim_time": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+          },
+          "end_sim_time": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+          }
+        }
+      },
+      "region": {
+        "type": "object",
+        "required": [
+          "bbox"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bbox": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "number"
+            },
+            "description": "west, south, east, north — degrees, WGS 84."
+          }
+        }
+      },
+      "guidance": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "recommended_minimum_depth_m",
+          "recommended_maximum_depth_m",
+          "expected_sound_speed_minimum_m_per_s",
+          "expected_sound_speed_maximum_m_per_s"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ]
+          },
+          "recommended_minimum_depth_m": {
+            "type": "number",
+            "minimum": 0
+          },
+          "recommended_maximum_depth_m": {
+            "type": "number",
+            "minimum": 0
+          },
+          "expected_sound_speed_minimum_m_per_s": {
+            "type": "number"
+          },
+          "expected_sound_speed_maximum_m_per_s": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
   "boundary-denial": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/boundary-denial.schema.json",
@@ -228,6 +350,117 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "number",
         "minimum": 0,
         "description": "Emission rate. Zero is a legitimate rate: it pins the clock for screenshot capture (FR-53) and stops simulated time without stopping anything else."
+      }
+    }
+  },
+  "config.advisory-source": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.advisory-source.schema.json",
+    "title": "drogna shore advisory source configuration (V2-C16)",
+    "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "cadence_ticks",
+      "valid_seconds",
+      "region_feature",
+      "depth_span_m",
+      "sound_speed_half_width_m_per_s"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "advisory"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "advisory": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "cadence_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "valid_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "region_feature": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+        "description": "The feature-store feature whose bounding box advisories cover."
+      },
+      "depth_span_m": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "sound_speed_half_width_m_per_s": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      }
+    }
+  },
+  "config.advisory-store": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.advisory-store.schema.json",
+    "title": "drogna advisory store configuration (V2-C17)",
+    "description": "The advisory store (SRD-v2 FR-37, FR-12): append-only, written only through its own ingestion seam — the subscription below — which validates every advisory against its master, absorbs redelivery on the deterministic id, and enforces the size ceiling with a refusal that names the limit. Read by the query components alone.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "size_ceiling_bytes"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "advisory"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "advisory": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "size_ceiling_bytes": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "description": "The wire-bytes ceiling. Advice travels light: the ceiling is held far below the smallest gridded update, and a test measures the two rather than trusting this sentence."
       }
     }
   },
@@ -1318,7 +1551,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "observations",
-          "divergence"
+          "divergence",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1329,6 +1563,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
           },
           "divergence": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
           }
         }
@@ -1432,6 +1669,322 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.offload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.offload.schema.json",
+    "title": "drogna offload packager configuration (V2-C20)",
+    "description": "The offload packager (SRD-v2 FR-39): announcement-only in V2, keeping the export's shape. On each published run it stages the bundle (bundle-manifest.schema.json beside the released field bytes) and the run-manifest SIBLING carrying the measurement geometry — the identification radius and every sampled position and simulation time in the window, beside the bundle and never inside it (E11) — then announces the staged departure on its declared topic (offload-telemetry.schema.json). No real transfer and no verified-receipt eviction until V3.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "identification_radius_m",
+      "format_version",
+      "staging_bound_bytes"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "run_published",
+          "offload"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "offload": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "identification_radius_m": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "Travels in the sibling's measurement geometry, so a release is scored on the radius it was released under; producer/boundary parity is held by a test (E11)."
+      },
+      "format_version": {
+        "type": "string",
+        "minLength": 1
+      },
+      "staging_bound_bytes": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      }
+    }
+  },
+  "config.operator": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.operator.schema.json",
+    "title": "drogna operator surface configuration (V2-C18)",
+    "description": "The operator surface (SRD-v2 FR-36): aggregates what components report about themselves — a component never heard from is reported unheard, not absent — and dispatches commands: clock step, and stop/start/restart of in-browser components. A refused command names the bound or rule; a stopped component goes dark because its heartbeats cease, never because this surface says so. Commands are ephemeral and outside AT-04's replay claim.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat",
+      "protected"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "heartbeat"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "heartbeat": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "components_path",
+          "step_path",
+          "command_prefix"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "components_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "step_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "command_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "POST <prefix>/<component-id>/stop|start|restart."
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "protected": {
+        "type": "array",
+        "items": {
+          "$ref": "config.common.schema.json#/$defs/component_id"
+        },
+        "description": "Components a stop command is refused for, by the rule this list is: stopping the clock stops time itself, stopping the broker silences every heartbeat including the evidence of the stopping, and the boundary and this surface must outlive their own commands."
+      }
+    }
+  },
+  "config.planner": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.planner.schema.json",
+    "title": "drogna planner configuration (V2-C14)",
+    "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "replan_interval_ticks",
+      "region_feature",
+      "h3_resolution",
+      "depth_bands",
+      "budget_seconds",
+      "speeds",
+      "footprint",
+      "usable_threshold",
+      "restarts",
+      "shortlist",
+      "projection"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The stream the restart draws come from; with restarts = 1 no draw is taken at all."
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observations",
+          "run_published",
+          "plan"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "plan": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "replan_interval_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "region_feature": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+        "description": "The feature-store feature whose polygon the planning cover is built over — the loiter region in the shipped scenario. Read through the store interface; the cover is by overlap, so edge water is inside it."
+      },
+      "h3_resolution": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 15
+      },
+      "depth_bands": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "index",
+            "minimum_depth_m",
+            "maximum_depth_m"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minimum_depth_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maximum_depth_m": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "budget_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "speeds": {
+        "type": "object",
+        "required": [
+          "horizontal_m_per_s",
+          "vertical_m_per_s"
+        ],
+        "additionalProperties": false,
+        "description": "Traversal cost is time: horizontal and vertical added, the conservative reading of a budget.",
+        "properties": {
+          "horizontal_m_per_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_m_per_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "footprint": {
+        "type": "object",
+        "required": [
+          "peak",
+          "horizontal_efolding_m",
+          "vertical_efolding_m",
+          "rings",
+          "band_reach"
+        ],
+        "additionalProperties": false,
+        "description": "The explicit sensing model: a product of two decays about the visited cell, evaluated over the stated rings and bands rather than a tolerance nobody wrote down.",
+        "properties": {
+          "peak": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          },
+          "horizontal_efolding_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_efolding_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "rings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "band_reach": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "usable_threshold": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "θ: the usable-confidence threshold excess is measured against. Where nothing exceeds it, the honest recommendation is no route at all, stated with its reason."
+      },
+      "restarts": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "shortlist": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "projection": {
+        "type": "object",
+        "required": [
+          "step_seconds",
+          "horizon_seconds"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "step_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "horizon_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    }
+  },
   "config.query": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.query.schema.json",
@@ -1466,7 +2019,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "edr_prefix",
           "st_prefix",
-          "subsets_path"
+          "subsets_path",
+          "features_prefix"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1479,6 +2033,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "subsets_path": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
             "description": "Where the subset statement (query-subsets.schema.json) is served, on the control plane."
+          },
+          "features_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
           }
         }
       },
@@ -1509,6 +2066,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "monitor",
       "scheduler",
       "model_runner",
+      "planner",
+      "telemetry",
+      "operator",
+      "advisory_source",
+      "advisory_store",
+      "offload",
       "shell"
     ],
     "additionalProperties": false,
@@ -1558,6 +2121,24 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "model_runner": {
         "$ref": "config.model-runner.schema.json"
       },
+      "planner": {
+        "$ref": "config.planner.schema.json"
+      },
+      "telemetry": {
+        "$ref": "config.telemetry.schema.json"
+      },
+      "operator": {
+        "$ref": "config.operator.schema.json"
+      },
+      "advisory_source": {
+        "$ref": "config.advisory-source.schema.json"
+      },
+      "advisory_store": {
+        "$ref": "config.advisory-store.schema.json"
+      },
+      "offload": {
+        "$ref": "config.offload.schema.json"
+      },
       "feature_store": {
         "$ref": "config.feature-store.schema.json"
       },
@@ -1591,7 +2172,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "divergence",
           "run_request",
-          "run_published"
+          "run_published",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1605,6 +2187,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/topic"
           },
           "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
           }
         }
@@ -1879,7 +2464,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "heartbeat",
           "holdings",
-          "all"
+          "all",
+          "plan",
+          "run_published",
+          "advisories"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1895,6 +2483,15 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "all": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
             "description": "The Messages panel's subscription: everything, because a display may not show cold where there is traffic (E13)."
+          },
+          "plan": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "advisories": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
           }
         }
       },
@@ -1925,7 +2522,14 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "object",
         "required": [
           "clock_rate",
-          "holdings"
+          "holdings",
+          "components",
+          "telemetry",
+          "clock_step",
+          "component_command",
+          "edr",
+          "features",
+          "query_subsets"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -1935,6 +2539,30 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "holdings": {
             "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "components": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "clock_step": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "component_command": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "edr": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "The EDR prefix the Map panel and the composer issue genuine GETs against."
+          },
+          "features": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "The Features prefix the Map panel reads advisories and reference geometry from."
+          },
+          "query_subsets": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Where the subset statement is served; the composer offers only what it states."
           }
         }
       },
@@ -1965,6 +2593,80 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "description": "How many recent seam messages the Messages panel retains for display."
           }
         }
+      }
+    }
+  },
+  "config.telemetry": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.telemetry.schema.json",
+    "title": "drogna telemetry configuration (V2-C15)",
+    "description": "The telemetry component (SRD-v2 FR-35): aggregates the residual samples the monitor reports, computes running statistics and forecast skill against a persistence reference — saying plainly when the model is not earning its compute — counts throughput per simulation second, and serves the current account on its seam path. Skill's persistence baseline holds the forecast run's initial step constant across its validity; the formula is stated in every message.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat",
+      "cadence_ticks",
+      "staleness_window_seconds",
+      "minimum_skill_samples"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "telemetry",
+          "run_published",
+          "observations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "report_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "report_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "cadence_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "staleness_window_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "A figure not updated within this much simulation time says stale and keeps saying its last update time — it does not go on presenting its last value as current."
+      },
+      "minimum_skill_samples": {
+        "type": "integer",
+        "minimum": 2
       }
     }
   },
@@ -2059,7 +2761,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coveragejson.schema.json",
     "title": "drogna CoverageJSON subset",
-    "description": "The CoverageJSON the EDR component serves (SRD-v2 FR-26): the honest subset, stated — Coverage documents with Point and Trajectory domains, NdArray ranges, and the harness's two parameters. This master is the shape a response is validated against in tests and behind the debug flag; it deliberately closes what the harness emits rather than describing everything CoverageJSON permits, so an accidental extra field is a finding, not a feature.",
+    "description": "The CoverageJSON the EDR component serves (SRD-v2 FR-26): the honest subset, stated — Coverage documents with Point, Trajectory and Grid domains, NdArray ranges, and the harness's two parameters. This master is the shape a response is validated against in tests and behind the debug flag; it deliberately closes what the harness emits rather than describing everything CoverageJSON permits, so an accidental extra field is a finding, not a feature.",
     "type": "object",
     "required": [
       "type",
@@ -2091,7 +2793,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "enum": [
               "Point",
-              "Trajectory"
+              "Trajectory",
+              "Grid"
             ]
           },
           "axes": {
@@ -2695,6 +3398,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               },
               "trajectory": {
                 "$ref": "#/$defs/data_query"
+              },
+              "area": {
+                "$ref": "#/$defs/data_query"
               }
             }
           },
@@ -2782,6 +3488,172 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         ],
         "additionalProperties": false,
         "description": "hrefs are relative and same-origin by requirement (FR-04, E7): an absolute URL here would break behind a clearance at the preflight.",
+        "properties": {
+          "href": {
+            "type": "string",
+            "pattern": "^[^:]*$"
+          },
+          "rel": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "features-response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/features-response.schema.json",
+    "title": "drogna Features subset responses",
+    "description": "The OGC API-Features (Part 1, Core, read-only) responses the query component serves (SRD-v2 FR-37's collection, and the reference geometry deferred there from 104): the collections list and one items page as a GeoJSON FeatureCollection subset. The advisories collection is present-and-stating-empty before any advisory exists — an empty collection is an answer, not an error.",
+    "type": "object",
+    "$defs": {
+      "collections": {
+        "type": "object",
+        "required": [
+          "links",
+          "collections"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/collection"
+            }
+          }
+        }
+      },
+      "collection": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "itemType",
+          "links"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "itemType": {
+            "type": "string",
+            "const": "feature"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          }
+        }
+      },
+      "feature_collection": {
+        "type": "object",
+        "required": [
+          "type",
+          "features",
+          "numberReturned"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "FeatureCollection"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/feature"
+            }
+          },
+          "numberReturned": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "feature": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "geometry",
+          "properties"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature"
+          },
+          "id": {
+            "type": "string"
+          },
+          "geometry": {
+            "type": "object",
+            "required": [
+              "type",
+              "coordinates"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Polygon"
+              },
+              "coordinates": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "type": "array",
+                  "minItems": 4,
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "properties": {
+            "type": "object",
+            "description": "For an advisory: the advisory document minus its region (the geometry carries it). For reference geometry: the declared name and kind. Governed content either way — nothing here escapes its own master."
+          }
+        }
+      },
+      "link": {
+        "type": "object",
+        "required": [
+          "href",
+          "rel"
+        ],
+        "additionalProperties": false,
         "properties": {
           "href": {
             "type": "string",
@@ -4611,6 +5483,65 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     ]
   },
+  "operator-components": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/operator-components.schema.json",
+    "title": "drogna operator components report",
+    "description": "The operator surface's answer to 'what do the components say about themselves': every declared component, with the last heartbeat genuinely heard from it or the honest statement that none was. Aggregation, never invention — nothing here can light a display (Constitution VII); the shell still lights only from heartbeats it hears itself.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "components"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "components": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "heard",
+            "stoppable",
+            "running",
+            "last_heartbeat"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "heard": {
+              "type": "boolean",
+              "description": "Whether any heartbeat has ever arrived from this component. Never heard is reported unheard, not absent (FR-36)."
+            },
+            "stoppable": {
+              "type": "boolean"
+            },
+            "running": {
+              "type": "boolean",
+              "description": "The control registry's record of whether the component is currently scheduled. A record of commands, not of life: life is the heartbeat column."
+            },
+            "last_heartbeat": {
+              "oneOf": [
+                {
+                  "$ref": "heartbeat.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
   "plan": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/plan.schema.json",
@@ -5284,7 +6215,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "required": [
       "schema_version",
       "edr",
-      "sensorthings"
+      "sensorthings",
+      "features"
     ],
     "additionalProperties": false,
     "properties": {
@@ -5350,6 +6282,32 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             }
           },
           "query_options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "refused_by_name": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "features": {
+        "type": "object",
+        "required": [
+          "standard",
+          "resources",
+          "refused_by_name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "standard": {
+            "type": "string"
+          },
+          "resources": {
             "type": "array",
             "items": {
               "type": "string"
@@ -6209,6 +7167,69 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 }
               }
             }
+          }
+        }
+      }
+    }
+  },
+  "telemetry-report": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/telemetry-report.schema.json",
+    "title": "drogna telemetry report",
+    "description": "The telemetry component's current account, served on its seam path (SRD-v2 FR-35): the latest residual statistics and forecast skill exactly as last published on the telemetry topic (telemetry.schema.json shapes, embedded whole), and throughput counted per simulation second — the only rate that means anything in a harness whose pace is a dial.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "statistics",
+      "skill",
+      "throughput"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "statistics": {
+        "oneOf": [
+          {
+            "$ref": "telemetry.schema.json#/$defs/residual_statistics"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "skill": {
+        "oneOf": [
+          {
+            "$ref": "telemetry.schema.json#/$defs/forecast_skill"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "throughput": {
+        "type": "object",
+        "required": [
+          "window_sim_seconds",
+          "observations_per_sim_second",
+          "telemetry_messages_per_sim_second"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "window_sim_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "observations_per_sim_second": {
+            "type": "number",
+            "minimum": 0
+          },
+          "telemetry_messages_per_sim_second": {
+            "type": "number",
+            "minimum": 0
           }
         }
       }

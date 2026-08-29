@@ -102,14 +102,96 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           detail column: the loop's quiet always says which quiet it is.
         </p>
       </section>
-      <section className="not-landed">
-        <h3>What has not landed yet</h3>
+      <section>
+        <h3>106 — doubt is measured, and directed</h3>
         <p>
-          Uncertainty
-          and planning (106), the operator&rsquo;s view (107), shore advisories (108)
-          and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
-          is built. Until then their components stay grey, because nothing here lights
-          without a heartbeat.
+          The planner reads only what publication released — the ensemble spread,
+          the ground-truth manifest&rsquo;s tau, the read-only region geometry — and
+          maintains an observation-age deficit that regrows at the local timescale:
+          water never sampled sits at the spread, water just sampled is worth
+          nothing to sample again, and fast water invites revisit without anybody
+          scheduling it. Candidate routes are <em>walked</em>, each stop scored
+          against the field as it will stand at arrival, and one route is committed
+          under a time budget by prize-collecting orienteering with seeded restarts
+          — published as a recommendation and nothing else, with the naive figure
+          beside the honest one so the size of the avoided error is a number you
+          can see, and projections of when each region&rsquo;s confidence lapses.
+          Watch <code>ctl/plan</code> in{' '}
+          <a href={hashForView('messages')}>Messages</a>.
+        </p>
+      </section>
+      <section>
+        <h3>107 — the machinery is interrogated</h3>
+        <p>
+          The <a href={hashForView('operator')}>Operator</a> tab reads what the
+          components say about themselves — a component never heard from is reported
+          <em> unheard</em>, not absent — and dispatches genuine commands through the
+          seam: step the clock, stop, start or restart a component. A stopped
+          component goes dark in <a href={hashForView('system')}>System</a> because
+          its heartbeats genuinely cease, never because a response claimed success;
+          a refused command names the bound or rule. Telemetry aggregates the
+          monitor&rsquo;s residual samples into running statistics and a forecast
+          skill figure against persistence, in its own sentence — the display says
+          plainly when the model is not earning its compute. Commands are ephemeral
+          and outside the replay claim: an exported manifest replays the run, not
+          your interventions.
+        </p>
+      </section>
+      <section>
+        <h3>108 — the world outside speaks, and the boundary holds</h3>
+        <p>
+          Shore advisories arrive on their own topic and pass through a genuine
+          ingestion seam: the append-only advisory store validates each against a
+          master in which <em>no field can carry free text</em> — every string is an
+          enum or a bounded pattern, so an advisory is structurally incapable of
+          naming anything the harness did not place — and refuses anything over the
+          size ceiling with the limit named. Advice travels light, and that is
+          measured, not asserted: the largest advisory is smaller than the smallest
+          gridded update. The offload packager stages a bundle beside each published
+          run, with the run-manifest sibling carrying the measurement geometry{' '}
+          <em>beside the bundle and never inside it</em> — announcement-only until a
+          real backend exists to receive it. Advisories and the reference geometry
+          are served as OGC API-Features collections through the same release gate;
+          the advisories collection answers <em>empty</em> before the first advisory
+          exists, because an empty collection is an answer, not an error. Watch{' '}
+          <code>adv/advisories</code> and <code>ctl/offload</code> in{' '}
+          <a href={hashForView('messages')}>Messages</a>.
+        </p>
+      </section>
+      <section>
+        <h3>109 — it is seen</h3>
+        <p>
+          The <a href={hashForView('map')}>Map</a> draws only documents that crossed
+          the seam: the field from a genuine EDR <em>area</em> query (the subset grew
+          one capability for it, stated in the conformance statement like every
+          other), the planner&rsquo;s doubt as H3 cells that refresh with each plan
+          and shade by how far each region has regrown toward saturation, the
+          committed route as a four-dimensional curve — slide the time control and
+          the platform moves along it; click a stop for the conditions at the moment
+          of arrival, fetched at that place and that instant — and advisories drawn
+          only while valid at the displayed time, undrawn outside validity yet still
+          listed and queryable. The <em>EDR composer</em> is a mode of the map: a
+          guided sequence with the literal request URL always visible, assembling
+          live and copyable, offering only what the server&rsquo;s own metadata
+          states it serves; the response renders where it was asked for, with null,
+          declined and absent kept as three different facts. Where WebGL is
+          unavailable the canvas says so instead of pretending.
+        </p>
+      </section>
+      <section>
+        <h3>The walkthrough, whole</h3>
+        <p>
+          Every beat above is live in this page, and this tab is the demo script:
+          start at <a href={hashForView('system')}>System</a> to watch the machinery
+          light, read the run&rsquo;s holdings in{' '}
+          <a href={hashForView('holdings')}>Holdings</a>, watch the traffic argue
+          with its masters in <a href={hashForView('messages')}>Messages</a>,
+          interrogate and interrupt the components in{' '}
+          <a href={hashForView('operator')}>Operator</a>, and end at the{' '}
+          <a href={hashForView('map')}>Map</a>, where the whole loop is visible at
+          once. Export the manifest from the header to replay this run
+          byte-identically; your interventions are ephemeral and deliberately
+          outside that claim. Everything is synthetic, and says so.
         </p>
       </section>
     </div>

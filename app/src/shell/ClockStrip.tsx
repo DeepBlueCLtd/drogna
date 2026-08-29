@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import type { ConfigShell } from '../generated/types.js';
 import type { SeamClient } from '../seam/transport.js';
+import { displayInstant } from './display.js';
 
 interface ClockSample {
   tick: number;
@@ -42,7 +43,7 @@ export function ClockStrip({ config, client }: { config: ConfigShell; client: Se
   return (
     <span className="clock-strip">
       <span className="clock-time" data-testid="sim-time">
-        {sample ? sample.sim_time : 'no clock heard yet'}
+        {sample ? displayInstant(sample.sim_time) : 'no clock heard yet'}
       </span>
       <span className="clock-rate" data-testid="sim-rate">
         rate {sample ? sample.rate : '—'}

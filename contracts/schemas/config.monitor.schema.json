@@ -4,38 +4,84 @@
   "title": "drogna monitor configuration (V2-C11)",
   "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried.",
   "type": "object",
-  "required": ["id", "topics", "heartbeat", "pairs", "threshold_m_per_s", "persistence_count", "region"],
+  "required": [
+    "id",
+    "topics",
+    "heartbeat",
+    "pairs",
+    "threshold_m_per_s",
+    "persistence_count",
+    "region"
+  ],
   "additionalProperties": false,
   "properties": {
-    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
+    },
     "topics": {
       "type": "object",
-      "required": ["clock", "observations", "divergence"],
+      "required": [
+        "clock",
+        "observations",
+        "divergence",
+        "telemetry"
+      ],
       "additionalProperties": false,
       "properties": {
-        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "observations": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
-        "divergence": { "$ref": "config.common.schema.json#/$defs/topic" }
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "observations": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter"
+        },
+        "divergence": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        }
       }
     },
-    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
     "pairs": {
       "type": "array",
       "minItems": 1,
       "description": "Which datastreams form a sound-speed sample: a temperature and a salinity series at one depth on one platform.",
       "items": {
         "type": "object",
-        "required": ["thing_id", "temperature_datastream", "salinity_datastream", "depth_m"],
+        "required": [
+          "thing_id",
+          "temperature_datastream",
+          "salinity_datastream",
+          "depth_m"
+        ],
         "additionalProperties": false,
         "properties": {
-          "thing_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
-          "temperature_datastream": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
-          "salinity_datastream": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
-          "depth_m": { "type": "number", "minimum": 0 }
+          "thing_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "temperature_datastream": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "salinity_datastream": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "depth_m": {
+            "type": "number",
+            "minimum": 0
+          }
         }
       }
     },
-    "threshold_m_per_s": { "type": "number", "exclusiveMinimum": 0 },
+    "threshold_m_per_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
     "persistence_count": {
       "type": "integer",
       "minimum": 2,
@@ -43,12 +89,21 @@
     },
     "region": {
       "type": "object",
-      "required": ["radius_m", "depth_pad_m"],
+      "required": [
+        "radius_m",
+        "depth_pad_m"
+      ],
       "additionalProperties": false,
       "description": "How the diverged region is stated: centred on the breaching samples' mean position, with this radius and this pad about the pair's depth.",
       "properties": {
-        "radius_m": { "type": "number", "exclusiveMinimum": 0 },
-        "depth_pad_m": { "type": "number", "minimum": 0 }
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth_pad_m": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     }
   }

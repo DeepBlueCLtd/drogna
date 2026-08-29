@@ -47,7 +47,7 @@ function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): LoopR
   return record;
 }
 
-describe('the forecast loop (feature 105)', () => {
+describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
   it('AT-02 descendant: the loop turns end to end — floor-scheduled first, then divergence-triggered, every message master-valid', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);

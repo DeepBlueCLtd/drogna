@@ -1,0 +1,134 @@
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+}
+
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+}
+
+.map-time input[type='range'] {
+  vertical-align: middle;
+  width: 180px;
+}
+
+.map-status {
+  font-size: 0.8rem;
+  color: #444;
+  margin: 0.2rem 0;
+}
+
+.map-arrival {
+  font-size: 0.8rem;
+  font-family: monospace;
+  background: #f4f2ec;
+  padding: 0.3rem 0.5rem;
+  margin: 0.2rem 0;
+}
+
+.map-body {
+  display: flex;
+  gap: 0.75rem;
+  min-height: 340px;
+  flex: 1;
+}
+
+.map-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 340px;
+  border: 1px solid #b5b1a5;
+  background: #dcd8cc;
+}
+
+.map-no-webgl {
+  padding: 1rem;
+  max-width: 40rem;
+}
+
+.composer {
+  width: 22rem;
+  border: 1px solid #b5b1a5;
+  padding: 0.6rem;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow: auto;
+}
+
+.composer label {
+  display: block;
+}
+
+.composer input[type='number'],
+.composer input[type='text'] {
+  width: 11rem;
+}
+
+.composer-parameter {
+  display: inline-block;
+  margin-right: 0.8rem;
+}
+
+.composer-url {
+  background: #f4f2ec;
+  padding: 0.35rem 0.5rem;
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+
+.composer-result {
+  border-left: 3px solid #888;
+  padding-left: 0.5rem;
+}
+
+.composer-result pre {
+  max-height: 14rem;
+  overflow: auto;
+  font-size: 0.72rem;
+}
+
+.composer-declined {
+  border-left-color: #a33;
+}
+
+.composer-absent {
+  border-left-color: #777;
+  font-style: italic;
+}
+
+.map-advisories {
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+}
+
+.map-advisories table {
+  border-collapse: collapse;
+}
+
+.map-advisories td,
+.map-advisories th {
+  border: 1px solid #ccc7ba;
+  padding: 0.2rem 0.5rem;
+  text-align: left;
+}
+
+.map-advisories tr.selected td {
+  background: #efeadb;
+}
+
+.map-advisory-detail {
+  font-size: 0.72rem;
+  background: #f4f2ec;
+  padding: 0.4rem;
+  max-height: 12rem;
+  overflow: auto;
+}

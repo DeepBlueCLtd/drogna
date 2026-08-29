@@ -11,12 +11,12 @@
 import type { SeamHttpResponse, SeamRequest } from '../../seam/http.js';
 import type { ConfigQuery, CoverageHolding, EdrCollectionsCollection } from '../../generated/types.js';
 import type { CoverageStore } from '../coverage-store/store.js';
-import { sampleHolding, timeAxisPosixOrigin, type SamplePoint } from './field-sampler.js';
-import { parsePoint, parseTrajectory } from './wkt.js';
+import { sampleGrid, sampleHolding, timeAxisPosixOrigin, type SamplePoint } from './field-sampler.js';
+import { parsePoint, parsePolygon, parseTrajectory } from './wkt.js';
 import { parseEpochMicros } from '../lib/sim-time.js';
 
-const IMPLEMENTED_QUERY_TYPES = ['position', 'trajectory'] as const;
-const KNOWN_UNIMPLEMENTED = ['radius', 'area', 'cube', 'corridor', 'items', 'locations', 'instances'];
+const IMPLEMENTED_QUERY_TYPES = ['position', 'trajectory', 'area'] as const;
+const KNOWN_UNIMPLEMENTED = ['radius', 'cube', 'corridor', 'items', 'locations', 'instances'];
 
 function json(status: number, body: unknown): SeamHttpResponse {
   return { status, body: JSON.stringify(body) };
@@ -63,6 +63,7 @@ export class EdrComponent {
       const queryType = segments[2];
       if (queryType === 'position') return this.position(collection, query);
       if (queryType === 'trajectory') return this.trajectory(collection, query);
+      if (queryType === 'area') return this.area(collection, query);
       if (KNOWN_UNIMPLEMENTED.includes(queryType)) {
         return refusal(501, `query type '${queryType}' is not implemented; implemented: ${IMPLEMENTED_QUERY_TYPES.join(', ')}`);
       }
@@ -94,6 +95,8 @@ export class EdrComponent {
         'http://www.opengis.net/spec/ogcapi-edr-1/1.1/conf/position',
         // harness:allow-literal-path OGC conformance-class identifiers, never fetched
         'http://www.opengis.net/spec/ogcapi-edr-1/1.1/conf/trajectory',
+        // harness:allow-literal-path OGC conformance-class identifiers, never fetched
+        'http://www.opengis.net/spec/ogcapi-edr-1/1.1/conf/area',
         // harness:allow-literal-path OGC conformance-class identifiers, never fetched
         'http://www.opengis.net/spec/ogcapi-edr-1/1.1/conf/covjson',
       ],
@@ -145,6 +148,9 @@ export class EdrComponent {
         },
         trajectory: {
           link: { href: `${prefix}/collections/${id}/trajectory`, rel: 'data', title: 'trajectory query' },
+        },
+        area: {
+          link: { href: `${prefix}/collections/${id}/area`, rel: 'data', title: 'area query' },
         },
       },
       parameter_names: this.parameters(manifest),
@@ -247,6 +253,59 @@ export class EdrComponent {
             axisNames: ['t', 'z', 'y', 'x'],
             shape: [1, 1, 1, 1],
             values: [sampled.value.values[variableOrder.indexOf(name)]],
+          },
+        ]),
+      ),
+    });
+  }
+
+  private area(
+    collection: { descriptor: CoverageHolding; bytes: Uint8Array },
+    query: URLSearchParams,
+  ): SeamHttpResponse {
+    const unsupported = this.unsupportedOption(query, ['coords', 'z', 'datetime', 'parameter-name']);
+    if (unsupported) return unsupported;
+    const coords = query.get('coords');
+    if (!coords) return refusal(400, 'an area query needs coords=POLYGON((lon lat, ...))');
+    const box = parsePolygon(coords);
+    if (!box.ok) return refusal(400, box.refusal);
+    const depth = Number(query.get('z') ?? Number.NaN);
+    if (!Number.isFinite(depth)) return refusal(400, 'an area query needs z=<depth metres, positive down>');
+    const datetime = query.get('datetime');
+    const manifest = collection.descriptor.manifest;
+    const posixSeconds = datetime
+      ? Number(parseEpochMicros(ensureMicros(datetime)) / 1_000_000n)
+      : timeAxisPosixOrigin(manifest) + manifest.grid.time.start_offset_seconds;
+    const parameters = this.requestedParameters(manifest, query);
+    if (!parameters.ok) return parameters.response;
+
+    const sampled = sampleGrid(collection, box.value, depth, posixSeconds);
+    if (!sampled.ok) return refusal(400, sampled.refusal);
+    const variableOrder = manifest.variables.map((variable) => variable.name);
+    const { lons, lats, snapped, values } = sampled.value;
+    return json(200, {
+      type: 'Coverage',
+      domain: {
+        type: 'Domain',
+        domainType: 'Grid',
+        axes: {
+          x: { values: lons },
+          y: { values: lats },
+          z: { values: [snapped.depthM] },
+          t: { values: [snapped.simTime] },
+        },
+        referencing: REFERENCING,
+      },
+      parameters: pick(this.parameters(manifest), parameters.names),
+      ranges: Object.fromEntries(
+        parameters.names.map((name) => [
+          name,
+          {
+            type: 'NdArray',
+            dataType: 'float',
+            axisNames: ['t', 'z', 'y', 'x'],
+            shape: [1, 1, lats.length, lons.length],
+            values: values[variableOrder.indexOf(name)],
           },
         ]),
       ),

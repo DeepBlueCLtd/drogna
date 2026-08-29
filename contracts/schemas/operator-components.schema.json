@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/operator-components.schema.json",
+  "title": "drogna operator components report",
+  "description": "The operator surface's answer to 'what do the components say about themselves': every declared component, with the last heartbeat genuinely heard from it or the honest statement that none was. Aggregation, never invention — nothing here can light a display (Constitution VII); the shell still lights only from heartbeats it hears itself.",
+  "type": "object",
+  "required": ["schema_version", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "heard", "stoppable", "running", "last_heartbeat"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "heard": {
+            "type": "boolean",
+            "description": "Whether any heartbeat has ever arrived from this component. Never heard is reported unheard, not absent (FR-36)."
+          },
+          "stoppable": { "type": "boolean" },
+          "running": {
+            "type": "boolean",
+            "description": "The control registry's record of whether the component is currently scheduled. A record of commands, not of life: life is the heartbeat column."
+          },
+          "last_heartbeat": {
+            "oneOf": [
+              { "$ref": "heartbeat.schema.json" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -20,6 +20,12 @@
     "monitor",
     "scheduler",
     "model_runner",
+    "planner",
+    "telemetry",
+    "operator",
+    "advisory_source",
+    "advisory_store",
+    "offload",
     "shell"
   ],
   "additionalProperties": false,
@@ -68,6 +74,24 @@
     },
     "model_runner": {
       "$ref": "config.model-runner.schema.json"
+    },
+    "planner": {
+      "$ref": "config.planner.schema.json"
+    },
+    "telemetry": {
+      "$ref": "config.telemetry.schema.json"
+    },
+    "operator": {
+      "$ref": "config.operator.schema.json"
+    },
+    "advisory_source": {
+      "$ref": "config.advisory-source.schema.json"
+    },
+    "advisory_store": {
+      "$ref": "config.advisory-store.schema.json"
+    },
+    "offload": {
+      "$ref": "config.offload.schema.json"
     },
     "feature_store": {
       "$ref": "config.feature-store.schema.json"

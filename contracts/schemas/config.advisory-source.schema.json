@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.advisory-source.schema.json",
+  "title": "drogna shore advisory source configuration (V2-C16)",
+  "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here.",
+  "type": "object",
+  "required": ["id", "stream", "topics", "heartbeat", "cadence_ticks", "valid_seconds", "region_feature", "depth_span_m", "sound_speed_half_width_m_per_s"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "stream": { "type": "string", "minLength": 1 },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "advisory"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "advisory": { "$ref": "config.common.schema.json#/$defs/topic" }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "cadence_ticks": { "type": "integer", "exclusiveMinimum": 0 },
+    "valid_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "region_feature": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "The feature-store feature whose bounding box advisories cover."
+    },
+    "depth_span_m": { "type": "number", "exclusiveMinimum": 0 },
+    "sound_speed_half_width_m_per_s": { "type": "number", "exclusiveMinimum": 0 }
+  }
+}

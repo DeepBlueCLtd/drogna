@@ -4,29 +4,56 @@
   "title": "drogna query components configuration (V2-C09)",
   "description": "The query components: OGC API-EDR (CoverageJSON) over the coverage store and OGC SensorThings (Part 1, Sensing, read-only) over the observation store, each a stated honest subset served through the seam and the release gate (SRD-v2 FR-26 to FR-29). The prefixes below are what the boundary's allow list must name for the collections to be released at all.",
   "type": "object",
-  "required": ["id", "topics", "http", "heartbeat"],
+  "required": [
+    "id",
+    "topics",
+    "http",
+    "heartbeat"
+  ],
   "additionalProperties": false,
   "properties": {
-    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
+    },
     "topics": {
       "type": "object",
-      "required": ["clock"],
-      "additionalProperties": false,
-      "properties": { "clock": { "$ref": "config.common.schema.json#/$defs/topic" } }
-    },
-    "http": {
-      "type": "object",
-      "required": ["edr_prefix", "st_prefix", "subsets_path"],
+      "required": [
+        "clock"
+      ],
       "additionalProperties": false,
       "properties": {
-        "edr_prefix": { "$ref": "config.common.schema.json#/$defs/relative_path" },
-        "st_prefix": { "$ref": "config.common.schema.json#/$defs/relative_path" },
-        "subsets_path": {
-          "$ref": "config.common.schema.json#/$defs/relative_path",
-          "description": "Where the subset statement (query-subsets.schema.json) is served, on the control plane."
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
         }
       }
     },
-    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" }
+    "http": {
+      "type": "object",
+      "required": [
+        "edr_prefix",
+        "st_prefix",
+        "subsets_path",
+        "features_prefix"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "edr_prefix": {
+          "$ref": "config.common.schema.json#/$defs/relative_path"
+        },
+        "st_prefix": {
+          "$ref": "config.common.schema.json#/$defs/relative_path"
+        },
+        "subsets_path": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Where the subset statement (query-subsets.schema.json) is served, on the control plane."
+        },
+        "features_prefix": {
+          "$ref": "config.common.schema.json#/$defs/relative_path"
+        }
+      }
+    },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    }
   }
 }

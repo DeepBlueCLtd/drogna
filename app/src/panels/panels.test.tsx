@@ -50,7 +50,20 @@ function panelProps(config: ConfigRun, runtime: BackendRuntime) {
   return { params } as unknown as IDockviewPanelProps<PanelParams>;
 }
 
-describe('the panels against a live backend', () => {
+/**
+ * Flush until the thing being waited for has happened, rather than a fixed number of
+ * microtasks. A count is a guess about how many turns a fetch → validate → setState
+ * chain takes, and CI took more turns than this machine did: the cube test went red
+ * on a runner with an empty query list while passing here every time.
+ */
+async function settle(until: () => boolean, rounds = 2000): Promise<void> {
+  for (let round = 0; round < rounds && !until(); round++) await Promise.resolve();
+}
+
+// The tests below turn the loop until the harness has genuinely produced what they
+// read — thousands of ticks in some cases — so the default five seconds is a limit on
+// the runner rather than on the behaviour.
+describe('the panels against a live backend', { timeout: 120_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
 
@@ -226,7 +239,7 @@ describe('the panels against a live backend', () => {
         for (let tick = 0; tick < config.env_generator.nowcast.interval_ticks; tick++) {
           runtime.clock.tickOnce();
         }
-        await Promise.resolve();
+        await settle(() => inventoryRequests > 1);
       });
       expect(inventoryRequests).toBe(2);
       const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
@@ -361,7 +374,7 @@ describe('the panels against a live backend', () => {
       // not the instant the slider happens to sit on.
       await act(async () => {
         fireEvent.change(slider, { target: { value: String(time.step_seconds) } });
-        for (let flush = 0; flush < 8; flush++) await Promise.resolve();
+        await settle(() => areaQueries().length > 0);
       });
       const scrubbed = areaQueries();
       expect(scrubbed).toHaveLength(1);
@@ -448,7 +461,7 @@ describe('the panels against a live backend', () => {
       const doubt = document.querySelectorAll('.map-controls select')[3] as HTMLSelectElement;
       await act(async () => {
         fireEvent.change(doubt, { target: { value: 'spread' } });
-        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+        await settle(() => asked.some((url) => url.includes('/area?')));
       });
       const spreadQueries = asked.filter((url) => url.includes('/area?'));
       expect(spreadQueries).toHaveLength(1);
@@ -500,10 +513,13 @@ describe('the panels against a live backend', () => {
       if (!nowcast) throw new Error('the store holds no now-cast to take a depth axis from');
       const depth = nowcast.manifest.grid.depth;
       const expected = Array.from({ length: depth.count }, (_, index) => depth.minimum + index * depth.spacing);
+      const asked_area = () => asked.filter((url) => url.includes('/area?'));
       await act(async () => {
-        for (let flush = 0; flush < expected.length * 4 + 8; flush++) await Promise.resolve();
+        // The cube waits on the inventory before it can ask for a single level, so
+        // what is waited for is the level queries themselves.
+        await settle(() => asked_area().length >= expected.length);
       });
-      const areaQueries = asked.filter((url) => url.includes('/area?'));
+      const areaQueries = asked_area();
       expect(areaQueries).toHaveLength(expected.length);
       expect(areaQueries.map((url) => Number(new URL(url, 'http://x').searchParams.get('z')))).toEqual(expected);
       expect(screen.getByText(new RegExp(`${expected.length} level\\(s\\), one area query each`))).toBeTruthy();
@@ -532,7 +548,7 @@ describe('the panels against a live backend', () => {
       expect(runtime.telemetry.lastRegionStatistics.length).toBeGreaterThan(0);
       mounted = render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {
-        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+        await settle(() => screen.queryByTestId('region-statistics') !== null);
       });
       const table = screen.getByTestId('region-statistics');
       const rows = [...table.querySelectorAll('tbody tr')];

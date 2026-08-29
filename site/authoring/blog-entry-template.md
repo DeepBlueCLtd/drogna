@@ -37,7 +37,11 @@ for. Link the first use of a term that needs it:
 The running thing, which is the point of the entry. For visible work, an instance opened
 at the view:
 
-[Open it at the map](../../../instances/main/#/view/map)
+[Open it at the map](../../instances/main/#/view/map)
+
+<!-- Two levels up, not three: an entry is published at `blog/posts/<slug>/`, and the
+     estate's instances sit beside `blog/`. The link gate refuses the third level, and
+     refused it the first time this template was used. -->
 
 For headless work, the wrapper that reads the component through the seam and exercises
 it across its range. A screenshot is the fallback, not the deliverable:

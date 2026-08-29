@@ -1,0 +1,42 @@
+{
+  "image": "109-the-map-you-can-point-at.png",
+  "run_id": "loiter-156vdoj",
+  "view": "map",
+  "sim_time": "2026-01-01T00:20:54Z",
+  "clock_pinned": "rate 0",
+  "lit_components": "not readable from this view",
+  "controls": [
+    {
+      "select": ".map-controls select >> nth=4",
+      "value": "cube"
+    },
+    {
+      "click": "text=EDR composer"
+    },
+    {
+      "click": ".map-canvas canvas",
+      "position": {
+        "x": 520,
+        "y": 300
+      }
+    },
+    {
+      "select": ".composer select >> nth=0",
+      "value": "nowcast"
+    },
+    {
+      "select": ".composer select >> nth=1",
+      "value": "position"
+    }
+  ],
+  "warmed": "run at rate 600 for 40000 ms of host time before the clock was pinned",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The Map tab in its depth-cube view with the composer open: six stacked slices, one genuine area query each, warm at the surface and cold below; a click on a slice has filled the composer with longitude -11.184, latitude 46.147 and depth 280 m, the note reads 'inside the domain', and the request line beneath shows the URL those numbers compose."
+}

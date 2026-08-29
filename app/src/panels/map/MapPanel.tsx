@@ -36,6 +36,8 @@ import {
   graticule,
   gridCells,
   insideRing,
+  manifestInstants,
+  nearestInstant,
   projectionCells,
   rampColour,
   routePositionAt,
@@ -65,6 +67,15 @@ interface VolumeLevel {
   coverage: GridCoverage;
 }
 
+/** The uncertainty instance as a gridded layer, when it is what is drawn (#60). */
+interface SpreadState {
+  coverage?: GridCoverage;
+  /** Which range of the spread coverage answers for the chosen parameter. */
+  parameterKey?: string;
+  refusal?: string;
+  servedFrom?: string;
+}
+
 interface VolumeState {
   levels: VolumeLevel[];
   /** The domain and depth extent the drawn volume stands for. */
@@ -90,6 +101,11 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const [advisories, setAdvisories] = useState<readonly AdvisoryFeature[]>([]);
   const [reference, setReference] = useState<readonly FeaturesResponseFeature[]>([]);
   const [field, setField] = useState<FieldState>({});
+  /** The store's inventory: each holding's manifest states its own axes. */
+  const [inventory, setInventory] = useState<readonly CoverageHolding[]>([]);
+  /** Which doubt is drawn: the plan's projection cells, the run's spread, neither. */
+  const [doubt, setDoubt] = useState<'projection' | 'spread' | 'none'>('projection');
+  const [spread, setSpread] = useState<SpreadState>({});
   const [source, setSource] = useState<'nowcast' | 'forecast'>('nowcast');
   const [parameter, setParameter] = useState('temperature');
   const [depthM, setDepthM] = useState(50);
@@ -150,9 +166,56 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const domain = reference.find((feature) => feature.id === 'domain');
   const domainRing = domain?.geometry.coordinates[0] as [number, number][] | undefined;
 
-  // The field: one genuine area query over the domain, refetched when the source
-  // holding is replaced. The response's own snapped instant is what is displayed.
   const collectionId = source === 'forecast' ? latestRun?.collections.forecast : 'nowcast';
+
+  // The store's inventory, through the seam: each holding's ground-truth manifest
+  // states the depth axis the cube stacks (#59) and the time axis its own field
+  // advances on (#60) — and the forecast's spread keeps a different axis from the
+  // now-cast's, which is why the inventory is held whole rather than one holding.
+  // One GET, refreshed when the store announces; nothing polls.
+  const refreshInventory = useCallback(async () => {
+    const response = await fetch(config.endpoints.holdings);
+    const body = (await response.json()) as unknown;
+    if (!response.ok || !validator.validate('holdings-inventory', body).ok) {
+      setInventory([]);
+      return;
+    }
+    setInventory((body as HoldingsInventory).holdings);
+  }, [config.endpoints.holdings, validator]);
+
+  useEffect(() => {
+    void refreshInventory();
+    return client.subscribe(config.topics.holdings, () => void refreshInventory());
+  }, [client, config.topics.holdings, refreshInventory]);
+
+  const holdingFor = useCallback(
+    (id: string | undefined) =>
+      id === undefined
+        ? undefined
+        : inventory.find((candidate) => candidate.era === id || candidate.holding_id === id),
+    [inventory],
+  );
+  const holding = holdingFor(collectionId);
+  const displayedSimTime = useMemo(() => {
+    if (!simTime) return '';
+    if (timeOffset === 0) return simTime;
+    const millis = Date.parse(simTime.slice(0, 23) + 'Z') + timeOffset * 1000;
+    return `${new Date(millis).toISOString().slice(0, 23)}000Z`;
+  }, [simTime, timeOffset]);
+
+  // The field, scrubbed (#60): the displayed instant moves continuously, but the
+  // holding stores steps, so the field is asked for the step the displayed instant
+  // falls on. No cache — a client-side copy of the holding would be a second store,
+  // and one that goes stale the moment the holding is replaced — and no timer: the
+  // refetch is thrown by the *snapped* instant changing, which happens at the
+  // holding's own step and no faster. What throttles the scrubber is therefore a
+  // number in the manifest, not one typed into the shell.
+  const fieldInstants = useMemo(
+    () => (holding ? manifestInstants(holding.manifest.grid.time) : []),
+    [holding],
+  );
+  const snapped = nearestInstant(fieldInstants, displayedSimTime);
+
   useEffect(() => {
     // The cube asks for every level itself; one more query for a slice nobody is
     // looking at would be a round trip spent on nothing.
@@ -160,6 +223,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
     void (async () => {
       const wkt = `POLYGON((${domainRing.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`;
       const query = new URLSearchParams({ coords: wkt, z: String(depthM), 'parameter-name': parameter });
+      if (snapped) query.set('datetime', snapped.instant);
       const response = await fetch(
         `${config.endpoints.edr}/collections/${collectionId}/area?${query.toString()}`,
       );
@@ -190,8 +254,74 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
     domainRing === undefined,
     parameter,
     projection,
+    snapped?.instant,
     validator,
     latestRun,
+  ]);
+
+  // Doubt as a gridded field (#60): the run publishes its ensemble spread as its own
+  // instance, servable through the very same area query, so this is one more genuine
+  // query rather than a second computation of doubt. It *replaces* the projection
+  // cells rather than joining them — two doubt layers at once read as one wrong one —
+  // and it is the run's doubt about the field, where the cells are the planner's
+  // doubt about the plan. The parameter is chosen from what the coverage answers
+  // with, because the spread's variables carry the producer's own names.
+  const spreadCollection = latestRun?.collections.uncertainty;
+  const spreadHolding = holdingFor(spreadCollection);
+  const spreadSnapped = nearestInstant(
+    spreadHolding ? manifestInstants(spreadHolding.manifest.grid.time) : [],
+    displayedSimTime,
+  );
+  useEffect(() => {
+    if (doubt !== 'spread' || !domainRing || !spreadCollection || projection === 'cube') return;
+    let abandoned = false;
+    void (async () => {
+      const wkt = `POLYGON((${domainRing.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`;
+      const query = new URLSearchParams({ coords: wkt, z: String(depthM) });
+      // The run's spread keeps its own time axis, which starts when the run did and
+      // ends at its horizon: snapping it to the *field's* step would ask a forecast
+      // about an instant it does not cover, and be refused for asking.
+      if (spreadSnapped) query.set('datetime', spreadSnapped.instant);
+      const response = await fetch(
+        `${config.endpoints.edr}/collections/${spreadCollection}/area?${query.toString()}`,
+      );
+      const body = (await response.json()) as unknown;
+      if (abandoned) return;
+      if (!response.ok) {
+        setSpread({
+          refusal: (body as { refused?: string }).refused ?? `the spread query answered ${response.status}`,
+        });
+        return;
+      }
+      const verdict = validator.validate('coveragejson', body);
+      if (!verdict.ok) {
+        setSpread({ refusal: `the spread coverage was refused by its master: ${verdict.refusals[0]}` });
+        return;
+      }
+      const coverage = body as GridCoverage;
+      const parameterKey = Object.keys(coverage.ranges).find((name) => name.startsWith(parameter));
+      setSpread({
+        coverage,
+        parameterKey,
+        refusal: parameterKey
+          ? undefined
+          : `the spread instance answers for ${Object.keys(coverage.ranges).join(', ')}, none of which is ${parameter}`,
+        servedFrom: `${spreadCollection} at ${displayInstant(coverage.domain.axes.t.values[0])}, ${coverage.domain.axes.z.values[0]} m`,
+      });
+    })();
+    return () => {
+      abandoned = true;
+    };
+  }, [
+    config.endpoints.edr,
+    depthM,
+    domainRing === undefined,
+    doubt,
+    parameter,
+    projection,
+    spreadCollection,
+    spreadSnapped?.instant,
+    validator,
   ]);
 
   // The cube (issue #59): the levels are the holding's own depth axis, read from the
@@ -201,30 +331,15 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   // this is the client stacking what the served subset does answer.
   useEffect(() => {
     if (projection !== 'cube' || !domainRing || !collectionId) return;
+    if (!holding) {
+      setVolume({
+        levels: [],
+        refusal: `the inventory names no holding for collection '${collectionId}', so the depth axis is unknown`,
+      });
+      return;
+    }
     let abandoned = false;
     void (async () => {
-      const inventoryResponse = await fetch(config.endpoints.holdings);
-      const inventoryBody = (await inventoryResponse.json()) as unknown;
-      if (!inventoryResponse.ok || !validator.validate('holdings-inventory', inventoryBody).ok) {
-        if (!abandoned) {
-          setVolume({
-            levels: [],
-            refusal:
-              'the holdings inventory did not answer with a master-valid document, so the depth axis is unknown',
-          });
-        }
-        return;
-      }
-      const holding = (inventoryBody as HoldingsInventory).holdings.find(
-        (candidate: CoverageHolding) =>
-          candidate.era === collectionId || candidate.holding_id === collectionId,
-      );
-      if (!holding) {
-        if (!abandoned) {
-          setVolume({ levels: [], refusal: `the inventory names no holding for collection '${collectionId}'` });
-        }
-        return;
-      }
       const grid = holding.manifest.grid;
       const wkt = `POLYGON((${domainRing.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`;
       const levels: VolumeLevel[] = [];
@@ -277,25 +392,21 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   }, [
     collectionId,
     config.endpoints.edr,
-    config.endpoints.holdings,
     domainRing === undefined,
-    latestRun,
+    holding,
     parameter,
     projection,
     validator,
   ]);
 
-  const displayedSimTime = useMemo(() => {
-    if (!simTime) return '';
-    if (timeOffset === 0) return simTime;
-    const millis = Date.parse(simTime.slice(0, 23) + 'Z') + timeOffset * 1000;
-    return `${new Date(millis).toISOString().slice(0, 23)}000Z`;
-  }, [simTime, timeOffset]);
-
   const grid = field.coverage ? gridCells(field.coverage, parameter) : undefined;
   const validAdvisories = advisories.filter((feature) => validAt(feature.properties, displayedSimTime));
   const platform = plan ? routePositionAt(plan, displayedSimTime) : undefined;
-  const doubtCells = plan ? projectionCells(plan, 0) : [];
+  const doubtCells = doubt === 'projection' && plan ? projectionCells(plan, 0) : [];
+  const spreadGrid =
+    doubt === 'spread' && spread.coverage && spread.parameterKey
+      ? gridCells(spread.coverage, spread.parameterKey)
+      : undefined;
 
   // Conditions at the moment of arrival (FR-40): a genuine position query at the
   // clicked vertex's place and arrival instant, shown in the vertex's own terms.
@@ -508,6 +619,37 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
         stroked: false,
         pickable: false,
       }),
+    spreadGrid &&
+      new PolygonLayer({
+        id: 'spread',
+        data: spreadGrid.cells,
+        getPolygon: (cell) => {
+          const [west, south, east, north] = cell.bounds;
+          return [
+            [west, south],
+            [east, south],
+            [east, north],
+            [west, north],
+          ];
+        },
+        // The same white-alpha language the projection cells speak, so doubt reads
+        // as doubt whichever of the two is drawn, scaled against the spread's own
+        // observed range — which the status line states, since a normalised shade
+        // means nothing without it.
+        getFillColor: (cell) => [
+          255,
+          255,
+          255,
+          Math.round(
+            190 *
+              (spreadGrid.maximum > spreadGrid.minimum
+                ? (cell.value - spreadGrid.minimum) / (spreadGrid.maximum - spreadGrid.minimum)
+                : 0),
+          ),
+        ],
+        stroked: false,
+        pickable: false,
+      }),
     doubtCells.length > 0 &&
       new PolygonLayer({
         id: 'doubt',
@@ -668,6 +810,20 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           />
         </label>
         <label>
+          doubt{' '}
+          <select
+            value={doubt}
+            disabled={projection === 'cube'}
+            onChange={(event) => setDoubt(event.target.value as 'projection' | 'spread' | 'none')}
+          >
+            <option value="projection">the plan's projection cells</option>
+            <option value="spread" disabled={!spreadCollection}>
+              the run's spread{spreadCollection ? '' : ' (no run published yet)'}
+            </option>
+            <option value="none">none</option>
+          </select>
+        </label>
+        <label>
           view{' '}
           <select
             value={projection}
@@ -698,6 +854,19 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           : field.refusal
             ? ` · field declined: ${field.refusal}`
             : ''}
+        {projection !== 'cube' && snapped?.beyond
+          ? ` · the displayed instant is ${snapped.beyond === 'after' ? 'past the end of' : 'before the start of'} this holding's time axis, so the field shows its ${snapped.beyond === 'after' ? 'last' : 'first'} step`
+          : ''}
+        {projection !== 'cube' && doubt === 'spread'
+          ? spread.refusal
+            ? ` · spread declined: ${spread.refusal}`
+            : spreadGrid
+              ? ` · spread: ${spread.servedFrom}, ${spreadGrid.minimum.toFixed(3)} to ${spreadGrid.maximum.toFixed(3)} across the shade` +
+                (spreadSnapped?.beyond
+                  ? `; the displayed instant is ${spreadSnapped.beyond === 'after' ? 'past the end of' : 'before the start of'} this run's horizon, so its ${spreadSnapped.beyond === 'after' ? 'last' : 'first'} step is shown`
+                  : '')
+              : ' · spread: querying…'
+          : ''}
         {plan ? ` · plan ${plan.plan_id} (${plan.route.vertices.length} stop(s))` : ' · no plan published yet'}
         {` · ${validAdvisories.length} of ${advisories.length} advisory(ies) valid at the displayed instant`}
         {composing ? ' · click the canvas to place the composed query' : ''}

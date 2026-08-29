@@ -25,10 +25,16 @@
 - [x] T808 Tests: area query agreement with position query, builder boundaries
       (validity plant watched failing), composer URLs and three-fact
       classification, panel against the live backend with WebGL absent
-- [ ] T809 Field time-scrubbing and a gridded spread layer — *deliberately not
-      done, recorded with reasons in spec.md ("Deliberately not in this
-      feature"): the projection cells already show doubt decaying and refreshing,
-      and a per-frame seam round-trip cache would be a second store.*
+- [x] T809 Field time-scrubbing and a gridded spread layer (issue #60). The caching
+      question the deferral was waiting on is answered *no cache*: a client-side map
+      of instant → coverage is a second store, stale the moment a holding is
+      replaced. No timer either — the field is asked for the step of its holding's
+      own time axis that the displayed instant falls on, so a scrub within a step
+      costs nothing and one across a step costs exactly one query, and the number
+      pacing it comes from the manifest rather than from the shell. The spread landed
+      as a *replacement* for the projection cells rather than a second doubt layer,
+      as the deferral required, snapped to its own time axis and with its range
+      stated.
 - [x] T810 Point-and-click EDR query location (issue #53): the composer's choices
       lifted into the map panel so the canvas and the number boxes write one state;
       `pickedPosition` wraps a wound globe longitude and refuses a click that

@@ -7,28 +7,17 @@
  * the width it wants. Never scaled past legibility, and never rendered having
  * silently dropped its labels; the prose and the spine stay usable either way.
  */
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useRef, type ReactNode } from 'react';
+import { fillsViewport, useMeasuredWidth, viewportWidth } from '../../shell/viewport.js';
 import type { FigureContext, Step, StepFigure } from './model.js';
 
 /**
- * The panel's width in CSS pixels, or undefined when there is nothing to measure.
- * Undefined is not narrow: an unknown width is no evidence of one, so the figure is
- * drawn rather than withheld.
+ * The measurement moved to `shell/viewport.ts` in feature 112, so that the shell and
+ * every panel measure the same way, and is re-exported here because this is where the
+ * course's own tests and explainers reach for it. Undefined is still not narrow: an
+ * unknown width is no evidence of one, so the figure is drawn rather than withheld.
  */
-export function useMeasuredWidth(ref: RefObject<HTMLElement>): number | undefined {
-  const [width, setWidth] = useState<number | undefined>(undefined);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const read = () => setWidth(element.clientWidth || undefined);
-    read();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(read);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width;
-}
+export { useMeasuredWidth };
 
 /**
  * The drawing, or the honest statement of the width it wants.
@@ -45,6 +34,16 @@ export function useMeasuredWidth(ref: RefObject<HTMLElement>): number | undefine
  * It settled on drawing, so the floor simply never appeared — watched happening,
  * when a figure whose minimum nothing could satisfy was drawn anyway.
  *
+ * **Feature 112 amends what happens below the floor.** "Widen the panel" is sound advice
+ * to a viewer who has a window to widen and an instruction that cannot be followed on a
+ * phone — a claim the tab makes that stops being true. So where the column is already as
+ * wide as the viewport, the drawing is rendered at its own minimum width inside a frame
+ * that scrolls sideways: full size, labels intact, panned rather than shrunk. FR-024's
+ * two guarantees are what make that the right answer instead of a workaround, and both
+ * still hold — never scaled past legibility, never rendered having dropped its labels.
+ * Where there *is* a wider width to be had, the statement of the width it wants is
+ * unchanged, because there the advice can be taken.
+ *
  * `width` is an override for tests, which have no layout to measure.
  */
 export function Figure({
@@ -60,6 +59,31 @@ export function Figure({
   const measured = useMeasuredWidth(columnRef);
   const width = given ?? measured;
   const tooNarrow = width !== undefined && width < figure.minWidth;
+  // There is no wider width to move to: the column already has the viewport.
+  const nowhereToWiden = tooNarrow && fillsViewport(width, viewportWidth() ?? Number.POSITIVE_INFINITY);
+
+  const drawing = (
+    <figure className="bg-figure">
+      <div className="bg-figure-frame" role="img" aria-label={figure.label}>
+        {figure.draw(context)}
+      </div>
+      {figure.caption ? <figcaption>{figure.caption}</figcaption> : null}
+    </figure>
+  );
+
+  if (nowhereToWiden) {
+    return (
+      <div className="bg-figure-column" ref={columnRef}>
+        <div className="bg-figure-pan" data-testid="figure-pan">
+          <div className="bg-figure-pan-inner" style={{ minWidth: `${figure.minWidth}px` }}>
+            {drawing}
+          </div>
+        </div>
+        <p className="bg-figure-pan-note">Wider than the screen — scroll the diagram sideways.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-figure-column" ref={columnRef}>
       {tooNarrow ? (
@@ -67,12 +91,7 @@ export function Figure({
           The diagram needs about {figure.minWidth}px. Widen the panel to see it.
         </p>
       ) : (
-        <figure className="bg-figure">
-          <div className="bg-figure-frame" role="img" aria-label={figure.label}>
-            {figure.draw(context)}
-          </div>
-          {figure.caption ? <figcaption>{figure.caption}</figcaption> : null}
-        </figure>
+        drawing
       )}
     </div>
   );

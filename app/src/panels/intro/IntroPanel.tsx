@@ -4,11 +4,10 @@
  * beat that has not landed is named as not landed — the narration makes no claim the
  * running system cannot back.
  */
-import type { IDockviewPanelProps } from 'dockview-react';
-import type { PanelParams } from '../../shell/Shell.js';
+import type { PanelProps } from '../../shell/registry.js';
 import { hashForView } from '../../shell/views.js';
 
-export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function IntroPanel({ params }: PanelProps) {
   const { manifest } = params;
   return (
     <div className="panel panel-prose">

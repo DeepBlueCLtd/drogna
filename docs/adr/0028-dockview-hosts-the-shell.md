@@ -33,6 +33,10 @@ The React-hosting pattern, which this ADR exists to record:
   address is now a view id and an opaque remainder the shell hands to the panel and
   never parses, so a panel may address positions inside itself. `#/view/<id>` and every
   link of that shape are unchanged.
+- **Amended by ADR-0033**: dockview owns the layout *at and above a width threshold*.
+  Below it the same views, from the same registry and behind the same addresses, are
+  presented one at a time as a stack. Docking is what a phone cannot do, and a docking
+  manager is the wrong thing to squeeze into 390px.
 - Layout serialisation (`api.toJSON`) is presentation only. It is never persisted by
   the harness and never consulted by any component; a deep link selects what is
   shown, never what happened.

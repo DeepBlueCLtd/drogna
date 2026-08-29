@@ -7,17 +7,25 @@
  * simulation second, and end-to-end latency in simulation seconds (issue #61). Everything here crosses the seam as genuine
  * requests; a stopped component goes dark in System because its heartbeats cease,
  * never because a response here said so.
+ *
+ * Narrow (feature 112, FR-010 to FR-012): telemetry is the primary surface — it is what
+ * the tab is read for — and the two acting surfaces, the commands and the components
+ * table, disclose beneath it under labels that name them. Wide, the three sections
+ * render exactly as they did.
  */
-import { useCallback, useEffect, useState } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
-import type { PanelParams } from '../../shell/Shell.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PanelProps } from '../../shell/registry.js';
+import { Disclosure } from '../../shell/Disclosure.js';
+import { useIsNarrow } from '../../shell/viewport.js';
 import type { OperatorComponents, TelemetryReport } from '../../generated/types.js';
 
-export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function OperatorPanel({ params }: PanelProps) {
   const { config, client, validator } = params;
   const [components, setComponents] = useState<OperatorComponents | undefined>();
   const [report, setReport] = useState<TelemetryReport | undefined>();
   const [refusal, setRefusal] = useState<string | undefined>();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const narrow = useIsNarrow(rootRef);
 
   const refresh = useCallback(async () => {
     const [componentsResponse, reportResponse] = await Promise.all([
@@ -49,7 +57,7 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
   };
 
   return (
-    <div className="panel">
+    <div className="panel" ref={rootRef} data-narrow={narrow}>
       <h3>Telemetry</h3>
       {report ? (
         <div className="operator-telemetry">
@@ -119,7 +127,8 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
         <p className="panel-footnote">no telemetry report yet</p>
       )}
 
-      <h3>Commands</h3>
+      <Disclosure label="commands" narrow={narrow} className="operator-commands">
+      {!narrow && <h3>Commands</h3>}
       <p>
         <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
           step the clock one tick
@@ -134,8 +143,11 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
           {refusal}
         </p>
       )}
+      </Disclosure>
 
-      <h3>Components, as they report themselves</h3>
+      <Disclosure label="components, as they report themselves" narrow={narrow} className="operator-components">
+      {!narrow && <h3>Components, as they report themselves</h3>}
+      <div className="table-scroll">
       <table className="system-grid" data-testid="operator-components">
         <thead>
           <tr>
@@ -175,11 +187,13 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
           ))}
         </tbody>
       </table>
+      </div>
       <p className="panel-footnote">
         This table is what components say about themselves, aggregated. Whether one is
         alive is the System tab&rsquo;s heartbeat column; a stopped component goes dark
         there because its heartbeats cease, not because a command claimed success.
       </p>
+      </Disclosure>
     </div>
   );
 }

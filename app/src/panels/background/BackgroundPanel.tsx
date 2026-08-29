@@ -17,8 +17,7 @@
  * renders prose and SVG.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
-import type { PanelParams } from '../../shell/Shell.js';
+import type { PanelProps } from '../../shell/registry.js';
 import { hashForView } from '../../shell/views.js';
 import { COURSE } from './registry.js';
 import { positionFromRest, restForPosition, type CoursePosition } from './address.js';
@@ -28,7 +27,7 @@ import { useMeasuredWidth } from './layout.js';
 import { CategoryKey } from './marks.js';
 import './background.css';
 
-export function BackgroundPanel({ params }: IDockviewPanelProps<PanelParams>): ReactNode {
+export function BackgroundPanel({ params }: PanelProps): ReactNode {
   const { address } = params;
   const [position, setPosition] = useState<CoursePosition>(() =>
     positionFromRest(COURSE, address.current()),

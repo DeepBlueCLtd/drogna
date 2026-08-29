@@ -202,8 +202,16 @@ body,
   min-height: 0;
 }
 
-.messages-list {
+/* The list's own scroll container (feature 112): wide it is the flex child the table
+   used to be, narrow it is what keeps the list's scroll position while the detail
+   covers it. */
+.messages-list-scroll {
   flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.messages-list {
   border-collapse: collapse;
   align-self: flex-start;
   font-family: monospace;
@@ -325,4 +333,345 @@ body,
   border: 1px solid #ccc7ba;
   padding: 0.15rem 0.45rem;
   text-align: left;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   The shell at a phone's width (feature 112, ADR-0033).
+
+   Every breakpoint below is 720px, which is `NARROW_WIDTH` in `viewport.ts` and the
+   only breakpoint this application has. `check-one-breakpoint` reads that declaration
+   and fails the build when a stylesheet carries a different number: a breakpoint copied
+   into five files is a number that drifts, and it drifts silently — nothing renders
+   wrong until somebody is holding a phone.
+
+   The panel rules are container queries, not media queries, because a panel docked
+   narrow inside a wide window has the same problem as a phone and deserves the same
+   answer. The shell's own chrome is the one thing keyed to the viewport, because the
+   shell *is* the viewport.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Progressive discovery (FR-011 to FR-014). The two shapes — a plain section wide, a
+   <details> narrow — are chosen in `Disclosure.tsx`; what is here is only how each
+   looks. */
+.disclosure {
+  display: block;
+  min-width: 0;
+}
+
+.disclosure > summary {
+  cursor: pointer;
+  padding: 0.55em 0.2em;
+  color: var(--shell-accent);
+  font-size: 0.9em;
+  user-select: none;
+  /* A thumb, not a cursor (FR-018). */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.disclosure[data-narrow='true'] {
+  border-top: 1px solid #232c36;
+}
+
+.disclosure[data-narrow='true'] > .disclosure-body {
+  padding-bottom: 0.4em;
+}
+
+/* Wide, a disclosure is not a box at all. `display: contents` drops the wrapper from the
+   layout entirely, so a disclosed region's children are laid out by the panel exactly as
+   they were before this feature existed — the header stays one flex row, the topic tree
+   stays a flex child of the split. FR-014 asks for "renders as it does today", and this
+   is the version of that promise a stylesheet can keep without a second set of rules. */
+.disclosure[data-narrow='false'],
+.disclosure[data-narrow='false'] > .disclosure-body {
+  display: contents;
+}
+
+/* A table is the one thing that will not fold. It scrolls inside its own container so
+   that the page never scrolls sideways (FR-017). */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* The stack: one view at a time, behind the same tabs (FR-003, FR-004). */
+.stack {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.stack-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid #232c36;
+  /* A 15px scrollbar under a 44px control is a third of the tab spent on furniture. The
+     overflow is discoverable from the tab clipped at the edge, which is why no label is
+     ever truncated to fit (FR-004). */
+  scrollbar-width: none;
+}
+
+.stack-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.stack-tab {
+  flex: 0 0 auto;
+  /* At least 44 CSS pixels on the smaller side: a thumb, not a cursor (FR-018). */
+  min-height: 44px;
+  padding: 0 0.85em;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--shell-dim);
+  font: inherit;
+  font-size: 0.88em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stack-tab-active {
+  color: var(--shell-accent);
+  border-bottom-color: var(--shell-accent);
+}
+
+.stack-tab:focus-visible {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: -2px;
+}
+
+.stack-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.stack-view {
+  height: 100%;
+  min-height: 0;
+}
+
+.stack-view[hidden] {
+  display: none;
+}
+
+/* A figure that cannot be widened is panned, not withdrawn (FR-019). Not narrow-only:
+   it is whatever `layout.tsx` decided, at whatever width it decided it. */
+.bg-figure-pan {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.bg-figure-pan-note {
+  color: var(--shell-dim);
+  font-size: 0.8em;
+  margin: 0.2em 0 0;
+}
+
+/* The narrow chrome, keyed to the presentation the shell chose rather than to a width
+   of its own. Two reasons, and the second is the one that was learned: a second copy of
+   the rule is a second thing to keep in step, and the shell's choice is not a width
+   question alone — a phone turned sideways is 844px wide and gets the stack, where a
+   `max-width` rule would have left the chrome at its desktop size on the shortest
+   viewport the harness has to serve. Watched happening, by the capture proof.
+
+   The disclaimer is not in here and never will be: chrome may be compacted or disclosed,
+   and the statement that the data is synthetic may not (FR-007). */
+.shell[data-presentation='stack'] .shell-header {
+  gap: 0.5em;
+  padding: 0.35em 0.6em;
+  row-gap: 0.15em;
+}
+
+.shell[data-presentation='stack'] .shell-title {
+  font-size: 0.95em;
+}
+
+.shell[data-presentation='stack'] .shell-disclaimer {
+  font-size: 0.72em;
+  line-height: 1.2;
+}
+
+.shell[data-presentation='stack'] .shell-header .disclosure {
+  border-top: none;
+}
+
+/* A row of its own is worth 26 pixels of a 390-pixel-tall screen, so it is spent only
+   where the viewport genuinely cannot hold the header on one line. The capture proof
+   found this too: giving the disclaimer and the run controls their own rows whenever
+   the shell was stacked put the chrome over its quarter-of-the-height bound in
+   landscape — the one orientation with no height to spare. Flex wrapping already does
+   the right thing at a phone's portrait width; this only stops the two from sharing a
+   line with the title when they would be squeezed to nothing. */
+@media (max-width: 720px) {
+  .shell[data-presentation='stack'] .shell-disclaimer,
+  .shell[data-presentation='stack'] .shell-header .disclosure {
+    flex-basis: 100%;
+  }
+}
+
+.shell[data-presentation='stack'] .shell-header .disclosure > summary {
+  min-height: 0;
+  padding: 0.1em 0;
+  font-size: 0.8em;
+}
+
+.shell[data-presentation='stack'] .shell-header .disclosure-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.25em 0 0.35em;
+}
+
+.shell[data-presentation='stack'] .shell-run {
+  font-size: 0.75em;
+}
+
+.shell[data-presentation='stack'] .clock-strip {
+  font-size: 0.85em;
+  gap: 0.35em;
+}
+
+/* The chrome's own controls get a floor of 32px rather than the 44 the tabs get, and
+   the difference is deliberate rather than an oversight. The tabs are how a viewer
+   navigates and are hit constantly; the clock rates and the manifest controls are hit
+   rarely, and six full-size controls would cost more of a 390-pixel-tall screen than
+   the compaction gives back. Both floors are measured by the capture proof, so the
+   exception is visible in the run rather than only in this comment. */
+.shell[data-presentation='stack'] .shell-header button,
+.shell[data-presentation='stack'] .shell-import {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Chrome shrinks before content does: a panel's own margin is the cheapest width there
+   is to give back. */
+.shell[data-presentation='stack'] .panel {
+  padding: 0.6em;
+}
+
+/* The panel stops scrolling so that the list can, which is what lets the detail cover
+   the list without either of them losing its place. */
+.shell[data-presentation='stack'] .messages-panel {
+  overflow: hidden;
+}
+
+/* Every panel measures itself, so its narrow rules are container queries: the same
+   answer for a phone and for a panel docked narrow on a large display.
+
+   A container query styles a container's *descendants*, never the container itself, so
+   `.panel` carries `container-type` and nothing inside the query names `.panel`. The
+   panel's own padding is therefore the viewport rule above; it is the one thing that
+   only matters when the whole window is small. Written down because the first draft put
+   `.panel { padding }` inside the container query, where it silently did nothing. */
+.panel {
+  container-type: inline-size;
+}
+
+@container (max-width: 720px) {
+  /* A list beside a detail becomes a list with the detail over it (FR-016). The split is
+     the positioned ancestor and does not itself scroll: the list scrolls inside its own
+     wrapper, which stays mounted under the detail, so going back goes back to the list
+     where it was left rather than to the top of a different one. */
+  .messages-split {
+    flex-direction: column;
+    gap: 0.4em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .messages-list-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .messages-list {
+    display: table;
+    width: 100%;
+  }
+
+  .messages-list td {
+    max-width: 60cqw;
+  }
+
+  /* Nothing selected, nothing shown: the placeholder is a whole screenful of advice on
+     a phone, and the list it is advising about is the thing it displaced. */
+  .message-detail[data-covering='false'] {
+    display: none;
+  }
+
+  .message-detail[data-covering='true'] {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: var(--shell-bg);
+    padding: 0.5em;
+    overflow: auto;
+  }
+
+  .message-back {
+    min-height: 44px;
+    margin-bottom: 0.4em;
+  }
+
+  .topic-tree {
+    min-width: 0;
+    max-width: none;
+    border-right: none;
+    padding-right: 0;
+    max-height: 40cqh;
+  }
+
+  /* The canvas is the primary surface; the composer takes the width beneath it rather
+     than 22rem beside it. */
+  .map-body {
+    flex-direction: column;
+    min-height: 300px;
+  }
+
+  .map-canvas {
+    min-height: 300px;
+  }
+
+  .composer {
+    width: auto;
+  }
+
+  .composer input[type='number'],
+  .composer input[type='text'] {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+  }
+
+  .map-controls {
+    gap: 0.5rem;
+  }
+
+  /* The slider takes a line of its own rather than sharing one with its label: at 100%
+     of a shared line it was four pixels wider than the box that held it, which is how a
+     row that reads fine on a laptop pushes a phone layout sideways. Found by the proof,
+     not by eye. */
+  .map-time {
+    display: block;
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .map-time input[type='range'] {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    /* The browser's own default margin on a range input. `width: 100%` plus a margin is
+       wider than 100%, which is the whole of the two pixels that pushed this row — and
+       the whole panel — sideways. */
+    margin: 0;
+  }
 }

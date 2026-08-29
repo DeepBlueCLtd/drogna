@@ -1069,7 +1069,8 @@
       "advisories": "adv/advisories",
       "all": "#",
       "platform_state": "ctl/platform/state",
-      "observations": "obs/#"
+      "observations": "obs/#",
+      "telemetry": "ctl/telemetry"
     },
     "message_schemas": [
       {

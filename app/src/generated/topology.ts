@@ -1026,6 +1026,12 @@ export const topology: Topology = {
           "path": "app/config/run.json",
           "line": 597,
           "constant": "/telemetry/topics/telemetry"
+        },
+        {
+          "component": "shell",
+          "path": "app/config/run.json",
+          "line": 597,
+          "constant": "/shell/topics/telemetry"
         }
       ]
     },

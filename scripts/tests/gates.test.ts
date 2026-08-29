@@ -21,6 +21,8 @@ import { runGate as siteResources } from '../gates/check-site-resources.js';
 import { inspect as publication } from '../gates/check-site-publication.js';
 import { runGate as siteDisclosure } from '../gates/check-site-disclosure.js';
 import { runGate as estateConcurrency } from '../gates/check-estate-concurrency.js';
+import { completenessFindings } from '../../app/src/panels/operator/graph.js';
+import type { ConfigRun, Topology } from '../../app/src/generated/types.js';
 import { buildSite } from '../site/build.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
@@ -73,6 +75,67 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     const stale = topologyDrift(REPO_ROOT, join(fixtures, 'stale-topology.json'));
     expect(stale.map((f) => f.message).join('\n')).toMatch(/drifted/);
     expect(topologyDrift(REPO_ROOT)).toEqual([]);
+  });
+
+  it('flow-completeness: an undrawn component, a drawn stranger and an unheard topic all fail; the real tree passes', () => {
+    const config = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'app', 'config', 'run.json'), 'utf8'),
+    ) as ConfigRun;
+    const topology = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'contracts', 'topology.json'), 'utf8'),
+    ) as Topology;
+    // The tree as it stands draws everything it should.
+    expect(completenessFindings(config.shell, topology)).toEqual([]);
+
+    // A component that runs and is not drawn.
+    const undrawn = structuredClone(config.shell);
+    undrawn.components = undrawn.components.filter((component) => component.id !== 'platform');
+    expect(completenessFindings(undrawn, topology).join('\n')).toMatch(
+      /component 'platform' runs in the topology but has no node/,
+    );
+
+    // A node for something that has never existed — Constitution VII, applied to the
+    // diagram. This is the shape the adaptive sampler was deliberately NOT given.
+    const stranger = structuredClone(config.shell);
+    stranger.components = [
+      ...stranger.components,
+      { id: 'adaptive-sampling', label: 'Adaptive sampling', beat: 112, band: 'downstream', rank: 9 },
+    ];
+    expect(completenessFindings(stranger, topology).join('\n')).toMatch(
+      /draws 'adaptive-sampling', which the topology does not know/,
+    );
+
+    // Two nodes claiming one place, and a port edge naming a stranger.
+    const collided = structuredClone(config.shell);
+    collided.components = collided.components.map((component) =>
+      component.id === 'sensors' ? { ...component, rank: 0 } : component,
+    );
+    collided.flow.ports = [
+      ...collided.flow.ports,
+      { from: 'adaptive-sampling', to: 'platform', label: 'a component that does not exist' },
+    ];
+    const collidedFindings = completenessFindings(collided, topology).join('\n');
+    expect(collidedFindings).toMatch(/both declare path:0/);
+    expect(collidedFindings).toMatch(/port edge names 'adaptive-sampling'/);
+
+    // A topic nothing in the picture hears. The first version of this gate counted
+    // every topic it looked at, so a planted one sailed past — a list that counts
+    // everything can never report anything missing.
+    const deaf = structuredClone(topology) as Topology;
+    deaf.topics = [
+      ...deaf.topics,
+      {
+        topic: 'ctl/telemetry/digest',
+        namespace: 'ctl',
+        schema: null,
+        publishers: ['telemetry'],
+        subscribers: [],
+        named_by: [],
+      },
+    ];
+    expect(completenessFindings(config.shell, deaf).join('\n')).toMatch(
+      /topic 'ctl\/telemetry\/digest' is published by telemetry and nothing in the picture hears it/,
+    );
   });
 
   it('estate-concurrency: two workflows sharing a group fail; distinct groups pass', () => {

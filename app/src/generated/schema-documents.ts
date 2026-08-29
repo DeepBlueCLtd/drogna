@@ -2707,7 +2707,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_published",
           "advisories",
           "platform_state",
-          "observations"
+          "observations",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2736,6 +2737,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "platform_state": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
             "description": "The platform's own report of demanded beside current (FR-047). Read by the Operator flow chart's platform face and by the Map's demanded-course ray; the track itself is a query, not this."
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-53)."
           },
           "observations": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
@@ -8070,6 +8075,36 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "sound_speed_equation": {
             "$ref": "#/$defs/sound_speed_equation"
+          },
+          "breach": {
+            "$ref": "#/$defs/breach_state"
+          }
+        }
+      },
+      "breach_state": {
+        "title": "How close this is to raising a divergence",
+        "description": "The monitor's own account of the drift that will trigger a new forecast: the threshold it is scoring against, and how far the persistence streak has got toward the run length that raises the event. Optional, and carried on the sample rather than derived by a consumer, because a display that recomputed the streak from the samples it happened to receive would be a second implementation of the rule, free to disagree with the monitor about whether the loop is about to turn (SRD-v2 FR-53).",
+        "type": "object",
+        "required": [
+          "threshold_m_per_s",
+          "streak",
+          "persistence_count"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "threshold_m_per_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "streak": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Consecutive breaching samples so far. Reset by a sample inside the threshold, and by a new forecast run: evidence against a superseded field is discarded rather than carried."
+          },
+          "persistence_count": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "How long the streak must run before a divergence is raised. A single spike is never sufficient."
           }
         }
       },

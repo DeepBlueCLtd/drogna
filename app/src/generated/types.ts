@@ -599,6 +599,7 @@ export type ConfigShell = {
     "run_published": ConfigCommonTopicFilter;
     "advisories": ConfigCommonTopicFilter;
     "platform_state": ConfigCommonTopicFilter;
+    "telemetry": ConfigCommonTopicFilter;
     "observations": ConfigCommonTopicFilter;
   };
   "message_schemas": {
@@ -1716,6 +1717,14 @@ export type TelemetryResidualSampleReport = {
   "forecast_run_id": TelemetryForecastRunId;
   "samples": TelemetryResidualPoint[];
   "sound_speed_equation": TelemetrySoundSpeedEquation;
+  "breach"?: TelemetryBreachState;
+};
+
+/** telemetry.schema.json #/$defs/breach_state */
+export type TelemetryBreachState = {
+  "threshold_m_per_s": number;
+  "streak": number;
+  "persistence_count": number;
 };
 
 /** telemetry.schema.json #/$defs/residual_summary */

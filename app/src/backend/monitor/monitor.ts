@@ -159,6 +159,15 @@ export class Monitor {
         },
       ],
       sound_speed_equation: 'Mackenzie 1981 nine-term equation',
+      // How close this is to raising a divergence, in the monitor's own numbers. A
+      // consumer that recomputed the streak from the samples it happened to receive
+      // would be a second implementation of the rule, free to disagree with the
+      // monitor about whether the loop is about to turn (FR-53).
+      breach: {
+        threshold_m_per_s: this.config.threshold_m_per_s,
+        streak: Math.abs(residual) > this.config.threshold_m_per_s ? this.breaches.length + 1 : 0,
+        persistence_count: this.config.persistence_count,
+      },
     });
 
     if (Math.abs(residual) > this.config.threshold_m_per_s) {

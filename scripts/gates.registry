@@ -10,3 +10,4 @@ gates/check-site-resources.ts
 gates/check-site-publication.ts
 gates/check-site-disclosure.ts
 gates/check-estate-concurrency.ts
+gates/check-flow-completeness.ts

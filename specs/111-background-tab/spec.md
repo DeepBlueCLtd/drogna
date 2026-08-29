@@ -215,12 +215,19 @@ loop steps through a full cycle from the viewer's input alone.
   not a measurement. No figure appears that the repository cannot support.
 - **FR-010**: Language MUST be domain-first. A software concept is introduced through the
   ocean example that motivates it, never through its own vocabulary first.
-- **FR-011**: Illustrations MUST be schematic and visually distinct from the Map panel,
-  and every distinction they draw MUST survive rendering in greyscale.
-- **FR-012**: Illustrations MUST use drogna's own seeded scenario vocabulary — the eddy,
-  the front, the thermocline, the drifting feature (SRD FR-06) — so that a viewer moving
-  between Background and Map recognises what they are seeing, while FR-005 keeps the
-  drawings from claiming to be readouts.
+- **FR-011**: Illustrations MUST be schematic and visually distinct from the Map panel.
+  They are designed in colour, and every distinction they draw MUST survive rendering in
+  greyscale. That guarantee MUST be structural rather than a promise kept by review:
+  categories come from one shared vocabulary in which a category is a hue **together
+  with** a texture and a line weight, so a colour-only distinction cannot be expressed.
+  A category style is never authored inline in an explainer.
+- **FR-012**: Explainers do NOT share a scene. Each frames the geography its own argument
+  needs, because forcing one patch of sea on eight different points costs more than the
+  continuity it buys. What is shared is the **vocabulary**: the marks for drogna's own
+  seeded features — the eddy, the front, the thermocline, the drifting feature (SRD
+  FR-06) — are drawn the same way wherever they appear, so a viewer moving between
+  Background and Map recognises the thing named even in an unfamiliar frame. FR-005 keeps
+  the drawings from claiming to be readouts.
 - **FR-013**: The pygeoapi explainer MUST be written in the present tense about the real
   deployment, and MUST state plainly that V2 serves these interfaces in the browser
   rather than through pygeoapi, so no viewer concludes the running page is a pygeoapi
@@ -230,12 +237,52 @@ loop steps through a full cycle from the viewer's input alone.
   in the course is presentation, and is discarded like any other per-viewer convenience
   (SRD FR-14, FR-15).
 
+#### How an explainer works
+
+Settled by interview on 29 August 2026. These are the mechanics every explainer obeys,
+so that eight of them read as one course rather than eight bespoke toys.
+
+- **FR-016**: Every explainer, slides and interactive alike, MUST have an ordered spine
+  of steps. Next always works, every step is addressable (FR-003), and following the
+  spine from first step to last is the 60-to-90-second headline path of FR-007.
+- **FR-017**: **Next performs the interaction.** In an interactive explainer, advancing
+  the spine drives the mechanism itself — the sampler sweeps, the query fires, the
+  subscriber catches — so a viewer who never touches the diagram still sees every
+  mechanism and reaches the value panel. It follows that **every step MUST be meaningful
+  without the viewer having poked anything**: an interaction may enrich a step, and may
+  never be the only route to one. This is also what makes an explainer capturable and
+  keyboard-traversable (FR-014) without a second code path.
+- **FR-018**: Within a step, free exploration MUST be available and MUST NOT change the
+  address. Poking is a second route to the states the spine already reaches, for the
+  viewer who wants to ask their own question.
+- **FR-019**: Nothing animates on arrival. An explainer opens in a finished, readable
+  state and moves only when the viewer advances the spine or pokes the diagram. There is
+  no autoplay, no timer, and no clock read of any kind (Constitution I).
+- **FR-020**: The value panel (FR-008) is the **final step** of every explainer, reached
+  by following the spine to its end.
+- **FR-021**: Explainers are reached from a numbered rail listing all eight with their
+  course positions, collapsing below a width threshold to a dropdown with previous and
+  next controls. Course order is fixed (FR-002); the rail shows position in it.
+- **FR-022**: URLs shown inside an explainer are **generic examples of the standard's own
+  shape against a fictional host**, never a path this application serves and never
+  anything that looks pasteable into this page. An explainer teaches a standard; the
+  running system is reached through FR-005's links, not imitated in a drawing.
+- **FR-023**: Prose sits beside the diagram where there is width for it, and stacks below
+  the diagram when there is not.
+- **FR-024**: Below the width an explainer's diagram needs, the diagram MUST be replaced
+  by a short statement of the width it requires, with the step's prose and the rail still
+  usable. A diagram is never scaled down past legibility, and never renders having
+  silently dropped its labels.
+
 ### Key Entities
 
 - **Explainer**: one sub-tab. Carries a title, a form (slides or interactive), an
   ordered sequence of steps, and exactly one closing value panel.
-- **Step**: one addressable position within an explainer — a slide, or a named state of
-  an interaction. The unit an anchor URL selects.
+- **Step**: one addressable position on an explainer's spine — a slide, or a named state
+  of an interaction. The unit an anchor URL selects, and the unit Next advances. Every
+  step is reachable by advancing alone (FR-017).
+- **Category style**: a hue together with a texture and a line weight, drawn from one
+  shared vocabulary. The unit a diagram distinguishes things by; never authored inline.
 - **Value panel**: the fixed closing beat. Three axes, each either filled or explicitly
   omitted with a reason.
 - **Course**: the ordered sequence of eight explainers, and the viewer's position in it.
@@ -251,13 +298,22 @@ loop steps through a full cycle from the viewer's input alone.
   against a deliberately-wired explainer before it is trusted.
 - **SC-003**: Every explainer and every step is reachable by anchor URL, and an unknown
   step falls back to the explainer's first step rather than erroring.
-- **SC-004**: Each explainer's headline path is completable in 60–90 seconds, measured by
-  a walk-through capture rather than asserted.
-- **SC-005**: Every explainer is legible with colour removed, verified by capture.
+- **SC-004**: Each explainer's headline path is completable in 60–90 seconds by advancing
+  the spine alone, touching no diagram (FR-017). Measured by a walk-through capture rather
+  than asserted.
+- **SC-005**: Every explainer is legible with colour removed, verified by capture. The
+  capture is the check on the drawing; the guard against the fault is FR-011's shared
+  category vocabulary, which makes a colour-only distinction unexpressible rather than
+  merely discouraged.
 - **SC-006**: Every explainer is completable by keyboard alone.
 - **SC-007**: Every value panel carries the three axes in the same order and position, and
-  every omitted axis carries a stated reason. Asserted by a test over the content, so a
-  ninth explainer cannot be added without one.
+  every omitted axis carries a stated reason. Content is authored as components and the
+  test introspects the render, which is only sound under two conditions, and both are
+  required: the test **enumerates from the explainer registry** rather than a hand-written
+  list, so a ninth explainer is in scope automatically; and a fixture explainer that omits
+  its value panel is held permanently in the test tree, so the test has been *watched*
+  catching the omission rather than trusted to. Without both, an assertion over markup
+  passes by simply not finding what it did not look for.
 - **SC-008**: A reader who has completed the course can state why SensorThings and OGC
   API-EDR both exist, in terms of the shape of the data rather than the names of the
   standards. Assessed by asking one, not by a test.

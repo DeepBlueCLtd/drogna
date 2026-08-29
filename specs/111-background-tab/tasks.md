@@ -39,16 +39,35 @@ and this branch now carries them.
 
 ## The spine (US1, P1)
 
-- [ ] T020 `BackgroundPanel`: the sub-tab strip, the course order, the viewer's position
-      in it, registered in `panelComponents` and in `config.run`'s `shell.views`.
-- [ ] T021 `Slides`: step index, click and keyboard advance, per-step reveal, each step
-      addressable. No dependency added (FR-006).
-- [ ] T022 `ValuePanel`: the three fixed axes, same position and wording everywhere; an
-      omitted axis renders its stated reason rather than an empty box (FR-008).
-- [ ] T023 Explainer 1, "why a standard at all" (slides). The argument the other seven
-      are judged by, so it lands with the spine rather than after it.
-- [ ] T024 `sea.tsx`: the shared schematic primitives — the nameless sea, the eddy,
-      front, thermocline and drifting feature, the grid (FR-011, FR-012).
+- [ ] T020 `registry.ts`: the eight explainers in course order. Load-bearing — the rail,
+      the anchor scheme and SC-007's test all read it, which is what stops any of the
+      three going stale independently. Build it before its three consumers.
+- [ ] T021 `BackgroundPanel`: hosts the rail and the active explainer, registered in
+      `panelComponents` and in `config.run`'s `shell.views`.
+- [ ] T022 `Rail`: the numbered course rail with position, collapsing to a dropdown plus
+      previous/next below the width threshold (FR-021).
+- [ ] T023 `Spine`: the ordered step machine every explainer obeys (FR-016). Next always
+      works and drives the mechanism itself (FR-017); free play within a step does not
+      change the address (FR-018); nothing animates on arrival (FR-019). Click and
+      keyboard advance, each step addressable. No dependency added (FR-006).
+- [ ] T024 `ValuePanel`: the three fixed axes, same position and wording everywhere; an
+      omitted axis renders its stated reason rather than an empty box (FR-008). Rendered
+      as the spine's final step (FR-020).
+- [ ] T025 SC-007's test, under both conditions that make introspecting a render sound:
+      it enumerates from `registry.ts`, never a hand-written list; and a fixture explainer
+      omitting its value panel lives permanently in the test tree. **Watch it catch that
+      fixture** — an assertion over markup otherwise passes by not finding what it did not
+      look for, which is how two of this repository's original gates reported a file of
+      deliberate violations as clean.
+- [ ] T026 `marks.tsx`: the shared category vocabulary — each category a hue *with* a
+      texture and a line weight, so a colour-only distinction cannot be expressed
+      (FR-011) — plus the marks for the four seeded features (FR-012). No shared scene;
+      each explainer frames its own.
+- [ ] T027 The narrow-width floor: below the width a diagram needs, replace it with a
+      statement of the width required, keeping prose and rail usable (FR-024). Never scale
+      a diagram past legibility, and never render one that has silently dropped its labels.
+- [ ] T028 Explainer 1, "why a standard at all" (slides). The argument the other seven are
+      judged by, so it lands with the spine rather than after it.
 
 ## Inertness (US1, and the feature's one real claim)
 
@@ -73,10 +92,13 @@ and this branch now carries them.
 ## The two ways it is served (US3, P3)
 
 - [ ] T050 Explainer 4, SensorThings (interactive): the instrument chain, each step
-      showing the URL that walks it. **Vocabulary hazard** — the gate forbids
+      showing the URL that walks it — generic to the standard, against a fictional host,
+      never a path this application serves and never something that looks pasteable into
+      this page (FR-022). **Vocabulary hazard** — the gate forbids
       `contact` and `detection`; write around them rather than reaching for the marker.
 - [ ] T051 Explainer 5, OGC API-EDR (interactive): the six query types, each drawn as
-      the geometry it takes and the shape it returns.
+      the geometry it takes and the shape it returns; URLs generic per FR-022, with the
+      live EDR composer reached by link (FR-005) rather than imitated.
 - [ ] T052 Explainer 6, pygeoapi (slides): present tense about the real deployment, and
       an unambiguous statement that this page is not serving through it (FR-013).
 

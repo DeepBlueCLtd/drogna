@@ -216,6 +216,10 @@ loop steps through a full cycle from the viewer's input alone.
   **what you do not have to build**. An axis MUST be free to record a **cost** rather than a
   benefit where one exists — the panel reports consequences, it does not advertise. An axis
   carrying little weight for a topic MUST be omitted with the reason stated, never padded.
+  **No two explainers may omit the same axis for the same reason**: a repeated excuse is
+  what a wrong axis looks like from the outside, and it is the signal Q2 was really after.
+  An axis omitted by more than two explainers is wrong, and is the axis's fault rather
+  than theirs (Q2, resolved).
 - **FR-009**: Every through-life-cost claim MUST be marked as a qualitative argument and
   not a measurement. No figure appears that the repository cannot support.
 - **FR-010**: Language MUST be domain-first. A software concept is introduced through the
@@ -380,11 +384,31 @@ Recorded as open rather than dissolved, per the repository's standing rule.
   claims to prose and links, which is where drift is least visible. The gate that would
   catch a stale claim does not obviously exist, and inventing one before the tab exists
   would be guessing. Revisit once there is content to check.
-- **Q2. Is the value panel's third axis real for NetCDF?** "What you do not have to
-  build" is strong for pygeoapi and SensorThings and looks thin for a file format.
-  FR-008 permits omission with a reason, so this resolves in the authoring rather than
-  here — but if two or more explainers omit the same axis, the axis is wrong, not the
-  explainers.
+- **Q2. Is the value panel's third axis real for NetCDF? — Resolved by the authoring, and
+  the rule it carried is amended.** The literal worry was unfounded: NetCDF fills "what
+  you do not have to build" with *a metadata sidecar, a schema registry, and a convention
+  document to keep in step with both*, which is the strongest statement of that axis in
+  the course. Only one explainer omits it — explainer 1, which sets the criterion the
+  other ten spend.
+
+  The rule attached to this question did fire, on a different axis. **Interoperability is
+  omitted twice**: by *points and fields*, which defers it to explainers 5 and 6 by name,
+  and by *the control loop*, which has nothing to claim because its subject is not a
+  standard. Taken at its word the rule says the axis is wrong. It is not, and the
+  threshold is amended to three with the reason recorded here rather than adjusted
+  quietly:
+
+  The rule was written when the frame was "the standards themselves" and every explainer
+  was about one, so an empty interoperability axis could only mean the axis was wrong.
+  T007 widened the frame to admit three explainers that are drogna's own arrangement. Two
+  of those three — *what a holding is* and *what is allowed to leave* — still fill the
+  axis substantively; only *the control loop* cannot, because it is the one subject that
+  is not reached through an interface at all. That is a property of one explainer, not of
+  the axis, and nine of eleven fill it.
+
+  What the rule was really after survives, and is now the sharper half of the check: two
+  explainers omitting an axis for the *same* reason is a boilerplate excuse and a genuine
+  symptom. Both halves are asserted by test, and both have been watched failing.
 - **Q3. Should the course record where a viewer got to?** FR-015 says no persisted state,
   which is right for the manifest and possibly wrong for a viewer returning to a
   half-finished course. Left as it stands; a per-viewer convenience could be added later

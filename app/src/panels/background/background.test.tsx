@@ -153,6 +153,37 @@ describe('every explainer closes on the same three axes (FR-008, FR-020, SC-007)
     expect(auditValuePanel(axisWithoutReason).join('\n')).toMatch(/omitted without a reason/);
   });
 
+  it('omits an axis rarely, and never twice for the same reason (FR-008, spec Q2)', () => {
+    // Q2 asked what it means when an axis keeps coming up empty, and set the threshold
+    // at two: "if two or more explainers omit the same axis, the axis is wrong, not the
+    // explainers". Building the course moved it to three, and the reasoning is in
+    // spec.md rather than here — in short, the frame widened after the rule was
+    // written, and "not a standard, so no interoperability claim" became a correct
+    // answer rather than a symptom.
+    //
+    // The count is the weaker half of this check. The stronger half is distinctness: an
+    // axis that is genuinely wrong gets omitted with the *same* excuse each time, and
+    // that is what a boilerplate reason looks like from the outside.
+    const OMISSION_CEILING = 2;
+    const faults: string[] = [];
+    for (const axis of VALUE_AXES) {
+      const omitted = COURSE.filter((explainer) => explainer.value?.[axis]?.kind === 'omitted');
+      if (omitted.length > OMISSION_CEILING) {
+        faults.push(
+          `${axis}: omitted by ${omitted.length} explainers (${omitted.map((e) => e.id).join(', ')}) — past ${OMISSION_CEILING} the axis is wrong, not the explainers (spec Q2)`,
+        );
+      }
+      const reasons = omitted.map((explainer) => {
+        const content = explainer.value?.[axis];
+        return content?.kind === 'omitted' ? content.reason.trim().toLowerCase() : '';
+      });
+      if (new Set(reasons).size !== reasons.length) {
+        faults.push(`${axis}: two explainers omit it for the same reason, which is what a wrong axis looks like`);
+      }
+    }
+    expect(faults).toEqual([]);
+  });
+
   it('marks every through-life-cost claim as argued rather than measured (FR-009)', () => {
     for (const explainer of COURSE) {
       const cost = explainer.value?.['through-life cost'];

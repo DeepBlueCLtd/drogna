@@ -79,19 +79,68 @@ and this branch now carries them.
       under load — and it belongs to whoever wants the claim to be stronger than an
       argument. Renumbered T010b here: this file carried two T010s, and the addressing one
       below is the one other work referred to.
-- [ ] T008 Settle what the third storyboard left open. **Still open, and the numbers in it
-      were wrong**: the course is eleven explainers and sixty-nine steps, not ten and
-      sixty-three. Three questions stand, and implementation has evidence for the first two
-      without settling either. (a) Is sixty-nine steps defensible against a time-poor
-      reader? The rail shows each explainer's length, dip-in works, and no explainer is
-      longer than seven steps — so nobody is asked for sixty-nine. Whether the *course*
-      still reads as one argument at that length is a judgement about readers, not code.
-      (b) Is closing on the boundary right? Building it says yes: it is the question an
-      evaluator in this domain asks first, and every explainer before it is about serving
-      data rather than about who may have it. (c) What bar would a fourth non-standards
-      explainer clear? Unanswered, and deliberately: the three that exist each closed a
-      question the standards could not, and inventing the rule before the fourth candidate
-      exists would be guessing at the shape of a thing nobody has proposed.
+- [x] T008 Settle what the third storyboard left open. Settled with the author, 29 August
+      2026, after the course was built — which is the right order, because two of the three
+      questions turned on what building it revealed.
+
+      **(a) Is sixty-nine steps defensible against a time-poor reader? Yes, and the number
+      is the wrong unit.** FR-007's promise is per explainer, and every explainer keeps it:
+      the longest is seven steps, which at about ten seconds a step is inside the
+      sixty-to-ninety-second band. Nobody is asked for sixty-nine. The rail shows each
+      explainer's length before it is started, dip-in works, and the course is the sum of
+      eleven separate promises rather than one long one. Left at eleven and sixty-nine.
+
+      **(b) Is closing on the boundary the right last impression? Yes.** T007's reasoning
+      held up against the built course: everything before explainer 11 is about serving
+      data well, and none of it asks who may have it. For an evaluator in this domain that
+      is the first question, so ending on it answers the question the rest of the course
+      provokes. The control loop is the more memorable image and is deliberately not last;
+      being memorable is not the same as being the answer.
+
+      **(c) What bar must a fourth non-standards explainer clear?** Written now, from what
+      the three that exist have in common rather than from taste. Each of *what a holding
+      is*, *reads and writes are separate* and *what is allowed to leave* answers a
+      question that **the course itself provokes and no standard answers** — EDR serves a
+      collection, but what is *in* one; data arrives one way and leaves another, but do
+      those loads fight; you have been shown how to serve it well, but who may have it. A
+      fourth must clear all four of these:
+
+      1. It answers a question a reader has *because* the standards were explained. If it
+         would make sense before explainer 1, it is a different course.
+      2. No standard answers it. If one does, the explainer is about that standard.
+      3. It is about **arrangement**, not implementation. The three that exist describe
+         how the parts are placed; none is a tour of how drogna's code is written, and a
+         tour would date the moment the code moved.
+      4. It cannot be discharged by a link. FR-005 says a claim about drogna links to the
+         live view rather than depicting it, so if the running system can simply show the
+         thing, showing it beats drawing it.
+
+      A candidate clearing three of four is a link from an existing explainer, not a new one.
+
+- [x] T015 Resolve open question Q2, which fired on an axis it was not aimed at. Its
+      literal worry was unfounded — NetCDF fills "what you do not have to build" with the
+      strongest statement of that axis in the course — but the rule it carried ("two or
+      more explainers omitting the same axis means the axis is wrong") did fire, on
+      interoperability, omitted by *points and fields* and by *the control loop*.
+
+      The axis is right and the threshold was written for a narrower course. When the rule
+      was set, every explainer was about a standard, so an empty interoperability axis
+      could only mean the axis was wrong; T007 then widened the frame to admit three that
+      are drogna's own. Two of those three still fill the axis, and only the control loop
+      cannot, because it is the one subject not reached through an interface. Nine of
+      eleven fill it. Threshold raised to three, in FR-008 and in Q2, with the reasoning
+      recorded rather than the number quietly changed.
+
+      What the rule was really after is kept and sharpened: **no two explainers may omit
+      the same axis for the same reason**, because a repeated excuse is what a wrong axis
+      looks like from outside. Both halves are asserted by test and both were watched
+      failing — a planted third omission reported `interoperability: omitted by 3
+      explainers (points-and-fields, holdings, control-loop)`, and a planted duplicate
+      reason reported `two explainers omit it for the same reason`.
+
+      Settled with the author rather than alone: the alternative readings were to fill both
+      omissions (padding, which FR-008 forbids) or to rework the axis across all eleven,
+      and those are materially different pieces of work.
 
 ## Addressing (US1, and the only work that can break another feature)
 
@@ -233,6 +282,10 @@ and this branch now carries them.
       re-plan rather than replay.
 
 ## Deliberately not done
+
+These stay unticked on purpose. An unticked box under this heading is a decision with
+its reason beside it, not an oversight — which is the whole distinction this file exists
+to keep. Ticking them would claim work that was deliberately not done.
 
 - [ ] T070 A gate that checks Background's drogna-specific claims still match the tree
       — *still declined, and the reason has changed now the content exists, so it is

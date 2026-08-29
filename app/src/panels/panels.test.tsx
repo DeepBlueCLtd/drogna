@@ -32,12 +32,20 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
+/** A panel that addresses no position inside itself never reads this (ADR-0032). */
+const noAddress: PanelParams['address'] = {
+  current: () => undefined,
+  write: () => {},
+  onChange: () => () => {},
+};
+
 function panelProps(config: ConfigRun, runtime: BackendRuntime) {
   const params: PanelParams = {
     config: config.shell,
     client: runtime.transport.connect('shell-test', config.shell.role),
     validator,
     manifest: runtime.manifest,
+    address: noAddress,
   };
   return { params } as unknown as IDockviewPanelProps<PanelParams>;
 }

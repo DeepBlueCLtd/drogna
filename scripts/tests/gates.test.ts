@@ -22,6 +22,8 @@ import { inspect as publication } from '../gates/check-site-publication.js';
 import { runGate as siteDisclosure } from '../gates/check-site-disclosure.js';
 import { runGate as estateConcurrency } from '../gates/check-estate-concurrency.js';
 import { buildSite } from '../site/build.js';
+import { runGate as backgroundInert } from '../gates/check-background-inert.js';
+import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -67,6 +69,29 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       "'panels' may not import from 'backend' (Constitution XI)",
     ]);
     expect(importBoundary(clean)).toEqual([]);
+  });
+
+  it('background-inert: every rule fires on the wired explainer (feature 111 FR-004)', () => {
+    const messages = backgroundInert(violations).map((f) => f.message).join('\n');
+    // Each rule named separately: a gate that has only ever been seen catching one of
+    // its five rules has four rules nobody has watched.
+    expect(messages).toMatch(/may not import 'seam'/);
+    expect(messages).toMatch(/fetch\(\)/);
+    expect(messages).toMatch(/a transport call/);
+    expect(messages).toMatch(/a network connection/);
+    expect(messages).toMatch(/reads no run state/);
+    expect(backgroundInert(clean)).toEqual([]);
+    // And the tree it is actually for: the course as committed is inert.
+    expect(backgroundInert(REPO_ROOT)).toEqual([]);
+  });
+
+  it('background-marks: an explainer that authors its own colour fails (FR-011)', () => {
+    const messages = backgroundMarks(violations).map((f) => f.message).join('\n');
+    expect(messages).toMatch(/a colour literal/);
+    expect(messages).toMatch(/a computed colour/);
+    expect(messages).toMatch(/a paint literal/);
+    expect(backgroundMarks(clean)).toEqual([]);
+    expect(backgroundMarks(REPO_ROOT)).toEqual([]);
   });
 
   it('topology-drift: a stale committed artefact fails; the real one passes', () => {

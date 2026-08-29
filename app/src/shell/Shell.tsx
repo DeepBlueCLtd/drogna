@@ -41,7 +41,7 @@ export interface PanelParams {
   validator: SeamValidator;
   manifest: RunManifest;
   /**
-   * The panel's own slice of the address (FR-15, ADR-0031). What the remainder means
+   * The panel's own slice of the address (FR-15, ADR-0032). What the remainder means
    * is the panel's business: a panel that does not address positions inside itself
    * simply never reads this.
    */

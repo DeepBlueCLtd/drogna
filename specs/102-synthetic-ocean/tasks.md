@@ -20,3 +20,11 @@
       climatology of the same analytic world sampled monthly; a seasonal cycle adds
       a parameter the demo does not yet read. Revisit if 109's map or a blog post
       wants visible seasonality.*
+- [x] T108 Holdings' requirement written into SRD-v2 §5.2 as FR-46 (issue #58): the
+      inventory through the seam and the gate against a configured path, master-valid
+      before display, era/id/instant/grid/digest per row, the manifest openable whole,
+      refresh only on the store's announcement and never a poll, and a refusal stated
+      rather than an empty store rendered. Two of those claims had no test behind them
+      and now do — the announcement-driven refresh with a genuine nowcast replacement,
+      and the gate's 403 stated in the tab — watched failing against a planted poll, a
+      dropped subscription and a swallowed refusal.

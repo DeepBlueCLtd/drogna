@@ -1,6 +1,6 @@
 # ADR-0028: dockview hosts the shell
 
-**Status:** Accepted; amended by ADR-0031 (addressability goes below the panel)
+**Status:** Accepted; amended by ADR-0032 (addressability goes below the panel)
 **Date:** 29 August 2026
 **Feature:** 101 (foundations & shell)
 
@@ -29,7 +29,7 @@ The React-hosting pattern, which this ADR exists to record:
   never from literals in the shell source (Constitution IV).
 - The panel `id` is the unit of URL addressability (FR-15): `#/view/<id>` activates
   the panel via `api.getPanel(id).api.setActive()`, and activation writes the hash
-  back, so the address bar always names the active view. **Amended by ADR-0031**: an
+  back, so the address bar always names the active view. **Amended by ADR-0032**: an
   address is now a view id and an opaque remainder the shell hands to the panel and
   never parses, so a panel may address positions inside itself. `#/view/<id>` and every
   link of that shape are unchanged.

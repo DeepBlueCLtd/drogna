@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { QuerySubsets } from '../../generated/types.js';
-import { classifyResponse, composeUrl, offeringFrom } from './composer.js';
+import { areaRing, classifyResponse, composeUrl, offeringFrom, pickedPosition } from './composer.js';
 
 const subsets: QuerySubsets = {
   schema_version: 1,
@@ -66,6 +66,40 @@ describe('the EDR composer (feature 109)', () => {
       const coords = new URLSearchParams(composed.url.split('?')[1]).get('coords');
       expect(coords).toBe('POLYGON((-11.25 45.75, -10.75 45.75, -10.75 46.25, -11.25 46.25, -11.25 45.75))');
     }
+  });
+
+  it('draws the same ring it queries: the WKT is the drawn ring, coordinate for coordinate', () => {
+    const ring = areaRing(-11, 46);
+    const composed = composeUrl('/api/edr', {
+      collection: 'nowcast',
+      queryType: 'area',
+      parameters: [],
+      longitude: -11,
+      latitude: 46,
+      depthM: 50,
+    });
+    expect(composed.ok).toBe(true);
+    if (composed.ok) {
+      const coords = new URLSearchParams(composed.url.split('?')[1]).get('coords');
+      expect(coords).toBe(`POLYGON((${ring.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`);
+    }
+    // Closed, and closed on the corner it opened at: an open ring is not a polygon.
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+  });
+
+  it('takes a position off the canvas, wrapping the globe and refusing a miss (issue #53)', () => {
+    // The plan view, clicked inside the domain: three decimals, as typed.
+    expect(pickedPosition([-11.23456, 46.51234])).toEqual({ longitude: -11.235, latitude: 46.512 });
+    // The globe, dragged past the seam: deck.gl unprojects to a wound longitude,
+    // and the same place must compose the same URL as the unwound click.
+    expect(pickedPosition([348.765, 46.512])).toEqual({ longitude: -11.235, latitude: 46.512 });
+    expect(pickedPosition([-371.235, 46.512])).toEqual({ longitude: -11.235, latitude: 46.512 });
+    // A click off the sphere unprojects to nothing, or to a latitude no place has.
+    expect(pickedPosition(undefined)).toBeUndefined();
+    expect(pickedPosition(null)).toBeUndefined();
+    expect(pickedPosition([-11.2])).toBeUndefined();
+    expect(pickedPosition([-11.2, 96])).toBeUndefined();
+    expect(pickedPosition([Number.NaN, 46])).toBeUndefined();
   });
 
   it('declines to guide a trajectory, saying why, rather than guessing per-vertex times', () => {

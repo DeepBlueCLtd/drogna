@@ -15,8 +15,8 @@ The attraction is that the list is closed. A client able to form those URLs can
 ask everything the interface offers. There is no expression language to learn,
 nothing to escape, and nothing the server has to defend itself against beyond
 bounds it chooses for itself. EDR is the only way anything reads drogna's
-[coverage store](../subsystems/c08-coverage-store.md), and the
-[query layer](../subsystems/c09-query-layer.md) that serves it is pygeoapi,
+[coverage store](../archive/subsystems/c08-coverage-store.md), and the
+[query layer](../archive/subsystems/c09-query-layer.md) that serves it is pygeoapi,
 configured with two provider plugins written for this harness.
 
 This page is a primer for a reader who has not met the standard. It is also a
@@ -245,7 +245,7 @@ degraded status. The default outcome of losing M is a provider quietly evaluatin
 the whole route at a single time and returning HTTP 200 with values that look
 entirely reasonable: for the twenty-vertex route the spike measured, wrong by
 12.8 °C against 2.7 × 10⁻⁸ °C for the correct answer. The full account is in
-[three ways to lose a timestamp](../blog/posts/three-ways-to-lose-a-timestamp.md).
+[three ways to lose a timestamp](../archive/blog/posts/three-ways-to-lose-a-timestamp.md).
 
 drogna's response is in three parts. The deployment pins Shapely 2.1 or later
 with the reason written at the pin. The image build parses a known

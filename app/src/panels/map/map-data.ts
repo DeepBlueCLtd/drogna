@@ -162,3 +162,24 @@ export function projectionCells(plan: Plan, depthBand: number): ProjectionCell[]
       depthBand: region.depth_band,
     }));
 }
+
+/**
+ * Whether a lon/lat lies inside a closed ring (ray casting, half-open on the north
+ * and east edges). The map uses it to say whether a picked position is inside the
+ * domain — the query is sent either way, and the server's own answer is what the
+ * composer displays; this is a warning, never a veto.
+ */
+export function insideRing(ring: readonly [number, number][], longitude: number, latitude: number): boolean {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [lonA, latA] = ring[index];
+    const [lonB, latB] = ring[previous];
+    if (
+      latA > latitude !== latB > latitude &&
+      longitude < ((lonB - lonA) * (latitude - latA)) / (latB - latA) + lonA
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}

@@ -8,6 +8,7 @@ import type { Plan } from '../../generated/types.js';
 import {
   graticule,
   gridCells,
+  insideRing,
   projectionCells,
   rampColour,
   routePositionAt,
@@ -163,5 +164,26 @@ describe('the map data builders (feature 109)', () => {
     expect(band0[0].boundary.length).toBeGreaterThanOrEqual(6);
     const band1 = projectionCells(plan, 1);
     expect(band1[0].fraction).toBe(1);
+  });
+
+  it('says whether a picked position is inside the domain ring, edges included by side', () => {
+    // The domain as the reference collection serves it: a closed lon/lat ring.
+    const ring: [number, number][] = [
+      [-14, 44],
+      [-8, 44],
+      [-8, 48],
+      [-14, 48],
+      [-14, 44],
+    ];
+    expect(insideRing(ring, -11, 46)).toBe(true);
+    expect(insideRing(ring, -20, 46)).toBe(false);
+    expect(insideRing(ring, -11, 40)).toBe(false);
+    expect(insideRing(ring, -11, 52)).toBe(false);
+    // Half-open: the west and south edges are in, the east and north are out, so a
+    // click on a shared edge belongs to exactly one side.
+    expect(insideRing(ring, -14, 46)).toBe(true);
+    expect(insideRing(ring, -8, 46)).toBe(false);
+    expect(insideRing(ring, -11, 44)).toBe(true);
+    expect(insideRing(ring, -11, 48)).toBe(false);
   });
 });

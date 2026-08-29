@@ -6,7 +6,7 @@
  * a clock sample actually caused (Constitution VII: the test would fail against a
  * fixture, because a fixture publishes nothing).
  */
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../config/run.json';
@@ -30,7 +30,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-/** A panel that addresses no position inside itself never reads this (ADR-0031). */
+/** A panel that addresses no position inside itself never reads this (ADR-0032). */
 const noAddress: PanelParams['address'] = {
   current: () => undefined,
   write: () => {},
@@ -125,9 +125,28 @@ describe('the panels against a live backend', () => {
     expect(Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1])).toBeGreaterThan(0);
     expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
     // The toggle is display-only: checking it reveals the buffered heartbeats.
-    const toggle = screen.getByRole('checkbox');
-    act(() => toggle.click());
+    act(() => screen.getByLabelText('show heartbeats').click());
     expect(listedTopics()).toContain(config.shell.topics.heartbeat);
+  });
+
+  it('Messages hides clock samples from the list by default and its own toggle displays them; both stay counted', () => {
+    render(<MessagesPanel {...panelProps(config, runtime)} />);
+    // Provoke clock traffic: the lockstep clock advances only when stepped.
+    act(() => runtime.clock.step());
+    act(() => vi.advanceTimersByTime(2100));
+    const listedTopics = () =>
+      [...document.querySelectorAll('.message-topic')].map((cell) => cell.textContent);
+    const received = () =>
+      Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1]);
+    // Clock samples arrived and are counted, but are not rendered.
+    expect(received()).toBeGreaterThan(0);
+    expect(listedTopics()).not.toContain(config.shell.topics.clock);
+    const countedBefore = received();
+    // Its toggle is independent of the heartbeat one and display-only.
+    act(() => screen.getByLabelText('show clock').click());
+    expect(listedTopics()).toContain(config.shell.topics.clock);
+    expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
+    expect(received()).toBe(countedBefore);
   });
 
   it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
@@ -171,6 +190,62 @@ describe('the panels against a live backend', () => {
     expect(undeclared?.className).toMatch(/topic-undeclared/);
   });
 
+  it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let inventoryRequests = 0;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      inventoryRequests += 1;
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    try {
+      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(1);
+      const nowcastBefore = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      expect(nowcastBefore).toBeTruthy();
+      // Time passing is not an announcement: nothing polls, so nothing is refetched.
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(1);
+      // A genuine replacement: the generator's own cadence, driven by the clock, and
+      // the store announces it on the topic the shell's configuration names.
+      await act(async () => {
+        for (let tick = 0; tick < config.env_generator.nowcast.interval_ticks; tick++) {
+          runtime.clock.tickOnce();
+        }
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(2);
+      const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      expect(nowcastAfter).not.toBe(nowcastBefore);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('Holdings states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    try {
+      // A path the release gate does not clear: the refusal is the real gate's, and
+      // an empty table would be a lie about what the store holds (Constitution VII).
+      const misconfigured = lockstepConfig();
+      misconfigured.shell.endpoints.holdings = '/api/not-a-cleared-prefix/holdings';
+      render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('Map states WebGL absence honestly, lists advisories as present-and-stating-empty, and the composer offers only what is served', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
@@ -199,6 +274,70 @@ describe('the panels against a live backend', () => {
       expect(collectionOptions).toContain('area');
       // The missing step is named until the URL can assemble.
       expect(screen.getByTestId('composer-url').textContent).toMatch(/choose a collection/);
+      // The position is the map panel's, not the pane's — which is what lets a click
+      // on the canvas place it (issue #53). Writing it through the boxes exercises the
+      // same state the click writes: the URL assembles, and the map says where the
+      // position falls against the domain it fetched from the reference collection.
+      const selects = [...document.querySelectorAll('.composer select')] as HTMLSelectElement[];
+      act(() => {
+        fireEvent.change(selects[0], { target: { value: 'nowcast' } });
+        fireEvent.change(selects[1], { target: { value: 'position' } });
+      });
+      const numbers = [...document.querySelectorAll('.composer input[type="number"]')] as HTMLInputElement[];
+      act(() => {
+        fireEvent.change(numbers[0], { target: { value: '-11.235' } });
+        fireEvent.change(numbers[1], { target: { value: '46.512' } });
+        fireEvent.change(numbers[2], { target: { value: '50' } });
+      });
+      expect(screen.getByTestId('composer-url').textContent).toContain('POINT%28-11.235+46.512%29');
+      expect(screen.getByText(/position -11.235, 46.512 — inside the domain/)).toBeTruthy();
+      act(() => {
+        fireEvent.change(numbers[0], { target: { value: '-25' } });
+      });
+      expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('the depth cube asks one area query per level of the holding\'s own depth axis (#59)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const asked: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input));
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    try {
+      render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // The plan view's own single-level query has already gone out; from here on
+      // every area query counted is the cube's.
+      asked.length = 0;
+      const view = [...document.querySelectorAll('.map-controls select')].at(-1) as HTMLSelectElement;
+      await act(async () => {
+        fireEvent.change(view, { target: { value: 'cube' } });
+        await Promise.resolve();
+      });
+      // The inventory, then one area query per level, and the levels are the ones
+      // the now-cast's ground-truth manifest states — not a list typed into the shell.
+      const nowcast = runtime.store.holdings().find((holding) => holding.era === 'nowcast');
+      if (!nowcast) throw new Error('the store holds no now-cast to take a depth axis from');
+      const depth = nowcast.manifest.grid.depth;
+      const expected = Array.from({ length: depth.count }, (_, index) => depth.minimum + index * depth.spacing);
+      await act(async () => {
+        for (let flush = 0; flush < expected.length * 4 + 8; flush++) await Promise.resolve();
+      });
+      const areaQueries = asked.filter((url) => url.includes('/area?'));
+      expect(areaQueries).toHaveLength(expected.length);
+      expect(areaQueries.map((url) => Number(new URL(url, 'http://x').searchParams.get('z')))).toEqual(expected);
+      expect(screen.getByText(new RegExp(`${expected.length} level\\(s\\), one area query each`))).toBeTruthy();
+      // Every level is drawn from a coverage that passed its master; a level that
+      // did not would be named as declined rather than quietly missing.
+      expect(screen.queryByText(/level\(s\) declined/)).toBeNull();
     } finally {
       globalThis.fetch = realFetch;
     }

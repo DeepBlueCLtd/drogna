@@ -1,5 +1,5 @@
 /**
- * Background's half of the address (FR-003, ADR-0031). The shell hands down an
+ * Background's half of the address (FR-003, ADR-0032). The shell hands down an
  * opaque remainder; this module is the only place that knows it means
  * `<explainer-id>/<step>`.
  *

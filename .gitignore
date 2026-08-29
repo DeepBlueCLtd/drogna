@@ -1,3 +1,7 @@
+# The built site. Written by `pnpm site:build`; published from a workflow, never
+# committed — the estate is the gh-pages branch, not this one.
+site/build/
+
 # Node
 node_modules/
 .pnpm-store/

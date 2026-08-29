@@ -185,9 +185,14 @@ body,
   color: var(--shell-dim);
 }
 
-.messages-heartbeat-toggle {
+.messages-suppression-toggle {
   margin-left: 1.2em;
   user-select: none;
+}
+
+.messages-suppression-note {
+  margin-left: 0.5em;
+  color: var(--shell-dim);
 }
 
 .messages-split {

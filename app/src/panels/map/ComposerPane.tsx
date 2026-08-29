@@ -3,7 +3,9 @@
  * visible, assembling live and copyable. It offers only what the query components
  * genuinely serve — collections fetched from the collections list, query types and
  * parameters from the served subset statement — never stubbed. The result renders
- * where it was asked for, with null, declined and absent kept as three facts.
+ * where it was asked for, with null, declined and absent kept as three facts. The
+ * position may be typed here or clicked on the canvas: the choices live in the map
+ * panel, so the click and the two number boxes write to one place (issue #53).
  */
 import { useEffect, useState } from 'react';
 import type { ConfigShell, QuerySubsets } from '../../generated/types.js';
@@ -21,15 +23,26 @@ export function ComposerPane({
   config,
   validator,
   latestForecast,
+  choices,
+  onChoices,
+  positionNote,
 }: {
   config: ConfigShell;
   validator: SeamValidator;
   latestForecast?: string;
+  /** The composed query, owned by the map so a canvas click can write to it. */
+  choices: ComposerChoices;
+  onChoices: (patch: Partial<ComposerChoices>) => void;
+  /** What the map can say about the chosen position, or undefined if none is set. */
+  positionNote?: string;
 }) {
   const [offering, setOffering] = useState<ComposerOffering | undefined>();
-  const [choices, setChoices] = useState<ComposerChoices>({ parameters: [] });
   const [result, setResult] = useState<ComposerResult | undefined>();
   const [copied, setCopied] = useState(false);
+
+  // Any change to the query — typed or clicked — retires the result it produced,
+  // so what is displayed always answers the URL displayed above it.
+  useEffect(() => setResult(undefined), [choices]);
 
   useEffect(() => {
     void (async () => {
@@ -70,10 +83,6 @@ export function ComposerPane({
 
   if (!offering) return <div className="composer">enumerating what the server serves…</div>;
 
-  const update = (patch: Partial<ComposerChoices>) => {
-    setResult(undefined);
-    setChoices((previous) => ({ ...previous, ...patch }));
-  };
 
   return (
     <div className="composer">
@@ -82,7 +91,7 @@ export function ComposerPane({
         1 · collection{' '}
         <select
           value={choices.collection ?? ''}
-          onChange={(event) => update({ collection: event.target.value || undefined })}
+          onChange={(event) => onChoices({ collection: event.target.value || undefined })}
         >
           <option value="">choose…</option>
           {offering.collections.map((id) => (
@@ -96,7 +105,7 @@ export function ComposerPane({
         2 · query type{' '}
         <select
           value={choices.queryType ?? ''}
-          onChange={(event) => update({ queryType: event.target.value || undefined })}
+          onChange={(event) => onChoices({ queryType: event.target.value || undefined })}
         >
           <option value="">choose…</option>
           {offering.queryTypes.map((type) => (
@@ -114,7 +123,7 @@ export function ComposerPane({
               type="checkbox"
               checked={choices.parameters.includes(name)}
               onChange={(event) =>
-                update({
+                onChoices({
                   parameters: event.target.checked
                     ? [...choices.parameters, name]
                     : choices.parameters.filter((chosen) => chosen !== name),
@@ -125,14 +134,18 @@ export function ComposerPane({
           </label>
         ))}
       </fieldset>
+      <p className="composer-pick">
+        4 · position — click the canvas to place it, or type it. The marker, and an
+        area query's box, are drawn where the URL says.
+      </p>
       <label>
-        4 · longitude{' '}
+        longitude{' '}
         <input
           type="number"
           step="0.1"
           value={choices.longitude ?? ''}
           onChange={(event) =>
-            update({ longitude: event.target.value === '' ? undefined : Number(event.target.value) })
+            onChoices({ longitude: event.target.value === '' ? undefined : Number(event.target.value) })
           }
         />
       </label>
@@ -143,10 +156,11 @@ export function ComposerPane({
           step="0.1"
           value={choices.latitude ?? ''}
           onChange={(event) =>
-            update({ latitude: event.target.value === '' ? undefined : Number(event.target.value) })
+            onChoices({ latitude: event.target.value === '' ? undefined : Number(event.target.value) })
           }
         />
       </label>
+      {positionNote && <p className="composer-pick-note">{positionNote}</p>}
       <label>
         5 · depth (m){' '}
         <input
@@ -154,7 +168,7 @@ export function ComposerPane({
           step="10"
           value={choices.depthM ?? ''}
           onChange={(event) =>
-            update({ depthM: event.target.value === '' ? undefined : Number(event.target.value) })
+            onChoices({ depthM: event.target.value === '' ? undefined : Number(event.target.value) })
           }
         />
       </label>
@@ -164,7 +178,7 @@ export function ComposerPane({
           type="text"
           placeholder="collection's first step"
           value={choices.datetime ?? ''}
-          onChange={(event) => update({ datetime: event.target.value || undefined })}
+          onChange={(event) => onChoices({ datetime: event.target.value || undefined })}
         />
       </label>
       <div className="composer-url" data-testid="composer-url">

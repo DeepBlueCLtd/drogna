@@ -4,7 +4,7 @@
  * names what is shown. A deep link selects what is shown, never what happened: no
  * manifest state travels here.
  *
- * Feature 111 extends the scheme below the panel (ADR-0031, amending ADR-0028's
+ * Feature 111 extends the scheme below the panel (ADR-0032, amending ADR-0028's
  * "the panel id is the unit of URL addressability"). An address is a view id and an
  * opaque remainder: '#/view/background/mqtt/3' names the panel 'background' and
  * hands it 'mqtt/3'. The remainder is meaningless here on purpose — the shell never

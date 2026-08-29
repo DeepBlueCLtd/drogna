@@ -10,7 +10,7 @@ field is the one worth reading about, because the forecast is admitted rubbish �
 analytic [advection](../glossary.md#advection) with noise on top, and
 [derived here](advection.md) — while the uncertainty beside it is the thing the
 rest of the system actually consumes. The
-[planner](../subsystems/c15-planner.md) chooses where to sample from it. The
+[planner](../archive/subsystems/c15-planner.md) chooses where to sample from it. The
 browser client colours the map with it. If it is wrong, everything downstream is
 confidently wrong with it.
 
@@ -206,7 +206,7 @@ Once sampling begins the second source switches on, and the combination is
 deliberately **not** done here. The model runner publishes the spread and nothing
 else; its own uncertainty file says so in its metadata — "the per-cell spread
 across the run's members, and nothing else". The combination of spread with
-observation age lives in the [planner](../subsystems/c15-planner.md), which is
+observation age lives in the [planner](../archive/subsystems/c15-planner.md), which is
 the only component that needs it. Putting it in the model runner would give the
 runner a dependency on an observation stream it does not otherwise read, and a
 component that must be told what has been measured in order to say how uncertain
@@ -238,7 +238,7 @@ statement of what is not built. The spread is a *claim* that the forecast will b
 wrong by about this much, at this point. drogna has a ground-truth manifest, so
 the claim is checkable — one could take the forecast error at every cell, bin it
 by published spread, and see whether the bins line up. Nothing does this. The
-[telemetry](../subsystems/c16-telemetry.md) component scores forecast skill
+[telemetry](../archive/subsystems/c16-telemetry.md) component scores forecast skill
 against a [persistence](../glossary.md#persistence-forecast) reference, which is
 a different question: it asks whether the forecast is better than doing nothing,
 not whether the uncertainty beside it is calibrated. Constitution IX says ground
@@ -259,6 +259,6 @@ truth is scored rather than assumed, and on this quantity it is not yet scored.
 
 There is no mathematical notation on this page. Everything above is arithmetic
 that survives being written in words, and the site has no renderer for
-mathematics — see [Site tooling](../decisions/site-tooling.md). Where a formula
+mathematics — see [Site tooling](../decisions/index.md). Where a formula
 would genuinely have been clearer it appears as a fenced block in the same form
 the source uses.

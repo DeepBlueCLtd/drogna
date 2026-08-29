@@ -14,7 +14,7 @@ describe('URL-addressable views (FR-15)', () => {
   });
 });
 
-describe('addressability below the panel (feature 111 FR-003, ADR-0031)', () => {
+describe('addressability below the panel (feature 111 FR-003, ADR-0032)', () => {
   it('round-trips a view id and an opaque remainder', () => {
     expect(addressFromHash(hashForView('background', 'mqtt/3'))).toEqual({
       view: 'background',

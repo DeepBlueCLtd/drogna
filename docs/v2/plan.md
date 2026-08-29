@@ -161,7 +161,7 @@ arc exists to walk through.
 SRD-v2 §5.10) and sits outside the arc: eleven self-contained explainers of the standards
 the architecture rests on and of what it takes to use them honestly, reading no run state
 and depending only on 101's shell — except the addressing, which it extended below the
-panel (ADR-0031, amending ADR-0028). It took 111 rather than 110 so that the walkthrough
+panel (ADR-0032, amending ADR-0028). It took 111 rather than 110 so that the walkthrough
 candidate above keeps its named slot; if that candidate is dropped, reconcile the numbers
 here rather than quietly.
 

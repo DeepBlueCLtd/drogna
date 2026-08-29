@@ -16,15 +16,22 @@ and this branch now carries them.
       Re-reading the amended paragraph against the tree also found Holdings missing from
       the tab list and the layout library still written as an open question; both fixed,
       and the reasons are in `plan.md`.
-- [x] T002 ADR amending ADR-0028: addressability below the panel — `docs/adr/0031-...`.
-      Written after the code rather than before it, which is a deviation from what this
-      task said and is recorded rather than glossed: the shape was already settled in
-      `plan.md`, and writing the record last let it carry the watched failure verbatim
-      instead of a prediction of it. ADR-0028's own bullet now says it is amended.
-      Adding the row also found `docs/adr/README.md` stopped at 0026 while 0027 to 0030
-      existed on disk — the second time that index has silently fallen behind. Rows added
-      and both catches noted there, because a table that rots twice is a fact about how
-      it is maintained.
+- [x] T002 ADR amending ADR-0028: addressability below the panel —
+      `docs/adr/0032-addressability-goes-below-the-panel.md`. Written after the code
+      rather than before it, which is a deviation from what this task said and is
+      recorded rather than glossed: the shape was already settled in `plan.md`, and
+      writing the record last let it carry the watched failure verbatim instead of a
+      prediction of it. ADR-0028's own bullet now says it is amended.
+
+      *Two corrections on merging `main`.* It was written as ADR-0031 and is renumbered
+      to 0032, because the site-tooling record took 0031 first; a number is a fixed
+      address for the life of the project, so the record nobody has referred to yet is
+      the one that moves. And writing it found `docs/adr/README.md` had stopped at 0026
+      while 0027 to 0030 existed on disk — the second time that index had silently
+      fallen behind — so the rows were added; `main` had meanwhile deleted the index
+      outright for the same reason and generates one for the site from the records
+      themselves. That is the better answer and it is the one kept: a hand-kept list
+      beside the files it lists is a second copy of something nobody has to copy.
 - [x] T003 Noted in `docs/v2/plan.md` §5. 110 is *not* dropped, so there is nothing to
       reconcile: 111 built explainers, not the machinery that drives the other panels.
       The note says so, and says the debt is owed by whoever drops the candidate, so it

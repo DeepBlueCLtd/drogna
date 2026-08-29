@@ -1,5 +1,0 @@
-
-    ssl_certificate @{certificate};
-    ssl_certificate_key @{key};
-    ssl_protocols @{protocols};
-    ssl_prefer_server_ciphers off;

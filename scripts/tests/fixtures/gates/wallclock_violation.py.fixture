@@ -1,6 +1,0 @@
-"""A component reading the host clock for an operational purpose."""
-import time
-
-
-def stamp_observation():
-    return time.time()

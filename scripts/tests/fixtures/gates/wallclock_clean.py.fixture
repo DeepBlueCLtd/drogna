@@ -1,6 +1,0 @@
-"""A component reading time from the clock port, as Principle I requires."""
-from harness_core.clock import Clock
-
-
-def stamp_observation(clock: Clock):
-    return clock.now()

@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  # The preview comment below. Nothing else here writes to a pull request.
+  pull-requests: write
 
 # Serialised, never cancelled: two estate pushes racing would drop one instance.
 concurrency:
@@ -91,6 +93,70 @@ jobs:
             sleep "$delay"
           done
           git push
+
+      # The instance is published and addressable, and until now the only person told
+      # was whoever holds the ntfy topic. A reviewer arriving at the pull request had no
+      # way to reach the thing under review without knowing the estate's URL scheme by
+      # heart, which is exactly what NFR-04 says the estate exists not to require.
+      #
+      # One comment per pull request, rewritten in place on every push. Appending would
+      # bury the review under a stack of near-identical links, and the only one that is
+      # ever true is the newest.
+      - name: Comment the preview link on the pull request
+        if: github.ref_name != 'main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- drogna-instance-preview -->';
+            // Written to GITHUB_ENV by the placement step, and deliberately not
+            // re-derived here: two definitions of the slug could disagree, and the one
+            // that matters is the directory the instance was actually written to.
+            const slug = process.env.slug;
+            if (!slug) {
+              core.setFailed('the instance slug is unset — a link to instances// helps nobody');
+              return;
+            }
+            const url = `https://deepbluecltd.github.io/drogna/instances/${slug}/`;
+            const { owner, repo } = context.repo;
+            const pulls = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${context.ref.replace('refs/heads/', '')}`,
+            });
+            if (pulls.data.length === 0) {
+              core.info('no open pull request for this branch; nothing to comment on');
+              return;
+            }
+            const body = [
+              marker,
+              `**Preview instance:** ${url}`,
+              '',
+              `Built from \`${context.sha.slice(0, 7)}\`. The whole harness runs in the page — the`,
+              'clock is a component, the tabs are live, and nothing is mocked below the seam.',
+              '',
+              'Deep links: ' + [
+                `[Intro](${url}#/view/intro)`,
+                `[Background](${url}#/view/background)`,
+                `[System](${url}#/view/system)`,
+                `[Holdings](${url}#/view/holdings)`,
+                `[Map](${url}#/view/map)`,
+                `[Messages](${url}#/view/messages)`,
+              ].join(' · '),
+              '',
+              'This comment is rewritten on every push to the branch, so the link above is',
+              'always the newest build.',
+            ].join('\n');
+            for (const pull of pulls.data) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: pull.number,
+              });
+              const existing = comments.find((comment) => comment.body?.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                core.info(`updated the preview comment on #${pull.number}`);
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number: pull.number, body });
+                core.info(`posted the preview comment on #${pull.number}`);
+              }
+            }
 
       # D17: the author is told when something is ready to look at. The topic is a CI
       # secret (PR-01): with no secret configured, this step says so and does nothing.

@@ -281,6 +281,49 @@ describe('the course is traversable without a pointer (FR-014, SC-006)', () => {
 });
 
 describe('the narrow panel (FR-021, FR-024)', () => {
+  it('withdraws a drawing on its own measurement, not only on a width it was handed', () => {
+    // The gap this closes: every other test here supplies `width`, so none of them
+    // exercised the measuring path — and that path was broken. Figure measured the
+    // element it could unmount, the observer read the withdrawn figure as zero width,
+    // and the floor never appeared at all while every test of it passed.
+    const measured: HTMLElement[] = [];
+    class WidthObserver {
+      constructor(private readonly notify: () => void) {}
+      observe(element: HTMLElement) {
+        measured.push(element);
+        this.notify();
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const realObserver = globalThis.ResizeObserver;
+    const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    // jsdom lays nothing out, so clientWidth is always 0 and 0 means "unknown".
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 200 });
+    globalThis.ResizeObserver = WidthObserver as unknown as typeof ResizeObserver;
+    try {
+      render(
+        <Figure
+          figure={{ minWidth: 360, label: 'a drawing', draw: () => <svg /> }}
+          context={{ poke: undefined, onPoke: () => {} }}
+        />,
+      );
+      expect(screen.getByTestId('figure-floor').textContent).toMatch(/needs about 360px/);
+      // And it stays withdrawn: the measured element is the column, which is still
+      // there, so the measurement cannot be undone by acting on it.
+      expect(measured).toHaveLength(1);
+      expect((measured[0] as HTMLElement).className).toBe('bg-figure-column');
+      expect(document.querySelector('.bg-figure-column')).not.toBeNull();
+    } finally {
+      globalThis.ResizeObserver = realObserver;
+      // clientWidth is defined on Element.prototype, not on HTMLElement's, so there is
+      // no own descriptor to put back — the shadowing property has to be removed, or it
+      // leaks a 200px layout into every test that runs after this one. It did.
+      if (realWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', realWidth);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
+    }
+  });
+
   it('replaces a drawing it cannot render legibly with the width it wants', () => {
     const figure = { minWidth: 360, label: 'a drawing', draw: () => <svg /> };
     render(<Figure figure={figure} width={240} context={{ poke: undefined, onPoke: () => {} }} />);

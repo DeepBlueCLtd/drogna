@@ -97,6 +97,30 @@ rather than reconstructed later.
       compared controls alone and a planted removal of the topic tree — a surface made
       entirely of text — went straight past it. Watched failing after the fix.
 
+## Merging `main` (the load-time work, PR #79)
+
+- [x] T021 `main` landed the load-time spike while this branch was open, and two files
+      conflicted. `scripts/gates.registry` is append-only, so both gate lines stay —
+      `check-one-breakpoint` and `check-schema-masters`. `Shell.tsx` was the real one:
+      `main` made the Map panel lazy and withheld its render until the tab is first
+      active, keyed on **dockview's panel API**, which the stack does not have.
+
+      Resolved by moving the fact into the registry, where both presentations read it:
+      the map is `lazy` there, and `DEFERRED_VIEWS` names the view whose render is
+      withheld. *How* "first shown" is observed is left to each presentation — dockview's
+      `onDidActiveChange` in the dock, the shown view in the stack — because that is the
+      only part that genuinely differs. Both latch: once shown, the panel stays mounted.
+      The map is still its own 712 kB chunk after the merge, so `main`'s win is intact at
+      both widths rather than only at the desktop one.
+- [x] T022 The merge made `capture:mobile` blind, and the picture is what showed it. With
+      the map deferred, the proof navigated to `#/view/map`, found the view present, and
+      measured and photographed the *Suspense placeholder* — one line of text — instead of
+      the map. It passed, and had stopped saying anything about the view it named.
+      The fallback now carries `data-testid="panel-arriving"` and the proof waits for it
+      to detach. Watched both ways, on one planted fault inside the map panel: without the
+      wait the run is clean, with the wait it reports
+      `div.panel.map-panel scrolls sideways — 917px of content in 390px`.
+
 ## Showing the work
 
 - [x] T019 Blog entry: `site/docs/blog/posts/the-shell-on-a-phone.md`. A new face in the

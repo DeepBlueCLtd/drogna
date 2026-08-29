@@ -16,13 +16,20 @@
  * harness's behaviour depend on which tab a viewer happened to open, which is precisely
  * what "presentation only" denies (SRD FR-14).
  *
+ * The one exception to "every view is mounted" is a view the registry defers
+ * (`DEFERRED_VIEWS`) — today the map, whose renderer is a third of the bundle and which
+ * nothing else reaches. That is a fact about the panel rather than about this
+ * presentation, so it is stated there and observed here against the shown view, which is
+ * what the stack has in place of dockview's panel API. It latches: once shown, the panel
+ * stays mounted and keeps what it has accumulated.
+ *
  * There is no drag rearrangement here. FR-14 already holds arrangement to be
  * presentation only, so a presentation with nothing to arrange loses nothing a
  * requirement claims — and a drag handle that does nothing is worse than none.
  */
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ConfigShell } from '../generated/types.js';
-import { panelComponents, type PanelParams } from './registry.js';
+import { DEFERRED_VIEWS, panelComponents, type PanelParams } from './registry.js';
 
 export interface StackProps {
   readonly config: ConfigShell;
@@ -34,6 +41,13 @@ export interface StackProps {
 
 export function Stack({ config, active, onSelect, paramsFor }: StackProps): ReactNode {
   const stripRef = useRef<HTMLDivElement>(null);
+  // Which views have been shown at least once. Seeded with the one the address named, so
+  // a deep link to a deferred view loads it at once rather than after a second render.
+  const [shown, setShown] = useState<ReadonlySet<string>>(() => new Set([active]));
+
+  useEffect(() => {
+    setShown((previous) => (previous.has(active) ? previous : new Set(previous).add(active)));
+  }, [active]);
 
   // The active tab is scrolled into view whenever the active view changes — including
   // when it changes from the address bar, which is the case a click-only implementation
@@ -84,7 +98,9 @@ export function Stack({ config, active, onSelect, paramsFor }: StackProps): Reac
               data-view={view.id}
               hidden={view.id !== active}
             >
-              <Panel params={paramsFor(view.id)} />
+              {!DEFERRED_VIEWS.has(view.id) || shown.has(view.id) ? (
+                <Panel params={paramsFor(view.id)} />
+              ) : null}
             </div>
           );
         })}

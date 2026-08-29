@@ -253,6 +253,13 @@ try {
       await page
         .locator(`.stack-view[data-view="${view.id}"]:not([hidden])`)
         .waitFor({ timeout: 10_000 });
+      // And for the panel itself, not the placeholder a deferred one shows while its
+      // chunk arrives (`shell/registry.tsx`). Without this the map view was measured and
+      // photographed as one line of text: the proof passed, and had stopped saying
+      // anything about the view it named.
+      await page
+        .locator(`.stack-view[data-view="${view.id}"] [data-testid="panel-arriving"]`)
+        .waitFor({ state: 'detached', timeout: 15_000 });
       const seen = await measure(page);
       const where = `${size.name} ${view.id}`;
 

@@ -17,19 +17,20 @@
  * than left to be discovered — what does survive is the address, and therefore the view,
  * which is the thing a link promised.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   DockviewDefaultTab,
   DockviewReact,
   type DockviewApi,
   type DockviewReadyEvent,
   type IDockviewPanelHeaderProps,
+  type IDockviewPanelProps,
 } from 'dockview-react';
 import type { ConfigShell, RunManifest } from '../generated/types.js';
 import type { SeamClient } from '../seam/transport.js';
 import type { SeamValidator } from '../seam/validate.js';
 import { createPanelAddress, hashForView, hashOnActivation, viewFromHash } from './views.js';
-import { panelComponents, type PanelParams } from './registry.js';
+import { DEFERRED_VIEWS, panelComponents, type PanelParams } from './registry.js';
 import { Disclosure } from './Disclosure.js';
 import { Stack } from './Stack.js';
 import { ClockStrip } from './ClockStrip.js';
@@ -51,6 +52,61 @@ export type { PanelParams };
 function PermanentTab(props: IDockviewPanelHeaderProps) {
   return <DockviewDefaultTab hideClose {...props} />;
 }
+
+/**
+ * How the dock observes "first shown", for a view the registry defers (`DEFERRED_VIEWS`).
+ * dockview mounts every panel's React tree at once — detached, as `panels/map/attach.ts`
+ * records — so the panel API's own activity is the only thing that says whether the
+ * viewer has actually asked for this view. A deep link naming it activates it during
+ * layout restore, so arriving at that address still loads it at once.
+ *
+ * `seen` latches: the panel is mounted once and never unmounted again, so switching away
+ * neither tears down the canvas nor loses what the panel has accumulated. The stack does
+ * the same thing against the shown view, which is what it has instead of this API.
+ */
+function WhenFirstActive({
+  api,
+  children,
+}: {
+  api: IDockviewPanelProps<PanelParams>['api'];
+  children: React.ReactNode;
+}) {
+  const seen = useRef(false);
+  const active = useSyncExternalStore(
+    useCallback(
+      (onChange) => {
+        const subscription = api.onDidActiveChange(() => onChange());
+        return () => subscription.dispose();
+      },
+      [api],
+    ),
+    () => {
+      seen.current ||= api.isActive;
+      return seen.current;
+    },
+  );
+  if (!active) return null;
+  return <>{children}</>;
+}
+
+/**
+ * The registry's components, wrapped for dockview. Every view renders from the one
+ * registry (FR-005); the wrapper adds only what dockview alone can supply — the panel
+ * API a deferred view is gated on.
+ */
+const dockComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> =
+  Object.fromEntries(
+    Object.entries(panelComponents).map(([id, Panel]) => [
+      id,
+      DEFERRED_VIEWS.has(id)
+        ? (props: IDockviewPanelProps<PanelParams>) => (
+            <WhenFirstActive api={props.api}>
+              <Panel params={props.params} />
+            </WhenFirstActive>
+          )
+        : (props: IDockviewPanelProps<PanelParams>) => <Panel params={props.params} />,
+    ]),
+  );
 
 export function Shell({ config, client, validator, manifest, onImportManifest }: ShellProps) {
   const apiRef = useRef<DockviewApi>();
@@ -200,7 +256,7 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
         ) : (
           <DockviewReact
             className="dockview-theme-abyss"
-            components={panelComponents}
+            components={dockComponents}
             defaultTabComponent={PermanentTab}
             onReady={onReady}
           />

@@ -46,20 +46,21 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 
 ## The eight explainers
 
-Ordered as a course: what shape the data is → how it is stored → the two ways it is
-served → the server that serves both → how consumers hear about it → the whole thing
-turning.
+Ordered as a course: what shape the data is → how it is stored → what a holding actually
+contains → the two ways it is served → the server that serves both → how consumers hear
+about it → the whole thing turning. **56 steps, roughly ten minutes end to end.**
 
-| # | Explainer | Form | The one idea | The interaction |
+| # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
-| 1 | Why a standard at all | slides | A bespoke interface is cheap to build and expensive to live with. The interface should outlive the vendor. | — |
-| 2 | Points and fields | interactive | Two irreducibly different data shapes. This is why 4 and 5 are a pair and not a duplication. | Sample a schematic sea: sparse dots against a filled grid |
-| 3 | NetCDF | interactive | Self-describing. Units, CRS and time origin travel *in* the file, so a reader in thirty years needs no side channel. | Peel a 4D block apart: dimensions, coordinates, variables, attributes |
-| 4 | SensorThings | interactive | Provenance is structural — every number walks back to the instrument that made it. | Walk buoy → sensor → property → stream → readings, with the URL shown at each step |
-| 5 | OGC API-EDR | interactive | The query *is* a geometry. "Conditions along my track" is one request, not a client-side loop. | Choose position, radius, area, cube, trajectory or corridor and see what each returns |
-| 6 | pygeoapi | slides | One server, many standards, plugin-shaped. New capability is configuration, not a project. | — |
-| 7 | MQTT | interactive | A new consumer is a subscription, not a change to the producer. | A topic tree with wildcards: publish, and watch who catches it |
-| 8 | The control loop | interactive | The loop is observable — every transition is a message you can watch. | Step sense → decide → act → publish; nudge it and watch it re-plan |
+| 1 | Why a standard at all | slides | 5 | A bespoke interface is cheap to build and expensive to live with |
+| 2 | Points and fields | interactive | 6 | Two irreducibly different data shapes; why 5 and 6 are a pair |
+| 3 | NetCDF | interactive | 6 | Units, CRS and time origin travel *in* the file |
+| 4 | What a holding is | interactive | 6 | A field is not one thing: archive, now-cast, and every run published |
+| 5 | SensorThings | interactive | 7 | Provenance is structural — every number walks back to its instrument |
+| 6 | OGC API-EDR | interactive | 7 | The query *is* a geometry |
+| 7 | pygeoapi | slides | 5 | One server, many standards; new capability is configuration |
+| 8 | MQTT | interactive | 7 | A new consumer is a subscription, not a producer change |
+| 9 | The control loop | interactive | 7 | Every transition is a message you can watch |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -191,7 +192,7 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002**: Background MUST contain the eight explainers named above, in the order
+- **FR-002**: Background MUST contain the nine explainers named above, in the order
   given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
@@ -220,7 +221,11 @@ loop steps through a full cycle from the viewer's input alone.
   greyscale. That guarantee MUST be structural rather than a promise kept by review:
   categories come from one shared vocabulary in which a category is a hue **together
   with** a texture and a line weight, so a colour-only distinction cannot be expressed.
-  A category style is never authored inline in an explainer.
+  A category style is never authored inline in an explainer. The vocabulary carries three
+  meanings, not two: **points** (observations), **fields** (gridded and computed), and the
+  **archive** — the coarse multi-decade prior the system already holds (SRD FR-21). The
+  third is not "truth you cannot have": drogna holds ground truth in a manifest and scores
+  recovery against it (Constitution IX), and an explainer must not teach otherwise.
 - **FR-012**: Explainers do NOT share a scene. Each frames the geography its own argument
   needs, because forcing one patch of sea on eight different points costs more than the
   continuity it buys. What is shared is the **vocabulary**: the marks for drogna's own
@@ -259,10 +264,17 @@ so that eight of them read as one course rather than eight bespoke toys.
   state and moves only when the viewer advances the spine or pokes the diagram. There is
   no autoplay, no timer, and no clock read of any kind (Constitution I).
 - **FR-020**: The value panel (FR-008) is the **final step** of every explainer, reached
-  by following the spine to its end.
-- **FR-021**: Explainers are reached from a numbered rail listing all eight with their
-  course positions, collapsing below a width threshold to a dropdown with previous and
-  next controls. Course order is fixed (FR-002); the rail shows position in it.
+  by following the spine to its end. **No explainer omits it.** Thinness is handled at the
+  axis, not the panel: FR-008 already allows an axis to be omitted with its reason stated,
+  which three explainers use. Dropping a whole panel would remove the argument from the
+  longest and densest explainers to save a step in the shortest.
+- **FR-025**: Every region that responds to the viewer MUST carry a consistent static
+  affordance — a dashed outline — so that free exploration (FR-018) is discoverable
+  without anything animating on arrival (FR-019). It is learned once and applies across
+  every explainer, and it must survive greyscale like any other mark.
+- **FR-021**: Explainers are reached from a numbered rail listing all nine with their
+  course positions **and their lengths**, so a viewer knows what they are starting,
+  collapsing below a width threshold to a dropdown with previous and next controls. Course order is fixed (FR-002); the rail shows position in it.
 - **FR-022**: URLs shown inside an explainer are **generic examples of the standard's own
   shape against a fictional host**, never a path this application serves and never
   anything that looks pasteable into this page. An explainer teaches a standard; the

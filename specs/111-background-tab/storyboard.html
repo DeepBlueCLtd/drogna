@@ -128,12 +128,13 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 <header class="top">
   <span class="eyebrow">drogna · feature 111 · storyboard for review</span>
   <h1>The Background Tab, step by step</h1>
-  <p class="lede">Eight explainers of the standards the architecture rests on, drawn out as
+  <p class="lede">Nine explainers of the standards the architecture rests on, drawn out as
   wireframes: what each step shows, what it says, and what the viewer can poke. This is the
   authoring brief the spec (FR-016&ndash;FR-024) governs, made visible enough to argue with.</p>
   <div class="meta">
     <span><b>Audience</b> evaluator · domain expert · future maintainer</span>
-    <span><b>Budget</b> 60&ndash;90s per explainer</span>
+    <span><b>Course</b> 9 explainers &middot; 56 steps</span>
+    <span><b>Budget</b> 60&ndash;90s each &mdash; about 10s a step</span>
     <span><b>Path</b> Next performs the interaction</span>
   </div>
 </header>
@@ -147,12 +148,25 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
   <div class="key">
     <span><i class="sw" style="background:var(--pts)"></i> points &mdash; observations, casts, readings</span>
     <span><i class="sw" style="background:var(--fld)"></i> fields &mdash; gridded, computed everywhere</span>
-    <span><i class="sw" style="background:var(--ghost)"></i> ground truth the viewer never has</span>
+    <span><i class="sw" style="background:var(--ghost)"></i> the archive &mdash; the coarse prior you already hold</span>
   </div>
+  <div class="note"><b>Interactive regions carry a dashed outline</b> &mdash; learned once, applied
+  across all nine. Static, so nothing animates on arrival, and it survives greyscale. The rail also
+  shows each explainer&rsquo;s length, so a viewer knows what they are starting.</div>
   <p class="prose" style="font-size:.94rem;color:var(--muted)">Those two hues carry the course&rsquo;s
   central distinction, so they mean the same thing in every explainer. In the built version each
   also carries a texture and a line weight, so the distinction survives greyscale by construction
   rather than by promise (FR-011).</p>
+  <div class="note"><b>The grey was wrong in the first draft.</b> It meant &ldquo;ground truth you
+  never have&rdquo;, which is romantic and false here: drogna holds a multi-decade monthly
+  <b>historic archive</b> (SRD FR-21), and the generator records ground truth in a manifest so
+  recovery can be <em>scored</em> (Constitution IX). Grey now means the archive &mdash; coarse,
+  dated, real, and queryable. That is a better lesson anyway: a data system sharpens a prior, it
+  does not conjure knowledge from nothing.</div>
+  <div class="note"><b>Interactive regions carry a dashed outline.</b> Nothing animates on arrival,
+  so the outline is the only signal that a diagram responds. Learned once, it applies across all
+  nine and survives greyscale. The rail also shows each explainer&rsquo;s length, so a viewer knows
+  what they are starting.</div>
 </section>
 <section class="blk stack">
   <h2>The panel, before any explainer</h2>
@@ -174,16 +188,26 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 
     <rect x="1" y="31" width="150" height="348" fill="var(--sunk)" stroke="var(--line)"/>
     <text x="16" y="52" font-size="10" font-family="monospace" fill="var(--muted)" letter-spacing="1.4">THE COURSE</text>
-    <rect x="9" y="132" width="134" height="24" fill="var(--pts)" opacity="0.16"/>
-    <line x1="9" y1="132" x2="9" y2="156" stroke="var(--pts)" stroke-width="3"/>
-    <text x="18" y="76" font-size="11" fill="var(--muted)">1 · Why a standard</text>
-    <text x="18" y="98" font-size="11" fill="var(--muted)">2 · Points and fields</text>
-    <text x="18" y="120" font-size="11" fill="var(--muted)">3 · NetCDF</text>
-    <text x="18" y="148" font-size="11" fill="var(--ink)" font-weight="600">4 · SensorThings</text>
-    <text x="18" y="170" font-size="11" fill="var(--muted)">5 · OGC API-EDR</text>
-    <text x="18" y="192" font-size="11" fill="var(--muted)">6 · pygeoapi</text>
-    <text x="18" y="214" font-size="11" fill="var(--muted)">7 · MQTT</text>
-    <text x="18" y="236" font-size="11" fill="var(--muted)">8 · The control loop</text>
+    <rect x="9" y="136" width="134" height="20" fill="var(--pts)" opacity="0.16"/>
+    <line x1="9" y1="136" x2="9" y2="156" stroke="var(--pts)" stroke-width="3"/>
+    <text x="18" y="74" font-size="10" fill="var(--muted)">1 · Why a standard</text>
+    <text x="136" y="74" font-size="9" text-anchor="end" fill="var(--muted)">5</text>
+    <text x="18" y="93" font-size="10" fill="var(--muted)">2 · Points and fields</text>
+    <text x="136" y="93" font-size="9" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="112" font-size="10" fill="var(--muted)">3 · NetCDF</text>
+    <text x="136" y="112" font-size="9" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="131" font-size="10" fill="var(--muted)">4 · What a holding is</text>
+    <text x="136" y="131" font-size="9" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="150" font-size="10" fill="var(--ink)" font-weight="600">5 · SensorThings</text>
+    <text x="136" y="150" font-size="9" text-anchor="end" fill="var(--ink)">7</text>
+    <text x="18" y="169" font-size="10" fill="var(--muted)">6 · OGC API-EDR</text>
+    <text x="136" y="169" font-size="9" text-anchor="end" fill="var(--muted)">7</text>
+    <text x="18" y="188" font-size="10" fill="var(--muted)">7 · pygeoapi</text>
+    <text x="136" y="188" font-size="9" text-anchor="end" fill="var(--muted)">5</text>
+    <text x="18" y="207" font-size="10" fill="var(--muted)">8 · MQTT</text>
+    <text x="136" y="207" font-size="9" text-anchor="end" fill="var(--muted)">7</text>
+    <text x="18" y="226" font-size="10" fill="var(--muted)">9 · The control loop</text>
+    <text x="136" y="226" font-size="9" text-anchor="end" fill="var(--muted)">7</text>
 
     <text x="176" y="62" font-size="15" font-family="Georgia,serif" fill="var(--ink)">Every number knows its instrument</text>
     <line x1="176" y1="76" x2="330" y2="76" stroke="var(--line)"/>
@@ -214,7 +238,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
     <text x="256" y="351" font-size="11" font-family="monospace" fill="var(--muted)">step 3 of 6</text>
     <text x="702" y="351" font-size="10" font-family="monospace" fill="var(--muted)" text-anchor="end">#/view/background/sensorthings/3</text>
   </svg>
-  <figcaption>Wide: rail shows all eight and marks position; prose sits beside the diagram; the
+  <figcaption>Wide: rail shows all nine with their step counts and marks position; prose sits beside the diagram; the
   address always names the step.</figcaption>
   </figure>
 
@@ -224,7 +248,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
     <rect x="1" y="1" width="278" height="26" fill="var(--rail)" stroke="var(--line)"/>
     <text x="12" y="18" font-size="11" font-family="monospace" fill="var(--ink)">Background</text>
     <rect x="12" y="40" width="256" height="26" fill="var(--sunk)" stroke="var(--line)"/>
-    <text x="22" y="57" font-size="11" fill="var(--ink)">4 &middot; SensorThings</text>
+    <text x="22" y="57" font-size="11" fill="var(--ink)">5 &middot; SensorThings</text>
     <text x="256" y="57" font-size="11" text-anchor="end" fill="var(--muted)">&#9662;</text>
     <text x="12" y="92" font-size="13" font-family="Georgia,serif" fill="var(--ink)">Every number knows its</text>
     <text x="12" y="108" font-size="13" font-family="Georgia,serif" fill="var(--ink)">instrument</text>
@@ -421,9 +445,12 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
     <div class="step">
       <figure>
       <svg viewBox="0 0 280 160" role="img" aria-label="Three casts sampling the section, the true field faint behind them">
-        <rect x="20" y="20" width="240" height="118" fill="var(--ghost)" opacity=".12"/>
-        <ellipse cx="88" cy="46" rx="34" ry="20" fill="var(--ghost)" opacity=".22"/>
-        <path d="M176 20 L192 138" stroke="var(--ghost)" stroke-width="2" opacity=".5" fill="none"/>
+        <rect x="20" y="20" width="240" height="118" fill="var(--ghost)" opacity=".14"/>
+        <g stroke="var(--ghost)" stroke-width=".9" opacity=".85" fill="none">
+          <line x1="100" y1="20" x2="100" y2="138"/><line x1="180" y1="20" x2="180" y2="138"/>
+          <line x1="20" y1="59" x2="260" y2="59"/><line x1="20" y1="99" x2="260" y2="99"/>
+        </g>
+        <text x="252" y="34" font-size="7.5" text-anchor="end" fill="var(--muted)">monthly archive</text>
         <line x1="62" y1="22" x2="62" y2="120" stroke="var(--pts)" stroke-width="1.2"/>
         <line x1="146" y1="22" x2="146" y2="132" stroke="var(--pts)" stroke-width="1.2"/>
         <line x1="228" y1="22" x2="228" y2="96" stroke="var(--pts)" stroke-width="1.2"/>
@@ -433,17 +460,17 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
         <circle cx="146" cy="96" r="3" fill="var(--pts)"/><circle cx="146" cy="128" r="3" fill="var(--pts)"/>
         <circle cx="228" cy="30" r="3" fill="var(--pts)"/><circle cx="228" cy="60" r="3" fill="var(--pts)"/>
         <circle cx="228" cy="92" r="3" fill="var(--pts)"/>
-        <text x="140" y="152" font-size="9" text-anchor="middle" fill="var(--pts)">11 readings. Everything else is unmeasured.</text>
+        <text x="140" y="152" font-size="9" text-anchor="middle" fill="var(--pts)">11 readings, over a prior six cells wide.</text>
       </svg>
-      <figcaption>Casts in ochre; the true field ghosted behind, to show how little was caught.</figcaption>
+      <figcaption>Casts in ochre over the archive in grey: not blindness, but a coarse belief about to be sharpened.</figcaption>
       </figure>
       <div>
         <span class="sid">/points-and-fields/2</span>
         <h4>You never have the sea. You have where you looked.</h4>
-        <p class="say">Three casts, eleven readings, each one true and each one attached to an
-        instrument, a moment and a depth. The ghost behind them is the ocean that was really
-        there &mdash; drawn here only so the sparseness is visible. <em>No store ever contains
-        it.</em></p>
+        <p class="say">Three casts, eleven readings, each one true and each attached to an
+        instrument, a moment and a depth. Behind them, in grey, is the multi-decade monthly
+        archive &mdash; six cells across, years out of date, and <em>the thing you actually had
+        before anyone went to sea.</em> The casts do not fill the gaps. They correct a belief.</p>
         <span class="tag poke">poke: drag a cast to a new position and watch what it catches</span>
       </div>
     </div>
@@ -712,7 +739,165 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 </section>
 
 <section class="blk">
-  <div class="exhead"><span class="num">4</span><h2>SensorThings</h2><span class="form">interactive · 6 steps</span></div>
+  <div class="exhead"><span class="num">4</span><h2>What a holding is</h2><span class="form">interactive &middot; 6 steps</span></div>
+  <p class="idea">A field is not one thing. A collection spans a coarse archive, a current now-cast, and every forecast run the loop has published &mdash; each queryable the same way.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">New in this draft. It goes here because knowing what is there precedes knowing how to ask for it &mdash; and because the previous three explainers have been quietly saying &ldquo;the field&rdquo; as though there were only one.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="One collection name spanning three kinds of holding">
+        <rect x="40" y="18" width="200" height="26" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="140" y="36" font-size="10" text-anchor="middle" font-family="monospace" fill="var(--ink)">sea_water_temperature</text>
+        <g stroke="var(--muted)"><line x1="90" y1="44" x2="66" y2="72"/><line x1="140" y1="44" x2="140" y2="72"/><line x1="190" y1="44" x2="214" y2="72"/></g>
+        <rect x="20" y="72" width="92" height="42" fill="var(--ghost)" opacity=".3" stroke="var(--ghost)"/>
+        <text x="66" y="90" font-size="9" text-anchor="middle" fill="var(--ink)">archive</text>
+        <text x="66" y="103" font-size="7.5" text-anchor="middle" fill="var(--muted)">20 years, monthly</text>
+        <rect x="118" y="72" width="44" height="42" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <text x="140" y="90" font-size="9" text-anchor="middle" fill="var(--ink)">now-cast</text>
+        <text x="140" y="103" font-size="7.5" text-anchor="middle" fill="var(--muted)">one</text>
+        <g fill="var(--fld)" opacity=".22" stroke="var(--fld)">
+          <rect x="176" y="78" width="76" height="36"/><rect x="180" y="74" width="76" height="36"/><rect x="184" y="70" width="76" height="36"/></g>
+        <text x="222" y="92" font-size="9" text-anchor="middle" fill="var(--ink)">instances</text>
+        <text x="222" y="104" font-size="7.5" text-anchor="middle" fill="var(--muted)">and growing</text>
+        <text x="140" y="140" font-size="9" text-anchor="middle" fill="var(--muted)">one name, three eras, one query language</text>
+      </svg>
+      <figcaption>A collection is not a file. It is a name over three kinds of holding.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/1</span>
+        <h4>A collection is not a file</h4>
+        <p class="say">Ask for sea water temperature and the honest answer is
+        <em>&ldquo;which one?&rdquo;</em> &mdash; the long coarse record, the current best picture,
+        or one of the forecasts. All three sit under one name, and all three answer the same
+        queries.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Two decades of monthly archive cells, coarse and complete">
+        <g fill="var(--ghost)" opacity=".55">
+          <rect x="16" y="40" width="14" height="26"/><rect x="34" y="40" width="14" height="26"/>
+          <rect x="52" y="40" width="14" height="26"/><rect x="70" y="40" width="14" height="26"/>
+          <rect x="88" y="40" width="14" height="26"/><rect x="106" y="40" width="14" height="26"/>
+          <rect x="124" y="40" width="14" height="26"/><rect x="142" y="40" width="14" height="26"/>
+          <rect x="160" y="40" width="14" height="26"/><rect x="178" y="40" width="14" height="26"/>
+          <rect x="196" y="40" width="14" height="26"/><rect x="214" y="40" width="14" height="26"/>
+          <rect x="232" y="40" width="14" height="26"/><rect x="250" y="40" width="14" height="26"/>
+        </g>
+        <text x="16" y="82" font-size="8" fill="var(--muted)">2006</text>
+        <text x="264" y="82" font-size="8" text-anchor="end" fill="var(--muted)">2026</text>
+        <text x="140" y="108" font-size="9" text-anchor="middle" fill="var(--ink)">coarse, dated, and never missing</text>
+        <text x="140" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">authored at provisioning, through the publisher&rsquo;s own path</text>
+      </svg>
+      <figcaption>The archive: the prior everything else is measured against.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/2</span>
+        <h4>The archive: what you knew before anyone sailed</h4>
+        <p class="say">Two decades of monthly means. Too coarse to navigate by and too old to trust
+        for today &mdash; but complete, everywhere, always. <em>This is the grey behind the casts in
+        explainer 2</em>, and it is why a gap in the observations is not a hole in your knowledge.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A single now-cast replaced on a cadence">
+        <rect x="104" y="44" width="72" height="46" fill="var(--fld)" opacity=".22" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="140" y="66" font-size="10" text-anchor="middle" fill="var(--ink)">now-cast</text>
+        <text x="140" y="80" font-size="8" text-anchor="middle" fill="var(--muted)">valid now</text>
+        <path d="M104 100 C 80 118, 200 118, 176 100" stroke="var(--fld)" fill="none" stroke-width="1.2"/>
+        <polygon points="176,100 170,108 182,107" fill="var(--fld)"/>
+        <text x="140" y="128" font-size="8.5" text-anchor="middle" fill="var(--muted)">replaced on a cadence &mdash; there is only ever one</text>
+        <text x="140" y="28" font-size="8.5" text-anchor="middle" fill="var(--muted)">its manifest records what it was derived from</text>
+      </svg>
+      <figcaption>The now-cast: singular, current, and replaced rather than accumulated.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/3</span>
+        <h4>The now-cast: one, and current</h4>
+        <p class="say">A single field, replaced on a cadence. There is never a second one to choose
+        between, which makes it the safe default for &ldquo;what is it like out there?&rdquo;
+        <em>Its manifest still records what it was derived from</em> &mdash; being current is not an
+        excuse for being unexplained.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Forecast runs accumulating, each carrying its own manifest">
+        <g stroke="var(--fld)" fill="var(--fld)" fill-opacity=".16">
+          <rect x="16" y="70" width="52" height="40"/><rect x="76" y="62" width="52" height="48"/>
+          <rect x="136" y="52" width="52" height="58"/><rect x="196" y="40" width="52" height="70"/>
+        </g>
+        <g font-size="7.5" font-family="monospace" fill="var(--muted)" text-anchor="middle">
+          <text x="42" y="122">run-0041</text><text x="102" y="122">run-0042</text>
+          <text x="162" y="122">run-0043</text><text x="222" y="122">run-0044</text>
+        </g>
+        <g fill="var(--pts)"><circle cx="42" cy="80" r="3.2"/><circle cx="102" cy="72" r="3.2"/>
+        <circle cx="162" cy="62" r="3.2"/><circle cx="222" cy="50" r="3.2"/></g>
+        <text x="140" y="24" font-size="9" text-anchor="middle" fill="var(--pts)">each carries the manifest that reconstructs it</text>
+        <text x="140" y="140" font-size="8.5" text-anchor="middle" fill="var(--muted)">nothing is overwritten &mdash; the record of what you believed, and when</text>
+      </svg>
+      <figcaption>Instances accumulate. The ochre dot on each is its manifest.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/4</span>
+        <h4>Instances: every run you ever published</h4>
+        <p class="say">The loop does not overwrite; it adds. So you can ask not only what the
+        forecast says now, but <em>what it said last Tuesday, and what it was made from</em> &mdash;
+        because each run carries the manifest that reconstructs it byte for byte. When someone asks
+        why a decision was taken on Tuesday, that is the only answer that holds up.</p>
+        <span class="tag beat">the beat &mdash; provenance you can replay, not provenance you assert</span>
+        <span class="tag poke">poke: pick a run and see the manifest it carries</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A discovery document stating extents truthfully, checked against the store">
+        <rect x="14" y="24" width="118" height="96" fill="none" stroke="var(--fld)"/>
+        <text x="73" y="42" font-size="9" text-anchor="middle" fill="var(--fld)">what it claims</text>
+        <g font-family="monospace" font-size="7.5" fill="var(--body)">
+          <text x="24" y="62">2006-01 &#8594; 2026-08</text><text x="24" y="78">-14 &#8594; -8 degE</text>
+          <text x="24" y="94">0 &#8594; 1000 m</text></g>
+        <text x="73" y="112" font-size="8" text-anchor="middle" fill="var(--fld)">&#10003; matches the store</text>
+        <rect x="148" y="24" width="118" height="96" fill="none" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="207" y="42" font-size="9" text-anchor="middle" fill="var(--warn)">if it over-claimed</text>
+        <g font-family="monospace" font-size="7.5" fill="var(--muted)">
+          <text x="158" y="62">2000-01 &#8594; 2026-08</text><text x="158" y="78">-20 &#8594; -2 degE</text>
+          <text x="158" y="94">0 &#8594; 4000 m</text></g>
+        <text x="207" y="112" font-size="8" text-anchor="middle" fill="var(--warn)">a client would plan on it</text>
+      </svg>
+      <figcaption>The extent is a promise. Here it is checked against the store by test.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/5</span>
+        <h4>And it says truthfully what it holds</h4>
+        <p class="say">Every collection publishes its extent &mdash; the years, the box, the depths.
+        A document that claims more than the store contains is not a documentation bug: <em>it is a
+        client planning a route through water nobody modelled.</em> Here the claim is verified
+        against the store by test, which is a promise most catalogues cannot make.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/holdings/6</span><h4>What it delivers</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Accumulating runs with manifests means questions about the past are answered by replay rather than by whoever still remembers the configuration.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>Three eras behind one collection name and one query language: a client that can read the now-cast can read twenty years of archive without learning anything new.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>The extent-and-discovery vocabulary. Standards already say how a collection states what it holds, so the only work left is telling the truth in it.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">5</span><h2>SensorThings</h2><span class="form">interactive &middot; 7 steps</span></div>
   <p class="idea">Provenance is structural. Every number walks back to the instrument that made it, because that path is the shape of the data rather than a column someone remembered to add.</p>
   <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Vocabulary hazard: the gate forbids two entity nouns this explainer would reach for naturally. A sensor <em>samples</em>; an instrument <em>reports</em>.</p>
 
@@ -739,6 +924,42 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 
     <div class="step">
       <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The eight SensorThings entity types shown once, with the five this explainer walks marked">
+        <g font-size="8.5" text-anchor="middle">
+          <rect x="12" y="26" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="43" fill="var(--ink)">Thing</text>
+          <rect x="104" y="26" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="140" y="43" fill="var(--ink)">Location</text>
+          <rect x="196" y="26" width="72" height="26" fill="none" stroke="var(--line)" stroke-dasharray="3 2"/>
+          <text x="232" y="43" fill="var(--muted)">HistoricalLoc.</text>
+          <rect x="12" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="79" fill="var(--ink)">Datastream</text>
+          <rect x="104" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="140" y="79" fill="var(--ink)">Sensor</text>
+          <rect x="196" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="232" y="79" font-size="7.5" fill="var(--ink)">ObservedProperty</text>
+          <rect x="12" y="98" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="115" fill="var(--ink)">Observation</text>
+          <rect x="104" y="98" width="72" height="26" fill="none" stroke="var(--line)" stroke-dasharray="3 2"/>
+          <text x="140" y="115" font-size="7.5" fill="var(--muted)">FeatureOfInterest</text>
+        </g>
+        <text x="232" y="115" font-size="8" text-anchor="middle" fill="var(--muted)">eight, and that is all</text>
+      </svg>
+      <figcaption>The whole model, once: six walked here, two named and left. It is bounded.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/2</span>
+        <h4>The whole model fits on one screen</h4>
+        <p class="say">Eight types, and that is the entire standard. Worth seeing once, because the
+        usual fear about adopting a standard is that it is unbounded &mdash; <em>this one you can
+        hold in your head.</em> We walk the six that answer &ldquo;can I trust this reading&rdquo;.
+        FeatureOfInterest is the subtle one: <em>where the observation applies, which is not always
+        where the instrument is</em> when water moves past a moored sensor.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
       <svg viewBox="0 0 280 150" role="img" aria-label="The reading linked to the datastream it belongs to">
         <circle cx="54" cy="70" r="15" fill="var(--pts)"/>
         <text x="54" y="74" font-size="9" text-anchor="middle" fill="var(--surface)">8.4</text>
@@ -752,7 +973,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       <figcaption>The first hop. Every later question hangs off this one link.</figcaption>
       </figure>
       <div>
-        <span class="sid">/sensorthings/2</span>
+        <span class="sid">/sensorthings/3</span>
         <h4>It belongs to a stream</h4>
         <p class="say">Not a table, a <em>stream</em>: one quantity, measured by one instrument, on
         one platform, over time. The reading is a member of it. That single relationship is what
@@ -777,7 +998,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       <figcaption>What is measured, and what did the measuring &mdash; two different questions, two links.</figcaption>
       </figure>
       <div>
-        <span class="sid">/sensorthings/3</span>
+        <span class="sid">/sensorthings/4</span>
         <h4>What it measures, and what did the measuring</h4>
         <p class="say">The property is the quantity in the world: sea water temperature, defined
         the same way for everyone. The sensor is the device: its make, its calibration date, how it
@@ -804,7 +1025,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       <figcaption>The platform, and where it is. One buoy carries many streams.</figcaption>
       </figure>
       <div>
-        <span class="sid">/sensorthings/4</span>
+        <span class="sid">/sensorthings/5</span>
         <h4>What it is attached to</h4>
         <p class="say">A Thing is the buoy. It has a location, and it carries several streams at
         once &mdash; temperature, salinity, pressure, all from the same hull at the same moment.
@@ -834,7 +1055,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       <figcaption>Any number, walked back to its instrument, in hops that are part of the standard.</figcaption>
       </figure>
       <div>
-        <span class="sid">/sensorthings/5</span>
+        <span class="sid">/sensorthings/6</span>
         <h4>Walk it backwards from any number</h4>
         <p class="say">From one reading to the stream, the instrument, its calibration, the hull it
         sits on and where that hull was. Not because someone designed a provenance feature, but
@@ -845,7 +1066,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
     </div>
 
     <div class="step vp">
-      <div><span class="sid">/sensorthings/6</span><h4>What it delivers</h4></div>
+      <div><span class="sid">/sensorthings/7</span><h4>What it delivers</h4></div>
       <div>
         <div class="axes">
           <div class="axis"><h5>Through-life cost</h5><p>Provenance that is structural cannot rot the way a convention can. There is no separate discipline to sustain, so none to quietly lapse.</p></div>
@@ -857,7 +1078,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
   </div>
 </section>
 <section class="blk">
-  <div class="exhead"><span class="num">5</span><h2>OGC API-EDR</h2><span class="form">interactive · 7 steps</span></div>
+  <div class="exhead"><span class="num">6</span><h2>OGC API-EDR</h2><span class="form">interactive &middot; 7 steps &middot; the long one</span></div>
   <p class="idea">The query <em>is</em> a geometry. &ldquo;Conditions along my planned track&rdquo; is one request, not a client-side loop.</p>
   <div class="note q" style="margin-top:14px"><b>Budget risk.</b> Seven steps against a 60&ndash;90 second promise. This is the one explainer that does not obviously fit, and step 3/4 could merge &mdash; at the cost of the viewpoint switch being less clearly signposted. Flagged rather than silently crammed; see the open questions at the end.</div>
 
@@ -1034,7 +1255,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 </section>
 
 <section class="blk">
-  <div class="exhead"><span class="num">6</span><h2>pygeoapi</h2><span class="form">slides · 5 steps</span></div>
+  <div class="exhead"><span class="num">7</span><h2>pygeoapi</h2><span class="form">slides · 5 steps</span></div>
   <p class="idea">One server, many standards, plugin-shaped. New capability arrives as configuration rather than as a project.</p>
   <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Written in the present tense about the real deployment. Step 4 carries FR-013&rsquo;s obligation: this page is not a pygeoapi instance and must say so.</p>
 
@@ -1158,7 +1379,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
   </div>
 </section>
 <section class="blk">
-  <div class="exhead"><span class="num">7</span><h2>MQTT</h2><span class="form">interactive · 6 steps</span></div>
+  <div class="exhead"><span class="num">8</span><h2>MQTT</h2><span class="form">interactive &middot; 7 steps</span></div>
   <p class="idea">A new consumer is a subscription, not a change to the producer.</p>
   <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">No sea in this one &mdash; the subject is the topic tree, so the viewpoint question does not arise.</p>
 
@@ -1272,6 +1493,40 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 
     <div class="step">
       <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A retained message giving a late joiner the current value immediately, and delivery guarantees for messages that must not be lost">
+        <rect x="14" y="22" width="120" height="106" fill="none" stroke="var(--fld)"/>
+        <text x="74" y="38" font-size="9" text-anchor="middle" fill="var(--fld)">retained</text>
+        <rect x="30" y="48" width="88" height="20" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <text x="74" y="62" font-size="8" text-anchor="middle" fill="var(--ink)">last value, kept</text>
+        <line x1="74" y1="68" x2="74" y2="86" stroke="var(--fld)"/>
+        <polygon points="74,92 70,84 78,84" fill="var(--fld)"/>
+        <rect x="34" y="94" width="80" height="20" fill="none" stroke="var(--ink)"/>
+        <text x="74" y="108" font-size="8" text-anchor="middle" fill="var(--ink)">a client that just joined</text>
+        <text x="74" y="126" font-size="7.5" text-anchor="middle" fill="var(--muted)">no wait for the next publish</text>
+        <rect x="146" y="22" width="120" height="106" fill="none" stroke="var(--pts)"/>
+        <text x="206" y="38" font-size="9" text-anchor="middle" fill="var(--pts)">delivery guarantee</text>
+        <g font-size="8" fill="var(--body)">
+          <text x="158" y="60">0 &mdash; at most once</text>
+          <text x="158" y="80">1 &mdash; at least once</text>
+          <text x="158" y="100">2 &mdash; exactly once</text></g>
+        <text x="206" y="122" font-size="7.5" text-anchor="middle" fill="var(--muted)">cost rises with certainty</text>
+      </svg>
+      <figcaption>Two things the broker gives you that a bespoke fan-out would have to grow.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/5</span>
+        <h4>What else comes with the broker</h4>
+        <p class="say">A <em>retained</em> message means a client that connects late is handed the
+        current value at once rather than sitting blank until the next publish &mdash; which is
+        exactly how this page lights up when you open it. And each message carries a delivery
+        guarantee: fire-and-forget for a reading that will be superseded in a second, exactly-once
+        for one that must not be lost. <em>Both are choices you would otherwise have to build, and
+        would build worse.</em></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
       <svg viewBox="0 0 280 150" role="img" aria-label="A fourth consumer added by subscribing, with no change to any producer">
         <g fill="var(--pts)"><circle cx="34" cy="46" r="7"/><circle cx="34" cy="94" r="7"/></g>
         <text x="34" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">unchanged</text>
@@ -1287,7 +1542,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       <figcaption>The only new thing is one line on the right. Nothing on the left was touched.</figcaption>
       </figure>
       <div>
-        <span class="sid">/mqtt/5</span>
+        <span class="sid">/mqtt/6</span>
         <h4>Adding a consumer changes nothing upstream</h4>
         <p class="say">A new client subscribes and starts receiving. No producer was edited, no
         release was cut, nothing was redeployed, and nobody had to be asked. <em>Compare the first
@@ -1296,7 +1551,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
     </div>
 
     <div class="step vp">
-      <div><span class="sid">/mqtt/6</span><h4>What it delivers</h4></div>
+      <div><span class="sid">/mqtt/7</span><h4>What it delivers</h4></div>
       <div>
         <div class="axes">
           <div class="axis"><h5>Through-life cost</h5><p>The cost of a new consumer stops scaling with the number of producers. That is the difference between a system that ages well and one that calcifies.</p></div>
@@ -1309,7 +1564,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 </section>
 
 <section class="blk">
-  <div class="exhead"><span class="num">8</span><h2>The control loop</h2><span class="form">interactive · 6 steps</span></div>
+  <div class="exhead"><span class="num">9</span><h2>The control loop</h2><span class="form">interactive &middot; 7 steps</span></div>
   <p class="idea">The loop is observable. Every transition is a message you can watch, which is why the seams are where they are.</p>
   <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">The only explainer about behaviour rather than an interface, and the closing impression. It is also the one with no standard to teach &mdash; it exists to show where the previous seven sit.</p>
 
@@ -1449,8 +1704,35 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
       </div>
     </div>
 
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Forecast error compared against a persistence reference, with one run that failed to beat it">
+        <line x1="30" y1="118" x2="264" y2="118" stroke="var(--muted)"/>
+        <line x1="30" y1="24" x2="30" y2="118" stroke="var(--muted)"/>
+        <text x="24" y="30" font-size="7.5" text-anchor="end" fill="var(--muted)">error</text>
+        <polyline points="46,62 92,58 138,66 184,54 230,60" fill="none" stroke="var(--ghost)" stroke-width="2" stroke-dasharray="4 3"/>
+        <text x="238" y="58" font-size="7.5" fill="var(--muted)">persistence</text>
+        <polyline points="46,88 92,80 138,92 184,50 230,84" fill="none" stroke="var(--fld)" stroke-width="2"/>
+        <text x="238" y="90" font-size="7.5" fill="var(--fld)">the model</text>
+        <circle cx="184" cy="50" r="4.5" fill="none" stroke="var(--warn)" stroke-width="1.6"/>
+        <text x="184" y="40" font-size="7.5" text-anchor="middle" fill="var(--warn)">worse than doing nothing</text>
+        <text x="146" y="138" font-size="8.5" text-anchor="middle" fill="var(--muted)">and the display says so, rather than hiding it</text>
+      </svg>
+      <figcaption>Skill is always reported against persistence &mdash; including the run that lost.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/6</span>
+        <h4>Was it better than doing nothing?</h4>
+        <p class="say">The reference is persistence: assume tomorrow looks like today, and see
+        whether the model beat that. Usually it does. <em>Sometimes it does not, and the display
+        says so</em> &mdash; naming the run that failed to earn its compute rather than averaging it
+        away. A system that only reports its wins cannot be trusted about any of them.</p>
+        <span class="tag beat">Constitution IX &mdash; ground truth is scored, never assumed</span>
+      </div>
+    </div>
+
     <div class="step vp">
-      <div><span class="sid">/control-loop/6</span><h4>What it delivers</h4></div>
+      <div><span class="sid">/control-loop/7</span><h4>What it delivers</h4></div>
       <div>
         <div class="axes">
           <div class="axis"><h5>Through-life cost</h5><p>Every transition is a message on a topic, so the loop can be watched years later by someone who was not there &mdash; without a debugger, a rebuild, or the original author.</p></div>
@@ -1463,29 +1745,42 @@ th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
 </section>
 
 <section class="blk">
-  <h2>What this raises</h2>
+  <h2>Settled in this pass</h2>
   <div class="stack" style="margin-top:16px">
-    <div class="note q"><b>1 &middot; EDR does not fit its budget.</b> Seven steps against 60&ndash;90
-    seconds, and it is the explainer closest to the subject matter that matters most to you.
-    Merging steps 3 and 4 fixes the arithmetic but buries the section-to-plan viewpoint switch,
-    which is the one place a reader can silently lose their bearings. The alternative is to let
-    this one explainer run long and say so in the rail.</div>
-    <div class="note q"><b>2 &middot; The value panel costs a step everywhere.</b> Six-step
-    explainers are really five steps of content. Across eight explainers that is eight steps spent
-    on a panel that is the same shape every time &mdash; strong for a skim-reader comparing closers,
-    expensive for the 60&ndash;90 second promise.</div>
-    <div class="note q"><b>3 &middot; Poke affordance is still unsolved.</b> Nothing animates on
-    arrival, so a viewer has no signal that a diagram can be touched. Because Next drives everything,
-    they lose nothing by never noticing &mdash; but then the free exploration in FR-018 may as well
-    not exist. A static affordance (a handle, a dotted outline, a cursor change) is the obvious
-    answer and needs choosing.</div>
-    <div class="note"><b>4 &middot; Two explainers now open on the painful alternative</b> &mdash;
-    EDR and MQTT &mdash; and explainer 1 is entirely that argument. That is three of eight, which is
-    about the right density for a rhythm the reader can learn without it becoming a formula.</div>
-    <div class="note"><b>5 &middot; The ghost convention appears once.</b> Ground truth the viewer
-    never has is drawn in grey, and only in Points and fields. If it is worth a third colour in the
-    shared vocabulary it should be used more than once; if not, it should be a local device in that
-    explainer rather than part of the course-wide key.</div>
+    <div class="note"><b>The grey was wrong, and the correction improved the course.</b> It meant
+    &ldquo;ground truth you never have&rdquo; &mdash; romantic, and false here. drogna holds a
+    multi-decade monthly archive (SRD FR-21) and records ground truth in a manifest so recovery can
+    be <em>scored</em> (Constitution IX). Grey now means the coarse prior you already hold. Points
+    and fields step 2 keeps its line and changes its picture: casts sit over an explicit six-cell
+    archive grid, so the drawing no longer implies the sea is unknowable. <b>That correction is what
+    produced explainer 4.</b></div>
+    <div class="note"><b>EDR was never over budget.</b> The first draft flagged seven steps as too
+    many. At about ten seconds a step &mdash; enough to read two sentences and watch the diagram
+    change &mdash; seven steps is roughly seventy seconds, inside the promise. Four explainers now
+    run to seven, so the rail showing length is a general courtesy rather than an exception.</div>
+    <div class="note"><b>No explainer skips the value panel.</b> FR-008 already handles thinness at
+    the right grain &mdash; an omitted <em>axis</em> with a stated reason, which three explainers
+    use. Dropping the whole panel would take the argument out of precisely the four longest and
+    densest explainers, to save a step in ones that were never the problem.</div>
+  </div>
+
+  <h2 style="margin-top:36px">Still open</h2>
+  <div class="stack" style="margin-top:16px">
+    <div class="note q"><b>1 &middot; The course is now 56 steps</b> &mdash; about ten minutes end to
+    end. That is a session, not a glance, and this audience was chosen partly for being time-poor.
+    Dip-in is supported, but nobody has decided which three explainers a viewer with four minutes
+    should be steered to.</div>
+    <div class="note q"><b>2 &middot; Two explainers are not about standards.</b> Holdings (4) and
+    the control loop (9) are drogna&rsquo;s own arrangement. Both earn their place by making the
+    others honest &mdash; but the stated frame is &ldquo;the standards themselves, drogna as worked
+    example&rdquo;, and two of nine now sit outside it.</div>
+    <div class="note q"><b>3 &middot; FeatureOfInterest is named but not walked.</b> Step 2 calls it
+    the subtle one &mdash; where an observation applies is not always where the instrument is
+    &mdash; and the walk then skips it. Either it deserves a step or it should not be singled
+    out.</div>
+    <div class="note q"><b>4 &middot; Nothing shows a refusal at the boundary.</b> Default deny is a
+    constitutional principle with a visible surface, and no explainer touches it. It may belong in
+    pygeoapi, or nowhere.</div>
   </div>
 </section>
 

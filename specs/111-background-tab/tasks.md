@@ -27,10 +27,18 @@ and this branch now carries them.
 - [x] T005 Storyboard all eight explainers — steps, prose, wireframes, value panels, and
       the panel chrome at both widths. `storyboard.html`, committed here because it leads
       implementation rather than records it.
-- [ ] T006 Settle what the storyboard left open: EDR's step budget, whether the value
-      panel must cost a step in every explainer, the poke affordance, and whether the
-      "ground truth you never have" grey earns a place in the shared vocabulary or stays
-      local to explainer 2.
+- [x] T006 Settle what the first storyboard left open. EDR was never over budget — at
+      ~10s a step, seven steps is ~70s, inside the promise; four explainers now run to
+      seven and the rail shows length for all of them. The value panel stays in every
+      explainer (FR-020): FR-008 already handles thinness at the axis. Interactive regions
+      carry a dashed outline (FR-025). And the grey was simply wrong — it meant "truth you
+      never have", when drogna holds a multi-decade archive and scores against a recorded
+      ground truth; it now means the coarse prior, which is what produced explainer 4.
+- [ ] T007 Settle what the second storyboard left open: which three explainers a viewer
+      with four minutes is steered to; whether two non-standards explainers (4 and 9) sit
+      comfortably in a course framed as "the standards themselves"; whether
+      FeatureOfInterest earns a step having been named as the subtle one; and whether a
+      refusal at the boundary belongs in explainer 7 or nowhere.
 
 ## Addressing (US1, and the only work that can break another feature)
 
@@ -94,7 +102,12 @@ and this branch now carries them.
 ## The shape of the data (US2, P2)
 
 - [ ] T040 Explainer 2, points and fields (interactive): sample the schematic sea as
-      points, then as a field; the two results differ in kind, not density.
+      points over the archive prior, then as a field; the results differ in kind, not
+      density. Step 4 is the beat — one question, two honest answers.
+- [ ] T042 Explainer 4, what a holding is (interactive): the three eras under one
+      collection name; step 4 is the beat — instances accumulate, each carrying the
+      manifest that reconstructs it; step 5, the extent stated truthfully and verified
+      against the store by test.
 - [ ] T041 Explainer 3, NetCDF (interactive): peel the 4D block into dimensions,
       coordinates, variables, attributes; units, CRS and time origin shown travelling
       inside the file.

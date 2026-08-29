@@ -4,7 +4,7 @@
   "title": "drogna run configuration",
   "description": "The whole configuration document the composition root reads: one sub-document per component, each validated against its own master before that component does any other work (Constitution IV). This is configuration, not state: everything that varies between runs of the same configuration lives in the run manifest (run-manifest.schema.json), and a replay consults the manifest plus this document's digests, never this document's values.",
   "type": "object",
-  "required": ["schema_version", "scenario", "clock", "broker", "boundary", "env_generator", "coverage_store", "sensors", "ingest", "observation_store", "feature_store", "shell"],
+  "required": ["schema_version", "scenario", "clock", "broker", "boundary", "env_generator", "coverage_store", "sensors", "ingest", "observation_store", "feature_store", "query", "shell"],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
@@ -21,6 +21,7 @@
     "sensors": { "$ref": "config.sensors.schema.json" },
     "ingest": { "$ref": "config.ingest.schema.json" },
     "observation_store": { "$ref": "config.observation-store.schema.json" },
+    "query": { "$ref": "config.query.schema.json" },
     "feature_store": { "$ref": "config.feature-store.schema.json" },
     "shell": { "$ref": "config.shell.schema.json" }
   }

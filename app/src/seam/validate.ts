@@ -16,7 +16,11 @@ export interface ValidationVerdict {
 }
 
 export interface SeamValidator {
-  /** Keys are master stems: 'clock', 'heartbeat', 'config.run', ... */
+  /**
+   * Keys are master stems ('clock', 'config.run', …), optionally addressing a
+   * $defs entry as 'edr-collections#collections' for masters that are libraries
+   * of shapes rather than one root shape.
+   */
   validate(schemaKey: string, payload: unknown): ValidationVerdict;
   has(schemaKey: string): boolean;
 }
@@ -28,12 +32,15 @@ export function createSeamValidator(): SeamValidator {
     ajv.addSchema(document);
   }
   const compiled = new Map<string, ValidateFunction>();
-  // harness:allow-literal-path a JSON-Schema $id namespace, never fetched — the masters' identity, not a location
-  const idFor = (key: string) => `https://schemas.harness.invalid/${key}.schema.json`;
+  const idFor = (key: string) => {
+    const [stem, def] = key.split('#');
+    // harness:allow-literal-path a JSON-Schema $id namespace, never fetched — the masters' identity, not a location
+    return `https://schemas.harness.invalid/${stem}.schema.json${def ? `#/$defs/${def}` : ''}`;
+  };
 
   return {
     has(schemaKey) {
-      return schemaKey in schemaDocuments;
+      return schemaKey.split('#')[0] in schemaDocuments;
     },
     validate(schemaKey, payload) {
       let validator = compiled.get(schemaKey);

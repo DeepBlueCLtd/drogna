@@ -118,6 +118,19 @@
       ]
     },
     {
+      "role": "query",
+      "rules": [
+        {
+          "access": "write",
+          "filter": "ctl/heartbeat"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/clock"
+        }
+      ]
+    },
+    {
       "role": "coverage-store",
       "rules": [
         {
@@ -186,6 +199,11 @@
       "source_root": "app/src/backend/observation-store"
     },
     {
+      "id": "query",
+      "role": "query",
+      "source_root": "app/src/backend/query"
+    },
+    {
       "id": "sensors",
       "role": "sensors",
       "source_root": "app/src/backend/sensors"
@@ -211,13 +229,13 @@
         {
           "component": "coverage-store",
           "path": "app/config/run.json",
-          "line": 144,
+          "line": 145,
           "constant": "/coverage_store/topics/published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 269,
+          "line": 280,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -236,7 +254,7 @@
         {
           "component": "boundary",
           "path": "app/config/run.json",
-          "line": 48,
+          "line": 49,
           "constant": "/boundary/topics/denial"
         }
       ]
@@ -256,6 +274,7 @@
         "feature-store",
         "ingest",
         "observation-store",
+        "query",
         "sensors",
         "shell"
       ],
@@ -297,6 +316,12 @@
           "constant": "/observation_store/topics/clock"
         },
         {
+          "component": "query",
+          "path": "app/config/run.json",
+          "line": 12,
+          "constant": "/query/topics/clock"
+        },
+        {
           "component": "feature-store",
           "path": "app/config/run.json",
           "line": 12,
@@ -323,6 +348,7 @@
         "feature-store",
         "ingest",
         "observation-store",
+        "query",
         "sensors"
       ],
       "subscribers": [
@@ -350,7 +376,7 @@
         {
           "component": "ingest",
           "path": "app/config/run.json",
-          "line": 202,
+          "line": 203,
           "constant": "/ingest/topics/observations"
         }
       ]

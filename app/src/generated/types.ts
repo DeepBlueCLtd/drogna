@@ -271,6 +271,20 @@ export type ConfigObservationStore = {
   "heartbeat": ConfigCommonHeartbeat;
 };
 
+/** drogna query components configuration (V2-C09) — from config.query.schema.json */
+export type ConfigQuery = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "http": {
+    "edr_prefix": ConfigCommonRelativePath;
+    "st_prefix": ConfigCommonRelativePath;
+    "subsets_path": ConfigCommonRelativePath;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+};
+
 /** drogna run configuration — from config.run.schema.json */
 export type ConfigRun = {
   "schema_version": 1;
@@ -283,6 +297,7 @@ export type ConfigRun = {
   "sensors": ConfigSensors;
   "ingest": ConfigIngest;
   "observation_store": ConfigObservationStore;
+  "query": ConfigQuery;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
 };
@@ -394,6 +409,48 @@ export type CoverageRunManifest = {
   };
 };
 
+/** drogna CoverageJSON subset — from coveragejson.schema.json */
+export type Coveragejson = {
+  "type": "Coverage";
+  "domain": {
+    "type": "Domain";
+    "domainType": "Point" | "Trajectory";
+    "axes": {
+      "x"?: CoveragejsonNumericAxis;
+      "y"?: CoveragejsonNumericAxis;
+      "z"?: CoveragejsonNumericAxis;
+      "t"?: CoveragejsonStringAxis;
+      "composite"?: {
+        "dataType": "tuple";
+        "coordinates": ("t" | "x" | "y" | "z")[];
+        "values": ((number | string)[])[];
+      };
+    };
+    "referencing": {
+      "coordinates": string[];
+      "system": {
+        "type": string;
+      };
+    }[];
+  };
+  "parameters": {
+    [key: string]: unknown;
+  };
+  "ranges": {
+    [key: string]: unknown;
+  };
+};
+
+/** coveragejson.schema.json #/$defs/numeric_axis */
+export type CoveragejsonNumericAxis = {
+  "values": number[];
+};
+
+/** coveragejson.schema.json #/$defs/string_axis */
+export type CoveragejsonStringAxis = {
+  "values": string[];
+};
+
 /** drogna divergence event — from divergence.schema.json */
 export type Divergence = {
   "component": string;
@@ -432,6 +489,72 @@ export type DivergencePersistence = {
   "span_seconds": number;
   "first_sim_time": string;
   "last_sim_time": string;
+};
+
+/** drogna EDR collections subset — from edr-collections.schema.json */
+export type EdrCollections = {
+  [key: string]: unknown;
+};
+
+/** edr-collections.schema.json #/$defs/landing */
+export type EdrCollectionsLanding = {
+  "title": string;
+  "description": string;
+  "links": EdrCollectionsLink[];
+};
+
+/** edr-collections.schema.json #/$defs/conformance */
+export type EdrCollectionsConformance = {
+  "conformsTo": string[];
+};
+
+/** edr-collections.schema.json #/$defs/collections */
+export type EdrCollectionsCollections = {
+  "links": EdrCollectionsLink[];
+  "collections": EdrCollectionsCollection[];
+};
+
+/** edr-collections.schema.json #/$defs/collection */
+export type EdrCollectionsCollection = {
+  "id": string;
+  "title": string;
+  "description": string;
+  "links": EdrCollectionsLink[];
+  "extent": {
+    "spatial": {
+      "bbox": number[][];
+      "crs": string;
+    };
+    "vertical": {
+      "interval": number[][];
+      "vrs": string;
+    };
+    "temporal": {
+      "interval": string[][];
+      "trs": string;
+    };
+  };
+  "data_queries": {
+    "position"?: EdrCollectionsDataQuery;
+    "trajectory"?: EdrCollectionsDataQuery;
+  };
+  "parameter_names": {
+    [key: string]: unknown;
+  };
+  "crs": string[];
+};
+
+/** edr-collections.schema.json #/$defs/data_query */
+export type EdrCollectionsDataQuery = {
+  "link": EdrCollectionsLink;
+};
+
+/** edr-collections.schema.json #/$defs/link */
+export type EdrCollectionsLink = {
+  "href": string;
+  "rel": string;
+  "type"?: string;
+  "title"?: string;
 };
 
 /** drogna component heartbeat — from heartbeat.schema.json */
@@ -919,6 +1042,24 @@ export type PlanProjectionEntry = {
   "timescale_seconds": number;
 };
 
+/** drogna query subset statement — from query-subsets.schema.json */
+export type QuerySubsets = {
+  "schema_version": 1;
+  "edr": {
+    "standard": string;
+    "query_types": string[];
+    "parameters": string[];
+    "interpolation": string;
+    "refused_by_name": string[];
+  };
+  "sensorthings": {
+    "standard": string;
+    "resources": string[];
+    "query_options": string[];
+    "refused_by_name": string[];
+  };
+};
+
 /** drogna run manifest — from run-manifest.schema.json */
 export type RunManifest = {
   "schema_version": 1;
@@ -1038,6 +1179,77 @@ export type RunStarted = {
   "member_count": number;
   "kernel": string;
   "initialisation_sim_time": string;
+};
+
+/** drogna SensorThings subset responses — from sensorthings-subset.schema.json */
+export type SensorthingsSubset = {
+  [key: string]: unknown;
+};
+
+/** sensorthings-subset.schema.json #/$defs/service_root */
+export type SensorthingsSubsetServiceRoot = {
+  "value": {
+    "name": string;
+    "url": string;
+  }[];
+};
+
+/** sensorthings-subset.schema.json #/$defs/things_response */
+export type SensorthingsSubsetThingsResponse = {
+  "@iot.count": number;
+  "value": SensorthingsSubsetThing[];
+};
+
+/** sensorthings-subset.schema.json #/$defs/thing */
+export type SensorthingsSubsetThing = {
+  "@iot.id": string;
+  "name": string;
+  "description": string;
+};
+
+/** sensorthings-subset.schema.json #/$defs/datastreams_response */
+export type SensorthingsSubsetDatastreamsResponse = {
+  "@iot.count": number;
+  "value": SensorthingsSubsetDatastream[];
+};
+
+/** sensorthings-subset.schema.json #/$defs/datastream */
+export type SensorthingsSubsetDatastream = {
+  "@iot.id": string;
+  "name": string;
+  "description": string;
+  "observationType": string;
+  "unitOfMeasurement": {
+    "name": string;
+    "symbol": string;
+    "definition": string;
+  };
+  "observedProperty": {
+    "name": string;
+    "definition": string;
+  };
+};
+
+/** sensorthings-subset.schema.json #/$defs/observations_response */
+export type SensorthingsSubsetObservationsResponse = {
+  "@iot.count": number;
+  "value": SensorthingsSubsetObservationEntity[];
+};
+
+/** sensorthings-subset.schema.json #/$defs/observation_entity */
+export type SensorthingsSubsetObservationEntity = {
+  "@iot.id": string;
+  "phenomenonTime": string;
+  "resultTime": string | null;
+  "result": number;
+  "Datastream@iot.navigationLink": string;
+  "FeatureOfInterest": {
+    "name": string;
+    "feature": {
+      "type": "Point";
+      "coordinates": number[];
+    };
+  };
 };
 
 /** drogna telemetry — from telemetry.schema.json */

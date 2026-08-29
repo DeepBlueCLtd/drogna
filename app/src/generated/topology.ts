@@ -124,6 +124,19 @@ export const topology: Topology = {
       ]
     },
     {
+      "role": "query",
+      "rules": [
+        {
+          "access": "write",
+          "filter": "ctl/heartbeat"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/clock"
+        }
+      ]
+    },
+    {
       "role": "coverage-store",
       "rules": [
         {
@@ -192,6 +205,11 @@ export const topology: Topology = {
       "source_root": "app/src/backend/observation-store"
     },
     {
+      "id": "query",
+      "role": "query",
+      "source_root": "app/src/backend/query"
+    },
+    {
       "id": "sensors",
       "role": "sensors",
       "source_root": "app/src/backend/sensors"
@@ -217,13 +235,13 @@ export const topology: Topology = {
         {
           "component": "coverage-store",
           "path": "app/config/run.json",
-          "line": 144,
+          "line": 145,
           "constant": "/coverage_store/topics/published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 269,
+          "line": 280,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -242,7 +260,7 @@ export const topology: Topology = {
         {
           "component": "boundary",
           "path": "app/config/run.json",
-          "line": 48,
+          "line": 49,
           "constant": "/boundary/topics/denial"
         }
       ]
@@ -262,6 +280,7 @@ export const topology: Topology = {
         "feature-store",
         "ingest",
         "observation-store",
+        "query",
         "sensors",
         "shell"
       ],
@@ -303,6 +322,12 @@ export const topology: Topology = {
           "constant": "/observation_store/topics/clock"
         },
         {
+          "component": "query",
+          "path": "app/config/run.json",
+          "line": 12,
+          "constant": "/query/topics/clock"
+        },
+        {
           "component": "feature-store",
           "path": "app/config/run.json",
           "line": 12,
@@ -329,6 +354,7 @@ export const topology: Topology = {
         "feature-store",
         "ingest",
         "observation-store",
+        "query",
         "sensors"
       ],
       "subscribers": [
@@ -356,7 +382,7 @@ export const topology: Topology = {
         {
           "component": "ingest",
           "path": "app/config/run.json",
-          "line": 202,
+          "line": 203,
           "constant": "/ingest/topics/observations"
         }
       ]

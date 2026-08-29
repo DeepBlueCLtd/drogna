@@ -25,6 +25,7 @@ import { Sensors, type WorldSampler } from '../sensors/sensors.js';
 import { Ingest } from '../ingest/ingest.js';
 import { ObservationStore } from '../observation-store/store.js';
 import { FeatureStore } from '../feature-store/store.js';
+import { QueryComponent } from '../query/query.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
@@ -72,6 +73,7 @@ export function buildBackend(
   validated(validator, 'config.ingest', config.ingest);
   validated(validator, 'config.observation-store', config.observation_store);
   validated(validator, 'config.feature-store', config.feature_store);
+  validated(validator, 'config.query', config.query);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
@@ -136,6 +138,14 @@ export function buildBackend(
     transport.connect(config.feature_store.id, config.feature_store.id),
     runId,
   );
+  const query = new QueryComponent(
+    config.query,
+    transport.connect(config.query.id, config.query.id),
+    store,
+    observationStore,
+    router,
+    runId,
+  );
 
   // Each component's heartbeat carries the simulation time that component last
   // heard over the seam; only the clock's carries the time it is the source of.
@@ -195,6 +205,7 @@ export function buildBackend(
   store.heartbeat.start();
   observationStore.heartbeat.start();
   featureStore.heartbeat.start();
+  query.start();
   clock.start();
   for (const heartbeat of heartbeats) heartbeat.start();
 
@@ -216,6 +227,7 @@ export function buildBackend(
       store.heartbeat.stop();
       observationStore.heartbeat.stop();
       featureStore.heartbeat.stop();
+      query.stop();
       clock.stop();
     },
   };

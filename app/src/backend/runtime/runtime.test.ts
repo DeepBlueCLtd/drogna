@@ -67,6 +67,7 @@ describe('the backend runtime', () => {
       'feature-store',
       'ingest',
       'observation-store',
+      'query',
       'sensors',
     ]);
     expect(heard.get('broker')?.sim_time).toBe('2026-01-01T00:00:00.000000Z');

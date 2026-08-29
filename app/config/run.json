@@ -32,6 +32,7 @@
       },
       { "role": "feature-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
       { "role": "observation-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      { "role": "query", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
       {
         "role": "coverage-store",
         "publish": ["cov/holdings", "ctl/heartbeat"],
@@ -44,7 +45,7 @@
   "boundary": {
     "id": "boundary",
     "api_prefix": "/api",
-    "allow_prefixes": ["/api/ctl/"],
+    "allow_prefixes": ["/api/ctl/", "/api/edr/", "/api/st/"],
     "topics": { "denial": "ctl/boundary/denial" },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
   },
@@ -205,6 +206,16 @@
   "observation_store": {
     "id": "observation-store",
     "topics": { "clock": "ctl/clock" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "query": {
+    "id": "query",
+    "topics": { "clock": "ctl/clock" },
+    "http": {
+      "edr_prefix": "/api/edr",
+      "st_prefix": "/api/st/v1.1",
+      "subsets_path": "/api/ctl/query-subsets"
+    },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
   },
   "feature_store": {

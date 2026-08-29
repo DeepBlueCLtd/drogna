@@ -1222,6 +1222,61 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.query": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.query.schema.json",
+    "title": "drogna query components configuration (V2-C09)",
+    "description": "The query components: OGC API-EDR (CoverageJSON) over the coverage store and OGC SensorThings (Part 1, Sensing, read-only) over the observation store, each a stated honest subset served through the seam and the release gate (SRD-v2 FR-26 to FR-29). The prefixes below are what the boundary's allow list must name for the collections to be released at all.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "edr_prefix",
+          "st_prefix",
+          "subsets_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "edr_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "st_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "subsets_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Where the subset statement (query-subsets.schema.json) is served, on the control plane."
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      }
+    }
+  },
   "config.run": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.run.schema.json",
@@ -1240,6 +1295,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "ingest",
       "observation_store",
       "feature_store",
+      "query",
       "shell"
     ],
     "additionalProperties": false,
@@ -1276,6 +1332,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "observation_store": {
         "$ref": "config.observation-store.schema.json"
+      },
+      "query": {
+        "$ref": "config.query.schema.json"
       },
       "feature_store": {
         "$ref": "config.feature-store.schema.json"
@@ -1835,6 +1894,275 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     ]
   },
+  "coveragejson": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/coveragejson.schema.json",
+    "title": "drogna CoverageJSON subset",
+    "description": "The CoverageJSON the EDR component serves (SRD-v2 FR-26): the honest subset, stated — Coverage documents with Point and Trajectory domains, NdArray ranges, and the harness's two parameters. This master is the shape a response is validated against in tests and behind the debug flag; it deliberately closes what the harness emits rather than describing everything CoverageJSON permits, so an accidental extra field is a finding, not a feature.",
+    "type": "object",
+    "required": [
+      "type",
+      "domain",
+      "parameters",
+      "ranges"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "type": "string",
+        "const": "Coverage"
+      },
+      "domain": {
+        "type": "object",
+        "required": [
+          "type",
+          "domainType",
+          "axes",
+          "referencing"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Domain"
+          },
+          "domainType": {
+            "type": "string",
+            "enum": [
+              "Point",
+              "Trajectory"
+            ]
+          },
+          "axes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "$ref": "#/$defs/numeric_axis"
+              },
+              "y": {
+                "$ref": "#/$defs/numeric_axis"
+              },
+              "z": {
+                "$ref": "#/$defs/numeric_axis"
+              },
+              "t": {
+                "$ref": "#/$defs/string_axis"
+              },
+              "composite": {
+                "type": "object",
+                "required": [
+                  "dataType",
+                  "coordinates",
+                  "values"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "dataType": {
+                    "type": "string",
+                    "const": "tuple"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "t",
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    }
+                  },
+                  "values": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": [
+                          "number",
+                          "string"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "referencing": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "coordinates",
+                "system"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "coordinates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "system": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": true,
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "type",
+            "description",
+            "unit",
+            "observedProperty"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "Parameter"
+            },
+            "description": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "unit": {
+              "type": "object",
+              "required": [
+                "symbol"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                }
+              }
+            },
+            "observedProperty": {
+              "type": "object",
+              "required": [
+                "id",
+                "label"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ranges": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "type",
+            "dataType",
+            "axisNames",
+            "shape",
+            "values"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "NdArray"
+            },
+            "dataType": {
+              "type": "string",
+              "const": "float"
+            },
+            "axisNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "shape": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "$defs": {
+      "numeric_axis": {
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "string_axis": {
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
   "divergence": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/divergence.schema.json",
@@ -2004,6 +2332,308 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "last_sim_time": {
             "type": "string",
             "description": "Simulation time of the latest contributing sample."
+          }
+        }
+      }
+    }
+  },
+  "edr-collections": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/edr-collections.schema.json",
+    "title": "drogna EDR collections subset",
+    "description": "The OGC API-EDR discovery documents the query component serves (SRD-v2 FR-26, FR-21): the landing page, the conformance declaration, the collections list and one collection. Each collection's extent states what the store genuinely holds, verified against the store by test — a discovery document that flatters its holdings is the dishonesty the harness exists to avoid.",
+    "type": "object",
+    "$defs": {
+      "landing": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "links"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          }
+        }
+      },
+      "conformance": {
+        "type": "object",
+        "required": [
+          "conformsTo"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "conformsTo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "collections": {
+        "type": "object",
+        "required": [
+          "links",
+          "collections"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/collection"
+            }
+          }
+        }
+      },
+      "collection": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "links",
+          "extent",
+          "data_queries",
+          "parameter_names",
+          "crs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          },
+          "extent": {
+            "type": "object",
+            "required": [
+              "spatial",
+              "vertical",
+              "temporal"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "spatial": {
+                "type": "object",
+                "required": [
+                  "bbox",
+                  "crs"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "bbox": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 4,
+                      "maxItems": 4,
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "crs": {
+                    "type": "string"
+                  }
+                }
+              },
+              "vertical": {
+                "type": "object",
+                "required": [
+                  "interval",
+                  "vrs"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "interval": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "vrs": {
+                    "type": "string",
+                    "description": "States that depth is positive downwards; a vertical axis that leaves it implicit will be read upside down by somebody."
+                  }
+                }
+              },
+              "temporal": {
+                "type": "object",
+                "required": [
+                  "interval",
+                  "trs"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "interval": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "trs": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "data_queries": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Exactly the query types genuinely served for this collection; an entry here is a capability, and an absent entry is refused by name when asked for.",
+            "properties": {
+              "position": {
+                "$ref": "#/$defs/data_query"
+              },
+              "trajectory": {
+                "$ref": "#/$defs/data_query"
+              }
+            }
+          },
+          "parameter_names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "type",
+                "description",
+                "unit",
+                "observedProperty"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "Parameter"
+                },
+                "description": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "unit": {
+                  "type": "object",
+                  "required": [
+                    "symbol"
+                  ],
+                  "additionalProperties": true,
+                  "properties": {
+                    "symbol": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "observedProperty": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "crs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "data_query": {
+        "type": "object",
+        "required": [
+          "link"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "link": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      },
+      "link": {
+        "type": "object",
+        "required": [
+          "href",
+          "rel"
+        ],
+        "additionalProperties": false,
+        "description": "hrefs are relative and same-origin by requirement (FR-04, E7): an absolute URL here would break behind a clearance at the preflight.",
+        "properties": {
+          "href": {
+            "type": "string",
+            "pattern": "^[^:]*$"
+          },
+          "rel": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
           }
         }
       }
@@ -4484,6 +5114,96 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     ]
   },
+  "query-subsets": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/query-subsets.schema.json",
+    "title": "drogna query subset statement",
+    "description": "The served account of exactly which subset of each standard the query component implements (SRD-v2 FR-27, E9, Constitution VI). Served on the control plane, and held equal to the documented account (docs/architecture/query-subsets.md) by a test — the conformance statement is amended in the same commit as the code, and a divergence between the served and documented accounts fails the build.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "edr",
+      "sensorthings"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "edr": {
+        "type": "object",
+        "required": [
+          "standard",
+          "query_types",
+          "parameters",
+          "interpolation",
+          "refused_by_name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "standard": {
+            "type": "string"
+          },
+          "query_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interpolation": {
+            "type": "string"
+          },
+          "refused_by_name": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Query types and options that exist in the standard, are not implemented, and are refused with their own name in the refusal."
+          }
+        }
+      },
+      "sensorthings": {
+        "type": "object",
+        "required": [
+          "standard",
+          "resources",
+          "query_options",
+          "refused_by_name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "standard": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "query_options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "refused_by_name": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
   "run-manifest": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-manifest.schema.json",
@@ -5053,6 +5773,257 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "initialisation_sim_time": {
         "type": "string",
         "description": "The simulation instant the run initialises from, echoed from the request."
+      }
+    }
+  },
+  "sensorthings-subset": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/sensorthings-subset.schema.json",
+    "title": "drogna SensorThings subset responses",
+    "description": "The OGC SensorThings (Part 1, Sensing) responses the query component serves over the observation store (SRD-v2 FR-26): the service root, and value collections of Things, Datastreams and Observations. Read-only, and a genuine subset with the subset stated: entity shapes carry exactly what the observation master carries, because the store is a function of the traffic and nothing else.",
+    "type": "object",
+    "$defs": {
+      "service_root": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "url"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^[^:]*$"
+                }
+              }
+            }
+          }
+        }
+      },
+      "things_response": {
+        "type": "object",
+        "required": [
+          "@iot.count",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/thing"
+            }
+          }
+        }
+      },
+      "thing": {
+        "type": "object",
+        "required": [
+          "@iot.id",
+          "name",
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "datastreams_response": {
+        "type": "object",
+        "required": [
+          "@iot.count",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/datastream"
+            }
+          }
+        }
+      },
+      "datastream": {
+        "type": "object",
+        "required": [
+          "@iot.id",
+          "name",
+          "description",
+          "observationType",
+          "unitOfMeasurement",
+          "observedProperty"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "observationType": {
+            "type": "string"
+          },
+          "unitOfMeasurement": {
+            "type": "object",
+            "required": [
+              "name",
+              "symbol",
+              "definition"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "string"
+              }
+            }
+          },
+          "observedProperty": {
+            "type": "object",
+            "required": [
+              "name",
+              "definition"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "observations_response": {
+        "type": "object",
+        "required": [
+          "@iot.count",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The total matching the query before $top/$skip, so a consumer can page honestly."
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/observation_entity"
+            }
+          }
+        }
+      },
+      "observation_entity": {
+        "type": "object",
+        "required": [
+          "@iot.id",
+          "phenomenonTime",
+          "result",
+          "resultTime",
+          "Datastream@iot.navigationLink",
+          "FeatureOfInterest"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "@iot.id": {
+            "type": "string"
+          },
+          "phenomenonTime": {
+            "type": "string"
+          },
+          "resultTime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Null, stated: the harness records phenomenon time only, and inventing a result time would be a claim the write path never made."
+          },
+          "result": {
+            "type": "number"
+          },
+          "Datastream@iot.navigationLink": {
+            "type": "string",
+            "pattern": "^[^:]*$"
+          },
+          "FeatureOfInterest": {
+            "type": "object",
+            "required": [
+              "name",
+              "feature"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "feature": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "coordinates"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "Point"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "lon, lat, depth in metres positive down — the third coordinate is depth, stated here because GeoJSON's default reading is altitude."
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },

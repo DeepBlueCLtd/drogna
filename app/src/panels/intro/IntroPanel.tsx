@@ -71,10 +71,23 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           traffic, and the two never mixing.
         </p>
       </section>
+      <section>
+        <h3>104 — it is served</h3>
+        <p>
+          The holdings and the observations are now answered through standard
+          interfaces: OGC API-EDR (CoverageJSON, position and trajectory with
+          per-vertex time) over the coverage store, and read-only SensorThings over
+          the observation store — each a stated, honest subset whose served account
+          is held equal to the documented one by a test, and where everything not
+          implemented is refused with its own name. Every request passes the release
+          gate: default deny, with the data prefixes released one at a time. Try{' '}
+          <code>/api/edr/collections</code> in the address bar — it is a genuine GET.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          The query seam (104), the forecast loop (105), uncertainty
+          The forecast loop (105), uncertainty
           and planning (106), the operator&rsquo;s view (107), shore advisories (108)
           and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
           is built. Until then their components stay grey, because nothing here lights

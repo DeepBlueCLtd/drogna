@@ -1,0 +1,142 @@
+# The HTTP contract of the query seam (SRD-v2 FR-26 to FR-29; Constitution III).
+#
+# Paths and parameters live here; every response body shape is a $ref into the JSON
+# Schema masters beside this file, so one vocabulary serves the wire and the type
+# chain, and a V3 backend generates from the same sources. The prefixes are
+# configuration (config.query.schema.json); the paths below use the shipped values.
+openapi: 3.1.0
+info:
+  title: drogna query seam
+  version: 2.0.0
+  description: >
+    OGC API-EDR and OGC SensorThings subsets over the in-browser stores, served
+    through the release gate. Deliberately fake numerics throughout; the served
+    subset statement is the authority on capabilities and is held equal to
+    docs/architecture/query-subsets.md by test.
+paths:
+  /api/ctl/query-subsets:
+    get:
+      summary: The served subset statement
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/query-subsets.schema.json'
+  /api/ctl/holdings:
+    get:
+      summary: The coverage store's inventory (control plane)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/holdings-inventory.schema.json'
+  /api/edr/:
+    get:
+      summary: EDR landing page
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/edr-collections.schema.json#/$defs/landing'
+  /api/edr/conformance:
+    get:
+      summary: EDR conformance declaration
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/edr-collections.schema.json#/$defs/conformance'
+  /api/edr/collections:
+    get:
+      summary: The served collections, enumerated from the store by convention
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/edr-collections.schema.json#/$defs/collections'
+  /api/edr/collections/{collectionId}:
+    get:
+      summary: One collection, its extent read from the store
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/edr-collections.schema.json#/$defs/collection'
+  /api/edr/collections/{collectionId}/position:
+    get:
+      summary: Position query, nearest neighbour, CoverageJSON Point
+      parameters:
+        - { name: collectionId, in: path, required: true, schema: { type: string } }
+        - { name: coords, in: query, required: true, schema: { type: string }, description: 'POINT(lon lat)' }
+        - { name: z, in: query, required: true, schema: { type: number }, description: depth in metres, positive down }
+        - { name: datetime, in: query, required: false, schema: { type: string } }
+        - { name: parameter-name, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          content:
+            application/prs.coverage+json:
+              schema:
+                $ref: '../schemas/coveragejson.schema.json'
+  /api/edr/collections/{collectionId}/trajectory:
+    get:
+      summary: Trajectory query with per-vertex depth and time (FR-28)
+      parameters:
+        - { name: collectionId, in: path, required: true, schema: { type: string } }
+        - { name: coords, in: query, required: true, schema: { type: string }, description: 'LINESTRINGZM(lon lat depth posix_seconds, ...)' }
+        - { name: parameter-name, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          content:
+            application/prs.coverage+json:
+              schema:
+                $ref: '../schemas/coveragejson.schema.json'
+  /api/st/v1.1/:
+    get:
+      summary: SensorThings service root
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/sensorthings-subset.schema.json#/$defs/service_root'
+  /api/st/v1.1/Things:
+    get:
+      summary: Things
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/sensorthings-subset.schema.json#/$defs/things_response'
+  /api/st/v1.1/Datastreams:
+    get:
+      summary: Datastreams
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/sensorthings-subset.schema.json#/$defs/datastreams_response'
+  /api/st/v1.1/Observations:
+    get:
+      summary: Observations, with $top and $skip
+      parameters:
+        - { name: $top, in: query, required: false, schema: { type: integer, minimum: 0 } }
+        - { name: $skip, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/sensorthings-subset.schema.json#/$defs/observations_response'

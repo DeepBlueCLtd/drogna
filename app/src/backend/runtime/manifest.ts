@@ -43,6 +43,7 @@ export function buildRunManifest(
       { id: config.ingest.id, role: 'observer', config_digest: configDigest(config.ingest), registered_tick: 0 },
       { id: config.observation_store.id, role: 'observer', config_digest: configDigest(config.observation_store), registered_tick: 0 },
       { id: config.feature_store.id, role: 'observer', config_digest: configDigest(config.feature_store), registered_tick: 0 },
+      { id: config.query.id, role: 'observer', config_digest: configDigest(config.query), registered_tick: 0 },
       { id: config.shell.id, role: 'observer', config_digest: configDigest(config.shell), registered_tick: 0 },
     ],
     streams: [...streams],

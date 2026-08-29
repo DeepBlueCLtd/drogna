@@ -25,7 +25,9 @@ const EDITS = [
     file: 'app/src/bootstrap/main.tsx',
     at: [
       ['const config = runConfigDocument as ConfigRun;', "performance.mark('modules-done');\nconst config = runConfigDocument as ConfigRun;"],
-      ['const validator = createSeamValidator();', "performance.mark('validator-start');\nconst validator = createSeamValidator();\nperformance.mark('validator-end');"],
+      // The validator is memoised and built on first use, so these fire inside
+      // validatorForRun() rather than at module scope — which is the point of it.
+      ['  seamValidator ??= createSeamValidator();', "  performance.mark('validator-start');\n  seamValidator ??= createSeamValidator();\n  performance.mark('validator-end');"],
       ['  runtime = buildBackend(', "  performance.mark('backend-start');\n  runtime = buildBackend("],
       ['  const shellClient = runtime.transport.connect(', "  performance.mark('backend-end');\n  const shellClient = runtime.transport.connect("],
       ['    </StrictMode>,\n  );\n}', "    </StrictMode>,\n  );\n  performance.mark('render-end');\n}"],

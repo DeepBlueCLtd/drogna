@@ -290,16 +290,24 @@ merged tree — `main` had gained the Background tab, which took the bundle from
 
 ### The result
 
-| Machine / line | first contentful paint, before | after |
-|---|---:|---:|
-| 4× / 9 Mbps | 2488 ms | **844 ms** |
-| 4× / 4 Mbps | 3224 ms | **1372 ms** |
-| 6× / 1.6 Mbps | 6388 ms | **2832 ms** |
+From `results/first-load-after.txt`, against §1's table:
 
-The dark screen is about a third of what it was. Full interactivity moved much less:
-`buildBackend` still costs ~1.45 s at 4×, so the shell is usable at roughly 2.4–5.2 s
-depending on the line. **The wait was not removed so much as taken out from behind a blank
-page** — which is the honest description of §5.3 and worth saying plainly.
+| Machine / line | first contentful paint, before | after | shell usable, before | after |
+|---|---:|---:|---:|---:|
+| 1× / localhost | 568 ms | **140 ms** | 594 ms | 551 ms |
+| 4× / 9 Mbps | 2488 ms | **588 ms** | 2600 ms | 2374 ms |
+| 4× / 4 Mbps | 3224 ms | **1080 ms** | 3336 ms | 2893 ms |
+| 6× / 1.6 Mbps | 6388 ms | **2400 ms** | 6619 ms | 5177 ms |
+
+Something appears in a quarter to a third of the time it used to, and on localhost the
+boot phases put first paint at 240 ms at 4× and 300 ms at 6× — against 2060 ms and 3024 ms
+in §3's table.
+
+Full interactivity moved much less. `buildBackend` still costs ~1.38 s at 4× and ~2.09 s at
+6×, so the shell is usable at roughly 2.4–5.2 s depending on the line. **The wait was not
+removed so much as taken out from behind a blank page** — which is the honest description
+of §5.3 and worth saying plainly. What remains is §5.2's territory and §5.4's, and neither
+has been solved.
 
 ### §5.1 was right, and incomplete
 
@@ -358,6 +366,18 @@ look of the phase table it improves.
 The first pass of this work claimed that change saved about 250 ms, on the strength of
 comparing two different builds. It did not; that comparison was confounded by every other
 change in the newer build, and the A/B above is what replaced it.
+
+### The fault the reasoning missed twice
+
+Reverting `validateSchema: false` put ~220 ms back onto first contentful paint, which made
+no sense until the phase table was read again: **`createSeamValidator()` ran at module
+scope**, so its ~270 ms at 4× sat in *front* of the starting frame rather than behind it.
+Two commits had by then moved work behind that frame and neither noticed that the largest
+single item before it was still there. It is now memoised and built on first use — nothing
+wants it before the paint — and that is worth more than everything §5.2 proposed.
+
+The general lesson is the one this repository already writes down: the measurement found
+it, and reading the code twice had not.
 
 ### What survived from §5.2
 

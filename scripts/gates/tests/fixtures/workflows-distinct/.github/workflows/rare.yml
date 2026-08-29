@@ -1,0 +1,12 @@
+name: Rare
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: gh-pages-site
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo publish

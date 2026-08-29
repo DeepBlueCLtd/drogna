@@ -1,0 +1,11 @@
+# The inline form of the same declaration, so the gate is watched reading both.
+name: Frequent
+on:
+  push:
+    branches: ['**']
+concurrency: gh-pages-instances-${{ github.ref }}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo deploy

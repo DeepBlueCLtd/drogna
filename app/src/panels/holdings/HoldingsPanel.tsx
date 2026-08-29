@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 import type { PanelParams } from '../../shell/Shell.js';
 import type { CoverageHolding, HoldingsInventory } from '../../generated/types.js';
+import { displayInstant } from '../../shell/display.js';
 
 export function HoldingsPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const { config, client, validator } = params;
@@ -61,7 +62,7 @@ export function HoldingsPanel({ params }: IDockviewPanelProps<PanelParams>) {
               <tr key={holding.holding_id} onClick={() => setSelected(holding.holding_id)} data-era={holding.era}>
                 <td>{holding.era}</td>
                 <td className="message-topic">{holding.holding_id}</td>
-                <td>{holding.published_at.sim_time}</td>
+                <td>{displayInstant(holding.published_at.sim_time)}</td>
                 <td>
                   {holding.manifest.grid.longitude.count}×{holding.manifest.grid.latitude.count}×
                   {holding.manifest.grid.depth.count}×{holding.manifest.grid.time.count}

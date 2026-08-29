@@ -29,6 +29,7 @@ import {
   type GridCoverage,
 } from './map-data.js';
 import { ComposerPane } from './ComposerPane.js';
+import { displayInstant } from '../../shell/display.js';
 import './map.css';
 
 interface FieldState {
@@ -126,7 +127,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
         return;
       }
       const coverage = body as GridCoverage;
-      setField({ coverage, servedFrom: `${collectionId} at ${coverage.domain.axes.t.values[0]}` });
+      setField({ coverage, servedFrom: `${collectionId} at ${displayInstant(coverage.domain.axes.t.values[0])}` });
     })();
     // latestRun keys the refetch: a newly published run replaces the holding.
   }, [collectionId, config.endpoints.edr, depthM, domainRing === undefined, parameter, validator, latestRun]);
@@ -162,7 +163,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
       };
       setArrival(
         response.ok && body.ranges
-          ? `stop ${vertex.sequence} · arrive ${vertex.arrival_sim_time} at ${vertex.depth_m} m: ` +
+          ? `stop ${vertex.sequence} · arrive ${displayInstant(vertex.arrival_sim_time)} at ${vertex.depth_m} m: ` +
               Object.entries(body.ranges)
                 .map(([name, range]) => `${name} ${range.values[0]?.toFixed(3)}`)
                 .join(', ')
@@ -316,7 +317,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
         </button>
       </div>
       <p className="map-status">
-        {displayedSimTime ? `displayed instant ${displayedSimTime}` : 'no clock sample yet'}
+        {displayedSimTime ? `displayed instant ${displayInstant(displayedSimTime)}` : 'no clock sample yet'}
         {field.servedFrom ? ` · field: ${field.servedFrom}` : ''}
         {field.refusal ? ` · field declined: ${field.refusal}` : ''}
         {plan ? ` · plan ${plan.plan_id} (${plan.route.vertices.length} stop(s))` : ' · no plan published yet'}
@@ -373,7 +374,8 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
                     <td>{feature.id}</td>
                     <td>{advisory.kind}</td>
                     <td>
-                      {advisory.valid_time.start_sim_time} → {advisory.valid_time.end_sim_time}
+                      {displayInstant(advisory.valid_time.start_sim_time)} →{' '}
+                      {displayInstant(advisory.valid_time.end_sim_time)}
                     </td>
                     <td>{validAt(advisory, displayedSimTime) ? 'drawn (valid)' : 'undrawn (outside validity)'}</td>
                   </tr>

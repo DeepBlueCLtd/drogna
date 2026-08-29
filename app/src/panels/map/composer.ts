@@ -3,7 +3,9 @@
  * the choices made so far, offering only what the server's own metadata states it
  * serves. The URL shown IS the URL fetched — one function builds both — and the
  * result is classified into the three facts the display keeps distinct: a value
- * (null included), a decline naming what was refused, and absence.
+ * (null included), a decline naming what was refused, and absence. A position may
+ * be typed or picked off the canvas; both arrive here as the same three-decimal
+ * numbers, and the ring the map draws for an area query is the ring in the URL.
  */
 import type { QuerySubsets } from '../../generated/types.js';
 
@@ -60,15 +62,9 @@ export function composeUrl(
   if (choices.queryType === 'position') {
     query.set('coords', `POINT(${choices.longitude} ${choices.latitude})`);
   } else if (choices.queryType === 'area') {
-    // A half-degree box centred on the chosen position: the guided area query.
-    const west = round3(choices.longitude - 0.25);
-    const east = round3(choices.longitude + 0.25);
-    const south = round3(choices.latitude - 0.25);
-    const north = round3(choices.latitude + 0.25);
-    query.set(
-      'coords',
-      `POLYGON((${west} ${south}, ${east} ${south}, ${east} ${north}, ${west} ${north}, ${west} ${south}))`,
-    );
+    // The ring drawn on the map IS the ring in the URL: one builder serves both.
+    const ring = areaRing(choices.longitude, choices.latitude);
+    query.set('coords', `POLYGON((${ring.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`);
   } else {
     return { ok: false, missing: `the composer does not guide '${choices.queryType}' queries` };
   }
@@ -76,6 +72,43 @@ export function composeUrl(
   if (choices.datetime) query.set('datetime', choices.datetime);
   if (choices.parameters.length > 0) query.set('parameter-name', choices.parameters.join(','));
   return { ok: true, url: `${edrPrefix}/collections/${choices.collection}/${choices.queryType}?${query.toString()}` };
+}
+
+/**
+ * The half-degree box a guided area query covers, as a closed lon/lat ring. The
+ * map draws this ring and `composeUrl` writes it into the WKT, so what is drawn
+ * and what is fetched cannot drift apart.
+ */
+export function areaRing(longitude: number, latitude: number): [number, number][] {
+  const west = round3(longitude - 0.25);
+  const east = round3(longitude + 0.25);
+  const south = round3(latitude - 0.25);
+  const north = round3(latitude + 0.25);
+  return [
+    [west, south],
+    [east, south],
+    [east, north],
+    [west, north],
+    [west, south],
+  ];
+}
+
+/**
+ * A position picked off the canvas (FR-41): deck.gl unprojects the clicked pixel,
+ * which on the globe can land any number of turns from the prime meridian and off
+ * the sphere entirely. Longitude is wrapped back into [-180, 180), latitude has to
+ * be a real one, and both are rounded to the three decimals the composer types —
+ * so a clicked query and a typed one are the same query.
+ */
+export function pickedPosition(
+  coordinate: readonly number[] | null | undefined,
+): { longitude: number; latitude: number } | undefined {
+  if (!coordinate || coordinate.length < 2) return undefined;
+  const [longitude, latitude] = coordinate;
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return undefined;
+  if (latitude < -90 || latitude > 90) return undefined;
+  const wrapped = ((((longitude + 180) % 360) + 360) % 360) - 180;
+  return { longitude: round3(wrapped), latitude: round3(latitude) };
 }
 
 /** The three facts a response can be, kept distinct (FR-41). */

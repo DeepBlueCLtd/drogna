@@ -352,7 +352,11 @@ directed → the machinery is interrogated → advice travels light → it is se
   the query components genuinely serve, enumerated from server metadata, never
   stubbed; results rendered where they were asked for, with null, declined and absent
   as three different facts *(v1 FR-77 to FR-83)*. The copied URL is a genuine GET —
-  which the wire-protocol seam is what makes true even in V2.
+  which the wire-protocol seam is what makes true even in V2. The query's position
+  may be placed by clicking the canvas in any projection the map offers, as well as
+  typed; what the canvas draws for the composed query — the position, and an area
+  query's ring — is built by the same function that writes the URL, so the drawn
+  query and the fetched query cannot differ.
 - **FR-42** The Intro tab narrates the arc, growing one section per landed beat, and
   by feature 109 constitutes the demo walkthrough script, deep-linking into each
   beat's view (FR-15).

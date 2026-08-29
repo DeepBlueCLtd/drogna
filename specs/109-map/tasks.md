@@ -29,3 +29,10 @@
       done, recorded with reasons in spec.md ("Deliberately not in this
       feature"): the projection cells already show doubt decaying and refreshing,
       and a per-frame seam round-trip cache would be a second store.*
+- [x] T810 Point-and-click EDR query location (issue #53): the composer's choices
+      lifted into the map panel so the canvas and the number boxes write one state;
+      `pickedPosition` wraps a wound globe longitude and refuses a click that
+      unprojects to nothing; `areaRing` builds both the drawn ring and the WKT; the
+      map draws the composed position as a hollow ring (no filled dot, so it cannot
+      be read as the platform or a route stop) and says whether it falls inside the
+      domain. The cube view (issue #59) picks through the same handler when it lands.

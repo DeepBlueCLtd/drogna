@@ -40,6 +40,16 @@ rather than pretending (Constitution VII, carried into presentation).
   facts, in the server's own words for the latter two. The composer declines to
   guide a trajectory, saying why (per-vertex times it does not collect), rather
   than stub one.
+- **The position is placed by clicking the canvas** (issue #53, FR-41 amended):
+  typing two numbers to reach a place you are already looking at is the wrong way
+  round. deck.gl unprojects the clicked pixel, so the plan view and the globe pick
+  alike — a globe click dragged past the seam comes back wound, and is wrapped into
+  [-180, 180) so a clicked query and a typed one are the same query — and a click
+  that misses the sphere unprojects to nothing and is left alone. What is drawn is
+  what is asked: `areaRing` builds the ring the canvas draws *and* the ring
+  `composeUrl` writes into the WKT. The map says whether the position falls inside
+  the domain it fetched from the reference collection; it is a warning, never a
+  veto, because the server's own refusal is the authority (Constitution VII).
 - **No literals in the shell:** the map's endpoints (`edr`, `features`,
   `query_subsets`) and topics (`plan`, `run_published`, `advisories`) joined the
   shell's configuration document and its master.
@@ -58,9 +68,19 @@ rather than pretending (Constitution VII, carried into presentation).
 - Panel against the live backend: WebGL absence stated; advisories present and
   stating empty; the composer enumerates nowcast/archive and the three query
   types from served metadata and names the missing step until the URL assembles.
+- Picking: the wrap and the misses are held at the boundary (a wound globe
+  longitude, a latitude no place has, a coordinate deck.gl could not unproject);
+  the drawn ring is asserted equal to the ring in the WKT, coordinate for
+  coordinate; and the panel test writes the position through the composer's boxes,
+  which is the state a canvas click writes, then reads the URL and the
+  inside/outside note back.
 - Watched failing: the validity boundary was planted end-inclusive and the suite
   went red; the replay proof was watched failing against a planted `Math.random()`
-  in the advisory source (exit 1, named), then both reverted.
+  in the advisory source (exit 1, named), then both reverted. For the picking:
+  the longitude wrap was removed, the domain test's ray casting made inclusive on
+  both edges, `composeUrl` shifted off `areaRing` by a hundredth of a degree, the
+  panel's `positionNote` cut, and the composer's choices frozen to a constant —
+  five plants, each watched red, each reverted.
 
 ## Deliberately not in this feature
 

@@ -6,7 +6,7 @@
  * a clock sample actually caused (Constitution VII: the test would fail against a
  * fixture, because a fixture publishes nothing).
  */
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../config/run.json';
@@ -191,6 +191,27 @@ describe('the panels against a live backend', () => {
       expect(collectionOptions).toContain('area');
       // The missing step is named until the URL can assemble.
       expect(screen.getByTestId('composer-url').textContent).toMatch(/choose a collection/);
+      // The position is the map panel's, not the pane's — which is what lets a click
+      // on the canvas place it (issue #53). Writing it through the boxes exercises the
+      // same state the click writes: the URL assembles, and the map says where the
+      // position falls against the domain it fetched from the reference collection.
+      const selects = [...document.querySelectorAll('.composer select')] as HTMLSelectElement[];
+      act(() => {
+        fireEvent.change(selects[0], { target: { value: 'nowcast' } });
+        fireEvent.change(selects[1], { target: { value: 'position' } });
+      });
+      const numbers = [...document.querySelectorAll('.composer input[type="number"]')] as HTMLInputElement[];
+      act(() => {
+        fireEvent.change(numbers[0], { target: { value: '-11.235' } });
+        fireEvent.change(numbers[1], { target: { value: '46.512' } });
+        fireEvent.change(numbers[2], { target: { value: '50' } });
+      });
+      expect(screen.getByTestId('composer-url').textContent).toContain('POINT%28-11.235+46.512%29');
+      expect(screen.getByText(/position -11.235, 46.512 — inside the domain/)).toBeTruthy();
+      act(() => {
+        fireEvent.change(numbers[0], { target: { value: '-25' } });
+      });
+      expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
     } finally {
       globalThis.fetch = realFetch;
     }

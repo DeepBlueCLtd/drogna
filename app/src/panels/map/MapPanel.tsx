@@ -3,14 +3,16 @@
  * field from a genuine EDR area query, the projection's doubt decaying and
  * refreshing from each published plan, the committed route as a four-dimensional
  * curve with a time control, and advisories drawn only while valid at the
- * displayed instant yet queryable always. Every pixel traces to a document that
+ * displayed instant yet queryable always. With the composer open the canvas also
+ * takes the query's position by click, in either projection, and draws exactly what
+ * the composed URL asks for (issue #53). Every pixel traces to a document that
  * crossed the seam; where WebGL is unavailable the canvas says so and the
  * documents remain (Constitution VII: the display can light nothing itself).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 import DeckGL from '@deck.gl/react';
-import { MapView, _GlobeView as GlobeView } from '@deck.gl/core';
+import { MapView, _GlobeView as GlobeView, type PickingInfo } from '@deck.gl/core';
 import { PathLayer, PolygonLayer, ScatterplotLayer, SolidPolygonLayer } from '@deck.gl/layers';
 import type { PanelParams } from '../../shell/Shell.js';
 import type {
@@ -23,6 +25,7 @@ import type {
 import {
   graticule,
   gridCells,
+  insideRing,
   projectionCells,
   rampColour,
   routePositionAt,
@@ -30,6 +33,7 @@ import {
   type AdvisoryFeature,
   type GridCoverage,
 } from './map-data.js';
+import { areaRing, pickedPosition, type ComposerChoices } from './composer.js';
 import { ComposerPane } from './ComposerPane.js';
 import { displayInstant } from '../../shell/display.js';
 import './map.css';
@@ -64,6 +68,8 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   /** Seconds behind/ahead of live simulation time; 0 follows the clock. */
   const [timeOffset, setTimeOffset] = useState(0);
   const [composing, setComposing] = useState(false);
+  /** The composed EDR query, held here so a click on the canvas can place it. */
+  const [choices, setChoices] = useState<ComposerChoices>({ parameters: [] });
   const [selectedAdvisory, setSelectedAdvisory] = useState<string | undefined>();
   const [arrival, setArrival] = useState<string | undefined>();
   /** Globe by default: drag rotates the sphere; flat keeps the plan view. */
@@ -177,6 +183,29 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
     [collectionId, config.endpoints.edr],
   );
 
+  // Picking (issue #53): with the composer open, a click on the canvas places the
+  // query's position. deck.gl unprojects the clicked pixel, so the globe and the
+  // plan view pick alike; a click that misses the sphere unprojects to nothing and
+  // is left alone, as is a click on a route stop, which asks a different question.
+  const placeFromCanvas = useCallback(
+    (info: PickingInfo) => {
+      if (!composing || info.layer?.id === 'route-stops') return;
+      const picked = pickedPosition(info.coordinate);
+      if (picked) setChoices((previous) => ({ ...previous, ...picked }));
+    },
+    [composing],
+  );
+
+  const positionNote =
+    choices.longitude === undefined || choices.latitude === undefined
+      ? undefined
+      : `position ${choices.longitude}, ${choices.latitude}` +
+        (domainRing === undefined
+          ? ''
+          : insideRing(domainRing, choices.longitude, choices.latitude)
+            ? ' — inside the domain'
+            : ' — outside the domain: the server will decline, and will say why');
+
   const layers = [
     // The sphere itself, globe mode only: a world-covering rectangle (it wraps)
     // and a generated graticule — the page's one sphere reference, no tiles.
@@ -282,6 +311,37 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           },
         }),
       ],
+    // What the composed URL asks for, drawn: the position as a hollow ring — no
+    // filled dot, so it cannot be read as the platform or a route stop — and, for an
+    // area query, the very ring `composeUrl` writes into the WKT.
+    composing &&
+      choices.longitude !== undefined &&
+      choices.latitude !== undefined && [
+        ...(choices.queryType === 'area'
+          ? [
+              new PathLayer({
+                id: 'pick-area',
+                data: [areaRing(choices.longitude, choices.latitude)],
+                getPath: (ring) => ring,
+                getColor: [20, 60, 140, 230],
+                getWidth: 2,
+                widthUnits: 'pixels',
+              }),
+            ]
+          : []),
+        new ScatterplotLayer({
+          id: 'pick-position',
+          data: [[choices.longitude, choices.latitude] as [number, number]],
+          getPosition: (position) => position,
+          getRadius: 9,
+          radiusUnits: 'pixels',
+          filled: false,
+          stroked: true,
+          getLineColor: [20, 60, 140, 255],
+          getLineWidth: 2,
+          lineWidthUnits: 'pixels',
+        }),
+      ],
     platform &&
       new ScatterplotLayer({
         id: 'platform',
@@ -358,6 +418,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
         {field.refusal ? ` · field declined: ${field.refusal}` : ''}
         {plan ? ` · plan ${plan.plan_id} (${plan.route.vertices.length} stop(s))` : ' · no plan published yet'}
         {` · ${validAdvisories.length} of ${advisories.length} advisory(ies) valid at the displayed instant`}
+        {composing ? ' · click the canvas to place the composed query' : ''}
       </p>
       {arrival && <p className="map-arrival">{arrival}</p>}
       <div className="map-body">
@@ -373,6 +434,10 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
               }
               controller
               layers={layers}
+              onClick={placeFromCanvas}
+              getCursor={({ isDragging }) =>
+                isDragging ? 'grabbing' : composing ? 'crosshair' : 'grab'
+              }
             >
               {null}
             </DeckGL>
@@ -387,7 +452,14 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           )}
         </div>
         {composing && (
-          <ComposerPane config={config} validator={validator} latestForecast={latestRun?.collections.forecast} />
+          <ComposerPane
+            config={config}
+            validator={validator}
+            latestForecast={latestRun?.collections.forecast}
+            choices={choices}
+            onChoices={(patch) => setChoices((previous) => ({ ...previous, ...patch }))}
+            positionNote={positionNote}
+          />
         )}
       </div>
       <div className="map-advisories">

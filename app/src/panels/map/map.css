@@ -132,3 +132,16 @@
   max-height: 12rem;
   overflow: auto;
 }
+
+.composer-pick {
+  margin: 0;
+  color: #444;
+}
+
+.composer-pick-note {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.76rem;
+  background: #f4f2ec;
+  padding: 0.25rem 0.4rem;
+}

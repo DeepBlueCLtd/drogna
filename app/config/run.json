@@ -35,12 +35,12 @@
       { "role": "query", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
       {
         "role": "monitor",
-        "publish": ["ctl/divergence", "ctl/heartbeat"],
+        "publish": ["ctl/divergence", "ctl/telemetry", "ctl/heartbeat"],
         "subscribe": ["obs/#", "ctl/clock"]
       },
       {
         "role": "scheduler",
-        "publish": ["ctl/run/request", "ctl/heartbeat"],
+        "publish": ["ctl/run/request", "ctl/telemetry", "ctl/heartbeat"],
         "subscribe": ["ctl/divergence", "ctl/run/published", "ctl/clock"]
       },
       {
@@ -57,6 +57,16 @@
         "role": "coverage-store",
         "publish": ["cov/holdings", "ctl/heartbeat"],
         "subscribe": ["ctl/clock"]
+      },
+      {
+        "role": "telemetry",
+        "publish": ["ctl/telemetry", "ctl/heartbeat"],
+        "subscribe": ["ctl/telemetry", "ctl/run/published", "obs/#", "ctl/clock"]
+      },
+      {
+        "role": "operator",
+        "publish": ["ctl/heartbeat"],
+        "subscribe": ["ctl/heartbeat", "ctl/clock"]
       },
       { "role": "shell", "publish": [], "subscribe": ["#"] }
     ],
@@ -243,7 +253,8 @@
     "topics": {
       "clock": "ctl/clock",
       "observations": "obs/#",
-      "divergence": "ctl/divergence"
+      "divergence": "ctl/divergence",
+      "telemetry": "ctl/telemetry"
     },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
     "pairs": [
@@ -264,7 +275,8 @@
       "clock": "ctl/clock",
       "divergence": "ctl/divergence",
       "run_request": "ctl/run/request",
-      "run_published": "ctl/run/published"
+      "run_published": "ctl/run/published",
+      "telemetry": "ctl/telemetry"
     },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
     "min_interval_ticks": 600,
@@ -318,6 +330,31 @@
     "shortlist": 3,
     "projection": { "step_seconds": 1800, "horizon_seconds": 21600 }
   },
+  "telemetry": {
+    "id": "telemetry",
+    "topics": {
+      "clock": "ctl/clock",
+      "telemetry": "ctl/telemetry",
+      "run_published": "ctl/run/published",
+      "observations": "obs/#"
+    },
+    "http": { "report_path": "/api/ctl/telemetry" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "cadence_ticks": 300,
+    "staleness_window_seconds": 1800,
+    "minimum_skill_samples": 5
+  },
+  "operator": {
+    "id": "operator",
+    "topics": { "clock": "ctl/clock", "heartbeat": "ctl/heartbeat" },
+    "http": {
+      "components_path": "/api/ctl/components",
+      "step_path": "/api/ctl/clock/step",
+      "command_prefix": "/api/ctl/components"
+    },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "protected": ["clock", "broker", "boundary", "operator", "coverage-store", "observation-store", "feature-store", "query", "telemetry"]
+  },
   "feature_store": {
     "id": "feature-store",
     "topics": { "clock": "ctl/clock" },
@@ -350,6 +387,7 @@
       { "id": "intro", "label": "Intro" },
       { "id": "system", "label": "System" },
       { "id": "holdings", "label": "Holdings" },
+      { "id": "operator", "label": "Operator" },
       { "id": "map", "label": "Map" },
       { "id": "messages", "label": "Messages" }
     ],
@@ -390,9 +428,17 @@
       { "filter": "ctl/run/request", "schema": "run-request" },
       { "filter": "ctl/run/started", "schema": "run-started" },
       { "filter": "ctl/run/published", "schema": "run-published" },
-      { "filter": "ctl/plan", "schema": "plan" }
+      { "filter": "ctl/plan", "schema": "plan" },
+      { "filter": "ctl/telemetry", "schema": "telemetry" }
     ],
-    "endpoints": { "clock_rate": "/api/ctl/clock/rate", "holdings": "/api/ctl/holdings" },
+    "endpoints": {
+      "clock_rate": "/api/ctl/clock/rate",
+      "holdings": "/api/ctl/holdings",
+      "components": "/api/ctl/components",
+      "telemetry": "/api/ctl/telemetry",
+      "clock_step": "/api/ctl/clock/step",
+      "component_command": "/api/ctl/components"
+    },
     "liveness": { "default_window_seconds": 6 },
     "messages": { "buffer": 200 }
   }

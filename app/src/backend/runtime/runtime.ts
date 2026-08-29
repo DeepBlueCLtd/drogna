@@ -3,16 +3,23 @@
  * configuration document, wires them over the seam, and provisions the run
  * (SRD-v2 FR-11: through the components' own code paths, never by poking a store).
  *
- * Construction order is part of the behaviour: broker first (everything else holds a
- * client), then the boundary and routes, then the clock — whose first published
+ * Construction order is part of the behaviour: broker first (everything else holds
+ * a client), then the boundary and routes, then the clock — whose first published
  * sample is the moment simulation time exists; heartbeats start after it so no
  * component ever claims a time it has not heard.
+ *
+ * The control registry (FR-36) is what makes stop/start/restart genuine: stopping
+ * a component disconnects its client — subscriptions die, publishes are refused —
+ * and starting builds a fresh instance from configuration through the same factory
+ * that built the first one. A restarted component re-subscribes at the end of the
+ * delivery order, which is one reason commands are ephemeral and outside AT-04's
+ * replay claim.
  *
  * Every component's configuration document is validated against its master before
  * that component does any other work (Constitution IV).
  */
 import type { SeamHttpBackend } from '../../seam/http.js';
-import type { SeamTransport } from '../../seam/transport.js';
+import type { SeamClient, SeamTransport } from '../../seam/transport.js';
 import type { SeamValidator } from '../../seam/validate.js';
 import type { ConfigRun, RunManifest } from '../../generated/types.js';
 import { Broker } from '../broker/broker.js';
@@ -30,11 +37,13 @@ import { Monitor } from '../monitor/monitor.js';
 import { Scheduler } from '../scheduler/scheduler.js';
 import { ModelRunner } from '../model-runner/runner.js';
 import { Planner } from '../planner/planner.js';
+import { Telemetry } from '../telemetry/telemetry.js';
+import { OperatorSurface, type ComponentControl } from '../operator/operator.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
-import { Router } from './router.js';
 import { parseEpochMicros } from '../lib/sim-time.js';
+import { Router } from './router.js';
 import { buildRunManifest, deriveRunId } from './manifest.js';
 
 export interface BackendRuntime {
@@ -50,6 +59,8 @@ export interface BackendRuntime {
   readonly monitor: Monitor;
   readonly scheduler: Scheduler;
   readonly planner: Planner;
+  readonly telemetry: Telemetry;
+  readonly control: ComponentControl;
   stop(): void;
 }
 
@@ -64,6 +75,16 @@ function validated(validator: SeamValidator, schemaKey: string, document: unknow
   if (!verdict.ok) {
     throw new Error(`configuration refused by its master:\n${verdict.refusals.join('\n')}`);
   }
+}
+
+interface Restartable {
+  start(): void;
+  stop(): void;
+}
+
+interface ControlBox {
+  component: Restartable;
+  client: SeamClient;
 }
 
 export function buildBackend(
@@ -86,6 +107,8 @@ export function buildBackend(
   validated(validator, 'config.scheduler', config.scheduler);
   validated(validator, 'config.model-runner', config.model_runner);
   validated(validator, 'config.planner', config.planner);
+  validated(validator, 'config.telemetry', config.telemetry);
+  validated(validator, 'config.operator', config.operator);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
@@ -113,40 +136,66 @@ export function buildBackend(
     runId,
     router,
   );
-  const generator = new EnvGenerator(
-    config.env_generator,
-    transport.connect(config.env_generator.id, config.env_generator.id),
-    store,
-    runId,
-    options.rootSeed,
-  );
+
+  const secondsPerTick = config.clock.tick_interval_us / 1e6;
+  const epochPosixSeconds = Number(parseEpochMicros(config.clock.epoch) / 1_000_000n);
+
+  // ---- the control registry: factories build, stop disconnects, start rebuilds --
+
+  const boxes = new Map<string, { running: boolean; box: ControlBox; make: () => ControlBox }>();
+  const register = (id: string, make: () => ControlBox): ControlBox => {
+    const box = make();
+    boxes.set(id, { running: false, box, make });
+    return box;
+  };
+  const control: ComponentControl = {
+    ids: () => [...boxes.keys()],
+    isRunning: (id) => boxes.get(id)?.running ?? false,
+    stop(id) {
+      const entry = boxes.get(id);
+      if (!entry || !entry.running) return;
+      entry.box.component.stop();
+      entry.box.client.disconnect();
+      entry.running = false;
+    },
+    start(id) {
+      const entry = boxes.get(id);
+      if (!entry || entry.running) return;
+      entry.box = entry.make();
+      entry.box.component.start();
+      entry.running = true;
+    },
+    stepClock: () => clock.step(),
+  };
+
+  const generatorBox = register(config.env_generator.id, () => {
+    const client = transport.connect(config.env_generator.id, config.env_generator.id);
+    return { component: new EnvGenerator(config.env_generator, client, store, runId, options.rootSeed), client };
+  });
+  const generator = generatorBox.component as EnvGenerator;
 
   // The world-sampler port: the sensors' one line to the truth (Constitution VI).
-  const secondsPerTick = config.clock.tick_interval_us / 1e6;
   const worldSampler: WorldSampler = {
     temperatureAt: (lon, lat, depth, tick) => temperatureAt(generator.world, lon, lat, depth, tick * secondsPerTick),
     salinityAt: (lon, lat, depth, tick) => salinityAt(generator.world, lon, lat, depth, tick * secondsPerTick),
   };
-  const sensors = new Sensors(
-    config.sensors,
-    transport.connect(config.sensors.id, config.sensors.id),
-    worldSampler,
-    runId,
-    options.rootSeed,
-    secondsPerTick,
-  );
+  register(config.sensors.id, () => {
+    const client = transport.connect(config.sensors.id, config.sensors.id);
+    return {
+      component: new Sensors(config.sensors, client, worldSampler, runId, options.rootSeed, secondsPerTick),
+      client,
+    };
+  });
+
   const observationStore = new ObservationStore(
     config.observation_store,
     transport.connect(config.observation_store.id, config.observation_store.id),
     runId,
   );
-  const ingest = new Ingest(
-    config.ingest,
-    transport.connect(config.ingest.id, config.ingest.id),
-    observationStore,
-    validator,
-    runId,
-  );
+  const ingestBox = register(config.ingest.id, () => {
+    const client = transport.connect(config.ingest.id, config.ingest.id);
+    return { component: new Ingest(config.ingest, client, observationStore, validator, runId), client };
+  });
   const featureStore = new FeatureStore(
     config.feature_store,
     transport.connect(config.feature_store.id, config.feature_store.id),
@@ -160,29 +209,53 @@ export function buildBackend(
     router,
     runId,
   );
-  const monitor = new Monitor(config.monitor, transport.connect(config.monitor.id, config.monitor.id), store, runId);
-  const scheduler = new Scheduler(config.scheduler, transport.connect(config.scheduler.id, config.scheduler.id), runId);
-  const modelRunner = new ModelRunner(
-    config.model_runner,
-    transport.connect(config.model_runner.id, config.model_runner.id),
+  const monitorBox = register(config.monitor.id, () => {
+    const client = transport.connect(config.monitor.id, config.monitor.id);
+    return { component: new Monitor(config.monitor, client, store, runId), client };
+  });
+  const schedulerBox = register(config.scheduler.id, () => {
+    const client = transport.connect(config.scheduler.id, config.scheduler.id);
+    return { component: new Scheduler(config.scheduler, client, runId), client };
+  });
+  register(config.model_runner.id, () => {
+    const client = transport.connect(config.model_runner.id, config.model_runner.id);
+    return { component: new ModelRunner(config.model_runner, client, store, runId, options.rootSeed), client };
+  });
+  const plannerBox = register(config.planner.id, () => {
+    const client = transport.connect(config.planner.id, config.planner.id);
+    return {
+      component: new Planner(
+        config.planner,
+        client,
+        store,
+        featureStore,
+        runId,
+        options.rootSeed,
+        secondsPerTick,
+        epochPosixSeconds,
+      ),
+      client,
+    };
+  });
+  const telemetry = new Telemetry(
+    config.telemetry,
+    transport.connect(config.telemetry.id, config.telemetry.id),
     store,
     runId,
-    options.rootSeed,
-  );
-  const planner = new Planner(
-    config.planner,
-    transport.connect(config.planner.id, config.planner.id),
-    store,
-    featureStore,
-    runId,
-    options.rootSeed,
     secondsPerTick,
-    Number(parseEpochMicros(config.clock.epoch) / 1_000_000n),
+    router,
+  );
+  const operator = new OperatorSurface(
+    config.operator,
+    transport.connect(config.operator.id, config.operator.id),
+    control,
+    runId,
+    router,
   );
 
   // Each component's heartbeat carries the simulation time that component last
   // heard over the seam; only the clock's carries the time it is the source of.
-  const trackSimTime = (client: ReturnType<SeamTransport['connect']>) => {
+  const trackSimTime = (client: SeamClient) => {
     const cache = { value: '', tick: null as number | null };
     client.subscribe(config.clock.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
@@ -231,14 +304,14 @@ export function buildBackend(
   // The generator and every consumer subscribe before the clock starts, so the
   // clock's first sample — the moment simulation time exists — triggers
   // provisioning through the store's own publication seam (FR-11) and reaches the
-  // whole loop in one deterministic order.
-  generator.start();
-  ingest.start();
-  sensors.start();
-  monitor.start();
-  scheduler.start();
-  modelRunner.start();
-  planner.start();
+  // whole loop in one deterministic order. Registration order above IS the
+  // subscription order.
+  for (const entry of boxes.values()) {
+    entry.box.component.start();
+    entry.running = true;
+  }
+  telemetry.start();
+  operator.start();
   store.heartbeat.start();
   observationStore.heartbeat.start();
   featureStore.heartbeat.start();
@@ -255,19 +328,22 @@ export function buildBackend(
     store,
     observationStore,
     featureStore,
-    ingest,
-    monitor,
-    scheduler,
-    planner,
+    ingest: ingestBox.component as Ingest,
+    monitor: monitorBox.component as Monitor,
+    scheduler: schedulerBox.component as Scheduler,
+    planner: plannerBox.component as Planner,
+    telemetry,
+    control,
     stop(): void {
       for (const heartbeat of heartbeats) heartbeat.stop();
-      generator.stop();
-      sensors.stop();
-      ingest.stop();
-      monitor.stop();
-      scheduler.stop();
-      modelRunner.stop();
-      planner.stop();
+      for (const entry of boxes.values()) {
+        if (entry.running) {
+          entry.box.component.stop();
+          entry.running = false;
+        }
+      }
+      telemetry.stop();
+      operator.stop();
       store.heartbeat.stop();
       observationStore.heartbeat.stop();
       featureStore.heartbeat.stop();

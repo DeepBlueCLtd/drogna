@@ -21,6 +21,8 @@
     "scheduler",
     "model_runner",
     "planner",
+    "telemetry",
+    "operator",
     "shell"
   ],
   "additionalProperties": false,
@@ -72,6 +74,12 @@
     },
     "planner": {
       "$ref": "config.planner.schema.json"
+    },
+    "telemetry": {
+      "$ref": "config.telemetry.schema.json"
+    },
+    "operator": {
+      "$ref": "config.operator.schema.json"
     },
     "feature_store": {
       "$ref": "config.feature-store.schema.json"

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.operator.schema.json",
+  "title": "drogna operator surface configuration (V2-C18)",
+  "description": "The operator surface (SRD-v2 FR-36): aggregates what components report about themselves — a component never heard from is reported unheard, not absent — and dispatches commands: clock step, and stop/start/restart of in-browser components. A refused command names the bound or rule; a stopped component goes dark because its heartbeats cease, never because this surface says so. Commands are ephemeral and outside AT-04's replay claim.",
+  "type": "object",
+  "required": ["id", "topics", "http", "heartbeat", "protected"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "heartbeat"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "heartbeat": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+      }
+    },
+    "http": {
+      "type": "object",
+      "required": ["components_path", "step_path", "command_prefix"],
+      "additionalProperties": false,
+      "properties": {
+        "components_path": { "$ref": "config.common.schema.json#/$defs/relative_path" },
+        "step_path": { "$ref": "config.common.schema.json#/$defs/relative_path" },
+        "command_prefix": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "POST <prefix>/<component-id>/stop|start|restart."
+        }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "protected": {
+      "type": "array",
+      "items": { "$ref": "config.common.schema.json#/$defs/component_id" },
+      "description": "Components a stop command is refused for, by the rule this list is: stopping the clock stops time itself, stopping the broker silences every heartbeat including the evidence of the stopping, and the boundary and this surface must outlive their own commands."
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.telemetry.schema.json",
+  "title": "drogna telemetry configuration (V2-C15)",
+  "description": "The telemetry component (SRD-v2 FR-35): aggregates the residual samples the monitor reports, computes running statistics and forecast skill against a persistence reference — saying plainly when the model is not earning its compute — counts throughput per simulation second, and serves the current account on its seam path. Skill's persistence baseline holds the forecast run's initial step constant across its validity; the formula is stated in every message.",
+  "type": "object",
+  "required": ["id", "topics", "http", "heartbeat", "cadence_ticks", "staleness_window_seconds", "minimum_skill_samples"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "telemetry", "run_published", "observations"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "telemetry": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "run_published": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "observations": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+      }
+    },
+    "http": {
+      "type": "object",
+      "required": ["report_path"],
+      "additionalProperties": false,
+      "properties": {
+        "report_path": { "$ref": "config.common.schema.json#/$defs/relative_path" }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "cadence_ticks": { "type": "integer", "exclusiveMinimum": 0 },
+    "staleness_window_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "A figure not updated within this much simulation time says stale and keeps saying its last update time — it does not go on presenting its last value as current."
+    },
+    "minimum_skill_samples": { "type": "integer", "minimum": 2 }
+  }
+}

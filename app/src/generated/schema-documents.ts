@@ -1318,7 +1318,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "observations",
-          "divergence"
+          "divergence",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1329,6 +1330,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
           },
           "divergence": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
           }
         }
@@ -1429,6 +1433,73 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
+      }
+    }
+  },
+  "config.operator": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.operator.schema.json",
+    "title": "drogna operator surface configuration (V2-C18)",
+    "description": "The operator surface (SRD-v2 FR-36): aggregates what components report about themselves — a component never heard from is reported unheard, not absent — and dispatches commands: clock step, and stop/start/restart of in-browser components. A refused command names the bound or rule; a stopped component goes dark because its heartbeats cease, never because this surface says so. Commands are ephemeral and outside AT-04's replay claim.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat",
+      "protected"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "heartbeat"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "heartbeat": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "components_path",
+          "step_path",
+          "command_prefix"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "components_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "step_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "command_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "POST <prefix>/<component-id>/stop|start|restart."
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "protected": {
+        "type": "array",
+        "items": {
+          "$ref": "config.common.schema.json#/$defs/component_id"
+        },
+        "description": "Components a stop command is refused for, by the rule this list is: stopping the clock stops time itself, stopping the broker silences every heartbeat including the evidence of the stopping, and the boundary and this surface must outlive their own commands."
       }
     }
   },
@@ -1702,6 +1773,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "scheduler",
       "model_runner",
       "planner",
+      "telemetry",
+      "operator",
       "shell"
     ],
     "additionalProperties": false,
@@ -1754,6 +1827,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "planner": {
         "$ref": "config.planner.schema.json"
       },
+      "telemetry": {
+        "$ref": "config.telemetry.schema.json"
+      },
+      "operator": {
+        "$ref": "config.operator.schema.json"
+      },
       "feature_store": {
         "$ref": "config.feature-store.schema.json"
       },
@@ -1787,7 +1866,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "divergence",
           "run_request",
-          "run_published"
+          "run_published",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1801,6 +1881,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/topic"
           },
           "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
           }
         }
@@ -2121,7 +2204,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "object",
         "required": [
           "clock_rate",
-          "holdings"
+          "holdings",
+          "components",
+          "telemetry",
+          "clock_step",
+          "component_command"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -2130,6 +2217,18 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/relative_path"
           },
           "holdings": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "components": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "clock_step": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "component_command": {
             "$ref": "config.common.schema.json#/$defs/relative_path"
           }
         }
@@ -2161,6 +2260,80 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "description": "How many recent seam messages the Messages panel retains for display."
           }
         }
+      }
+    }
+  },
+  "config.telemetry": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.telemetry.schema.json",
+    "title": "drogna telemetry configuration (V2-C15)",
+    "description": "The telemetry component (SRD-v2 FR-35): aggregates the residual samples the monitor reports, computes running statistics and forecast skill against a persistence reference — saying plainly when the model is not earning its compute — counts throughput per simulation second, and serves the current account on its seam path. Skill's persistence baseline holds the forecast run's initial step constant across its validity; the formula is stated in every message.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat",
+      "cadence_ticks",
+      "staleness_window_seconds",
+      "minimum_skill_samples"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "telemetry",
+          "run_published",
+          "observations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "report_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "report_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "cadence_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "staleness_window_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "A figure not updated within this much simulation time says stale and keeps saying its last update time — it does not go on presenting its last value as current."
+      },
+      "minimum_skill_samples": {
+        "type": "integer",
+        "minimum": 2
       }
     }
   },
@@ -4807,6 +4980,65 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     ]
   },
+  "operator-components": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/operator-components.schema.json",
+    "title": "drogna operator components report",
+    "description": "The operator surface's answer to 'what do the components say about themselves': every declared component, with the last heartbeat genuinely heard from it or the honest statement that none was. Aggregation, never invention — nothing here can light a display (Constitution VII); the shell still lights only from heartbeats it hears itself.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "components"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "components": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "heard",
+            "stoppable",
+            "running",
+            "last_heartbeat"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "heard": {
+              "type": "boolean",
+              "description": "Whether any heartbeat has ever arrived from this component. Never heard is reported unheard, not absent (FR-36)."
+            },
+            "stoppable": {
+              "type": "boolean"
+            },
+            "running": {
+              "type": "boolean",
+              "description": "The control registry's record of whether the component is currently scheduled. A record of commands, not of life: life is the heartbeat column."
+            },
+            "last_heartbeat": {
+              "oneOf": [
+                {
+                  "$ref": "heartbeat.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
   "plan": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/plan.schema.json",
@@ -6405,6 +6637,69 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 }
               }
             }
+          }
+        }
+      }
+    }
+  },
+  "telemetry-report": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/telemetry-report.schema.json",
+    "title": "drogna telemetry report",
+    "description": "The telemetry component's current account, served on its seam path (SRD-v2 FR-35): the latest residual statistics and forecast skill exactly as last published on the telemetry topic (telemetry.schema.json shapes, embedded whole), and throughput counted per simulation second — the only rate that means anything in a harness whose pace is a dial.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "statistics",
+      "skill",
+      "throughput"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "statistics": {
+        "oneOf": [
+          {
+            "$ref": "telemetry.schema.json#/$defs/residual_statistics"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "skill": {
+        "oneOf": [
+          {
+            "$ref": "telemetry.schema.json#/$defs/forecast_skill"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "throughput": {
+        "type": "object",
+        "required": [
+          "window_sim_seconds",
+          "observations_per_sim_second",
+          "telemetry_messages_per_sim_second"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "window_sim_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "observations_per_sim_second": {
+            "type": "number",
+            "minimum": 0
+          },
+          "telemetry_messages_per_sim_second": {
+            "type": "number",
+            "minimum": 0
           }
         }
       }

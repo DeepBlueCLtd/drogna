@@ -48,6 +48,8 @@ export function buildRunManifest(
       { id: config.scheduler.id, role: 'observer', config_digest: configDigest(config.scheduler), registered_tick: 0 },
       { id: config.model_runner.id, role: 'observer', config_digest: configDigest(config.model_runner), registered_tick: 0 },
       { id: config.planner.id, role: 'observer', config_digest: configDigest(config.planner), registered_tick: 0 },
+      { id: config.telemetry.id, role: 'observer', config_digest: configDigest(config.telemetry), registered_tick: 0 },
+      { id: config.operator.id, role: 'observer', config_digest: configDigest(config.operator), registered_tick: 0 },
       { id: config.shell.id, role: 'observer', config_digest: configDigest(config.shell), registered_tick: 0 },
     ],
     streams: [...streams],

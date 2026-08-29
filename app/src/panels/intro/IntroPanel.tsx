@@ -120,10 +120,27 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           <a href={hashForView('messages')}>Messages</a>.
         </p>
       </section>
+      <section>
+        <h3>107 — the machinery is interrogated</h3>
+        <p>
+          The <a href={hashForView('operator')}>Operator</a> tab reads what the
+          components say about themselves — a component never heard from is reported
+          <em> unheard</em>, not absent — and dispatches genuine commands through the
+          seam: step the clock, stop, start or restart a component. A stopped
+          component goes dark in <a href={hashForView('system')}>System</a> because
+          its heartbeats genuinely cease, never because a response claimed success;
+          a refused command names the bound or rule. Telemetry aggregates the
+          monitor&rsquo;s residual samples into running statistics and a forecast
+          skill figure against persistence, in its own sentence — the display says
+          plainly when the model is not earning its compute. Commands are ephemeral
+          and outside the replay claim: an exported manifest replays the run, not
+          your interventions.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          The operator&rsquo;s view (107), shore advisories (108)
+          Shore advisories (108)
           and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
           is built. Until then their components stay grey, because nothing here lights
           without a heartbeat.

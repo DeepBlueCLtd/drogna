@@ -127,6 +127,32 @@ export class Monitor {
     this.residualCount += 1;
     this.lastResidual = residual;
 
+    // Every scored sample is reported on the telemetry topic (FR-35): the monitor
+    // is the one producer of residuals, and telemetry aggregates rather than
+    // recomputing them.
+    this.client.publish(this.config.topics.telemetry, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      kind: 'residual-sample',
+      // The model run scored against is the holding's identity; the descriptor's
+      // run_id is the scenario's.
+      forecast_run_id: instance.descriptor.holding_id,
+      samples: [
+        {
+          sim_time: temperature.sim_time,
+          latitude: temperature.location.latitude,
+          longitude: temperature.location.longitude,
+          depth_m: depthM,
+          residual_m_per_s: residual,
+          measured_m_per_s: observedC,
+          platform: temperature.thing_id,
+        },
+      ],
+      sound_speed_equation: 'Mackenzie 1981 nine-term equation',
+    });
+
     if (Math.abs(residual) > this.config.threshold_m_per_s) {
       this.breaches.push({
         tick: temperature.tick,
@@ -136,7 +162,7 @@ export class Monitor {
         longitude: temperature.location.longitude,
       });
       if (this.breaches.length >= this.config.persistence_count) {
-        this.raise(depthM, instance.descriptor.run_id);
+        this.raise(depthM, instance.descriptor.holding_id);
         this.breaches = [];
       }
     } else {

@@ -68,14 +68,36 @@ export class Scheduler {
     if (this.inFlight !== undefined) {
       this.declinedByPolicy += 1;
       this.lastDecision = `declined by policy: divergence ${divergence.divergence_id} while run ${this.inFlight} is in flight`;
+      this.reportDecision(divergence.divergence_id, 'duplicate-outstanding', this.lastDecision, null);
       return;
     }
     if (this.lastRequestTick !== undefined && this.simTime.tick - this.lastRequestTick < this.config.min_interval_ticks) {
       this.declinedByPolicy += 1;
       this.lastDecision = `declined by policy: divergence ${divergence.divergence_id} at tick ${this.simTime.tick} inside the minimum interval (${this.config.min_interval_ticks} ticks since tick ${this.lastRequestTick})`;
+      this.reportDecision(divergence.divergence_id, 'minimum-interval', this.lastDecision, null);
       return;
     }
     this.request('divergence', divergence);
+  }
+
+  /** Every decision on a divergence is a telemetry fact, not only the accepted ones. */
+  private reportDecision(
+    divergenceId: string,
+    decision: 'accepted' | 'minimum-interval' | 'duplicate-outstanding',
+    detail: string,
+    runIdentifier: string | null,
+  ): void {
+    this.client.publish(this.config.topics.telemetry, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      kind: 'scheduler-decision',
+      divergence_id: divergenceId,
+      decision,
+      detail,
+      run_id: runIdentifier,
+    });
   }
 
   /** FR-31: the loop cannot be permanently becalmed. */
@@ -105,6 +127,9 @@ export class Scheduler {
       divergence: divergence ?? null,
     };
     this.client.publish(this.config.topics.run_request, request);
+    if (divergence) {
+      this.reportDecision(divergence.divergence_id, 'accepted', `requested ${runIdentifier}`, runIdentifier);
+    }
     this.runSequence += 1;
     this.lastRequestTick = this.simTime.tick;
     this.inFlight = runIdentifier;

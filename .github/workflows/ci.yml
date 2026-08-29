@@ -74,3 +74,7 @@ jobs:
           name: glance
           path: .capture/
           if-no-files-found: error
+          # .capture is a dotted directory, and upload-artifact treats a dotted path as
+          # hidden and skips it by default — so the glance PNG was written and then
+          # reported missing by the very next step. Watched failing on 101's own runs.
+          include-hidden-files: true

@@ -157,6 +157,12 @@ walkthrough script. Interactive walkthrough machinery (a step-through mode drivi
 other panels) is deliberately not in this series; it is a candidate feature 110 once the
 arc exists to walk through.
 
+**Feature 111, the Background tab**, is specified (`specs/111-background-tab/spec.md`,
+SRD-v2 §5.10) and sits outside the arc: eight self-contained explainers of the standards
+the architecture rests on, reading no run state and depending only on 101's shell. It
+took 111 rather than 110 so that the walkthrough candidate above keeps its named slot;
+if that candidate is dropped, reconcile the numbers here rather than quietly.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

@@ -55,8 +55,8 @@ scripts/
 ├── gates/check-flow-completeness.ts     NEW — FR-005
 └── gates.registry                       one line appended; the runner still names no gate
 docs/adr/
-├── 0032-ownship-state-is-measured.md    NEW — the enum amendment and why ADR-0005 stands
-└── 0033-the-operator-tab-is-a-flow-chart.md  NEW — edges from the topology master;
+├── 0033-ownship-state-is-measured.md    NEW — the enum amendment and why ADR-0005 stands
+└── 0034-the-operator-tab-is-a-flow-chart.md  NEW — edges from the topology master;
                                          the three kinds of figure; the two suppressions
 srd.md                                   AMENDED — §5.11 (FR-47 to FR-55); FR-22, FR-35,
                                          FR-36 and FR-40 amended in place; §4 gains V2-C21

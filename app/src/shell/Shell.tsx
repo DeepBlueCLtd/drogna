@@ -15,13 +15,14 @@ import {
 import type { ConfigShell, RunManifest } from '../generated/types.js';
 import type { SeamClient } from '../seam/transport.js';
 import type { SeamValidator } from '../seam/validate.js';
-import { hashForView, viewFromHash } from './views.js';
+import { createPanelAddress, hashOnActivation, viewFromHash, type PanelAddress } from './views.js';
 import { IntroPanel } from '../panels/intro/IntroPanel.js';
 import { SystemPanel } from '../panels/system/SystemPanel.js';
 import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
 import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
 import { MapPanel } from '../panels/map/MapPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
+import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
 import { ClockStrip } from './ClockStrip.js';
 import { HelpButton } from './walkthrough/HelpButton.js';
 import { componentTour } from './walkthrough/tour.js';
@@ -41,11 +42,18 @@ export interface PanelParams {
   client: SeamClient;
   validator: SeamValidator;
   manifest: RunManifest;
+  /**
+   * The panel's own slice of the address (FR-15, ADR-0032). What the remainder means
+   * is the panel's business: a panel that does not address positions inside itself
+   * simply never reads this.
+   */
+  address: PanelAddress;
 }
 
 /** Which React component renders each configured view id. */
 const panelComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> = {
   intro: IntroPanel,
+  background: BackgroundPanel,
   system: SystemPanel,
   holdings: HoldingsPanel,
   operator: OperatorPanel,
@@ -73,16 +81,18 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
           id: view.id,
           component: view.id,
           title: view.label,
-          params: { config, client, validator, manifest },
+          params: { config, client, validator, manifest, address: createPanelAddress(view.id) },
         });
       }
       const requested = viewFromHash(window.location.hash);
       const initial = requested ?? config.views[0].id;
       event.api.getPanel(initial)?.api.setActive();
       event.api.onDidActivePanelChange(({ panel }) => {
-        if (panel && viewFromHash(window.location.hash) !== panel.id) {
-          window.history.replaceState(null, '', hashForView(panel.id));
-        }
+        if (!panel) return;
+        // Undefined means the address already names this panel — possibly at a
+        // position below it, which an activation must not erase (views.ts).
+        const rewritten = hashOnActivation(window.location.hash, panel.id);
+        if (rewritten !== undefined) window.history.replaceState(null, '', rewritten);
       });
     },
     [config, client, validator, manifest],

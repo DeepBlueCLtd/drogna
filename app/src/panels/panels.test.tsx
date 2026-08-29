@@ -21,6 +21,7 @@ import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
 import { MapPanel } from './map/MapPanel.js';
+import { OperatorPanel } from './operator/OperatorPanel.js';
 
 const validator = createSeamValidator();
 
@@ -31,17 +32,38 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
+/** A panel that addresses no position inside itself never reads this (ADR-0032). */
+const noAddress: PanelParams['address'] = {
+  current: () => undefined,
+  write: () => {},
+  onChange: () => () => {},
+};
+
 function panelProps(config: ConfigRun, runtime: BackendRuntime) {
   const params: PanelParams = {
     config: config.shell,
     client: runtime.transport.connect('shell-test', config.shell.role),
     validator,
     manifest: runtime.manifest,
+    address: noAddress,
   };
   return { params } as unknown as IDockviewPanelProps<PanelParams>;
 }
 
-describe('the panels against a live backend', () => {
+/**
+ * Flush until the thing being waited for has happened, rather than a fixed number of
+ * microtasks. A count is a guess about how many turns a fetch → validate → setState
+ * chain takes, and CI took more turns than this machine did: the cube test went red
+ * on a runner with an empty query list while passing here every time.
+ */
+async function settle(until: () => boolean, rounds = 2000): Promise<void> {
+  for (let round = 0; round < rounds && !until(); round++) await Promise.resolve();
+}
+
+// The tests below turn the loop until the harness has genuinely produced what they
+// read — thousands of ticks in some cases — so the default five seconds is a limit on
+// the runner rather than on the behaviour.
+describe('the panels against a live backend', { timeout: 120_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
 
@@ -220,7 +242,7 @@ describe('the panels against a live backend', () => {
         for (let tick = 0; tick < config.env_generator.nowcast.interval_ticks; tick++) {
           runtime.clock.tickOnce();
         }
-        await Promise.resolve();
+        await settle(() => inventoryRequests > 1);
       });
       expect(inventoryRequests).toBe(2);
       const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
@@ -355,7 +377,7 @@ describe('the panels against a live backend', () => {
       // not the instant the slider happens to sit on.
       await act(async () => {
         fireEvent.change(slider, { target: { value: String(time.step_seconds) } });
-        for (let flush = 0; flush < 8; flush++) await Promise.resolve();
+        await settle(() => areaQueries().length > 0);
       });
       const scrubbed = areaQueries();
       expect(scrubbed).toHaveLength(1);
@@ -442,7 +464,7 @@ describe('the panels against a live backend', () => {
       const doubt = document.querySelectorAll('.map-controls select')[3] as HTMLSelectElement;
       await act(async () => {
         fireEvent.change(doubt, { target: { value: 'spread' } });
-        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+        await settle(() => asked.some((url) => url.includes('/area?')));
       });
       const spreadQueries = asked.filter((url) => url.includes('/area?'));
       expect(spreadQueries).toHaveLength(1);
@@ -494,10 +516,13 @@ describe('the panels against a live backend', () => {
       if (!nowcast) throw new Error('the store holds no now-cast to take a depth axis from');
       const depth = nowcast.manifest.grid.depth;
       const expected = Array.from({ length: depth.count }, (_, index) => depth.minimum + index * depth.spacing);
+      const asked_area = () => asked.filter((url) => url.includes('/area?'));
       await act(async () => {
-        for (let flush = 0; flush < expected.length * 4 + 8; flush++) await Promise.resolve();
+        // The cube waits on the inventory before it can ask for a single level, so
+        // what is waited for is the level queries themselves.
+        await settle(() => asked_area().length >= expected.length);
       });
-      const areaQueries = asked.filter((url) => url.includes('/area?'));
+      const areaQueries = asked_area();
       expect(areaQueries).toHaveLength(expected.length);
       expect(areaQueries.map((url) => Number(new URL(url, 'http://x').searchParams.get('z')))).toEqual(expected);
       expect(screen.getByText(new RegExp(`${expected.length} level\\(s\\), one area query each`))).toBeTruthy();
@@ -508,6 +533,46 @@ describe('the panels against a live backend', () => {
       // Unmount before the shim comes off: a panel still mounted can fire one more
       // effect, and a relative seam path handed to the real fetch is a TypeError
       // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('Operator shows the region table and the latency figure the report carries (#61)', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let mounted: ReturnType<typeof render> | undefined;
+    try {
+      // Turn the loop until telemetry has region figures to serve — driven before
+      // the panel mounts, so what the display shows is what the report already had.
+      for (let tick = 0; tick < 8000 && runtime.telemetry.lastRegionStatistics.length === 0; tick++) {
+        runtime.clock.tickOnce();
+      }
+      expect(runtime.telemetry.lastRegionStatistics.length).toBeGreaterThan(0);
+      mounted = render(<OperatorPanel {...panelProps(config, runtime)} />);
+      // Feature 112 redrew this tab as a flow chart, and the telemetry these figures
+      // belong to is now in the telemetry component's own drawer — which is where a
+      // reader goes to ask that component what it has to say. The figures are the same
+      // figures, from the same report, asserted the same way; only the route changed.
+      await act(async () => {
+        await settle(() => document.querySelector('[data-flow-node="telemetry"]') !== null);
+      });
+      await act(async () => {
+        fireEvent.click(document.querySelector('[data-flow-node="telemetry"]') as HTMLElement);
+      });
+      await act(async () => {
+        await settle(() => screen.queryByTestId('region-statistics') !== null);
+      });
+      const table = screen.getByTestId('region-statistics');
+      const rows = [...table.querySelectorAll('tbody tr')];
+      expect(rows).toHaveLength(runtime.telemetry.lastRegionStatistics.length);
+      expect(rows.map((row) => row.getAttribute('data-region'))).toEqual(
+        runtime.telemetry.lastRegionStatistics.map((region) => region.scope.region_id),
+      );
+      // Latency reads in simulation seconds and says what it measured.
+      expect(screen.getByTestId('latency').textContent).toMatch(/sim-s/);
+      expect(screen.getByTestId('latency').textContent).toMatch(/simulation instant/);
+    } finally {
       mounted?.unmount();
       globalThis.fetch = realFetch;
     }

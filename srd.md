@@ -399,12 +399,23 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 ### 5.10 Background (feature 111)
 
-- **FR-43** The Background tab shall carry a linear course of eight self-contained
-  explainers — why a standard at all; points and fields; NetCDF; SensorThings; OGC
-  API-EDR; pygeoapi; MQTT; the control loop — each a slide sequence or an interactive
-  infographic completable in 60 to 90 seconds, each addressable by anchor URL to the
-  step (FR-15), and each closing on the same three value axes: through-life cost,
-  interoperability, and what one does not have to build.
+- **FR-43** The Background tab shall carry a linear course of eleven self-contained
+  explainers — why a standard at all; points and fields; NetCDF; what a holding is;
+  SensorThings; OGC API-EDR; pygeoapi; MQTT; reads and writes are separate; the control
+  loop; what is allowed to leave — each a slide sequence or an interactive infographic
+  completable in 60 to 90 seconds, each addressable by anchor URL to the step (FR-15),
+  and each closing on the same three value axes: through-life cost, interoperability,
+  and what one does not have to build. An axis may record a **cost** rather than a
+  benefit, and an axis carrying little weight for a topic is omitted with its reason
+  stated rather than padded.
+
+  *Amended by feature 111 during implementation. This paragraph was written when the
+  frame was "the standards themselves" and named eight. Three of the eleven — holdings,
+  the read/write separation, and the boundary — are drogna's own arrangement rather than
+  a standard, and the specification widened the frame to "the standards, and what it
+  takes to use them honestly" to admit them openly rather than let the tab quietly serve
+  eleven while this list claimed eight. The count is checked against the built course by
+  a test that enumerates the registry.*
 - **FR-44** No explainer shall read run state, subscribe to the broker, or issue a
   request across the seam. Background renders identically with every component stopped,
   and is tested under that condition. It teaches the standards rather than standing in

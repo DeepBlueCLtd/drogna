@@ -4,7 +4,7 @@
   "title": "drogna telemetry report",
   "description": "The telemetry component's current account, served on its seam path (SRD-v2 FR-35): the latest residual statistics and forecast skill exactly as last published on the telemetry topic (telemetry.schema.json shapes, embedded whole), and throughput counted per simulation second — the only rate that means anything in a harness whose pace is a dial.",
   "type": "object",
-  "required": ["schema_version", "statistics", "skill", "throughput"],
+  "required": ["schema_version", "statistics", "skill", "throughput", "regions", "latency"],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
@@ -28,6 +28,23 @@
         "window_sim_seconds": { "type": "number", "exclusiveMinimum": 0 },
         "observations_per_sim_second": { "type": "number", "minimum": 0 },
         "telemetry_messages_per_sim_second": { "type": "number", "minimum": 0 }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "description": "The region-level statistics as last published, one entry per region of the configured grid that has seen at least one residual. A region nobody sampled is absent rather than present with zeroes: an unsampled region and a region scoring zero are different facts and only one of them is a measurement. Empty until residuals arrive.",
+      "items": { "$ref": "telemetry.schema.json#/$defs/residual_statistics" }
+    },
+    "latency": {
+      "type": "object",
+      "required": ["basis", "sample_count", "mean_sim_seconds", "maximum_sim_seconds"],
+      "additionalProperties": false,
+      "description": "End-to-end latency in SIMULATION seconds: from the instant an observation was taken to the instant its residual was folded into these statistics. Simulation time throughout — a wall-clock figure would measure the host's mood and the position of the rate dial, neither of which is the harness's subject (Constitution I, ADR-0006).",
+      "properties": {
+        "basis": { "type": "string", "minLength": 1, "description": "What the figure measures, in words, so a reader need not infer it from the field name." },
+        "sample_count": { "type": "integer", "minimum": 0, "description": "Residuals the figures were measured over, since the current forecast run was published." },
+        "mean_sim_seconds": { "type": ["number", "null"], "description": "Mean, or null when no residual has been folded yet: a zero here would read as instantaneous." },
+        "maximum_sim_seconds": { "type": ["number", "null"], "description": "Worst seen, or null on the same terms." }
       }
     }
   }

@@ -732,7 +732,12 @@
     },
     "cadence_ticks": 300,
     "staleness_window_seconds": 1800,
-    "minimum_skill_samples": 5
+    "minimum_skill_samples": 5,
+    "regions": {
+      "rows": 2,
+      "columns": 3,
+      "minimum_samples": 3
+    }
   },
   "operator": {
     "id": "operator",
@@ -896,6 +901,10 @@
       {
         "id": "intro",
         "label": "Intro"
+      },
+      {
+        "id": "background",
+        "label": "Background"
       },
       {
         "id": "system",

@@ -2921,7 +2921,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "cadence_ticks",
       "staleness_window_seconds",
-      "minimum_skill_samples"
+      "minimum_skill_samples",
+      "regions"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2979,6 +2980,33 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "minimum_skill_samples": {
         "type": "integer",
         "minimum": 2
+      },
+      "regions": {
+        "type": "object",
+        "required": [
+          "rows",
+          "columns",
+          "minimum_samples"
+        ],
+        "additionalProperties": false,
+        "description": "The bounded grid the region-level statistics scope is defined over (telemetry.schema.json's statistics_scope). Rows and columns are fixed before a run starts, so the number of region scopes a run can hold is fixed with them and cannot grow with the scenario. The grid's extent is deliberately not stated here: it is the extent of the forecast holding the residuals were scored against, which this component already reads through the store, and a second copy of the domain in configuration is a second thing to keep in step.",
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cells north to south."
+          },
+          "columns": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cells west to east."
+          },
+          "minimum_samples": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Below this many residuals a region reports state 'insufficient-samples' and its figures stand as they are, rather than being folded into the scenario figure where nobody could tell they were thin."
+          }
+        }
       }
     }
   },
@@ -7778,7 +7806,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "schema_version",
       "statistics",
       "skill",
-      "throughput"
+      "throughput",
+      "regions",
+      "latency"
     ],
     "additionalProperties": false,
     "properties": {
@@ -7826,6 +7856,50 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "telemetry_messages_per_sim_second": {
             "type": "number",
             "minimum": 0
+          }
+        }
+      },
+      "regions": {
+        "type": "array",
+        "description": "The region-level statistics as last published, one entry per region of the configured grid that has seen at least one residual. A region nobody sampled is absent rather than present with zeroes: an unsampled region and a region scoring zero are different facts and only one of them is a measurement. Empty until residuals arrive.",
+        "items": {
+          "$ref": "telemetry.schema.json#/$defs/residual_statistics"
+        }
+      },
+      "latency": {
+        "type": "object",
+        "required": [
+          "basis",
+          "sample_count",
+          "mean_sim_seconds",
+          "maximum_sim_seconds"
+        ],
+        "additionalProperties": false,
+        "description": "End-to-end latency in SIMULATION seconds: from the instant an observation was taken to the instant its residual was folded into these statistics. Simulation time throughout — a wall-clock figure would measure the host's mood and the position of the rate dial, neither of which is the harness's subject (Constitution I, ADR-0006).",
+        "properties": {
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the figure measures, in words, so a reader need not infer it from the field name."
+          },
+          "sample_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Residuals the figures were measured over, since the current forecast run was published."
+          },
+          "mean_sim_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Mean, or null when no residual has been folded yet: a zero here would read as instantaneous."
+          },
+          "maximum_sim_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Worst seen, or null on the same terms."
           }
         }
       }

@@ -524,19 +524,19 @@ export const topology: Topology = {
         {
           "component": "advisory-source",
           "path": "app/config/run.json",
-          "line": 773,
+          "line": 778,
           "constant": "/advisory_source/topics/advisory"
         },
         {
           "component": "advisory-store",
           "path": "app/config/run.json",
-          "line": 773,
+          "line": 778,
           "constant": "/advisory_store/topics/advisory"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1069,
+          "line": 1078,
           "constant": "/shell/topics/advisories"
         }
       ]
@@ -561,7 +561,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1066,
+          "line": 1075,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -791,13 +791,13 @@ export const topology: Topology = {
         {
           "component": "operator",
           "path": "app/config/run.json",
-          "line": 741,
+          "line": 746,
           "constant": "/operator/topics/heartbeat"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 741,
+          "line": 746,
           "constant": "/shell/topics/heartbeat"
         }
       ]
@@ -816,7 +816,7 @@ export const topology: Topology = {
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 804,
+          "line": 809,
           "constant": "/offload/topics/offload"
         }
       ]
@@ -867,7 +867,7 @@ export const topology: Topology = {
         {
           "component": "operator",
           "path": "app/config/run.json",
-          "line": 742,
+          "line": 747,
           "constant": "/operator/topics/platform_demand"
         }
       ]
@@ -892,7 +892,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1071,
+          "line": 1080,
           "constant": "/shell/topics/platform_state"
         }
       ]

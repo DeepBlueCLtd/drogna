@@ -7,13 +7,25 @@
  * the simulated rate in force beside the image path — so a picture of a stopped
  * system is never handed over as a live one.
  *
+ * Beside each image it writes a `.provenance.json` sidecar: the run the picture came
+ * from, the instant and rate the clock was at, the viewport and the browser. The site's
+ * authoring rules have required that sidecar since the V1 site, and OCR over published
+ * images is the check V2 gave up (ADR-0031) — the discipline it was traded for is this
+ * one, so the mechanism writes the record rather than asking an author to remember.
+ *
+ * A view's own controls can be set before the shot — a mode selector, a toggle — and
+ * what was set is recorded in the sidecar, because a picture of a mode nobody can see
+ * the switch for is a picture whose state is a mystery. Only the controls the page
+ * itself offers: the capture drives the shell, it never reaches past it.
+ *
  * Usage: pnpm capture:glance [view-id] [out.png]
  * The optional view id deep-links the capture (FR-15): e.g. `system`, `messages`.
+ * DROGNA_GLANCE_CAPTION, if set, is recorded in the sidecar as the picture's caption.
  */
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { mkdirSync } from 'node:fs';
-import { dirname, extname, join, normalize } from 'node:path';
+import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -58,6 +70,22 @@ try {
   await page.goto(viewId ? `${base}#/view/${viewId}` : base);
   await page.getByTestId('sim-time').waitFor({ timeout: 10_000 });
 
+  // Optionally let the run get somewhere first. A harness photographed at its
+  // epoch shows an honest empty board, which is the right picture for the shell
+  // arriving and the wrong one for anything the loop has to produce. The rate and
+  // the warming are both recorded in the sidecar, and the clock is pinned to zero
+  // for the capture itself either way (FR-19).
+  const warmRate = Number(process.env.DROGNA_GLANCE_WARM_RATE ?? 0);
+  const warmMillis = Number(process.env.DROGNA_GLANCE_WARM_MS ?? 0);
+  if (warmRate > 0 && warmMillis > 0) {
+    const accepted = await page.evaluate(async (rate) => {
+      const response = await fetch('/api/ctl/clock/rate', { method: 'PUT', body: JSON.stringify({ rate }) });
+      return response.status;
+    }, warmRate);
+    if (accepted !== 200) throw new Error(`could not set the warming rate: rate endpoint answered ${accepted}`);
+    await page.waitForTimeout(warmMillis);
+  }
+
   // Pin the clock for the capture, through the shell's own seam: rate zero is a
   // legitimate rate (FR-19), and the acknowledgement sample updates the display.
   const pinned = await page.evaluate(async () => {
@@ -73,6 +101,27 @@ try {
     return rate?.textContent?.includes('rate 0') ?? false;
   });
 
+  // Set the view's own controls, if the caller named any. Each step is a selector
+  // and either a value to select or a click, applied through the page exactly as a
+  // reader would, and each is recorded in the sidecar beside the image.
+  const controls = JSON.parse(process.env.DROGNA_GLANCE_CONTROLS ?? '[]') as {
+    select?: string;
+    value?: string;
+    click?: string;
+    /** Where in the element to click, for a canvas that has no other handle. */
+    position?: { x: number; y: number };
+  }[];
+  for (const step of controls) {
+    if (step.select !== undefined && step.value !== undefined) {
+      await page.selectOption(step.select, step.value);
+    } else if (step.click !== undefined) {
+      await page.click(step.click, step.position ? { position: step.position } : undefined);
+    } else {
+      throw new Error(`a control step is neither a selection nor a click: ${JSON.stringify(step)}`);
+    }
+    await page.waitForTimeout(Number(process.env.DROGNA_GLANCE_CONTROL_SETTLE_MS ?? 1200));
+  }
+
   // Let one full heartbeat cadence pass before looking: liveness is real time
   // (ADR-0006), so a shot taken inside the first interval shows an honest dark
   // board — true, but not the moment worth capturing.
@@ -80,8 +129,35 @@ try {
 
   const rateText = await page.getByTestId('sim-rate').textContent();
   const simTime = await page.getByTestId('sim-time').textContent();
+  const runId = await page.locator('.shell-run').textContent();
+  const litComponents = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-component]')]
+      .filter((row) => !row.className.includes('dark'))
+      .map((row) => row.getAttribute('data-component') ?? ''),
+  );
   mkdirSync(dirname(outPath), { recursive: true });
   await page.screenshot({ path: outPath, fullPage: false });
+  // The sidecar: what a reader would otherwise have to take on trust about the
+  // picture. The run id is recorded rather than the seed, because a fresh visit
+  // seeds itself and the id is what that seed produced — the identifier that
+  // actually names this run (a manifest import reproduces it).
+  const provenance = {
+    image: basename(outPath),
+    run_id: runId ?? 'unknown',
+    view: viewId ?? 'first configured view',
+    sim_time: simTime ?? 'unknown',
+    clock_pinned: rateText ?? 'unknown',
+    lit_components: litComponents.length > 0 ? litComponents : 'not readable from this view',
+    controls: controls.length > 0 ? controls : 'none: the view is as it opens',
+    warmed:
+      warmRate > 0 && warmMillis > 0
+        ? `run at rate ${warmRate} for ${warmMillis} ms of host time before the clock was pinned`
+        : 'not warmed: the picture is of the run at its epoch',
+    viewport: { width: 1440, height: 900 },
+    browser: { name: 'chromium', version: browser.version() },
+    caption: process.env.DROGNA_GLANCE_CAPTION ?? '',
+  };
+  await writeFile(outPath.replace(/\.png$/, '.provenance.json'), `${JSON.stringify(provenance, null, 2)}\n`);
   console.log(outPath);
   console.log(`simulated rate in force: ${rateText ?? 'unknown'} (pinned for capture); sim time ${simTime ?? 'unknown'}`);
 } finally {

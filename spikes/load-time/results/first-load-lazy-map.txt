@@ -1,0 +1,34 @@
+# prototype-lazy-map.patch applied: initial chunk 1,255.68 kB (gzip 339.82) + MapPanel 711.18 kB (gzip 206.14) fetched on demand
+
+### http://127.0.0.1:4182/   cpu=4x   line=broadband
+TTFB 7ms | first-paint 160ms | FCP 2444ms | load 2354ms | SHELL-USABLE 2598ms
+  index-BlkNdHEO.js            start=   66 duration=   349 transfer=340118 decoded=1255684
+  index-BSkRy30p.css           start=   69 duration=    66 transfer=11809 decoded=136147
+  favicon.ico                  start= 2596 duration=    47 transfer=308 decoded=8
+  MapPanel-Bzc4SUMV.js         start= 2650 duration=   233 transfer=206441 decoded=711178
+  MapPanel-DlWZJZXV.css        start= 2652 duration=    48 transfer=963 decoded=1709
+  favicon.ico                  start= 2791 duration=    45 transfer=308 decoded=8
+long tasks over 50ms: [{"start":439,"duration":1916},{"start":2431,"duration":159},{"start":2597,"duration":129},{"start":2732,"duration":57}]
+main thread blocked for 2261ms across 4 task(s)
+
+### http://127.0.0.1:4182/   cpu=4x   line=slowish
+TTFB 4ms | first-paint 256ms | FCP 2724ms | load 2639ms | SHELL-USABLE 2843ms
+  index-BlkNdHEO.js            start=  104 duration=   754 transfer=340118 decoded=1255684
+  index-BSkRy30p.css           start=  107 duration=   125 transfer=11809 decoded=136147
+  favicon.ico                  start= 2843 duration=    86 transfer=308 decoded=8
+  MapPanel-Bzc4SUMV.js         start= 2889 duration=   482 transfer=206441 decoded=711178
+  MapPanel-DlWZJZXV.css        start= 2891 duration=    88 transfer=963 decoded=1709
+  favicon.ico                  start= 3004 duration=    88 transfer=308 decoded=8
+long tasks over 50ms: [{"start":884,"duration":1755},{"start":2713,"duration":125},{"start":2844,"duration":108}]
+main thread blocked for 1988ms across 3 task(s)
+
+### http://127.0.0.1:4182/   cpu=6x   line=fast3g
+TTFB 3ms | first-paint 488ms | FCP 4820ms | load 4707ms | SHELL-USABLE 5000ms
+  index-BlkNdHEO.js            start=  186 duration=  1832 transfer=340118 decoded=1255684
+  index-BSkRy30p.css           start=  190 duration=   262 transfer=11809 decoded=136147
+  favicon.ico                  start= 5003 duration=   156 transfer=308 decoded=8
+  MapPanel-Bzc4SUMV.js         start= 5075 duration=  1155 transfer=206441 decoded=711178
+  MapPanel-DlWZJZXV.css        start= 5078 duration=   167 transfer=963 decoded=1709
+  favicon.ico                  start= 5267 duration=   165 transfer=308 decoded=8
+long tasks over 50ms: [{"start":2052,"duration":2657},{"start":4812,"duration":182},{"start":5005,"duration":178},{"start":5183,"duration":75},{"start":6257,"duration":62},{"start":6323,"duration":66}]
+main thread blocked for 3220ms across 6 task(s)

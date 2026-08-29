@@ -1,0 +1,60 @@
+> drogna-app@2.0.0 build /home/user/drogna/app
+transforming...
+cpu=1x   first contentful paint at 560ms, load at 506ms
+  module evaluation (the whole bundle)                   71.0ms
+  createSeamValidator (ajv holds every master)           55.3ms
+  validating 21 configuration documents                 102.1ms
+  constructing the components                            10.3ms
+  starting them (subscriptions only)                      1.3ms
+  clock.start() -> the provisioning cascade             185.8ms
+    of which the archive holding:
+        evaluating the field                             79.9ms
+        sha256 over the field bytes                      38.5ms
+        assembling the manifest                           0.4ms
+        store.publish (re-hash, then fan-out)            33.7ms
+    of which the now-cast holding:
+        evaluating the field                             10.7ms
+        sha256 over the field bytes                       4.2ms
+        store.publish (re-hash, then fan-out)             3.6ms
+  buildBackend total                                    299.9ms
+  React commit -> first contentful paint                 54.9ms
+> drogna-app@2.0.0 build /home/user/drogna/app
+transforming...
+cpu=4x   first contentful paint at 2060ms, load at 1841ms
+  module evaluation (the whole bundle)                  215.4ms
+  createSeamValidator (ajv holds every master)          256.9ms
+  validating 21 configuration documents                 390.0ms
+  constructing the components                            35.2ms
+  starting them (subscriptions only)                      8.9ms
+  clock.start() -> the provisioning cascade             824.0ms
+    of which the archive holding:
+        evaluating the field                            338.5ms
+        sha256 over the field bytes                     175.1ms
+        assembling the manifest                           3.3ms
+        store.publish (re-hash, then fan-out)           163.4ms
+    of which the now-cast holding:
+        evaluating the field                             46.3ms
+        sha256 over the field bytes                      23.2ms
+        store.publish (re-hash, then fan-out)            17.3ms
+  buildBackend total                                   1260.8ms
+  React commit -> first contentful paint                219.1ms
+> drogna-app@2.0.0 build /home/user/drogna/app
+transforming...
+cpu=6x   first contentful paint at 3024ms, load at 2886ms
+  module evaluation (the whole bundle)                  242.7ms
+  createSeamValidator (ajv holds every master)          412.9ms
+  validating 21 configuration documents                 818.1ms
+  constructing the components                            56.6ms
+  starting them (subscriptions only)                     11.0ms
+  clock.start() -> the provisioning cascade            1211.0ms
+    of which the archive holding:
+        evaluating the field                            519.3ms
+        sha256 over the field bytes                     237.6ms
+        assembling the manifest                           4.2ms
+        store.publish (re-hash, then fan-out)           228.5ms
+    of which the now-cast holding:
+        evaluating the field                             71.5ms
+        sha256 over the field bytes                      30.2ms
+        store.publish (re-hash, then fan-out)            24.1ms
+  buildBackend total                                   2101.4ms
+  React commit -> first contentful paint                141.4ms

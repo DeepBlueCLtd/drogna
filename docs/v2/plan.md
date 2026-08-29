@@ -7,8 +7,10 @@ standing)
 **Date:** 29 August 2026
 **Provenance:** an interview with the author, conducted 29 August 2026, plus a sweep of
 the six open pull requests (#43–#47, #49) for emergent requirements (§6), plus a second
-interview round the same day resolving the §9 questions and E1. Every decision below was
-put as a question and answered.
+interview round the same day resolving the §9 questions and E1, plus a third round of
+author direction the same day on how implementation is worked and reviewed (D15–D17).
+Every decision below was put as a question and answered, or stated by the author
+directly.
 
 ---
 
@@ -54,6 +56,9 @@ document, not a silent divergence later.
 | D12 | **The pub/sub seam is a broker component with MQTT semantics**: topic tree, wildcard subscription, ACL-shaped rules, behind a transport interface whose wire shape is MQTT-over-WebSocket. | The Messages tab and topic-tree view keep their V1 meaning; V3 swaps in a real broker. |
 | D13 | **Foundations feature first.** The shell (four tabs, mostly empty), the clock, the RNG, the manifest, the seam skeleton and the gates land as feature one, so every later beat is *visible* the day it is built. | "Demonstrable before the next begins" holds from the first feature. |
 | D14 | **Principle X survives as a release-gate component at the seam**: the fetch layer routes through an in-browser boundary component applying a path-prefix allowlist with default deny, observable in System/Messages when a request is denied. | The release-boundary story stays tellable in V2; V3 replaces the component with the real proxy. |
+| D15 | **Developer autonomy during implementation** *(third round)*. The system is far better understood than when the repository began: once the plan, SRD-v2 and constitution are adopted, developers make implementation decisions independently, without asking the author — including conducting research spikes when necessary, whose outcomes need no endorsement. | The author reviews *outcomes* — through D16's demo links, D17's notices and blog posts — not through approval gates. The record disciplines carry unchanged: contested or hard-to-reverse decisions still earn ADRs, spikes still write dated `FINDING.md`s. |
+| D16 | **One implementation PR** *(third round)*. The whole V2 implementation lands through a single long-lived PR. Progress is narrated in PR comments, each linking to a statically hosted (gh-pages) instance of the app **opening in the relevant view via an anchor URL** — the reviewer clicks from the comment straight into the beat being shown. | Two derived obligations: CI publishes per-stage builds under stable gh-pages paths, and **the shell supports URL-addressable views (deep links) from feature 101** — a comment cannot open "the relevant view" unless views are addressable. Both go into SRD-v2. |
+| D17 | **ntfy notices and the blog mark significant arrivals** *(third round)*. When a significant visual component is ready, the author is sent a ntfy message with the demo link. Blog posts on the rebuilt site (§9.1) capture significant new UI components and backend simulations — amending the cadence from one-post-per-feature to one-per-significant-component — and each posting is also announced by ntfy. | The ntfy topic is deployment configuration (a CI secret), never committed — PR-01's "public but unadvertised" discipline applies to the notification channel too. |
 
 ## 3. The seam, precisely
 
@@ -136,7 +141,7 @@ in the shell the day it lands. This list is a proposal for review, not a decisio
 
 | Feature | Beat | Lands visibly as |
 |---|---|---|
-| **101 foundations & shell** | The stage is lit | The dockable shell with the four tabs (layout library chosen by spike, §9.5); clock component beating; System lights its first component from a real heartbeat; seam skeleton; gates in TS, each watched failing; static build deployed |
+| **101 foundations & shell** | The stage is lit | The dockable shell with the four tabs (layout library chosen by spike, §9.5) and URL-addressable views (D16); clock component beating; System lights its first component from a real heartbeat; seam skeleton; gates in TS, each watched failing; static build deployed |
 | **102 the synthetic ocean** | A world exists | Generator: 4D fields, four seeded features, the tau field, ground-truth manifest; the historic archive authored at provisioning; manifest inspectable in the shell |
 | **103 sensing** | It is sampled | Sensors publishing SensorThings-vocabulary observations over the broker; ingestion seam; observation store; Messages tab shows real traffic |
 | **104 the query seam** | It is served | EDR + SensorThings answered through the seam over the archive, now-cast and observations; subset statements; the release gate with default deny; AT-01's descendant passes |
@@ -257,7 +262,10 @@ the plan refers to it as "the reversal ADR" rather than by number.
 ## 7. Repository mechanics
 
 - **Branching:** this plan and its drafts land via PR from `claude/drogna-v2-planning-ae8ln2`.
-  Adoption (below) happens on the repository's normal flow after review.
+  Adoption (below) happens on the repository's normal flow after review. Implementation
+  then proceeds per D16: one long-lived branch, one PR, for the whole of 101–109 — PR
+  comments with anchor-URL demo links are the running review surface, gh-pages carries
+  the hosted instances, and ntfy carries the significant-arrival notices (D17).
 - **Archiving:** `specs/001–023`, `docs/adr/0001–0026`, `spikes/`, and `harness-srd.md`
   stay where they are. Each gets a one-line archival banner at the top ("V1 record —
   describes retired software; superseded by …") in the adoption commit, nothing else is
@@ -308,8 +316,12 @@ the plan refers to it as "the reversal ADR" rather than by number.
    Accepted; the version log records the major bump. (Superseded drafts of both
    documents exist at `410fc03` in this branch's history as a starting point.)
 4. **Feature 101 specified** (spec-kit, against the new constitution), beginning with
-   the retirement commit and the seam spike.
-5. Beats 102–109 follow in order, each demonstrable before the next begins.
+   the retirement commit and the seam and layout spikes. Implementation opens the
+   single long-lived PR of D16.
+5. Beats 102–109 follow in order in the same PR, each demonstrable before the next
+   begins — demonstrated by a PR comment deep-linking into the hosted instance, with
+   ntfy and the blog marking the significant arrivals (D17). Decisions along the way
+   are the developers' own (D15); the author reads the outcomes.
 
 ## 9. Questions raised open — resolved by the second interview round, 29 August 2026
 

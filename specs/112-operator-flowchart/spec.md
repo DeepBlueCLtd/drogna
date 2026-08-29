@@ -258,9 +258,14 @@ Local numbering. The SRD requirements this feature adds are FR-47 to FR-55 of `s
 - **FR-028** The sensors sample at the position they last heard from the platform. When
   they have heard none they publish nothing and say so. No component computes the
   platform's position a second time.
-- **FR-029** An ownship observation is not a sample of the ocean. The monitor's pairing
-  and the planner's observation-age field exclude the ownship datastreams by name, and
-  the exclusion carries a test that fails when the exclusion is removed.
+- **FR-029** An ownship observation is not a sample of the ocean. The planner's
+  observation-age field excludes the ownship datastreams **by name**, and the exclusion
+  carries a test that fails when a name is removed — the planner informs on whatever
+  arrives, so what it must ignore has to be named. *Amended during implementation:* the
+  monitor needs no such list and must not carry one. Its `pairs` names the thing and the
+  two datastreams it scores, which is an allowlist and stronger; a denylist was written
+  beside it, planted against, and found unable to fail, so it was removed and the master
+  no longer admits the field.
 - **FR-030** The ingestion seam's quality flagging covers the ownship properties with
   their own range rules (course within a revolution, speed within the declared maximum,
   depth non-negative and within the declared maximum).

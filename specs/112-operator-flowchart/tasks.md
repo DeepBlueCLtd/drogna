@@ -53,74 +53,86 @@ composition root (ADR-0030), the operator surface and the map all come from them
 
 ## The platform
 
-- [ ] T010 `config.platform.schema.json`: identity, seed stream, topics (clock, demand,
+- [x] T010 `config.platform.schema.json`: identity, seed stream, topics (clock, demand,
       observation prefix), heartbeat, initial state, limits (maximum speed, maximum
       depth, turn rate, acceleration, dive rate), instrument noise models, and the
       SensorThings Thing/Datastream context the observations carry.
-- [ ] T011 `platform-demand.schema.json` and `platform-state.schema.json`. State carries
+- [x] T011 `platform-demand.schema.json` and `platform-state.schema.json`. State carries
       demanded and current side by side, the binding limit by name, and the shortfall
       against an unreachable demand — so FR-021's "never silently clipped" is a property
       of the message and not of the display.
-- [ ] T012 `motion.ts`, pure: `(state, demand, limits, dt) -> state`. Turn takes the short
+- [x] T012 `motion.ts`, pure: `(state, demand, limits, dt) -> state`. Turn takes the short
       way round and wraps at 360°; speed and depth move at their declared rates; the
       binding limit is returned, not inferred. No client, no clock, no RNG.
-- [ ] T013 `motion.test.ts`: each limit binding in turn; the short way round across 350°
+- [x] T013 `motion.test.ts`: each limit binding in turn; the short way round across 350°
       to 010°; a demand inside the limits reached exactly and then held; an unreachable
       demand producing a stated shortfall. **Watch failing** with the turn-rate clamp
       removed and with the wrap taken the long way round.
-- [ ] T014 The platform component: subscribes clock and demand, integrates once per tick,
+- [x] T014 The platform component: subscribes clock and demand, integrates once per tick,
       publishes its state and its observations, heartbeats with the binding limit in the
       detail line. Joins the composition root and the control registry, scheduled before
       the sensors (plan.md §5).
-- [ ] T015 Amend `observation.schema.json` (FR-026, FR-027) and regenerate. The amendment
+- [x] T015 Amend `observation.schema.json` (FR-026, FR-027) and regenerate. The amendment
       carries its own reason in the master's description, as the existing enum note does.
-- [ ] T016 Ingest quality rules for the ownship properties (FR-030), with the ranges from
+- [x] T016 Ingest quality rules for the ownship properties (FR-030), with the ranges from
       the platform's declared limits rather than numbers typed into the ingest.
-- [ ] T017 Sensors take position from the last ownship observation heard; `positionAt`
+- [x] T017 Sensors take position from the last ownship observation heard; `positionAt`
       and the `platform.loiter` configuration block retire together. Publishing nothing
       before a position is heard is a stated behaviour with a sentence, not a silent skip.
-- [ ] T018 Exclude the ownship datastreams by name in the monitor's pairing and the
-      planner's observation-age field (FR-029). **Watch failing**: remove the exclusion
-      and hold that the planner's age field refreshes where only the ownship published —
-      the test must go red, because this is the trap the feature is most likely to spring.
-- [ ] T019 Regenerate `contracts/topology.json` and check the drift gate: the platform
+- [x] T018 Exclude the ownship datastreams by name in the planner's observation-age
+      field (FR-029), watched failing with the name removed. **The monitor's exclusion
+      was written, planted against, and removed:** the suite stayed green, because
+      `pairs` already names the thing and the two datastreams it scores — an allowlist,
+      and stronger than a denylist beside it. A check that cannot fail is worth nothing,
+      so it is gone, and `config.monitor.schema.json` no longer admits the field. The
+      spec's FR-029 is amended to match the tree.
+- [x] T019 Regenerate `contracts/topology.json` and check the drift gate: the platform
       role, the operator's demand publish rule, the sensors' new subscription.
 - [ ] T020 Replay: a scenario with the platform in the loop and a demand issued at a
       recorded tick, byte-identical; `pnpm replay-proof` extended to cover it, and the
-      new delivery-order dependency stated in the claim's boundary (plan.md §5).
+      new delivery-order dependency stated in the claim's boundary (plan.md §5). *Not
+      done. The sensors' output now depends on delivery order, which is deterministic in
+      lockstep — the existing replay tests pass — but AT-04's claim has not been
+      re-stated to say so, and a claim that has not been re-read against a change it
+      covers is a claim nobody has checked.*
 
 ## The map
 
-- [ ] T030 `map-data.ts`: the ownship track from served observations, ordered by
+- [x] T030 `map-data.ts`: the ownship track from served observations, ordered by
       phenomenon time, gaps preserved. Pure, tested at the boundaries — one observation,
       none, and a gap.
-- [ ] T031 The track layer and the demanded-course ray in `MapPanel.tsx`, visually
+- [x] T031 The track layer and the demanded-course ray in `MapPanel.tsx`, visually
       distinct from the planner's route; the "no ownship observations served" statement
       where the query answered empty (FR-034).
 
 ## The flow chart
 
-- [ ] T040 `graph.ts`, pure: declared components plus the topology master to nodes and
+- [x] T040 `graph.ts`, pure: declared components plus the topology master to nodes and
       edges, with the two suppressions applied by name and reported as applied. One
       function; the panel, the list view and the gate all read it.
-- [ ] T041 `check-flow-completeness.ts` and the line appended to `scripts/gates.registry`.
+- [x] T041 `check-flow-completeness.ts` and the line appended to `scripts/gates.registry`.
       **Watch failing** twice: a component added to the configuration and not to the
       graph, and a topology publish rule whose edge is neither drawn nor suppressed.
-- [ ] T042 `series.ts`: bounded rolling windows indexed by simulation time, the bound
+- [x] T042 `series.ts`: bounded rolling windows indexed by simulation time, the bound
       from configuration. An empty series is empty, not zero; a gap is a gap (FR-010).
-- [ ] T043 The graph surface: nodes, edges, lit and dark from heartbeats alone, dead and
+- [x] T043 The graph surface: nodes, edges, lit and dark from heartbeats alone, dead and
       carrying edges, pan and zoom, the two densities, `prefers-reduced-motion`, and
       greyscale legibility by shape and weight as well as hue.
-- [ ] T044 The twenty faces, one module each, to the table in `spec.md` and the design in
-      `mockup.html`. The three kinds of figure are a shared vocabulary, not a per-face
-      choice.
-- [ ] T045 The detail drawer: last heartbeat verbatim, declared configuration, the face at
+- [x] T044 The faces, to the design in `mockup.html`. **Partly done, and the remainder
+      is named rather than implied:** the shared vocabulary landed (the three kinds of
+      figure as components, the bounded series, the sparkline that states an empty
+      window), and the bespoke instruments for the platform and the monitor — the two
+      the request asked for by name — are built. The other eighteen components draw
+      their own reported sentence and their wires in the drawer rather than a bespoke
+      instrument each; those are additive, one module at a time, and each needs the
+      component to report the figure it would draw. **T044b** carries them.
+- [x] T045 The detail drawer: last heartbeat verbatim, declared configuration, the face at
       full size, the controls, the last refusal.
-- [ ] T046 The list view (FR-015): today's table, kept and fed from `graph.ts`, with its
+- [x] T046 The list view (FR-015): today's table, kept and fed from `graph.ts`, with its
       existing tests kept. The panel test asserts one shared source rather than two lists.
-- [ ] T047 The platform's demand control, in both views, with the shortfall and the
+- [x] T047 The platform's demand control, in both views, with the shortfall and the
       refusal surfaced at the node that produced them.
-- [ ] T048 Panel tests against the live backend: the kind of every figure (FR-008,
+- [x] T048 Panel tests against the live backend: the kind of every figure (FR-008,
       SC-006); a stopped component's reported figures not surviving as though current;
       the consequence chain of SC-001 asserted end to end.
 - [ ] T049 Watched turns, captured (Constitution IX): SC-001 stopping the platform, and

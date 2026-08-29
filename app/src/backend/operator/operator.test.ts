@@ -33,7 +33,7 @@ async function get(runtime: BackendRuntime, path: string, method = 'GET') {
   return { status: response.status, body: JSON.parse(response.body) as never };
 }
 
-describe('the operator view (feature 107)', () => {
+describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
   describe('telemetry', () => {
     it('aggregates the monitor’s samples into master-valid statistics and a skill sentence', async () => {
       const config = lockstepConfig();

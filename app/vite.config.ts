@@ -27,12 +27,5 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    // These tests turn the loop against the real backend — thousands of simulated
-    // ticks, with the panels mounted in some of them — so vitest's default five
-    // seconds measures the runner rather than the behaviour. It was set on four
-    // describes one at a time, each time somebody hit the wall, and the fifth to hit
-    // it went red in CI on a test that was not the one that ran out of time. One
-    // budget here, and no test carries its own.
-    testTimeout: 120_000,
   },
 });

@@ -21,11 +21,13 @@ export function MessagesPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const { config, client, validator } = params;
   const [rows, setRows] = useState<readonly Row[]>([]);
   const [selected, setSelected] = useState<Row | undefined>();
-  // Heartbeats are most of the traffic and rarely what a reader came for: hidden
-  // from the list by default, displayable by the toggle. Display only — every
-  // message, heartbeats included, is still received, validated and counted, so
-  // the refusal claim keeps its full coverage either way.
+  // Heartbeats and clock samples are most of the traffic and rarely what a reader
+  // came for: both hidden from the list by default, each displayable by its own
+  // toggle. Display only — every message, the suppressed kinds included, is still
+  // received, validated and counted, so the refusal claim keeps its full coverage
+  // whatever is showing.
   const [showHeartbeats, setShowHeartbeats] = useState(false);
+  const [showClock, setShowClock] = useState(false);
   const counters = useRef({ received: 0, refused: 0 });
 
   useEffect(() => {
@@ -55,21 +57,34 @@ export function MessagesPanel({ params }: IDockviewPanelProps<PanelParams>) {
     <div className="panel messages-panel">
       <p className="messages-counters" data-testid="refusal-counter">
         {counters.current.received} received · {counters.current.refused} refused by their schema
-        <label className="messages-heartbeat-toggle">
+        <label className="messages-suppression-toggle">
           <input
             type="checkbox"
             checked={showHeartbeats}
             onChange={(event) => setShowHeartbeats(event.target.checked)}
           />{' '}
-          show heartbeats (counted and validated either way)
+          show heartbeats
         </label>
+        <label className="messages-suppression-toggle">
+          <input
+            type="checkbox"
+            checked={showClock}
+            onChange={(event) => setShowClock(event.target.checked)}
+          />{' '}
+          show clock
+        </label>
+        <span className="messages-suppression-note">(counted and validated either way)</span>
       </p>
       <div className="messages-split">
         <TopicTree client={client} />
         <table className="messages-list">
           <tbody>
             {rows
-              .filter((row) => showHeartbeats || row.topic !== config.topics.heartbeat)
+              .filter(
+                (row) =>
+                  (showHeartbeats || !topicMatchesFilter(config.topics.heartbeat, row.topic)) &&
+                  (showClock || !topicMatchesFilter(config.topics.clock, row.topic)),
+              )
               .map((row) => (
                 <tr
                   key={row.seq}

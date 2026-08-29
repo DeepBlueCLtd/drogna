@@ -57,6 +57,15 @@ def _rendered(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     (root / "config").mkdir(parents=True)
     (root / "deploy" / "broker").mkdir(parents=True)
+    # The proxy's image definition travels with the scratch tree, because the renderer
+    # reads the identity that will open the credential file out of the image that defines
+    # it rather than repeating the uid. Without it the render falls back to a host chown,
+    # which only root may perform — so this omission failed on the CI runner and passed in
+    # a session container that happened to be root.
+    (root / "deploy" / "images").mkdir(parents=True)
+    (root / "deploy" / "images" / "proxy.Dockerfile").write_bytes(
+        (REPO_ROOT / "deploy" / "images" / "proxy.Dockerfile").read_bytes()
+    )
     for name in ("local",):
         target = root / "config" / name
         target.mkdir()
@@ -316,13 +325,64 @@ def _verifies(entry: str, secret: str) -> bool:
     return produced == digest.strip()
 
 
+def _read_as_the_reader(path: Path) -> str:
+    """The credential file's content, read the way its owner could read it.
+
+    The file belongs to the proxy's worker identity at 0600, so the deploying user cannot
+    open it — which is the arrangement working, not a fault. A test that needs the content
+    reads it the same way the renderer wrote it: directly where this process is root, and
+    otherwise through a container that is. Where neither is available the renderer itself
+    refuses, so this is never the thing that fails first.
+    """
+    if os.geteuid() == 0:
+        return path.read_text(encoding="utf-8")
+    runtime = shutil.which("docker")
+    assert runtime is not None, "neither root nor a container daemon; the render would have refused"
+    result = subprocess.run(
+        [
+            runtime,
+            "run",
+            "--rm",
+            "--user",
+            "0:0",
+            "-v",
+            f"{path.parent}:/work:ro",
+            render_credentials.proxy_image(REPO_ROOT),
+            "cat",
+            f"/work/{path.name}",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, f"could not read the credential file back: {result.stderr}"
+    return result.stdout
+
+
+def _can_give_a_file_away() -> bool:
+    """Root, or a container daemon that actually answers — not merely a client on PATH."""
+    if os.geteuid() == 0:
+        return True
+    if shutil.which("docker") is None:
+        return False
+    return subprocess.run(["docker", "info"], capture_output=True).returncode == 0
+
+
+@pytest.mark.skipif(
+    not _can_give_a_file_away(),
+    reason=(
+        "the proxy's credential file is given to the identity that reads it, which needs "
+        "root or a reachable container daemon; with neither, the renderer refuses rather "
+        "than leaving a file nginx would answer 500 behind"
+    ),
+)
 def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
     values = dict(VALUES)
     values[render_credentials.PROXY_SECRET] = "secret-for-the-reader"
     render_credentials.render_destination("local", values, scratch)
     written = render_credentials.write_proxy_credentials("local", values, scratch)
 
-    entry = written.read_text(encoding="utf-8").strip()
+    entry = _read_as_the_reader(written).strip()
     tracked = json.loads(
         (REPO_ROOT / "config" / "local" / "proxy.json").read_text(encoding="utf-8")
     )
@@ -338,6 +398,10 @@ def test_the_proxy_credential_is_produced_and_verifies(scratch: Path) -> None:
         "a wrong secret verified, so this test proves nothing about the right one"
     )
     assert written.stat().st_mode & 0o077 == 0, "a credential file is readable by its owner alone"
+    assert written.stat().st_uid == render_credentials.PROXY_READER_UID, (
+        "and its owner is the nginx worker that opens it per request, not the deployer: "
+        "owned by anyone else it is a 500 behind the clearance on every Linux bring-up"
+    )
 
 
 def test_no_proxy_secret_is_a_refusal(scratch: Path) -> None:

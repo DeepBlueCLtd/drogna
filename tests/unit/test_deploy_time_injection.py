@@ -189,10 +189,23 @@ def test_a_document_without_the_credentials_shape_is_left_alone(tmp_path: Path) 
 
 
 def _can_change_ownership() -> bool:
+    """Whether this machine can hand a file to another user at all.
+
+    Root can, and so can a *reachable* container daemon. A `docker` on PATH is not a
+    daemon that answers — the renderer's own comment says so, and this guard forgot it:
+    on a machine with the client installed and the socket refused, the render correctly
+    refuses and a test guarded on presence alone fails for the right reason at the wrong
+    moment. Probed the way tests/support/proxy_boundary.py probes it.
+    """
     import os
     import shutil as _shutil
+    import subprocess as _subprocess
 
-    return os.geteuid() == 0 or _shutil.which("docker") is not None
+    if os.geteuid() == 0:
+        return True
+    if _shutil.which("docker") is None:
+        return False
+    return _subprocess.run(["docker", "info"], capture_output=True).returncode == 0
 
 
 @pytest.mark.skipif(
@@ -234,6 +247,11 @@ def test_the_proxy_credential_file_is_given_to_the_worker_that_reads_it(tmp_path
         DESTINATION, {render_credentials.PROXY_SECRET: "generated-value"}, root
     )
 
+    # Asserted by `stat`, never by reading the bytes: once the file belongs to the worker
+    # at 0600, the deploying user cannot open it — which is the whole point, and which is
+    # what a first version of this test forgot. It read the file back, passed as root in a
+    # session container, and failed on the CI runner with the very `PermissionError` the
+    # arrangement is designed to produce. `stat` needs no read permission.
     stat = written.stat()
     assert stat.st_uid == render_credentials.PROXY_READER_UID, (
         "the credential file must belong to the worker identity that opens it per request; "
@@ -243,8 +261,12 @@ def test_the_proxy_credential_file_is_given_to_the_worker_that_reads_it(tmp_path
 
     # The second render must also survive: the file now belongs to the worker, so it is
     # unlinked and recreated rather than truncated in place — the same second-run lesson
-    # the broker's password file taught.
+    # the broker's password file taught. A truncate here is `PermissionError` for anyone
+    # but root, so this call raising is the regression.
     again = render_credentials.write_proxy_credentials(
         DESTINATION, {render_credentials.PROXY_SECRET: "generated-value"}, root
     )
-    assert again.read_text(encoding="utf-8") == written.read_text(encoding="utf-8")
+    assert again == written
+    again_stat = again.stat()
+    assert again_stat.st_uid == render_credentials.PROXY_READER_UID
+    assert again_stat.st_mode & 0o777 == 0o600

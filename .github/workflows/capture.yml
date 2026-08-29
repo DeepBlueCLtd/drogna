@@ -80,8 +80,11 @@ jobs:
     defaults:
       run:
         working-directory: client
-    env:
-      HARNESS_CONFIG: config/local/capture.json
+    # HARNESS_CONFIG is deliberately not set at job level any more. The page is served
+    # through the proxy behind its clearance (issue #34, link 6), so a capture must read
+    # the *rendered* capture document — the render is what puts the credential in, and the
+    # tracked document names nobody. Which document exists depends on whether the bring-up
+    # ran, so the choice is made in its own step below and published through GITHUB_ENV.
     steps:
       - uses: actions/checkout@v4
 
@@ -140,8 +143,12 @@ jobs:
       # Changing that is a decision about what a destination runs; borrowing four profiles
       # for a capture job is not, and the override exists so the two stay separable.
       #
-      # The client service publishes on the address config/local/capture.json already names,
-      # so nothing here bends the configuration to fit the job.
+      # The proxy publishes on the address config/local/capture.json already names — one
+      # door, the page behind the clearance — so nothing here bends the configuration to
+      # fit the job. The proxy's rendered nginx now also names `client` and `clock` as
+      # upstreams (the page and FR-74's clock strand), which `shell` and `foundation`
+      # provide; nginx resolves every upstream at config load, so all three are start-up
+      # dependencies of the boundary, and deploy/compose.yaml says so.
       #
       # This step is allowed to fail. It is the first time the stack has been brought up
       # anywhere, the profile set below is reasoned from deploy/compose.yaml rather than
@@ -162,6 +169,24 @@ jobs:
         run: |
           set -o pipefail
           ./scripts/up.sh local 2>&1 | tee "${RUNNER_TEMP}/bringup.log"
+
+      # The rendered document where the render produced one, the tracked one where it did
+      # not. The rendered document carries the clearance the page's challenge demands; the
+      # tracked one names nobody, which is exactly right for the preview fallback below —
+      # a preview serves the page with no challenge, and the mechanisms present a
+      # credential only when the document carries a secret.
+      - name: Point the captures at the document that matches what is serving
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ -f deploy/.runtime/config/local/capture.json ]; then
+            echo "HARNESS_CONFIG=deploy/.runtime/config/local/capture.json" >> "$GITHUB_ENV"
+            echo "captures read the rendered document, credential included"
+          else
+            echo "HARNESS_CONFIG=config/local/capture.json" >> "$GITHUB_ENV"
+            echo "no rendered document exists, so the captures read the tracked one, which"
+            echo "names nobody — right for a preview, refused by a stack, either way loud"
+          fi
 
       - name: Say what came up
         if: always()
@@ -206,9 +231,19 @@ jobs:
       # exercised either way, exactly as it was before the stack existed here.
       - name: Make sure a client is answering, from the stack or from a preview
         run: |
-          url="$(node -e 'process.stdout.write(require("../config/local/capture.json").client.url)')"
+          url="$(node -e 'process.stdout.write(require(process.argv[1]).client.url)' "../${HARNESS_CONFIG}")"
+          user="$(node -e 'process.stdout.write(require(process.argv[1]).client.credentials.user)' "../${HARNESS_CONFIG}")"
+          secret="$(node -e 'process.stdout.write(require(process.argv[1]).client.credentials.secret)' "../${HARNESS_CONFIG}")"
+          # The page sits behind the boundary's clearance, so this probe presents the same
+          # credential the captures will — where the document carries one. Presenting
+          # nothing to a stack answers 401, -f fails, and the loop would fall through to a
+          # preview that cannot bind the proxy's published port: a loud wrong answer.
+          auth=()
+          if [ -n "$secret" ]; then
+            auth=(-u "${user}:${secret}")
+          fi
           for _ in $(seq 1 60); do
-            if curl -fsS -o /dev/null "$url"; then
+            if curl -fsS "${auth[@]}" -o /dev/null "$url"; then
               echo "the stack is serving the client at $url"
               exit 0
             fi
@@ -246,11 +281,12 @@ jobs:
       # This step is allowed to fail without failing the job, and the step after it says
       # why it failed rather than leaving a red cross to be interpreted. The pair pins the
       # clock through the client's own rate control and waits for the clock to acknowledge
-      # it (FR-007); this job serves the built client and does not bring up the rest of the
-      # harness, so no clock answers and the capture refuses. That refusal is the correct
-      # behaviour and it is loud, which is why it is reported rather than suppressed. The
-      # determinism specs above are the part of the pair mechanism that is load-bearing
-      # without a running stack, and they are not allowed to fail.
+      # it (FR-007); with the stack up that request travels the one door — the page, the
+      # credential and the clock all through the boundary — and where the bring-up failed
+      # and a preview stands in, no clock answers and the capture refuses. That refusal is
+      # the correct behaviour and it is loud, which is why it is reported rather than
+      # suppressed. The determinism specs above are the part of the pair mechanism that is
+      # load-bearing without a running stack, and they are not allowed to fail.
       - name: Capture the after half of a pair
         id: after
         continue-on-error: true

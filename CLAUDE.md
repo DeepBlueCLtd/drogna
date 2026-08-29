@@ -160,6 +160,17 @@ inside a container, and unlink-not-truncate on re-render. The lesson on top of t
 **a boundary that has never been entered is untested from the inside — measure at least one
 cleared request, not only the refusals.**
 
+**This session's shell is root, and CI's is not, so a permission test passes here for the
+wrong reason.** The two tests written for the fault above — that the credential file belongs
+to the identity that opens it — passed in this container and failed on the runner twice: as
+root, reading a 0600 file owned by uid 101 succeeds, and a host `chown` succeeds without any
+container at all, so both the assertion and the code path under it were the ones CI would
+never take. Assert ownership with `stat`, which needs no read permission, and **run a
+permission-sensitive test as a non-root user before believing it**: `useradd`, add the user
+to the docker socket's group, and run pytest as them. Note the second half of that setup —
+a `docker` on PATH is not a daemon that answers, so a skip guard must probe `docker info`
+rather than `shutil.which`, or it fails on exactly the machine it meant to skip.
+
 **nginx's own canonicalising redirect names the listen port, which is a container port.** A
 slash-terminated proxied location answers its bare prefix (`/clock`) with a 301 nginx builds
 absolutely from the *listen* port — `Location: http://127.0.0.1:8080/clock/` from a proxy

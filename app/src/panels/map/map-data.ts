@@ -183,3 +183,56 @@ export function insideRing(ring: readonly [number, number][], longitude: number,
   }
   return inside;
 }
+
+/** The time axis the ground-truth manifest states, in seconds from its origin. */
+export interface ManifestTimeAxis {
+  origin_sim_time: string;
+  start_offset_seconds: number;
+  step_seconds: number;
+  count: number;
+}
+
+/**
+ * The instants a holding actually stores (issue #60). The field advances at these
+ * steps and no others, so they are what the scrubber refetches on: the displayed
+ * instant moves continuously, the field moves when it crosses into another step.
+ * Derived from the manifest rather than from a step typed into the shell.
+ */
+export function manifestInstants(time: ManifestTimeAxis): string[] {
+  const originMillis = Date.parse(time.origin_sim_time.slice(0, 23) + 'Z');
+  const instants: string[] = [];
+  for (let index = 0; index < time.count; index++) {
+    const seconds = time.start_offset_seconds + index * time.step_seconds;
+    instants.push(`${new Date(originMillis + seconds * 1000).toISOString().slice(0, 23)}000Z`);
+  }
+  return instants;
+}
+
+/**
+ * The stored instant a displayed instant falls on: the nearest step, which is what
+ * the server's nearest-neighbour sampler would pick anyway, and ties go to the
+ * earlier step so the choice is a rule rather than a coincidence of floating point.
+ * Outside the axis it clamps, and `beyond` says so — the field then shows an end of
+ * its extent, and the panel has to admit that rather than imply the field goes on.
+ */
+export function nearestInstant(
+  instants: readonly string[],
+  displayedSimTime: string,
+): { instant: string; beyond: 'before' | 'after' | undefined } | undefined {
+  if (instants.length === 0 || displayedSimTime === '') return undefined;
+  const target = Date.parse(displayedSimTime.slice(0, 23) + 'Z');
+  if (!Number.isFinite(target)) return undefined;
+  if (target < Date.parse(instants[0].slice(0, 23) + 'Z')) return { instant: instants[0], beyond: 'before' };
+  const last = instants[instants.length - 1];
+  if (target > Date.parse(last.slice(0, 23) + 'Z')) return { instant: last, beyond: 'after' };
+  let chosen = instants[0];
+  let best = Number.POSITIVE_INFINITY;
+  for (const instant of instants) {
+    const distance = Math.abs(Date.parse(instant.slice(0, 23) + 'Z') - target);
+    if (distance < best) {
+      best = distance;
+      chosen = instant;
+    }
+  }
+  return { instant: chosen, beyond: undefined };
+}

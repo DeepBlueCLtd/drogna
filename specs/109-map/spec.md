@@ -50,6 +50,28 @@ rather than pretending (Constitution VII, carried into presentation).
   `composeUrl` writes into the WKT. The map says whether the position falls inside
   the domain it fetched from the reference collection; it is a warning, never a
   veto, because the server's own refusal is the authority (Constitution VII).
+- **The time control carries the field, without a cache** (issue #60, FR-40
+  amended): the slider drove the route, the platform and the advisories; the field
+  stood at one instant. It now moves too. The decision the issue asked for is *no
+  cache*: a client-side map of instant → coverage is a second store, and one that
+  goes stale the moment the holding is replaced. Nor is there a timer to debounce
+  the scrub. What throttles it instead is the holding's own time axis, read from
+  the ground-truth manifest: the field is asked for the *step* the displayed
+  instant falls on, so a scrub within a step costs nothing and a scrub across one
+  costs exactly one query. The number that paces the scrubber therefore comes from
+  a manifest rather than from a constant typed into the shell. Where the displayed
+  instant falls outside the holding's axis the panel says so and shows the end of
+  the extent, rather than letting the picture imply the field goes on.
+- **Doubt is one layer, chosen** (issue #60): the run publishes its ensemble spread
+  as its own instance, servable through the same area query, so drawing it is one
+  more genuine query rather than a second computation of doubt. It *replaces* the
+  projection cells rather than joining them, as the issue required. The two are
+  different claims — the cells are the planner's doubt about the plan, the spread is
+  the run's doubt about the field — and the spread is snapped to *its own* time axis:
+  a forecast asked about the now-cast's step is asked about an instant outside its
+  horizon, and is refused for asking (found in the running page, then held by test).
+  The shade is normalised against the spread's observed range, which the status line
+  states, because a normalised shade means nothing without one.
 - **The depth volume is stacked, not invented** (issue #59, FR-40 amended): V1's map
   rotated a cube of the data volume; V2's map gained a globe and served depth one
   slice at a time. The cube view restores the volume without inventing one. Its
@@ -81,6 +103,14 @@ rather than pretending (Constitution VII, carried into presentation).
 - Panel against the live backend: WebGL absence stated; advisories present and
   stating empty; the composer enumerates nowcast/archive and the three query
   types from served metadata and names the missing step until the URL assembles.
+- Scrubbing: the panel test moves the slider a quarter of a step and holds that no
+  query is issued, then a whole step and holds that exactly one is, with its
+  `datetime` the manifest's step rather than the instant the slider sits on.
+- The spread: the panel test turns the loop until the model runner genuinely
+  publishes, turns on further until the two time axes disagree about the displayed
+  instant — while they agree, a spread query snapped to the field's step passes for
+  the wrong reason — and then holds the collection and the datetime the query asks
+  for, and that the shade's range is stated.
 - The cube: the panel test drives the view selector against the live backend and
   holds that the area queries issued are exactly one per level of the now-cast
   manifest's depth axis, at those z values, with no level declined; the frame's
@@ -102,17 +132,24 @@ rather than pretending (Constitution VII, carried into presentation).
   five plants, each watched red, each reverted. For the cube: the manifest's axis
   swapped for a depth list typed into the shell (the requested z values went red
   against the manifest's own), a level dropped rather than named (the level count
-  went red), and the frame's inverse offset by a degree (the round trip went red).
+  went red), and the frame's inverse offset by a degree (the round trip went red). For the
+  scrubber: the raw displayed instant sent instead of the snapped step (red on the
+  datetime), the effect keyed on the displayed instant rather than the step (red on
+  the no-query-within-a-step assertion), the nearest-step tie flipped to the later
+  step and the outside-the-axis flag dropped (both red in the builders). For the
+  spread: the query pointed at the field's collection (red on the collection), the
+  spread snapped to the field's step (red on the datetime — this was a real fault,
+  found in the running page before it was planted), and the shade's range removed
+  from the status line (red on the range).
 
 ## Deliberately not in this feature
 
 - A basemap: the demo draws the domain's own reference geometry. Tiles would be
   the page's only external fetch, for coastline that is nowhere near the domain.
-- Time-scrubbing the *field* (the slider drives route, advisories and platform):
-  the area query serves any instant in a holding's extent, so a scrubber is a
-  consumer-side loop away — but each frame is a fresh seam round-trip, and a
-  cache would be a second store. Deferred until someone actually wants it.
-- Uncertainty as a second gridded layer (the spread instance is servable through
-  the same area query): the projection cells already show doubt decaying and
-  refreshing, which is what FR-40 asks to be *seen*; two doubt layers at once
-  read as one wrong one.
+- ~~Time-scrubbing the *field*~~ — built (issue #60). The caching question it was
+  waiting on is answered *no*, and the round-trip worry it raised is answered by
+  the holding's own time axis: a scrub within a step costs nothing.
+- ~~Uncertainty as a second gridded layer~~ — built (issue #60), but as a
+  *replacement* for the projection cells rather than a second layer, which is what
+  the deferral asked for. Two doubt layers at once still read as one wrong one, and
+  the panel does not offer them together.

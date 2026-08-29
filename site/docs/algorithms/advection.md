@@ -14,8 +14,8 @@ the second half is what stops a reader mistaking this for an ocean model.
 ## The problem, before the method
 
 The rest of the harness needs a field that changes. The
-[monitor](../subsystems/c11-monitor.md) needs something to detect divergence
-*from*. The [planner](../subsystems/c15-planner.md) needs somewhere for the
+[monitor](../archive/subsystems/c11-monitor.md) needs something to detect divergence
+*from*. The [planner](../archive/subsystems/c15-planner.md) needs somewhere for the
 interesting water to move *to*, or its revisit logic never has anything to chase.
 The browser client needs something that visibly evolves.
 
@@ -34,7 +34,7 @@ because the first invites a reader to trust them.
 
 ## Where the features come from
 
-The [environment generator](../subsystems/c02-environment-generator.md) seeds four
+The [environment generator](../archive/subsystems/c02-environment-generator.md) seeds four
 features into the synthetic world and writes their true parameters to a
 ground-truth manifest: a [mesoscale eddy](../glossary.md#mesoscale-eddy) of known
 centre, radius and strength; a [front](../glossary.md#front) of known position and
@@ -166,7 +166,7 @@ background and adding noise on top makes no attempt at a budget.
 
 **The forecast does not use observations at all.** The model runner never reads
 the observation store or the observation topics. The control loop is closed by the
-[monitor](../subsystems/c11-monitor.md) deciding a rerun is warranted, not by any
+[monitor](../archive/subsystems/c11-monitor.md) deciding a rerun is warranted, not by any
 assimilation of measurements into the state. Each new run is re-initialised from
 the same ground truth, advected further. Nothing in drogna corrects a forecast
 towards what was measured.
@@ -190,7 +190,7 @@ Both kernels are selected by name from configuration, and the name is announced 
 the control namespace when a run starts, so which one produced a given field is
 recorded rather than inferred. Swapping one for the other is a configuration
 change with no source edit outside the model runner package — which is the entire
-claim the [model kernel port](../architecture/overview.md#the-port-accounting)
+claim the [model kernel port](../archive/architecture/overview.md#the-port-accounting)
 makes, and the reason the fakeness of the numerics inside it is tolerable.
 
 ## Where the code is
@@ -208,4 +208,4 @@ makes, and the reason the fakeness of the numerics inside it is tolerable.
 There is no mathematical notation on this page. The five lines of displacement
 arithmetic above are the whole model, and they are clearer as code than as
 notation; the site has no renderer for mathematics in any case, which is recorded
-in [Site tooling](../decisions/site-tooling.md).
+in [Site tooling](../decisions/index.md).

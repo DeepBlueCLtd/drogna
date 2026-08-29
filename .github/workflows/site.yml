@@ -1,0 +1,117 @@
+# The published site, grown into the gh-pages estate (SRD-v2 PR-04, NFR-04, D18).
+#
+# The estate has two tenants. This one owns the root; instances.yml owns instances/,
+# one subtree per branch, and neither workflow may reach into the other's ground —
+# scripts/publish-site.ts holds that boundary and refuses to cross it whatever the
+# manifest it reads says.
+#
+# Only the default branch publishes the site. A branch's *app* is reviewable as its own
+# instance, which is what review needs; a branch's *site* is reviewable by building it,
+# which `pnpm site:build` does on any machine. Publishing a branch's site would put two
+# claims about the same pages at the same addresses.
+name: Site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'site/**'
+      - 'docs/adr/**'
+      - 'contracts/topology.json'
+      - 'specs/**'
+      - 'scripts/site/**'
+      - 'scripts/build-site.ts'
+      - 'scripts/publish-site.ts'
+      - 'scripts/estate-index.ts'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# This workflow's own group, deliberately NOT shared with the instance deployments.
+# GitHub holds at most ONE queued run per concurrency group: `cancel-in-progress: false`
+# protects the run already going, and the next arrival evicts and CANCELS the one
+# waiting behind it. Sharing `gh-pages-estate` with a workflow that fires on every
+# push to every `claude/**` branch therefore did not serialise this one — it dropped
+# it. The V2 site publication queued at 12:34:45 and was cancelled at 12:34:49, and the
+# site simply never appeared. Estate writers now race, and the push step below resolves
+# that by re-placing the site on the winner's state.
+concurrency:
+  group: gh-pages-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The publication disciplines — every internal link resolves, nothing is fetched
+      # from another origin, the landing page carries FR-01's statement, every page
+      # declines indexing — are three of the gates in scripts/gates.registry, so they
+      # run here, in a contributor's terminal and in CI's own gate step. V1's ran only
+      # in the publishing workflow, and stopped running when it was deleted.
+      - name: Gates
+        run: pnpm run gates
+
+      - name: Check out the estate
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: estate
+
+      - name: Place the site and push, additively
+        run: |
+          set -euo pipefail
+
+          # Placement is a function of this build and whatever the estate holds right
+          # now, so a losing attempt re-does it on the winner's state rather than
+          # rebasing onto it. Both workflows regenerate instances/index.html, and
+          # rebasing one generated file onto another run's version of it conflicts,
+          # where re-deriving it from the estate just fetched cannot.
+          place() {
+            pnpm run site:publish estate
+            # Regenerated here as well as in instances.yml, so the index is current
+            # whichever workflow last touched the estate. It is read from what the
+            # estate holds, so running it twice cannot produce two different answers.
+            pnpm run estate:index estate
+          }
+
+          git -C estate config user.name "drogna-site"
+          git -C estate config user.email "actions@users.noreply.github.com"
+
+          for delay in 2 4 8 16; do
+            place
+            # Precisely the site's own ground, plus the one file in the other tenant's
+            # that this workflow legitimately regenerates. `git add -A` at the root would
+            # be a workflow staging whatever it happened to find, which is the habit that
+            # produced three red runs in V1.
+            git -C estate add -A -- . ':(exclude)instances'
+            git -C estate add instances/index.html
+            if git -C estate diff --cached --quiet; then
+              echo "site unchanged; nothing to push"
+              exit 0
+            fi
+            git -C estate commit -m "site: ${GITHUB_SHA}"
+            if git -C estate push; then exit 0; fi
+            echo "another writer moved the estate; taking its state and placing again"
+            git -C estate fetch origin gh-pages
+            git -C estate reset --hard origin/gh-pages
+            sleep "${delay}"
+          done
+          echo "could not push the site into the estate after four attempts" >&2
+          exit 1

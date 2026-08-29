@@ -1,7 +1,7 @@
 <!--
-Short on purpose. A template nobody fills in is worse than no template, so this asks for
-the two things that cannot be reconstructed from the diff: what was watched happening, and
-what was decided not to do.
+Short on purpose. A template nobody fills in is worse than no template, so this asks only
+for what cannot be reconstructed from the diff: where the change can be seen running, what
+was watched happening, and what was decided not to do.
 
 Delete any section that does not apply. An empty section is a claim too.
 -->
@@ -9,6 +9,33 @@ Delete any section that does not apply. An empty section is a claim too.
 ## What this changes, and why
 
 <!-- One paragraph. The diff says what; this says why, and what was rejected. -->
+
+## The instance, opened at the change
+
+<!--
+CI has already built one: https://deepbluecltd.github.io/drogna/instances/<branch-with-slashes-as-hyphens>/
+and the Instances run writes the exact URL into its job summary.
+
+Link it opened at the view the change is in — `#/view/map`, `#/view/messages` — not at
+the shell's front door, which asks the reviewer to go and find the change. Views are
+addressable so that this link can exist.
+
+If there is nothing visible in this change, say "nothing visible". A screenshot is the
+fallback for something no URL reaches, not the deliverable.
+-->
+
+## The blog entry
+
+<!--
+A significant component — a new face in the shell, or a piece of backend simulation
+worth watching work — arrives with its entry, in this pull request. Not one per feature.
+Copy site/authoring/blog-entry-template.md to site/docs/blog/posts/<slug>.md; the shape
+and the audience are in site/authoring/README.md.
+
+Link the entry here, or say why this change does not earn one. "Plumbing, no entry yet"
+is a decision; silence is an oversight, and the coverage table on the blog index
+publishes the gap either way.
+-->
 
 ## What was watched failing
 

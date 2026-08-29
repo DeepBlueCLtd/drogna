@@ -16,6 +16,12 @@ import { runGate as vocabulary } from '../gates/check-vocabulary.js';
 import { runGate as importBoundary } from '../gates/check-import-boundary.js';
 import { runGate as typesDrift } from '../gates/check-types-drift.js';
 import { runGate as topologyDrift } from '../gates/check-topology-drift.js';
+import { runGate as siteLinks } from '../gates/check-site-links.js';
+import { runGate as siteResources } from '../gates/check-site-resources.js';
+import { inspect as publication } from '../gates/check-site-publication.js';
+import { runGate as siteDisclosure } from '../gates/check-site-disclosure.js';
+import { runGate as estateConcurrency } from '../gates/check-estate-concurrency.js';
+import { buildSite } from '../site/build.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -69,11 +75,104 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(topologyDrift(REPO_ROOT)).toEqual([]);
   });
 
+  it('estate-concurrency: two workflows sharing a group fail; distinct groups pass', () => {
+    const shared = estateConcurrency(join(fixtures, 'workflows-shared'));
+    // Both sharers are named, because either one is the one that gets cancelled.
+    expect(shared.map((f) => f.file).sort()).toEqual([
+      '.github/workflows/frequent.yml',
+      '.github/workflows/rare.yml',
+    ]);
+    expect(shared.map((f) => f.message).join('\n')).toMatch(/gh-pages-estate/);
+    expect(estateConcurrency(join(fixtures, 'workflows-distinct'))).toEqual([]);
+    // And the tree this runs in, whose shared group cost the V2 site its publication.
+    expect(estateConcurrency(REPO_ROOT)).toEqual([]);
+  });
+
   it('types-drift: a stale committed tree fails; the real one passes', () => {
     const stale = typesDrift(REPO_ROOT, join(fixtures, 'stale-generated'));
     expect(stale.length).toBeGreaterThan(0);
     expect(stale.map((f) => f.message).join('\n')).toMatch(/drifted|missing/);
     expect(typesDrift(REPO_ROOT)).toEqual([]);
+  });
+});
+
+describe('the site gates catch their planted violations and pass the real site', () => {
+  const fixtureSite = (name: string): string => join(fixtures, name);
+
+  it('site-links: a broken link, a broken anchor and an absolute link', () => {
+    const messages = siteLinks(REPO_ROOT, fixtureSite('site-broken')).map((f) => f.message);
+    expect(messages.join('\n')).toMatch(/page that does not exist: nowhere\.md/);
+    expect(messages.join('\n')).toMatch(/heading that does not exist: present\.md#no-such-heading/);
+    expect(messages.join('\n')).toMatch(/absolute link '\/absolute\/path\/'/);
+    expect(siteLinks(REPO_ROOT)).toEqual([]);
+  });
+
+  it('site-resources: a fetched image and a fetched script, but not a hyperlink', () => {
+    const messages = siteResources(REPO_ROOT, fixtureSite('site-external')).map((f) => f.message);
+    expect(messages.join('\n')).toMatch(/a-picture\.png/);
+    expect(messages.join('\n')).toMatch(/a-script\.js/);
+    // The hyperlink to the standards document is a link, not a fetch, and is allowed.
+    expect(messages.join('\n')).not.toMatch(/docs\.ogc\.org/);
+    expect(siteResources(REPO_ROOT)).toEqual([]);
+  });
+
+  it('site-disclosure: an email address and a home directory pasted into a page', () => {
+    const messages = siteDisclosure(REPO_ROOT, fixtureSite('site-disclosed')).map((f) => f.message);
+    expect(messages.join('\n')).toMatch(/someone@example\.invalid/);
+    expect(messages.join('\n')).toMatch(/\/home\/someone/);
+    expect(siteDisclosure(REPO_ROOT)).toEqual([]);
+  });
+
+  it('site-publication: the statement, the noindex declaration and the two files', () => {
+    const real = buildSite(REPO_ROOT).files;
+    expect(publication(real)).toEqual([]);
+
+    const withoutStatement = real.map((file) =>
+      file.path === 'index.html'
+        ? { path: file.path, contents: String(file.contents).replace(/deliberately fake/gi, 'entirely reliable') }
+        : file,
+    );
+    expect(publication(withoutStatement).map((f) => f.message).join('\n')).toMatch(/does not state/);
+
+    const withoutNoindex = real.map((file) =>
+      file.path === 'glossary/index.html'
+        ? { path: file.path, contents: String(file.contents).replace(/noindex, nofollow/, 'all') }
+        : file,
+    );
+    expect(publication(withoutNoindex).map((f) => f.message).join('\n')).toMatch(/does not decline indexing/);
+
+    expect(publication(real.filter((file) => file.path !== 'robots.txt')).map((f) => f.message).join('\n')).toMatch(
+      /robots\.txt is missing/,
+    );
+    expect(publication(real.filter((file) => file.path !== '.nojekyll')).map((f) => f.message).join('\n')).toMatch(
+      /\.nojekyll is missing/,
+    );
+
+    // A page that says it is a stub is a stub, whatever its length — V1's five
+    // self-declared stubs were all longer than the shortest page it had accepted.
+    const withStub = real.map((file) =>
+      file.path === 'glossary/index.html'
+        ? { path: file.path, contents: `${String(file.contents)}<p>Stub — not yet written.</p>` }
+        : file,
+    );
+    expect(publication(withStub).map((f) => f.message).join('\n')).toMatch(/declares itself a stub/);
+  });
+
+  it('the statement has to be above the first section heading, not merely present', () => {
+    const real = buildSite(REPO_ROOT).files;
+    const moved = real.map((file) => {
+      if (file.path !== 'index.html') return file;
+      const text = String(file.contents);
+      const opening = text.indexOf('<main');
+      const firstSection = text.indexOf('<h2');
+      // The statement is cut out of the opening and pasted back below the first
+      // heading: every word still on the page, none of it where a reader starts.
+      const head = text.slice(0, opening);
+      const statement = text.slice(opening, firstSection);
+      const rest = text.slice(firstSection);
+      return { path: file.path, contents: `${head}<main id="content" class="content">${rest}${statement}` };
+    });
+    expect(publication(moved).map((f) => f.message).join('\n')).toMatch(/does not state/);
   });
 });
 

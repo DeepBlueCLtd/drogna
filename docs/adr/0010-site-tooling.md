@@ -1,8 +1,10 @@
 > **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+> The site tooling this record chose is superseded specifically by **ADR-0031**: MkDocs and
+> its Python environment are retired, and the site is built in TypeScript.
 
 # ADR-0010: Tooling for the published site
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0031
 **Date:** 26 August 2026, amended 27 August 2026 (mathematics rendering settled)
 **Feature:** 015 — published site
 **Requirements:** SRD PR-06, PR-07, PR-09

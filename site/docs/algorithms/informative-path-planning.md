@@ -9,7 +9,7 @@ it go?
 
 The obvious answer is wrong in an instructive way, and the whole of this page is
 about the shape of the correction. drogna's
-[planner](../subsystems/c15-planner.md) is the component that makes it, and it is
+[planner](../archive/subsystems/c15-planner.md) is the component that makes it, and it is
 the piece of the harness with the most arithmetic in it that nothing downstream
 can check — a wrong route looks exactly like a right one.
 
@@ -49,7 +49,7 @@ does the work.
 
 **Saturated uncertainty** is what a cell is worth knowing nothing about: the
 published [ensemble spread](../glossary.md#ensemble-spread) there, read from the
-[coverage store](../subsystems/c08-coverage-store.md) at the instant asked about.
+[coverage store](../archive/subsystems/c08-coverage-store.md) at the instant asked about.
 It is a function of simulation time, because the forecast field it comes from
 evolves.
 
@@ -341,4 +341,4 @@ There is no mathematical notation on this page. The regrowth law and the sensing
 kernel are the only two expressions that needed writing down, and both appear as
 fenced blocks in the same form the source states them; the site has no renderer
 for mathematics, which is recorded in
-[Site tooling](../decisions/site-tooling.md).
+[Site tooling](../decisions/index.md).

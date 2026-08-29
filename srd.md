@@ -372,8 +372,17 @@ directed → the machinery is interrogated → advice travels light → it is se
   globe, and a rotatable depth volume; the volume shall draw every level of the
   holding's own depth axis, each from a genuine area query, and shall say how many
   levels answered — EDR's `cube` query type remains outside the served subset, and
-  the composer says so by name *(v1 FR-49's cube, restored client-side)*. **Amended by feature 112:** the
-  panel also draws the platform's historic track and its demanded course (FR-55).
+  the composer says so by name *(v1 FR-49's cube, restored client-side)*. The time
+  control shall carry the field as well as the route: the field is asked for the step
+  of its holding's own time axis that the displayed instant falls on, refetched when
+  the displayed instant crosses into another step and no faster, and never cached —
+  a client-side copy of a holding would be a second store. Where the displayed
+  instant lies outside a holding's time axis, the panel shall say so rather than
+  imply the field extends there. Doubt shall be drawn as one thing at a time: the
+  plan's projection cells or the run's published spread as a gridded field, chosen
+  by the reader, never both — two doubt layers at once read as one wrong one.
+  **Amended by feature 112:** the panel also draws the platform's historic track and
+  its demanded course (FR-55).
 - **FR-41** The EDR composer carries as a mode of the map: a guided sequence with the
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never

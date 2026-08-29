@@ -48,8 +48,8 @@ and a label" can draw anything the server chooses to serve, and adding a new
 variable to the server is not a client release.
 
 That is the property drogna is actually testing. The
-[browser client](../subsystems/c18-browser-client.md) and the
-[query layer](../subsystems/c09-query-layer.md) have the same author, so it would
+[browser client](../archive/subsystems/c18-browser-client.md) and the
+[query layer](../archive/subsystems/c09-query-layer.md) have the same author, so it would
 be very easy for them to share an assumption instead of a contract, and for
 nobody to notice.
 
@@ -60,8 +60,8 @@ point over the alternatives at this particular boundary is blunt: a browser can
 read it with `JSON.parse` and nothing else.
 
 The obvious alternative is NetCDF, which drogna does use — one layer down, as the
-[coverage store's](../subsystems/c08-coverage-store.md) storage format and as the
-[offload export](../subsystems/c17-offload-packager.md) format, where CF
+[coverage store's](../archive/subsystems/c08-coverage-store.md) storage format and as the
+[offload export](../archive/subsystems/c17-offload-packager.md) format, where CF
 conventions and general-purpose analysis tools matter more than browsers do. But
 NetCDF at the *read* boundary would need a translation layer in front of the
 client, and a translation layer is a place for meaning to go missing. Two formats

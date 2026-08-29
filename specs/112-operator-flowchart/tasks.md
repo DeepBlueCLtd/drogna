@@ -33,7 +33,7 @@ composition root (ADR-0030), the operator surface and the map all come from them
 
 ## Record — owed before the code
 
-- [ ] T004 ADR-0031, *ownship state is measured, not declared*: the observed-property
+- [ ] T004 ADR-0032, *ownship state is measured, not declared*: the observed-property
       enumeration grows by the ownship quantities; why that does not reopen ADR-0005's
       closure (the closure's argument is about *derived* values having a second source of
       truth, and the motion simulator's state is primary); why position stays the
@@ -41,7 +41,7 @@ composition root (ADR-0030), the operator surface and the map all come from them
       and why `HistoricalLocations` stays refused. Owed before the master is amended,
       because a closed enumeration reopened without a record is how the next reader
       learns the wrong lesson.
-- [ ] T005 ADR-0032, *the operator tab is a flow chart*: edges derived from the topology
+- [ ] T005 ADR-0033, *the operator tab is a flow chart*: edges derived from the topology
       master rather than authored; the two suppressed namespaces and why; the three kinds
       of figure and the rule that a figure may not change kind. The alternatives and the
       rejections are in `plan.md`.

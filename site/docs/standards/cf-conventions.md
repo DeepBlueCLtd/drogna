@@ -16,7 +16,7 @@ for. CF is the mechanism by which units, coordinate definitions and variable mea
 travel with the data.
 
 drogna stores its forecast and uncertainty fields as CF-conforming NetCDF, and the
-[offload packager](../subsystems/c17-offload-packager.md) exports a run's
+[offload packager](../archive/subsystems/c17-offload-packager.md) exports a run's
 [profiles](../glossary.md#profile) the same way. This page is about the export, because
 the export is the file that leaves.
 

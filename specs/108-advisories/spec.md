@@ -55,18 +55,38 @@ equal to `docs/architecture/query-subsets.md` by the existing parity test.
 - The Features face serves both collections through the gate (E8), refuses
   filter options and single-feature access by name (E9), and the sibling's
   radius matches the packager's configuration (E11 producer parity).
+- Leakage scoring: a release that only updates where it measured is detected; a
+  whole-domain rewrite scores at chance and is called clear; a domain-wide rewrite
+  cannot hide one leaking variable, because every variable is scored on its own as
+  well as in the union and the worst is acted on; every inconclusive case is
+  returned by name, an absent geometry included. The harness's own releases are
+  scored too, and the three reasons that comparison is inconclusive are held as
+  measurements, so the day one stops being true the test says so.
 - Watched failing: the size-ceiling seam was disabled and the suite failed on
-  the refusal count before the fault was reverted.
+  the refusal count before the fault was reverted. For the leakage score: the
+  worst-of reading was replaced by a union-only one (the hidden leaking variable
+  went undetected, red); an empty mask was let through as a clean release (red in
+  both the scorer's tests and the harness's own comparison); and the released
+  identification radius was narrowed below the sampling span (red on the measured
+  span, which is what tells that assertion from a hard-coded one).
 
 ## Deliberately not in this feature
 
-- **The leakage mask-scoring gate** (V1's FR-015/FR-017 lineage): the geometry
-  travels and is complete — radius, positions, interval — but a mask comparison
-  between successive released products is not scored here, because the
-  shift-advect kernel's per-cell noise moves *every* cell between runs, making
-  the change mask uninformative: the comparison would score at chance for the
-  wrong reason and a gate nobody can fail is worse than none. Recorded as an
-  open question for a V3 backend with a quieter kernel, not dissolved.
+- **The leakage mask-scoring gate** (V1's FR-015/FR-017 lineage): the *scoring*
+  is built (issue #57), with a standing test that a known leak is caught; the **gate** is
+  not, and the reason is now measured rather than assumed. Against this harness's
+  own releases: the loiter scenario's measurements in a release interval span
+  3.9 km against the 60 km identification radius the run is released under, so
+  the buffer is one blob and FR-017 calls that inconclusive whatever the kernel
+  does; with the per-cell noise suppressed — the quieter kernel the open question
+  asked for, which needs no second kernel, only `noise_std` at zero — two
+  successive releases initialised from the same now-cast are identical value for
+  value, so there is no mask; and with the noise on, the mask is the whole domain
+  and scores at chance, which is the pass earned by noise the question recorded.
+  A gate wants a scoring configuration whose sampling spans more than the radius
+  it is released under and whose successive releases differ. Both are scenario and
+  release-terms properties, not kernel properties, which is the part the open
+  question had wrong.
 - Real transfer, receipts, verification and eviction: V3, by the seam this
   feature keeps warm. The `run_failed`/`publication_refused` telemetry kinds
   stay unproduced for the same reason — announcement-only staging has no

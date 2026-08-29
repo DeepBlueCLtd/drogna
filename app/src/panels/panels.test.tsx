@@ -15,6 +15,7 @@ import { createSeamValidator } from '../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
 import type { PanelParams } from '../shell/Shell.js';
 import { createSeamFetch } from '../seam/http.js';
+import { displayInstant } from '../shell/display.js';
 import { SystemPanel } from './system/SystemPanel.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
@@ -117,16 +118,36 @@ describe('the panels against a live backend', () => {
     expect(Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1])).toBeGreaterThan(0);
     expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
     // The toggle is display-only: checking it reveals the buffered heartbeats.
-    const toggle = screen.getByRole('checkbox');
-    act(() => toggle.click());
+    act(() => screen.getByLabelText('show heartbeats').click());
     expect(listedTopics()).toContain(config.shell.topics.heartbeat);
+  });
+
+  it('Messages hides clock samples from the list by default and its own toggle displays them; both stay counted', () => {
+    render(<MessagesPanel {...panelProps(config, runtime)} />);
+    // Provoke clock traffic: the lockstep clock advances only when stepped.
+    act(() => runtime.clock.step());
+    act(() => vi.advanceTimersByTime(2100));
+    const listedTopics = () =>
+      [...document.querySelectorAll('.message-topic')].map((cell) => cell.textContent);
+    const received = () =>
+      Number(/^(\d+) received/.exec(screen.getByTestId('refusal-counter').textContent ?? '')?.[1]);
+    // Clock samples arrived and are counted, but are not rendered.
+    expect(received()).toBeGreaterThan(0);
+    expect(listedTopics()).not.toContain(config.shell.topics.clock);
+    const countedBefore = received();
+    // Its toggle is independent of the heartbeat one and display-only.
+    act(() => screen.getByLabelText('show clock').click());
+    expect(listedTopics()).toContain(config.shell.topics.clock);
+    expect(listedTopics()).not.toContain(config.shell.topics.heartbeat);
+    expect(received()).toBe(countedBefore);
   });
 
   it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let mounted: ReturnType<typeof render> | undefined;
     try {
-      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      mounted = render(<HoldingsPanel {...panelProps(config, runtime)} />);
       // Flush the fetch → validate → setState chain (microtasks only; timers are fake).
       await act(async () => {
         await Promise.resolve();
@@ -137,6 +158,10 @@ describe('the panels against a live backend', () => {
       act(() => (archiveRow as HTMLElement).click());
       expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
     } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });
@@ -171,8 +196,9 @@ describe('the panels against a live backend', () => {
       inventoryRequests += 1;
       return seamFetch(input, init);
     }) as typeof globalThis.fetch;
+    let mounted: ReturnType<typeof render> | undefined;
     try {
-      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      mounted = render(<HoldingsPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
@@ -197,6 +223,10 @@ describe('the panels against a live backend', () => {
       const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
       expect(nowcastAfter).not.toBe(nowcastBefore);
     } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });
@@ -204,17 +234,22 @@ describe('the panels against a live backend', () => {
   it('Holdings states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let mounted: ReturnType<typeof render> | undefined;
     try {
       // A path the release gate does not clear: the refusal is the real gate's, and
       // an empty table would be a lie about what the store holds (Constitution VII).
       const misconfigured = lockstepConfig();
       misconfigured.shell.endpoints.holdings = '/api/not-a-cleared-prefix/holdings';
-      render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
+      mounted = render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
       expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
     } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });
@@ -222,8 +257,9 @@ describe('the panels against a live backend', () => {
   it('Map states WebGL absence honestly, lists advisories as present-and-stating-empty, and the composer offers only what is served', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let mounted: ReturnType<typeof render> | undefined;
     try {
-      render(<MapPanel {...panelProps(config, runtime)} />);
+      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -269,6 +305,159 @@ describe('the panels against a live backend', () => {
       });
       expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
     } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('scrubbing the field refetches at the holding\'s own step, and no faster (#60)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const asked: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input));
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    let mounted: ReturnType<typeof render> | undefined;
+    try {
+      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+      // One clock sample, so there is a displayed instant to scrub away from.
+      await act(async () => {
+        runtime.clock.tickOnce();
+        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+      });
+      const nowcast = runtime.store.holdings().find((holding) => holding.era === 'nowcast');
+      if (!nowcast) throw new Error('the store holds no now-cast to scrub');
+      const time = nowcast.manifest.grid.time;
+      const originMillis = Date.parse(time.origin_sim_time.slice(0, 23) + 'Z');
+      const stepInstant = (index: number) =>
+        `${new Date(originMillis + (time.start_offset_seconds + index * time.step_seconds) * 1000).toISOString().slice(0, 23)}000Z`;
+      const areaQueries = () => asked.filter((url) => url.includes('/area?'));
+
+      asked.length = 0;
+      const slider = document.querySelector('.map-time input') as HTMLInputElement;
+      // A quarter of a step: the displayed instant moves, the field does not, because
+      // the holding has nothing else to answer with — and no query is spent finding
+      // that out a second time.
+      await act(async () => {
+        fireEvent.change(slider, { target: { value: String(Math.round(time.step_seconds / 4)) } });
+        for (let flush = 0; flush < 8; flush++) await Promise.resolve();
+      });
+      expect(areaQueries()).toHaveLength(0);
+
+      // A whole step: exactly one query, and its datetime is the manifest's step,
+      // not the instant the slider happens to sit on.
+      await act(async () => {
+        fireEvent.change(slider, { target: { value: String(time.step_seconds) } });
+        for (let flush = 0; flush < 8; flush++) await Promise.resolve();
+      });
+      const scrubbed = areaQueries();
+      expect(scrubbed).toHaveLength(1);
+      expect(new URL(scrubbed[0], 'http://x').searchParams.get('datetime')).toBe(stepInstant(1));
+      expect(screen.getByText(new RegExp(`field: nowcast at ${displayInstant(stepInstant(1))}`))).toBeTruthy();
+    } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('doubt as the run\'s spread is a genuine query against the run\'s own instance and axis (#60)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const asked: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input));
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    const watcher = runtime.transport.connect('run-watch', config.shell.role);
+    let announced: { collections: { uncertainty: string } } | undefined;
+    watcher.subscribe(config.shell.topics.run_published, (message) => {
+      announced ??= message.payload as { collections: { uncertainty: string } };
+    });
+    let mounted: ReturnType<typeof render> | undefined;
+    try {
+      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+      // Turn the loop until the model runner genuinely publishes: the spread is the
+      // run's own instance, so there is nothing to draw until a run exists.
+      await act(async () => {
+        for (let tick = 0; tick < 2000 && !announced; tick++) runtime.clock.tickOnce();
+        for (let flush = 0; flush < 24; flush++) await Promise.resolve();
+      });
+      if (!announced) throw new Error('no run published in 2000 ticks; the loop is not turning');
+      const spreadId = announced.collections.uncertainty;
+      const spreadHolding = runtime.store.holdings().find((holding) => holding.holding_id === spreadId);
+      if (!spreadHolding) throw new Error(`the store holds no spread instance '${spreadId}'`);
+
+      // The steps each holding actually stores, computed here rather than borrowed
+      // from the panel's own helper, so the two are checked against each other.
+      const stepsOf = (holding: { manifest: { grid: { time: { origin_sim_time: string; start_offset_seconds: number; step_seconds: number; count: number } } } }) => {
+        const time = holding.manifest.grid.time;
+        const originMillis = Date.parse(time.origin_sim_time.slice(0, 23) + 'Z');
+        return Array.from(
+          { length: time.count },
+          (_, index) =>
+            `${new Date(originMillis + (time.start_offset_seconds + index * time.step_seconds) * 1000).toISOString().slice(0, 23)}000Z`,
+        );
+      };
+      const nearest = (steps: string[], instant: string) =>
+        steps.reduce((best, step) =>
+          Math.abs(Date.parse(step.slice(0, 23) + 'Z') - Date.parse(instant.slice(0, 23) + 'Z')) <
+          Math.abs(Date.parse(best.slice(0, 23) + 'Z') - Date.parse(instant.slice(0, 23) + 'Z'))
+            ? step
+            : best,
+        );
+      const spreadSteps = stepsOf(spreadHolding);
+      // The displayed instant is the clock's own, the slider being at zero.
+      const displayed = () => runtime.clock.simTime();
+      const nowcastSteps = () => {
+        const nowcast = runtime.store.holdings().find((holding) => holding.era === 'nowcast');
+        if (!nowcast) throw new Error('the store holds no now-cast');
+        return stepsOf(nowcast);
+      };
+      // Turn on until the two axes disagree about the displayed instant: while they
+      // agree, a spread query snapped to the *field's* step would pass for the wrong
+      // reason — and that is exactly the fault this holds.
+      const steps = nowcastSteps();
+      await act(async () => {
+        for (let tick = 0; tick < 900; tick++) {
+          const instant = displayed();
+          if (instant && nearest(spreadSteps, instant) !== nearest(steps, instant)) break;
+          runtime.clock.tickOnce();
+        }
+        for (let flush = 0; flush < 24; flush++) await Promise.resolve();
+      });
+      const instant = displayed();
+      expect(nearest(spreadSteps, instant)).not.toBe(nearest(steps, instant));
+
+      asked.length = 0;
+      const doubt = document.querySelectorAll('.map-controls select')[3] as HTMLSelectElement;
+      await act(async () => {
+        fireEvent.change(doubt, { target: { value: 'spread' } });
+        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+      });
+      const spreadQueries = asked.filter((url) => url.includes('/area?'));
+      expect(spreadQueries).toHaveLength(1);
+      const asked_url = new URL(spreadQueries[0], 'http://x');
+      expect(asked_url.pathname).toContain(`/collections/${spreadId}/area`);
+      // The datetime is the nearest step of the *spread's* own time axis, not the
+      // field's: snapping a forecast to the now-cast's steps asks it about an instant
+      // outside its horizon, and the server refuses it for asking — which is how this
+      // was found, in the running page rather than here.
+      expect(asked_url.searchParams.get('datetime')).toBe(nearest(spreadSteps, instant));
+      // Drawn, and its range stated: a normalised shade means nothing without one.
+      expect(screen.getByText(/across the shade/)).toBeTruthy();
+      expect(screen.queryByText(/spread declined/)).toBeNull();
+    } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });
@@ -281,8 +470,9 @@ describe('the panels against a live backend', () => {
       asked.push(String(input));
       return seamFetch(input, init);
     }) as typeof globalThis.fetch;
+    let mounted: ReturnType<typeof render> | undefined;
     try {
-      render(<MapPanel {...panelProps(config, runtime)} />);
+      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -312,6 +502,10 @@ describe('the panels against a live backend', () => {
       // did not would be named as declined rather than quietly missing.
       expect(screen.queryByText(/level\(s\) declined/)).toBeNull();
     } finally {
+      // Unmount before the shim comes off: a panel still mounted can fire one more
+      // effect, and a relative seam path handed to the real fetch is a TypeError
+      // that lands in whichever test runs next (seen in CI, not here).
+      mounted?.unmount();
       globalThis.fetch = realFetch;
     }
   });

@@ -152,17 +152,27 @@ Local numbering. The SRD requirements this feature adds are FR-47 to FR-55 of `s
 - **FR-002** Node **structure** — which components exist, their labels, their rank and
   lane — comes from the shell's configuration document. Nothing in it may light
   anything (Constitution VII).
-- **FR-003** **Edges** are derived from the broker topology artefact
-  (`contracts/topology.json`): an edge exists from role A to role B where A's publish
-  rules and B's subscribe rules overlap on a topic filter. No edge is authored in panel
-  code.
+- **FR-003** **Edges** are of two kinds, drawn distinctly, and neither is authored in
+  panel code:
+  - a **topic edge** is derived from the broker topology artefact
+    (`contracts/topology.json`) — an edge exists from role A to role B where A's publish
+    rules and B's subscribe rules overlap on a topic filter;
+  - a **port edge** is a coupling that carries no broker traffic — the world-sampler
+    port, and the store interfaces — declared in the shell's configuration document, and
+    drawn dashed because it can never pulse. Without them the environment generator,
+    which publishes nothing but heartbeats, would sit isolated in a picture of a system
+    it is the source of.
+  A wildcard subscription is drawn as a tap on a **namespace bus** rather than as one
+  edge per subscriber. Every edge is still present and still countable; the bus is a
+  drawing convention, not a suppression, and the gate of FR-005 counts taps.
 - **FR-004** Two topic namespaces are **suppressed** from the edge set because drawing
   them would connect every node to every node: `ctl/clock` and `ctl/heartbeat`. They are
   drawn instead as *the plane the flow runs on*, and the panel names the suppression in
   words. Any other suppression requires amending this requirement.
 - **FR-005** A gate shall fail the build when the flow chart's node set does not equal
-  the declared component set, or when a topology edge is neither drawn nor named in the
-  suppression list. The gate is a line appended to `scripts/gates.registry`.
+  the declared component set, when a topology edge is neither drawn (directly or as a bus
+  tap) nor named in the suppression list, or when a declared port edge names a component
+  that does not exist. The gate is a line appended to `scripts/gates.registry`.
 - **FR-006** Illumination is heartbeats and nothing else, on the System tab's rule: a
   node is lit only while a heartbeat from it has arrived within its declared liveness
   window; otherwise it is *silent* if one ever arrived and *unheard* if none ever did,
@@ -330,7 +340,7 @@ word, last-heard simulation time, lag) and its controls or its `protected` mark.
 | `contracts/schemas/platform-demand.schema.json` | **New.** The demanded course, speed and depth, with the publisher's component id and the simulation instant it was issued at |
 | `contracts/schemas/platform-state.schema.json` | **New.** What the platform reports about itself for its face: demanded and current, the binding limit, and the shortfall against an unreachable demand |
 | `contracts/schemas/observation.schema.json` | **Amended.** The observed-property enumeration grows by the ownship quantities, with the reason and the ADR-0005 note (FR-026); the location note amended per FR-027 |
-| `contracts/schemas/config.shell.schema.json` | **Amended.** Components gain a rank and a lane for the flow chart's layout; `beat` widens past 109; the sparkline window bound joins the document |
+| `contracts/schemas/config.shell.schema.json` | **Amended.** Components gain a rank and a lane for the flow chart's layout; the declared port edges (FR-003) join the document; `beat` widens past 109; the sparkline window bound joins the document |
 | `contracts/schemas/config.sensors.schema.json` | **Amended.** The `platform.loiter` block retires; the sensors gain the ownship topic they take position from |
 | `contracts/schemas/config.monitor.schema.json`, `config.planner.schema.json` | **Amended.** The excluded ownship datastreams, by name (FR-029) |
 | `contracts/topology.json` | **Regenerated.** The platform role publishes `obs/ownship/+` and `ctl/platform/state`, subscribes `ctl/platform/demand` and `ctl/clock`; the operator role publishes `ctl/platform/demand`; the sensors role subscribes `obs/ownship/+` |

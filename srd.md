@@ -452,10 +452,12 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   limits.
 - **FR-52** The Operator tab shall present the declared components as a **directed flow
   chart** with the assimilation cycle drawn as a cycle. Node structure comes from the
-  configuration document; **edges are derived from the broker topology artefact**, so
-  the picture cannot disagree with the wiring, and a gate fails the build when a
-  declared component is undrawn or a topology edge is neither drawn nor named as
-  suppressed. Exactly two namespaces are suppressed — `ctl/clock` and `ctl/heartbeat` —
+  configuration document; **topic edges are derived from the broker topology artefact**,
+  so the picture cannot disagree with the wiring, and the couplings that carry no broker
+  traffic — the world-sampler port and the store interfaces — are declared beside the
+  components and drawn dashed, because a picture in which the environment generator sits
+  isolated would be a false one. A gate fails the build when a declared component is
+  undrawn or a topology edge is neither drawn nor named as suppressed. Exactly two namespaces are suppressed — `ctl/clock` and `ctl/heartbeat` —
   drawn instead as the plane the flow runs on. Illumination remains heartbeats and
   nothing else. Three kinds of figure are visually distinct and never mix: **declared**
   (configuration), **reported** (carried in a message from the component) and

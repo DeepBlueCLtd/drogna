@@ -1,0 +1,1429 @@
+<title>The Operator Flow Chart</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Public+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F0F3F4; --surface:#FFFFFF; --sunk:#E4E9EA;
+  --ink:#0E1B22; --body:#26383F; --muted:#5C6E77; --line:#C9D4D7; --rail:#DCE4E5;
+  --pts:#B4650F;   /* observations, points */
+  --fld:#1F6C63;   /* forecast fields, holdings */
+  --own:#1D6B86;   /* ownship: the platform, its track, its demanded vector */
+  --ctl:#54468C;   /* control traffic: commands, demands, requests, divergences */
+  --warn:#9C3320;  /* refusals and denials */
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+    --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F; --rail:#18262C;
+    --pts:#E39A44; --fld:#5FB8AC; --own:#63BEDE; --ctl:#A79AD8; --warn:#E08A76;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+  --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F; --rail:#18262C;
+  --pts:#E39A44; --fld:#5FB8AC; --own:#63BEDE; --ctl:#A79AD8; --warn:#E08A76;
+}
+/* The console keeps one palette in both document themes: these are pictures of a
+   dark application, and repainting them light would be a picture of nothing. */
+.console{
+  --c-bg:#10151b; --c-node:#18202a; --c-dead:#141a21; --c-line:#2b3742;
+  --c-fg:#d5dde5; --c-dim:#6b7785; --c-lit:#58d68d; --c-cy:#4cc2ff;
+  --c-ref:#ff7b6b; --c-pts:#e0a458; --c-fld:#5fb8ac; --c-own:#63bede; --c-ctl:#9c8fd1;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--body); margin:0;
+  font-family:'Public Sans',system-ui,-apple-system,sans-serif; font-size:16px; line-height:1.6;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 110px}
+.bleed{max-width:1560px;margin:0 auto;padding:0 24px}
+h1,h2,h3,h4,h5{font-family:Spectral,Georgia,serif;color:var(--ink);text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,4.4vw,3.05rem);font-weight:600;line-height:1.1;letter-spacing:-.012em}
+h2{font-size:clamp(1.4rem,2.6vw,1.95rem);font-weight:600;line-height:1.2}
+h3{font-size:1.12rem;font-weight:600}
+h4{font-size:.98rem;font-weight:600}
+p{margin:0}
+.prose{max-width:66ch}
+code,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
+a{color:var(--fld)}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted)}
+header.top{border-bottom:1px solid var(--line);padding:60px 0 34px;display:flex;
+  flex-direction:column;gap:18px}
+header.top .lede{font-size:1.13rem;max-width:64ch;color:var(--body)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:'IBM Plex Mono',monospace;
+  font-size:.78rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+section.blk{padding:46px 0;border-bottom:1px solid var(--line)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.note{border-left:3px solid var(--pts);background:var(--sunk);padding:14px 18px;font-size:.94rem}
+.note.q{border-left-color:var(--warn)}
+.note.own{border-left-color:var(--own)}
+.note b{color:var(--ink)}
+.key{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:.85rem;color:var(--muted);align-items:center}
+.key span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:22px;height:10px;border-radius:2px;display:inline-block}
+.tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.66rem;
+  letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;
+  background:var(--rail);color:var(--muted)}
+.tag.dec{background:transparent;border:1px solid var(--muted)}
+.tag.rep{background:var(--fld);color:var(--surface);border:1px solid var(--fld)}
+.tag.obs{background:transparent;border:1px dotted var(--pts);color:var(--pts)}
+.tag.new{background:var(--own);color:var(--surface)}
+.tag.fr{background:transparent;border:1px solid var(--line)}
+figure{margin:0;display:flex;flex-direction:column;gap:9px}
+figcaption{font-size:.78rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;max-width:74ch}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+svg{display:block;max-width:100%;height:auto}
+.chart{background:var(--c-bg);border:1px solid var(--line);border-radius:3px}
+/* face gallery */
+.faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:22px}
+.face{display:flex;flex-direction:column;gap:9px;background:var(--surface);
+  border:1px solid var(--line);padding:14px}
+.face .hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.face .hd h4{font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:600;
+  letter-spacing:.02em;color:var(--ink)}
+.face .why{font-size:.85rem;line-height:1.5}
+.face .kinds{display:flex;flex-wrap:wrap;gap:5px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:500}
+td.mono{font-family:'IBM Plex Mono',monospace;font-size:.82rem}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px}
+.frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.frame{background:var(--surface);border:1px solid var(--line);padding:13px;
+  display:flex;flex-direction:column;gap:8px}
+.frame .n{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--pts)}
+.frame p{font-size:.86rem;line-height:1.5}
+ul{margin:0;padding-left:1.15em}
+li{margin:.32em 0}
+li::marker{color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){
+  .pulse{animation:travel 2.6s linear infinite}
+  @keyframes travel{from{stroke-dashoffset:34}to{stroke-dashoffset:0}}
+}
+</style>
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">drogna &middot; feature 112 &middot; design for review</span>
+  <h1>The Operator Flow Chart</h1>
+  <p class="lede">The Operator tab is a table. The SRD has said since Version&nbsp;1 that the
+  organising diagram is <em>a flow chart with a loop in it</em> &mdash; and a table has no cycle
+  in it. This is that picture, drawn live: every component wearing an instrument designed for
+  what it does, and a new one at the head of the observation path that can be told where to go.</p>
+  <div class="meta">
+    <span><b>Governs</b> spec.md FR-001 to FR-035</span>
+    <span><b>Nodes</b> 20 components &middot; 1 new</span>
+    <span><b>Views</b> graph and list, equal</span>
+    <span><b>New component</b> platform &mdash; V2-C21</span>
+  </div>
+</header>
+<section class="blk stack">
+  <h2>What the table cannot say</h2>
+  <p class="prose">Stop the sensors in today&rsquo;s Operator tab and one word in one row
+  changes. What it <em>means</em> &mdash; ingestion goes quiet, the observation store stops
+  growing, the monitor has nothing to score and says so, the loop stops turning &mdash; is
+  spread over two other tabs and reassembled by a reader who already knows the architecture.
+  The flow chart&rsquo;s whole claim is that consequence should be visible where the cause was
+  applied.</p>
+  <p class="prose">Three rules hold the picture honest, and they are the reason this is a
+  design document rather than a screenshot of a graph library.</p>
+  <div class="key">
+    <span><i class="sw" style="background:var(--pts)"></i> observations &mdash; points, measured</span>
+    <span><i class="sw" style="background:var(--fld)"></i> fields &mdash; forecasts, holdings</span>
+    <span><i class="sw" style="background:var(--own)"></i> ownship &mdash; the platform, its track, its demand</span>
+    <span><i class="sw" style="background:var(--ctl)"></i> control &mdash; requests, decisions, commands</span>
+    <span><i class="sw" style="background:var(--warn)"></i> refusal &mdash; denied, declined, protected</span>
+  </div>
+</section>
+<section class="blk stack">
+<h2>Rule one: three kinds of figure, never mixed</h2>
+<p class="prose">The table has one kind of figure &mdash; whatever the component said about
+itself. The flow chart puts broker throughput (which only the shell can count) beside a residual
+(which only the monitor can compute) beside a breach threshold (which is configuration). Mixing
+them is how a display starts asserting things nothing published, which is the one thing
+Constitution&nbsp;VII exists to prevent. So each kind gets a treatment, and the legend names all
+three on screen.</p>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1000 168" role="img" aria-label="Three treatments: declared figures drawn as hairline outlines, reported figures filled solid, observed figures with a dotted underline">
+<rect width="1000" height="168" fill="var(--c-bg)"/>
+<text x="30" y="30" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="2" fill="var(--c-dim)">DECLARED</text>
+<text x="30" y="50" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">from the configuration document</text>
+<text x="355" y="30" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="2" fill="var(--c-dim)">REPORTED</text>
+<text x="355" y="50" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">carried in a message from the component</text>
+<text x="680" y="30" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="2" fill="var(--c-dim)">OBSERVED</text>
+<text x="680" y="50" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">counted by the shell from traffic it heard</text>
+<rect x="30" y="70" width="180" height="34" fill="none" stroke="var(--c-dim)" stroke-width="1"/>
+<text x="44" y="92" font-family="IBM Plex Mono, monospace" font-size="15" fill="var(--c-fg)">threshold 1.20 m/s</text>
+<rect x="355" y="70" width="196" height="34" fill="var(--c-fld)" opacity="0.16"/>
+<rect x="355" y="70" width="3" height="34" fill="var(--c-fld)"/>
+<text x="371" y="92" font-family="IBM Plex Mono, monospace" font-size="15" fill="var(--c-fg)">last residual 0.94 m/s</text>
+<text x="680" y="92" font-family="IBM Plex Mono, monospace" font-size="15" fill="var(--c-fg)">18.4 msg / sim-s</text>
+<line x1="680" y1="100" x2="820" y2="100" stroke="var(--c-pts)" stroke-width="1.5" stroke-dasharray="1.5 3"/>
+<text x="828" y="97" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--c-pts)">counted here</text>
+<text x="30" y="132" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)">It is in the run document. It cannot move, and</text>
+<text x="30" y="149" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)"> nothing published it.</text>
+<text x="355" y="132" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)">The monitor computed it and published it. Its </text>
+<text x="355" y="149" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)">words, not ours.</text>
+<text x="680" y="132" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)">Nobody publishes this. The shell subscribes to</text>
+<text x="680" y="149" font-family="Public Sans, sans-serif" font-size="12.5" fill="var(--c-dim)"> # and counts.</text>
+</svg></div>
+<div class="note"><b>A figure may not change kind between states.</b> When a component goes
+silent its reported figures do not quietly become the shell&rsquo;s last-known values dressed as
+current: they keep the simulation time they were reported at, and the face says how far behind
+that now is. The panel test asserts the kind of every figure, so a figure cannot be reclassified
+by accident (FR-008, SC-006).</div>
+</section>
+<section class="blk stack">
+<h2>Rule two: every node is the same frame around a different instrument</h2>
+<p class="prose">The chrome is identical everywhere, so a reader learns it once: state word,
+the simulation time the figures were last updated at, how far behind that is now, and the control
+the rules allow. What sits between them is chosen for what the component actually does &mdash; a
+store shows volume and growth, the monitor shows drift against the threshold that will fire, the
+runner shows its ensemble. A single generic gauge repeated twenty times would have told a reader
+nothing the table did not already.</p>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1000 300" role="img" aria-label="Anatomy of a node: header with status dot and component id, the bespoke instrument in the middle, and a footer with last-heard simulation time and controls">
+<rect width="1000" height="300" fill="var(--c-bg)"/>
+<rect x="60" y="46" width="380" height="216" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="60" y="46" width="4" height="216" fill="var(--c-fld)"/>
+<line x1="60" y1="80" x2="440" y2="80" stroke="var(--c-line)"/>
+<circle cx="82" cy="64" r="5" fill="var(--c-lit)"/>
+<text x="98" y="69" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="var(--c-fg)">monitor</text>
+<text x="426" y="69" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-lit)">lit</text>
+<rect x="82" y="100" width="336" height="88" fill="none" stroke="var(--c-line)" stroke-dasharray="2 3"/>
+<line x1="82" y1="117.6" x2="418" y2="117.6" stroke="var(--c-ref)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="414" y="112.6" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--c-ref)">1.20 threshold</text>
+<path d="M 82,188 L 82.0,169.8 L 106.0,162.2 L 130.0,165.7 L 154.0,151.6 L 178.0,155.7 L 202.0,146.3 L 226.0,139.3 L 250.0,149.3 L 274.0,132.3 L 298.0,124.6 L 322.0,131.1 L 346.0,115.3 L 370.0,111.1 L 394.0,118.2 L 418.0,112.9 L 418,188 Z" fill="var(--c-fld)" opacity="0.10"/>
+<polyline points="82.0,169.8 106.0,162.2 130.0,165.7 154.0,151.6 178.0,155.7 202.0,146.3 226.0,139.3 250.0,149.3 274.0,132.3 298.0,124.6 322.0,131.1 346.0,115.3 370.0,111.1 394.0,118.2 418.0,112.9" fill="none" stroke="var(--c-fld)" stroke-width="1.6"/>
+<circle cx="346.0" cy="115.3" r="2.6" fill="var(--c-ref)"/>
+<circle cx="370.0" cy="111.1" r="2.6" fill="var(--c-ref)"/>
+<circle cx="418.0" cy="112.9" r="2.6" fill="var(--c-ref)"/>
+<text x="82" y="208" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-dim)">STREAK</text>
+<rect x="142" y="198" width="24" height="12" fill="var(--c-ref)" stroke="var(--c-ref)"/>
+<rect x="172" y="198" width="24" height="12" fill="var(--c-ref)" stroke="var(--c-ref)"/>
+<rect x="202" y="198" width="24" height="12" fill="none" stroke="var(--c-ref)"/>
+<text x="244" y="208" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-dim)">2 of 3 &rarr; divergence</text>
+<line x1="60" y1="232" x2="440" y2="232" stroke="var(--c-line)"/>
+<text x="82" y="251" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--c-dim)">04:12:30 &middot; 2 sim-s behind</text>
+<rect x="332" y="238" width="42" height="18" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="353" y="251" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-fg)">stop</text>
+<rect x="380" y="238" width="48" height="18" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="404" y="251" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-fg)">restart</text>
+<line x1="448" y1="64" x2="478" y2="64" stroke="var(--c-dim)" stroke-width="1"/>
+<circle cx="448" cy="64" r="2" fill="var(--c-dim)"/>
+<text x="486" y="68" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">heartbeat state &mdash; lit, silent, unheard, stopped, degraded, protected</text>
+<line x1="448" y1="116" x2="478" y2="116" stroke="var(--c-dim)" stroke-width="1"/>
+<circle cx="448" cy="116" r="2" fill="var(--c-dim)"/>
+<text x="486" y="120" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">the bespoke instrument. Here: residual against the breach threshold</text>
+<line x1="448" y1="204" x2="478" y2="204" stroke="var(--c-dim)" stroke-width="1"/>
+<circle cx="448" cy="204" r="2" fill="var(--c-dim)"/>
+<text x="486" y="208" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">the persistence streak &mdash; the drift level that will raise a divergence</text>
+<line x1="448" y1="250" x2="478" y2="250" stroke="var(--c-dim)" stroke-width="1"/>
+<circle cx="448" cy="250" r="2" fill="var(--c-dim)"/>
+<text x="486" y="254" font-family="Public Sans, sans-serif" font-size="13" fill="var(--c-dim)">the simulation time these figures were last updated at, and the lag</text>
+</svg></div>
+<figcaption>The monitor&rsquo;s node, at the expanded density. Twenty of these fill a laptop viewport; the compact density drops the instrument to a single line and keeps the chrome.</figcaption>
+<h3 style="margin-top:14px">Six states, and none of them is a colour alone</h3>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1040 150" role="img" aria-label="Six node states: lit, degraded, silent, unheard, stopped by command, and protected">
+<rect width="1040" height="150" fill="var(--c-bg)"/>
+<rect x="24" y="30" width="148" height="56" rx="3" fill="var(--c-node)" stroke="var(--c-lit)" stroke-dasharray="none" opacity="1"/>
+<circle cx="42" cy="50" r="4.5" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="56" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">lit</text>
+<text x="42" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)"></text>
+<text x="24" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">a heartbeat arrived inside</text>
+<text x="24" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)"> its window</text>
+<rect x="192" y="30" width="148" height="56" rx="3" fill="var(--c-node)" stroke="#e0b04a" stroke-dasharray="none" opacity="1"/>
+<circle cx="210" cy="50" r="4.5" fill="#e0b04a" stroke="#e0b04a"/>
+<text x="224" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">degraded</text>
+<text x="210" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)"></text>
+<text x="192" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">alive and saying it is not</text>
+<text x="192" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)"> working</text>
+<rect x="360" y="30" width="148" height="56" rx="3" fill="var(--c-dead)" stroke="var(--c-dim)" stroke-dasharray="5 4" opacity="0.55"/>
+<circle cx="378" cy="50" r="4.5" fill="none" stroke="var(--c-dim)"/>
+<text x="392" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">silent</text>
+<text x="378" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">hatched</text>
+<text x="360" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">heard once; nothing inside</text>
+<text x="360" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)"> the window</text>
+<rect x="528" y="30" width="148" height="56" rx="3" fill="var(--c-dead)" stroke="var(--c-dim)" stroke-dasharray="1.5 3.5" opacity="0.55"/>
+<circle cx="546" cy="50" r="4.5" fill="none" stroke="var(--c-dim)"/>
+<text x="560" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">unheard</text>
+<text x="546" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">hatched</text>
+<text x="528" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">no heartbeat has ever arri</text>
+<text x="528" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">ved</text>
+<rect x="696" y="30" width="148" height="56" rx="3" fill="var(--c-dead)" stroke="var(--c-ref)" stroke-dasharray="5 4" opacity="0.55"/>
+<circle cx="714" cy="50" r="4.5" fill="none" stroke="var(--c-ref)"/>
+<text x="728" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">stopped</text>
+<text x="714" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)"></text>
+<text x="696" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">a command was dispatched, </text>
+<text x="696" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">and the</text>
+<rect x="864" y="30" width="148" height="56" rx="3" fill="var(--c-node)" stroke="var(--c-cy)" stroke-dasharray="none" opacity="1"/>
+<circle cx="882" cy="50" r="4.5" fill="var(--c-cy)" stroke="var(--c-cy)"/>
+<text x="896" y="54" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--c-fg)">protected</text>
+<text x="882" y="74" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">padlock</text>
+<text x="864" y="106" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">no command may reach it; t</text>
+<text x="864" y="121" font-family="Public Sans, sans-serif" font-size="11.5" fill="var(--c-dim)">he rule</text>
+</svg></div>
+<div class="note"><b>Silent and unheard are different words, because they are different
+facts.</b> Today&rsquo;s System tab already draws that distinction and its footnote says the
+display cannot tell a component that has not run yet from one that has stopped &mdash; only the
+silence. The flow chart keeps that honesty and adds the one thing it can honestly add: when the
+shell dispatched the stop itself, it says so, and still waits for the silence to confirm it
+(FR-006, FR-014).</div>
+</section>
+</div>
+<div class="bleed">
+<section class="blk stack">
+<h2>Rule three: the arrows are not drawn, they are derived</h2>
+<p class="prose">A picture of the wiring that is maintained separately from the wiring goes
+stale, and nothing tells you when. So a <b>topic edge</b> exists wherever one role&rsquo;s publish
+rules and another&rsquo;s subscribe rules overlap in <code>contracts/topology.json</code> &mdash;
+the master a gate already keeps honest against the run configuration. A <b>port edge</b> is drawn
+dashed for the couplings that carry no broker traffic at all: the world-sampler port, and the
+store interfaces. Without those, the environment generator &mdash; which publishes nothing but
+heartbeats &mdash; would sit isolated in a picture of a system it is the source of. A wildcard
+subscription is drawn as a tap on a namespace bus; every edge is still there and still counted
+by the gate (FR-003 to FR-005).</p>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1520 812" role="img" aria-label="The Operator flow chart: seventeen components in three bands over a plane of clock, broker and release gate. The observation path runs left to right through platform, sensors, ingest, observation store and query; the assimilation loop runs above it through coverage store, monitor, scheduler and model runner and returns to the coverage store.">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-dim)"/></marker>
+<marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-pts)"/></marker>
+<marker id="arrowF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-fld)"/></marker>
+<marker id="arrowO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-own)"/></marker>
+<marker id="arrowC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-ctl)"/></marker>
+<marker id="arrowY" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--c-cy)"/></marker>
+</defs>
+<rect width="1520" height="812" fill="var(--c-bg)"/>
+<text x="40" y="64" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-dim)">THE LOOP — assimilation</text>
+<line x1="40" y1="72" x2="1480" y2="72" stroke="var(--c-line)" stroke-width="0.6" opacity="0.55"/>
+<text x="40" y="280" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-dim)">THE PATH — sensing to serving</text>
+<line x1="40" y1="288" x2="1480" y2="288" stroke="var(--c-line)" stroke-width="0.6" opacity="0.55"/>
+<text x="40" y="496" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-dim)">DECIDING, ADVISING, LEAVING</text>
+<line x1="40" y1="504" x2="1480" y2="504" stroke="var(--c-line)" stroke-width="0.6" opacity="0.55"/>
+<path d="M 190,118 L 40,118 L 40,174 L 190,174" fill="none" stroke="var(--c-own)" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.75"/>
+<text x="50" y="138" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--c-own)">adaptive sampling</text>
+<text x="50" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-dim)">a publish rule exists.</text>
+<text x="50" y="164" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-dim)">No publisher ever heard.</text>
+<path d="M 115,174 L 115,318" fill="none" stroke="var(--c-own)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrowO)" opacity="0.75"/>
+<text x="124" y="250" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-own)">ctl/platform/demand</text>
+<path d="M 400,146 L 462,146" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 620,146 L 672,146" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 325,182 L 325,318" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 620,362 L 672,362" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 830,362 C 900,410 1020,410 1092,368" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 1040,362 L 1092,362" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 1175,542 L 1175,406" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<path d="M 1175,110 L 1175,86 L 545,86 L 545,102" fill="none" stroke="var(--c-dim)" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#arrow)" opacity="0.8"/>
+<text x="431" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">authors</text>
+<text x="646" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">samples</text>
+<text x="333" y="250" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-dim)">world-sampler port</text>
+<text x="646" y="354" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">writes</text>
+<text x="960" y="398" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">reads the store</text>
+<text x="1183" y="470" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">reads</text>
+<text x="860" y="80" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">port — the runner writes the holding back into the store</text>
+<path d="M 830,146 L 882,146" fill="none" stroke="var(--c-ctl)" stroke-width="1.6" marker-end="url(#arrowC)" opacity="1.0"/>
+<text x="856" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--c-ctl)">divergence</text>
+<path d="M 1040,146 L 1092,146" fill="none" stroke="var(--c-ctl)" stroke-width="1.6" marker-end="url(#arrowC)" opacity="1.0"/>
+<text x="1066" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--c-ctl)">run/request</text>
+<line x1="455" y1="254" x2="1385" y2="254" stroke="var(--c-ctl)" stroke-width="2.4" opacity="0.55"/>
+<text x="1396" y="258" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-ctl)">ctl/run/published</text>
+<path d="M 1175,182 L 1175,250" fill="none" stroke="var(--c-ctl)" stroke-width="1.4" marker-end="url(#arrowC)" opacity="1.0"/>
+<path d="M 965,254 L 965,190" fill="none" stroke="var(--c-ctl)" stroke-width="1.4" marker-end="url(#arrowC)" opacity="1.0"/>
+<path d="M 455,254 L 455,560 L 462,560" fill="none" stroke="var(--c-ctl)" stroke-width="1.4" marker-end="url(#arrowC)" opacity="1.0"/>
+<path d="M 845,254 L 845,534" fill="none" stroke="var(--c-ctl)" stroke-width="1.4" marker-end="url(#arrowC)" opacity="1.0"/>
+<path d="M 1385,254 L 1385,534" fill="none" stroke="var(--c-ctl)" stroke-width="1.4" marker-end="url(#arrowC)" opacity="1.0"/>
+<line x1="110" y1="446" x2="1000" y2="446" stroke="var(--c-own)" stroke-width="2.2" opacity="0.6"/>
+<line x1="300" y1="456" x2="1000" y2="456" stroke="var(--c-pts)" stroke-width="2.2" opacity="0.6"/>
+<text x="1012" y="448" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-own)">obs/ownship/+</text>
+<text x="1012" y="468" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-pts)">obs/platform-a/+</text>
+<text x="1012" y="482" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-dim)">one namespace, two lanes</text>
+<path d="M 115,398 L 115,443" fill="none" stroke="var(--c-own)" stroke-width="1.4" marker-end="url(#arrowO)" opacity="1.0"/>
+<path d="M 300,446 L 300,406" fill="none" stroke="var(--c-own)" stroke-width="1.4" marker-end="url(#arrowO)" opacity="1.0"/>
+<text x="308" y="424" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-own)">position</text>
+<path d="M 350,398 L 350,453" fill="none" stroke="var(--c-pts)" stroke-width="1.4" marker-end="url(#arrowP)" opacity="1.0"/>
+<path d="M 520,456 L 520,406" fill="none" stroke="var(--c-pts)" stroke-width="1.4" marker-end="url(#arrowP)" opacity="1.0"/>
+<path d="M 528,446 L 528,406" fill="none" stroke="var(--c-own)" stroke-width="1.2" marker-end="url(#arrowO)" opacity="0.8"/>
+<path d="M 650,456 C 650,330 640,230 692,190" fill="none" stroke="var(--c-pts)" stroke-width="1.4" marker-end="url(#arrowP)" opacity="1.0"/>
+<text x="600" y="300" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-pts)">obs/#</text>
+<path d="M 560,456 L 560,534" fill="none" stroke="var(--c-pts)" stroke-width="1.4" marker-end="url(#arrowP)" opacity="1.0"/>
+<path d="M 790,456 L 790,534" fill="none" stroke="var(--c-pts)" stroke-width="1.4" marker-end="url(#arrowP)" opacity="1.0"/>
+<path d="M 760,182 C 862,270 872,450 838,552" fill="none" stroke="var(--c-ctl)" stroke-width="1.1" marker-end="url(#arrowC)" opacity="0.8"/>
+<path d="M 965,190 C 900,300 878,470 838,572" fill="none" stroke="var(--c-ctl)" stroke-width="1.1" marker-end="url(#arrowC)" opacity="0.8"/>
+<text x="886" y="500" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="var(--c-ctl)">ctl/telemetry</text>
+<path d="M 250,578 C 170,606 14,520 30,400 L 38,368" fill="none" stroke="var(--c-ctl)" stroke-width="1.6" marker-end="url(#arrowC)" opacity="1.0"/>
+<text x="56" y="652" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-ctl)">demand — issued by the operator, by hand</text>
+<path d="M 545,182 L 545,196" fill="none" stroke="var(--c-fld)" stroke-width="1.4" marker-end="url(#arrowF)" opacity="1.0"/>
+<rect x="482" y="198" width="126" height="22" rx="11" fill="none" stroke="var(--c-fld)" stroke-dasharray="3 3"/>
+<text x="545" y="213" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-fld)">cov/holdings</text>
+<path d="M 545,614 L 545,644" fill="none" stroke="var(--c-ctl)" stroke-width="1.6" marker-end="url(#arrowC)" opacity="1.0"/>
+<rect x="470" y="646" width="150" height="24" rx="3" fill="none" stroke="var(--c-ctl)"/>
+<text x="545" y="662" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-ctl)">ctl/plan → the Map</text>
+<line x1="638" y1="646" x2="638" y2="670" stroke="var(--c-ref)" stroke-width="3"/>
+<text x="650" y="656" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-ref)">and no further. The planner recommends;</text>
+<text x="650" y="668" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">it does not command the platform (Constitution VIII).</text>
+<path d="M 1040,578 L 1092,578" fill="none" stroke="var(--c-cy)" stroke-width="1.6" marker-end="url(#arrowY)" opacity="1.0"/>
+<text x="1066" y="570" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--c-cy)">advisories</text>
+<path d="M 1270,398 L 1270,672" fill="none" stroke="var(--c-cy)" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#arrowY)" opacity="0.8"/>
+<text x="1278" y="470" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-cy)">every seam request</text>
+<text x="1278" y="482" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--c-cy)">passes the gate</text>
+<g><rect x="250" y="110" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="250" y="110" width="3.5" height="72" fill="var(--c-fld)"/>
+<circle cx="268" cy="129" r="4" fill="var(--c-lit)"/>
+<text x="280" y="133" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">env-generator</text>
+<line x1="250" y1="140" x2="400" y2="140" stroke="var(--c-line)"/>
+<text x="262" y="157" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">now-cast in 214 ticks</text>
+</g>
+<g><rect x="470" y="110" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="470" y="110" width="3.5" height="72" fill="var(--c-fld)"/>
+<circle cx="488" cy="129" r="4" fill="var(--c-lit)"/>
+<text x="500" y="133" font-family="IBM Plex Mono, monospace" font-size="9.8" font-weight="600" fill="var(--c-fg)">coverage-store</text>
+<path d="M 605,126 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="603" y="126" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="470" y1="140" x2="620" y2="140" stroke="var(--c-line)"/>
+<text x="482" y="157" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">9 holdings · 41.2 MB</text>
+</g>
+<g><rect x="680" y="110" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="680" y="110" width="3.5" height="72" fill="var(--c-ctl)"/>
+<circle cx="698" cy="129" r="4" fill="var(--c-lit)"/>
+<text x="710" y="133" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">monitor</text>
+<line x1="680" y1="140" x2="830" y2="140" stroke="var(--c-line)"/>
+<text x="692" y="157" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">0.94 m/s · streak 2/3</text>
+</g>
+<g><rect x="890" y="110" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="890" y="110" width="3.5" height="72" fill="var(--c-ctl)"/>
+<circle cx="908" cy="129" r="4" fill="var(--c-lit)"/>
+<text x="920" y="133" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">scheduler</text>
+<line x1="890" y1="140" x2="1040" y2="140" stroke="var(--c-line)"/>
+<text x="902" y="157" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">min-interval 118 ticks</text>
+</g>
+<g><rect x="1100" y="110" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="1100" y="110" width="3.5" height="72" fill="var(--c-fld)"/>
+<circle cx="1118" cy="129" r="4" fill="var(--c-lit)"/>
+<text x="1130" y="133" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">model-runner</text>
+<line x1="1100" y1="140" x2="1250" y2="140" stroke="var(--c-line)"/>
+<text x="1112" y="157" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">ensemble 5/5 · idle</text>
+</g>
+<g><rect x="40" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="40" y="326" width="3.5" height="72" fill="var(--c-own)"/>
+<circle cx="58" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="70" y="349" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">platform</text>
+<rect x="150" y="337" width="32" height="14" rx="2" fill="var(--c-own)"/>
+<text x="166" y="347.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="600" fill="#10151b">NEW</text>
+<line x1="40" y1="356" x2="190" y2="356" stroke="var(--c-line)"/>
+<text x="52" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">072° → 090° · 2.4 m/s</text>
+</g>
+<g><rect x="250" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="250" y="326" width="3.5" height="72" fill="var(--c-pts)"/>
+<circle cx="268" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="280" y="349" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">sensors</text>
+<line x1="250" y1="356" x2="400" y2="356" stroke="var(--c-line)"/>
+<text x="262" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">3 instruments · 1 284</text>
+</g>
+<g><rect x="470" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="470" y="326" width="3.5" height="72" fill="var(--c-pts)"/>
+<circle cx="488" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="500" y="349" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">ingest</text>
+<line x1="470" y1="356" x2="620" y2="356" stroke="var(--c-line)"/>
+<text x="482" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">1 284 in · 6 flagged</text>
+</g>
+<g><rect x="680" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="680" y="326" width="3.5" height="72" fill="var(--c-pts)"/>
+<circle cx="698" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="710" y="349" font-family="IBM Plex Mono, monospace" font-size="9.8" font-weight="600" fill="var(--c-fg)">observation-store</text>
+<path d="M 815,342 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="813" y="342" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="680" y1="356" x2="830" y2="356" stroke="var(--c-line)"/>
+<text x="692" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">1 284 rows · 4 streams</text>
+</g>
+<g><rect x="890" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="890" y="326" width="3.5" height="72" fill="var(--c-dim)"/>
+<circle cx="908" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="920" y="349" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">feature-store</text>
+<path d="M 1025,342 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="1023" y="342" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="890" y1="356" x2="1040" y2="356" stroke="var(--c-line)"/>
+<text x="902" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">2 features · read-only</text>
+</g>
+<g><rect x="1100" y="326" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="1100" y="326" width="3.5" height="72" fill="var(--c-cy)"/>
+<circle cx="1118" cy="345" r="4" fill="var(--c-lit)"/>
+<text x="1130" y="349" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">query</text>
+<path d="M 1235,342 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="1233" y="342" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="1100" y1="356" x2="1250" y2="356" stroke="var(--c-line)"/>
+<text x="1112" y="373" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">312 served · 4 refused</text>
+</g>
+<g><rect x="250" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="250" y="542" width="3.5" height="72" fill="var(--c-ctl)"/>
+<circle cx="268" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="280" y="565" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">operator</text>
+<path d="M 385,558 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="383" y="558" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="250" y1="572" x2="400" y2="572" stroke="var(--c-line)"/>
+<text x="262" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">17 sent · 3 refused</text>
+</g>
+<g><rect x="470" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="470" y="542" width="3.5" height="72" fill="var(--c-ctl)"/>
+<circle cx="488" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="500" y="565" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">planner</text>
+<line x1="470" y1="572" x2="620" y2="572" stroke="var(--c-line)"/>
+<text x="482" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">route 6 stops · replan 88</text>
+</g>
+<g><rect x="680" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="680" y="542" width="3.5" height="72" fill="var(--c-fld)"/>
+<circle cx="698" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="710" y="565" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">telemetry</text>
+<path d="M 815,558 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="813" y="558" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="680" y1="572" x2="830" y2="572" stroke="var(--c-line)"/>
+<text x="692" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">skill +0.18 vs persistence</text>
+</g>
+<g><rect x="890" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="890" y="542" width="3.5" height="72" fill="var(--c-cy)"/>
+<circle cx="908" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="920" y="565" font-family="IBM Plex Mono, monospace" font-size="9.8" font-weight="600" fill="var(--c-fg)">advisory-source</text>
+<line x1="890" y1="572" x2="1040" y2="572" stroke="var(--c-line)"/>
+<text x="902" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">4 authored</text>
+</g>
+<g><rect x="1100" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="1100" y="542" width="3.5" height="72" fill="var(--c-cy)"/>
+<circle cx="1118" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="1130" y="565" font-family="IBM Plex Mono, monospace" font-size="9.8" font-weight="600" fill="var(--c-fg)">advisory-store</text>
+<path d="M 1235,558 a 3.5,3.5 0 0 1 7,0" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<rect x="1233" y="558" width="11" height="8" rx="1.5" fill="none" stroke="var(--c-cy)" stroke-width="1.2"/>
+<line x1="1100" y1="572" x2="1250" y2="572" stroke="var(--c-line)"/>
+<text x="1112" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">4 · append-only</text>
+</g>
+<g><rect x="1310" y="542" width="150" height="72" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="1310" y="542" width="3.5" height="72" fill="var(--c-dim)"/>
+<circle cx="1328" cy="561" r="4" fill="var(--c-lit)"/>
+<text x="1340" y="565" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">offload</text>
+<line x1="1310" y1="572" x2="1460" y2="572" stroke="var(--c-line)"/>
+<text x="1322" y="589" font-family="IBM Plex Mono, monospace" font-size="9.8" fill="var(--c-fg)">2 announced · 3.1 MB</text>
+</g>
+<polyline points="52.0,394.0 66.0,392.5 80.0,393.0 94.0,390.0 108.0,391.0 122.0,388.5 136.0,387.5 150.0,389.0 164.0,386.0 178.0,386.5" fill="none" stroke="var(--c-own)" stroke-width="1.2" opacity="0.9"/>
+<polyline points="692.0,173.1 703.5,171.9 714.9,172.5 726.4,170.2 737.8,170.9 749.3,169.4 760.7,168.3 772.2,169.8 783.6,167.1 795.1,165.9 806.5,166.9 818.0,164.4" fill="none" stroke="var(--c-fld)" stroke-width="1.2" opacity="0.9"/>
+<polyline points="262.0,385.4 276.0,385.2 290.0,385.3 304.0,384.8 318.0,385.1 332.0,384.6 346.0,384.7 360.0,384.5 374.0,384.6 388.0,384.3" fill="none" stroke="var(--c-pts)" stroke-width="1.2" opacity="0.9"/>
+<polyline points="692.0,396.0 707.8,394.6 723.5,393.3 739.2,391.9 755.0,390.4 770.8,389.1 786.5,387.9 802.2,386.6 818.0,385.2" fill="none" stroke="var(--c-pts)" stroke-width="1.2" opacity="0.9"/>
+<rect x="40" y="680" width="1440" height="72" rx="3" fill="#131920" stroke="var(--c-line)"/>
+<text x="56" y="700" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">THE PLANE THE FLOW RUNS ON</text>
+<rect x="56" y="708" width="300" height="32" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="72" cy="724" r="4" fill="var(--c-lit)"/>
+<text x="84" y="728" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--c-fg)">clock</text>
+<text x="346" y="728" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">tick 4 812 · rate ×60 · step</text>
+<rect x="400" y="708" width="470" height="32" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="416" cy="724" r="4" fill="var(--c-lit)"/>
+<text x="428" y="728" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--c-fg)">broker</text>
+<text x="860" y="728" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">18.4 msg/sim-s · 14 topics</text>
+<rect x="900" y="708" width="420" height="32" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="916" cy="724" r="4" fill="var(--c-lit)"/>
+<text x="928" y="728" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--c-fg)">boundary</text>
+<text x="1310" y="728" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">312 allowed · 4 denied</text>
+<text x="56" y="772" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-dim)">ctl/clock and ctl/heartbeat reach every node above. Drawn as the plane, not as forty edges — the only two suppressions, and the panel names them (FR-004).</text>
+<text x="56" y="788" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--c-cy)">The padlock marks a component the operator plane may not command; a refused command names the rule rather than the lookup.</text>
+</svg></div>
+<figcaption>Solid arrows are topic edges derived from <code>contracts/topology.json</code>;
+dashed grey are port edges, which carry no broker traffic and therefore never pulse. Topic names are
+shortened on the canvas and given in full in the drawer. Every node here is lit; the states of the
+previous section replace the chrome, not the instrument.</figcaption>
+</section>
+<section class="blk stack">
+<h2>Twenty faces</h2>
+<p class="prose">In arc order: the plane first, then the observation path, then the loop,
+then deciding, advising and leaving. Each is drawn at the expanded density, with the kind of every
+figure declared beneath it. Where a face says something in words, those are the component&rsquo;s own
+words carried in its message &mdash; not a sentence the panel composed.</p>
+<div class="faces">
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="clock node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">clock</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="52" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">tick</text>
+<text x="12" y="72" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="400" fill="var(--c-fg)">4 812</text>
+<text x="120" y="52" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">sim time</text>
+<text x="120" y="70" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="400" fill="var(--c-cy)">2026-01-01 04:12:30</text>
+<text x="12" y="96" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fg)">rate ×60</text>
+<rect x="12" y="104" width="244" height="7" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="104" width="4.1" height="7" fill="var(--c-cy)"/>
+<text x="12" y="126" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">0</text>
+<text x="256" y="126" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">3 600 — the configured ceiling</text>
+<rect x="12" y="132" width="52" height="16" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="38" y="144" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">step</text>
+<text x="72" y="144" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">one tick, through the seam</text>
+</svg>
+<p class="why">The dial the whole harness runs at, against the bounds it was configured with. The rate shown is the one the clock <em>acknowledged</em>, never the one that was asked for.</p>
+<div class="kinds"><span class="tag dec">declared: bounds</span> <span class="tag rep">reported: rate, tick</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="broker node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">broker</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="48" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">messages per simulation second, by namespace</text>
+<text x="12" y="67" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">obs/</text>
+<rect x="48" y="58" width="160" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="48" y="58" width="149.3" height="9" fill="var(--c-pts)"/>
+<text x="216" y="67" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">11.2</text>
+<text x="12" y="85" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">ctl/</text>
+<rect x="48" y="76" width="160" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="48" y="76" width="74.7" height="9" fill="var(--c-ctl)"/>
+<text x="216" y="85" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">5.6</text>
+<text x="12" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">cov/</text>
+<rect x="48" y="94" width="160" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="48" y="94" width="14.7" height="9" fill="var(--c-fld)"/>
+<text x="216" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">1.1</text>
+<text x="12" y="121" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">adv/</text>
+<rect x="48" y="112" width="160" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="48" y="112" width="6.7" height="9" fill="var(--c-cy)"/>
+<text x="216" y="121" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">0.5</text>
+<line x1="12" y1="134" x2="230" y2="134" stroke="var(--c-pts)" stroke-width="1.4" stroke-dasharray="1.5 3"/>
+<text x="12" y="146" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-pts)">14 topics seen · counted here</text>
+</svg>
+<p class="why">Nobody publishes throughput. The shell subscribes to <code>#</code> and counts what reaches it, so every figure on this face is <em>observed</em> &mdash; and carries the dotted rule that says so.</p>
+<div class="kinds"><span class="tag obs">observed: all four rates</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="boundary node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">boundary</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<rect x="12" y="46" width="244" height="12" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="46" width="240.9" height="12" fill="var(--c-fld)"/>
+<text x="12" y="74" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fld)">312 allowed</text>
+<text x="256" y="74" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-ref)">4 denied</text>
+<text x="12" y="96" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">last denial</text>
+<text x="12" y="110" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-ref)">GET /api/internal/holdings</text>
+<text x="12" y="126" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">no allow-prefix matches</text>
+<text x="12" y="146" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">allow: /api/ctl/ /api/edr/ /api/st/ /api/features/</text>
+</svg>
+<p class="why">Default deny, with the refusal in the gate&rsquo;s own words and the allow-prefixes it was configured with beside them. A denial is a fact worth showing at full size, not a counter.</p>
+<div class="kinds"><span class="tag dec">declared: allow-prefixes</span> <span class="tag rep">reported: counts, last denial</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="env-generator node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">env-generator</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="48" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">next now-cast authoring</text>
+<rect x="12" y="56" width="244" height="10" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="56" width="186.0" height="10" fill="var(--c-fld)"/>
+<text x="12" y="80" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">214 ticks to go</text>
+<text x="256" y="80" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">every 900 ticks</text>
+<text x="12" y="104" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">domain</text>
+<text x="12" y="118" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">44–48 N · 14–8 W · 0–1 000 m</text>
+<text x="12" y="140" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">ground truth  sha256:4f19c2…</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">the manifest AT-03 scores against</text>
+</svg>
+<p class="why">It publishes nothing but heartbeats, so its face is a cadence and a digest: when the next field is authored, and which seeded truth the current one was drawn from.</p>
+<div class="kinds"><span class="tag dec">declared: domain, cadence</span> <span class="tag rep">reported: digest</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="platform node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">platform</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<rect x="122" y="170" width="44" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="144.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">demand</text>
+<circle cx="52" cy="88" r="34" fill="none" stroke="var(--c-line)"/>
+<line x1="52.0" y1="55.0" x2="52.0" y2="59.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="68.5" y1="59.4" x2="67.5" y2="61.2" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="80.6" y1="71.5" x2="78.8" y2="72.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="85.0" y1="88.0" x2="81.0" y2="88.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="80.6" y1="104.5" x2="78.8" y2="103.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="68.5" y1="116.6" x2="67.5" y2="114.8" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="52.0" y1="121.0" x2="52.0" y2="117.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="35.5" y1="116.6" x2="36.5" y2="114.8" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="23.4" y1="104.5" x2="25.2" y2="103.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="19.0" y1="88.0" x2="23.0" y2="88.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="23.4" y1="71.5" x2="25.2" y2="72.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="35.5" y1="59.4" x2="36.5" y2="61.2" stroke="var(--c-line)" stroke-width="1"/>
+<text x="52" y="49" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">N</text>
+<line x1="52" y1="88" x2="80.0" y2="88.0" stroke="var(--c-own)" stroke-width="1.6" stroke-dasharray="4 3"/>
+<circle cx="80.0" cy="88.0" r="3" fill="none" stroke="var(--c-own)" stroke-width="1.4"/>
+<line x1="52" y1="88" x2="74.8" y2="80.6" stroke="var(--c-fg)" stroke-width="2.4"/>
+<circle cx="52" cy="88" r="2.6" fill="var(--c-fg)"/>
+<path d="M 71.0,81.8 A 20,20 0 0 1 72.0,88.0" fill="none" stroke="var(--c-own)" stroke-width="4" opacity="0.28"/>
+<text x="52" y="138" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fg)">072° → 090°</text>
+<text x="52" y="150" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">course over ground</text>
+<text x="108" y="48" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">speed</text>
+<text x="256" y="48" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">2.4 → 3.0 m/s</text>
+<rect x="108" y="60" width="148" height="8" fill="var(--c-line)" opacity="0.45"/>
+<rect x="108" y="60" width="88.8" height="8" fill="var(--c-own)" opacity="0.85"/>
+<path d="M 219.0,57 l 4,-5 l -8,0 z" fill="none" stroke="var(--c-own)" stroke-width="1.3"/>
+<line x1="219.0" y1="58" x2="219.0" y2="70" stroke="var(--c-own)" stroke-width="1.3" stroke-dasharray="2 2"/>
+<text x="108" y="88" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">depth</text>
+<text x="256" y="88" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">50 → 120 m</text>
+<rect x="108" y="100" width="148" height="8" fill="var(--c-line)" opacity="0.45"/>
+<rect x="108" y="100" width="18.5" height="8" fill="var(--c-own)" opacity="0.85"/>
+<path d="M 152.4,97 l 4,-5 l -8,0 z" fill="none" stroke="var(--c-own)" stroke-width="1.3"/>
+<line x1="152.4" y1="98" x2="152.4" y2="110" stroke="var(--c-own)" stroke-width="1.3" stroke-dasharray="2 2"/>
+<text x="108" y="128" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">heading, last 60 samples</text>
+<polyline points="108.0,140.6 117.9,140.6 127.7,140.2 137.6,140.2 147.5,139.9 157.3,139.9 167.2,139.5 177.1,139.2 186.9,138.9 196.8,138.2 206.7,137.5 216.5,136.8 226.4,136.1 236.3,135.4 246.1,134.7 256.0,134.1" fill="none" stroke="var(--c-own)" stroke-width="1.3"/>
+<rect x="108" y="146" width="148" height="14" fill="var(--c-own)" opacity="0.14"/>
+<text x="112" y="156" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-own)">binding: turn rate 3.0°/sim-s</text>
+</svg>
+<p class="why"><b>The new component.</b> Demanded is the hollow ghost mark, current the solid one, and the shaded arc is what is still to swing. Where the two differ the face names the limit that is binding &mdash; so a platform that is not obeying is never mistaken for one that is.</p>
+<div class="kinds"><span class="tag dec">declared: limits</span> <span class="tag rep">reported: demanded, current, binding limit</span> <span class="tag obs">observed: heading trace</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="sensors node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">sensors</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="53" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">temperature-050m</text>
+<polyline points="120.0,58.0 128.2,55.2 136.4,56.6 144.7,51.0 152.9,53.8 161.1,48.2 169.3,49.6 177.6,46.8 185.8,48.2 194.0,44.0" fill="none" stroke="var(--c-pts)" stroke-width="1.2"/>
+<text x="256" y="53" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">12.61 degC</text>
+<text x="12" y="79" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">salinity-050m</text>
+<polyline points="120.0,84.0 128.2,77.0 136.4,80.5 144.7,70.0 152.9,75.6 161.1,71.4 169.3,77.0 177.6,73.5 185.8,76.3 194.0,74.2" fill="none" stroke="var(--c-pts)" stroke-width="1.2"/>
+<text x="256" y="79" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">35.41 psu</text>
+<text x="12" y="105" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">pressure-050m</text>
+<polyline points="120.0,110.0 128.2,104.4 136.4,107.2 144.7,98.8 152.9,101.6 161.1,96.0 169.3,104.4 177.6,98.8 185.8,101.6 194.0,101.6" fill="none" stroke="var(--c-pts)" stroke-width="1.2"/>
+<text x="256" y="105" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">50.4 dbar</text>
+<text x="12" y="136" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">sampling every 30 ticks · 1 284 published</text>
+<rect x="12" y="140" width="244" height="14" fill="var(--c-own)" opacity="0.14"/>
+<text x="16" y="150" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-own)">position from ownship, heard at tick 4 810</text>
+</svg>
+<p class="why">One row per instrument, each with the last value it reported and the shape of the ones before it. The line beneath is the new dependency: the sensors sample where the platform says it is, and when they have heard no position they publish nothing and say so.</p>
+<div class="kinds"><span class="tag dec">declared: cadence</span> <span class="tag rep">reported: values</span> <span class="tag obs">observed: traces</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="ingest node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">ingest</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="48" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">accepted</text>
+<text x="256" y="48" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fld)">1 278</text>
+<rect x="12" y="54" width="244" height="10" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="54" width="242.9" height="10" fill="var(--c-fld)"/>
+<text x="12" y="84" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">flagged, by reason</text>
+<text x="12" y="100" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">out-of-range</text>
+<text x="256" y="100" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">4</text>
+<text x="12" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">depth-mismatch</text>
+<text x="256" y="116" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">2</text>
+<text x="12" y="140" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">ownship rows checked against the platform’s</text>
+<text x="12" y="151" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">own declared limits, not numbers typed here</text>
+</svg>
+<p class="why">Two lanes and the reasons by name. The store&rsquo;s sole writer, so this is where a flag is a fact rather than an opinion &mdash; and where the ownship properties get their ranges from the platform&rsquo;s declared limits.</p>
+<div class="kinds"><span class="tag rep">reported: both lanes, every reason</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="observation-store node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">observation-store</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="22" font-weight="400" fill="var(--c-fg)">1 284</text>
+<text x="84" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">rows</text>
+<text x="256" y="38" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">02:00:00 → 04:12:30</text>
+<text x="256" y="50" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">oldest → newest</text>
+<path d="M 12,104 L 12.0,98.0 L 42.5,93.8 L 73.0,89.9 L 103.5,85.7 L 134.0,81.2 L 164.5,77.3 L 195.0,73.7 L 225.5,69.8 L 256.0,65.5 L 256,104 Z" fill="var(--c-pts)" opacity="0.14"/>
+<polyline points="12.0,98.0 42.5,93.8 73.0,89.9 103.5,85.7 134.0,81.2 164.5,77.3 195.0,73.7 225.5,69.8 256.0,65.5" fill="none" stroke="var(--c-pts)" stroke-width="1.5"/>
+<text x="12" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">rows per simulation minute</text>
+<rect x="12" y="126" width="71.2" height="10" fill="var(--c-pts)" opacity="0.45"/>
+<rect x="85.2" y="126" width="71.2" height="10" fill="var(--c-pts)" opacity="0.45"/>
+<rect x="158.4" y="126" width="46.8" height="10" fill="var(--c-pts)" opacity="0.45"/>
+<rect x="207.20000000000002" y="126" width="46.8" height="10" fill="var(--c-own)" opacity="0.9"/>
+<text x="12" y="150" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">by datastream — ownship, a visible share</text>
+</svg>
+<p class="why">Volume, growth, and the share each datastream holds. The ownship rows are drawn as part of the whole because that is what they are: ordinary measurements through the ordinary seam, not a private channel to the map.</p>
+<div class="kinds"><span class="tag rep">reported: counts, extent</span> <span class="tag obs">observed: growth trace</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="feature-store node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">feature-store</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<rect x="12" y="44" width="80" height="16" rx="8" fill="none" stroke="var(--c-cy)"/>
+<text x="52" y="55" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">read-only</text>
+<text x="12" y="82" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fg)">domain</text>
+<text x="256" y="82" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">polygon · 4 vertices</text>
+<text x="12" y="102" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fg)">loiter-region</text>
+<text x="256" y="102" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">polygon · 4 vertices</text>
+<text x="12" y="134" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">declared at construction; nothing writes here</text>
+<text x="12" y="148" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">during a run, which is why it has no growth line</text>
+</svg>
+<p class="why">The one face with nothing moving on it, and that is the point: a store that is read-only for the whole run has no growth to draw, and drawing one anyway would be an invention.</p>
+<div class="kinds"><span class="tag dec">declared: the features themselves</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="query node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">query</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="48" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">served, by standard</text>
+<text x="12" y="65" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">EDR</text>
+<rect x="92" y="56" width="128" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="92" y="56" width="76.8" height="9" fill="var(--c-fld)"/>
+<text x="256" y="65" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">186</text>
+<text x="12" y="82" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">SensorThings</text>
+<rect x="92" y="73" width="128" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="92" y="73" width="42.2" height="9" fill="var(--c-pts)"/>
+<text x="256" y="82" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">104</text>
+<text x="12" y="99" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">features</text>
+<rect x="92" y="90" width="128" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="92" y="90" width="9.0" height="9" fill="var(--c-cy)"/>
+<text x="256" y="99" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">22</text>
+<text x="12" y="122" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">last served</text>
+<text x="12" y="134" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="7.4" font-weight="400" fill="var(--c-own)">/api/st/v1.1/Datastreams('ds-ownship')/Observations</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ref)">4 refused — last: $filter is not in the subset</text>
+</svg>
+<p class="why">A request tape, and the refusal in the words the subset uses. The ownship track reaches the map through this line and no other &mdash; which is what makes it a genuine query rather than a wire from the platform to the canvas.</p>
+<div class="kinds"><span class="tag rep">reported: tallies, paths, refusals</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="coverage-store node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">coverage-store</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">9 holdings</text>
+<text x="256" y="46" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fld)">41.2 MB</text>
+<rect x="12" y="56" width="171.6" height="7" fill="var(--c-fld)" opacity="1"/>
+<text x="200" y="63" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-fld)">run-0009 · new</text>
+<rect x="12" y="65" width="151.9" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="74" width="146.2" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="83" width="135.0" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="92" width="123.8" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="101" width="115.3" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="110" width="109.7" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="119" width="104.1" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<rect x="12" y="128" width="101.2" height="7" fill="var(--c-fld)" opacity="0.42"/>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">newest at the top; length is bytes on the wire</text>
+</svg>
+<p class="why">Volume as a stack rather than a number, so a run that published a thin holding is visible as a short bar. The newest is highlighted and pulses once when <code>cov/holdings</code> announces it &mdash; the arrival of a new forecast, drawn where it arrives.</p>
+<div class="kinds"><span class="tag rep">reported: count, bytes, ids</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="monitor node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">monitor</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">residual, sound speed</text>
+<text x="256" y="46" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="400" fill="var(--c-fg)">0.94 m/s</text>
+<path d="M 12,106 L 12.0,94.8 L 29.4,90.2 L 46.9,92.3 L 64.3,83.7 L 81.7,86.2 L 99.1,80.4 L 116.6,76.1 L 134.0,82.2 L 151.4,71.8 L 168.9,67.1 L 186.3,71.1 L 203.7,61.4 L 221.1,58.8 L 238.6,63.2 L 256.0,59.9 L 256,106 Z" fill="var(--c-fld)" opacity="0.10"/>
+<line x1="12" y1="62.8" x2="256" y2="62.8" stroke="var(--c-ref)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="15" y="58.800000000000004" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-ref)">1.20 — the breach threshold</text>
+<polyline points="12.0,94.8 29.4,90.2 46.9,92.3 64.3,83.7 81.7,86.2 99.1,80.4 116.6,76.1 134.0,82.2 151.4,71.8 168.9,67.1 186.3,71.1 203.7,61.4 221.1,58.8 238.6,63.2 256.0,59.9" fill="none" stroke="var(--c-fld)" stroke-width="1.6"/>
+<circle cx="203.7" cy="61.4" r="2.4" fill="var(--c-ref)"/>
+<circle cx="221.1" cy="58.8" r="2.4" fill="var(--c-ref)"/>
+<circle cx="256.0" cy="59.9" r="2.4" fill="var(--c-ref)"/>
+<text x="12" y="124" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">STREAK</text>
+<rect x="58" y="116" width="20" height="10" fill="var(--c-ref)" stroke="var(--c-ref)"/>
+<rect x="84" y="116" width="20" height="10" fill="var(--c-ref)" stroke="var(--c-ref)"/>
+<rect x="110" y="116" width="20" height="10" fill="none" stroke="var(--c-ref)"/>
+<text x="142" y="124" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ref)">2 of 3 → divergence</text>
+<text x="12" y="140" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">scoring against run-0009</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-own)">ownship datastreams excluded by name</text>
+</svg>
+<p class="why"><b>The drift face.</b> The residual, the threshold that will fire drawn across it, the breaching samples marked, and the persistence streak beneath &mdash; two of three filled. This is the drift level that triggers a new forecast, drawn as the thing it is rather than described in a heartbeat line.</p>
+<div class="kinds"><span class="tag dec">declared: threshold, streak length</span> <span class="tag rep">reported: residuals, run scored</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="scheduler node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">scheduler</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">decisions</text>
+<text x="12" y="63" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">accepted</text>
+<text x="256" y="63" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fld)">9</text>
+<text x="12" y="79" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">minimum-interval</text>
+<text x="256" y="79" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">4</text>
+<text x="12" y="95" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">duplicate-outstanding</text>
+<text x="256" y="95" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">1</text>
+<text x="12" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">minimum interval</text>
+<rect x="12" y="120" width="244" height="8" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="120" width="196.0" height="8" fill="var(--c-ctl)"/>
+<text x="12" y="138" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">118 ticks before another divergence can be accepted</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">cadence floor in 1 044 ticks — a run happens anyway</text>
+</svg>
+<p class="why">Every decision, not only the ones that led to a run &mdash; and the two clocks that produce them: how long until a breach could be accepted, and how long until one happens on schedule regardless. A decline here is policy, and it says so.</p>
+<div class="kinds"><span class="tag dec">declared: both intervals</span> <span class="tag rep">reported: the ledger</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="model-runner node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">model-runner</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">ensemble</text>
+<text x="256" y="46" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">shift-advect-v1</text>
+<rect x="12" y="54" width="44" height="30" fill="none" stroke="var(--c-fld)"/>
+<rect x="12" y="54.0" width="44" height="30.0" fill="var(--c-fld)" opacity="0.55"/>
+<text x="34" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">m1</text>
+<rect x="62" y="54" width="44" height="30" fill="none" stroke="var(--c-fld)"/>
+<rect x="62" y="54.0" width="44" height="30.0" fill="var(--c-fld)" opacity="0.55"/>
+<text x="84" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">m2</text>
+<rect x="112" y="54" width="44" height="30" fill="none" stroke="var(--c-fld)"/>
+<rect x="112" y="54.0" width="44" height="30.0" fill="var(--c-fld)" opacity="0.55"/>
+<text x="134" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">m3</text>
+<rect x="162" y="54" width="44" height="30" fill="none" stroke="var(--c-fld)"/>
+<rect x="162" y="65.4" width="44" height="18.6" fill="var(--c-fld)" opacity="0.55"/>
+<text x="184" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">m4</text>
+<rect x="212" y="54" width="44" height="30" fill="none" stroke="var(--c-fld)"/>
+<rect x="212" y="84.0" width="44" height="0.0" fill="var(--c-fld)" opacity="0.55"/>
+<text x="234" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">m5</text>
+<path d="M 12,112 l 10,-6 l 0,12 z" fill="var(--c-ctl)"/>
+<text x="28" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ctl)">run-0010 requested at tick 4 806</text>
+<text x="12" y="134" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">horizon 4 steps × 900 s = 1 h</text>
+<text x="12" y="148" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">last run took 42 simulation seconds</text>
+</svg>
+<p class="why">The inbound trigger and what it set going: a request arriving from the scheduler, then five ensemble members filling. The forecast that lands on the coverage store is drawn as it is produced, not announced after the fact.</p>
+<div class="kinds"><span class="tag dec">declared: kernel, ensemble size, horizon</span> <span class="tag rep">reported: progress, run id</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="planner node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">planner</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">uncertainty, worst cell</text>
+<text x="256" y="46" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="400" fill="var(--c-fg)">0.34</text>
+<rect x="12" y="52" width="244" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="52" width="83.0" height="9" fill="var(--c-ctl)"/>
+<line x1="41.3" y1="49" x2="41.3" y2="64" stroke="var(--c-ref)" stroke-width="1.4"/>
+<text x="45.28" y="74" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-ref)">usable threshold 0.12</text>
+<text x="12" y="96" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">committed route</text>
+<polyline points="120,124 146,112 172,118 198,104 224,110 250,100" fill="none" stroke="var(--c-ctl)" stroke-width="1.4"/>
+<circle cx="120" cy="124" r="2.4" fill="var(--c-ctl)"/>
+<circle cx="146" cy="112" r="2.4" fill="var(--c-ctl)"/>
+<circle cx="172" cy="118" r="2.4" fill="var(--c-ctl)"/>
+<circle cx="198" cy="104" r="2.4" fill="var(--c-ctl)"/>
+<circle cx="224" cy="110" r="2.4" fill="var(--c-ctl)"/>
+<circle cx="250" cy="100" r="2.4" fill="var(--c-ctl)"/>
+<text x="12" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-fg)">6 stops</text>
+<text x="12" y="130" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">6 h horizon</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-ctl)">recommendations only — this commands nothing</text>
+</svg>
+<p class="why">Doubt against the threshold that makes a region unusable, and the route it recommends. The sentence along the bottom is load-bearing: this component publishes a recommendation and the picture shows its arrow stopping there.</p>
+<div class="kinds"><span class="tag dec">declared: threshold, horizon</span> <span class="tag rep">reported: uncertainty, route</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="telemetry node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">telemetry</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">forecast skill vs persistence</text>
+<rect x="12" y="54" width="244" height="12" fill="var(--c-line)" opacity="0.45"/>
+<line x1="134" y1="50" x2="134" y2="70" stroke="var(--c-dim)" stroke-width="1"/>
+<rect x="134" y="54" width="44" height="12" fill="var(--c-fld)"/>
+<text x="134" y="82" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">0 — persistence</text>
+<text x="256" y="82" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fld)">+0.18</text>
+<text x="12" y="104" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">“the model is earning its compute,</text>
+<text x="12" y="116" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">by 0.18 against persistence, over 14 samples”</text>
+<text x="12" y="136" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">mean |r| 0.71 m/s · rms 0.88 m/s · 112 scored</text>
+<text x="12" y="150" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">11.4 obs/sim-s · 0.6 telemetry msg/sim-s</text>
+</svg>
+<p class="why">The gauge carries the component&rsquo;s own sentence, in quotation marks, because the sentence travels in the message &mdash; and when the model is not earning its compute the same face says that instead, in the same words every other consumer gets.</p>
+<div class="kinds"><span class="tag rep">reported: every figure, and the sentence</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="operator node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">operator</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<text x="12" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="400" fill="var(--c-fg)">17</text>
+<text x="44" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">dispatched</text>
+<text x="150" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="400" fill="var(--c-ref)">3</text>
+<text x="168" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">refused by rule</text>
+<text x="12" y="78" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">last refusal</text>
+<rect x="12" y="84" width="244" height="40" fill="var(--c-ref)" opacity="0.10"/>
+<rect x="12" y="84" width="3" height="40" fill="var(--c-ref)"/>
+<text x="20" y="98" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ref)">‘clock’ is protected from the operator</text>
+<text x="20" y="110" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ref)">plane by rule: stopping it would take the</text>
+<text x="20" y="120" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ref)">evidence of the stopping with it</text>
+<text x="12" y="142" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">this is the surface you are looking through</text>
+<text x="12" y="154" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">stopping it is refused, and the rule says why</text>
+</svg>
+<p class="why">The one node that is also the thing doing the drawing. Refusals are shown at full length in the words the surface used &mdash; a truncated refusal is a refusal you cannot act on.</p>
+<div class="kinds"><span class="tag rep">reported: counts and the refusal verbatim</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="advisory-source node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">advisory-source</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">4 authored</text>
+<text x="12" y="74" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">next authoring</text>
+<rect x="12" y="80" width="244" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="80" width="146.4" height="9" fill="var(--c-cy)"/>
+<text x="12" y="104" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">last: gale warning, Biscay approaches</text>
+<text x="12" y="118" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">valid 04:00:00 → 10:00:00</text>
+<text x="12" y="146" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">deterministic authoring from the seeded stream</text>
+</svg>
+<p class="why">Cadence and the last thing it wrote, in its own words. Nothing here is authored by the display.</p>
+<div class="kinds"><span class="tag dec">declared: cadence</span> <span class="tag rep">reported: count, the advisory</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="advisory-store node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">advisory-store</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">PROTECTED</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<text x="258" y="182" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">⌷ protected by rule</text>
+<rect x="12" y="44" width="94" height="16" rx="8" fill="none" stroke="var(--c-cy)"/>
+<text x="59" y="55" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-cy)">append-only</text>
+<text x="256" y="55" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-fg)">4 advisories</text>
+<text x="12" y="82" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">validity at the displayed instant</text>
+<rect x="12" y="90" width="244" height="8" fill="var(--c-line)" opacity="0.35"/>
+<rect x="24.2" y="90" width="90.3" height="8" fill="var(--c-cy)" opacity="0.3"/>
+<rect x="12" y="103" width="244" height="8" fill="var(--c-line)" opacity="0.35"/>
+<rect x="85.2" y="103" width="117.1" height="8" fill="var(--c-cy)" opacity="0.9"/>
+<rect x="12" y="116" width="244" height="8" fill="var(--c-line)" opacity="0.35"/>
+<rect x="146.2" y="116" width="90.3" height="8" fill="var(--c-cy)" opacity="0.9"/>
+<rect x="12" y="129" width="244" height="8" fill="var(--c-line)" opacity="0.35"/>
+<rect x="182.8" y="129" width="73.2" height="8" fill="var(--c-cy)" opacity="0.3"/>
+<line x1="163.3" y1="86" x2="163.3" y2="146" stroke="var(--c-fg)" stroke-width="1"/>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">start-inclusive, end-exclusive</text>
+</svg>
+<p class="why">Which advisories are valid at the instant on screen, and which are merely stored. The vertical is the displayed instant; the pale bars are outside validity and still queryable.</p>
+<div class="kinds"><span class="tag rep">reported: the advisories and their windows</span></div>
+</figure>
+<figure class="face">
+<svg class="console" viewBox="0 0 268 194" role="img" aria-label="offload node face">
+<rect width="268" height="194" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="16" cy="18" r="4.5" fill="var(--c-lit)"/>
+<text x="28" y="22" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="var(--c-fg)">offload</text>
+<text x="258" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-lit)">lit</text>
+<line x1="0" y1="30" x2="268" y2="30" stroke="var(--c-line)"/>
+<line x1="0" y1="164" x2="268" y2="164" stroke="var(--c-line)"/>
+<text x="12" y="182" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">04:12:30 · 2 sim-s behind</text>
+<rect x="208" y="170" width="50" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="233.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">restart</text>
+<rect x="171" y="170" width="32" height="17" rx="2" fill="none" stroke="var(--c-line)"/>
+<text x="187.0" y="182.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">stop</text>
+<text x="12" y="50" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">2 announced</text>
+<text x="256" y="50" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">3.1 MB staged</text>
+<text x="12" y="74" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">against the declared staging bound</text>
+<rect x="12" y="80" width="244" height="9" fill="var(--c-line)" opacity="0.5"/><rect x="12" y="80" width="94.5" height="9" fill="var(--c-fld)"/>
+<text x="12" y="104" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">3.1 of 8.0 MB</text>
+<text x="12" y="126" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fg)">last: bundle-0002, drogna-bundle-2.0</text>
+<text x="12" y="140" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">announced at 03:58:00 — announcement only,</text>
+<text x="12" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">nothing leaves until Version 3</text>
+</svg>
+<p class="why">The export shape and its departure announcement, with the bound it is measured against. The face says what it does <em>not</em> do, because a packager that never transfers anything would otherwise read as one that does.</p>
+<div class="kinds"><span class="tag dec">declared: bound, format</span> <span class="tag rep">reported: counts, announcements</span></div>
+</figure>
+</div>
+</section>
+</div>
+<div class="wrap">
+<section class="blk stack">
+<h2>The platform, at full size</h2>
+<p class="prose">The one node that takes a command other than stop and start. Everything on the
+left is what the motion simulator currently is; everything hollow is what it has been asked to be.
+The gap between them is the interesting part, and the face refuses to let it be silent: the binding
+limit is named, and an unreachable demand states its shortfall in the platform&rsquo;s own report
+rather than being quietly clipped to something achievable (FR-020, FR-021).</p>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1000 380" role="img" aria-label="The platform node at full size: a course dial with demanded and current needles, speed and depth tapes, the binding limit, the demand control, and the inlet showing which publishers the demand topic admits">
+<rect width="1000" height="380" fill="var(--c-bg)"/>
+<rect x="24" y="24" width="952" height="332" rx="3" fill="var(--c-node)" stroke="var(--c-line)"/>
+<rect x="24" y="24" width="4" height="332" fill="var(--c-own)"/>
+<circle cx="48" cy="52" r="5" fill="var(--c-lit)"/>
+<text x="64" y="57" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="var(--c-fg)">platform</text>
+<rect x="146" y="42" width="40" height="18" rx="2" fill="var(--c-own)"/>
+<text x="166" y="55" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#10151b">NEW</text>
+<text x="976" y="57" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="400" fill="var(--c-dim)">lit · heard 04:12:30 · 2 sim-s behind</text>
+<line x1="24" y1="70" x2="976" y2="70" stroke="var(--c-line)"/>
+<circle cx="160" cy="190" r="86" fill="none" stroke="var(--c-line)"/>
+<line x1="160.0" y1="105.0" x2="160.0" y2="109.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="202.5" y1="116.4" x2="201.5" y2="118.1" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="233.6" y1="147.5" x2="231.9" y2="148.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="245.0" y1="190.0" x2="241.0" y2="190.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="233.6" y1="232.5" x2="231.9" y2="231.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="202.5" y1="263.6" x2="201.5" y2="261.9" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="160.0" y1="275.0" x2="160.0" y2="271.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="117.5" y1="263.6" x2="118.5" y2="261.9" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="86.4" y1="232.5" x2="88.1" y2="231.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="75.0" y1="190.0" x2="79.0" y2="190.0" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="86.4" y1="147.5" x2="88.1" y2="148.5" stroke="var(--c-line)" stroke-width="1"/>
+<line x1="117.5" y1="116.4" x2="118.5" y2="118.1" stroke="var(--c-line)" stroke-width="1"/>
+<text x="160" y="99" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8" font-weight="400" fill="var(--c-dim)">N</text>
+<line x1="160" y1="190" x2="240.0" y2="190.0" stroke="var(--c-own)" stroke-width="1.6" stroke-dasharray="4 3"/>
+<circle cx="240.0" cy="190.0" r="3" fill="none" stroke="var(--c-own)" stroke-width="1.4"/>
+<line x1="160" y1="190" x2="232.3" y2="166.5" stroke="var(--c-fg)" stroke-width="2.4"/>
+<circle cx="160" cy="190" r="2.6" fill="var(--c-fg)"/>
+<path d="M 228.5,167.8 A 72,72 0 0 1 232.0,190.0" fill="none" stroke="var(--c-own)" stroke-width="4" opacity="0.28"/>
+<text x="160" y="296" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="26" font-weight="400" fill="var(--c-fg)">072°</text>
+<text x="160" y="316" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-dim)">current course over ground</text>
+<text x="160" y="334" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-own)">demanded 090° · 18° still to swing</text>
+<text x="300" y="110" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="400" fill="var(--c-dim)">SPEED OVER GROUND</text>
+<rect x="300" y="120" width="320" height="16" fill="var(--c-line)" opacity="0.4"/>
+<rect x="300" y="120" width="192.0" height="16" fill="var(--c-own)" opacity="0.8"/>
+<line x1="540.0" y1="114" x2="540.0" y2="142" stroke="var(--c-own)" stroke-width="1.6" stroke-dasharray="3 3"/>
+<path d="M 540.0,114 l 5,-7 l -10,0 z" fill="none" stroke="var(--c-own)" stroke-width="1.5"/>
+<text x="300" y="158" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="400" fill="var(--c-fg)">current 2.4 m/s</text>
+<text x="620" y="158" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="400" fill="var(--c-own)">demanded 3.0</text>
+<text x="300" y="174" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">0</text>
+<text x="620" y="174" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">max 4.0 m/s</text>
+<text x="300" y="222" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="400" fill="var(--c-dim)">DEPTH</text>
+<rect x="300" y="232" width="320" height="16" fill="var(--c-line)" opacity="0.4"/>
+<rect x="300" y="232" width="40.0" height="16" fill="var(--c-own)" opacity="0.8"/>
+<line x1="396.0" y1="226" x2="396.0" y2="254" stroke="var(--c-own)" stroke-width="1.6" stroke-dasharray="3 3"/>
+<path d="M 396.0,226 l 5,-7 l -10,0 z" fill="none" stroke="var(--c-own)" stroke-width="1.5"/>
+<text x="300" y="270" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="400" fill="var(--c-fg)">current 50 m</text>
+<text x="620" y="270" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="400" fill="var(--c-own)">demanded 120</text>
+<text x="300" y="286" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">0</text>
+<text x="620" y="286" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-dim)">max 400 m</text>
+<rect x="668" y="104" width="288" height="52" fill="var(--c-own)" opacity="0.13"/>
+<text x="682" y="126" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--c-own)">BINDING: turn rate 3.0°/sim-s</text>
+<text x="682" y="145" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="400" fill="var(--c-dim)">reaches 090° in about 6 simulation seconds</text>
+<text x="668" y="186" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="400" fill="var(--c-dim)">heading, last 60 samples</text>
+<polyline points="668.0,223.4 683.2,223.4 698.3,223.4 713.5,222.2 728.6,222.2 743.8,220.9 758.9,220.9 774.1,219.7 789.3,218.4 804.4,217.1 819.6,214.6 834.7,212.1 849.9,209.6 865.1,207.1 880.2,204.6 895.4,203.3 910.5,200.8 925.7,199.5 940.8,198.3 956.0,198.3" fill="none" stroke="var(--c-own)" stroke-width="1.8"/>
+<line x1="668" y1="198.3" x2="956" y2="198.3" stroke="var(--c-own)" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="956" y="250" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="400" fill="var(--c-own)">demanded</text>
+<rect x="668" y="268" width="288" height="72" fill="none" stroke="var(--c-line)" stroke-dasharray="3 3"/>
+<text x="682" y="288" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="400" fill="var(--c-dim)">ISSUE A DEMAND</text>
+<rect x="682" y="296" width="62" height="22" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<text x="690" y="311" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">090</text>
+<text x="682" y="332" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">course</text>
+<rect x="756" y="296" width="62" height="22" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<text x="764" y="311" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">3.0</text>
+<text x="756" y="332" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">speed</text>
+<rect x="830" y="296" width="62" height="22" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<text x="838" y="311" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-fg)">120</text>
+<text x="830" y="332" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">depth</text>
+<rect x="890" y="296" width="54" height="22" rx="2" fill="var(--c-own)"/>
+<text x="917" y="311" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#10151b">send</text>
+<path d="M 24,150 L 6,150 L 6,196 L 24,196" fill="none" stroke="var(--c-own)" stroke-width="1.4" stroke-dasharray="4 3"/>
+</svg></div>
+<figcaption>The demanded marks are hollow everywhere &mdash; dial, both tapes, and the dashed rule
+across the heading trace &mdash; so &ldquo;asked for&rdquo; reads the same way wherever it appears.</figcaption>
+<div class="note own"><b>The inlet, and the component that is not there.</b> The demand arrives on
+<code>ctl/platform/demand</code>. The broker&rsquo;s rules admit the operator surface today and are
+written to admit an adaptive sampler as a second publisher. On the canvas that is drawn as an open
+bracket in the empty slot above the platform &mdash; deliberately not a node: no status dot, no
+chrome, no headline. A greyed-out node would read exactly like a component that has stopped, and the
+System tab&rsquo;s own footnote says the display cannot tell those two apart. Making that footnote
+false to gain a box would be the precise failure Constitution&nbsp;VII exists to prevent
+(FR-022).</div>
+<div class="note q"><b>And the arrow that is missing.</b> A reader who knows the architecture will
+look for planner&nbsp;&rarr;&nbsp;platform and not find it. Its absence has to be an answer rather than
+an oversight, so the planner&rsquo;s edge is drawn terminating at <code>ctl/plan</code> against a red
+stop, captioned <em>the planner recommends; it does not command the platform</em>. Turning a
+recommendation into a demand is a decision, and the component that would make it does not exist yet
+(FR-023, Constitution&nbsp;VIII).</div>
+</section>
+<section class="blk stack">
+<h2>Stop the platform, and watch what it costs</h2>
+<p class="prose">Every fact in these four frames is already available today &mdash; in three
+different tabs, to a reader who knows where to look. The argument for the flow chart is that
+consequence should be visible where the cause was applied. This is SC-001, and it is captured as a
+watched turn rather than inferred from green tests.</p>
+<div class="frames">
+<figure class="frame"><span class="n">before</span><svg class="console" viewBox="0 0 280 168" role="img" aria-label="before the stop">
+<rect width="280" height="168" rx="3" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<rect x="14" y="14" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="29" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="27" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">platform</text>
+<text x="40" y="38" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">072° · 2.4 m/s · publishing</text>
+<line x1="140" y1="44" x2="140" y2="52" stroke="var(--c-pts)" stroke-width="1.4"/>
+<rect x="14" y="52" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="67" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="65" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">sensors</text>
+<text x="40" y="76" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">1 284 published · every 30 ticks</text>
+<line x1="140" y1="82" x2="140" y2="90" stroke="var(--c-pts)" stroke-width="1.4"/>
+<rect x="14" y="90" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="105" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">observation-store</text>
+<text x="40" y="114" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">1 284 rows, climbing</text>
+<line x1="140" y1="120" x2="140" y2="128" stroke="var(--c-pts)" stroke-width="1.4"/>
+<rect x="14" y="128" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="143" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="141" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">monitor</text>
+<text x="40" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">0.94 m/s · streak 2 of 3</text>
+</svg><p>The chain, running. Every node lit from its own heartbeat; the observation lane carrying.</p></figure>
+<figure class="frame"><span class="n">the command</span><svg class="console" viewBox="0 0 280 168" role="img" aria-label="the command dispatched">
+<rect width="280" height="168" rx="3" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<rect x="14" y="14" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-ref)" stroke-dasharray="5 4"/>
+<circle cx="28" cy="29" r="4" fill="none" stroke="var(--c-ref)"/>
+<text x="40" y="27" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">platform</text>
+<text x="40" y="38" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">stop dispatched — awaiting silence</text>
+<line x1="140" y1="44" x2="140" y2="52" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="52" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="67" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="65" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">sensors</text>
+<text x="40" y="76" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">1 284 published</text>
+<line x1="140" y1="82" x2="140" y2="90" stroke="var(--c-pts)" stroke-width="1.4"/>
+<rect x="14" y="90" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="105" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">observation-store</text>
+<text x="40" y="114" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">1 284 rows</text>
+<line x1="140" y1="120" x2="140" y2="128" stroke="var(--c-pts)" stroke-width="1.4"/>
+<rect x="14" y="128" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="143" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="141" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">monitor</text>
+<text x="40" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">0.94 m/s · streak 2 of 3</text>
+</svg><p>The stop is dispatched. The node says so and <em>waits</em>: the command&rsquo;s success response is not evidence of anything.</p></figure>
+<figure class="frame"><span class="n">the silence</span><svg class="console" viewBox="0 0 280 168" role="img" aria-label="the silence propagating">
+<rect width="280" height="168" rx="3" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<rect x="14" y="14" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-ref)" stroke-dasharray="5 4"/>
+<circle cx="28" cy="29" r="4" fill="none" stroke="var(--c-ref)"/>
+<text x="40" y="27" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">platform</text>
+<text x="40" y="38" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">no heartbeat for 6 s — dark</text>
+<line x1="140" y1="44" x2="140" y2="52" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="52" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-line)"/>
+<circle cx="28" cy="67" r="4" fill="none" stroke="var(--c-dim)"/>
+<text x="40" y="65" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">sensors</text>
+<text x="40" y="76" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">no position heard since tick 4 812</text>
+<line x1="140" y1="82" x2="140" y2="90" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="90" width="252" height="30" rx="2" fill="var(--c-node)" stroke="var(--c-line)"/>
+<circle cx="28" cy="105" r="4" fill="var(--c-lit)" stroke="var(--c-lit)"/>
+<text x="40" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-fg)">observation-store</text>
+<text x="40" y="114" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">1 284 rows — flat</text>
+<line x1="140" y1="120" x2="140" y2="128" stroke="var(--c-dim)" stroke-width="1.4"/>
+<rect x="14" y="128" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-line)"/>
+<circle cx="28" cy="143" r="4" fill="none" stroke="var(--c-dim)"/>
+<text x="40" y="141" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">monitor</text>
+<text x="40" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">no fresh residuals to score</text>
+</svg><p>The liveness window lapses and the node darkens because it went quiet. The sensors change their own sentence; the store stops climbing.</p></figure>
+<figure class="frame"><span class="n">the break</span><svg class="console" viewBox="0 0 280 168" role="img" aria-label="the break in the series">
+<rect width="280" height="168" rx="3" fill="var(--c-bg)" stroke="var(--c-line)"/>
+<rect x="14" y="14" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-ref)" stroke-dasharray="5 4"/>
+<circle cx="28" cy="29" r="4" fill="none" stroke="var(--c-ref)"/>
+<text x="40" y="27" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">platform</text>
+<text x="40" y="38" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">dark</text>
+<line x1="140" y1="44" x2="140" y2="52" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="52" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-line)"/>
+<circle cx="28" cy="67" r="4" fill="none" stroke="var(--c-dim)"/>
+<text x="40" y="65" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">sensors</text>
+<text x="40" y="76" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">publishing nothing, and saying so</text>
+<line x1="140" y1="82" x2="140" y2="90" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="90" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-line)"/>
+<circle cx="28" cy="105" r="4" fill="none" stroke="var(--c-dim)"/>
+<text x="40" y="103" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">observation-store</text>
+<text x="40" y="114" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">growth series shows a gap, not a zero</text>
+<line x1="140" y1="120" x2="140" y2="128" stroke="var(--c-dim)" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="14" y="128" width="252" height="30" rx="2" fill="var(--c-dead)" stroke="var(--c-line)"/>
+<circle cx="28" cy="143" r="4" fill="none" stroke="var(--c-dim)"/>
+<text x="40" y="141" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="var(--c-dim)">monitor</text>
+<text x="40" y="152" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">quiet: nothing arriving to score</text>
+</svg><p>The store&rsquo;s growth series breaks. A gap is drawn as a gap &mdash; a line sloping to zero would claim measurements of nothing (FR-010).</p></figure>
+</div>
+<div class="note"><b>And then start it.</b> The same chain runs backwards: the platform beats,
+the sensors hear a position and resume, the store climbs again with a visible gap left behind in the
+series. The gap does not heal, because it happened.</div>
+</section>
+<section class="blk stack">
+<h2>The same facts, without the picture</h2>
+<p class="prose">An SVG graph is not a keyboard surface and it is not a screen-reader surface.
+So today&rsquo;s table does not retire &mdash; it becomes the list view, fed from the same
+<code>graph.ts</code> the canvas reads, with the same controls and the same refusals. Neither view is
+the other&rsquo;s accessible fallback; the panel test asserts one shared source rather than two lists
+(FR-015, SC-007).</p>
+<style>
+.listview{background:#10151b;border:1px solid var(--line);border-radius:3px;padding:14px 16px;
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:#d5dde5;overflow-x:auto}
+.listview table{width:100%;min-width:640px}
+.listview th{color:#6b7785;border-bottom:1px solid #2b3742;font-size:.68rem}
+.listview td{border-bottom:1px solid #1c242c;padding:7px 10px;color:#d5dde5}
+.listview .dim{color:#6b7785}
+.listview .own{color:#63bede}
+.listview .ref{color:#ff7b6b}
+.listview .lit{color:#58d68d}
+.listview button{background:#1a2229;color:#d5dde5;border:1px solid #2c3742;border-radius:2px;
+  padding:2px 8px;font:inherit;font-size:.72rem;cursor:pointer}
+.listview button:focus-visible{outline:2px solid #4cc2ff;outline-offset:1px}
+</style>
+<div class="listview"><table><thead><tr><th>component</th><th>state</th><th>last heard</th><th>figures</th><th>control</th></tr></thead><tbody>
+<tr><td class="own">platform</td><td><span class="lit">lit</span></td><td class="dim">04:12:30</td><td>072° &rarr; 090° · 2.4 &rarr; 3.0 m/s · 50 &rarr; 120 m · binding: turn rate</td><td><button type="button">demand</button> <button type="button">stop</button> <button type="button">restart</button></td></tr>
+<tr><td>sensors</td><td><span class="lit">lit</span></td><td class="dim">04:12:30</td><td>3 instruments · 1 284 published · position heard at tick 4 810</td><td><button type="button">stop</button> <button type="button">restart</button></td></tr>
+<tr><td>ingest</td><td><span class="lit">lit</span></td><td class="dim">04:12:29</td><td>1 278 accepted · 6 flagged (out-of-range 4, depth-mismatch 2)</td><td><button type="button">stop</button> <button type="button">restart</button></td></tr>
+<tr><td>observation-store</td><td><span class="lit">lit</span></td><td class="dim">04:12:30</td><td>1 284 rows · 02:00:00 &rarr; 04:12:30 · ownship 20% of rows</td><td><span class="dim">protected</span></td></tr>
+<tr><td>monitor</td><td><span class="lit">lit</span></td><td class="dim">04:12:28</td><td>residual 0.94 m/s against 1.20 · streak 2 of 3 · scoring run-0009</td><td><button type="button">stop</button> <button type="button">restart</button></td></tr>
+<tr><td>scheduler</td><td><span class="lit">lit</span></td><td class="dim">04:12:30</td><td>9 accepted, 4 minimum-interval, 1 duplicate · 118 ticks to go</td><td><button type="button">stop</button> <button type="button">restart</button></td></tr>
+<tr><td>clock</td><td><span class="lit">lit</span></td><td class="dim">04:12:30</td><td>tick 4 812 · rate ×60 of a 3 600 ceiling</td><td><span class="dim">protected</span></td></tr>
+</tbody></table></div>
+<figcaption>Seven of twenty rows. The figures column carries the same numbers the faces draw, in the same order.</figcaption>
+</section>
+<section class="blk stack">
+<h2>What falls out on the Map</h2>
+<p class="prose">Once ownship state is an ordinary measurement, the track is not a feature the
+map has to be given &mdash; it is a query the map can already ask. The panel fetches
+<code>Datastreams(&lsquo;ds-ownship-course&rsquo;)/Observations</code> through the seam and draws the
+locations those observations carry, in phenomenon-time order. Nothing is interpolated between them:
+the planner&rsquo;s route is a four-dimensional curve and stays drawn as one, and the track is the
+places the platform actually reported (FR-032 to FR-035).</p>
+<div class="scroll"><svg class="chart console" viewBox="0 0 1000 340" role="img" aria-label="Map panel with the ownship track drawn from served observations, the demanded course as a ray, and the planner route drawn distinctly; beside it the same panel where no ownship observations have been served">
+<rect width="1000" height="340" fill="var(--c-bg)"/>
+<rect x="24" y="24" width="612" height="292" fill="#0c1116" stroke="var(--c-line)"/>
+<rect x="60" y="52" width="540" height="232" fill="none" stroke="var(--c-line)" stroke-dasharray="4 4"/>
+<text x="66" y="46" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">scenario domain</text>
+<rect x="196" y="112" width="240" height="120" fill="var(--c-fld)" opacity="0.06" stroke="var(--c-fld)" stroke-dasharray="2 3"/>
+<text x="202" y="126" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-fld)">loiter region</text>
+<polyline points="150,240 178,226 206,214 232,198 254,180 272,162 290,148 310,140 332,138 354,142 374,150 392,162 406,176 416,192" fill="none" stroke="var(--c-own)" stroke-width="2.2"/>
+<circle cx="150" cy="240" r="2.4" fill="var(--c-own)" opacity="0.85"/>
+<circle cx="232" cy="198" r="2.4" fill="var(--c-own)" opacity="0.85"/>
+<circle cx="290" cy="148" r="2.4" fill="var(--c-own)" opacity="0.85"/>
+<circle cx="354" cy="142" r="2.4" fill="var(--c-own)" opacity="0.85"/>
+<circle cx="406" cy="176" r="2.4" fill="var(--c-own)" opacity="0.85"/>
+<text x="150" y="256" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-dim)">oldest served observation</text>
+<circle cx="416" cy="192" r="6" fill="var(--c-own)"/>
+<circle cx="416" cy="192" r="11" fill="none" stroke="var(--c-own)" stroke-width="1" opacity="0.6"/>
+<line x1="416" y1="192" x2="490" y2="192" stroke="var(--c-own)" stroke-width="1.6" stroke-dasharray="6 4"/>
+<path d="M 490,192 l -8,-4 l 0,8 z" fill="var(--c-own)"/>
+<text x="498.0" y="196.0" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-own)">demanded 090° at 3.0 m/s</text>
+<polyline points="250,268 300,254 346,262 392,246 438,254 486,240" fill="none" stroke="var(--c-ctl)" stroke-width="1.6" stroke-dasharray="2 4"/>
+<rect x="247" y="265" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<rect x="297" y="251" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<rect x="343" y="259" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<rect x="389" y="243" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<rect x="435" y="251" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<rect x="483" y="237" width="6" height="6" fill="none" stroke="var(--c-ctl)"/>
+<text x="250" y="288" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-ctl)">planner’s recommended route — squares, dotted, interpolated</text>
+<text x="150" y="300" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="8.5" font-weight="400" fill="var(--c-own)">ownship track — circles, solid, never interpolated</text>
+<rect x="664" y="24" width="312" height="292" fill="#0c1116" stroke="var(--c-line)"/>
+<rect x="694" y="60" width="252" height="200" fill="none" stroke="var(--c-line)" stroke-dasharray="4 4"/>
+<text x="820" y="150" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-dim)">no ownship observations</text>
+<text x="820" y="170" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="400" fill="var(--c-dim)">have been served</text>
+<text x="820" y="196" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">the query answered with an empty</text>
+<text x="820" y="208" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-dim)">collection. Nothing is drawn.</text>
+<text x="820" y="290" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">not a stub, not a straight line between two</text>
+<text x="820" y="302" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" font-weight="400" fill="var(--c-ref)">points, and not the configured loiter circle</text>
+</svg></div>
+<figcaption>Track and route are deliberately unlike each other: the track is what happened and is
+drawn point to point; the route is what is recommended and is interpolated. Reading one as the other
+would be reading a recommendation as a record.</figcaption>
+</section>
+<section class="blk stack">
+<h2>What this design refuses to draw</h2>
+<div class="scroll"><table><thead><tr><th>Refused</th><th>Why</th></tr></thead><tbody>
+<tr><td class="mono">A node for the adaptive sampler</td><td>A display of what exists must not draw what has never existed. The topic and its publish rules are real and are drawn; the absent publisher is stated in words (FR-022).</td></tr>
+<tr><td class="mono">A planner &rarr; platform arrow</td><td>It does not exist, and it will not until a component that <em>decides</em> does. Constitution VIII. The picture answers the question instead of leaving a hole.</td></tr>
+<tr><td class="mono">Edges for <code>ctl/clock</code> and <code>ctl/heartbeat</code></td><td>Every component subscribes to both; forty edges would hide the ones that carry meaning. They are drawn as the plane, and the panel names the suppression &mdash; the only two (FR-004).</td></tr>
+<tr><td class="mono">A flat line at zero for an empty series</td><td>Zero is a measurement. Nothing is not. An empty series says it is empty and a gap is drawn as a gap (FR-010).</td></tr>
+<tr><td class="mono">Force-directed layout</td><td>A picture that rearranges itself between renders cannot be learned and cannot be tested. Ranks and lanes are declared (FR-002).</td></tr>
+<tr><td class="mono">Position as a scalar observation result</td><td>A latitude is not a measurement result in SensorThings&rsquo; sense. Position is the location every observation already carries; the ownship datastream is what makes a series of them a track (FR-027).</td></tr>
+<tr><td class="mono"><code>HistoricalLocations</code></td><td>One representation of the track, not two that can disagree. It stays refused by name, with the reason recorded beside the refusal (FR-031).</td></tr>
+<tr><td class="mono">A manual &ldquo;request a run&rdquo; button</td><td>It would let the operator manufacture the loop&rsquo;s cause. The demo&rsquo;s claim is that the loop turns because the world diverged.</td></tr>
+<tr><td class="mono">Persisting the sparkline windows</td><td>Version 2 persists nothing between visits by design. A rolling window that outlived the page would be a second store (FR-009).</td></tr>
+</tbody></table></div>
+</section>
+<section class="blk stack">
+<h2>Open, and worth arguing about</h2>
+<ul>
+<li><b>Density.</b> The faces above are drawn at 268&nbsp;&times;&nbsp;178. Twenty of them do not fit a
+laptop viewport beside the drawer, and the compact face is designed but the switch is currently a
+manual control. Automatic below a width threshold, as 111&rsquo;s rail is? Or a control, on the
+grounds that a face collapsing under you while you read it is worse than a scroll bar? <span class="tag fr">tasks T003</span></li>
+<li><b>Where the loop&rsquo;s return arc goes.</b> It is drawn over the top, which reads well and
+crosses nothing &mdash; but it is a port edge, and port edges are dashed and quiet everywhere else.
+The most important arrow in the picture being the least emphatic one may be wrong.</li>
+<li><b>How much of the drawer is the face again.</b> Repeating the instrument at full size is
+comfortable and costs a lot of screen. The alternative &mdash; the drawer carries only what the face
+could not fit &mdash; is tighter and asks the reader to hold two things at once.</li>
+<li><b>Whether the operator node should be drawn at all.</b> It is the surface doing the drawing, and
+a picture that contains itself is either honest or a joke. It is drawn, with a line saying so; that
+decision is not settled.</li>
+</ul>
+<div class="note"><b>Not open:</b> whether a figure may be presented as reported when the shell
+computed it. It may not, in any state, at any density, in either view. Everything else here is
+negotiable.</div>
+</section>
+<footer style="padding:34px 0;color:var(--muted);font-size:.86rem">
+<p>drogna &middot; feature 112 &middot; the design <code>spec.md</code> FR-012 governs. Where this
+document and the specification disagree, the specification is the requirement and this is the
+proposal. Everything in drogna is deliberately synthetic and says so.</p>
+</footer>
+</div>

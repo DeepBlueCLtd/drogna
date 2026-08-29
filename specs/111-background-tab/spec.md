@@ -44,11 +44,12 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 | **Schematic and abstract** visuals, deliberately unlike the Map panel | A diagram is never mistaken for a readout. |
 | Cost claims stay **qualitative, and say so** | No invented figures. Consistent with the repo's habit of marking an unmeasured claim as unmeasured. |
 
-## The eight explainers
+## The eleven explainers
 
-Ordered as a course: what shape the data is → how it is stored → what a holding actually
-contains → the two ways it is served → the server that serves both → how consumers hear
-about it → the whole thing turning. **69 steps.**
+Ordered as a course: why a standard at all → what shape the data is → how it is stored →
+what a holding actually contains → the two ways it is served → the server that serves
+both → how consumers hear about it → why the two paths never contend → the whole thing
+turning → what is allowed off the boat. **69 steps.**
 
 | # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
@@ -70,14 +71,14 @@ about it → the whole thing turning. **69 steps.**
 
 An evaluator opens the Background tab and is met with a course, not a pile: a fixed
 order, a visible position within it, and one explainer that establishes the argument the
-other seven serve. They can leave after ninety seconds having understood why any of this
+other ten serve. They can leave after ninety seconds having understood why any of this
 is standards-based, and they can send a colleague a URL that opens exactly what they
 were looking at.
 
 **Why this priority**: The tab's frame is the product. Explainer 1 plus the shared
 value panel and the anchor scheme is the smallest thing that is genuinely useful, and
-every later explainer is a fill of a shape this story defines. Without it, seven good
-visualisations are seven orphans.
+every later explainer is a fill of a shape this story defines. Without it, ten good
+visualisations are ten orphans.
 
 **Independent Test**: With the whole in-browser backend stopped, open the Background
 tab, complete explainer 1's headline path, copy the anchor URL from a middle step, open
@@ -133,16 +134,16 @@ standards-serving server hands them that they would otherwise write.
 **Why this priority**: The three explainers the request was really about. They depend on
 story 2 to land, which is why they follow it rather than lead.
 
-**Independent Test**: Complete explainers 4, 5 and 6 with the backend stopped. Explainer
-6 states plainly which system it describes.
+**Independent Test**: Complete explainers 5, 6 and 7 with the backend stopped. Explainer
+7 states plainly which system it describes.
 
 **Acceptance Scenarios**:
 
-1. **Given** explainer 4's instrument chain, **When** the viewer walks it,
+1. **Given** explainer 5's instrument chain, **When** the viewer walks it,
    **Then** each step shows the URL that walks it, and the last step reaches a reading.
-2. **Given** explainer 5's query-type chooser, **When** the viewer selects a query type,
+2. **Given** explainer 6's query-type chooser, **When** the viewer selects a query type,
    **Then** the geometry the query takes and the shape of what returns are both shown.
-3. **Given** explainer 6, **When** the viewer reads it,
+3. **Given** explainer 7, **When** the viewer reads it,
    **Then** it is unambiguous that pygeoapi describes the real deployment and is not
    what this browser is serving.
 
@@ -157,16 +158,16 @@ added without touching a producer, and how a divergence becomes a published fore
 they teach behaviour rather than interfaces, and the interfaces are what the audience
 came for.
 
-**Independent Test**: Complete explainers 7 and 8 with the backend stopped; the control
+**Independent Test**: Complete explainers 8 and 10 with the backend stopped; the control
 loop steps through a full cycle from the viewer's input alone.
 
 **Acceptance Scenarios**:
 
-1. **Given** explainer 7's topic tree, **When** the viewer publishes to a topic,
+1. **Given** explainer 8's topic tree, **When** the viewer sends to a topic,
    **Then** exactly those subscribers whose patterns match are shown catching it.
-2. **Given** explainer 8 at rest, **When** the viewer steps the loop,
+2. **Given** explainer 10 at rest, **When** the viewer steps the loop,
    **Then** each transition names the message that carries it.
-3. **Given** explainer 8 mid-cycle, **When** the viewer perturbs the input,
+3. **Given** explainer 10 mid-cycle, **When** the viewer perturbs the input,
    **Then** the loop is seen to re-plan rather than replay.
 
 ### Edge Cases
@@ -235,7 +236,7 @@ loop steps through a full cycle from the viewer's input alone.
   third is not "truth you cannot have": drogna holds ground truth in a manifest and scores
   recovery against it (Constitution IX), and an explainer must not teach otherwise.
 - **FR-012**: Explainers do NOT share a scene. Each frames the geography its own argument
-  needs, because forcing one patch of sea on eight different points costs more than the
+  needs, because forcing one patch of sea on eleven different points costs more than the
   continuity it buys. What is shared is the **vocabulary**: the marks for drogna's own
   seeded features — the eddy, the front, the thermocline, the drifting feature (SRD
   FR-06) — are drawn the same way wherever they appear, so a viewer moving between
@@ -253,7 +254,7 @@ loop steps through a full cycle from the viewer's input alone.
 #### How an explainer works
 
 Settled by interview on 29 August 2026. These are the mechanics every explainer obeys,
-so that eight of them read as one course rather than eight bespoke toys.
+so that eleven of them read as one course rather than eleven bespoke toys.
 
 - **FR-016**: Every explainer, slides and interactive alike, MUST have an ordered spine
   of steps. Next always works, every step is addressable (FR-003), and following the
@@ -280,7 +281,7 @@ so that eight of them read as one course rather than eight bespoke toys.
   affordance — a dashed outline — so that free exploration (FR-018) is discoverable
   without anything animating on arrival (FR-019). It is learned once and applies across
   every explainer, and it must survive greyscale like any other mark.
-- **FR-021**: Explainers are reached from a numbered rail listing all nine with their
+- **FR-021**: Explainers are reached from a numbered rail listing all eleven with their
   course positions **and their lengths**, so a viewer knows what they are starting,
   collapsing below a width threshold to a dropdown with previous and next controls. There
   is deliberately **no curated short path**: dip-in already works and the lengths are
@@ -308,13 +309,13 @@ so that eight of them read as one course rather than eight bespoke toys.
   shared vocabulary. The unit a diagram distinguishes things by; never authored inline.
 - **Value panel**: the fixed closing beat. Three axes, each either filled or explicitly
   omitted with a reason.
-- **Course**: the ordered sequence of eight explainers, and the viewer's position in it.
+- **Course**: the ordered sequence of eleven explainers, and the viewer's position in it.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Background renders completely, and all eight explainers are traversable end
+- **SC-001**: Background renders completely, and all eleven explainers are traversable end
   to end, with every backend component stopped. Asserted by a test that starts nothing.
 - **SC-002**: Background originates zero seam traffic. Asserted by a test that fails if
   any fetch or broker subscription is issued while the tab is open — watched failing
@@ -391,3 +392,20 @@ Recorded as open rather than dissolved, per the repository's standing rule.
 - **Q4. Does 110 or 111 win?** This feature took 111 to leave `plan.md`'s named candidate
   alone. If the walkthrough candidate is dropped, the numbers should be reconciled once,
   in the plan, rather than quietly.
+
+## The counts, reconciled during implementation
+
+Written up here rather than corrected silently, because the tree is the authority and
+this document is a claim about it.
+
+The interview settled eight explainers and the table below grew to eleven across T007
+and T009 without the prose following it. On the day the course was built, this file said
+"eight" in seven places, "nine" in one, and listed eleven; `srd.md` FR-43 named eight and
+listed eight; and the storyboard — the newest claim, and the one implementation follows —
+carried eleven with 69 steps.
+
+Eleven wins, because eleven is what was designed, storyboarded and reviewed. The prose
+here and FR-43 in `srd.md` are amended to say so, with FR-43 carrying the reason it was
+ever eight. The count is no longer only a claim in prose: `background.test.tsx`
+enumerates `registry.ts` and asserts the course's ids in order, so the next time these
+disagree, a test says so rather than a reader noticing.

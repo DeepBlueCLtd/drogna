@@ -15,6 +15,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
+import runConfigDocument from '../../../config/run.json';
 import type { PanelParams } from '../../shell/Shell.js';
 import { BackgroundPanel } from './BackgroundPanel.js';
 import { Rail, RAIL_WIDTH_THRESHOLD } from './Rail.js';
@@ -197,6 +198,25 @@ describe('the course', () => {
         }
       }
     }
+  });
+
+  it('links only to views the shell actually serves (FR-005)', () => {
+    // A claim about drogna links to the live view rather than depicting it, so a link
+    // that names a view nobody serves is a dead end where the evidence should be. The
+    // panel itself never reads the configuration — that is what the inertness gate is
+    // for — so the check lives here, where a test may read both sides.
+    const served = new Set(runConfigDocument.shell.views.map((view) => view.id));
+    for (const explainer of COURSE) {
+      for (const [index, step] of explainer.steps.entries()) {
+        if (!step.liveView) continue;
+        expect(`${explainer.id}/${index + 1} → ${step.liveView.view}`).toBe(
+          `${explainer.id}/${index + 1} → ${served.has(step.liveView.view) ? step.liveView.view : 'a view the shell serves'}`,
+        );
+      }
+    }
+    // And the links exist at all: FR-005 is not satisfied by never making a claim.
+    expect(COURSE.flatMap((explainer) => explainer.steps.filter((step) => step.liveView)).length)
+      .toBeGreaterThan(4);
   });
 
   it('states no URL that looks pasteable into this page (FR-022)', () => {

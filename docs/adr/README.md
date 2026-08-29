@@ -34,6 +34,18 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0024](0024-the-advisory-store-is-a-third-schema.md) | The advisory store is a third schema, not a second engine | Accepted |
 | [0025](0025-the-operator-plane-sits-behind-the-clearance.md) | The operator plane sits behind the clearance, and the clock joins it there | Accepted |
 | [0026](0026-resource-sampling-and-the-runtime-socket.md) | The third wall-clock exemption is resource sampling, and the socket stops at the door | Accepted |
+| [0027](0027-version-2-client-side-rewrite.md) | Version 2 is a client-side rewrite behind a wire-protocol seam | Accepted |
+| [0028](0028-dockview-hosts-the-shell.md) | dockview hosts the shell | Accepted, amended by ADR-0031 |
+| [0029](0029-the-http-seam-is-a-fetch-shim.md) | The HTTP seam is a fetch-level shim, not a Service Worker | Accepted |
+| [0030](0030-scheduled-modules-and-the-composition-root.md) | Components are scheduled modules on the main thread, wired by one composition root | Accepted |
+| [0031](0031-addressability-goes-below-the-panel.md) | Addressability goes below the panel | Accepted |
+
+The rows 0027 to 0030 were added on 29 August 2026, by feature 111, which came to add
+its own row and found the table had stopped at 0026 while four V2 records existed on
+disk. This is the second time this index has been found short, and for the same reason:
+the files are the record and this table is a claim about them, so the claim is the part
+that rots. Both catches are noted here rather than tidied away, because a table that has
+silently fallen behind twice is a fact about how it is maintained.
 
 There is no ADR-0017. The number was never used — no file by that number appears anywhere
 in the history — and renumbering the records that exist would break references already in

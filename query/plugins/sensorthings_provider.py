@@ -83,7 +83,7 @@ def conformance_statement(conformance_url: str) -> dict[str, Any]:
             f"{SPATIAL_FUNCTION}(location, geography'POLYGON (…)') — the observation's "
             f"own sampled position inside a single drawn ring, composing with the "
             f"phenomenon-time comparisons by and. Every other spatial function, "
-            f"property and geometry is refused with its name (ADR-0025)."
+            f"property and geometry is refused with its name (ADR-0027)."
         ),
         "time": (
             f"{PHENOMENON_TIME} is simulation time. No arrival time or insertion time is "
@@ -156,7 +156,7 @@ class PostgresRowSource:
             clauses.append(f"{column} = %s")
             values.append(value)
         if criteria.within and model.geometry_column is not None:
-            # The one spatial predicate the filter subset implements (FR-80, ADR-0025).
+            # The one spatial predicate the filter subset implements (FR-80, ADR-0027).
             # The WKT literal travels as a bound parameter; the geography column is read
             # as geometry because ST_Within is defined over geometry, and the store's
             # SRID is 4326 throughout.

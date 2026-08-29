@@ -1,9 +1,15 @@
-# ADR-0025: The SensorThings filter subset grows exactly one spatial predicate
+# ADR-0027: The SensorThings filter subset grows exactly one spatial predicate
 
 **Status:** Accepted
 **Date:** 28 August 2026
 **Requirements:** SRD FR-80 (§5.13); feature 023 FR-009; feature 008's FR-028 to FR-030 discipline; PR-03
 **Raised by:** feature 023's specification, which owes this record in as many words: "spatial predicates enter a subset whose honesty has been its narrowness"
+
+*Numbered 0025 when written on this branch, and renumbered to 0027 on merging main, which
+had meanwhile landed 0025 and 0026 for the operator plane. Commit messages on this branch
+predating the merge therefore call it ADR-0025; `site/gates/check_adr_numbers.py` is the
+gate that caught the collision, and this line is the pointer for anyone following an old
+reference. Every reference in the tree names 0027.*
 
 ## Context
 

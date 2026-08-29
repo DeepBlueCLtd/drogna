@@ -417,3 +417,13 @@ Left unimplemented deliberately, and this is the reason, recorded at the moment 
 taken. The recorded ownership decision of 2026-08-27 settles that this component is the
 producer and that is not reopened; what it does not settle is whether a bundle grows a
 member carrying exact measurement positions, which is a question for 013 and 014 together.
+
+**Decided, 28 August 2026, by the owner by structured interview: beside the bundle,
+never inside it.** The geometry travels as its own staged object — a `run-manifest.json`
+named in the sidecar's member list but not a bundle member — transferred beside the
+products, exactly the shape `tests/leakage/updated_region.load_geometry` already reads.
+SC-006 stays true as written and 013's provenance rules gain no exception. Decisions 3
+and 4 of the proposal above follow unchanged (the packager declares its own
+`identification_radius_m` with a parity test against the proxy's, and the producer
+refuses an empty `measurements`). The implementation is wave 7 residue in the delivery
+plan; this note is the decision so no session re-opens the question.

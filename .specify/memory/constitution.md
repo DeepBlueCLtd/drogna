@@ -23,8 +23,10 @@ time comes from the shared simulation clock service (C-01) via the clock port.
   used as truth.
 - Permitted only in: log line decoration, process-level metrics, test harness setup,
   the clock service's own real-time driver, **heartbeat emission and liveness
-  evaluation** (ADR-0006), and **interpolation between received clock samples in the
-  client's render path** (ADR-0007). The last of these is narrow and stays narrow: it covers
+  evaluation** (ADR-0006), **interpolation between received clock samples in the
+  client's render path** (ADR-0007), and **container resource sampling in the system
+  controller's sampler module** (ADR-0026). The heartbeat exemption is narrow and stays
+  narrow: it covers
   emitting a heartbeat on a real-time interval and evaluating a liveness window. It
   does not cover timestamping an observation, scheduling a model run, ageing an
   uncertainty field, or anything else. Liveness answers "is this process alive?",
@@ -33,11 +35,16 @@ time comes from the shared simulation clock service (C-01) via the clock port.
   render-path exemption is bounded the same way: it may interpolate between two
   received samples but never extrapolate past the latest one, every arriving sample
   snaps the display and discards the interpolation, and no value derived from it
-  leaves the render path.
-- Both exemptions concern the boundary between the simulated world and the machine
-  displaying it. That is the shape of the boundary, not a slide. A third request is
+  leaves the render path. The sampling exemption is bounded to one module of C-21:
+  readings are per-host-second by nature, are published as their own telemetry kind
+  whose schema declares host-time semantics, never enter a simulation-time metric or
+  the run record, and nothing operational reads them.
+- All three exemptions concern the boundary between the simulated world and the
+  machine running and displaying it — each measures the machinery, not the
+  simulation, and has no simulation-time answer even in principle. That is the shape
+  of the boundary, not a slide. A fourth request is
   evidence the principle is being eroded and must be argued on its own merits, never
-  by analogy to these two.
+  by analogy to these three.
 - Enforced by an automated lint gate (`scripts/check_no_wallclock.py`) that runs in
   CI and fails the build. Any exemption is an inline `# harness:allow-wallclock
   <reason>` marker, and every marker is reviewed.
@@ -291,7 +298,7 @@ with it, the constitution wins and the artefact is amended.
   Tracking table with the simpler alternative and why it was rejected. An unrecorded
   violation is a defect.
 
-**Version**: 1.5.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-28
+**Version**: 1.6.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-28
 
 *1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
 extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
@@ -321,3 +328,11 @@ take the decision.*
 joins `observations` and `features` in the one Postgres instance, because the separation
 feature 020 needs is a grant the database enforces and not a second engine (ADR-0024).
 SRD FR-12 is amended in step.*
+
+*1.6.0 — Principle I gains its third bounded exemption: container resource sampling in
+the system controller's sampler module (ADR-0026, SRD FR-70), argued on its own merits
+as the erosion clause requires — it measures the machinery, not the simulation, and a
+host's utilisation has no simulation-time answer even in principle. Readings are their
+own host-time telemetry kind and never enter a simulation-time metric or the run
+record. The erosion clause now counts four: three granted and bounded, a fourth is the
+evidence-of-erosion case.*

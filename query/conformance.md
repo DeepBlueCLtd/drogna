@@ -82,7 +82,7 @@ the entity sets rather than at an error.
 - `$filter` — comparisons on `phenomenonTime` (`eq`, `ne`, `gt`, `ge`, `lt`, `le`), and
   exactly one spatial predicate: `st_within(location, geography'POLYGON (…)')`, the
   observation's own sampled position inside a single drawn ring — joined by `and`, so a
-  drawn geometry and a time window select together, server-side (ADR-0025).
+  drawn geometry and a time window select together, server-side (ADR-0027).
 - `$expand` — one level: from a `Datastream` to its `Sensor`, `ObservedProperty` and `Thing`,
   and from an `Observation` to its `Datastream` and `FeatureOfInterest`.
 
@@ -112,7 +112,7 @@ and it looks exactly like a correct one.
   predicate, `location` — result values included. A filter on any other property is a
   query the harness has no use for and would have to be tested to claim.
 - The filter language's geospatial and temporal functions, save one — of them, exactly
-  `st_within(location, geography'POLYGON (…)')` is implemented (ADR-0025): a single-ring
+  `st_within(location, geography'POLYGON (…)')` is implemented (ADR-0027): a single-ring
   polygon over the observation geometry, nothing else. `st_intersects`, `geo.distance`,
   every other function, `st_within` on any other property, and any other geometry —
   holes and multipolygons included — are refused with the offending part named.

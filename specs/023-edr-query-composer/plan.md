@@ -50,7 +50,7 @@ The SensorThings filter subset grows exactly one spatial predicate over the obse
 geometry, composing with the existing temporal filtering, so a drawn geometry will filter
 observations server-side rather than pretending to. The subset's honesty has been its
 narrowness: every unimplemented option keeps its refusal with the option named, and the
-conformance statement is amended in the same commit as the code (ADR-0025).
+conformance statement is amended in the same commit as the code (ADR-0027).
 
 ## Technical Context
 
@@ -122,7 +122,7 @@ by declared limits, every refusal naming its limit.
   coverage output port (ADR-0003's home), not stubbed for a composer to point at: FR-78's
   whole argument is that an offered-but-stubbed query type is the exact dishonesty the
   harness exists to avoid. The SensorThings subset stays a stated subset; its one new
-  predicate is stated with the same precision as its refusals (ADR-0025).
+  predicate is stated with the same precision as its refusals (ADR-0027).
 - **VII. Liveness, Not Configuration** — Untouched. The query layer's heartbeat is
   unchanged; nothing here drives illumination.
 - **IX. Ground Truth Is Scored** — The new types are verified against the analytic
@@ -233,7 +233,7 @@ The list has two kinds of entry, distinguished by a `kind` the response states:
   (GeoJSON-compatible FeatureCollection with `kind` distinguished), generated into both
   languages, registered append-only in `tests/unit/test_generated_models.py`.
 
-### The SensorThings spatial predicate: `st_within`, and nothing else (ADR-0025)
+### The SensorThings spatial predicate: `st_within`, and nothing else (ADR-0027)
 
 The filter subset grows exactly one spatial predicate:
 `st_within(location, geography'POLYGON (…)')`, composable by `and` with the existing
@@ -249,7 +249,7 @@ geometry but a single-ring `POLYGON`, disjunction. The conformance statement —
 document and `query/conformance.md`, generated from and checked against the same constants
 — is amended in the same commit. The decision, the alternatives the interview weighed
 (client-side selection after a temporal query; an EDR items type over observations) and
-the conformance obligation are recorded as **ADR-0025**, written in this session because
+the conformance obligation are recorded as **ADR-0027**, written in this session because
 this session does the widening (PR-03).
 
 ### Discoverable limits: the carrier is decided here, wired with the client half

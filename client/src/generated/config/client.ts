@@ -145,4 +145,13 @@ export interface DrognaBrowserClientRuntimeConfiguration {
      */
     graticule_spacing_degrees?: number;
   };
+  /**
+   * Where the published documentation site is, so the standards badges on the client's panes can link each delivering standard to its primer (018 FR-008). A link a viewer follows in a browser, never a location the client fetches from: the page issues no request to it. Optional: a destination that declares no site gets badges that name the standard and state that no site root was declared, rather than badges that guess a location (Constitution IV).
+   */
+  site?: {
+    /**
+     * Base URL of the site's standards section, without a trailing slash. A primer is addressed by appending the standard's slug as a directory path, which is the published site's own URL convention.
+     */
+    standards_url: string;
+  };
 }

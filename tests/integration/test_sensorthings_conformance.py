@@ -168,4 +168,4 @@ def test_both_accounts_state_the_one_spatial_predicate_identically(statement, pr
     assert "st_within(location, geography'POLYGON" in statement["spatial"]
     assert "refused" in statement["spatial"]
     assert "st_within(location, geography'POLYGON" in prose
-    assert "ADR-0025" in prose
+    assert "ADR-0027" in prose

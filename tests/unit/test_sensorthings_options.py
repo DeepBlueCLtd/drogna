@@ -190,7 +190,7 @@ def test_a_filter_on_a_result_value_is_refused_naming_the_property() -> None:
 
 
 def test_a_spatial_predicate_on_any_other_property_is_refused_naming_it() -> None:
-    # Feature 023 (FR-80, ADR-0025) made st_within(location, ...) the one implemented
+    # Feature 023 (FR-80, ADR-0027) made st_within(location, ...) the one implemented
     # spatial predicate. This case — the same function on a different property — keeps
     # its refusal, and the refusal now names the property beside the function.
     with pytest.raises(QueryOptionRefusedError) as refusal:

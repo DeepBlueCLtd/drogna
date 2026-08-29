@@ -51,7 +51,7 @@ __all__ = [
 ]
 
 SPATIAL_FUNCTION = "st_within"
-"""The one spatial predicate the filter subset implements (FR-80, ADR-0025).
+"""The one spatial predicate the filter subset implements (FR-80, ADR-0027).
 
 ``st_within(location, geography'POLYGON (…)')``: the observation's own sampled position
 inside a single drawn ring, composing with the phenomenon-time comparisons by ``and``.
@@ -95,7 +95,7 @@ OUT_OF_SCOPE: Mapping[str, str] = {
     "$filter-function": (
         "Of the filter language's geospatial and temporal functions, exactly one is "
         "implemented: st_within(location, geography'POLYGON (…)'), the observation "
-        "geometry inside a single drawn ring (ADR-0025). Every other function is "
+        "geometry inside a single drawn ring (ADR-0027). Every other function is "
         "refused by name."
     ),
     "write": (
@@ -222,7 +222,7 @@ def _parse_filter(
     Anything else is refused by name: any other function, any other property, any other
     geometry, disjunction. The spatial clause is recognised before the function refusal
     runs, so st_within is the one function that does not refuse — everything about it that
-    is not served still does, with the cause named (ADR-0025).
+    is not served still does, with the cause named (ADR-0027).
     """
     if re.search(r"\bor\b", expression, re.IGNORECASE):
         raise QueryOptionRefusedError(

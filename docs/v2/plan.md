@@ -218,8 +218,8 @@ needs an author's answer**.
   run-manifest sibling carries the identification radius and every sampled
   position/time — the ground truth the leakage gate scores the updated-region shape
   against — deliberately outside the released members list, with producer/boundary
-  radius parity held by a test. Refines the leakage-test requirement and interacts with
-  open question §9.4 (offload's V2 shape).
+  radius parity held by a test. Refines the leakage-test requirement; §9.4's resolution
+  keeps this shape in V2's announcement-only offload.
 
 **From #44 (the topic tree — its ADR-0027 and spec):**
 

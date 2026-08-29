@@ -144,7 +144,11 @@ try {
   span('nowcast-field-end', 'nowcast-digest-end', '      sha256 over the field bytes');
   span('nowcast-manifest-end', 'nowcast-publish-end', '      store.publish (re-hash, then fan-out)');
   span('backend-start', 'backend-end', 'buildBackend total');
-  span('render-end', '#fcp', 'React commit -> first contentful paint');
+  span('backend-end', 'render-end', 'rendering the shell over the starting frame');
+  // Since main.tsx paints a starting frame before building the backend, FCP lands ahead
+  // of everything above and is reported in the header rather than as a span. It used to
+  // be the last thing that happened; a span from the shell's commit to FCP now comes out
+  // negative, which is the change working rather than a fault.
 } finally {
   await browser?.close();
   server?.close();

@@ -26,12 +26,17 @@ export interface SeamValidator {
 }
 
 export function createSeamValidator(): SeamValidator {
-  // validateSchema: false because the masters are checked against the meta-schema, and
-  // compiled, by scripts/gates/check-schema-masters.ts — once, in CI, where a bad master
-  // fails the build. Leaving it on re-decided the same thing in every visitor's browser
-  // at about 250 ms of a mid-range laptop's boot (spikes/load-time, §3). The check is
-  // moved rather than dropped, and the gate is the stricter of the two.
-  const ajv = new Ajv2020({ allErrors: true, strict: false, validateSchema: false });
+  // `validateSchema` is left ON, having been measured off and found to buy nothing.
+  // Turning it off does cut this constructor from about 270 ms to 55 ms at Chromium's 4x
+  // throttle — but the saving does not survive to the total: compilation grows by roughly
+  // as much again, and `buildBackend` came out the same within noise over three runs each
+  // way (spikes/load-time §7). So the runtime meta-check stays, because it costs nothing
+  // net and refusing a bad master here is a property worth keeping.
+  //
+  // What did come out of that measurement is scripts/gates/check-schema-masters.ts, which
+  // makes the same decision in CI — and compiles each master too, which this never does
+  // until something asks for one. That gate is an addition, not a replacement.
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
   addFormats(ajv);
   for (const document of Object.values(schemaDocuments)) {
     ajv.addSchema(document);

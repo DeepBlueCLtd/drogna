@@ -1,7 +1,9 @@
 # Finding: where the ten seconds before the shell appears actually go
 
 **Date**: 29 August 2026
-**Status**: answered; nothing in `app/` changed by this spike
+**Status**: answered, and acted on — §5.1 and §5.3 are implemented, §5.2 was tried and
+abandoned on the measurement. **§7 is written after the fact and corrects §5 in three
+places; read it before acting on anything above it.**
 **Question**: a first load of a published instance takes about ten seconds. Where does
 that time go, and what is worth doing about it?
 
@@ -198,6 +200,12 @@ at 494 kB, because `backend/planner` uses it as well as the map; the planner's u
 worth a separate look, because a backend component that pulls half a megabyte of
 geospatial index into the first paint is a stronger reason to move it than the map is.
 
+> **Acted on, and two of the three below were wrong about why.** §5.1 and §5.3 are
+> implemented and measured; §5.2 was attempted and abandoned on the measurement. What
+> changed, and what the numbers said when it was tried, is in §7 — read that before
+> trusting the three subsections it follows, which are left as written so the corrections
+> have something to correct.
+
 ### 5.2 Precompile the validators, under the chain that already exists
 
 Ajv's `standalone` mode emits plain JavaScript validation functions from a schema at
@@ -271,3 +279,101 @@ a blank panel.
 - Whether `dockview-core`'s 773 kB can be reduced. It was not looked at, because unlike
   the map it is needed by every view, and stating it as unmeasured is more useful than
   guessing.
+
+---
+
+## 7. What was done, and where §5 was wrong
+
+Written after implementing §5.1 and §5.3 and abandoning §5.2. The numbers below are on the
+merged tree — `main` had gained the Background tab, which took the bundle from 1,968 kB to
+2,076 kB before any of this — so they do not line up exactly with §1's.
+
+### The result
+
+| Machine / line | first contentful paint, before | after |
+|---|---:|---:|
+| 4× / 9 Mbps | 2488 ms | **844 ms** |
+| 4× / 4 Mbps | 3224 ms | **1372 ms** |
+| 6× / 1.6 Mbps | 6388 ms | **2832 ms** |
+
+The dark screen is about a third of what it was. Full interactivity moved much less:
+`buildBackend` still costs ~1.45 s at 4×, so the shell is usable at roughly 2.4–5.2 s
+depending on the line. **The wait was not removed so much as taken out from behind a blank
+page** — which is the honest description of §5.3 and worth saying plainly.
+
+### §5.1 was right, and incomplete
+
+Splitting the map out took the initial chunk from 2,076 kB to 1,364 kB (574 → 369 kB
+gzipped). But `React.lazy` alone does nothing here, and §5.1 half-guessed this in its own
+last paragraph: dockview mounts every panel's React tree at once — detached, as
+`panels/map/attach.ts` already recorded — so a mounted lazy component fetches its chunk
+immediately anyway. It needs the second half: `WhenFirstActive` withholds the render until
+the tab is first selected. The prototype patch measured in §5.1 therefore measured the
+weaker of the two changes.
+
+### §5.3 was right, and the reason it works is not the one given
+
+§5.3 said to render the shell first and boot after. That is what happens, but the yield is
+not the interesting part — `flushSync` is. `root.render` only *schedules* in React 18, so
+the first attempt left the starting frame uncommitted when the two animation frames
+expired, the browser painted nothing new, and **FCP did not move at all** (2276 ms against
+a 2488 ms baseline: noise). Forcing the commit is what turns a dark screen into a visible
+one. A reader following §5.3 as written would have built the version that does not work.
+
+### §5.2 was wrong, and is not done
+
+Three measurements killed it, in order.
+
+**Precompiling everything is worse than the problem.** All 131 addressable keys — 48 root
+masters plus 82 `$defs` entries, all of which compile — emit **2,088,399 bytes** of
+standalone validator code. That is larger than the entire bundle it was meant to shrink.
+
+**The 21 config validations are one compilation, not 21.** `config.run` `$ref`s all twenty
+component configs, so compiling it compiles the tree; the twenty `getSchema` calls after it
+are cache hits at 0.0 ms each. Timed individually: `config.run` 134.1 ms, every other key
+0.0 ms. So there was no redundancy to remove, and precompiling just `config.run` still
+emits 518 kB raw / 48 kB gzipped, because it inlines the whole closure.
+
+**And it does not run.** Wired up as a probe, the page died on `ReferenceError: require is
+not defined`: Ajv's standalone output calls `require` for the ajv-formats runtime even
+under `code: {esm: true}`. Fixable, but the fix keeps ajv-formats in the bundle anyway, and
+by then the trade was 48 kB gzipped plus the parse of 518 kB against a saving that the next
+measurement said was not there.
+
+**The cheap part of §5.2 buys nothing either.** `validateSchema: false` was the one-line
+version of "stop re-deciding a build-time fact in every browser", and in a Node microbenchmark
+it looked excellent — `addSchema` 65 ms → 4.4 ms. In the browser, A/B on one build, three
+runs each way at 4×:
+
+| | `createSeamValidator` | validating the configs | **`buildBackend` total** |
+|---|---:|---:|---:|
+| `validateSchema: false` | ~55 ms | ~633 ms | **~1484 ms** |
+| default (on) | ~273 ms | ~578 ms | **~1452 ms** |
+
+The constructor really does get four times cheaper. The saving then reappears in
+compilation, and the totals are indistinguishable — the `false` arm is 32 ms *slower* on
+average, well inside a ±70 ms spread. So the flag was reverted rather than kept for the
+look of the phase table it improves.
+
+The first pass of this work claimed that change saved about 250 ms, on the strength of
+comparing two different builds. It did not; that comparison was confounded by every other
+change in the newer build, and the A/B above is what replaced it.
+
+### What survived from §5.2
+
+`scripts/gates/check-schema-masters.ts`. The masters are now checked against the
+meta-schema **and compiled** in CI, where a bad one fails the build instead of reaching a
+reader. It is an addition rather than a replacement — the runtime check stays, since it was
+measured to cost nothing net — and it is stricter than the browser ever was, because the
+browser only ever validated the documents and never compiled them. Watched failing on a
+master whose `type` breaks the meta-schema, on a dangling `$ref` that is meta-valid but
+will not compile, and on a master with no `$id`. The middle one is the case the browser
+could not have caught.
+
+### What is still on the table
+
+`buildBackend`'s remaining ~1.45 s at 4× is roughly 600 ms of Ajv compilation and 830 ms of
+provisioning, and neither has been touched. The provisioning half is §5.4's territory:
+native `crypto.subtle` for the ~340 ms of hand-written SHA-256, and the `archive.months`
+question, which is the owner's rather than a performance decision. The Ajv half now has a
+measured answer for what does *not* work, which is most of what §5.2 was worth.

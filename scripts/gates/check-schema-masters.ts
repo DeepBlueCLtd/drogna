@@ -2,18 +2,19 @@
  * Gate: every master under contracts/schemas/ is itself a valid JSON Schema 2020-12
  * document, and Ajv can compile it.
  *
- * This check used to happen in every visitor's browser. `createSeamValidator` handed all
- * forty-nine masters to Ajv with `validateSchema` at its default, so each page load
- * re-validated them against the meta-schema before it could do anything else — about
- * 250 ms of a mid-range laptop's boot, spent re-deciding something that cannot change
- * between visits (`spikes/load-time`, §3). The masters are committed; the right place to
- * decide it is once, here, where a bad master fails the build instead of every reader.
+ * This began as a way to stop the browser doing the work: `createSeamValidator` hands all
+ * forty-nine masters to Ajv, and with `validateSchema` at its default each page load
+ * re-validated them against the meta-schema — about 270 ms of a mid-range laptop's boot,
+ * re-deciding something that cannot change between visits. Turning that off in the browser
+ * turned out to save nothing at all: the cost simply reappeared in compilation, and the
+ * boot total came out the same within noise (`spikes/load-time`, §7). So the runtime check
+ * stayed, and this gate is what the measurement left behind.
  *
- * So this is not a check that was dropped for speed. It is the same check, moved to the
- * moment it can still be acted on — and made stricter on the way: the browser only ever
- * validated the documents, where this also compiles each one, so a master that parses but
- * cannot produce a validator is caught here rather than at the call site that first wants
- * it.
+ * It earns its place anyway, on being earlier and stricter rather than on being faster. A
+ * bad master fails the build here instead of reaching a reader; and where the browser only
+ * ever validated the documents, this also compiles each one, so a master that parses and
+ * satisfies the meta-schema but cannot produce a validator — a dangling `$ref`, say — is
+ * caught here rather than at whichever call site first happens to want it.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';

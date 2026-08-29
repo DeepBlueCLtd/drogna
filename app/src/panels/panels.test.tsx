@@ -163,6 +163,62 @@ describe('the panels against a live backend', () => {
     expect(undeclared?.className).toMatch(/topic-undeclared/);
   });
 
+  it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    let inventoryRequests = 0;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      inventoryRequests += 1;
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    try {
+      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(1);
+      const nowcastBefore = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      expect(nowcastBefore).toBeTruthy();
+      // Time passing is not an announcement: nothing polls, so nothing is refetched.
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(1);
+      // A genuine replacement: the generator's own cadence, driven by the clock, and
+      // the store announces it on the topic the shell's configuration names.
+      await act(async () => {
+        for (let tick = 0; tick < config.env_generator.nowcast.interval_ticks; tick++) {
+          runtime.clock.tickOnce();
+        }
+        await Promise.resolve();
+      });
+      expect(inventoryRequests).toBe(2);
+      const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      expect(nowcastAfter).not.toBe(nowcastBefore);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('Holdings states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    try {
+      // A path the release gate does not clear: the refusal is the real gate's, and
+      // an empty table would be a lie about what the store holds (Constitution VII).
+      const misconfigured = lockstepConfig();
+      misconfigured.shell.endpoints.holdings = '/api/not-a-cleared-prefix/holdings';
+      render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('Map states WebGL absence honestly, lists advisories as present-and-stating-empty, and the composer offers only what is served', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);

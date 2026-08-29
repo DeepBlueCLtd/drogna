@@ -1,9 +1,8 @@
 # drogna Version 2 — the plan
 
-**Status:** Draft for review — and the review gate for everything downstream: the SRD-v2
-and constitution 2.0.0 drafts are written only after this plan is approved (earlier
-drafts of both exist in this branch's history at `410fc03` as reference, carrying no
-standing)
+**Status:** Endorsed by the author, 29 August 2026. The SRD-v2 and constitution 2.0.0
+drafts, written against the endorsed plan, accompany it in this directory; adoption
+mechanics are §8.
 **Date:** 29 August 2026
 **Provenance:** an interview with the author, conducted 29 August 2026, plus a sweep of
 the six open pull requests (#43–#47, #49) for emergent requirements (§6), plus a second
@@ -305,16 +304,16 @@ the plan refers to it as "the reversal ADR" rather than by number.
 
 ## 8. Adoption sequence (after this review)
 
-1. **This plan is reviewed and approved first.** Review comments are resolved in place;
-   the E-items of §6 are accepted, amended or struck. (E1 and the §9 questions already
-   have their answers, from the second interview round.)
-2. **SRD-v2 drafted** against the approved plan, folding in the accepted E-items, and
-   reviewed. On adoption it moves to the root as `srd.md`; `harness-srd.md` gets its
-   archival banner.
-3. **Constitution 2.0.0 drafted** against the adopted SRD, with the reversal ADR, and
-   reviewed. On adoption it replaces `.specify/memory/constitution.md`; the ADR moves to
-   Accepted; the version log records the major bump. (Superseded drafts of both
-   documents exist at `410fc03` in this branch's history as a starting point.)
+1. **This plan is reviewed and approved first.** ✔ Endorsed by the author,
+   29 August 2026.
+2. **SRD-v2 drafted** against the endorsed plan, folding in the E-items and resolved
+   questions — `docs/v2/srd-v2.md`, in this directory. On adoption it moves to the
+   root as `srd.md`; `harness-srd.md` gets its archival banner.
+3. **Constitution 2.0.0 drafted** against the SRD, with the reversal ADR —
+   `docs/v2/constitution-2.0-draft.md` and `docs/v2/adr-reversal-draft.md`, in this
+   directory. On adoption it replaces `.specify/memory/constitution.md`; the ADR moves
+   to Accepted under the next free number (plan §6's collision note); the version log
+   records the major bump.
 4. **Feature 101 specified** (spec-kit, against the new constitution), beginning with
    the retirement commit and the seam and layout spikes. Implementation opens the
    single long-lived PR of D16.

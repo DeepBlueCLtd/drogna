@@ -1,5 +1,5 @@
 /**
- * The flow chart's geometry (FR-52). Held by a test rather than judged by eye,
+ * The flow chart's geometry (FR-57). Held by a test rather than judged by eye,
  * because "the arrows look about right" is not a check.
  */
 import { describe, expect, it } from 'vitest';
@@ -12,7 +12,7 @@ const NODES = [
 ];
 const BANDS = ['loop', 'path', 'downstream', 'plane'];
 
-describe('the flow chart’s layout (feature 112)', () => {
+describe('the flow chart’s layout (feature 113)', () => {
   it('places by declared band and rank, and leaves no two nodes overlapping', () => {
     const { placed, width, height } = layout(NODES, BANDS);
     expect(placed.map((node) => node.id)).toEqual(['a', 'b', 'c']);

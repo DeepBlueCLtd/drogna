@@ -172,21 +172,28 @@ reconciliation this paragraph asks for is owed by whoever drops the candidate, a
 note exists so that the debt is visible from the plan rather than only from the spec's
 open questions.
 
+**Feature 112, the shell at a phone's width**, also sits outside the arc and claims no
+beat: it adds no component and no capability, and presents the seven views that already
+exist at a width they were never designed for (`specs/112-mobile-support/spec.md`,
+SRD-v2 §5.11, ADR-0033). It took the next free number rather than a slot in the arc,
+and, like 111, leaves the named 110 candidate alone.
+
 **The candidate was not dropped: feature 110 is spent** (`specs/110-walkthrough/`,
-SRD-v2 §5.12). A yellow help control in the shell header walks a reader through the
+SRD-v2 §5.13). A yellow help control in the shell header walks a reader through the
 components one at a time — what each does and what its panel shows — stepping over the
 Operator flow chart, whose one-node-per-component layout is what gave the tour something
 to point at. It teaches and does not report: no step claims a component's live state,
 and a test holds it there.
 
-**Feature 112, the Operator flow chart and the platform**, is specified
-(`specs/112-operator-flowchart/`, SRD-v2 §5.11) and also sits outside the arc, though it
-reaches into it: it gives the sampling platform its own component with a motion
-simulator — demanded and current course, speed and depth, commandable over the broker —
-publishes ownship state as ordinary SensorThings measurements so the map can draw the
-track, and redraws the Operator tab as the picture §2 of the V1 SRD always said the
-architecture is: a flow chart with a loop in it, every component wearing an instrument
-designed for what it does. It took 112 for the same reason 111 took 111.
+**Feature 113, the Operator flow chart and the platform** (`specs/113-operator-flowchart/`,
+SRD-v2 §5.12), also sits outside the arc, though it reaches into it: it gives the sampling
+platform its own component with a motion simulator — demanded and current course, speed
+and depth, commandable over the broker — publishes ownship state as ordinary SensorThings
+measurements so the map can draw the track, and redraws the Operator tab as the picture §2
+of the V1 SRD always said the architecture is: a flow chart with a loop in it, every
+component wearing an instrument designed for what it does. **It was specified as 112 and
+renumbered to 113** when the mobile-support work above took that number on `main` while
+this was in flight; the tree is the authority, so it moved rather than argued.
 
 ## 6. Emergent requirements from the open pull requests
 

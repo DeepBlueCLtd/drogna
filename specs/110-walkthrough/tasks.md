@@ -25,5 +25,5 @@
       that stepped the clock or stopped a component would have to undo what it did, or
       leave the harness changed by having been explained.*
 - [ ] T010 SRD requirement for the walkthrough. *Owed: this landed as a request during
-      112's implementation, and `srd.md` §5.12 carries FR-56 and FR-57 written from the
+      113's implementation, and `srd.md` §5.13 carries FR-61 and FR-62 written from the
       feature as built — tick when that amendment is on `main`.*

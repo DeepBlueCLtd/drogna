@@ -1,5 +1,5 @@
 /**
- * The platform demand (SRD-v2 FR-48, FR-54): a course, a speed and a depth, posted
+ * The platform demand (SRD-v2 FR-53, FR-59): a course, a speed and a depth, posted
  * across the seam to the operator surface, which publishes them.
  *
  * The shell does not publish. Its broker role carries an empty publish list, and a

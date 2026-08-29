@@ -27,11 +27,11 @@ describe('sensing (feature 103)', () => {
     const runtime = buildBackend(config, options, validator);
     for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
     // Sample ticks 30 and 60 × four instruments. Tick 0 is missing on purpose and the
-    // sensors say why: since feature 112 they sample where ownship last reported, and
+    // sensors say why: since feature 113 they sample where ownship last reported, and
     // the platform's first report is published *during* tick 0's delivery pass, so it
     // is queued behind the clock sample the sensors are handling. One sampling tick of
     // cold start, stated rather than papered over — sampling the ocean at a place
-    // nobody has reported would be inventing the place (FR-50).
+    // nobody has reported would be inventing the place (FR-55).
     expect(runtime.observationStore.byDatastream('platform-a', 'temperature-050m').length).toBe(2);
     expect(runtime.observationStore.count()).toBe(8 + 9);
     expect(runtime.ingest.refused).toBe(0);
@@ -46,7 +46,7 @@ describe('sensing (feature 103)', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
     // The first ocean sample lands one sampling interval in, not at tick 0: the
-    // sensors have no position until the platform's first report is delivered (FR-50).
+    // sensors have no position until the platform's first report is delivered (FR-55).
     for (let i = 0; i < 30; i++) runtime.clock.tickOnce();
     const temperature50 = runtime.observationStore.byDatastream('platform-a', 'temperature-050m');
     expect(temperature50.length).toBeGreaterThan(0);
@@ -65,7 +65,7 @@ describe('sensing (feature 103)', () => {
     twin.stop();
   });
 
-  it('the sensors sample where ownship reported, never where they guessed (FR-50)', () => {
+  it('the sensors sample where ownship reported, never where they guessed (FR-55)', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
     // Tick 0 is published by the clock as the runtime is built, and the sensors handle

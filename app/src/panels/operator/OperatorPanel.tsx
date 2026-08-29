@@ -1,5 +1,5 @@
 /**
- * The Operator tab (FR-35, FR-36, FR-52 to FR-54): the machinery interrogated, drawn
+ * The Operator tab (FR-35, FR-36, FR-57 to FR-59): the machinery interrogated, drawn
  * as the picture the SRD has always said the architecture is — *a flow chart with a
  * loop in it*. A table has no cycle in it, and consequence should be visible where the
  * cause was applied: stop the platform here and the sensors' own sentence changes two
@@ -25,7 +25,9 @@
  * where a reader now goes to ask that component what it has to say.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
+import type { PanelProps } from '../../shell/registry.js';
+import { useIsNarrow } from '../../shell/viewport.js';
+import { Disclosure } from '../../shell/Disclosure.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import type {
   Heartbeat,
@@ -68,7 +70,7 @@ const BAND_CAPTION: Record<Band, string> = {
   plane: 'the plane the flow runs on',
 };
 
-export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function OperatorPanel({ params }: PanelProps) {
   const { config, client, validator } = params;
   const flow = useMemo(() => buildFlow(config, topology), [config]);
   const [components, setComponents] = useState<OperatorComponents | undefined>();
@@ -107,6 +109,8 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
     },
     [config.flow.series_samples],
   );
+  const rootRef = useRef<HTMLDivElement>(null);
+  const narrow = useIsNarrow(rootRef);
 
   const refresh = useCallback(async () => {
     const [componentsResponse, reportResponse] = await Promise.all([
@@ -171,7 +175,7 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
         if (!('kind' in payload) || payload.kind !== 'residual-sample') return;
         // The monitor's own numbers, drawn as it reported them: the threshold it scores
         // against and how far its streak has got. Recomputing either here would be a
-        // second implementation of the rule (FR-53).
+        // second implementation of the rule (FR-58).
         setBreach(payload.breach);
         for (const sample of payload.samples) {
           series('residual').push(payload.tick, sample.residual_m_per_s);
@@ -260,8 +264,8 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const selectedNode = flow.nodes.find((node) => node.id === selected);
 
   return (
-    <div className="panel operator-panel">
-      <div className="operator-controls">
+    <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
+      <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
         <button
           onClick={() => setAsList((value) => !value)}
           data-testid="view-toggle"
@@ -276,7 +280,7 @@ export function OperatorPanel({ params }: IDockviewPanelProps<PanelParams>) {
           {flow.nodes.length} components · {flow.edges.length} edges derived from the topology ·{' '}
           {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
         </span>
-      </div>
+      </Disclosure>
       {refusal && (
         <p className="shell-refusal" data-testid="command-refusal">
           {refusal}

@@ -1,0 +1,39 @@
+diff --git a/app/src/shell/Shell.tsx b/app/src/shell/Shell.tsx
+index 3078d5d..4030323 100644
+--- a/app/src/shell/Shell.tsx
++++ b/app/src/shell/Shell.tsx
+@@ -3,7 +3,7 @@
+  * dockview owns the layout; each panel is a React component; the four first-run tabs
+  * come from the shell's configuration document, never from literals here.
+  */
+-import { useCallback, useEffect, useRef, useState } from 'react';
++import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+ import {
+   DockviewDefaultTab,
+   DockviewReact,
+@@ -20,7 +20,6 @@ import { IntroPanel } from '../panels/intro/IntroPanel.js';
+ import { SystemPanel } from '../panels/system/SystemPanel.js';
+ import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
+ import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
+-import { MapPanel } from '../panels/map/MapPanel.js';
+ import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
+ import { ClockStrip } from './ClockStrip.js';
+ import './shell.css';
+@@ -42,6 +41,17 @@ export interface PanelParams {
+ }
+ 
+ /** Which React component renders each configured view id. */
++const LazyMapPanel = lazy(async () => ({ default: (await import('../panels/map/MapPanel.js')).MapPanel }));
++
++/** Spike only: shows what leaves the critical path, not how the seam should present it. */
++function MapPanel(props: IDockviewPanelProps<PanelParams>) {
++  return (
++    <Suspense fallback={<div style={{ padding: 12 }}>loading the map…</div>}>
++      <LazyMapPanel {...props} />
++    </Suspense>
++  );
++}
++
+ const panelComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> = {
+   intro: IntroPanel,
+   system: SystemPanel,

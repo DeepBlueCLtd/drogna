@@ -1869,7 +1869,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9_.-]*$"
         },
-        "description": "Datastreams on the observation namespace that the planner must not treat as measurements of the ocean — the platform's own ownship series (FR-51). The planner informs its observation-age field from whatever arrives, so what it must ignore has to be named; counting an ownship row would refresh confidence everywhere the platform went without a single sounding being taken. Named rather than pattern-matched, because a rule that guesses which datastreams are about the sea will one day guess wrong. The monitor needs no such list: its pairs name the thing and datastreams it scores outright, which is an allowlist and stronger. A test fails when a name here is removed."
+        "description": "Datastreams on the observation namespace that the planner must not treat as measurements of the ocean — the platform's own ownship series (FR-56). The planner informs its observation-age field from whatever arrives, so what it must ignore has to be named; counting an ownship row would refresh confidence everywhere the platform went without a single sounding being taken. Named rather than pattern-matched, because a rule that guesses which datastreams are about the sea will one day guess wrong. The monitor needs no such list: its pairs name the thing and datastreams it scores outright, which is an allowlist and stronger. A test fails when a name here is removed."
       },
       "replan_interval_ticks": {
         "type": "integer",
@@ -2007,7 +2007,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.platform.schema.json",
     "title": "drogna platform configuration (V2-C21)",
-    "description": "The platform component's configuration document (SRD-v2 FR-47, FR-48): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 112 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
+    "description": "The platform component's configuration document (SRD-v2 FR-52, FR-53): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 113 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
     "type": "object",
     "required": [
       "id",
@@ -2053,7 +2053,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "observation_prefix": {
             "type": "string",
             "pattern": "^[a-z0-9]+$",
-            "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-49)."
+            "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-54)."
           }
         }
       },
@@ -2131,7 +2131,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "dive_rate_m_per_s"
         ],
         "additionalProperties": false,
-        "description": "What the platform can do, and therefore what it will refuse to pretend to do. A demand beyond a limit is applied as far as the limit allows and the shortfall is stated in the state message — never silently clipped (FR-48).",
+        "description": "What the platform can do, and therefore what it will refuse to pretend to do. A demand beyond a limit is applied as far as the limit allows and the shortfall is stated in the state message — never silently clipped (FR-53).",
         "properties": {
           "maximum_speed_m_per_s": {
             "type": "number",
@@ -2163,7 +2163,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "instruments": {
         "type": "array",
         "minItems": 1,
-        "description": "The navigation instruments. Each is a genuine Datastream on the ownship Thing, with its own declared noise, exactly like the sensors' instruments — which is what makes ownship state a measurement rather than a declaration (FR-49).",
+        "description": "The navigation instruments. Each is a genuine Datastream on the ownship Thing, with its own declared noise, exactly like the sensors' instruments — which is what makes ownship state a measurement rather than a declaration (FR-54).",
         "items": {
           "type": "object",
           "required": [
@@ -2460,7 +2460,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.sensors.schema.json",
     "title": "drogna sensors configuration (V2-C04)",
-    "description": "The sensors component's configuration document (SRD-v2 FR-22, amended by FR-50): instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Until feature 112 this document also carried a loiter, and the sensors evaluated the platform's position from it in closed form. That block is gone: position now comes from the platform component, over the broker, and no component computes it twice. Sensors read the clock and the ownship datastreams, and nothing else (ADR-0012, widened by FR-50 and stated rather than assumed — sampling now depends on delivery order, which is deterministic in lockstep and is named in AT-04's boundary).",
+    "description": "The sensors component's configuration document (SRD-v2 FR-22, amended by FR-55): instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Until feature 113 this document also carried a loiter, and the sensors evaluated the platform's position from it in closed form. That block is gone: position now comes from the platform component, over the broker, and no component computes it twice. Sensors read the clock and the ownship datastreams, and nothing else (ADR-0012, widened by FR-55 and stated rather than assumed — sampling now depends on delivery order, which is deterministic in lockstep and is named in AT-04's boundary).",
     "type": "object",
     "required": [
       "id",
@@ -2515,7 +2515,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "description"
         ],
         "additionalProperties": false,
-        "description": "The sampling platform these instruments are mounted on: the SensorThings Thing the ocean observations belong to. A coordinate and a sampler, no history, no identity beyond its id (Constitution V). Where it IS is not here — that is the platform component's business, and the loiter this block used to carry retired with feature 112 (FR-50).",
+        "description": "The sampling platform these instruments are mounted on: the SensorThings Thing the ocean observations belong to. A coordinate and a sampler, no history, no identity beyond its id (Constitution V). Where it IS is not here — that is the platform component's business, and the loiter this block used to carry retired with feature 113 (FR-55).",
         "properties": {
           "thing_id": {
             "type": "string",
@@ -2740,7 +2740,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
-            "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-53)."
+            "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-58)."
           },
           "observations": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
@@ -4016,7 +4016,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/heartbeat.schema.json",
     "title": "drogna component heartbeat",
-    "description": "The message every long-lived component publishes on ctl/heartbeat at its declared interval, and the only thing that lights a component in the client (FR-45, FR-52, Constitution VII). The shape was settled by feature 001, which publishes the first one; this document is the neutral master and adopts that shape unchanged, extending it only with the two optional declarations FR-012 asks for. Note what is absent: no host timestamp. Cadence and liveness windows are real time by ADR-0006, but the sender does not tell the receiver what time the sender thinks it is; the receiver measures arrival against its own real time, and the simulation time carried here is payload, not schedule.",
+    "description": "The message every long-lived component publishes on ctl/heartbeat at its declared interval, and the only thing that lights a component in the client (FR-45, FR-57, Constitution VII). The shape was settled by feature 001, which publishes the first one; this document is the neutral master and adopts that shape unchanged, extending it only with the two optional declarations FR-012 asks for. Note what is absent: no host timestamp. Cadence and liveness windows are real time by ADR-0006, but the sender does not tell the receiver what time the sender thinks it is; the receiver measures arrival against its own real time, and the simulation time carried here is payload, not schedule.",
     "type": "object",
     "required": [
       "component",
@@ -4085,7 +4085,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "figures": {
         "type": "array",
         "maxItems": 8,
-        "description": "What this component reports about itself, as numbers rather than as prose (SRD-v2 FR-53). The detail line above is for a reader; these are for a display that wants to draw a bar, a stack or a sparkline without parsing a sentence — and parsing a sentence is exactly how a display starts inventing figures nobody published. Optional: a component with nothing countable to say omits it, and a face with no figures says so rather than drawing zeroes.",
+        "description": "What this component reports about itself, as numbers rather than as prose (SRD-v2 FR-58). The detail line above is for a reader; these are for a display that wants to draw a bar, a stack or a sparkline without parsing a sentence — and parsing a sentence is exactly how a display starts inventing figures nobody published. Optional: a component with nothing countable to say omits it, and a face with no figures says so rather than drawing zeroes.",
         "items": {
           "type": "object",
           "required": [
@@ -5354,7 +5354,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/observation.schema.json",
     "title": "drogna observation",
-    "description": "One measured value published by a simulated instrument on obs/<thing-id>/<datastream-id>, in SensorThings Part 1 vocabulary. SensorThings is the shape and vocabulary of the message and nothing more: no SensorThings server takes part in the write path, and this document is the single definition the sensors, the platform and the ingest client are generated from (SRD FR-16, FR-17). The observed property is a closed enumeration: three ocean properties, and — since feature 112 — three ownship ones, whose admission is argued at that enumeration. Sound speed is absent by decision: ADR-0005 derives it at the point of use from temperature, salinity and pressure, so it is never published and never stored, and no derived quantity may join the list without amending that ADR. Every time here is simulation time taken from the clock port; no broker-assigned timestamp, database default or host clock value appears anywhere in the write path.",
+    "description": "One measured value published by a simulated instrument on obs/<thing-id>/<datastream-id>, in SensorThings Part 1 vocabulary. SensorThings is the shape and vocabulary of the message and nothing more: no SensorThings server takes part in the write path, and this document is the single definition the sensors, the platform and the ingest client are generated from (SRD FR-16, FR-17). The observed property is a closed enumeration: three ocean properties, and — since feature 113 — three ownship ones, whose admission is argued at that enumeration. Sound speed is absent by decision: ADR-0005 derives it at the point of use from temperature, salinity and pressure, so it is never published and never stored, and no derived quantity may join the list without amending that ADR. Every time here is simulation time taken from the clock port; no broker-assigned timestamp, database default or host clock value appears anywhere in the write path.",
     "type": "object",
     "required": [
       "observation_id",
@@ -5393,7 +5393,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "thing_id": {
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-        "description": "The Thing this observation came from, and the first segment of the topic. A sampling platform is a coordinate and a sampler, carrying no history. The platform component’s own Thing is the exception feature 112 argues for at /$defs/location: it moves, and its observations are therefore a track. Neither is an entity of any other kind (Constitution V)."
+        "description": "The Thing this observation came from, and the first segment of the topic. A sampling platform is a coordinate and a sampler, carrying no history. The platform component’s own Thing is the exception feature 113 argues for at /$defs/location: it moves, and its observations are therefore a track. Neither is an entity of any other kind (Constitution V)."
       },
       "datastream_id": {
         "type": "string",
@@ -5436,11 +5436,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "platform_speed",
           "platform_depth"
         ],
-        "description": "What was measured: three ocean properties, and three ownship ones added by feature 112 (FR-49). Sound speed is not among them and is not a datastream — it is derived at the point of use by the one implementation the monitor, telemetry and the environment generator all call (ADR-0005), because a derived value stored beside its inputs is a second source of truth that can disagree with them after a change to the equation, with no way to tell which was right. The ownship three do not reopen that closure, and the difference is the argument: what ADR-0005 closed the list against is quantities derived from other stored values. Course, speed and depth over ground are the motion simulator’s own primary state, measured by the platform’s navigation instruments under a declared noise model exactly as the ocean instruments measure the sea, and nothing else in the harness holds them — so there is no second source for them to disagree with. Position is deliberately not among them: a latitude is not a measurement result, and position is carried in /location as it is on every observation. Nor is an ownship observation a sample of the ocean: consumers that reason about where the sea has been measured — the monitor’s pairing, the planner’s observation-age field — exclude these datastreams by name, and a test fails when that exclusion is removed (FR-51)."
+        "description": "What was measured: three ocean properties, and three ownship ones added by feature 113 (FR-54). Sound speed is not among them and is not a datastream — it is derived at the point of use by the one implementation the monitor, telemetry and the environment generator all call (ADR-0005), because a derived value stored beside its inputs is a second source of truth that can disagree with them after a change to the equation, with no way to tell which was right. The ownship three do not reopen that closure, and the difference is the argument: what ADR-0005 closed the list against is quantities derived from other stored values. Course, speed and depth over ground are the motion simulator’s own primary state, measured by the platform’s navigation instruments under a declared noise model exactly as the ocean instruments measure the sea, and nothing else in the harness holds them — so there is no second source for them to disagree with. Position is deliberately not among them: a latitude is not a measurement result, and position is carried in /location as it is on every observation. Nor is an ownship observation a sample of the ocean: consumers that reason about where the sea has been measured — the monitor’s pairing, the planner’s observation-age field — exclude these datastreams by name, and a test fails when that exclusion is removed (FR-56)."
       },
       "location": {
         "title": "Sampled position",
-        "description": "Where the value pertains to. A position and a depth, and nothing else in this object: no heading, no speed, no identity carried between them. Feature 112 admits one history here and names it, rather than leaving the reader to infer the change. On the ocean datastreams nothing moves: a series of sampling locations is a sampling path, and the FeatureOfInterest is still not a place anything went. On the platform’s own datastreams the series is the ownship track, because those observations come from one moving Thing which is the harness’s own vehicle — Constitution V keeps ‘track’ as ordinary navigational English for exactly this path, and forbids the third party whose position the harness would infer rather than know. The track therefore has no representation of its own: it is these locations in phenomenon-time order, served through the ordinary Observations resource. HistoricalLocations stays outside the served subset for that reason, since a second representation of one fact is two answers that can disagree (FR-49).",
+        "description": "Where the value pertains to. A position and a depth, and nothing else in this object: no heading, no speed, no identity carried between them. Feature 113 admits one history here and names it, rather than leaving the reader to infer the change. On the ocean datastreams nothing moves: a series of sampling locations is a sampling path, and the FeatureOfInterest is still not a place anything went. On the platform’s own datastreams the series is the ownship track, because those observations come from one moving Thing which is the harness’s own vehicle — Constitution V keeps ‘track’ as ordinary navigational English for exactly this path, and forbids the third party whose position the harness would infer rather than know. The track therefore has no representation of its own: it is these locations in phenomenon-time order, served through the ordinary Observations resource. HistoricalLocations stays outside the served subset for that reason, since a second representation of one fact is two answers that can disagree (FR-54).",
         "type": "object",
         "required": [
           "latitude",
@@ -6588,7 +6588,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/platform-demand.schema.json",
     "title": "drogna platform demand",
-    "description": "A demanded course, speed and depth, published on the platform's demand topic (SRD-v2 FR-48). The platform applies the last demand it heard; a demand beyond a declared limit is applied as far as the limit allows and the shortfall is stated in the platform's own state message, so an unreachable demand is never silently turned into a reachable one. Who may publish this is a broker rule, not a field: today the operator surface, and the rules are written to admit a future adaptive-sampling component. The planner is not a publisher and may not become one without amending Constitution VIII — it emits recommendations, and turning a recommendation into a demand is a decision.",
+    "description": "A demanded course, speed and depth, published on the platform's demand topic (SRD-v2 FR-53). The platform applies the last demand it heard; a demand beyond a declared limit is applied as far as the limit allows and the shortfall is stated in the platform's own state message, so an unreachable demand is never silently turned into a reachable one. Who may publish this is a broker rule, not a field: today the operator surface, and the rules are written to admit a future adaptive-sampling component. The planner is not a publisher and may not become one without amending Constitution VIII — it emits recommendations, and turning a recommendation into a demand is a decision.",
     "type": "object",
     "required": [
       "component",
@@ -6653,7 +6653,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/platform-state.schema.json",
     "title": "drogna platform state",
-    "description": "What the platform reports about itself (SRD-v2 FR-47): demanded beside current, never conflated, and the limit that is binding where the two differ. This is the component's own account for the Operator view, not a measurement — the measurements are ownship observations on the observation namespace, and position appears here for the reader rather than as the record. A consumer that wants where the platform has been reads the observations through the query layer, because a state message is the present and a track is a history.",
+    "description": "What the platform reports about itself (SRD-v2 FR-52): demanded beside current, never conflated, and the limit that is binding where the two differ. This is the component's own account for the Operator view, not a measurement — the measurements are ownship observations on the observation namespace, and position appears here for the reader rather than as the record. A consumer that wants where the platform has been reads the observations through the query layer, because a state message is the present and a track is a history.",
     "type": "object",
     "required": [
       "component",
@@ -8192,7 +8192,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "breach_state": {
         "title": "How close this is to raising a divergence",
-        "description": "The monitor's own account of the drift that will trigger a new forecast: the threshold it is scoring against, and how far the persistence streak has got toward the run length that raises the event. Optional, and carried on the sample rather than derived by a consumer, because a display that recomputed the streak from the samples it happened to receive would be a second implementation of the rule, free to disagree with the monitor about whether the loop is about to turn (SRD-v2 FR-53).",
+        "description": "The monitor's own account of the drift that will trigger a new forecast: the threshold it is scoring against, and how far the persistence streak has got toward the run length that raises the event. Optional, and carried on the sample rather than derived by a consumer, because a display that recomputed the streak from the samples it happened to receive would be a second implementation of the rule, free to disagree with the monitor about whether the loop is about to turn (SRD-v2 FR-58).",
         "type": "object",
         "required": [
           "threshold_m_per_s",

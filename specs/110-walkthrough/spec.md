@@ -19,7 +19,7 @@ step-through mode driving the other panels)", named it as deliberately outside t
 renumbering somebody else's slot, and why this specification takes 110 rather than
 inventing a number. The reservation is now spent, and §5's note is amended to say so.
 
-The request arrived while feature 112 was being built, and lands on it: 112's Operator
+The request arrived while feature 113 was being built, and lands on it: 112's Operator
 flow chart draws one node per declared component with a stable `data-flow-node`
 attribute, which is exactly the anchor a step-through needs. A walkthrough written
 against the old table would have had nothing to point at but rows.

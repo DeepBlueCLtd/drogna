@@ -12,4 +12,6 @@ gates/check-site-disclosure.ts
 gates/check-estate-concurrency.ts
 gates/check-background-inert.ts
 gates/check-background-marks.ts
+gates/check-one-breakpoint.ts
+gates/check-schema-masters.ts
 gates/check-flow-completeness.ts

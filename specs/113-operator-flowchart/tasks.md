@@ -1,4 +1,4 @@
-# Feature 112 — tasks
+# Feature 113 — tasks
 
 Dependency-ordered. Nothing below the design group is built yet; the design and record
 tasks are. Tick as you go, and write the reason at the moment a task is declined — the
@@ -33,7 +33,7 @@ composition root (ADR-0030), the operator surface and the map all come from them
 
 ## Record — owed before the code
 
-- [ ] T004 ADR-0033, *ownship state is measured, not declared*: the observed-property
+- [ ] T004 ADR-0034, *ownship state is measured, not declared*: the observed-property
       enumeration grows by the ownship quantities; why that does not reopen ADR-0005's
       closure (the closure's argument is about *derived* values having a second source of
       truth, and the motion simulator's state is primary); why position stays the
@@ -41,14 +41,14 @@ composition root (ADR-0030), the operator surface and the map all come from them
       and why `HistoricalLocations` stays refused. Owed before the master is amended,
       because a closed enumeration reopened without a record is how the next reader
       learns the wrong lesson.
-- [ ] T005 ADR-0034, *the operator tab is a flow chart*: edges derived from the topology
+- [ ] T005 ADR-0035, *the operator tab is a flow chart*: edges derived from the topology
       master rather than authored; the two suppressed namespaces and why; the three kinds
       of figure and the rule that a figure may not change kind. The alternatives and the
       rejections are in `plan.md`.
-- [ ] T006 Amend `srd.md`: new §5.11 with FR-47 to FR-55; FR-22, FR-35, FR-36 and FR-40
+- [ ] T006 Amend `srd.md`: new §5.11 with FR-52 to FR-60; FR-22, FR-35, FR-36 and FR-40
       amended in place; §4's component table gains V2-C21 Platform. *(Drafted with this
       spec — tick when the amendment is on `main`.)*
-- [ ] T007 Note feature 112 in `docs/v2/plan.md` §5, beside the note 111 left, so the
+- [ ] T007 Note feature 113 in `docs/v2/plan.md` §5, beside the note 111 left, so the
       numbering is reconciled openly. *(Drafted with this spec.)*
 
 ## The platform

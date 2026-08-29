@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Operator flow chart against a genuine backend (SRD-v2 FR-52 to FR-54). Nothing
+ * The Operator flow chart against a genuine backend (SRD-v2 FR-57 to FR-59). Nothing
  * below the seam is mocked: what the assertions read is what a heartbeat, a clock
  * sample or a genuine command actually caused.
  *
@@ -50,7 +50,7 @@ function panelProps(config: ConfigRun, runtime: BackendRuntime) {
   return { params } as unknown as IDockviewPanelProps<PanelParams>;
 }
 
-describe('the Operator flow chart (feature 112)', () => {
+describe('the Operator flow chart (feature 113)', () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
 

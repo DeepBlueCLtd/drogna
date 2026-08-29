@@ -8,8 +8,7 @@
  * a process is alive is a fact about the machinery, with no simulation-time answer.
  */
 import { useEffect, useState } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
-import type { PanelParams } from '../../shell/Shell.js';
+import type { PanelProps } from '../../shell/registry.js';
 import type { Heartbeat } from '../../generated/types.js';
 import { displayInstant } from '../../shell/display.js';
 
@@ -18,7 +17,7 @@ interface Heard {
   heardAtHostMs: number;
 }
 
-export function SystemPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function SystemPanel({ params }: PanelProps) {
   const { config, client } = params;
   const [heard, setHeard] = useState<ReadonlyMap<string, Heard>>(new Map());
   const [, setSweep] = useState(0);
@@ -46,6 +45,9 @@ export function SystemPanel({ params }: IDockviewPanelProps<PanelParams>) {
 
   return (
     <div className="panel">
+      {/* One table, and a table is the one thing that will not fold: it scrolls in its
+          own container so that the page never scrolls sideways (feature 112, FR-017). */}
+      <div className="table-scroll">
       <table className="system-grid">
         <thead>
           <tr>
@@ -78,6 +80,7 @@ export function SystemPanel({ params }: IDockviewPanelProps<PanelParams>) {
           })}
         </tbody>
       </table>
+      </div>
       <p className="panel-footnote">
         Structure above is declared configuration; light is received heartbeats and
         nothing else. A grey row is a component that has not run yet, or has stopped —

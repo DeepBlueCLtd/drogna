@@ -1,5 +1,5 @@
 /**
- * An ownship observation is not a sample of the ocean (SRD-v2 FR-51).
+ * An ownship observation is not a sample of the ocean (SRD-v2 FR-56).
  *
  * The platform publishes on the same namespace as the sensors, through the same
  * ingestion seam, into the same store — which is what makes the track a genuine
@@ -28,7 +28,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-describe('ownship observations are not soundings (feature 112)', () => {
+describe('ownship observations are not soundings (feature 113)', () => {
   it('the planner’s exclusion names the platform’s own datastreams', () => {
     const config = lockstepConfig();
     const declared = config.platform.instruments.map((instrument) => instrument.datastream_id).sort();
@@ -88,7 +88,7 @@ describe('ownship observations are not soundings (feature 112)', () => {
     for (const row of rows) {
       expect(validator.validate('observation', row).refusals).toEqual([]);
     }
-    // Position is the location every observation carries, not a scalar result (FR-49).
+    // Position is the location every observation carries, not a scalar result (FR-54).
     expect(rows[0].location.latitude).toBeCloseTo(config.platform.initial.latitude, 6);
     expect(rows[0].observed_property).toBe('platform_course');
     // Nothing was flagged: the platform cannot exceed the limits the ingest checks it

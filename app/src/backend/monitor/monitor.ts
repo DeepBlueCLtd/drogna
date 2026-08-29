@@ -9,7 +9,7 @@
  * happening — no forecast to score against, nothing breaching, or how far a streak
  * has got.
  *
- * An ownship observation is not a sample of the ocean (FR-51), and the monitor needs
+ * An ownship observation is not a sample of the ocean (FR-56), and the monitor needs
  * no rule to say so: `pairs` names the thing and the two datastreams it scores, so an
  * observation it did not ask for informs nothing. That is an allowlist, and it is
  * stronger than the denylist the planner carries — the planner informs on whatever
@@ -162,7 +162,7 @@ export class Monitor {
       // How close this is to raising a divergence, in the monitor's own numbers. A
       // consumer that recomputed the streak from the samples it happened to receive
       // would be a second implementation of the rule, free to disagree with the
-      // monitor about whether the loop is about to turn (FR-53).
+      // monitor about whether the loop is about to turn (FR-58).
       breach: {
         threshold_m_per_s: this.config.threshold_m_per_s,
         streak: Math.abs(residual) > this.config.threshold_m_per_s ? this.breaches.length + 1 : 0,

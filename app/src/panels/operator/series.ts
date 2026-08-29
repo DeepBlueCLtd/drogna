@@ -1,5 +1,5 @@
 /**
- * The rolling windows the faces draw (SRD-v2 FR-53).
+ * The rolling windows the faces draw (SRD-v2 FR-58).
  *
  * Bounded, in memory, discarded on reload, never persisted and never served: a window
  * that outlived the page would be a second store, and Version 2 persists nothing

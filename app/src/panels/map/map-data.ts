@@ -238,7 +238,7 @@ export function nearestInstant(
 }
 
 /**
- * The ownship track (SRD-v2 FR-55): the places the platform reported, in phenomenon
+ * The ownship track (SRD-v2 FR-60): the places the platform reported, in phenomenon
  * time order, taken from observations the query layer served.
  *
  * Not interpolated. The planner's route is a four-dimensional curve and is drawn as

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Map's ownship track (SRD-v2 FR-55), against a genuine backend.
+ * The Map's ownship track (SRD-v2 FR-60), against a genuine backend.
  *
  * In its own file rather than beside the other map tests: it runs the world forward a
  * long way to get reports into the store, and the seam read it then issues resolves
@@ -46,7 +46,7 @@ function panelProps(config: ConfigRun, runtime: BackendRuntime) {
   return { params } as unknown as IDockviewPanelProps<PanelParams>;
 }
 
-describe('the Map’s ownship track (feature 112)', () => {
+describe('the Map’s ownship track (feature 113)', () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
 
@@ -67,7 +67,7 @@ describe('the Map’s ownship track (feature 112)', () => {
     // On first paint the query has not answered, and the panel says exactly that.
     // "Asked and answered empty" and "not asked yet" are different facts, and the
     // panel does not collapse them into an empty canvas that looks the same either
-    // way (FR-55). Not a stub, not a straight line between two points, and not the
+    // way (FR-60). Not a stub, not a straight line between two points, and not the
     // configured loiter drawn from a document nobody published.
     expect(screen.getByTestId('ownship-status').textContent).toContain('not asked for yet');
 

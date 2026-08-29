@@ -231,7 +231,7 @@ describe('the map data builders (feature 109)', () => {
   });
 });
 
-describe('the ownship track (feature 112)', () => {
+describe('the ownship track (feature 113)', () => {
   it('orders by phenomenon time and keeps only what has a position', () => {
     const at = (lon: number, lat: number, depth: number) => ({
       feature: { type: 'Point', coordinates: [lon, lat, depth] },

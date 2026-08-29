@@ -1,7 +1,7 @@
 /**
- * The platform (V2-C21, SRD-v2 FR-47 to FR-49): the ownship motion simulator.
+ * The platform (V2-C21, SRD-v2 FR-52 to FR-54): the ownship motion simulator.
  *
- * Before feature 112 the platform was a closed-form loiter evaluated inside the
+ * Before feature 113 the platform was a closed-form loiter evaluated inside the
  * sensors. It could not be commanded, held no state between ticks, had no course or
  * speed at all, and nothing downstream could see where it had been. It is a
  * component now, and the three consequences are the feature:

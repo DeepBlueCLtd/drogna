@@ -1,5 +1,5 @@
 /**
- * The motion simulator (SRD-v2 FR-47): a pure step from one ownship state to the
+ * The motion simulator (SRD-v2 FR-52): a pure step from one ownship state to the
  * next, under the platform's declared limits.
  *
  * Pure on purpose — no client, no clock, no RNG. Everything stochastic about the

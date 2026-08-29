@@ -1,5 +1,5 @@
 /**
- * Gate: the Operator flow chart draws the whole system (SRD-v2 FR-52).
+ * Gate: the Operator flow chart draws the whole system (SRD-v2 FR-57).
  *
  * The picture is derived — nodes from the shell's declared components, topic edges
  * from the topology master, port edges from the shell's declared port list — and this

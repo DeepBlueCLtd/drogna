@@ -1,6 +1,6 @@
 # Feature Specification: The Operator flow chart, and the platform
 
-**Feature Branch**: `112-operator-flowchart`
+**Feature Branch**: `113-operator-flowchart`
 
 **Created**: 29 August 2026
 
@@ -43,15 +43,19 @@ The second half of the feature is a component the harness has been missing since
 The platform's position is currently a closed-form loiter evaluated inside the sensors
 (`Sensors.positionAt`, a circle from `config.sensors.platform.loiter`). It cannot be
 commanded, it has no state between ticks, it has no course or speed at all, and nothing
-downstream can see where it has been. **Feature 112 gives the platform its own
+downstream can see where it has been. **Feature 113 gives the platform its own
 component with a motion simulator, publishes its state as measurements, and the map
 draws the track that falls out.**
 
 **Feature number.** `docs/v2/plan.md` §5 reserves 110 for interactive walkthrough
-machinery; 111 is the Background tab, which took 111 for exactly that reason. This
-feature takes 112 and leaves the reserved slot alone.
+machinery; 111 is the Background tab, which took 111 for exactly that reason. This was
+specified as **112** and is now **113**: while it was in flight, `main` landed the
+mobile-support work under 112, took SRD-v2 §5.11 and used FR-47 to FR-51. The tree is
+the authority and the record is a claim about it, so this moved rather than argued —
+the directory, the SRD section (now §5.12), its requirements (now FR-52 to FR-60) and
+every reference to them. The walkthrough's §5.12 moved to §5.13 with it.
 
-**SRD change.** New §5.11 carries FR-47 to FR-55. FR-22 (sensing), FR-35/FR-36 (the
+**SRD change.** New §5.12 carries FR-52 to FR-60. FR-22 (sensing), FR-35/FR-36 (the
 operator's view) and FR-40 (the map) are amended in place rather than left disagreeing
 with the tree, and §4's component table gains **V2-C21 Platform**.
 
@@ -141,8 +145,8 @@ control set and the same refusal strings.
 
 ## Requirements
 
-Local numbering. The SRD requirements this feature adds are FR-47 to FR-55 of `srd.md`
-§5.11; the mapping is in the table at the end of this section.
+Local numbering. The SRD requirements this feature adds are FR-52 to FR-60 of `srd.md`
+§5.12; the mapping is in the table at the end of this section.
 
 ### The flow chart
 
@@ -290,17 +294,17 @@ Local numbering. The SRD requirements this feature adds are FR-47 to FR-55 of `s
 
 | SRD | Covers |
 |---|---|
-| FR-47 | FR-018 to FR-020, FR-024 |
-| FR-48 | FR-021 to FR-023 |
-| FR-49 | FR-025 to FR-027, FR-031 |
-| FR-50 | FR-028 |
-| FR-51 | FR-029, FR-030 |
-| FR-52 | FR-001 to FR-011 |
-| FR-53 | FR-012, FR-013 |
-| FR-54 | FR-014 to FR-017 |
-| FR-55 | FR-032 to FR-035 |
+| FR-52 | FR-018 to FR-020, FR-024 |
+| FR-53 | FR-021 to FR-023 |
+| FR-54 | FR-025 to FR-027, FR-031 |
+| FR-55 | FR-028 |
+| FR-56 | FR-029, FR-030 |
+| FR-57 | FR-001 to FR-011 |
+| FR-58 | FR-012, FR-013 |
+| FR-59 | FR-014 to FR-017 |
+| FR-60 | FR-032 to FR-035 |
 | FR-22 amended | FR-028 |
-| FR-35, FR-36 amended | pointer to §5.11 for presentation; the surface's own behaviour is unchanged |
+| FR-35, FR-36 amended | pointer to §5.12 for presentation; the surface's own behaviour is unchanged |
 | FR-40 amended | FR-032 to FR-035 |
 
 ---

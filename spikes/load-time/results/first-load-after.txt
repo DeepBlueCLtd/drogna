@@ -1,0 +1,36 @@
+# after: map on demand, shell paints first, seam validator built after that frame
+
+### http://127.0.0.1:4205/   cpu=1x   line=none
+TTFB 10ms | first-paint 68ms | FCP 140ms | load 121ms | SHELL-USABLE 551ms
+  index-CmB8tz7z.js            start=   17 duration=    47 transfer=368843 decoded=1364376
+  index-BVB2kVeE.css           start=   18 duration=    43 transfer=12850 decoded=140446
+  favicon.ico                  start=  133 duration=     3 transfer=308 decoded=8
+long tasks over 50ms: [{"start":137,"duration":363}]
+main thread blocked for 363ms across 1 task(s)
+
+### http://127.0.0.1:4205/   cpu=4x   line=broadband
+TTFB 3ms | first-paint 164ms | FCP 588ms | load 559ms | SHELL-USABLE 2374ms
+  index-CmB8tz7z.js            start=   63 duration=   369 transfer=368843 decoded=1364376
+  index-BVB2kVeE.css           start=   65 duration=    66 transfer=12850 decoded=140446
+  favicon.ico                  start= 2206 duration=    46 transfer=308 decoded=8
+  favicon.ico                  start= 2377 duration=    47 transfer=308 decoded=8
+long tasks over 50ms: [{"start":462,"duration":112},{"start":583,"duration":1620},{"start":2246,"duration":124},{"start":2377,"duration":107},{"start":2485,"duration":51}]
+main thread blocked for 2014ms across 5 task(s)
+
+### http://127.0.0.1:4205/   cpu=4x   line=slowish
+TTFB 4ms | first-paint 264ms | FCP 1080ms | load 1047ms | SHELL-USABLE 2893ms
+  index-CmB8tz7z.js            start=  111 duration=   813 transfer=368843 decoded=1364376
+  index-BVB2kVeE.css           start=  112 duration=   133 transfer=12850 decoded=140446
+  favicon.ico                  start= 2725 duration=    85 transfer=308 decoded=8
+  favicon.ico                  start= 2897 duration=    85 transfer=308 decoded=8
+long tasks over 50ms: [{"start":955,"duration":109},{"start":1073,"duration":1649},{"start":2766,"duration":122},{"start":2897,"duration":116}]
+main thread blocked for 1996ms across 4 task(s)
+
+### http://127.0.0.1:4205/   cpu=6x   line=fast3g
+TTFB 4ms | first-paint 496ms | FCP 2400ms | load 2354ms | SHELL-USABLE 5177ms
+  index-CmB8tz7z.js            start=  182 duration=  1973 transfer=368843 decoded=1364376
+  index-BVB2kVeE.css           start=  188 duration=   280 transfer=12850 decoded=140446
+  favicon.ico                  start= 4902 duration=   158 transfer=308 decoded=8
+  favicon.ico                  start= 5183 duration=   156 transfer=308 decoded=8
+long tasks over 50ms: [{"start":2193,"duration":188},{"start":2396,"duration":2503},{"start":4968,"duration":204},{"start":5183,"duration":191},{"start":5375,"duration":76}]
+main thread blocked for 3162ms across 5 task(s)

@@ -1,5 +1,5 @@
 /**
- * The flow chart's canvas (SRD-v2 FR-52): the nodes, and **the wires between them**.
+ * The flow chart's canvas (SRD-v2 FR-57): the nodes, and **the wires between them**.
  *
  * Edges are drawn in one SVG layer behind absolutely-positioned nodes, rather than
  * with the nodes inside the SVG. The faces are real DOM that way — focusable,

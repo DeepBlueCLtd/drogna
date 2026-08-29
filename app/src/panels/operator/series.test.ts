@@ -1,5 +1,5 @@
 /**
- * The rolling windows (FR-53). Each assertion here was watched failing: the bound
+ * The rolling windows (FR-58). Each assertion here was watched failing: the bound
  * removed (the window grew without limit), the gap split removed (a line slid through
  * a silence), and the empty case made to return a zero-height line rather than
  * nothing.
@@ -9,7 +9,7 @@ import { Series } from './series.js';
 
 const BOX = { x: 0, y: 0, width: 100, height: 10 };
 
-describe('the faces’ rolling windows (feature 112)', () => {
+describe('the faces’ rolling windows (feature 113)', () => {
   it('is bounded, and drops the oldest rather than the newest', () => {
     const series = new Series(3);
     for (let tick = 0; tick < 10; tick++) series.push(tick, tick);

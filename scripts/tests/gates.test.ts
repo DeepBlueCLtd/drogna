@@ -26,6 +26,7 @@ import type { ConfigRun, Topology } from '../../app/src/generated/types.js';
 import { buildSite } from '../site/build.js';
 import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
+import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -94,6 +95,26 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(messages).toMatch(/a paint literal/);
     expect(backgroundMarks(clean)).toEqual([]);
     expect(backgroundMarks(REPO_ROOT)).toEqual([]);
+  });
+
+  it('one-breakpoint: a stylesheet switching at a width the shell does not fails (FR-002)', () => {
+    // Both halves matter. The gate has to catch a second number — the drift it exists
+    // for — and it has to leave alone a breakpoint that carries the declared threshold
+    // and one that is exempted with its reason. A gate that failed the clean tree would
+    // be paid for in exemptions until it meant nothing.
+    const messages = oneBreakpoint(violations).map((f) => f.message).join('\n');
+    expect(messages).toMatch(/a breakpoint at 640px/);
+    expect(messages).toMatch(/a breakpoint at 900px/);
+    expect(messages).toMatch(/the one threshold is 720px/);
+    expect(oneBreakpoint(clean)).toEqual([]);
+    // And the tree it is actually for.
+    expect(oneBreakpoint(REPO_ROOT)).toEqual([]);
+  });
+
+  it('one-breakpoint: reports rather than passes when the declaration is missing', () => {
+    // The outcome that proves nothing must not look like a pass (run-gates.ts). A tree
+    // with no NARROW_WIDTH is a tree this gate cannot check, and it says so.
+    expect(() => oneBreakpoint(join(fixtures, 'stale-generated'))).toThrow(/NARROW_WIDTH/);
   });
 
   it('topology-drift: a stale committed artefact fails; the real one passes', () => {

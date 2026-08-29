@@ -10,9 +10,16 @@
  * with the route running through it at the depths the plan states. Every pixel traces to a document that
  * crossed the seam; where WebGL is unavailable the canvas says so and the
  * documents remain (Constitution VII: the display can light nothing itself).
+ *
+ * Narrow (feature 112, FR-010 to FR-012, FR-017): the canvas is the primary surface —
+ * the tab is the arc's closing scene, and a map is what it is for — so the control row
+ * and the advisories table each disclose under a label that names them, and the composer
+ * keeps the toggle it already had but takes the full width beneath the canvas instead of
+ * 22rem beside it. The status line stays visible at both widths: it is what makes every
+ * pixel traceable to a document, and a map whose provenance is folded away is a picture.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
+
 import DeckGL from '@deck.gl/react';
 import {
   COORDINATE_SYSTEM,
@@ -22,7 +29,7 @@ import {
   type PickingInfo,
 } from '@deck.gl/core';
 import { PathLayer, PolygonLayer, ScatterplotLayer, SolidPolygonLayer } from '@deck.gl/layers';
-import type { PanelParams } from '../../shell/Shell.js';
+import type { PanelProps } from '../../shell/registry.js';
 import type {
   Advisory,
   CoverageHolding,
@@ -55,6 +62,8 @@ import { areaRing, pickedPosition, type ComposerChoices } from './composer.js';
 import { axisValues, cubeFrame, volumeEdges, type CubeFrame } from './cube.js';
 import { ComposerPane } from './ComposerPane.js';
 import { displayInstant } from '../../shell/display.js';
+import { Disclosure } from '../../shell/Disclosure.js';
+import { useIsNarrow } from '../../shell/viewport.js';
 import './map.css';
 
 interface FieldState {
@@ -99,8 +108,10 @@ function webglAvailable(): boolean {
   }
 }
 
-export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function MapPanel({ params }: PanelProps) {
   const { config, client, validator } = params;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const narrow = useIsNarrow(rootRef);
   const [simTime, setSimTime] = useState('');
   const [plan, setPlan] = useState<Plan | undefined>();
   const [latestRun, setLatestRun] = useState<RunPublished | undefined>();
@@ -406,6 +417,14 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
       const levels: VolumeLevel[] = [];
       const refusals: string[] = [];
       for (const requestedDepthM of axisValues(grid.depth)) {
+        // Checked per level, not once after the loop. The cleanup below sets the flag,
+        // but a loop already in flight kept issuing the remaining queries regardless —
+        // one await per depth level, each outliving the effect that started it. In the
+        // panel that is a burst of queries whose answers are discarded; under test it is
+        // worse, because the shim `panels.test.tsx` installs comes off when the test
+        // ends and the next iteration hands a relative URL to the real fetch, which
+        // cannot parse one ("Failed to parse URL from /api/edr/…").
+        if (abandoned) return;
         const query = new URLSearchParams({
           coords: wkt,
           z: String(requestedDepthM),
@@ -871,7 +890,8 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
   const horizonSpan = plan?.horizon.span_seconds ?? 21600;
 
   return (
-    <div className="panel map-panel">
+    <div className="panel map-panel" ref={rootRef} data-narrow={narrow}>
+      <Disclosure label="view controls" narrow={narrow} className="map-controls-disclosure">
       <div className="map-controls">
         <label>
           field{' '}
@@ -944,6 +964,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           {composing ? 'close the composer' : 'EDR composer'}
         </button>
       </div>
+      </Disclosure>
       <p className="map-status" data-testid="ownship-status">
         {/* The track says what it is, and what it is not. An empty answer is a
             statement, never a stub or the configured loiter drawn from nowhere. */}
@@ -1036,11 +1057,14 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           />
         )}
       </div>
+      <Disclosure label="advisories" narrow={narrow} className="map-advisories-disclosure">
       <div className="map-advisories">
-        <h4>advisories (queryable whether or not drawn)</h4>
+        {!narrow && <h4>advisories (queryable whether or not drawn)</h4>}
+        {narrow && <p className="panel-footnote">queryable whether or not drawn</p>}
         {advisories.length === 0 ? (
           <p>none yet: the collection is present and stating empty.</p>
         ) : (
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
@@ -1071,6 +1095,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
               })}
             </tbody>
           </table>
+          </div>
         )}
         {selectedAdvisory && (
           <pre className="map-advisory-detail">
@@ -1085,6 +1110,7 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
           </pre>
         )}
       </div>
+      </Disclosure>
     </div>
   );
 }

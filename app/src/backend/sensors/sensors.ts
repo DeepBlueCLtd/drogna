@@ -8,7 +8,7 @@
  * stochastic draw comes from their named stream in a deterministic order
  * (tick-major, instrument-minor).
  *
- * **Where they are is no longer their own business** (FR-50, feature 112). The
+ * **Where they are is no longer their own business** (FR-55, feature 113). The
  * sensors used to evaluate a closed-form loiter from their own configuration, which
  * meant two places would have computed the platform's position the moment a platform
  * component existed. They now sample at the position they last heard on the ownship

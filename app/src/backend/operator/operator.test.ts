@@ -229,7 +229,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
         if ((message.payload as { component: string }).component === 'sensors') sensorHeartbeats += 1;
       });
 
-      // Counted per datastream, not in total: since feature 112 the platform is
+      // Counted per datastream, not in total: since feature 113 the platform is
       // publishing ownship rows into the same store, so a total row count would go on
       // climbing with the sensors stopped and the assertion would pass for the wrong
       // reason. What must freeze is the ocean sampling.

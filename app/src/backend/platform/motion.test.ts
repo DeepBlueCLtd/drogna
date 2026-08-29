@@ -1,5 +1,5 @@
 /**
- * The motion simulator's limits (SRD-v2 FR-47), each held at the place it binds.
+ * The motion simulator's limits (SRD-v2 FR-52), each held at the place it binds.
  *
  * Every case here was watched failing before it was watched passing: the turn-rate
  * clamp was removed (a 90° demand arrived in one step), the wrap was taken the long
@@ -33,7 +33,7 @@ const holding = (v: Vector): Demand => ({
   depth_m: v.depth_m,
 });
 
-describe('the motion simulator (feature 112)', () => {
+describe('the motion simulator (feature 113)', () => {
   it('takes the short way round, including across 000', () => {
     expect(headingDifference(350, 10)).toBe(20);
     expect(headingDifference(10, 350)).toBe(-20);

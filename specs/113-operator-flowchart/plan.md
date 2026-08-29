@@ -1,4 +1,4 @@
-# Feature 112 — plan
+# Feature 113 — plan
 
 Written against the tree as it stands on `main` after 109 landed, not against the plans
 for it. Where the two differ the tree wins (CLAUDE.md, lesson 1).
@@ -55,10 +55,10 @@ scripts/
 ├── gates/check-flow-completeness.ts     NEW — FR-005
 └── gates.registry                       one line appended; the runner still names no gate
 docs/adr/
-├── 0033-ownship-state-is-measured.md    NEW — the enum amendment and why ADR-0005 stands
-└── 0034-the-operator-tab-is-a-flow-chart.md  NEW — edges from the topology master;
+├── 0034-ownship-state-is-measured.md    NEW — the enum amendment and why ADR-0005 stands
+└── 0035-the-operator-tab-is-a-flow-chart.md  NEW — edges from the topology master;
                                          the three kinds of figure; the two suppressions
-srd.md                                   AMENDED — §5.11 (FR-47 to FR-55); FR-22, FR-35,
+srd.md                                   AMENDED — §5.11 (FR-52 to FR-60); FR-22, FR-35,
                                          FR-36 and FR-40 amended in place; §4 gains V2-C21
 docs/v2/plan.md                          AMENDED — §5 notes 112 beside 111's note
 ```

@@ -185,17 +185,27 @@ directed → the machinery is interrogated → advice travels light → it is se
 ### 5.1 Foundations and shell (feature 101)
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
-  **Intro, Background, System, Holdings, Map, Messages** at first run,
+  **Intro, Background, System, Holdings, Operator, Map, Messages** at first run,
   user-rearrangeable by drag and drop. Background is specified by §5.10 and built by
   feature 111; it is named here because a tab that arrives without a requirement behind
   it is exactly the divergence V2 exists to end. **Holdings** was named here with the debt
   admitted — it shipped with feature 102 and this list did not follow it — and §5.2
-  now carries FR-46, written from the tab as built.
+  now carries FR-46, written from the tab as built. **Operator** is named here by feature
+  112 for the third instance of the same fault: it shipped with feature 107, `§5.7`
+  specifies it in FR-36 to FR-38, and this list still said six tabs while the
+  configuration served seven. The tree is the authority; this line is the claim, and it
+  is now checked — a test enumerates `config.shell.views` and both presentations render
+  what it names (feature 112, SC-004).
   The layout library is **dockview 8.x**, chosen by feature 101's spike
   (`spikes/layout-manager/FINDING.md`) and recorded with its React-hosting pattern in
   ADR-0028. Panel arrangement is presentation only: no arrangement changes what any
   component does, and a saved arrangement is a per-viewer convenience, never state the
   system depends on.
+  *Amended by feature 112.* dockview hosts the layout **at and above a width threshold**;
+  below it the same views are presented one at a time behind the same tabs (§5.11,
+  ADR-0033). Both presentations render from one panel registry and share one address
+  vocabulary, and drag rearrangement is offered only where docking means something —
+  which this paragraph already permits, arrangement being presentation only.
 - **FR-15** Views shall be URL-addressable from feature 101: an anchor URL opens the
   shell in a named view (a tab, a panel arrangement, a beat's demonstration), so a PR
   comment or a blog post can link a reader straight into the running instance at the
@@ -250,8 +260,8 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-22** Sensors publish observations in SensorThings vocabulary on the observation
   namespace; the broker's role-based rules confine sensors to that namespace; the
   ingestion seam validates against the message schema and is the store's sole writer
-  *(v1 FR-14, FR-16 to FR-18)*. **Amended by feature 112:** the sensors sample at the
-  position they last heard from the platform component (FR-50) and publish nothing
+  *(v1 FR-14, FR-16 to FR-18)*. **Amended by feature 113:** the sensors sample at the
+  position they last heard from the platform component (FR-60) and publish nothing
   before they have heard one; the closed-form loiter they originally evaluated
   themselves retires with that amendment.
 - **FR-23** The Messages tab renders live broker traffic with inspection of the
@@ -381,8 +391,8 @@ directed → the machinery is interrogated → advice travels light → it is se
   imply the field extends there. Doubt shall be drawn as one thing at a time: the
   plan's projection cells or the run's published spread as a gridded field, chosen
   by the reader, never both — two doubt layers at once read as one wrong one.
-  **Amended by feature 112:** the panel also draws the platform's historic track and
-  its demanded course (FR-55).
+  **Amended by feature 113:** the panel also draws the platform's historic track and
+  its demanded course (FR-60).
 - **FR-41** The EDR composer carries as a mode of the map: a guided sequence with the
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never
@@ -429,23 +439,66 @@ directed → the machinery is interrogated → advice travels light → it is se
   as unmeasured. The slide mechanism is built in feature 111; NFR-05's toolchain is
   unchanged.
 
+### 5.11 The shell at a phone's width (feature 112)
+
+- **FR-47** The shell shall have two presentations of the same views: the dockable layout
+  of FR-14 where there is room to dock, and a **stack** where there is not, showing one
+  view at a time. The presentation shall be chosen from the measured width of the shell's
+  own body, never from a user agent, a device class or a build flag, so that a panel
+  docked narrow on a large display is treated the same as a phone. Either axis is enough
+  on its own: docking divides space in both, so a viewport below the declared width *or*
+  below the declared height is presented as a stack — a phone turned sideways passes the
+  width test and has no room to dock at all. Each threshold is declared once in one module
+  and every partnering CSS breakpoint carries the same number, held by a gate.
+- **FR-48** The tabs are kept. The stack shall render every configured view as a tab, in
+  configured order and with its configured label, in a strip that scrolls horizontally
+  when the labels do not fit; no view is hidden behind an overflow control and no label
+  is abbreviated or replaced by an icon. Both presentations render from one panel
+  registry and share FR-15's address vocabulary, so crossing the threshold preserves the
+  shown view and writes nothing to the address.
+- **FR-49** At a narrow width each panel shall show one primary surface and keep every
+  other surface it offers reachable behind a labelled disclosure, closed at rest, opening
+  in place, operable by keyboard, and named for its content rather than for the existence
+  of more content. Nothing is removed; it moves one gesture away. Whether a disclosure is
+  open is a per-viewer convenience: it enters neither the address nor the manifest, and
+  changes nothing about what any component does. The one element that shall never be
+  disclosed away is the statement that the data is synthetic.
+- **FR-50** The narrow presentation shall change where a panel is and never whether it is
+  running: every view is mounted in both presentations, exactly as the layout manager
+  mounts an inactive panel, so a panel that accumulates does so whether or not it is
+  shown. Where a figure cannot be drawn legibly in the width available and the panel is
+  already as wide as the viewport, it shall be drawn at its own minimum inside a
+  scrollable frame rather than replaced by an instruction to widen a window that cannot
+  be widened — amending FR-45's presentation rule for the case that advice cannot be
+  taken, and leaving its guarantees (never scaled past legibility, never silently
+  dropping labels) intact.
+- **FR-51** The static build shall publish a **preview page** beside the app that frames
+  the built shell at a standard mobile size, so the narrow presentation can be reviewed
+  from a desktop browser and linked from a pull request (NFR-03, NFR-04). It carries
+  FR-15's address vocabulary in both directions, offers a small set of common sizes and
+  an orientation control, holds no copy of the shell or its configuration, and states
+  plainly that it mocks a viewport size and is not a device: it reproduces neither touch
+  input, nor browser chrome, nor safe areas, nor device pixel ratio.
+
 ---
 
-### 5.11 The platform, and the operator's flow (feature 112)
+---
+
+### 5.12 The platform, and the operator's flow (feature 113)
 
 This beat sits outside the 101-to-109 arc. It gives the harness the component its
 sampling platform never had, and redraws the operator's view as the picture §2 has
 always said the architecture is: *a flow chart with a loop in it*. The specification is
-`specs/112-operator-flowchart/`; the visual design is its `mockup.html`.
+`specs/113-operator-flowchart/`; the visual design is its `mockup.html`.
 
-- **FR-47** A **platform** component (V2-C21) shall hold ownship state — position,
+- **FR-52** A **platform** component (V2-C21) shall hold ownship state — position,
   course over ground, speed over ground and depth — and integrate it once per tick under
   declared limits: maximum speed, maximum depth, turn rate, longitudinal acceleration
   and dive rate. **Demanded** and **current** are held, published and displayed
   separately and are never conflated; where current lags demanded, the limit that is
   binding is named. Motion is a pure function of the clock, the demands heard and the
   component's own seed stream.
-- **FR-48** Demands shall arrive as messages on a demand topic, the platform applying
+- **FR-53** Demands shall arrive as messages on a demand topic, the platform applying
   the last demand heard. A demand beyond a declared limit is applied as far as the limit
   allows and the shortfall is stated in the platform's own report, never silently
   clipped. The topic's publish rules admit the operator surface today and are written to
@@ -453,7 +506,7 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   declared or drawn for that publisher until it exists. **The planner shall not publish
   demands** — its recommendations reach a demand only through a component that decides,
   and Constitution VIII governs whether such a component may exist.
-- **FR-49** The platform shall publish its own state as SensorThings observations on its
+- **FR-54** The platform shall publish its own state as SensorThings observations on its
   own Thing, through the same broker topics, ingestion seam and observation store as
   every other measurement — no second write path. The observation master's
   observed-property enumeration grows by exactly the ownship quantities and states in the
@@ -462,15 +515,15 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   datastream is what makes a series of them a track. `HistoricalLocations` stays outside
   the served SensorThings subset, refused by name, so the track has one representation
   and not two that can disagree.
-- **FR-50** No component shall compute the platform's position a second time. Consumers
+- **FR-55** No component shall compute the platform's position a second time. Consumers
   of position take it from the ownship observations; see FR-22 as amended.
-- **FR-51** An ownship observation is not a sample of the ocean. Components that reason
+- **FR-56** An ownship observation is not a sample of the ocean. Components that reason
   about where the ocean has been measured — the monitor's pairing, the planner's
   observation-age field — shall exclude the ownship datastreams by name, and the
   exclusion carries a test that fails when it is removed. The ingestion seam's quality
   flagging covers the ownship properties with ranges taken from the platform's declared
   limits.
-- **FR-52** The Operator tab shall present the declared components as a **directed flow
+- **FR-57** The Operator tab shall present the declared components as a **directed flow
   chart** with the assimilation cycle drawn as a cycle. Node structure comes from the
   configuration document; **topic edges are derived from the broker topology artefact**,
   so the picture cannot disagree with the wiring, and the couplings that carry no broker
@@ -483,7 +536,7 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   (configuration), **reported** (carried in a message from the component) and
   **observed** (counted by the shell from traffic it received itself); a figure may not
   change kind between states.
-- **FR-53** Each component's node shall carry an instrument designed for what that
+- **FR-58** Each component's node shall carry an instrument designed for what that
   component does — among them the monitor's residual against the threshold that will
   raise a divergence and the persistence streak beneath it, the stores' record volume and
   growth, the scheduler's minimum-interval and cadence-floor bars, the model runner's
@@ -491,31 +544,31 @@ always said the architecture is: *a flow chart with a loop in it*. The specifica
   the platform's demanded and current course, speed and depth. Every face states the
   simulation time its figures were last updated at. A series with no samples says so and
   is never drawn as a flat line at zero; a gap is drawn as a gap.
-- **FR-54** A **list view** shall carry every fact and every control the flow chart
+- **FR-59** A **list view** shall carry every fact and every control the flow chart
   carries, reachable by keyboard and readable by assistive technology, with identical
   refusals in both views; neither view is the other's fallback. The graph shall be
   legible in greyscale and shall respect `prefers-reduced-motion`, traffic animation
   becoming a count and a timestamp.
-- **FR-55** The Map panel shall draw the platform's historic track from a genuine query
+- **FR-60** The Map panel shall draw the platform's historic track from a genuine query
   over the ownship datastreams through the seam, ordered by phenomenon time and visually
   distinct from the planner's route, together with the demanded course as a ray from the
   current position. Where no ownship observations have been served the panel says so
   rather than drawing a stub or the configured loiter.
 
-### 5.12 The walkthrough (feature 110)
+### 5.13 The walkthrough (feature 110)
 
 `docs/v2/plan.md` §5 reserved feature 110 for interactive walkthrough machinery and
 left the slot named but unclaimed. It is spent. The specification is
 `specs/110-walkthrough/`.
 
-- **FR-56** The shell shall carry a **help control**, visually distinct from the
+- **FR-61** The shell shall carry a **help control**, visually distinct from the
   controls that operate the harness, which walks a reader through the components one at
   a time: what each does, and what its panel shows. The steps shall be keyed to the
   declared component list and presented in the order the Operator flow chart draws
   them, so a component with no step — or a step for something that is not a component —
   is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
   covering a component would read as a complete tour.
-- **FR-57** The walkthrough **teaches and does not report**: it shall not claim any
+- **FR-62** The walkthrough **teaches and does not report**: it shall not claim any
   particular component's live state, and a test shall hold it to that. It stands in for
   no component, which is why Constitution VII is not engaged by it (feature 111's
   precedent) — and the reason that stays true is the rule above, not the intention. The
@@ -619,5 +672,5 @@ exemption retires with them); offload's real transfer and verified-receipt evict
 (v1 FR-43, FR-44 — deferred to V3, the export shape and announcements carried by
 FR-39); the second-broker fallback (v1 FR-15 — moot with one in-browser broker; V3
 revisits); and every implementation-specific requirement of a retired engine (v1
-FR-51 among them — the *property* it protected, per-vertex time surviving the parse,
+FR-56 among them — the *property* it protected, per-vertex time surviving the parse,
 lives on in FR-28 and AT-01).

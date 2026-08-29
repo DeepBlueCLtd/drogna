@@ -93,7 +93,7 @@ export class OperatorSurface {
   }
 
   /**
-   * A demanded course, speed and depth (FR-48). The surface publishes it and says so;
+   * A demanded course, speed and depth (FR-53). The surface publishes it and says so;
    * it does not apply it and does not claim it was reached. Whether the platform can
    * get there is the platform's own answer, and it arrives on the state topic like
    * everything else a component says about itself — which is the same rule that keeps

@@ -1,5 +1,5 @@
 /* The Operator flow chart (FR-52 to FR-54). The console's palette, extended with the
-   two channels feature 112 adds: ownship, and control traffic. */
+   two channels feature 113 adds: ownship, and control traffic. */
 .operator-panel {
   --flow-line: #2b3742;
   --flow-fg: #d5dde5;

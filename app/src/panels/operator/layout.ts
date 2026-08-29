@@ -1,6 +1,6 @@
 /**
  * Where the flow chart's nodes sit, and the shape of every wire between them
- * (SRD-v2 FR-52). Pure: geometry in, geometry out, no DOM and no React — so the
+ * (SRD-v2 FR-57). Pure: geometry in, geometry out, no DOM and no React — so the
  * routing can be held by a test rather than judged by eye.
  *
  * Bands stack top to bottom in the order the arc runs; rank places a node left to

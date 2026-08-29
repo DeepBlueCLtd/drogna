@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.platform.schema.json",
   "title": "drogna platform configuration (V2-C21)",
-  "description": "The platform component's configuration document (SRD-v2 FR-47, FR-48): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 112 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
+  "description": "The platform component's configuration document (SRD-v2 FR-52, FR-53): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 113 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
   "type": "object",
   "required": ["id", "stream", "topics", "heartbeat", "initial", "limits", "instruments", "thing"],
   "additionalProperties": false,
@@ -30,7 +30,7 @@
         "observation_prefix": {
           "type": "string",
           "pattern": "^[a-z0-9]+$",
-          "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-49)."
+          "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-54)."
         }
       }
     },
@@ -69,7 +69,7 @@
         "dive_rate_m_per_s"
       ],
       "additionalProperties": false,
-      "description": "What the platform can do, and therefore what it will refuse to pretend to do. A demand beyond a limit is applied as far as the limit allows and the shortfall is stated in the state message — never silently clipped (FR-48).",
+      "description": "What the platform can do, and therefore what it will refuse to pretend to do. A demand beyond a limit is applied as far as the limit allows and the shortfall is stated in the state message — never silently clipped (FR-53).",
       "properties": {
         "maximum_speed_m_per_s": { "type": "number", "exclusiveMinimum": 0 },
         "maximum_depth_m": { "type": "number", "exclusiveMinimum": 0 },
@@ -86,7 +86,7 @@
     "instruments": {
       "type": "array",
       "minItems": 1,
-      "description": "The navigation instruments. Each is a genuine Datastream on the ownship Thing, with its own declared noise, exactly like the sensors' instruments — which is what makes ownship state a measurement rather than a declaration (FR-49).",
+      "description": "The navigation instruments. Each is a genuine Datastream on the ownship Thing, with its own declared noise, exactly like the sensors' instruments — which is what makes ownship state a measurement rather than a declaration (FR-54).",
       "items": {
         "type": "object",
         "required": ["sensor_id", "datastream_id", "observed_property", "noise_std", "unit"],

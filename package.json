@@ -12,6 +12,7 @@
     "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
     "capture:glance": "tsx scripts/capture/glance.ts",
     "capture:background": "tsx scripts/capture/background.ts",
+    "capture:mobile": "tsx scripts/capture/mobile.ts",
     "replay-proof": "tsx scripts/replay-proof.ts",
     "site:build": "tsx scripts/build-site.ts",
     "site:publish": "tsx scripts/publish-site.ts",

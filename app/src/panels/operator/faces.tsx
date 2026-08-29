@@ -1,5 +1,5 @@
 /**
- * The faces (SRD-v2 FR-53): one instrument per component, chosen for what that
+ * The faces (SRD-v2 FR-58): one instrument per component, chosen for what that
  * component does.
  *
  * A single generic gauge repeated twenty times tells a reader nothing the table did
@@ -336,7 +336,7 @@ function SensorsFace(c: FaceContext) {
       )}
       {published === undefined ? null : <p className="face-note">{format(published)} published</p>}
       {/* The sensors sample where ownship last reported, and a position older than one
-          sampling interval is not where the platform is now (FR-50). Which of those
+          sampling interval is not where the platform is now (FR-55). Which of those
           holds is the single most useful thing this face can say. */}
       {age === undefined ? (
         <p className="face-binding" data-testid="sensors-position">

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/platform-state.schema.json",
   "title": "drogna platform state",
-  "description": "What the platform reports about itself (SRD-v2 FR-47): demanded beside current, never conflated, and the limit that is binding where the two differ. This is the component's own account for the Operator view, not a measurement — the measurements are ownship observations on the observation namespace, and position appears here for the reader rather than as the record. A consumer that wants where the platform has been reads the observations through the query layer, because a state message is the present and a track is a history.",
+  "description": "What the platform reports about itself (SRD-v2 FR-52): demanded beside current, never conflated, and the limit that is binding where the two differ. This is the component's own account for the Operator view, not a measurement — the measurements are ownship observations on the observation namespace, and position appears here for the reader rather than as the record. A consumer that wants where the platform has been reads the observations through the query layer, because a state message is the present and a track is a history.",
   "type": "object",
   "required": [
     "component",

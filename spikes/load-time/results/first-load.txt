@@ -1,0 +1,36 @@
+
+### http://127.0.0.1:4174/   cpu=1x   line=none
+TTFB 10ms | first-paint 88ms | FCP 568ms | load 539ms | SHELL-USABLE 594ms
+  index-BPgZWqrF.js            start=   16 duration=    64 transfer=546609 decoded=1968255
+  index-CFTM5O6E.css           start=   17 duration=    58 transfer=12325 decoded=137855
+  favicon.ico                  start=  588 duration=     6 transfer=308 decoded=8
+  favicon.ico                  start=  636 duration=     4 transfer=308 decoded=8
+long tasks over 50ms: [{"start":140,"duration":399}]
+main thread blocked for 399ms across 1 task(s)
+
+### http://127.0.0.1:4174/   cpu=4x   line=broadband
+TTFB 3ms | first-paint 200ms | FCP 2488ms | load 2409ms | SHELL-USABLE 2600ms
+  index-BPgZWqrF.js            start=   64 duration=   529 transfer=546609 decoded=1968255
+  index-CFTM5O6E.css           start=   66 duration=    67 transfer=12325 decoded=137855
+  favicon.ico                  start= 2598 duration=    45 transfer=308 decoded=8
+  favicon.ico                  start= 2778 duration=    46 transfer=308 decoded=8
+long tasks over 50ms: [{"start":641,"duration":1769},{"start":2480,"duration":113},{"start":2600,"duration":130}]
+main thread blocked for 2012ms across 3 task(s)
+
+### http://127.0.0.1:4174/   cpu=4x   line=slowish
+TTFB 3ms | first-paint 260ms | FCP 3224ms | load 3141ms | SHELL-USABLE 3336ms
+  index-BPgZWqrF.js            start=  105 duration=  1154 transfer=546609 decoded=1968255
+  index-CFTM5O6E.css           start=  106 duration=   136 transfer=12325 decoded=137855
+  favicon.ico                  start= 3336 duration=    85 transfer=308 decoded=8
+  favicon.ico                  start= 3518 duration=    86 transfer=308 decoded=8
+long tasks over 50ms: [{"start":1307,"duration":1834},{"start":3214,"duration":117},{"start":3337,"duration":134}]
+main thread blocked for 2085ms across 3 task(s)
+
+### http://127.0.0.1:4174/   cpu=6x   line=fast3g
+TTFB 3ms | first-paint 488ms | FCP 6388ms | load 6249ms | SHELL-USABLE 6619ms
+  index-BPgZWqrF.js            start=  181 duration=  2825 transfer=546609 decoded=1968255
+  index-CFTM5O6E.css           start=  185 duration=   277 transfer=12325 decoded=137855
+  favicon.ico                  start= 6623 duration=   160 transfer=308 decoded=8
+  favicon.ico                  start= 6924 duration=   160 transfer=308 decoded=8
+long tasks over 50ms: [{"start":3057,"duration":3193},{"start":6257,"duration":64},{"start":6381,"duration":233},{"start":6626,"duration":227},{"start":6854,"duration":67}]
+main thread blocked for 3784ms across 5 task(s)

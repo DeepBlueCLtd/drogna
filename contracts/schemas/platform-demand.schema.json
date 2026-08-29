@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/platform-demand.schema.json",
   "title": "drogna platform demand",
-  "description": "A demanded course, speed and depth, published on the platform's demand topic (SRD-v2 FR-48). The platform applies the last demand it heard; a demand beyond a declared limit is applied as far as the limit allows and the shortfall is stated in the platform's own state message, so an unreachable demand is never silently turned into a reachable one. Who may publish this is a broker rule, not a field: today the operator surface, and the rules are written to admit a future adaptive-sampling component. The planner is not a publisher and may not become one without amending Constitution VIII — it emits recommendations, and turning a recommendation into a demand is a decision.",
+  "description": "A demanded course, speed and depth, published on the platform's demand topic (SRD-v2 FR-53). The platform applies the last demand it heard; a demand beyond a declared limit is applied as far as the limit allows and the shortfall is stated in the platform's own state message, so an unreachable demand is never silently turned into a reachable one. Who may publish this is a broker rule, not a field: today the operator surface, and the rules are written to admit a future adaptive-sampling component. The planner is not a publisher and may not become one without amending Constitution VIII — it emits recommendations, and turning a recommendation into a demand is a decision.",
   "type": "object",
   "required": ["component", "scenario_run_id", "sim_time", "tick"],
   "additionalProperties": false,

@@ -4,18 +4,25 @@
  * path — the manifest a holding embeds is the ground truth AT-01 and AT-03 score
  * against, inspectable here whole. Refreshed when the store announces a publication
  * on its declared topic; nothing polls.
+ *
+ * Narrow (feature 112, FR-010, FR-016): the inventory is the primary surface and the
+ * manifest — which is a page of JSON — is shown over it with a control that goes back,
+ * rather than in a 130px column beside it. The table itself scrolls in its own
+ * container; the page never does (FR-017).
  */
-import { useCallback, useEffect, useState } from 'react';
-import type { IDockviewPanelProps } from 'dockview-react';
-import type { PanelParams } from '../../shell/Shell.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PanelProps } from '../../shell/registry.js';
+import { useIsNarrow } from '../../shell/viewport.js';
 import type { CoverageHolding, HoldingsInventory } from '../../generated/types.js';
 import { displayInstant } from '../../shell/display.js';
 
-export function HoldingsPanel({ params }: IDockviewPanelProps<PanelParams>) {
+export function HoldingsPanel({ params }: PanelProps) {
   const { config, client, validator } = params;
   const [holdings, setHoldings] = useState<readonly CoverageHolding[]>([]);
   const [refusal, setRefusal] = useState<string | undefined>();
   const [selected, setSelected] = useState<string | undefined>();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const narrow = useIsNarrow(rootRef);
 
   const refresh = useCallback(async () => {
     const response = await fetch(config.endpoints.holdings);
@@ -39,15 +46,17 @@ export function HoldingsPanel({ params }: IDockviewPanelProps<PanelParams>) {
   }, [client, config.topics.holdings, refresh]);
 
   const chosen = holdings.find((holding) => holding.holding_id === selected);
+  const covered = narrow && chosen !== undefined;
 
   return (
-    <div className="panel messages-panel">
+    <div className="panel messages-panel" ref={rootRef} data-narrow={narrow}>
       <p className="messages-counters" data-testid="holdings-count">
         {holdings.length} holding(s) in the coverage store
         {refusal && <span className="shell-refusal"> · {refusal}</span>}
       </p>
       <div className="messages-split">
-        <table className="messages-list holdings-list">
+        <div className="messages-list-scroll">
+        <table className="messages-list holdings-list" aria-hidden={covered || undefined}>
           <thead>
             <tr>
               <th>era</th>
@@ -72,9 +81,15 @@ export function HoldingsPanel({ params }: IDockviewPanelProps<PanelParams>) {
             ))}
           </tbody>
         </table>
-        <div className="message-detail">
+        </div>
+        <div className="message-detail" data-covering={covered}>
           {chosen ? (
             <>
+              {narrow && (
+                <button type="button" className="message-back" onClick={() => setSelected(undefined)}>
+                  ← back to the inventory
+                </button>
+              )}
               <h3>{chosen.holding_id} — ground-truth manifest</h3>
               <p className="panel-footnote">
                 Sufficient on its own: with the generator version it names, the field

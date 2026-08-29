@@ -77,6 +77,14 @@ jobs:
       - name: Background course proofs (keyboard, greyscale, labels)
         run: pnpm run capture:background
 
+      # Feature 112's SC-001 to SC-003, SC-008 and SC-010 are claims about geometry, and
+      # an assertion over markup cannot see whether something fits. This walks every
+      # configured view at three phone sizes and fails on a layout that scrolls sideways,
+      # a tab a thumb cannot hit, chrome that has eaten the screen, or a Background step
+      # that asks a phone to widen a window it cannot widen.
+      - name: Narrow-presentation proofs (overflow, tap targets, chrome, the preview page)
+        run: pnpm run capture:mobile
+
       - uses: actions/upload-artifact@v4
         with:
           name: glance

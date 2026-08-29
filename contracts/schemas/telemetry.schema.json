@@ -164,7 +164,7 @@
     },
     "breach_state": {
       "title": "How close this is to raising a divergence",
-      "description": "The monitor's own account of the drift that will trigger a new forecast: the threshold it is scoring against, and how far the persistence streak has got toward the run length that raises the event. Optional, and carried on the sample rather than derived by a consumer, because a display that recomputed the streak from the samples it happened to receive would be a second implementation of the rule, free to disagree with the monitor about whether the loop is about to turn (SRD-v2 FR-53).",
+      "description": "The monitor's own account of the drift that will trigger a new forecast: the threshold it is scoring against, and how far the persistence streak has got toward the run length that raises the event. Optional, and carried on the sample rather than derived by a consumer, because a display that recomputed the streak from the samples it happened to receive would be a second implementation of the rule, free to disagree with the monitor about whether the loop is about to turn (SRD-v2 FR-58).",
       "type": "object",
       "required": ["threshold_m_per_s", "streak", "persistence_count"],
       "additionalProperties": false,

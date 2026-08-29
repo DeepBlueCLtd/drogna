@@ -134,7 +134,7 @@ describe('the query seam (feature 104)', () => {
     const things = await get('/api/st/v1.1/Things');
     expect(things.status).toBe(200);
     expect(validator.validate('sensorthings-subset#things_response', things.body).refusals).toEqual([]);
-    // Two Things since feature 112: the sampling platform, and the ownship the
+    // Two Things since feature 113: the sampling platform, and the ownship the
     // platform component reports on. Asserted as a set, because which sorts first is
     // the store's business and not this test's claim.
     expect(
@@ -149,7 +149,7 @@ describe('the query seam (feature 104)', () => {
     const nested = await get("/api/st/v1.1/Datastreams('platform-a/temperature-050m')/Observations");
     const nestedPage = nested.body as { '@iot.count': number };
     // Sixty ticks, sampling every thirty, minus the tick-0 sample the sensors skip for
-    // want of a position (FR-50): ticks 30 and 60.
+    // want of a position (FR-55): ticks 30 and 60.
     expect(nestedPage['@iot.count']).toBe(2);
 
     // The ownship datastreams are served by the same resource and no other: the track
@@ -163,7 +163,7 @@ describe('the query seam (feature 104)', () => {
     expect(validator.validate('sensorthings-subset#observations_response', ownship.body).refusals).toEqual([]);
 
     // HistoricalLocations stays refused by name: the track has one representation, and
-    // two that can disagree is what this refusal buys (FR-49).
+    // two that can disagree is what this refusal buys (FR-54).
     const historical = await get('/api/st/v1.1/HistoricalLocations');
     expect(historical.status).toBe(501);
     expect((historical.body as { refused: string }).refused).toMatch(/'HistoricalLocations' is not implemented/);

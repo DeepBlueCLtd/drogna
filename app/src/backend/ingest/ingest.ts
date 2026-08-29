@@ -4,7 +4,7 @@
  * what fails with the fault named and the count observable, and absorbs redelivery
  * (SRD-v2 FR-22; ADR-0014's carried stance: quality flagging IS the ingestion seam).
  *
- * Feature 112 gave the seam its first range rules (FR-51). The ownship datastreams
+ * Feature 113 gave the seam its first range rules (FR-56). The ownship datastreams
  * carry an angle, a speed and a depth, and each has bounds that are facts about the
  * platform rather than opinions: a course outside a revolution, a negative speed or a
  * depth beyond what the platform declares it can reach are impossible values, not

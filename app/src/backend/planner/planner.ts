@@ -50,7 +50,7 @@ export class Planner {
   /**
    * Soundings this planner has let inform its age field. Public for the same reason
    * the monitor's residual count is: whether an ownship observation was mistaken for a
-   * measurement of the sea is a claim a test has to be able to check (FR-51).
+   * measurement of the sea is a claim a test has to be able to check (FR-56).
    */
   soundingsInformed = 0;
   private platform: { latitude: number; longitude: number; depth_m: number } | undefined;
@@ -130,7 +130,7 @@ export class Planner {
     // observation measures the platform, so counting one would refresh confidence
     // everywhere the platform went without a single sounding being taken — the trap
     // this feature is most likely to spring, and the reason a test fails when this
-    // line is removed (FR-51).
+    // line is removed (FR-56).
     if (this.config.excluded_datastreams?.includes(observation.datastream_id)) return;
     this.platform = { ...observation.location };
     const soundingKey = `${observation.thing_id}:${observation.tick}`;

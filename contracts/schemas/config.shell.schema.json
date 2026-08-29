@@ -130,7 +130,7 @@
         },
         "telemetry": {
           "$ref": "config.common.schema.json#/$defs/topic_filter",
-          "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-53)."
+          "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-58)."
         },
         "observations": {
           "$ref": "config.common.schema.json#/$defs/topic_filter",

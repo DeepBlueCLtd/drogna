@@ -6,8 +6,9 @@ drafts of both exist in this branch's history at `410fc03` as reference, carryin
 standing)
 **Date:** 29 August 2026
 **Provenance:** an interview with the author, conducted 29 August 2026, plus a sweep of
-the six open pull requests (#43–#47, #49) for emergent requirements (§6). Every decision
-below was put as a question and answered; the open questions at the end were not asked.
+the six open pull requests (#43–#47, #49) for emergent requirements (§6), plus a second
+interview round the same day resolving the §9 questions and E1. Every decision below was
+put as a question and answered.
 
 ---
 
@@ -45,13 +46,13 @@ document, not a silent divergence later.
 | D4 | **All capabilities carry into V2**, connected by a **narrative arc** that logically joins them and forms the basis of a demo/walkthrough. Nothing is retired by scope; anything deferred says why. | The arc is the organising artefact — see §5. |
 | D5 | **EDR + SensorThings remain the seam's vocabulary**, as genuine subsets with the subset stated (the honest-ports discipline carries). | Standards conformance stays demonstrable; the V3 backend implements the same standards. |
 | D6 | **Determinism carries in full.** No wall-clock (Principle I) and seeded-RNG replay (Principle II) both survive: a simulation-clock component drives all time, every component draws from seeded streams, and replay-from-manifest remains a test. | The harness keeps its identity, and one language makes the gates *easier* to enforce, not harder. |
-| D7 | **React + Deck.gl inside GoldenLayout.** GoldenLayout 2.x owns the layout; each panel hosts a React root; the Map panel keeps Deck.gl. Top-level tabs at first run: **Intro, System, Map, Messages**; users may drag/drop to rearrange. | V1's rendering knowledge is reused. The GoldenLayout↔React integration is part of the foundations feature. |
+| D7 | **React + Deck.gl inside a dockable multi-panel shell.** A layout manager owns the shell; each panel hosts a React root; the Map panel keeps Deck.gl. Top-level tabs at first run: **Intro, System, Map, Messages**; users may drag/drop to rearrange. *Amended in the second round (§9.5): dockable drag/drop tabs are the requirement, not a named library — GoldenLayout 2.x is the leading candidate, and feature 101 opens with a short spike choosing between it and maintained alternatives (e.g. dockview, flexlayout-react), recorded as an ADR.* | V1's rendering knowledge is reused. The layout-manager choice and its React-hosting pattern are settled in the foundations feature. |
 | D8 | **Arc = build order = demo.** One ordering serves all three: each feature adds the next beat of the story, and the Intro tab narrates it. Build runs in chronograph order: data generation first, map display last. | See §5 for the proposed beats. |
 | D9 | **Artefact order: SRD-v2 → constitution 2.0.0 → fresh spec series.** V1 specs are archived, never edited. The new series is far coarser — one feature per narrative beat. | This plan is reviewed first; the SRD and constitution drafts follow its approval (§8). |
 | D10 | **All-TypeScript toolchain, gates included.** pnpm / TypeScript 5 / vitest / Playwright only; the constitution gates are rewritten as TypeScript scripts behind a new gates registry; Python leaves the repository. | One toolchain, one language — the reviewability the rewrite exists for. The watched-failing discipline carries unchanged. |
 | D11 | **Static site, in-memory.** V2 builds to static assets; every visit is a fresh seeded run (which V1's constitution already demanded of instances); manifest export/import gives replay without storage. | The demo becomes a URL. No server, no droplet dependency for the core demonstration. |
 | D12 | **The pub/sub seam is a broker component with MQTT semantics**: topic tree, wildcard subscription, ACL-shaped rules, behind a transport interface whose wire shape is MQTT-over-WebSocket. | The Messages tab and topic-tree view keep their V1 meaning; V3 swaps in a real broker. |
-| D13 | **Foundations feature first.** The GoldenLayout shell (four tabs, mostly empty), the clock, the RNG, the manifest, the seam skeleton and the gates land as feature one, so every later beat is *visible* the day it is built. | "Demonstrable before the next begins" holds from the first feature. |
+| D13 | **Foundations feature first.** The shell (four tabs, mostly empty), the clock, the RNG, the manifest, the seam skeleton and the gates land as feature one, so every later beat is *visible* the day it is built. | "Demonstrable before the next begins" holds from the first feature. |
 | D14 | **Principle X survives as a release-gate component at the seam**: the fetch layer routes through an in-browser boundary component applying a path-prefix allowlist with default deny, observable in System/Messages when a request is denied. | The release-boundary story stays tellable in V2; V3 replaces the component with the real proxy. |
 
 ## 3. The seam, precisely
@@ -118,7 +119,8 @@ Python and its toolchain (D10).
 **Deliberately deferred, not dissolved:** offload export as a real file leaving a real
 system is thin when the whole system is one browser page; V2 keeps the *announcement*
 semantics (products observed leaving by subscription) and defers verified-receipt
-eviction to V3. The one genuinely open scope question this raises is recorded in §9.
+eviction to V3. The scope question this raised is resolved in §9.4: announcement-only,
+keeping the export's shape (E11's run-manifest sibling included).
 
 ## 5. The narrative arc, and the proposed feature series
 
@@ -134,7 +136,7 @@ in the shell the day it lands. This list is a proposal for review, not a decisio
 
 | Feature | Beat | Lands visibly as |
 |---|---|---|
-| **101 foundations & shell** | The stage is lit | GoldenLayout shell with the four tabs; clock component beating; System lights its first component from a real heartbeat; seam skeleton; gates in TS, each watched failing; static build deployed |
+| **101 foundations & shell** | The stage is lit | The dockable shell with the four tabs (layout library chosen by spike, §9.5); clock component beating; System lights its first component from a real heartbeat; seam skeleton; gates in TS, each watched failing; static build deployed |
 | **102 the synthetic ocean** | A world exists | Generator: 4D fields, four seeded features, the tau field, ground-truth manifest; the historic archive authored at provisioning; manifest inspectable in the shell |
 | **103 sensing** | It is sampled | Sensors publishing SensorThings-vocabulary observations over the broker; ingestion seam; observation store; Messages tab shows real traffic |
 | **104 the query seam** | It is served | EDR + SensorThings answered through the seam over the archive, now-cast and observations; subset statements; the release gate with default deny; AT-01's descendant passes |
@@ -166,7 +168,8 @@ needs an author's answer**.
   component reports healthy. Watched live in the first scenario. SRD-v2's forecast-loop
   beat (105) must *answer* what V1 deliberately left open: score against a lapsed field,
   hold a scheduling cadence as a floor, or declare the calm a scenario's intended end
-  state — and whichever it is, the state must be legible in the shell.
+  state — and whichever it is, the state must be legible in the shell. **Answered in
+  the second interview round: the cadence floor (§9.7).**
 - **E2 — Quiet must be legible.** The scheduler correctly declining a breach inside its
   minimum interval looks identical to a stall from the outside. The System view should
   say *why* the loop is quiet: declined-by-policy, becalmed, or genuinely stalled.
@@ -279,13 +282,13 @@ the plan refers to it as "the reversal ADR" rather than by number.
 ├── docs/                         adr/ (carried; V2 records continue the numbering), architecture/ (rewritten), v1 archive banners
 ├── app/                          the one deliverable
 │   └── src/
-│       ├── shell/                GoldenLayout + panel hosts
+│       ├── shell/                layout manager + panel hosts
 │       ├── panels/               Intro, System, Map, Messages (+ any later)
 │       ├── backend/              the in-browser components, one directory each
 │       ├── seam/                 transport, interception, release gate, client interfaces
 │       └── generated/            GENERATED TS types (do not edit)
 ├── scripts/                      TS gates + gates.registry (pattern carried)
-└── site/                         fate is an open question, §9
+└── site/                         rebuilt for V2, V1 posts archived within it (§9.1)
 ```
 
 - **The import-boundary gate** polices `shell|panels` ↔ `backend` (only `seam/` and
@@ -295,8 +298,8 @@ the plan refers to it as "the reversal ADR" rather than by number.
 ## 8. Adoption sequence (after this review)
 
 1. **This plan is reviewed and approved first.** Review comments are resolved in place;
-   the E-items of §6 are accepted, amended or struck; E1 and the §9 questions get their
-   answers.
+   the E-items of §6 are accepted, amended or struck. (E1 and the §9 questions already
+   have their answers, from the second interview round.)
 2. **SRD-v2 drafted** against the approved plan, folding in the accepted E-items, and
    reviewed. On adoption it moves to the root as `srd.md`; `harness-srd.md` gets its
    archival banner.
@@ -308,22 +311,41 @@ the plan refers to it as "the reversal ADR" rather than by number.
    the retirement commit and the seam spike.
 5. Beats 102–109 follow in order, each demonstrable before the next begins.
 
-## 9. Open questions — raised here, not silently resolved
+## 9. Questions raised open — resolved by the second interview round, 29 August 2026
 
-These were *not* asked in the interview. Each needs an answer before the feature that
-touches it, none blocks adoption of the plan itself.
+These were not asked in the first interview, were recorded here as open rather than
+silently resolved, and were then put to the author. Each now carries its answer; the
+original question wording is kept so the answer can be read against it.
 
 1. **The published site and blog** (`site/`, PR-06–PR-08): does one-post-per-feature
    continue for the V2 series, and does the V1 site stay published as part of the
-   record? (Recommendation: yes to both; the rewrite is itself good material.)
-2. **The droplet** (NFR-06): a static site removes the need for it for the demo. Retire
-   it, or keep it serving the published site until V3 needs a host again?
-3. **Capture tooling:** V1's three-moment Playwright capture discipline (PR-10) and the
-   rate-zero rule (FR-53) carry naturally — but the capture scripts are Python. Confirm
-   they are rewritten in feature 101 rather than carried.
-4. **Offload's V2 shape** (§4): is announcement-only offload acceptable for V2, with
-   verified-receipt eviction deferred to V3?
-5. **GoldenLayout pin:** golden-layout 2.6.x (MIT) is the assumption. Confirm, and
-   record the React-hosting pattern chosen in feature 101's ADR if it proves contested.
-6. **Spec numbering from 101:** confirm, or choose another scheme, before feature 101's
-   directory is created.
+   record? — **A fresh V2 site, with V1 archived.** The site is rebuilt for V2 (a
+   static site beside a static site), and the V1 posts move to an archive section
+   within it rather than disappearing. The rebuild's feature placement is decided at
+   101's planning; the archive move rides the retirement commit's wake.
+2. **The droplet** (NFR-06): retire it, or keep it serving the published site until V3?
+   — **Retired at V1 retirement.** Demo and site are both static, so nothing V2 runs
+   needs a server; V3 provisions fresh when it needs a host. The droplet is
+   decommissioned in the retirement commit's wake.
+3. **Capture tooling:** rewritten in feature 101 or carried? — **Rewritten in
+   TypeScript in feature 101.** The three-moment discipline (PR-10) and the rate-zero
+   rule (FR-53) carry unchanged; the glance mechanism — headless-Chromium shot with the
+   simulated rate printed beside it — is rebuilt first so every beat from 102 on has
+   capture from day one. Python leaves whole (D10 holds without exception).
+4. **Offload's V2 shape** (§4): — **Announcement-only, keeping E11's shape.** V2 keeps
+   the announcement semantics and the export's *shape*, including the run-manifest
+   sibling carrying the measurement geometry, so the leakage tests keep their ground
+   truth; no real transfer and no verified-receipt eviction until V3.
+5. **GoldenLayout pin:** — **Evaluate alternatives first.** Dockable drag/drop tabs are
+   the requirement, not a named library. Feature 101 opens with a short spike comparing
+   golden-layout 2.x against maintained alternatives (e.g. dockview, flexlayout-react)
+   and pins the winner with an ADR recording the React-hosting pattern. D7 is amended
+   in place to match.
+6. **Spec numbering from 101:** — **Confirmed.** `specs/101-…` through `specs/109-…`;
+   V1's 001–023 sort separately and no number is ever reused.
+7. **E1, the becalmed loop** (§6, put to the author in the same round): — **A cadence
+   floor.** The scheduler gains a maximum interval: when no run has been requested
+   within it and the current run's validity has lapsed, a run is warranted on schedule
+   alone, so the loop cannot be permanently becalmed. The System view labels such runs
+   *scheduled*, distinct from divergence-triggered, so the two causes stay legible
+   (which also serves E2).

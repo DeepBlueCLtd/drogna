@@ -36,3 +36,15 @@
       map draws the composed position as a hollow ring (no filled dot, so it cannot
       be read as the platform or a route stop) and says whether it falls inside the
       domain. The cube view (issue #59) picks through the same handler when it lands.
+- [x] T811 The rotatable depth volume (issue #59): an OrbitView mode stacking one
+      genuine area query per level of the holding's own depth axis, the route drawn
+      through it at the depths the plan states, the volume framed and depth
+      exaggerated with the exaggeration stated, and a click on a slice placing the
+      composer's position *and* depth through T810's handler. The plan view's status
+      line now also states the depth the coverage answered for, which is not always
+      the depth the selector asked for — the sampler is nearest-neighbour, and the
+      difference belongs on screen. *Not done here: EDR's own `cube` query type,
+      which would collapse the per-level round trips into one. It stays in
+      `KNOWN_UNIMPLEMENTED`, the composer refuses it by name, and implementing it is
+      a query-component change with its own master, subset statement and documented
+      account — not a map change.*

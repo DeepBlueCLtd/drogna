@@ -361,7 +361,11 @@ directed → the machinery is interrogated → advice travels light → it is se
   decaying and refreshing; the planned route as a four-dimensional curve with a time
   control showing conditions at arrival; advisories valid at the displayed time,
   visibly distinct and legible in greyscale, undrawn outside validity yet still
-  queryable *(v1 FR-47, FR-48, FR-66)*.
+  queryable *(v1 FR-47, FR-48, FR-66)*. The panel offers a plan view, a rotatable
+  globe, and a rotatable depth volume; the volume shall draw every level of the
+  holding's own depth axis, each from a genuine area query, and shall say how many
+  levels answered — EDR's `cube` query type remains outside the served subset, and
+  the composer says so by name *(v1 FR-49's cube, restored client-side)*.
 - **FR-41** The EDR composer carries as a mode of the map: a guided sequence with the
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never

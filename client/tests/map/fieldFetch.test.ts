@@ -157,14 +157,27 @@ describe("where the request is issued from", () => {
     expect(loop).not.toContain("fieldRequest");
   });
 
-  it("is the announcement branch, once, and nowhere else in the shell", () => {
+  it("is the announcement branch or the viewer's re-ask, and nowhere else in the shell", () => {
+    // Two call sites since feature 018, and exactly two causes, neither of them a poll:
+    // a run-published announcement, and the viewer pressing the re-ask control — one
+    // genuine request of a kind the client already makes, gated to a stated minimum
+    // interval and disabled while in flight (018 FR-010). Anything beyond these two is
+    // the polling FR-021 forbids arriving by a new door.
     const calls = shellSource.match(/void readFieldFor\(/g) ?? [];
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     const branch = shellSource.slice(
       shellSource.indexOf("if (topic === RUN_PUBLISHED_TOPIC)"),
       shellSource.indexOf("if (topic === PLAN_TOPIC"),
     );
     expect(branch).toContain("void readFieldFor(");
+    const reAsk = shellSource.slice(
+      shellSource.indexOf("const reAskNow = useMemo("),
+      shellSource.indexOf("const sink = useMemo<ControlSink>("),
+    );
+    expect(reAsk).toContain("void readFieldFor(");
+    // The re-ask site re-checks the gate before asking, so a queued click cannot slip
+    // past the interval bound.
+    expect(reAsk).toContain("offer.gate.allowed");
   });
 
   it("has no timer anywhere in the map's own source that could cause one", () => {

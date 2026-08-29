@@ -188,6 +188,16 @@ class Map(BaseModel):
     )
 
 
+class Site(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    standards_url: AnyUrl = Field(
+        ...,
+        description="Base URL of the site's standards section, without a trailing slash. A primer is addressed by appending the standard's slug as a directory path, which is the published site's own URL convention.",
+    )
+
+
 class DrognaBrowserClientRuntimeConfiguration(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -221,4 +231,9 @@ class DrognaBrowserClientRuntimeConfiguration(BaseModel):
         None,
         description="Where the scenario is, for a surface that must not invent geography. The extent a run's field is drawn in comes from the announcement's own grid bounds and never from here; this is what the map has to draw before any run has been announced, which is the state a harness whose loop has not yet turned is honestly in. Optional: a document that omits it renders the statement that no extent has been served rather than failing to start, and a client that has neither an announcement nor a declaration draws no frame at all.",
         title='Map surface',
+    )
+    site: Site | None = Field(
+        None,
+        description="Where the published documentation site is, so the standards badges on the client's panes can link each delivering standard to its primer (018 FR-008). A link a viewer follows in a browser, never a location the client fetches from: the page issues no request to it. Optional: a destination that declares no site gets badges that name the standard and state that no site root was declared, rather than badges that guess a location (Constitution IV).",
+        title='Published site',
     )

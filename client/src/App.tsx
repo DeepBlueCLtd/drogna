@@ -36,6 +36,15 @@ import { routeDisplay } from "./route/RouteLayer";
 import { readTrajectory, trajectoryRequest } from "./route/trajectoryQuery";
 import type { TrajectoryResult } from "./route/trajectoryQuery";
 import type { RouteDisplay } from "./route/RouteLayer";
+import { beginReAsk, emptyReadPath, reAskGate, reAskSettled, recordCrossing } from "./readpath/crossings";
+import type { ObservedCrossing, ReadPathState } from "./readpath/crossings";
+import { observedRead } from "./readpath/observedRead";
+import { ReadPathView } from "./readpath/ReadPathView";
+import type { ReAskOffer } from "./readpath/ReadPathView";
+import { STANDARDS } from "./readpath/standards";
+import type { StandardName } from "./readpath/standards";
+import { StandardBadge } from "./readpath/StandardBadge";
+import { TopologyMatrix } from "./topology/TopologyMatrix";
 import { QualityStatement } from "./uncertainty/QualityStatement";
 import { announceRun, emptyOverlay, fieldRead } from "./uncertainty/overlay";
 import type { OverlayState } from "./uncertainty/overlay";
@@ -100,6 +109,10 @@ interface LoopView {
   readonly mapField: MapFieldState;
   /** The extent the last announcement stated, or null before any (017 FR-001). */
   readonly announcedExtent: MapExtent | null;
+  /** The read path's recorded crossings, and the re-ask control's bounds (018). */
+  readonly readPath: ReadPathState;
+  /** What a press of the re-ask control would do this frame, decided when drawn. */
+  readonly reAsk: ReAskOffer;
 }
 
 export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
@@ -115,7 +128,9 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
   const conditions = useRef<TrajectoryResult | null>(null);
   const mapField = useRef<MapFieldState>(NO_FIELD);
   const announcedExtent = useRef<MapExtent | null>(null);
+  const readPath = useRef<ReadPathState>(emptyReadPath());
   const [failure, setFailure] = useState<string | null>(null);
+  const [badgesShown, setBadgesShown] = useState<boolean>(true);
   const [selectedBoundary, setSelectedBoundary] = useState<string>(boundaryId("monitor", "scheduler"));
   const [selectedVertex, setSelectedVertex] = useState<number>(0);
   const [samples, setSamples] = useState<SamplePair>(NO_SAMPLES);
@@ -139,6 +154,57 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     [],
   );
 
+  /**
+   * What the re-ask control could genuinely do right now (018 FR-010).
+   *
+   * A re-ask is never a new capability: it re-issues one of the two reads the client
+   * already makes — the trajectory query for the current plan, else the field fetch for
+   * the current run — and where neither has anything to ask about, the control says so
+   * rather than inventing a request. Recomputed each frame, so the interval and
+   * in-flight bounds need no timer: the disabled state is a function of the same host
+   * instant the frame throttle already reads.
+   */
+  const reAskOfferAt = useMemo(
+    () =>
+      (instant: number): ReAskOffer => {
+        const config = configuration.current;
+        const gate = reAskGate(readPath.current, instant);
+        if (config === null) {
+          return {
+            kind: null,
+            unavailableBecause: "the configuration document has not arrived, so no read can be composed",
+            gate,
+          };
+        }
+        if (
+          route.current !== null &&
+          config.query.trajectoryPath !== undefined &&
+          overlay.current.forecastCollection !== null
+        ) {
+          return { kind: "trajectory", unavailableBecause: null, gate };
+        }
+        if (overlay.current.runId !== null && announcedExtent.current !== null) {
+          return { kind: "field", unavailableBecause: null, gate };
+        }
+        return {
+          kind: null,
+          unavailableBecause:
+            "no plan has been recommended and no run has been announced, so there is no read the client already makes to repeat",
+          gate,
+        };
+      },
+    [],
+  );
+
+  /** The only route a crossing takes into the read path's state (018, Constitution VII). */
+  const deliverCrossing = useMemo(
+    () =>
+      (crossing: ObservedCrossing): void => {
+        readPath.current = recordCrossing(readPath.current, crossing);
+      },
+    [],
+  );
+
   const [view, setView] = useState<ShellView>(() => build(now()));
   const [loopView, setLoopView] = useState<LoopView>(() => ({
     loop: loop.current,
@@ -149,6 +215,8 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     conditions: conditions.current,
     mapField: mapField.current,
     announcedExtent: announcedExtent.current,
+    readPath: readPath.current,
+    reAsk: reAskOfferAt(now()),
   }));
 
   /**
@@ -190,23 +258,27 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         if (request === null) {
           return;
         }
-        try {
-          const response = await globalThis.fetch(request.url);
-          if (!response.ok) {
-            return;
-          }
-          const outcome = readTrajectory(await response.json());
-          if (outcome.ok && route.current?.planId === drawn.planId) {
-            conditions.current = outcome;
-          }
-        } catch {
+        // The read goes through the one observing wrapper, so the crossing the read-path
+        // view draws is this very request and this very response (018 FR-003). The
+        // wrapper adds observation and nothing else; a failure is recorded as a failed
+        // crossing and lands here as a non-answer.
+        const answer = await observedRead("trajectory", request.url, deliverCrossing);
+        if (answer.status === null || (answer.ok && answer.body === null)) {
           // A route without its conditions renders as a route without its conditions. The
           // arrival control says there is no forecast for the moment of arrival rather
           // than showing a field that describes another moment (FR-027).
           conditions.current = null;
+          return;
+        }
+        if (!answer.ok) {
+          return;
+        }
+        const outcome = readTrajectory(answer.body);
+        if (outcome.ok && route.current?.planId === drawn.planId) {
+          conditions.current = outcome;
         }
       },
-    [],
+    [deliverCrossing],
   );
 
   /**
@@ -240,61 +312,71 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           mapField.current = { cube: null, because: cannotAskForField(asked.missing), awaiting: false };
           return;
         }
-        try {
-          const response = await globalThis.fetch(asked.url);
-          if (!response.ok) {
-            mapField.current = {
-              cube: null,
-              because: fieldNotRead(asked.collection, `the query layer answered ${response.status}`),
-              awaiting: false,
-            };
-            return;
-          }
-          const read = readFieldCube(await response.json(), {
-            runId,
-            collection: asked.collection,
-            parameter: asked.parameter,
-          });
-          if (overlay.current.runId !== runId) {
-            // A later announcement overtook this read. Its own read is in flight and this
-            // one describes a run that is no longer current, so it is dropped rather than
-            // drawn under the newer run's frame.
-            return;
-          }
-          if (!read.ok) {
-            mapField.current = {
-              cube: null,
-              because: fieldNotRead(asked.collection, read.reason),
-              awaiting: false,
-            };
-            return;
-          }
-          mapField.current = {
-            cube: {
-              runId: read.runId,
-              collection: read.collection,
-              parameter: read.parameter,
-              longitudes: read.longitudes,
-              latitudes: read.latitudes,
-              depths: read.depths,
-              times: read.times,
-              values: read.values,
-              unit: read.unit,
-            },
-            because: null,
-            awaiting: false,
-          };
-          overlay.current = fieldRead(overlay.current);
-        } catch (error) {
-          const detail = error instanceof Error ? error.message : String(error);
+        // Through the one observing wrapper, for the same reason the trajectory read is:
+        // the crossing drawn on the read path is this request and this response, and a
+        // failure is a crossing too, recorded with what actually came back (018 FR-003).
+        const answer = await observedRead("field", asked.url, deliverCrossing);
+        if (answer.status === null) {
           mapField.current = {
             cube: null,
-            because: fieldNotRead(asked.collection, `the request did not complete: ${detail}`),
+            because: fieldNotRead(asked.collection, answer.failure ?? "the request did not complete"),
             awaiting: false,
           };
+          return;
         }
+        if (!answer.ok) {
+          mapField.current = {
+            cube: null,
+            because: fieldNotRead(asked.collection, `the query layer answered ${answer.status}`),
+            awaiting: false,
+          };
+          return;
+        }
+        if (answer.body === null) {
+          mapField.current = {
+            cube: null,
+            because: fieldNotRead(asked.collection, answer.failure ?? "the response carried no body"),
+            awaiting: false,
+          };
+          return;
+        }
+        const read = readFieldCube(answer.body, {
+          runId,
+          collection: asked.collection,
+          parameter: asked.parameter,
+        });
+        if (overlay.current.runId !== runId) {
+          // A later announcement overtook this read. Its own read is in flight and this
+          // one describes a run that is no longer current, so it is dropped rather than
+          // drawn under the newer run's frame.
+          return;
+        }
+        if (!read.ok) {
+          mapField.current = {
+            cube: null,
+            because: fieldNotRead(asked.collection, read.reason),
+            awaiting: false,
+          };
+          return;
+        }
+        mapField.current = {
+          cube: {
+            runId: read.runId,
+            collection: read.collection,
+            parameter: read.parameter,
+            longitudes: read.longitudes,
+            latitudes: read.latitudes,
+            depths: read.depths,
+            times: read.times,
+            values: read.values,
+            unit: read.unit,
+          },
+          because: null,
+          awaiting: false,
+        };
+        overlay.current = fieldRead(overlay.current);
       },
-    [],
+    [deliverCrossing],
   );
 
   /** Asking the clock for a rate. Asking is all this page can do (FR-012). */
@@ -314,6 +396,46 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     [],
   );
 
+  /**
+   * The re-ask control pressed: one genuine request of a kind the client already makes.
+   *
+   * Never a replay — the request is composed afresh from the current plan or the current
+   * run by the same functions the loop-driven reads use, sent through the same observing
+   * wrapper, so the resulting crossing is indistinguishable in provenance from a
+   * loop-driven one because it is the same thing (018 FR-010). The gate is re-checked
+   * here, not only in the control's disabled state, so a queued click cannot slip past
+   * the interval; while the request is in flight the control stays disabled and no queue
+   * builds.
+   */
+  const reAskNow = useMemo(
+    () =>
+      (): void => {
+        const instant = now();
+        const offer = reAskOfferAt(instant);
+        if (offer.kind === null || !offer.gate.allowed) {
+          return;
+        }
+        const settle = (): void => {
+          readPath.current = reAskSettled(readPath.current);
+        };
+        if (offer.kind === "trajectory" && route.current !== null) {
+          readPath.current = beginReAsk(readPath.current, "trajectory", instant);
+          void readConditionsAlong(route.current).then(settle, settle);
+          return;
+        }
+        if (offer.kind === "field" && overlay.current.runId !== null && announcedExtent.current !== null) {
+          readPath.current = beginReAsk(readPath.current, "field", instant);
+          void readFieldFor(
+            overlay.current.runId,
+            overlay.current.collection,
+            announcedExtent.current,
+            overlay.current.validFrom,
+          ).then(settle, settle);
+        }
+      },
+    [now, reAskOfferAt, readConditionsAlong, readFieldFor],
+  );
+
   const sink = useMemo<ControlSink>(
     () => ({
       message(topic: string, payload: string): void {
@@ -324,6 +446,13 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           return;
         }
         if (topic === HEARTBEAT_TOPIC) {
+          // Folded into the loop state as well as the liveness state: the reducer buffers
+          // a heartbeat and counts it, draws no transit for it, and has no route to
+          // liveness. Before feature 018 nothing displayed buffered heartbeats and this
+          // call was skipped; the topology matrix now counts real arrivals per topic, and
+          // a heartbeat row reading "quiet" while the shell lights from the same messages
+          // would be the display understating genuine traffic.
+          loop.current = receiveControl(loop.current, topic, payload);
           const tolerances = configuration.current?.liveness ?? FALLBACK_TOLERANCES;
           const interpretation = interpret(decoded.value, receivedAt, tolerances);
           liveness.current = interpretation.accepted
@@ -397,6 +526,10 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         const outcome = await load();
         if (outcome.ok) {
           configuration.current = outcome.config;
+          // The crossing history adopts the document's buffer depth — the same bound the
+          // topic buffers use (FR-009). Safe to reset here: both readers require the
+          // configuration, so nothing can have been recorded yet.
+          readPath.current = emptyReadPath(outcome.config.display.bufferDepth);
         }
         return outcome;
       },
@@ -441,6 +574,8 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           conditions: conditions.current,
           mapField: mapField.current,
           announcedExtent: announcedExtent.current,
+          readPath: readPath.current,
+          reAsk: reAskOfferAt(instant),
         });
       }
       frame = requestAnimationFrame(draw);
@@ -449,7 +584,23 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [build, now]);
+  }, [build, now, reAskOfferAt]);
+
+  /**
+   * A pane's delivery badge, or nothing while the badges are toggled off (018 FR-008).
+   *
+   * A badge names the standard that delivered the pane's contents and links to its primer
+   * on the published site, whose location arrives in the configuration document. It is a
+   * static fact about the delivery channel: it cannot light anything and claims nothing
+   * about whether data has arrived.
+   */
+  const badge = (name: StandardName): JSX.Element | null =>
+    badgesShown ? (
+      <StandardBadge
+        standard={STANDARDS[name]}
+        standardsUrl={configuration.current?.site?.standardsUrl}
+      />
+    ) : null;
 
   return (
     <main>
@@ -471,6 +622,20 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           <span className="figure">{view.litCount}</span> of {view.nodes.length} components heard
           from within the window each declared.
         </p>
+        <p className="badge-toggle">
+          <button
+            type="button"
+            data-testid="badges-toggle"
+            aria-pressed={badgesShown}
+            onClick={() => {
+              setBadgesShown((shown) => !shown);
+            }}
+          >
+            {badgesShown ? "Hide" : "Show"} standards badges
+          </button>{" "}
+          — each data-bearing pane names the standard that delivered its contents, linking
+          to that standard&apos;s primer on the published site.
+        </p>
       </header>
       <MapSurface
         extent={chooseExtent(
@@ -488,8 +653,13 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         maximumDrawnCells={configuration.current?.display.maximumDrawnCells}
         graticuleSpacingDegrees={configuration.current?.map?.graticuleSpacingDegrees}
       />
+      <div className="pane-badges">
+        {badge("OGC API-EDR")}
+        {badge("CoverageJSON")}
+      </div>
       <div className="panels">
         <ClockState clock={view.clock} />
+        {badge("MQTT, contract-validated JSON")}
         <ConnectionState
           connection={view.connection}
           discarded={view.discarded}
@@ -500,6 +670,7 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
       </div>
       <Conflicts views={view.nodes} />
       <ComponentDiagram views={view.nodes} />
+      <div className="pane-badges">{badge("MQTT, contract-validated JSON")}</div>
       <CycleView
         loop={loopView.loop}
         status={loopStatus(loopView.loop, view.connection)}
@@ -525,6 +696,17 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
         boundary={selectedBoundary}
         message={messageOn(loopView.loop, selectedBoundary)}
       />
+      <div className="pane-badges">{badge("MQTT, contract-validated JSON")}</div>
+      <ReadPathView
+        state={loopView.readPath}
+        standardsUrl={configuration.current?.site?.standardsUrl}
+        reAsk={loopView.reAsk}
+        onReAsk={reAskNow}
+      />
+      <TopologyMatrix
+        loop={loopView.loop}
+        standardsUrl={configuration.current?.site?.standardsUrl}
+      />
       <div className="panels">
         <SpeedControl
           rate={loopView.rate}
@@ -532,15 +714,22 @@ export function App({ load, open, now = hostInstant }: AppProps): JSX.Element {
           unavailable={configuration.current?.clock.controlUrl === undefined ? NO_CONTROL_SURFACE : null}
         />
         <QualityStatement skill={loopView.skill} />
+        {badge("MQTT, contract-validated JSON")}
       </div>
       <RecommendationLabel route={loopView.route} />
       {loopView.route === null ? null : (
-        <ArrivalTimeControl
-          route={loopView.route}
-          conditions={loopView.conditions}
-          selected={selectedVertex}
-          onSelect={setSelectedVertex}
-        />
+        <>
+          <ArrivalTimeControl
+            route={loopView.route}
+            conditions={loopView.conditions}
+            selected={selectedVertex}
+            onSelect={setSelectedVertex}
+          />
+          <div className="pane-badges">
+            {badge("OGC API-EDR")}
+            {badge("CoverageJSON")}
+          </div>
+        </>
       )}
     </main>
   );

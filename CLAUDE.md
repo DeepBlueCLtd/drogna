@@ -4,8 +4,9 @@ drogna is a demonstration harness: a synthetic ocean, sensors that sample it, a 
 loop that assimilates what they report, and a query layer that serves the result through
 OGC API-EDR and SensorThings. Everything in it is deliberately fake and says so.
 
-Sixteen features, eleven services, 1799 Python tests and 446 client tests, fourteen gates
-and twenty-two ADRs. All four SRD acceptance criteria pass.
+Seventeen features delivered and six more specified, twelve services, fifteen gates and
+twenty-five ADRs. All four SRD acceptance criteria pass, and the control loop is wired
+live (PR #33).
 
 ## Where the answers already are
 
@@ -14,12 +15,12 @@ reason a fresh session can pick this up without archaeology.
 
 | Question | Where |
 |---|---|
-| What may I never do? | `.specify/memory/constitution.md` — ten principles, currently at 1.5.0 |
-| Why is it built like this? | `docs/adr/` — 23 records (numbered to 0024; there is no 0017), each with the alternative it rejected |
+| What may I never do? | `.specify/memory/constitution.md` — ten principles, currently at 1.6.0 |
+| Why is it built like this? | `docs/adr/` — 25 records (numbered to 0026; there is no 0017), each with the alternative it rejected |
 | What does this feature do, and what is deliberately not done? | `specs/<nnn>-*/spec.md` and `tasks.md` |
 | Where does a file live, and who owns it? | `docs/architecture/repo-layout.md` |
 | What does a store look like on disk? | `stores/coverage/layout.md` |
-| Was this question already investigated, and what did it cost? | `spikes/*/FINDING.md` — seven, each dated, each with its evidence in `results/` |
+| Was this question already investigated, and what did it cost? | `spikes/*/FINDING.md` — eight, each dated; the ones that measured keep their evidence in `results/` |
 | How do I run the stack, or see the client, from this container? | `spikes/dev-cloud/README.md`, and the commands below |
 
 `tasks.md` files record unticked work with the reason it is unticked. An unticked task

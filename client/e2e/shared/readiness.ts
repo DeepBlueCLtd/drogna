@@ -125,19 +125,27 @@ export async function settled(page: Page, client: CaptureClient): Promise<Settle
       //
       // Under a pinned clock these values do not change and this costs nothing, so the pair
       // and the curated shot are unaffected either way.
+      //
+      // **Measured from a copy, and that is not a detail.** This used to blank each
+      // held-aside element's `innerHTML` on the live page and put it back afterwards, which
+      // is a mutation of a running application's DOM taken in order to observe it. React
+      // owns that DOM: emptying a subtree it rendered and then re-inserting a *string* of
+      // the same shape leaves its fibres pointing at nodes no longer in the document, so
+      // every later render writes into detached nodes or throws while removing a child that
+      // has already gone. On the shell's four small text spans that never surfaced. On a
+      // subtree with keyed children, conditional branches and an SVG — feature 022's topic
+      // tree — it broke the client outright: the page stopped updating, and what a test saw
+      // was the *speed control* never acknowledging a pin, three files away from the cause.
+      // Cloning costs a copy of the body per frame and takes the observation without
+      // touching what is being observed.
       const markup = (): string => {
-        const held = new Map<Element, string>();
+        const copy = document.body.cloneNode(true) as HTMLElement;
         for (const selector of advancing) {
-          for (const node of document.querySelectorAll(selector)) {
-            held.set(node, node.innerHTML);
+          for (const node of copy.querySelectorAll(selector)) {
             node.innerHTML = "";
           }
         }
-        const text = document.body.innerHTML;
-        for (const [node, content] of held) {
-          node.innerHTML = content;
-        }
-        return text;
+        return copy.innerHTML;
       };
 
       let previous = markup();

@@ -237,7 +237,16 @@ export function TopicTreePanel({
   const selectedNode = selected === null ? null : findNode(tree, selected);
 
   return (
-    <section className="panel topic-tree" data-testid="topic-tree">
+    <section
+      className="panel topic-tree"
+      data-testid="topic-tree"
+      // Whether this surface is animating, stated on the element so a capture mechanism
+      // can tell without knowing anything about the panel. While the simulation advances
+      // the tree pulses every frame and a settle check must hold it aside; while pinned it
+      // draws steady marks and holds still, so it takes part in the stability check like
+      // any other panel — which is what makes a pinned pair deterministic (012 FR-53).
+      data-animating={String(snap.pinnedSince === null)}
+    >
       <h2>The topic tree</h2>
       <p className="tt-strapline">
         Every declared topic and every declared consumer role, drawn whether or not it

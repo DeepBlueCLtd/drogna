@@ -10,6 +10,7 @@ import { flushSync } from 'react-dom';
 import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, RunManifest } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
+import type { SeamValidator } from '../seam/validate.js';
 import { installSeamFetch } from '../seam/http.js';
 import type { SeamHttpBackend } from '../seam/http.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
@@ -19,7 +20,21 @@ declare const __DROGNA_REVISION__: string;
 declare const __DROGNA_DIRTY__: boolean;
 
 const config = runConfigDocument as ConfigRun;
-const validator = createSeamValidator();
+
+/**
+ * Built on first use rather than at module scope, because everything that wants it runs
+ * after the starting frame and constructing it does not: at module scope its ~270 ms at
+ * Chromium's 4x throttle sat in front of the first paint, and moving it behind the frame
+ * was worth that much of the blank screen on its own (spikes/load-time §7).
+ *
+ * Memoised, so a re-boot from an imported manifest reuses the one Ajv instance rather
+ * than paying for it again.
+ */
+let seamValidator: SeamValidator | undefined;
+function validatorForRun(): SeamValidator {
+  seamValidator ??= createSeamValidator();
+  return seamValidator;
+}
 
 /**
  * The one place entropy may enter the harness: seeding a fresh visit's manifest.
@@ -78,6 +93,7 @@ function Starting(): ReactNode {
 
 function boot(rootSeed: number): void {
   runtime?.stop();
+  const validator = validatorForRun();
   runtime = buildBackend(
     config,
     { rootSeed, revision: __DROGNA_REVISION__, dirty: __DROGNA_DIRTY__ },
@@ -99,7 +115,7 @@ function boot(rootSeed: number): void {
 }
 
 function importManifest(candidate: unknown): string | undefined {
-  const verdict = validator.validate('run-manifest', candidate);
+  const verdict = validatorForRun().validate('run-manifest', candidate);
   if (!verdict.ok) return `manifest refused by its master: ${verdict.refusals[0]}`;
   const manifest = candidate as RunManifest;
   if (manifest.seed_derivation.rule !== runtime?.manifest.seed_derivation.rule) {

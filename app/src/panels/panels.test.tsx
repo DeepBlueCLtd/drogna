@@ -60,12 +60,33 @@ async function settle(until: () => boolean, rounds = 2000): Promise<void> {
   for (let round = 0; round < rounds && !until(); round++) await Promise.resolve();
 }
 
-// The tests below turn the loop until the harness has genuinely produced what they
-// read — thousands of ticks in some cases — so the default five seconds is a limit on
-// the runner rather than on the behaviour.
 describe('the panels against a live backend', { timeout: 120_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
+  let removeSeam: (() => void) | undefined;
+
+  /**
+   * Install the seam for one test: every request the panels make is answered by this
+   * runtime's own backend, and every requested URL is recorded for the tests that
+   * count them. Taking it off again is the fixture's job, deliberately — a test
+   * abandoned mid-await (a timeout) never runs its own `finally`, so a shim removed
+   * there leaves a mounted panel handing a relative seam path to the real fetch, and
+   * undici's `Invalid URL` lands on whichever test runs next. One timeout cost three
+   * CI failures that way, two of them on innocent tests.
+   */
+  function seam(): { asked: string[] } {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const asked: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input));
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    removeSeam = () => {
+      globalThis.fetch = realFetch;
+    };
+    return { asked };
+  }
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -73,9 +94,15 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     runtime = buildBackend(config, { rootSeed: 7, revision: 'test', dirty: false }, validator);
   });
 
-  afterEach(() => {
-    runtime.stop();
+  afterEach(async () => {
+    // Unmount first, then let whatever the last effects started run to its end, and
+    // only then take the seam off: in that order there is no moment where a live
+    // panel can reach a fetch that cannot answer it.
     cleanup();
+    await settle(() => false, 200);
+    removeSeam?.();
+    removeSeam = undefined;
+    runtime.stop();
     vi.useRealTimers();
   });
 
@@ -165,11 +192,9 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   });
 
   it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<HoldingsPanel {...panelProps(config, runtime)} />);
+    seam();
+    {
+      render(<HoldingsPanel {...panelProps(config, runtime)} />);
       // Flush the fetch → validate → setState chain (microtasks only; timers are fake).
       await act(async () => {
         await Promise.resolve();
@@ -179,12 +204,6 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       expect(archiveRow).not.toBeNull();
       act(() => (archiveRow as HTMLElement).click());
       expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
@@ -211,20 +230,14 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   });
 
   it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
-    const realFetch = globalThis.fetch;
-    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    let inventoryRequests = 0;
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      inventoryRequests += 1;
-      return seamFetch(input, init);
-    }) as typeof globalThis.fetch;
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<HoldingsPanel {...panelProps(config, runtime)} />);
+    const { asked } = seam();
+    const inventoryRequests = () => asked.length;
+    {
+      render(<HoldingsPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
-      expect(inventoryRequests).toBe(1);
+      expect(inventoryRequests()).toBe(1);
       const nowcastBefore = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
       expect(nowcastBefore).toBeTruthy();
       // Time passing is not an announcement: nothing polls, so nothing is refetched.
@@ -232,56 +245,40 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         vi.advanceTimersByTime(30_000);
         await Promise.resolve();
       });
-      expect(inventoryRequests).toBe(1);
+      expect(inventoryRequests()).toBe(1);
       // A genuine replacement: the generator's own cadence, driven by the clock, and
       // the store announces it on the topic the shell's configuration names.
       await act(async () => {
         for (let tick = 0; tick < config.env_generator.nowcast.interval_ticks; tick++) {
           runtime.clock.tickOnce();
         }
-        await settle(() => inventoryRequests > 1);
+        await settle(() => inventoryRequests() > 1);
       });
-      expect(inventoryRequests).toBe(2);
+      expect(inventoryRequests()).toBe(2);
       const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
       expect(nowcastAfter).not.toBe(nowcastBefore);
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
   it('Holdings states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
+    seam();
+    {
       // A path the release gate does not clear: the refusal is the real gate's, and
       // an empty table would be a lie about what the store holds (Constitution VII).
       const misconfigured = lockstepConfig();
       misconfigured.shell.endpoints.holdings = '/api/not-a-cleared-prefix/holdings';
-      mounted = render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
+      render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
       expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
   it('Map states WebGL absence honestly, lists advisories as present-and-stating-empty, and the composer offers only what is served', async () => {
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+    seam();
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -326,26 +323,13 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         fireEvent.change(numbers[0], { target: { value: '-25' } });
       });
       expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
   it('scrubbing the field refetches at the holding\'s own step, and no faster (#60)', async () => {
-    const realFetch = globalThis.fetch;
-    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    const asked: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      asked.push(String(input));
-      return seamFetch(input, init);
-    }) as typeof globalThis.fetch;
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+    const { asked } = seam();
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
       // One clock sample, so there is a displayed instant to scrub away from.
       await act(async () => {
         runtime.clock.tickOnce();
@@ -380,12 +364,6 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       expect(scrubbed).toHaveLength(1);
       expect(new URL(scrubbed[0], 'http://x').searchParams.get('datetime')).toBe(stepInstant(1));
       expect(screen.getByText(new RegExp(`field: nowcast at ${displayInstant(stepInstant(1))}`))).toBeTruthy();
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
@@ -408,21 +386,14 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   const TURNS_THE_LOOP = 30_000;
 
   it('doubt as the run\'s spread is a genuine query against the run\'s own instance and axis (#60)', async () => {
-    const realFetch = globalThis.fetch;
-    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    const asked: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      asked.push(String(input));
-      return seamFetch(input, init);
-    }) as typeof globalThis.fetch;
+    const { asked } = seam();
     const watcher = runtime.transport.connect('run-watch', config.shell.role);
     let announced: { collections: { uncertainty: string } } | undefined;
     watcher.subscribe(config.shell.topics.run_published, (message) => {
       announced ??= message.payload as { collections: { uncertainty: string } };
     });
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
       // Turn the loop until the model runner genuinely publishes: the spread is the
       // run's own instance, so there is nothing to draw until a run exists.
       await act(async () => {
@@ -493,26 +464,13 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       // Drawn, and its range stated: a normalised shade means nothing without one.
       expect(screen.getByText(/across the shade/)).toBeTruthy();
       expect(screen.queryByText(/spread declined/)).toBeNull();
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   }, TURNS_THE_LOOP);
 
   it('the depth cube asks one area query per level of the holding\'s own depth axis (#59)', async () => {
-    const realFetch = globalThis.fetch;
-    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    const asked: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      asked.push(String(input));
-      return seamFetch(input, init);
-    }) as typeof globalThis.fetch;
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
-      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+    const { asked } = seam();
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -544,12 +502,6 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       // Every level is drawn from a coverage that passed its master; a level that
       // did not would be named as declined rather than quietly missing.
       expect(screen.queryByText(/level\(s\) declined/)).toBeNull();
-    } finally {
-      // Unmount before the shim comes off: a panel still mounted can fire one more
-      // effect, and a relative seam path handed to the real fetch is a TypeError
-      // that lands in whichever test runs next (seen in CI, not here).
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   });
 
@@ -622,17 +574,15 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   });
 
   it('Operator shows the region table and the latency figure the report carries (#61)', async () => {
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
-    let mounted: ReturnType<typeof render> | undefined;
-    try {
+    seam();
+    {
       // Turn the loop until telemetry has region figures to serve — driven before
       // the panel mounts, so what the display shows is what the report already had.
       for (let tick = 0; tick < 8000 && runtime.telemetry.lastRegionStatistics.length === 0; tick++) {
         runtime.clock.tickOnce();
       }
       expect(runtime.telemetry.lastRegionStatistics.length).toBeGreaterThan(0);
-      mounted = render(<OperatorPanel {...panelProps(config, runtime)} />);
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await settle(() => screen.queryByTestId('region-statistics') !== null);
       });
@@ -645,9 +595,6 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       // Latency reads in simulation seconds and says what it measured.
       expect(screen.getByTestId('latency').textContent).toMatch(/sim-s/);
       expect(screen.getByTestId('latency').textContent).toMatch(/simulation instant/);
-    } finally {
-      mounted?.unmount();
-      globalThis.fetch = realFetch;
     }
   }, TURNS_THE_LOOP);
 

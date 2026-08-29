@@ -4,6 +4,10 @@ for what cannot be reconstructed from the diff: where the change can be seen run
 was watched happening, and what was decided not to do.
 
 Delete any section that does not apply. An empty section is a claim too.
+
+The title is terse engineering language: scope prefix, then the change — `map: defer canvas
+init until panel is mounted`, not a sentence about what it means for the reader. CLAUDE.md,
+"Titles and work packages", has the rule and the examples.
 -->
 
 ## What this changes, and why

@@ -70,6 +70,36 @@ which is what lets a feature add one without touching the others.
   times in V1 the code was right and the requirement loose, and once the reverse.
   Establish which before amending either; record genuine open questions as open.
 
+## Titles and work packages: terse engineering language
+
+Titles are index entries, not sentences. The tree already shows the story; a title that
+retells it costs the reader a second read to find out what changed. This applies to pull
+request titles, issue titles, task lines in `specs/*/tasks.md`, and commit subjects.
+
+- Noun phrase or imperative. No metaphor, no personification, no narrative reveal.
+- Prefix with the scope — component, feature number, or subsystem: `map:`, `telemetry:`,
+  `gates:`, `112:`.
+- Name the change, not its effect on the reader. Under ~72 characters, no trailing stop.
+- Keep the issue reference: `(#61)`.
+
+| Not this | This |
+|---|---|
+| The ocean reaches the browser: issue #34 links 3–6, and the fault no record carried | `map: coverage-store links 3–6; fix tile index fault (#34)` |
+| Map: hold the canvas back until the panel is in the document | `map: defer canvas init until panel is mounted` |
+| Telemetry scores each region, and says how late its residuals were (#61) | `telemetry: per-region residuals and end-to-end latency (#61)` |
+| The loop becalms for good when a run's validity lapses without an accepted breach | `control loop: permanent stall on lapsed run validity without accepted breach` |
+| Feature 112: the shell at a phone's width | `112: shell layout at phone widths` |
+
+Work-package bodies — issues, and the task lines they come from — follow the title:
+declarative, present tense, naming files, components and acceptance. Reasoning stays; it
+is the part that cannot be reconstructed later. Flourish goes. Write "unsampled regions
+publish no statistics; the panel states the reason" rather than "the display says that
+rather than presenting a bare zero".
+
+Prose bodies keep the voice they have. Specifications, ADRs, blog entries and pull request
+descriptions are written for a reader and that is deliberate; this rule governs titles and
+work packages only.
+
 ## Showing the work, not describing it
 
 Both of these are already built and neither was being used. Every push to `main` or to a

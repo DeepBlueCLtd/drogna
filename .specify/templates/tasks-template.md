@@ -18,6 +18,9 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- Descriptions are terse engineering language — scope prefix, then the change, declarative
+  and present tense. See CLAUDE.md, "Titles and work packages"; these lines become issue
+  titles verbatim via `/speckit-taskstoissues`.
 
 ## Path Conventions
 

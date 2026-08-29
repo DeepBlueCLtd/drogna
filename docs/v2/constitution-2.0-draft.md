@@ -239,9 +239,11 @@ Version 3 into the rewrite this principle exists to prevent.*
   MQTT-over-WebSocket.
 - **Delivery is static assets.** Any static host serves the harness; each visit is a
   fresh seeded run; nothing persists between visits; the manifest export/import is
-  the replay mechanism. CI publishes per-stage builds to stable gh-pages paths, and
-  the shell's views are URL-addressable so a link opens a specific view of a specific
-  instance (SRD FR-15, NFR-04).
+  the replay mechanism. CI publishes a per-PR instance for review, retained once the
+  PR completes, and the gh-pages estate is grown additively — discrete deployments,
+  never a wholesale rebuild per merge; the shell's views are URL-addressable so a
+  link opens a specific view of a specific instance, and an instance can be embedded
+  in a site page (SRD FR-15, NFR-04).
 
 ### Repository Layout
 
@@ -282,7 +284,10 @@ when the repository began:
   by anchor URL. The author reads outcomes, not approval requests.
 - The author is sent a ntfy message when a significant visual component is ready, and
   when a blog post lands. Blog posts capture significant new UI components and
-  backend simulations. The ntfy topic is a CI secret, never committed.
+  backend simulations, in a fixed terse shape — background, requirement, options
+  considered, demo — with a playable embedded instance, or, for headless work, an
+  embedded wrapper demonstrating the component through the seam. The ntfy topic is a
+  CI secret, never committed.
 
 ### Architecture Decision Records
 

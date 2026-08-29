@@ -369,10 +369,13 @@ directed → the machinery is interrogated → advice travels light → it is se
   URL. Each visit provisions a fresh seeded run; nothing persists between visits;
   manifest export/import (FR-10) provides replay. *(v1 NFR-07's "a fresh instance is
   equivalent to a long-running one," now literal.)*
-- **NFR-04** CI publishes per-stage builds of the app to stable gh-pages paths, so
-  that a PR comment or blog post can link a specific instance and, via FR-15's
-  anchors, a specific view of it. The published site (§8 PR-04) and the hosted
-  instances share the static hosting *(D16)*.
+- **NFR-04** CI publishes a **per-PR instance** of the app for review, addressable
+  while the PR is open and **retained once it completes**, so that a PR comment or
+  blog post can link a specific instance and, via FR-15's anchors, a specific view of
+  it — and so an instance can be embedded in a site page. The published estate
+  (instances and site together) is **grown additively**: discrete deployments push
+  content into it directly — a review instance cannot wait for a merge to the default
+  branch — rather than the whole site being rebuilt at each merge *(D16, D18)*.
 - **NFR-05** Toolchain: TypeScript 5, React, Deck.gl, a layout manager per FR-14,
   pnpm, vitest, Playwright. Nothing else; no Python, no containers (NFR-01).
 
@@ -390,9 +393,18 @@ directed → the machinery is interrogated → advice travels light → it is se
   whatever number is free when it lands, after the open V1 PRs settle theirs *(v1
   PR-03)*.
 - **PR-04** The published site is rebuilt for V2, with the V1 posts moved to an
-  archive section rather than disappearing. Blog posts capture significant new UI
-  components and backend simulations — one per significant component rather than
-  strictly one per feature — each announced to the author by ntfy *(plan §9.1; D17)*.
+  archive section rather than disappearing, and carries the **glossary** and the
+  **component reference** as first-class pages *(v1 PR-09; D18 — valued content, not
+  ballast)*. Blog posts capture significant new UI components and backend
+  simulations — one per significant component rather than strictly one per feature —
+  each announced to the author by ntfy *(plan §9.1; D17)*.
+- **PR-04a** Blog articles are terse, to a fixed shape: **the background, the
+  requirement, the options considered, the demo** — minimal prose beyond that
+  *(D19)*. An article for a significant UI component embeds a **playable instance**;
+  where the significant work is headless, the article embeds an HTML/JS
+  wrapper/visualisation demonstrating the component working across its range of
+  interactions, reading it through the seam — the wire shape is what makes such a
+  wrapper an ordinary consumer rather than a special build *(D18)*.
 - **PR-05** Implementation is worked with developer autonomy in a single long-lived
   PR *(D15, D16)*: developers decide independently, conducting research spikes when
   necessary whose outcomes need no endorsement — with the record disciplines

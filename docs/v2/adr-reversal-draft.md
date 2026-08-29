@@ -107,8 +107,8 @@ in the plan (D1–D17, §9):
   without a committed master, or a client configuration carrying an absolute URL is a
   constitution violation from feature 101 onward.
 - The shell must support URL-addressable views from feature 101, and CI must publish
-  per-stage builds to stable gh-pages paths — the single-PR review model depends on
-  both.
+  per-PR instances into an additively grown gh-pages estate, retained on completion —
+  the single-PR review model and the blog's embedded demos depend on both.
 - Offload's real transfer and verified-receipt eviction, and the second-broker
   fallback, are deferred to V3 with reasons recorded in SRD-v2 §11.
 - Until this record is Accepted, constitution 1.6.0 governs and nothing in `docs/v2/`

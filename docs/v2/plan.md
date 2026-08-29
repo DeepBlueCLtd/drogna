@@ -7,9 +7,9 @@ mechanics are §8.
 **Provenance:** an interview with the author, conducted 29 August 2026, plus a sweep of
 the six open pull requests (#43–#47, #49) for emergent requirements (§6), plus a second
 interview round the same day resolving the §9 questions and E1, plus a third round of
-author direction the same day on how implementation is worked and reviewed (D15–D17).
-Every decision below was put as a question and answered, or stated by the author
-directly.
+author direction the same day on how implementation is worked and reviewed (D15–D17),
+plus a fourth on the gh-pages estate and the blog's form (D18–D19). Every decision
+below was put as a question and answered, or stated by the author directly.
 
 ---
 
@@ -58,6 +58,8 @@ document, not a silent divergence later.
 | D15 | **Developer autonomy during implementation** *(third round)*. The system is far better understood than when the repository began: once the plan, SRD-v2 and constitution are adopted, developers make implementation decisions independently, without asking the author — including conducting research spikes when necessary, whose outcomes need no endorsement. | The author reviews *outcomes* — through D16's demo links, D17's notices and blog posts — not through approval gates. The record disciplines carry unchanged: contested or hard-to-reverse decisions still earn ADRs, spikes still write dated `FINDING.md`s. |
 | D16 | **One implementation PR** *(third round)*. The whole V2 implementation lands through a single long-lived PR. Progress is narrated in PR comments, each linking to a statically hosted (gh-pages) instance of the app **opening in the relevant view via an anchor URL** — the reviewer clicks from the comment straight into the beat being shown. | Two derived obligations: CI publishes per-stage builds under stable gh-pages paths, and **the shell supports URL-addressable views (deep links) from feature 101** — a comment cannot open "the relevant view" unless views are addressable. Both go into SRD-v2. |
 | D17 | **ntfy notices and the blog mark significant arrivals** *(third round)*. When a significant visual component is ready, the author is sent a ntfy message with the demo link. Blog posts on the rebuilt site (§9.1) capture significant new UI components and backend simulations — amending the cadence from one-post-per-feature to one-per-significant-component — and each posting is also announced by ntfy. | The ntfy topic is deployment configuration (a CI secret), never committed — PR-01's "public but unadvertised" discipline applies to the notification channel too. |
+| D18 | **The gh-pages estate grows; it is not rebuilt** *(fourth round)*. The site hosts per-PR SPA instances for review, retained once the PR completes; blog articles for significant components **embed a playable instance**; where the significant work is headless, the article embeds an HTML/JS wrapper/visualisation that demonstrates the component working across its range of interactions — possible precisely because the data crosses the seam in wire shape, so a wrapper is just another consumer. The glossary and the component reference are valued V1 site content and carry into the V2 site as first-class pages. | The publishing model changes from a wholesale rewrite at each merge to **additive, discrete deployments**: a review instance cannot wait for a merge to the default branch, so pushes land content into the estate directly, and completed instances stay addressable. SRD-v2's delivery requirements follow. |
+| D19 | **Blog articles are terse, to a fixed shape** *(fourth round)*: the background, the requirement, the options considered, the demo — minimal prose beyond that. | The demo (the embedded instance or wrapper) carries the weight the prose used to; a post is a caption on a running thing, not an essay. |
 
 ## 3. The seam, precisely
 
@@ -333,7 +335,9 @@ original question wording is kept so the answer can be read against it.
    record? — **A fresh V2 site, with V1 archived.** The site is rebuilt for V2 (a
    static site beside a static site), and the V1 posts move to an archive section
    within it rather than disappearing. The rebuild's feature placement is decided at
-   101's planning; the archive move rides the retirement commit's wake.
+   101's planning; the archive move rides the retirement commit's wake. *Extended by
+   the fourth round: the estate grows additively with live instances and embedded
+   demos (D18), and the articles take a fixed terse shape (D19).*
 2. **The droplet** (NFR-06): retire it, or keep it serving the published site until V3?
    — **Retired at V1 retirement.** Demo and site are both static, so nothing V2 runs
    needs a server; V3 provisions fresh when it needs a host. The droplet is

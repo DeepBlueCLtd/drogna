@@ -97,6 +97,10 @@ export class CoverageStore {
       if (previous !== undefined && previous !== descriptor.holding_id) this.holdingsById.delete(previous);
       this.eraPointers.set('nowcast', descriptor.holding_id);
     }
+    if (descriptor.era === 'instance') {
+      // Instances accumulate as holdings (FR-30); the pointer names the current one.
+      this.eraPointers.set('instance', descriptor.holding_id);
+    }
     this.client.publish(this.config.topics.published, {
       component: this.config.id,
       holding_id: descriptor.holding_id,
@@ -119,6 +123,12 @@ export class CoverageStore {
 
   currentNowcast(): { descriptor: CoverageHolding; bytes: Uint8Array } | undefined {
     const id = this.eraPointers.get('nowcast');
+    return id === undefined ? undefined : this.holdingsById.get(id);
+  }
+
+  /** The current forecast instance — what the monitor scores against. */
+  currentInstance(): { descriptor: CoverageHolding; bytes: Uint8Array } | undefined {
+    const id = this.eraPointers.get('instance');
     return id === undefined ? undefined : this.holdingsById.get(id);
   }
 

@@ -262,6 +262,53 @@ export type ConfigIngest = {
   "heartbeat": ConfigCommonHeartbeat;
 };
 
+/** drogna model runner configuration (V2-C13) — from config.model-runner.schema.json */
+export type ConfigModelRunner = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "run_request": ConfigCommonTopic;
+    "run_started": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "kernel": string;
+  "steps": number;
+  "step_seconds": number;
+  "advection": {
+    "east_km_per_day": number;
+    "north_km_per_day": number;
+  };
+  "noise_std": {
+    "temperature": number;
+    "salinity": number;
+  };
+};
+
+/** drogna monitor configuration (V2-C11) — from config.monitor.schema.json */
+export type ConfigMonitor = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+    "divergence": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "pairs": {
+    "thing_id": string;
+    "temperature_datastream": string;
+    "salinity_datastream": string;
+    "depth_m": number;
+  }[];
+  "threshold_m_per_s": number;
+  "persistence_count": number;
+  "region": {
+    "radius_m": number;
+    "depth_pad_m": number;
+  };
+};
+
 /** drogna observation store configuration (V2-C06) — from config.observation-store.schema.json */
 export type ConfigObservationStore = {
   "id": ConfigCommonComponentId;
@@ -298,8 +345,26 @@ export type ConfigRun = {
   "ingest": ConfigIngest;
   "observation_store": ConfigObservationStore;
   "query": ConfigQuery;
+  "monitor": ConfigMonitor;
+  "scheduler": ConfigScheduler;
+  "model_runner": ConfigModelRunner;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
+};
+
+/** drogna scheduler configuration (V2-C12) — from config.scheduler.schema.json */
+export type ConfigScheduler = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "divergence": ConfigCommonTopic;
+    "run_request": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "min_interval_ticks": number;
+  "max_interval_ticks": number;
+  "ensemble_size": number;
 };
 
 /** drogna sensors configuration (V2-C04) — from config.sensors.schema.json */
@@ -388,25 +453,6 @@ export type CoverageHolding = {
     "byte_length": number;
   };
   "manifest": Manifest;
-};
-
-/** drogna coverage run manifest — from coverage-run-manifest.schema.json */
-export type CoverageRunManifest = {
-  "schema_version": number;
-  "run_id": string;
-  "root_seed": number;
-  "run_sequence": number | null;
-  "generator_version": string;
-  "model_version": string;
-  "sim_time": string;
-  "valid_time": {
-    "begin": string;
-    "end": string;
-  };
-  "ensemble": {
-    "members": number | null;
-    "method": string;
-  };
 };
 
 /** drogna CoverageJSON subset — from coveragejson.schema.json */
@@ -1164,8 +1210,9 @@ export type RunRequest = {
   "run_sequence": number;
   "initialisation_sim_time": string;
   "ensemble_size": number;
-  "region": DivergenceRegion;
-  "divergence": Divergence;
+  "region": (DivergenceRegion) | (null);
+  "divergence": (Divergence) | (null);
+  "cause": "divergence" | "scheduled";
 };
 
 /** drogna model run started — from run-started.schema.json */
@@ -1175,7 +1222,7 @@ export type RunStarted = {
   "sim_time": string;
   "tick": number;
   "run_id": string;
-  "divergence_id": string;
+  "divergence_id": string | null;
   "member_count": number;
   "kernel": string;
   "initialisation_sim_time": string;

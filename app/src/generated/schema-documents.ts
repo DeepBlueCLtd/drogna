@@ -1189,6 +1189,216 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.model-runner": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.model-runner.schema.json",
+    "title": "drogna model runner configuration (V2-C13)",
+    "description": "The model runner (SRD-v2 FR-30): initialises from the current now-cast through the store interface, advects analytically with seeded noise behind the kernel port, runs a small ensemble, and publishes the ensemble mean as the forecast with the spread as the uncertainty field — both through the coverage store's digest-checked seam, announced on the control namespace.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "kernel",
+      "steps",
+      "step_seconds",
+      "advection",
+      "noise_std"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "run_request",
+          "run_started",
+          "run_published"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_request": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_started": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "kernel": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "The kernel implementation selected behind the port (Constitution VI); named in every run-started message."
+      },
+      "steps": {
+        "type": "integer",
+        "minimum": 2
+      },
+      "step_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "advection": {
+        "type": "object",
+        "required": [
+          "east_km_per_day",
+          "north_km_per_day"
+        ],
+        "additionalProperties": false,
+        "description": "The kernel's advection velocity: a modelling assumption, deliberately not the true drift — forecast error is supposed to grow.",
+        "properties": {
+          "east_km_per_day": {
+            "type": "number"
+          },
+          "north_km_per_day": {
+            "type": "number"
+          }
+        }
+      },
+      "noise_std": {
+        "type": "object",
+        "required": [
+          "temperature",
+          "salinity"
+        ],
+        "additionalProperties": false,
+        "description": "Per-member, per-step noise standard deviations, drawn from this component's stream.",
+        "properties": {
+          "temperature": {
+            "type": "number",
+            "minimum": 0
+          },
+          "salinity": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "config.monitor": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.monitor.schema.json",
+    "title": "drogna monitor configuration (V2-C11)",
+    "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "pairs",
+      "threshold_m_per_s",
+      "persistence_count",
+      "region"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observations",
+          "divergence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "divergence": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "pairs": {
+        "type": "array",
+        "minItems": 1,
+        "description": "Which datastreams form a sound-speed sample: a temperature and a salinity series at one depth on one platform.",
+        "items": {
+          "type": "object",
+          "required": [
+            "thing_id",
+            "temperature_datastream",
+            "salinity_datastream",
+            "depth_m"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "thing_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "temperature_datastream": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "salinity_datastream": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "depth_m": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "threshold_m_per_s": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "persistence_count": {
+        "type": "integer",
+        "minimum": 2,
+        "description": "Consecutive breaching samples before a divergence is raised: never a single spike."
+      },
+      "region": {
+        "type": "object",
+        "required": [
+          "radius_m",
+          "depth_pad_m"
+        ],
+        "additionalProperties": false,
+        "description": "How the diverged region is stated: centred on the breaching samples' mean position, with this radius and this pad about the pair's depth.",
+        "properties": {
+          "radius_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "depth_pad_m": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
   "config.observation-store": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.observation-store.schema.json",
@@ -1296,6 +1506,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "observation_store",
       "feature_store",
       "query",
+      "monitor",
+      "scheduler",
+      "model_runner",
       "shell"
     ],
     "additionalProperties": false,
@@ -1336,11 +1549,82 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "query": {
         "$ref": "config.query.schema.json"
       },
+      "monitor": {
+        "$ref": "config.monitor.schema.json"
+      },
+      "scheduler": {
+        "$ref": "config.scheduler.schema.json"
+      },
+      "model_runner": {
+        "$ref": "config.model-runner.schema.json"
+      },
       "feature_store": {
         "$ref": "config.feature-store.schema.json"
       },
       "shell": {
         "$ref": "config.shell.schema.json"
+      }
+    }
+  },
+  "config.scheduler": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
+    "title": "drogna scheduler configuration (V2-C12)",
+    "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "min_interval_ticks",
+      "max_interval_ticks",
+      "ensemble_size"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "divergence",
+          "run_request",
+          "run_published"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "divergence": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_request": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "min_interval_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "description": "No two runs closer than this; a breach inside it is declined by policy, and the decline is legible (FR-32)."
+      },
+      "max_interval_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "description": "The cadence floor (FR-31): the interval after which, with the current run's validity lapsed (or no run at all), a run is warranted on schedule alone."
+      },
+      "ensemble_size": {
+        "type": "integer",
+        "minimum": 2
       }
     }
   },
@@ -1688,7 +1972,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
     "title": "drogna coverage holding",
-    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. Three eras (SRD-v2 FR-21): the historic archive authored at provisioning, the now-cast replaced on its cadence, and the forecast instances that accumulate once the loop turns (whose fuller descriptor is coverage-run-manifest.schema.json; the holding wraps it). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. Three eras (SRD-v2 FR-21): the historic archive authored at provisioning, the now-cast replaced on its cadence, and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
     "type": "object",
     "required": [
       "schema_version",
@@ -1770,129 +2054,6 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "description": "The ground-truth manifest, embedded whole: a holding is inspectable without a second fetch, and AT-01/AT-03 score against exactly what the catalogue serves."
       }
     }
-  },
-  "coverage-run-manifest": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://schemas.harness.invalid/coverage-run-manifest.schema.json",
-    "title": "drogna coverage run manifest",
-    "description": "The document that sits beside a published run in the coverage store, and the reason a served value can be traced back to what produced it. Constitution III requires a shape that crosses a boundary to have a master, and this one crosses the widest boundary in the harness: the publisher writes it and the query layer refuses to catalogue a run without it, which is why its rules were stated twice — in stores/coverage/layout.md and in each of the two implementations — before this file existed. It is not run-manifest.schema.json, which is C-01's record of how to replay a whole scenario; this one describes one forecast run and is read by a catalogue rather than by a replay.",
-    "type": "object",
-    "required": [
-      "schema_version",
-      "run_id",
-      "root_seed",
-      "run_sequence",
-      "generator_version",
-      "model_version",
-      "sim_time",
-      "valid_time",
-      "ensemble"
-    ],
-    "additionalProperties": false,
-    "properties": {
-      "schema_version": {
-        "type": "integer",
-        "minimum": 1,
-        "description": "Bumped when the shape changes in a way a reader must notice."
-      },
-      "run_id": {
-        "type": "string",
-        "minLength": 1,
-        "description": "This run's identifier. It must equal the name of the directory holding this file: a run whose manifest disagrees with its directory is refused rather than catalogued, because nothing in a response would then say which of the two names it was answering under."
-      },
-      "root_seed": {
-        "type": "integer",
-        "description": "The seed the run derives from. With run_sequence it determines run_id, by the rule stores/coverage/layout.md states."
-      },
-      "run_sequence": {
-        "type": [
-          "integer",
-          "null"
-        ],
-        "minimum": 0,
-        "description": "Which run of this scenario this is. Null where nothing carried it — a run named by a rule other than the store's cannot have its sequence read back out of its name, and a guess here would look like a fact that reproduced the run."
-      },
-      "generator_version": {
-        "type": "string",
-        "minLength": 1,
-        "description": "What produced the initial state this run was advected from."
-      },
-      "model_version": {
-        "type": "string",
-        "minLength": 1,
-        "description": "The model kernel that produced the forecast, and the version of the analytic form it used."
-      },
-      "sim_time": {
-        "type": "string",
-        "minLength": 1,
-        "description": "The simulation time the run was made at. Simulation time, never host time (Constitution I)."
-      },
-      "valid_time": {
-        "title": "The extent the forecast is valid over",
-        "description": "Load-bearing beyond documentation: an EDR query that names no time is answered over this extent, taken from this document rather than from a host clock — there is no now here, and reading one to decide what a forecast says would be Constitution I broken at the one place the answer would still look right.",
-        "type": "object",
-        "required": [
-          "begin",
-          "end"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "begin": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Start of the valid extent, in simulation time."
-          },
-          "end": {
-            "type": "string",
-            "minLength": 1,
-            "description": "End of the valid extent, in simulation time. Not before begin — an ordering this document cannot express and the catalogue checks besides."
-          }
-        }
-      },
-      "ensemble": {
-        "title": "How many members, and how they were combined",
-        "type": "object",
-        "required": [
-          "members",
-          "method"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "members": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "minimum": 2,
-            "description": "Members the run was computed over. At least two, or there is no spread and the uncertainty field beside this manifest would be a fiction."
-          },
-          "method": {
-            "type": "string",
-            "minLength": 1,
-            "description": "How the members were combined into the published fields."
-          }
-        }
-      }
-    },
-    "examples": [
-      {
-        "schema_version": 1,
-        "run_id": "run-000000-7f80b47c7b91",
-        "root_seed": 20260826,
-        "run_sequence": 0,
-        "generator_version": "model_runner 0.1.0",
-        "model_version": "analytic 1",
-        "sim_time": "2026-01-01T00:00:00.000000Z",
-        "valid_time": {
-          "begin": "2026-01-01T00:00:00.000000Z",
-          "end": "2026-01-01T07:00:00.000000Z"
-        },
-        "ensemble": {
-          "members": 8,
-          "method": "analytic"
-        }
-      }
-    ]
   },
   "coveragejson": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -5653,7 +5814,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-request.schema.json",
     "title": "drogna model run request",
-    "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was.",
+    "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was. Amended for V2 (SRD-v2 FR-31, E1 resolved plan §9.7): the scheduler holds a cadence floor, so a run can be warranted on schedule alone — such a request carries cause \"scheduled\" with divergence and region null, and every display labels runs by this cause.",
     "type": "object",
     "required": [
       "component",
@@ -5665,7 +5826,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "initialisation_sim_time",
       "ensemble_size",
       "region",
-      "divergence"
+      "divergence",
+      "cause"
     ],
     "additionalProperties": false,
     "properties": {
@@ -5706,12 +5868,34 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "description": "How many perturbed members the run is asked for. At least two, or there is no spread to publish and the uncertainty field would be a fiction."
       },
       "region": {
-        "$ref": "https://schemas.harness.invalid/divergence.schema.json#/$defs/region",
-        "description": "The region that diverged. It does not bound the run's domain, which is the whole grid; it records where the disagreement was."
+        "oneOf": [
+          {
+            "$ref": "https://schemas.harness.invalid/divergence.schema.json#/$defs/region"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The region that diverged, or null for a scheduled run. It does not bound the run’s domain, which is the whole grid."
       },
       "divergence": {
-        "$ref": "https://schemas.harness.invalid/divergence.schema.json",
-        "description": "The divergence event that justified this request, carried whole."
+        "oneOf": [
+          {
+            "$ref": "https://schemas.harness.invalid/divergence.schema.json"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The divergence event that justified this request, carried whole; null exactly when cause is \"scheduled\"."
+      },
+      "cause": {
+        "type": "string",
+        "enum": [
+          "divergence",
+          "scheduled"
+        ],
+        "description": "Why this run is warranted: a sustained divergence, or the cadence floor alone (FR-31). Labelled wherever runs are shown."
       }
     }
   },
@@ -5757,8 +5941,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "description": "The model run identifier from the request that caused this run."
       },
       "divergence_id": {
-        "type": "string",
-        "description": "The divergence that justified the request, so the chain from observation to field is followable through the control namespace alone."
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "The divergence that justified the request, or null for a run warranted by the cadence floor alone (FR-31), so the chain from observation to field is followable through the control namespace alone."
       },
       "member_count": {
         "type": "integer",

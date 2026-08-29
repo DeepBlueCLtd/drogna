@@ -66,8 +66,11 @@ describe('the backend runtime', () => {
       'env-generator',
       'feature-store',
       'ingest',
+      'model-runner',
+      'monitor',
       'observation-store',
       'query',
+      'scheduler',
       'sensors',
     ]);
     expect(heard.get('broker')?.sim_time).toBe('2026-01-01T00:00:00.000000Z');

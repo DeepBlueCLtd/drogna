@@ -49,6 +49,7 @@ export class Sensors {
   private readonly heartbeat: HeartbeatEmitter;
   private simTime = { value: '', tick: 0 };
   private publishedCount = 0;
+  private lastSampledTick = -1;
 
   constructor(
     private readonly config: ConfigSensors,
@@ -90,7 +91,11 @@ export class Sensors {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
-      if (sample.tick % this.config.sample_interval_ticks === 0) {
+      // A rate-change acknowledgement repeats the tick in force (clock.schema.json);
+      // sampling keys to the tick, not to the count of samples heard, so a repeat
+      // draws nothing and publishes nothing.
+      if (sample.tick % this.config.sample_interval_ticks === 0 && sample.tick !== this.lastSampledTick) {
+        this.lastSampledTick = sample.tick;
         this.sampleAll(sample.tick, sample.sim_time);
       }
     });

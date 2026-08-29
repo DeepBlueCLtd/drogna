@@ -84,10 +84,28 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           <code>/api/edr/collections</code> in the address bar — it is a genuine GET.
         </p>
       </section>
+      <section>
+        <h3>105 — it is assimilated</h3>
+        <p>
+          The loop turns. The monitor pairs co-located samples, derives sound speed
+          by the one implementation, and scores residuals against the current
+          forecast — raising a divergence only on sustained persistence, never a
+          single spike. The scheduler decides: a breach inside the minimum interval
+          is declined by policy, observably, and the cadence floor means the loop
+          can never be permanently becalmed — a run warranted on schedule alone is
+          labelled <em>scheduled</em>, distinct from <em>divergence-triggered</em>,
+          wherever runs appear. The model runner advects an ensemble behind the
+          kernel port and publishes the mean with its spread through the same
+          digest-checked seam as everything else; instances accumulate in{' '}
+          <a href={hashForView('holdings')}>Holdings</a> and are served through EDR
+          by convention. Watch the <a href={hashForView('system')}>System</a> tab's
+          detail column: the loop's quiet always says which quiet it is.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          The forecast loop (105), uncertainty
+          Uncertainty
           and planning (106), the operator&rsquo;s view (107), shore advisories (108)
           and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
           is built. Until then their components stay grey, because nothing here lights

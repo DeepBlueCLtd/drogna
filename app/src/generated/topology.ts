@@ -137,6 +137,77 @@ export const topology: Topology = {
       ]
     },
     {
+      "role": "monitor",
+      "rules": [
+        {
+          "access": "write",
+          "filter": "ctl/divergence"
+        },
+        {
+          "access": "write",
+          "filter": "ctl/heartbeat"
+        },
+        {
+          "access": "read",
+          "filter": "obs/#"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/clock"
+        }
+      ]
+    },
+    {
+      "role": "scheduler",
+      "rules": [
+        {
+          "access": "write",
+          "filter": "ctl/run/request"
+        },
+        {
+          "access": "write",
+          "filter": "ctl/heartbeat"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/divergence"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/run/published"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/clock"
+        }
+      ]
+    },
+    {
+      "role": "model-runner",
+      "rules": [
+        {
+          "access": "write",
+          "filter": "ctl/run/started"
+        },
+        {
+          "access": "write",
+          "filter": "ctl/run/published"
+        },
+        {
+          "access": "write",
+          "filter": "ctl/heartbeat"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/run/request"
+        },
+        {
+          "access": "read",
+          "filter": "ctl/clock"
+        }
+      ]
+    },
+    {
       "role": "coverage-store",
       "rules": [
         {
@@ -200,6 +271,16 @@ export const topology: Topology = {
       "source_root": "app/src/backend/ingest"
     },
     {
+      "id": "model-runner",
+      "role": "model-runner",
+      "source_root": "app/src/backend/model-runner"
+    },
+    {
+      "id": "monitor",
+      "role": "monitor",
+      "source_root": "app/src/backend/monitor"
+    },
+    {
       "id": "observation-store",
       "role": "observation-store",
       "source_root": "app/src/backend/observation-store"
@@ -208,6 +289,11 @@ export const topology: Topology = {
       "id": "query",
       "role": "query",
       "source_root": "app/src/backend/query"
+    },
+    {
+      "id": "scheduler",
+      "role": "scheduler",
+      "source_root": "app/src/backend/scheduler"
     },
     {
       "id": "sensors",
@@ -235,13 +321,13 @@ export const topology: Topology = {
         {
           "component": "coverage-store",
           "path": "app/config/run.json",
-          "line": 145,
+          "line": 160,
           "constant": "/coverage_store/topics/published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 280,
+          "line": 344,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -260,7 +346,7 @@ export const topology: Topology = {
         {
           "component": "boundary",
           "path": "app/config/run.json",
-          "line": 49,
+          "line": 64,
           "constant": "/boundary/topics/denial"
         }
       ]
@@ -279,8 +365,11 @@ export const topology: Topology = {
         "env-generator",
         "feature-store",
         "ingest",
+        "model-runner",
+        "monitor",
         "observation-store",
         "query",
+        "scheduler",
         "sensors",
         "shell"
       ],
@@ -328,6 +417,24 @@ export const topology: Topology = {
           "constant": "/query/topics/clock"
         },
         {
+          "component": "monitor",
+          "path": "app/config/run.json",
+          "line": 12,
+          "constant": "/monitor/topics/clock"
+        },
+        {
+          "component": "scheduler",
+          "path": "app/config/run.json",
+          "line": 12,
+          "constant": "/scheduler/topics/clock"
+        },
+        {
+          "component": "model-runner",
+          "path": "app/config/run.json",
+          "line": 12,
+          "constant": "/model_runner/topics/clock"
+        },
+        {
           "component": "feature-store",
           "path": "app/config/run.json",
           "line": 12,
@@ -338,6 +445,32 @@ export const topology: Topology = {
           "path": "app/config/run.json",
           "line": 12,
           "constant": "/shell/topics/clock"
+        }
+      ]
+    },
+    {
+      "topic": "ctl/divergence",
+      "namespace": "ctl",
+      "schema": "contracts/schemas/divergence.schema.json",
+      "publishers": [
+        "monitor"
+      ],
+      "subscribers": [
+        "scheduler",
+        "shell"
+      ],
+      "named_by": [
+        {
+          "component": "monitor",
+          "path": "app/config/run.json",
+          "line": 241,
+          "constant": "/monitor/topics/divergence"
+        },
+        {
+          "component": "scheduler",
+          "path": "app/config/run.json",
+          "line": 241,
+          "constant": "/scheduler/topics/divergence"
         }
       ]
     },
@@ -353,8 +486,11 @@ export const topology: Topology = {
         "env-generator",
         "feature-store",
         "ingest",
+        "model-runner",
+        "monitor",
         "observation-store",
         "query",
+        "scheduler",
         "sensors"
       ],
       "subscribers": [
@@ -370,20 +506,98 @@ export const topology: Topology = {
       ]
     },
     {
+      "topic": "ctl/run/published",
+      "namespace": "ctl",
+      "schema": "contracts/schemas/run-published.schema.json",
+      "publishers": [
+        "model-runner"
+      ],
+      "subscribers": [
+        "scheduler",
+        "shell"
+      ],
+      "named_by": [
+        {
+          "component": "scheduler",
+          "path": "app/config/run.json",
+          "line": 262,
+          "constant": "/scheduler/topics/run_published"
+        },
+        {
+          "component": "model-runner",
+          "path": "app/config/run.json",
+          "line": 262,
+          "constant": "/model_runner/topics/run_published"
+        }
+      ]
+    },
+    {
+      "topic": "ctl/run/request",
+      "namespace": "ctl",
+      "schema": "contracts/schemas/run-request.schema.json",
+      "publishers": [
+        "scheduler"
+      ],
+      "subscribers": [
+        "model-runner",
+        "shell"
+      ],
+      "named_by": [
+        {
+          "component": "scheduler",
+          "path": "app/config/run.json",
+          "line": 261,
+          "constant": "/scheduler/topics/run_request"
+        },
+        {
+          "component": "model-runner",
+          "path": "app/config/run.json",
+          "line": 261,
+          "constant": "/model_runner/topics/run_request"
+        }
+      ]
+    },
+    {
+      "topic": "ctl/run/started",
+      "namespace": "ctl",
+      "schema": "contracts/schemas/run-started.schema.json",
+      "publishers": [
+        "model-runner"
+      ],
+      "subscribers": [
+        "shell"
+      ],
+      "named_by": [
+        {
+          "component": "model-runner",
+          "path": "app/config/run.json",
+          "line": 275,
+          "constant": "/model_runner/topics/run_started"
+        }
+      ]
+    },
+    {
       "topic": "obs/#",
       "namespace": "obs",
       "schema": "contracts/schemas/observation.schema.json",
       "publishers": [],
       "subscribers": [
         "ingest",
+        "monitor",
         "shell"
       ],
       "named_by": [
         {
           "component": "ingest",
           "path": "app/config/run.json",
-          "line": 203,
+          "line": 218,
           "constant": "/ingest/topics/observations"
+        },
+        {
+          "component": "monitor",
+          "path": "app/config/run.json",
+          "line": 218,
+          "constant": "/monitor/topics/observations"
         }
       ]
     },
@@ -396,6 +610,7 @@ export const topology: Topology = {
       ],
       "subscribers": [
         "ingest",
+        "monitor",
         "shell"
       ],
       "named_by": [
@@ -416,6 +631,7 @@ export const topology: Topology = {
       ],
       "subscribers": [
         "ingest",
+        "monitor",
         "shell"
       ],
       "named_by": [
@@ -436,6 +652,7 @@ export const topology: Topology = {
       ],
       "subscribers": [
         "ingest",
+        "monitor",
         "shell"
       ],
       "named_by": [
@@ -456,6 +673,7 @@ export const topology: Topology = {
       ],
       "subscribers": [
         "ingest",
+        "monitor",
         "shell"
       ],
       "named_by": [

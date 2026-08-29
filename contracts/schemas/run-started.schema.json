@@ -22,19 +22,29 @@
       "pattern": "^[a-z][a-z0-9_-]*$",
       "description": "The model runner, matching config /component/id."
     },
-    "scenario_run_id": { "type": "string", "description": "The scenario run this belongs to." },
+    "scenario_run_id": {
+      "type": "string",
+      "description": "The scenario run this belongs to."
+    },
     "sim_time": {
       "type": "string",
       "description": "Simulation time at which work began, ISO-8601 UTC with microsecond precision."
     },
-    "tick": { "type": "integer", "minimum": 0, "description": "The tick index the runner had observed." },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the runner had observed."
+    },
     "run_id": {
       "type": "string",
       "description": "The model run identifier from the request that caused this run."
     },
     "divergence_id": {
-      "type": "string",
-      "description": "The divergence that justified the request, so the chain from observation to field is followable through the control namespace alone."
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The divergence that justified the request, or null for a run warranted by the cadence floor alone (FR-31), so the chain from observation to field is followable through the control namespace alone."
     },
     "member_count": {
       "type": "integer",

@@ -26,6 +26,9 @@ import { Ingest } from '../ingest/ingest.js';
 import { ObservationStore } from '../observation-store/store.js';
 import { FeatureStore } from '../feature-store/store.js';
 import { QueryComponent } from '../query/query.js';
+import { Monitor } from '../monitor/monitor.js';
+import { Scheduler } from '../scheduler/scheduler.js';
+import { ModelRunner } from '../model-runner/runner.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
@@ -42,6 +45,8 @@ export interface BackendRuntime {
   readonly observationStore: ObservationStore;
   readonly featureStore: FeatureStore;
   readonly ingest: Ingest;
+  readonly monitor: Monitor;
+  readonly scheduler: Scheduler;
   stop(): void;
 }
 
@@ -74,12 +79,16 @@ export function buildBackend(
   validated(validator, 'config.observation-store', config.observation_store);
   validated(validator, 'config.feature-store', config.feature_store);
   validated(validator, 'config.query', config.query);
+  validated(validator, 'config.monitor', config.monitor);
+  validated(validator, 'config.scheduler', config.scheduler);
+  validated(validator, 'config.model-runner', config.model_runner);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
   const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, [
     config.env_generator.stream,
     config.sensors.stream,
+    config.model_runner.stream,
   ]);
 
   const broker = new Broker(config.broker);
@@ -146,6 +155,15 @@ export function buildBackend(
     router,
     runId,
   );
+  const monitor = new Monitor(config.monitor, transport.connect(config.monitor.id, config.monitor.id), store, runId);
+  const scheduler = new Scheduler(config.scheduler, transport.connect(config.scheduler.id, config.scheduler.id), runId);
+  const modelRunner = new ModelRunner(
+    config.model_runner,
+    transport.connect(config.model_runner.id, config.model_runner.id),
+    store,
+    runId,
+    options.rootSeed,
+  );
 
   // Each component's heartbeat carries the simulation time that component last
   // heard over the seam; only the clock's carries the time it is the source of.
@@ -202,6 +220,9 @@ export function buildBackend(
   generator.start();
   ingest.start();
   sensors.start();
+  monitor.start();
+  scheduler.start();
+  modelRunner.start();
   store.heartbeat.start();
   observationStore.heartbeat.start();
   featureStore.heartbeat.start();
@@ -219,11 +240,16 @@ export function buildBackend(
     observationStore,
     featureStore,
     ingest,
+    monitor,
+    scheduler,
     stop(): void {
       for (const heartbeat of heartbeats) heartbeat.stop();
       generator.stop();
       sensors.stop();
       ingest.stop();
+      monitor.stop();
+      scheduler.stop();
+      modelRunner.stop();
       store.heartbeat.stop();
       observationStore.heartbeat.stop();
       featureStore.heartbeat.stop();

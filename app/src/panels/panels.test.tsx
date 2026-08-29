@@ -67,21 +67,24 @@ describe('the panels against a live backend', () => {
       'env-generator',
       'feature-store',
       'ingest',
+      'model-runner',
+      'monitor',
       'observation-store',
       'query',
+      'scheduler',
       'sensors',
     ]);
     // The full declared layout renders from day one (FR-16): every future beat greyed.
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 10);
+    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 13);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(10);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(13);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));

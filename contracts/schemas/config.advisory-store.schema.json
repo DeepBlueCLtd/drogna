@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.advisory-store.schema.json",
+  "title": "drogna advisory store configuration (V2-C17)",
+  "description": "The advisory store (SRD-v2 FR-37, FR-12): append-only, written only through its own ingestion seam — the subscription below — which validates every advisory against its master, absorbs redelivery on the deterministic id, and enforces the size ceiling with a refusal that names the limit. Read by the query components alone.",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat", "size_ceiling_bytes"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "advisory"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "advisory": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "size_ceiling_bytes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "The wire-bytes ceiling. Advice travels light: the ceiling is held far below the smallest gridded update, and a test measures the two rather than trusting this sentence."
+    }
+  }
+}

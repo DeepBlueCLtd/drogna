@@ -23,6 +23,9 @@
     "planner",
     "telemetry",
     "operator",
+    "advisory_source",
+    "advisory_store",
+    "offload",
     "shell"
   ],
   "additionalProperties": false,
@@ -80,6 +83,15 @@
     },
     "operator": {
       "$ref": "config.operator.schema.json"
+    },
+    "advisory_source": {
+      "$ref": "config.advisory-source.schema.json"
+    },
+    "advisory_store": {
+      "$ref": "config.advisory-store.schema.json"
+    },
+    "offload": {
+      "$ref": "config.offload.schema.json"
     },
     "feature_store": {
       "$ref": "config.feature-store.schema.json"

@@ -59,6 +59,21 @@
         "subscribe": ["ctl/clock"]
       },
       {
+        "role": "advisory-source",
+        "publish": ["adv/advisories", "ctl/heartbeat"],
+        "subscribe": ["ctl/clock"]
+      },
+      {
+        "role": "advisory-store",
+        "publish": ["ctl/heartbeat"],
+        "subscribe": ["adv/advisories", "ctl/clock"]
+      },
+      {
+        "role": "offload",
+        "publish": ["ctl/offload", "ctl/heartbeat"],
+        "subscribe": ["ctl/run/published", "ctl/clock"]
+      },
+      {
         "role": "telemetry",
         "publish": ["ctl/telemetry", "ctl/heartbeat"],
         "subscribe": ["ctl/telemetry", "ctl/run/published", "obs/#", "ctl/clock"]
@@ -75,7 +90,7 @@
   "boundary": {
     "id": "boundary",
     "api_prefix": "/api",
-    "allow_prefixes": ["/api/ctl/", "/api/edr/", "/api/st/"],
+    "allow_prefixes": ["/api/ctl/", "/api/edr/", "/api/st/", "/api/features/"],
     "topics": { "denial": "ctl/boundary/denial" },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
   },
@@ -244,7 +259,8 @@
     "http": {
       "edr_prefix": "/api/edr",
       "st_prefix": "/api/st/v1.1",
-      "subsets_path": "/api/ctl/query-subsets"
+      "subsets_path": "/api/ctl/query-subsets",
+      "features_prefix": "/api/features"
     },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
   },
@@ -353,7 +369,36 @@
       "command_prefix": "/api/ctl/components"
     },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
-    "protected": ["clock", "broker", "boundary", "operator", "coverage-store", "observation-store", "feature-store", "query", "telemetry"]
+    "protected": ["clock", "broker", "boundary", "operator", "coverage-store", "observation-store", "feature-store", "advisory-store", "query", "telemetry"]
+  },
+  "advisory_source": {
+    "id": "advisory-source",
+    "stream": "advisory-source",
+    "topics": { "clock": "ctl/clock", "advisory": "adv/advisories" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "cadence_ticks": 1200,
+    "valid_seconds": 14400,
+    "region_feature": "loiter-region",
+    "depth_span_m": 250,
+    "sound_speed_half_width_m_per_s": 6
+  },
+  "advisory_store": {
+    "id": "advisory-store",
+    "topics": { "clock": "ctl/clock", "advisory": "adv/advisories" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "size_ceiling_bytes": 2048
+  },
+  "offload": {
+    "id": "offload",
+    "topics": {
+      "clock": "ctl/clock",
+      "run_published": "ctl/run/published",
+      "offload": "ctl/offload"
+    },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "identification_radius_m": 60000,
+    "format_version": "drogna-bundle-2.0",
+    "staging_bound_bytes": 8388608
   },
   "feature_store": {
     "id": "feature-store",
@@ -429,7 +474,9 @@
       { "filter": "ctl/run/started", "schema": "run-started" },
       { "filter": "ctl/run/published", "schema": "run-published" },
       { "filter": "ctl/plan", "schema": "plan" },
-      { "filter": "ctl/telemetry", "schema": "telemetry" }
+      { "filter": "ctl/telemetry", "schema": "telemetry" },
+      { "filter": "adv/advisories", "schema": "advisory" },
+      { "filter": "ctl/offload", "schema": "offload-telemetry" }
     ],
     "endpoints": {
       "clock_rate": "/api/ctl/clock/rate",

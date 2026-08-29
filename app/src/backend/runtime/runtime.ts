@@ -32,6 +32,9 @@ import { Sensors, type WorldSampler } from '../sensors/sensors.js';
 import { Ingest } from '../ingest/ingest.js';
 import { ObservationStore } from '../observation-store/store.js';
 import { FeatureStore } from '../feature-store/store.js';
+import { AdvisorySource } from '../advisories/source.js';
+import { AdvisoryStore } from '../advisories/store.js';
+import { OffloadPackager } from '../offload/packager.js';
 import { QueryComponent } from '../query/query.js';
 import { Monitor } from '../monitor/monitor.js';
 import { Scheduler } from '../scheduler/scheduler.js';
@@ -55,6 +58,8 @@ export interface BackendRuntime {
   readonly store: CoverageStore;
   readonly observationStore: ObservationStore;
   readonly featureStore: FeatureStore;
+  readonly advisoryStore: AdvisoryStore;
+  readonly offload: OffloadPackager;
   readonly ingest: Ingest;
   readonly monitor: Monitor;
   readonly scheduler: Scheduler;
@@ -109,6 +114,9 @@ export function buildBackend(
   validated(validator, 'config.planner', config.planner);
   validated(validator, 'config.telemetry', config.telemetry);
   validated(validator, 'config.operator', config.operator);
+  validated(validator, 'config.advisory-source', config.advisory_source);
+  validated(validator, 'config.advisory-store', config.advisory_store);
+  validated(validator, 'config.offload', config.offload);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
@@ -117,6 +125,7 @@ export function buildBackend(
     config.sensors.stream,
     config.model_runner.stream,
     config.planner.stream,
+    config.advisory_source.stream,
   ]);
 
   const broker = new Broker(config.broker);
@@ -201,11 +210,21 @@ export function buildBackend(
     transport.connect(config.feature_store.id, config.feature_store.id),
     runId,
   );
+  // The advisory store is a store: written only through its own ingestion seam,
+  // protected from the operator plane like the others, read by the query face.
+  const advisoryStore = new AdvisoryStore(
+    config.advisory_store,
+    transport.connect(config.advisory_store.id, config.advisory_store.id),
+    validator,
+    runId,
+  );
   const query = new QueryComponent(
     config.query,
     transport.connect(config.query.id, config.query.id),
     store,
     observationStore,
+    advisoryStore,
+    featureStore,
     router,
     runId,
   );
@@ -234,6 +253,20 @@ export function buildBackend(
         secondsPerTick,
         epochPosixSeconds,
       ),
+      client,
+    };
+  });
+  register(config.advisory_source.id, () => {
+    const client = transport.connect(config.advisory_source.id, config.advisory_source.id);
+    return {
+      component: new AdvisorySource(config.advisory_source, client, featureStore, generator, runId, options.rootSeed),
+      client,
+    };
+  });
+  const offloadBox = register(config.offload.id, () => {
+    const client = transport.connect(config.offload.id, config.offload.id);
+    return {
+      component: new OffloadPackager(config.offload, client, store, observationStore, manifest, runId, secondsPerTick),
       client,
     };
   });
@@ -315,6 +348,7 @@ export function buildBackend(
   store.heartbeat.start();
   observationStore.heartbeat.start();
   featureStore.heartbeat.start();
+  advisoryStore.heartbeat.start();
   query.start();
   clock.start();
   for (const heartbeat of heartbeats) heartbeat.start();
@@ -328,6 +362,8 @@ export function buildBackend(
     store,
     observationStore,
     featureStore,
+    advisoryStore,
+    offload: offloadBox.component as OffloadPackager,
     ingest: ingestBox.component as Ingest,
     monitor: monitorBox.component as Monitor,
     scheduler: schedulerBox.component as Scheduler,
@@ -347,6 +383,7 @@ export function buildBackend(
       store.heartbeat.stop();
       observationStore.heartbeat.stop();
       featureStore.heartbeat.stop();
+      advisoryStore.heartbeat.stop();
       query.stop();
       clock.stop();
     },

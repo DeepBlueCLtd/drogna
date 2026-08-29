@@ -9,11 +9,14 @@ import type { SeamClient } from '../../seam/transport.js';
 import type { ConfigQuery, QuerySubsets } from '../../generated/types.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import type { ObservationStore } from '../observation-store/store.js';
+import type { AdvisoryStore } from '../advisories/store.js';
+import type { FeatureStore } from '../feature-store/store.js';
 import type { Router } from '../runtime/router.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { EdrComponent } from './edr.js';
 import { SensorThingsComponent } from './sensorthings.js';
+import { FeaturesComponent } from './features.js';
 
 export const SUBSET_STATEMENT: Omit<QuerySubsets, 'schema_version'> = {
   edr: {
@@ -29,6 +32,11 @@ export const SUBSET_STATEMENT: Omit<QuerySubsets, 'schema_version'> = {
     query_options: ['$top', '$skip'],
     refused_by_name: ['$filter', '$orderby', '$select', '$expand', '$count', 'Sensors', 'ObservedProperties', 'FeaturesOfInterest', 'Locations', 'HistoricalLocations'],
   },
+  features: {
+    standard: 'OGC API - Features Part 1: Core 1.0, read-only',
+    resources: ['collections', 'collections/{id}', 'collections/{id}/items'],
+    refused_by_name: ['conformance', 'items/{featureId}', 'bbox', 'datetime', 'limit', 'crs', 'f'],
+  },
 };
 
 export class QueryComponent {
@@ -40,13 +48,17 @@ export class QueryComponent {
     client: SeamClient,
     coverageStore: CoverageStore,
     observationStore: ObservationStore,
+    advisoryStore: AdvisoryStore,
+    featureStore: FeatureStore,
     router: Router,
     runId: string,
   ) {
     const edr = new EdrComponent(config, coverageStore);
     const sensorThings = new SensorThingsComponent(config, observationStore);
+    const features = new FeaturesComponent(config, advisoryStore, featureStore);
     router.registerPrefix('GET', config.http.edr_prefix, (request) => edr.handle(request));
     router.registerPrefix('GET', config.http.st_prefix, (request) => sensorThings.handle(request));
+    router.registerPrefix('GET', config.http.features_prefix, (request) => features.handle(request));
     router.register('GET', config.http.subsets_path, () => ({
       status: 200,
       body: JSON.stringify({ schema_version: 1, ...SUBSET_STATEMENT }),

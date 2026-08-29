@@ -59,6 +59,8 @@ describe('the backend runtime', () => {
     });
     vi.advanceTimersByTime(2500);
     expect([...heard.keys()].sort()).toEqual([
+      'advisory-source',
+      'advisory-store',
       'boundary',
       'broker',
       'clock',
@@ -69,6 +71,7 @@ describe('the backend runtime', () => {
       'model-runner',
       'monitor',
       'observation-store',
+      'offload',
       'operator',
       'planner',
       'query',

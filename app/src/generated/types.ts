@@ -2,6 +2,30 @@
 // Source of truth: contracts/schemas/*.schema.json (Constitution III).
 // Regenerate with: pnpm generate. CI fails on drift.
 
+/** drogna shore advisory — from advisory.schema.json */
+export type Advisory = {
+  "advisory_id": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "sequence": number;
+  "kind": "sound-speed-outlook" | "sampling-window" | "caution-region";
+  "valid_time": {
+    "start_sim_time": string;
+    "end_sim_time": string;
+  };
+  "region": {
+    "bbox": number[];
+  };
+  "guidance": {
+    "confidence": "low" | "moderate" | "high";
+    "recommended_minimum_depth_m": number;
+    "recommended_maximum_depth_m": number;
+    "expected_sound_speed_minimum_m_per_s": number;
+    "expected_sound_speed_maximum_m_per_s": number;
+  };
+};
+
 /** drogna boundary denial — from boundary-denial.schema.json */
 export type BoundaryDenial = {
   "component": string;
@@ -39,6 +63,33 @@ export type Clock = {
   "sim_time": string;
   "mode": "realtime" | "accelerated" | "paused" | "lockstep";
   "rate": number;
+};
+
+/** drogna shore advisory source configuration (V2-C16) — from config.advisory-source.schema.json */
+export type ConfigAdvisorySource = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "advisory": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "cadence_ticks": number;
+  "valid_seconds": number;
+  "region_feature": string;
+  "depth_span_m": number;
+  "sound_speed_half_width_m_per_s": number;
+};
+
+/** drogna advisory store configuration (V2-C17) — from config.advisory-store.schema.json */
+export type ConfigAdvisoryStore = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "advisory": ConfigCommonTopicFilter;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "size_ceiling_bytes": number;
 };
 
 /** drogna release-gate configuration (V2-C10) — from config.boundary.schema.json */
@@ -319,6 +370,20 @@ export type ConfigObservationStore = {
   "heartbeat": ConfigCommonHeartbeat;
 };
 
+/** drogna offload packager configuration (V2-C20) — from config.offload.schema.json */
+export type ConfigOffload = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+    "offload": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "identification_radius_m": number;
+  "format_version": string;
+  "staging_bound_bytes": number;
+};
+
 /** drogna operator surface configuration (V2-C18) — from config.operator.schema.json */
 export type ConfigOperator = {
   "id": ConfigCommonComponentId;
@@ -385,6 +450,7 @@ export type ConfigQuery = {
     "edr_prefix": ConfigCommonRelativePath;
     "st_prefix": ConfigCommonRelativePath;
     "subsets_path": ConfigCommonRelativePath;
+    "features_prefix": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
 };
@@ -408,6 +474,9 @@ export type ConfigRun = {
   "planner": ConfigPlanner;
   "telemetry": ConfigTelemetry;
   "operator": ConfigOperator;
+  "advisory_source": ConfigAdvisorySource;
+  "advisory_store": ConfigAdvisoryStore;
+  "offload": ConfigOffload;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
 };
@@ -680,6 +749,54 @@ export type EdrCollectionsDataQuery = {
 
 /** edr-collections.schema.json #/$defs/link */
 export type EdrCollectionsLink = {
+  "href": string;
+  "rel": string;
+  "type"?: string;
+  "title"?: string;
+};
+
+/** drogna Features subset responses — from features-response.schema.json */
+export type FeaturesResponse = {
+  [key: string]: unknown;
+};
+
+/** features-response.schema.json #/$defs/collections */
+export type FeaturesResponseCollections = {
+  "links": FeaturesResponseLink[];
+  "collections": FeaturesResponseCollection[];
+};
+
+/** features-response.schema.json #/$defs/collection */
+export type FeaturesResponseCollection = {
+  "id": string;
+  "title": string;
+  "description": string;
+  "itemType": "feature";
+  "links": FeaturesResponseLink[];
+};
+
+/** features-response.schema.json #/$defs/feature_collection */
+export type FeaturesResponseFeatureCollection = {
+  "type": "FeatureCollection";
+  "features": FeaturesResponseFeature[];
+  "numberReturned": number;
+};
+
+/** features-response.schema.json #/$defs/feature */
+export type FeaturesResponseFeature = {
+  "type": "Feature";
+  "id": string;
+  "geometry": {
+    "type": "Polygon";
+    "coordinates": number[][][];
+  };
+  "properties": {
+    [key: string]: unknown;
+  };
+};
+
+/** features-response.schema.json #/$defs/link */
+export type FeaturesResponseLink = {
   "href": string;
   "rel": string;
   "type"?: string;
@@ -1197,6 +1314,11 @@ export type QuerySubsets = {
     "standard": string;
     "resources": string[];
     "query_options": string[];
+    "refused_by_name": string[];
+  };
+  "features": {
+    "standard": string;
+    "resources": string[];
     "refused_by_name": string[];
   };
 };

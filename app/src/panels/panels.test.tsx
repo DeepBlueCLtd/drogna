@@ -60,6 +60,8 @@ describe('the panels against a live backend', () => {
     act(() => vi.advanceTimersByTime(2100));
     const lit = document.querySelectorAll('tr[data-lit="true"]');
     expect([...lit].map((row) => row.getAttribute('data-component')).sort()).toEqual([
+      'advisory-source',
+      'advisory-store',
       'boundary',
       'broker',
       'clock',
@@ -70,6 +72,7 @@ describe('the panels against a live backend', () => {
       'model-runner',
       'monitor',
       'observation-store',
+      'offload',
       'operator',
       'planner',
       'query',
@@ -81,13 +84,14 @@ describe('the panels against a live backend', () => {
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 16);
+    // Every declared beat has now landed: nothing renders greyed.
+    expect(screen.queryAllByText('not heard').length).toBe(config.shell.components.length - 19);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(16);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(19);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));

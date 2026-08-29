@@ -137,13 +137,32 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           your interventions.
         </p>
       </section>
+      <section>
+        <h3>108 — the world outside speaks, and the boundary holds</h3>
+        <p>
+          Shore advisories arrive on their own topic and pass through a genuine
+          ingestion seam: the append-only advisory store validates each against a
+          master in which <em>no field can carry free text</em> — every string is an
+          enum or a bounded pattern, so an advisory is structurally incapable of
+          naming anything the harness did not place — and refuses anything over the
+          size ceiling with the limit named. Advice travels light, and that is
+          measured, not asserted: the largest advisory is smaller than the smallest
+          gridded update. The offload packager stages a bundle beside each published
+          run, with the run-manifest sibling carrying the measurement geometry{' '}
+          <em>beside the bundle and never inside it</em> — announcement-only until a
+          real backend exists to receive it. Advisories and the reference geometry
+          are served as OGC API-Features collections through the same release gate;
+          the advisories collection answers <em>empty</em> before the first advisory
+          exists, because an empty collection is an answer, not an error. Watch{' '}
+          <code>adv/advisories</code> and <code>ctl/offload</code> in{' '}
+          <a href={hashForView('messages')}>Messages</a>.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          Shore advisories (108)
-          and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
-          is built. Until then their components stay grey, because nothing here lights
-          without a heartbeat.
+          The <a href={hashForView('map')}>map</a> (109) arrives as its beat is
+          built. Until then, nothing here lights without a heartbeat.
         </p>
       </section>
     </div>

@@ -1,6 +1,6 @@
 # The query seam's subsets
 
-The query components (V2-C09) implement genuine subsets of two OGC standards, and
+The query components (V2-C09) implement genuine subsets of three OGC standards, and
 this page is the documented half of the agreement FR-27 requires: the served
 statement (`GET /api/ctl/query-subsets`, of `query-subsets.schema.json` shape) and
 the JSON below are held equal by a test, so amending one without the other fails
@@ -22,6 +22,11 @@ thing refused — the option, the shape, the property, the extent (E9).
     "resources": ["Things", "Datastreams", "Observations", "Datastreams('id')/Observations"],
     "query_options": ["$top", "$skip"],
     "refused_by_name": ["$filter", "$orderby", "$select", "$expand", "$count", "Sensors", "ObservedProperties", "FeaturesOfInterest", "Locations", "HistoricalLocations"]
+  },
+  "features": {
+    "standard": "OGC API - Features Part 1: Core 1.0, read-only",
+    "resources": ["collections", "collections/{id}", "collections/{id}/items"],
+    "refused_by_name": ["conformance", "items/{featureId}", "bbox", "datetime", "limit", "crs", "f"]
   }
 }
 ```
@@ -41,5 +46,12 @@ thing refused — the option, the shape, the property, the extent (E9).
   broker, and no server takes part in it (the V1 stance, carried). Entity content
   is a function of the traffic; `resultTime` is null, stated, because the harness
   records phenomenon time only.
+- **Features** serves two collections read-only: `advisories` (every advisory the
+  advisory store has ingested, geometry = the advised region's bbox as a Polygon,
+  properties = the advisory minus its region) and `reference` (the feature
+  store's provisioned geometry — the serving deferred from 104 lands here). The
+  advisories collection is present-and-stating-empty before any advisory exists.
+  No filtering: an items page carries every feature, and every filter option is
+  refused with its own name.
 - Discovery documents state extents read from the store and verified against it by
   test; the collection landing carries only relative hrefs (FR-04, E7).

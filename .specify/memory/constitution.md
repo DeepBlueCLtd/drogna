@@ -1,12 +1,26 @@
 # drogna Constitution
 
+**Status:** Adopted 29 August 2026, per the endorsed plan (`docs/v2/plan.md`). The
+reversal ADR is ADR-0027, Accepted in the same commit. The 1.6.0 text and its version
+log are archived at `docs/v1/constitution-1.6.0.md`.
+
 **Purpose of this document.** These are the non-negotiables of the harness. Every
 spec-kit phase — `specify`, `plan`, `tasks`, `analyze`, `implement` — is checked
 against them. A plan that violates a principle is rejected or must carry an explicit,
 argued entry in its Complexity Tracking table and a corresponding ADR.
 
-Source of truth for scope is `harness-srd.md`. This constitution does not restate the
+Source of truth for scope is `srd.md` (SRD-v2). This constitution does not restate the
 requirements; it states the rules that constrain how any of them may be met.
+
+**What changed at 2.0.0, in one paragraph.** Version 2 is a pure client-side TypeScript
+single-page application: the backend components are genuine programs running in the
+browser, separated from the front-end by a wire-protocol seam, to be replaced by a real
+backend in Version 3 (the reversal ADR). The ten principles survive — none is retired —
+but III, VI, VII and X are re-scoped to the seam, the technology constraints are
+rewritten for a single-language toolchain, and a new Principle XI makes the seam itself
+constitutional. Principle I returns to two exemptions. The workflow changes shape with
+the same endorsement: one implementation PR, developer autonomy, demonstration by
+deep-linked hosted instance.
 
 ---
 
@@ -14,199 +28,195 @@ requirements; it states the rules that constrain how any of them may be met.
 
 ### I. No Wall-Clock Time (NON-NEGOTIABLE)
 
-No component reads time from the operating system for any operational purpose. All
-time comes from the shared simulation clock service (C-01) via the clock port.
+No component reads time from the host for any operational purpose. All time comes from
+the simulation clock component via the clock port.
 
-- Prohibited in operational code paths: `time.time`, `time.monotonic`,
-  `datetime.now`, `datetime.utcnow`, `datetime.today`, `Date.now`, `new Date()`,
-  `performance.now`, SQL `now()`, `current_timestamp`, broker-assigned timestamps
-  used as truth.
-- Permitted only in: log line decoration, process-level metrics, test harness setup,
-  the clock service's own real-time driver, **heartbeat emission and liveness
-  evaluation** (ADR-0006), **interpolation between received clock samples in the
-  client's render path** (ADR-0007), and **container resource sampling in the system
-  controller's sampler module** (ADR-0026). The heartbeat exemption is narrow and stays
-  narrow: it covers
-  emitting a heartbeat on a real-time interval and evaluating a liveness window. It
-  does not cover timestamping an observation, scheduling a model run, ageing an
-  uncertainty field, or anything else. Liveness answers "is this process alive?",
-  which is a fact about the host and not about the simulated world, and deterministic
-  replay is untouched because no operational output depends on heartbeat timing. The
-  render-path exemption is bounded the same way: it may interpolate between two
-  received samples but never extrapolate past the latest one, every arriving sample
-  snaps the display and discards the interpolation, and no value derived from it
-  leaves the render path. The sampling exemption is bounded to one module of C-21:
-  readings are per-host-second by nature, are published as their own telemetry kind
-  whose schema declares host-time semantics, never enter a simulation-time metric or
-  the run record, and nothing operational reads them.
-- All three exemptions concern the boundary between the simulated world and the
-  machine running and displaying it — each measures the machinery, not the
-  simulation, and has no simulation-time answer even in principle. That is the shape
-  of the boundary, not a slide. A fourth request is
-  evidence the principle is being eroded and must be argued on its own merits, never
-  by analogy to these three.
-- Enforced by an automated lint gate (`scripts/check_no_wallclock.py`) that runs in
-  CI and fails the build. Any exemption is an inline `# harness:allow-wallclock
-  <reason>` marker, and every marker is reviewed.
+- Prohibited in operational code paths: `Date.now`, `new Date()`, `performance.now`,
+  `requestAnimationFrame` timestamps used as truth, timer callbacks used as a measure
+  of elapsed simulated time, and any equivalent.
+- Permitted only in: log line decoration, test harness setup, the clock component's own
+  real-time driver, **heartbeat emission and liveness evaluation** (ADR-0006), and
+  **interpolation between received clock samples in the render path** (ADR-0007). Both
+  exemptions carry their 1.x bounds verbatim: liveness answers "is this process
+  alive?", a fact about the machinery with no simulation-time answer even in
+  principle; interpolation never extrapolates past the latest sample, every arriving
+  sample snaps the display, and nothing derived from it leaves the render path.
+- The third exemption of 1.6.0 — container resource sampling (ADR-0026) — **retires
+  with the containers**. The erosion count returns to two; a third request is again
+  the evidence-of-erosion case and must be argued on its own merits, never by analogy.
+- Enforced by an automated lint gate that runs in CI and fails the build. Any exemption
+  is an inline `// harness:allow-wallclock <reason>` marker, and every marker is
+  reviewed.
 
-*Rationale (SRD FR-09, §10.1): this is the one property that cannot be retrofitted at
-acceptable cost. Deterministic replay (AT-04) dies the moment a single component
-reads the host clock.*
+*Rationale: deterministic replay (AT-04) dies the moment a single component reads the
+host clock, and this is the one property that cannot be retrofitted at acceptable
+cost. Running in a browser changes the function names, not the principle.*
 
 ### II. Seeded Randomness and Deterministic Replay (NON-NEGOTIABLE)
 
 All stochastic behaviour derives from explicitly seeded random number generators.
 
-- No component calls a module-level or global RNG (`random.random`,
-  `numpy.random.*` free functions, `Math.random`, `uuid4` for operational
-  identifiers). Every generator is constructed from a seed obtained from the run
-  manifest, through the RNG port.
+- No component calls `Math.random`, `crypto.getRandomValues` or `crypto.randomUUID`
+  for operational purposes. Every generator is constructed from a seed obtained from
+  the run manifest, through the RNG port, as a named per-component stream.
 - Every run writes a manifest recording: the root seed, per-component derived seeds,
-  the generator version, the clock configuration, and the config file digest.
-- A scenario replayed from its manifest produces byte-identical outputs for the
-  same code version. This is a test (AT-04), not an aspiration.
-- Identifiers that appear in stored data or messages are derived deterministically
-  from seed + logical position, never from entropy or wall-clock.
-
-*Rationale (SRD FR-11, AT-04).*
+  the generator version, the clock configuration, and the configuration digest. The
+  manifest is exportable and importable through the shell, because V2 persists
+  nothing between visits.
+- A scenario replayed from its manifest produces byte-identical outputs for the same
+  code version, in AT-04's strong form: components in lockstep, byte-for-byte across
+  every store and seam crossing, run by a one-command proof. This is a test, not an
+  aspiration.
+- Identifiers in stored data or messages derive deterministically from seed + logical
+  position, never from entropy or wall-clock.
 
 ### III. Generated Types Only (NON-NEGOTIABLE)
 
-No type that crosses a language boundary is hand-written twice.
+No shape that crosses the seam is hand-written twice — and V2 has one language, so the
+principle's weight moves: the masters exist for Version 3 as much as for today.
 
-- Broker message payloads are defined once, in JSON Schema, under `contracts/schemas/`.
-- HTTP interface types derive from OpenAPI under `contracts/openapi/`, taking the
-  query layer's own emitted specification as source wherever it emits one.
-- Where the same shape appears in both, the OpenAPI document `$ref`s the JSON Schema
-  file. One vocabulary, one generator chain.
-- Python and TypeScript types are generated into `libs/harness_types/` and
-  `client/src/generated/` respectively, and both are committed and CI-verified to be
-  in sync with their sources (regenerate, diff, fail on drift).
-- Generated directories are never edited by hand. Every generated file carries a
-  "DO NOT EDIT" banner.
-
-*Rationale (SRD NFR-01 to NFR-03).*
+- Seam message payloads and configuration documents are defined once, in JSON Schema,
+  under `contracts/schemas/`. HTTP interface types derive from OpenAPI under
+  `contracts/openapi/`. Where a shape appears in both, the OpenAPI document `$ref`s
+  the JSON Schema file: one vocabulary, one generator chain.
+- TypeScript is generated from the masters into `app/src/generated/`, committed, and
+  CI-verified against its sources (regenerate, diff, fail on drift). Generated
+  directories are never edited by hand and carry a "DO NOT EDIT" banner.
+- The masters are the contract a Version 3 backend generates its own types from. A
+  seam shape that exists only as a TypeScript declaration is a violation even though
+  nothing else consumes it yet.
 
 ### IV. No Literal Paths or Hosts (NON-NEGOTIABLE)
 
-No component contains a literal filename, directory path, hostname, port, or URL.
+No component contains a literal filename, path, hostname, port, URL or topic string.
 
-- All external input arrives via a named configuration file whose location is given
-  by a single environment variable per component (`HARNESS_CONFIG`).
-- The config is validated against its JSON Schema as the first operation the
-  component performs, before any I/O. Invalid config is a startup failure with a
-  readable message, never a runtime surprise.
-- The same rule binds the Compose configuration, the query layer configuration, the
-  proxy configuration, and the client: environment-agnostic from the first commit.
-
-*Rationale (SRD NFR-04, NFR-05). Drift between local and droplet quietly doubles
-maintenance.*
+- Every component receives exactly one configuration document at construction,
+  validated against its JSON Schema before any other work. Invalid configuration is a
+  construction failure with a readable message, never a runtime surprise.
+- The seam's endpoints — the HTTP base and the broker transport — come from
+  configuration alone, and no client configuration carries an absolute URL: every
+  fetch is relative and same-origin (SRD FR-04, learned at V1's boundary the hard
+  way). That is precisely what makes Version 3 a configuration change (Principle XI).
 
 ### V. No Tracked Entities (NON-NEGOTIABLE)
 
-The harness holds no tracked entities, contacts or detections, and never will.
-
-- The data model admits environmental measurements, forecast fields, uncertainty
-  fields, sampling recommendations and system telemetry. Nothing else.
-- No customer name, project name, or bid-specific material appears anywhere in the
-  repository: code, docs, blog, commit messages, branch names, or issue tracker.
-- Numerics are deliberately fake and data synthetic. The landing page says so in
-  plain words (FR-01), and no artefact of the harness may imply otherwise.
-- What is forbidden is the *third party*: an entity the harness did not place, whose
-  position it infers rather than knows. A contact, a detection, a tracklet, anything
-  that is or implies one.
-- **The word "track" is not forbidden.** The route a vehicle has travelled is a track,
-  in ordinary navigational English, and the simulated platform's own path may be called
-  one. What the harness has no analogue of is somebody else's.
-
-*Rationale (SRD §1.1, PR-01).*
-
-*Amended 2026-08-27.* The original wording forbade the word "track" outright, and the
-gate enforcing it accumulated four narrow escapes in as many weeks — "sampling track",
-"tracks the local decorrelation timescale", "not a track" — which is what a rule drawn
-around the wrong noun looks like from the inside. The prohibition is on the entity, not
-the vocabulary. A sentence that uses "track" in the sense this principle guards against
-will name a contact or a detection, and those remain forbidden.
+Carried verbatim from 1.6.0, including the 1.4.0 amendment narrowing the prohibition
+to the entity rather than the vocabulary. The harness holds no tracked entities,
+contacts or detections, and never will; the data model admits environmental
+measurements, forecast fields, uncertainty fields, sampling recommendations, advisories
+and system telemetry, nothing else; no customer, project or bid material appears
+anywhere in the repository — nor in the notification channel, whose topic is deployment
+configuration and never committed; the word "track" remains ordinary navigational
+English for the simulated platform's own path. What is forbidden is the third party: an
+entity the harness did not place, whose position it infers rather than knows.
 
 ### VI. Honest Ports
 
 The harness claims exactly the pluggability it has, and no more.
 
-- Genuine ports, expressed as interfaces with more than one conceivable
-  implementation: the **model kernel** (initialisation state in, gridded field out),
-  the **coverage output** (NetCDF today, Zarr plausibly later), the **clock**, and
-  the **RNG**. The bespoke EDR trajectory provider sits behind the coverage output
-  port as a planned component, not a workaround (FR-50, ADR-0003), as does the bespoke
-  SensorThings provider (ADR-0004). Where a standard is ahead of its implementations,
-  drogna writes the adapter rather than bending the architecture around the gap — and
-  states plainly which subset of the standard it actually implements.
-- Marginal, wrapped thinly and documented as marginal: **event publication**.
-- Not ports, and not to be dressed as ports: the **observation store** (Postgres is
-  not being swapped) and **observation intake** (aspirational, not real).
-- Introducing an abstraction over anything in the third group requires an ADR
-  arguing why. Interface-for-its-own-sake is a constitution violation.
-
-*Rationale (SRD §2.1). The documentation does not claim more than the code delivers.*
+- Genuine ports, each with more than one conceivable implementation: the **seam
+  transports** (HTTP interception and the broker transport — in-browser today, network
+  in V3), the **clock**, the **RNG**, the **model kernel** (initialisation state in,
+  gridded field out), and the **store interfaces** (in-memory today, engines in V3).
+- The store interfaces are ports *because Version 3 is planned*. In 1.x, "Postgres is
+  not being swapped" was the honest statement; in 2.x the swap is the roadmap. If
+  Version 3 is ever abandoned, this entry is amended rather than left flattering.
+- The query components state plainly which subset of each standard they implement;
+  subsets grow one capability at a time, and every refusal names the thing refused —
+  the option, the shape, the property. The conformance statement is amended in the
+  same commit as the code, and the agreement between the served and documented
+  accounts is a test. An offered-but-stubbed capability is the exact dishonesty this
+  harness exists to avoid.
+- Introducing any other abstraction "for flexibility" requires an ADR arguing why.
+  Interface-for-its-own-sake is a constitution violation.
 
 ### VII. Liveness, Not Configuration (NON-NEGOTIABLE)
 
-Any display of what exists is driven by observed liveness, never by a configuration
-file listing what ought to exist, and never by mocked traffic.
+Any display of what exists is driven by observed liveness, never by configuration
+listing what ought to exist, and never by fixture data.
 
-- The client renders the full component layout from day one with components greyed
-  out until they are genuinely alive and heard from.
-- A component is "lit" only because a message from it arrived within its declared
-  liveness window. There is no manual override, no `enabled: true` flag, and no
-  hardcoded list of live components.
-- **No mocked or synthesised traffic shall ever drive illumination.** A mock asserts
-  the existence of something that does not exist, which is precisely the failure this
-  principle exists to prevent. There is no demo mode, no fixture mode, and no
-  "populate for the screenshot" path. The simulation clock's heartbeat is the first
-  real liveness signal and the pattern every later component follows.
+- The shell renders the full component layout from day one, greyed out until each
+  component is genuinely alive and heard from: a component is lit only because a
+  heartbeat from it arrived over the broker within its declared liveness window. No
+  manual override, no `enabled: true` flag, no hardcoded list.
+- **Re-scoped for V2, deliberately (the reversal ADR).** The in-browser components are
+  real components: each genuinely runs, holds its own configuration and seed stream,
+  emits its own heartbeats, and can genuinely stop — and when it stops, it goes dark
+  because its heartbeats cease. What this principle forbids is unchanged and is now
+  stated by effect rather than by the word "mock": **no data path may assert the
+  existence of something that is not running.** Fixture data, canned traffic, a
+  "populate for the screenshot" mode, or illumination derived from anything but
+  received heartbeats — each remains forbidden exactly as in 1.x.
+- The principle cuts both ways: a display may not show silence where there is traffic.
+  Structure comes from the declared topology artefact, illumination from received
+  messages, and the two sources never mix; if a view cannot hear a namespace it
+  claims to show, the design is at fault, not the caption (SRD FR-24, FR-25).
+- Provisioning is not an exception: seed data is authored through the components' own
+  code paths and seams, so the first thing a fresh page shows lit was genuinely
+  published, not planted (SRD FR-11).
+- A component stopped by operator command is shown stopped by the silence of its
+  heartbeats, never by the command's success response.
 
-*Rationale (SRD FR-45, FR-52). The display cannot be permitted to claim a component
-exists when it does not — the whole evidential value of drogna rests on it.*
+*Rationale: the whole evidential value of drogna rests on the display being unable to
+claim a component exists when it does not — or does not exist when it does. That the
+components live in the browser changes where they run, not what evidence is.*
 
 ### VIII. Recommendations, Not Decisions
 
-The harness is headless with respect to decisions.
-
-- The planner emits recommendations. It does not command, does not task, and does not
-  advise a human directly. Rendering and advice occur downstream.
-- Computing where sampling would most reduce uncertainty is decision logic even when
-  never drawn; the boundary defended is *who recommends*, not *who renders*.
-
-*Rationale (SRD FR-36).*
+Carried verbatim. The planner emits recommendations; it does not command, task, or
+advise a human directly. Computing where sampling would most reduce uncertainty is
+decision logic even when never drawn; the boundary defended is *who recommends*, not
+*who renders*.
 
 ### IX. Ground Truth Is Scored, Not Assumed
 
-Every claim the harness makes about recovering the environment is measured against
-the generator's recorded ground truth.
-
-- The environment generator writes a manifest of seeded feature parameters alongside
-  each field.
-- Recovery error is computed and reported, never asserted. "The eddy is recoverable"
-  is meaningless without the error figure beside it (AT-03).
-- Forecast skill is always reported against a persistence reference. A model not
-  beating "conditions stay the same" is not earning its compute, and the display
-  says so (FR-38).
-
-*Rationale (SRD FR-04, FR-38, AT-01, AT-03).*
+Carried verbatim, with the watched-turn method added. The generator writes a manifest
+of seeded parameters alongside each field; recovery error is computed and reported,
+never asserted (AT-03, with its bound derived from the authoring jitter on disk, never
+typed into the test); forecast skill is always reported against a persistence
+reference, and the display says when the model is not earning its compute. A beat's
+acceptance is *watched happening in the shell* across the full path through the seam —
+generator to pixel — and captured, never inferred from green tests alone (SRD PR-06).
 
 ### X. Default Deny at the Boundary
 
-Exposure is opt-in, one path prefix at a time.
+Exposure is opt-in, one path prefix at a time — and in V2 the boundary is a component
+at the seam rather than a reverse proxy, enforcing the same policy observably.
 
-- Access is binary: cleared for all data or none. No per-field redaction. (Recorded
-  as ADR-0001, because if this ever softens to tiered access the architecture changes
-  materially.)
+- Access is binary: cleared for all data or none. No per-field redaction (ADR-0001
+  stands).
 - Released collections sit under a dedicated path prefix; everything else is
-  default-deny at the reverse proxy. Adding a collection never exposes it by accident.
-- Two leakage paths carry explicit tests, not review by eye: provenance metadata
-  embedded in exported files, and the shape of the freshly updated region, which
-  traces the sampling track.
+  default-deny at the release gate, through which all seam HTTP traffic passes.
+  Adding a collection never exposes it by accident. A denial is observable in the
+  shell.
+- The two leakage paths carry explicit tests, not review by eye: provenance metadata
+  embedded in exports, and the shape of the freshly updated region, which traces the
+  sampling track — scored against the export's run-manifest sibling as ground truth.
+- The boundary's tests exercise at least one allowed request as well as the refusals:
+  a boundary that has never been entered is untested from the inside (V1's proxy
+  credential fault, hidden for its whole life behind refusal-only tests).
+- In Version 3 the release gate's policy moves verbatim to a real proxy; the policy
+  format is therefore configuration, not code.
 
-*Rationale (SRD FR-39 to FR-42).*
+### XI. One Seam, Wire-Shaped (NON-NEGOTIABLE, new in 2.0.0)
+
+Everything the front-end knows about the backend crosses the seam in wire shape.
+
+- The front-end reaches the backend only through the seam's client interfaces: HTTP
+  requests against configured relative URLs, and the broker transport. Backend
+  components reach each other only over the broker and the stores behind their
+  interfaces. No front-end module imports a backend module, and vice versa; the only
+  code visible from both sides is `app/src/seam/` and `app/src/generated/`. Enforced
+  by an import-boundary lint gate that runs in CI.
+- Every crossing is governed by a committed master (Principle III) and validated
+  against it in tests — and the recorded seam-traffic corpus is the conformance suite
+  a Version 3 backend must pass (AT-05).
+- No code path may know whether the seam is answered locally or remotely. A feature
+  that works only in-browser, or only against a server, is a violation.
+
+*Rationale: the seam is the entire reason Version 2 can exist without foreclosing
+Version 3. A single leaked import quietly turns the client into a monolith and turns
+Version 3 into the rewrite this principle exists to prevent.*
 
 ---
 
@@ -214,38 +224,39 @@ Exposure is opt-in, one path prefix at a time.
 
 ### Technology
 
-- **Python 3.11** for services and libraries; `uv` workspace; `ruff` for lint and
-  format; `pytest` for tests.
-- **TypeScript 5 / React / Deck.gl** for the browser client; `pnpm`; `vitest`;
-  Playwright for capture and end-to-end.
-- **Postgres + PostGIS** as one instance carrying three schemas — `observations`,
-  `features` and `advisories` — mirroring the conceptual split without multiplying
-  operational surface. The three do not share a rule: `features` is read-only for the
-  duration of a run, `observations` is written by the ingestion seam alone, and
-  `advisories` is written during a run through its own ingestion seam and by nothing
-  else. What separates them is a grant the database enforces rather than a process
-  boundary (ADR-0024, SRD FR-12).
-- **MQTT** as the single broker, with separate topic namespaces for observations and
-  control, and ACLs confining sensors to the observation branch. Physical separation
-  onto a second broker remains a documented fallback requiring configuration change
-  only.
-- **pygeoapi** as the query layer, exposing SensorThings (Part 1, Sensing) over the
-  observation store and OGC API-EDR over the coverage store.
-- **NetCDF with CF conventions** for coverage storage and offload export.
-- **Docker Compose**, one configuration, two destinations.
+- **TypeScript 5** throughout — application, in-browser backend components, tests,
+  and the constitution gates themselves. **pnpm**; **vitest**; **Playwright** for
+  capture and end-to-end. No Python, no containers, no second toolchain (SRD-v2
+  NFR-01).
+- **React** for panel content; a **dockable multi-panel layout manager** for the shell
+  (chosen by feature 101's spike and pinned with an ADR recording its React-hosting
+  pattern — golden-layout 2.x the leading candidate); **Deck.gl** for the map surface.
+- **Stores are in-memory** behind store interfaces, with V1's semantics: one writer
+  per store through its ingestion seam; the feature store read-only during a run; the
+  advisory store append-only; atomic, digest-checked publication of runs.
+- **The broker** is an in-browser component with MQTT topic semantics — topic tree,
+  wildcard subscription, role-based rules — behind a transport whose wire shape is
+  MQTT-over-WebSocket.
+- **Delivery is static assets.** Any static host serves the harness; each visit is a
+  fresh seeded run; nothing persists between visits; the manifest export/import is
+  the replay mechanism. CI publishes a per-PR instance for review, retained once the
+  PR completes, and the gh-pages estate is grown additively — discrete deployments,
+  never a wholesale rebuild per merge; the shell's views are URL-addressable so a
+  link opens a specific view of a specific instance, and an instance can be embedded
+  in a site page (SRD FR-15, NFR-04).
 
 ### Repository Layout
 
 Feature work stays inside its own directories. The canonical layout is recorded in
-`docs/architecture/repo-layout.md` and is binding: a plan that proposes new
-top-level directories must say why.
+`docs/architecture/repo-layout.md` (rewritten for V2 by feature 101) and is binding: a
+plan proposing a new top-level directory must say why.
 
 ### Data
 
-- Seed data is produced by scripts, never accumulated. A fresh instance is equivalent
-  to a long-running one.
-- The feature store is read-only during a scenario run, provisioned by script at
-  scenario start.
+- Seed data is produced through the components' own code paths at provisioning, never
+  accumulated and never written into a store directly (SRD FR-11). A fresh visit is
+  equivalent to a long-running one — in V2, literally.
+- The feature store is read-only during a scenario run, provisioned at scenario start.
 
 ---
 
@@ -253,86 +264,79 @@ top-level directories must say why.
 
 ### Spec-driven development
 
-Feature development follows spec-kit: constitution → specify → plan → tasks →
-analyze → implement. Every feature has a `specs/NNN-name/` directory containing at
-minimum `spec.md`, `plan.md` and `tasks.md`.
+Unchanged in shape: constitution → specify → plan → tasks → analyze → implement. Every
+feature has a `specs/NNN-name/` directory with at minimum `spec.md`, `plan.md` and
+`tasks.md`. V2 features are numbered from 101. Tick tasks as you go, and write the
+reason at the moment a task is declined — the reason is the part that cannot be
+reconstructed later.
+
+### Autonomy, and the single implementation PR
+
+Endorsed with the plan (D15–D17), because the system is far better understood than
+when the repository began:
+
+- Developers make implementation decisions independently, without asking the author;
+  research spikes are conducted when necessary and their outcomes need no
+  endorsement. The record disciplines do not relax: contested or hard-to-reverse
+  decisions earn ADRs, spikes write dated `FINDING.md`s.
+- The whole V2 implementation lands through one long-lived PR. Progress is narrated
+  in PR comments, each linking a gh-pages-hosted instance opened at the relevant view
+  by anchor URL. The author reads outcomes, not approval requests.
+- The author is sent a ntfy message when a significant visual component is ready, and
+  when a blog post lands. Blog posts capture significant new UI components and
+  backend simulations, in a fixed terse shape — background, requirement, options
+  considered, demo — with a playable embedded instance, or, for headless work, an
+  embedded wrapper demonstrating the component through the seam. The ntfy topic is a
+  CI secret, never committed.
 
 ### Architecture Decision Records
 
-An ADR in `docs/adr/` is required for any decision that is hard to reverse, was
-genuinely contested, or where a plausible alternative was rejected. Routine choices
-do not earn one. ADRs are numbered, dated, and carry Status / Context / Decision /
-Consequences.
+Unchanged, continuing the existing numbering: an ADR for any decision that is hard to
+reverse, was genuinely contested, or where a plausible alternative was rejected.
+Routine choices do not earn one. The V1 records remain the record of how 2.0.0's
+positions were learned.
 
 ### Quality gates
 
 Every change must pass, in CI:
 
-1. `ruff check` and `ruff format --check`; `eslint` and `tsc --noEmit`.
-2. `pytest` and `vitest`.
-3. The wall-clock lint gate (Principle I).
-4. The seeded-RNG lint gate (Principle II).
-5. The generated-types drift check (Principle III).
-6. The literal-path lint gate (Principle IV).
-7. The forbidden-vocabulary gate (Principle V) — scans for tracked-entity and
-   customer vocabulary across all tracked files.
+1. `eslint` and `tsc --noEmit`; `vitest`.
+2. The wall-clock lint gate (Principle I).
+3. The seeded-RNG lint gate (Principle II).
+4. The generated-types drift check (Principle III).
+5. The literal-path lint gate (Principle IV).
+6. The forbidden-vocabulary gate (Principle V).
+7. The seam import-boundary gate (Principle XI).
 
-Gates 3 to 7 live in `scripts/` and are runnable locally with a single command.
+Gates 2–7 are TypeScript scripts registered in a gates registry, one per line, run by
+a runner that names no gate — a feature adds a gate by appending a line, never by
+editing the runner. **A check that has never been seen to fail is worth nothing**:
+every gate is watched failing on a planted violation before it is trusted, and the
+commit message says so.
 
 ### Demonstrability
 
 Each delivery stage is demonstrable before the next begins. "Demonstrable" means
-runnable from a clean checkout with one command, and visible in the client.
+runnable from a clean checkout with one command, visible in the shell across the full
+path through the seam — generator to pixel, never a panel in isolation — and, from
+feature 101 on, deployed as a static instance and linked from the implementation PR by
+an anchor URL that opens the beat being shown.
 
 ---
 
 ## Governance
 
 This constitution supersedes other practices. Where a spec, plan or task conflicts
-with it, the constitution wins and the artefact is amended.
+with it, the constitution wins and the artefact is amended. Amendments require an ADR
+and a version bump here. Every plan carries a Constitution Check section. Violations
+that are genuinely necessary are recorded in the plan's Complexity Tracking table with
+the simpler alternative and why it was rejected; an unrecorded violation is a defect.
 
-- Amendments require an ADR recording what changed and why, and a version bump here.
-- Every plan carries a Constitution Check section that names each principle it
-  touches and how it complies.
-- Violations that are genuinely necessary are recorded in the plan's Complexity
-  Tracking table with the simpler alternative and why it was rejected. An unrecorded
-  violation is a defect.
+**Version**: 2.0.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
 
-**Version**: 1.6.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-28
-
-*1.1.0 — amended against SRD v0.3. Principle VII promoted to non-negotiable and
-extended to forbid mocked traffic outright (FR-52). Principle VI records the bespoke
-EDR trajectory provider as sitting behind an existing port (FR-50). Project named.*
-
-*1.2.0 — Principle I gains a narrow exemption for heartbeat emission and liveness
-evaluation (ADR-0006), without which FR-53's rate-zero capture greys out a running
-system. Principle VI records the bespoke SensorThings provider (ADR-0004) and the
-obligation to state which subset of a standard is actually implemented.*
-
-*1.3.0 — Principle I gains a second bounded exemption for interpolating between
-received clock samples in the client's render path (ADR-0007), with the rule that a
-third such request is evidence of erosion rather than precedent.*
-
-*1.4.0 — Principle V narrows to the entity rather than the vocabulary: the harness holds
-no tracked entities, contacts or detections, and "track" returns to being ordinary
-navigational English for the path the simulated platform has travelled. The
-forbidden-vocabulary gate follows, dropping `track` and `tracking` from its word list
-along with the four permitted phrases that existed only to let ordinary English past.
-Entered in `f423913` on 27 August 2026; this line was written on 28 August 2026, when the
-next amendment found that the version had moved and the log had not. The reasoning is
-that commit's message. No ADR was written at the time, and governance asks for one — the
-debt is recorded here rather than an ADR invented after the fact by someone who did not
-take the decision.*
-
-*1.5.0 — the technology constraint names three schemas rather than two: `advisories`
-joins `observations` and `features` in the one Postgres instance, because the separation
-feature 020 needs is a grant the database enforces and not a second engine (ADR-0024).
-SRD FR-12 is amended in step.*
-
-*1.6.0 — Principle I gains its third bounded exemption: container resource sampling in
-the system controller's sampler module (ADR-0026, SRD FR-70), argued on its own merits
-as the erosion clause requires — it measures the machinery, not the simulation, and a
-host's utilisation has no simulation-time answer even in principle. Readings are their
-own host-time telemetry kind and never enter a simulation-time metric or the run
-record. The erosion clause now counts four: three granted and bounded, a fourth is the
-evidence-of-erosion case.*
+*2.0.0 — the Version 2 reversal (ADR-0027): pure
+client-side TypeScript SPA, in-browser backend components behind a wire-protocol seam,
+single-language toolchain, static delivery, one implementation PR under developer
+autonomy. All ten principles survive; III, VI, VII and X re-scoped to the seam;
+Principle I returns to two exemptions as ADR-0026's retires with the containers;
+Principle XI added. The 1.x version log is preserved in the archived constitution.*

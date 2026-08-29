@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.run.schema.json",
+  "title": "drogna run configuration",
+  "description": "The whole configuration document the composition root reads: one sub-document per component, each validated against its own master before that component does any other work (Constitution IV). This is configuration, not state: everything that varies between runs of the same configuration lives in the run manifest (run-manifest.schema.json), and a replay consults the manifest plus this document's digests, never this document's values.",
+  "type": "object",
+  "required": ["schema_version", "scenario", "clock", "broker", "boundary", "env_generator", "coverage_store", "shell"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "scenario": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Names the scenario this configuration describes; joins the root seed in deriving the run id."
+    },
+    "clock": { "$ref": "config.clock.schema.json" },
+    "broker": { "$ref": "config.broker.schema.json" },
+    "boundary": { "$ref": "config.boundary.schema.json" },
+    "env_generator": { "$ref": "config.env-generator.schema.json" },
+    "coverage_store": { "$ref": "config.coverage-store.schema.json" },
+    "shell": { "$ref": "config.shell.schema.json" }
+  }
+}

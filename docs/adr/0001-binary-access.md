@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0001: Binary access rather than tiered or per-field
 
 **Status:** Accepted, amended by ADR-0020

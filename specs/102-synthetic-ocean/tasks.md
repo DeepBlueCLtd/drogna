@@ -1,0 +1,22 @@
+# Feature 102 — tasks
+
+- [x] T101 Masters: coverage-holding (embedding manifest), holdings-inventory,
+      holding-published, config.env-generator, config.coverage-store; config.run and
+      config.shell extended (holdings view, topic, endpoint)
+- [x] T102 Analytic form v1: background profiles, four features, composition rule,
+      tau with max-membership blend and anomaly-geometry membership, pressure
+      relation, Mackenzie sound speed with validity accounting
+- [x] T103 Coverage store: staged digest-checked atomic publication, era pointers,
+      announcement on its topic, inventory route, heartbeat with holdings count
+- [x] T104 Generator: jitter draws with recorded draw order, archive + now-cast
+      authoring through the publication seam, cadence-driven replacement,
+      ground-truth manifest to the master
+- [x] T105 Holdings panel: inventory through the seam, master-validated, manifest
+      inspection; Intro grown by the 102 section
+- [x] T106 Tests: analytic properties; manifest validity and sufficiency; FR-13
+      refusal watched; cadence; AT-03 descendant with manifest-derived bound;
+      AT-04 seed-level byte identity (and its different-seed failure case)
+- [ ] T107 Seasonal signal in the archive — *declined for now: the archive is a
+      climatology of the same analytic world sampled monthly; a seasonal cycle adds
+      a parameter the demo does not yet read. Revisit if 109's map or a blog post
+      wants visible seasonality.*

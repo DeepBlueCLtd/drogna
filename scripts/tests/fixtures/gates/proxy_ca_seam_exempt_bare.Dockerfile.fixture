@@ -1,5 +1,0 @@
-# A fixture. The marker below carries no reason, so it exempts nothing and the gate says so.
-FROM alpine:3
-
-# harness:allow-proxy-ca-seam
-RUN apk add --no-cache python3

@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # App Platform and pull requests spike
 
 **The question**: DigitalOcean's console offers a droplet or an App Platform app. App

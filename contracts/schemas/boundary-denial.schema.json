@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/boundary-denial.schema.json",
+  "title": "drogna boundary denial",
+  "description": "Published by the release gate (V2-C10) on its declared topic each time the default-deny policy refuses a request (SRD-v2 FR-38, D14). This is what makes a denial observable in the shell rather than a silent 403. It names the request and the rule and carries nothing else: never the body of anything, and never the contents of what was refused.",
+  "type": "object",
+  "required": ["component", "path", "method", "rule"],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The gate's component id."
+    },
+    "path": {
+      "type": "string",
+      "description": "The relative path that was refused."
+    },
+    "method": {
+      "type": "string",
+      "description": "The HTTP method of the refused request."
+    },
+    "rule": {
+      "type": "string",
+      "description": "The rule that refused it, named: 'default deny at the boundary', or the specific refusal."
+    }
+  }
+}

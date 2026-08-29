@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "scenario": "loiter",
+  "clock": {
+    "id": "clock",
+    "epoch": "2026-01-01T00:00:00.000000Z",
+    "tick_interval_us": 1000000,
+    "mode": "realtime",
+    "rate": 1,
+    "min_rate": 0,
+    "max_rate": 3600,
+    "topics": { "clock": "ctl/clock" },
+    "http": { "rate_path": "/api/ctl/clock/rate" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "broker": {
+    "id": "broker",
+    "roles": [
+      { "role": "clock", "publish": ["ctl/clock", "ctl/heartbeat"], "subscribe": [] },
+      { "role": "broker", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "boundary",
+        "publish": ["ctl/boundary/denial", "ctl/heartbeat"],
+        "subscribe": ["ctl/clock"]
+      },
+      { "role": "env-generator", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "coverage-store",
+        "publish": ["cov/holdings", "ctl/heartbeat"],
+        "subscribe": ["ctl/clock"]
+      },
+      { "role": "shell", "publish": [], "subscribe": ["#"] }
+    ],
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "boundary": {
+    "id": "boundary",
+    "api_prefix": "/api",
+    "allow_prefixes": ["/api/ctl/"],
+    "topics": { "denial": "ctl/boundary/denial" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "env_generator": {
+    "id": "env-generator",
+    "stream": "env-generator",
+    "topics": { "clock": "ctl/clock" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "domain": {
+      "latitude": { "minimum": 44, "maximum": 48 },
+      "longitude": { "minimum": -14, "maximum": -8 },
+      "depth": { "minimum": 0, "maximum": 1000 }
+    },
+    "nowcast": {
+      "grid": { "longitude": 24, "latitude": 20, "depth": 6 },
+      "interval_ticks": 900,
+      "time_steps": 4,
+      "step_seconds": 3600
+    },
+    "archive": {
+      "grid": { "longitude": 12, "latitude": 10, "depth": 4 },
+      "months": 240,
+      "month_seconds": 2592000
+    },
+    "background": {
+      "surface_temperature_c": 17.5,
+      "deep_temperature_c": 4.5,
+      "temperature_scale_depth_m": 350,
+      "surface_salinity_psu": 35.4,
+      "deep_salinity_psu": 34.9,
+      "salinity_scale_depth_m": 300
+    },
+    "features": {
+      "eddy": {
+        "nominal": {
+          "centre_latitude": 46.1,
+          "centre_longitude": -11.2,
+          "radius_km": 60,
+          "strength_c": 2.5,
+          "salinity_strength_psu": 0.15,
+          "sign": 1,
+          "depth_centre_m": 150,
+          "depth_half_thickness_m": 220
+        },
+        "jitter": { "centre_degrees": 0.4, "radius_km": 10, "strength_c": 0.5 }
+      },
+      "front": {
+        "nominal": {
+          "anchor_latitude": 47.1,
+          "anchor_longitude": -9.4,
+          "bearing_degrees": 40,
+          "sharpness_km": 30,
+          "amplitude_c": 1.2,
+          "salinity_amplitude_psu": -0.2,
+          "depth_scale_m": 250
+        },
+        "jitter": { "anchor_degrees": 0.3, "bearing_degrees": 10 }
+      },
+      "thermocline": {
+        "nominal": {
+          "depth_m": 80,
+          "thickness_m": 30,
+          "temperature_drop_c": 4,
+          "salinity_rise_psu": 0.1
+        },
+        "jitter": { "depth_m": 15, "temperature_drop_c": 0.8 }
+      },
+      "moving": {
+        "nominal": {
+          "centre_latitude": 44.9,
+          "centre_longitude": -12.6,
+          "radius_km": 40,
+          "strength_c": 1.5,
+          "salinity_strength_psu": 0.1,
+          "sign": -1,
+          "depth_centre_m": 100,
+          "depth_half_thickness_m": 160,
+          "drift_east_km_per_day": 8,
+          "drift_north_km_per_day": 5
+        },
+        "jitter": { "centre_degrees": 0.4, "drift_km_per_day": 2 }
+      }
+    },
+    "timescale": {
+      "background_seconds": 864000,
+      "floor_ratio": 2,
+      "feature_seconds": {
+        "eddy": 432000,
+        "front": 172800,
+        "thermocline": 1209600,
+        "moving": 86400
+      }
+    }
+  },
+  "coverage_store": {
+    "id": "coverage-store",
+    "topics": { "clock": "ctl/clock", "published": "cov/holdings" },
+    "http": { "holdings_path": "/api/ctl/holdings" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "shell": {
+    "id": "shell",
+    "role": "shell",
+    "views": [
+      { "id": "intro", "label": "Intro" },
+      { "id": "system", "label": "System" },
+      { "id": "holdings", "label": "Holdings" },
+      { "id": "map", "label": "Map" },
+      { "id": "messages", "label": "Messages" }
+    ],
+    "components": [
+      { "id": "clock", "label": "Simulation clock", "beat": 101 },
+      { "id": "broker", "label": "Broker", "beat": 101 },
+      { "id": "boundary", "label": "Release gate", "beat": 101 },
+      { "id": "env-generator", "label": "Environment generator", "beat": 102 },
+      { "id": "coverage-store", "label": "Coverage store", "beat": 102 },
+      { "id": "sensors", "label": "Sensors", "beat": 103 },
+      { "id": "ingest", "label": "Ingestion seam", "beat": 103 },
+      { "id": "observation-store", "label": "Observation store", "beat": 103 },
+      { "id": "feature-store", "label": "Feature store", "beat": 103 },
+      { "id": "query", "label": "Query components", "beat": 104 },
+      { "id": "monitor", "label": "Monitor", "beat": 105 },
+      { "id": "scheduler", "label": "Scheduler", "beat": 105 },
+      { "id": "model-runner", "label": "Model runner", "beat": 105 },
+      { "id": "planner", "label": "Planner", "beat": 106 },
+      { "id": "telemetry", "label": "Telemetry", "beat": 107 },
+      { "id": "operator", "label": "Operator surface", "beat": 107 },
+      { "id": "advisory-source", "label": "Shore advisory source", "beat": 108 },
+      { "id": "advisory-store", "label": "Advisory store", "beat": 108 },
+      { "id": "offload", "label": "Offload packager", "beat": 108 }
+    ],
+    "topics": {
+      "clock": "ctl/clock",
+      "heartbeat": "ctl/heartbeat",
+      "holdings": "cov/holdings",
+      "all": "#"
+    },
+    "message_schemas": [
+      { "filter": "ctl/clock", "schema": "clock" },
+      { "filter": "ctl/heartbeat", "schema": "heartbeat" },
+      { "filter": "ctl/boundary/denial", "schema": "boundary-denial" },
+      { "filter": "cov/holdings", "schema": "holding-published" }
+    ],
+    "endpoints": { "clock_rate": "/api/ctl/clock/rate", "holdings": "/api/ctl/holdings" },
+    "liveness": { "default_window_seconds": 6 },
+    "messages": { "buffer": 200 }
+  }
+}

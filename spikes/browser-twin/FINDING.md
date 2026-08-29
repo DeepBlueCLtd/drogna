@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # Finding: a browser-hosted twin, and where its boundary actually is
 
 **The question.** Downstream browser visualisation is where a lot of effort is going to

@@ -1,3 +1,5 @@
+> **V1 record — describes retired software; superseded for V2 by `srd.md`, constitution 2.0.0 and ADR-0027.**
+
 # ADR-0026: The third wall-clock exemption is resource sampling, and the socket stops at the door
 
 **Status:** Accepted

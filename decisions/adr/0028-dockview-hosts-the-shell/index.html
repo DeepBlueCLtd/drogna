@@ -23,7 +23,7 @@
   </nav>
   <main id="content" class="content">
 <h1 id="adr-0028-dockview-hosts-the-shell">ADR-0028: dockview hosts the shell</h1>
-<p><strong>Status:</strong> Accepted
+<p><strong>Status:</strong> Accepted; amended by ADR-0032 (addressability goes below the panel)
 <strong>Date:</strong> 29 August 2026
 <strong>Feature:</strong> 101 (foundations &amp; shell)</p>
 <h2 id="context">Context</h2>
@@ -47,7 +47,10 @@ state and never re-mounts on layout changes.</li>
 never from literals in the shell source (Constitution IV).</li>
 <li>The panel <code>id</code> is the unit of URL addressability (FR-15): <code>#/view/&lt;id&gt;</code> activates
 the panel via <code>api.getPanel(id).api.setActive()</code>, and activation writes the hash
-back, so the address bar always names the active view.</li>
+back, so the address bar always names the active view. <strong>Amended by ADR-0032</strong>: an
+address is now a view id and an opaque remainder the shell hands to the panel and
+never parses, so a panel may address positions inside itself. <code>#/view/&lt;id&gt;</code> and every
+link of that shape are unchanged.</li>
 <li>Layout serialisation (<code>api.toJSON</code>) is presentation only. It is never persisted by
 the harness and never consulted by any component; a deep link selects what is
 shown, never what happened.</li>

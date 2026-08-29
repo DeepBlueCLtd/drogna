@@ -82,6 +82,7 @@
     "decisions/adr/0029-the-http-seam-is-a-fetch-shim/index.html",
     "decisions/adr/0030-scheduled-modules-and-the-composition-root/index.html",
     "decisions/adr/0031-the-site-is-typescript-and-the-estate-has-two-tenants/index.html",
+    "decisions/adr/0032-addressability-goes-below-the-panel/index.html",
     "decisions/index.html",
     "demo/index.html",
     "glossary/index.html",

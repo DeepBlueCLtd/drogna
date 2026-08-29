@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0032: addressability goes below the panel — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0032-addressability-goes-below-the-panel">ADR-0032: addressability goes below the panel</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 29 August 2026
+<strong>Feature:</strong> 111 (the Background tab)
+<strong>Amends:</strong> ADR-0028, which stated that the panel <code>id</code> is the unit of URL addressability.</p>
+<blockquote>
+<p>Written as ADR-0031 and renumbered to 0032 when <code>main</code> moved: the site-tooling record
+took 0031 first. A record's number is a fixed address for the life of the project
+(<code>README.md</code>), so the collision is resolved by moving the record nobody has referred to
+yet, not by reusing a number.</p>
+</blockquote>
+<h2 id="context">Context</h2>
+<p>SRD-v2 FR-15 makes views URL-addressable, and ADR-0028 recorded how: <code>#/view/&lt;id&gt;</code>
+activates the panel of that id, and activation writes the hash back, so the address bar
+always names what is shown. <code>app/src/shell/views.ts</code> matched <code>^#/view/([a-z][a-z0-9_-]*)$</code>
+— one segment, exactly — and ADR-0028 said so outright: &quot;the panel <code>id</code> is the unit of
+URL addressability (FR-15).&quot;</p>
+<p>Feature 111 needs more than that. Background is a course of eleven explainers with 69
+steps between them, and FR-003 requires each step to be addressable so that a PR comment
+or a blog post links to one step rather than to the tab. <code>#/view/background/mqtt/3</code>
+cannot be expressed by a scheme with one segment.</p>
+<p>This is hard to reverse. Once a link is shared, its meaning is somebody else's; changing
+what an address selects afterwards breaks a page nobody controls. That is the whole point
+of FR-15, and it is why this earns a record rather than a commit message.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>An address is a view id and an opaque remainder.</strong> <code>#/view/&lt;id&gt;</code> is unchanged. Anything
+after the view id is handed to that panel and is never parsed by the shell.</p>
+<ul>
+<li><code>addressFromHash</code> returns <code>{ view, rest? }</code>. <code>viewFromHash</code> keeps its signature and its
+behaviour, so every existing call site and every existing test is untouched.</li>
+<li>The shell hands each panel a <code>PanelAddress</code> — read the remainder, write the remainder,
+hear about a change. A panel that addresses no position inside itself never reads it.</li>
+<li>What a remainder <em>means</em> is the panel's business. Background alone knows that its
+remainder is <code>&lt;explainer-id&gt;/&lt;step&gt;</code>; that knowledge lives in
+<code>app/src/panels/background/address.ts</code> and nowhere else.</li>
+<li>An unknown or malformed remainder resolves to a first step. It never errors and never
+blanks: the anchor is a convenience, never state (FR-15).</li>
+</ul>
+<p><strong>And the writeback must stop erasing what it does not recognise.</strong> <code>Shell.tsx</code> rewrote
+the address to <code>hashForView(panel.id)</code> whenever the hash did not <em>equal</em> a bare view
+address. Left alone, the first activation — including the one dockview fires while
+restoring a layout — would have replaced <code>#/view/background/mqtt/3</code> with
+<code>#/view/background</code>. That is worse than a broken link: it is a link that works, then
+quietly forgets where it pointed, and only on a second visit.</p>
+<p>The decision is <code>hashOnActivation(hash, panelId)</code>, which returns nothing when the address
+already names the activated panel, whatever else it carries.</p>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>No panel's internal vocabulary reaches shell source. The shell knows about an opaque
+string; the alternative below did not have that property.</li>
+<li>Every single-segment link keeps working, and the existing <code>views.test.ts</code> cases pass
+unchanged — which is the evidence, not the intention.</li>
+<li>The erasure was <strong>watched before it was fixed</strong>. <code>Shell.test.tsx</code> asserted that a
+sub-path survives an activation and reported <code>expected '#/view/intro' to be '#/view/background/why-a-standard/3'</code> against the unmodified writeback.</li>
+<li>A future panel that wants positions inside itself has the mechanism already, and owes
+only its own reading of the remainder.</li>
+</ul>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<ul>
+<li><strong>A hash query</strong> (<code>#/view/background?step=mqtt.3</code>). Two parsers for one address, and
+query semantics inside a fragment surprise everyone who reads them.</li>
+<li><strong>Eleven top-level panel ids</strong> (<code>background-mqtt</code>, …). It would put the explainers in
+the tab bar beside Intro and Map, which is what a sub-tab exists not to do.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

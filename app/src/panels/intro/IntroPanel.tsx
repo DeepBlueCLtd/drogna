@@ -102,11 +102,28 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           detail column: the loop's quiet always says which quiet it is.
         </p>
       </section>
+      <section>
+        <h3>106 — doubt is measured, and directed</h3>
+        <p>
+          The planner reads only what publication released — the ensemble spread,
+          the ground-truth manifest&rsquo;s tau, the read-only region geometry — and
+          maintains an observation-age deficit that regrows at the local timescale:
+          water never sampled sits at the spread, water just sampled is worth
+          nothing to sample again, and fast water invites revisit without anybody
+          scheduling it. Candidate routes are <em>walked</em>, each stop scored
+          against the field as it will stand at arrival, and one route is committed
+          under a time budget by prize-collecting orienteering with seeded restarts
+          — published as a recommendation and nothing else, with the naive figure
+          beside the honest one so the size of the avoided error is a number you
+          can see, and projections of when each region&rsquo;s confidence lapses.
+          Watch <code>ctl/plan</code> in{' '}
+          <a href={hashForView('messages')}>Messages</a>.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          Uncertainty
-          and planning (106), the operator&rsquo;s view (107), shore advisories (108)
+          The operator&rsquo;s view (107), shore advisories (108)
           and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
           is built. Until then their components stay grey, because nothing here lights
           without a heartbeat.

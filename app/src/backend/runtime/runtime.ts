@@ -29,10 +29,12 @@ import { QueryComponent } from '../query/query.js';
 import { Monitor } from '../monitor/monitor.js';
 import { Scheduler } from '../scheduler/scheduler.js';
 import { ModelRunner } from '../model-runner/runner.js';
+import { Planner } from '../planner/planner.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
 import { Router } from './router.js';
+import { parseEpochMicros } from '../lib/sim-time.js';
 import { buildRunManifest, deriveRunId } from './manifest.js';
 
 export interface BackendRuntime {
@@ -47,6 +49,7 @@ export interface BackendRuntime {
   readonly ingest: Ingest;
   readonly monitor: Monitor;
   readonly scheduler: Scheduler;
+  readonly planner: Planner;
   stop(): void;
 }
 
@@ -82,6 +85,7 @@ export function buildBackend(
   validated(validator, 'config.monitor', config.monitor);
   validated(validator, 'config.scheduler', config.scheduler);
   validated(validator, 'config.model-runner', config.model_runner);
+  validated(validator, 'config.planner', config.planner);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
@@ -89,6 +93,7 @@ export function buildBackend(
     config.env_generator.stream,
     config.sensors.stream,
     config.model_runner.stream,
+    config.planner.stream,
   ]);
 
   const broker = new Broker(config.broker);
@@ -164,6 +169,16 @@ export function buildBackend(
     runId,
     options.rootSeed,
   );
+  const planner = new Planner(
+    config.planner,
+    transport.connect(config.planner.id, config.planner.id),
+    store,
+    featureStore,
+    runId,
+    options.rootSeed,
+    secondsPerTick,
+    Number(parseEpochMicros(config.clock.epoch) / 1_000_000n),
+  );
 
   // Each component's heartbeat carries the simulation time that component last
   // heard over the seam; only the clock's carries the time it is the source of.
@@ -223,6 +238,7 @@ export function buildBackend(
   monitor.start();
   scheduler.start();
   modelRunner.start();
+  planner.start();
   store.heartbeat.start();
   observationStore.heartbeat.start();
   featureStore.heartbeat.start();
@@ -242,6 +258,7 @@ export function buildBackend(
     ingest,
     monitor,
     scheduler,
+    planner,
     stop(): void {
       for (const heartbeat of heartbeats) heartbeat.stop();
       generator.stop();
@@ -250,6 +267,7 @@ export function buildBackend(
       monitor.stop();
       scheduler.stop();
       modelRunner.stop();
+      planner.stop();
       store.heartbeat.stop();
       observationStore.heartbeat.stop();
       featureStore.heartbeat.stop();

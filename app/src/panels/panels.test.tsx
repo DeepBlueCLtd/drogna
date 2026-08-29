@@ -70,6 +70,7 @@ describe('the panels against a live backend', () => {
       'model-runner',
       'monitor',
       'observation-store',
+      'planner',
       'query',
       'scheduler',
       'sensors',
@@ -78,13 +79,13 @@ describe('the panels against a live backend', () => {
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 13);
+    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 14);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(13);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(14);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));

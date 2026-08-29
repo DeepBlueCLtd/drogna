@@ -69,6 +69,7 @@ describe('the backend runtime', () => {
       'model-runner',
       'monitor',
       'observation-store',
+      'planner',
       'query',
       'scheduler',
       'sensors',

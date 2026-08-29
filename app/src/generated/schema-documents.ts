@@ -1432,6 +1432,198 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.planner": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.planner.schema.json",
+    "title": "drogna planner configuration (V2-C14)",
+    "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "replan_interval_ticks",
+      "region_feature",
+      "h3_resolution",
+      "depth_bands",
+      "budget_seconds",
+      "speeds",
+      "footprint",
+      "usable_threshold",
+      "restarts",
+      "shortlist",
+      "projection"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The stream the restart draws come from; with restarts = 1 no draw is taken at all."
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observations",
+          "run_published",
+          "plan"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "plan": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "replan_interval_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "region_feature": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+        "description": "The feature-store feature whose polygon the planning cover is built over — the loiter region in the shipped scenario. Read through the store interface; the cover is by overlap, so edge water is inside it."
+      },
+      "h3_resolution": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 15
+      },
+      "depth_bands": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "index",
+            "minimum_depth_m",
+            "maximum_depth_m"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minimum_depth_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maximum_depth_m": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "budget_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "speeds": {
+        "type": "object",
+        "required": [
+          "horizontal_m_per_s",
+          "vertical_m_per_s"
+        ],
+        "additionalProperties": false,
+        "description": "Traversal cost is time: horizontal and vertical added, the conservative reading of a budget.",
+        "properties": {
+          "horizontal_m_per_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_m_per_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "footprint": {
+        "type": "object",
+        "required": [
+          "peak",
+          "horizontal_efolding_m",
+          "vertical_efolding_m",
+          "rings",
+          "band_reach"
+        ],
+        "additionalProperties": false,
+        "description": "The explicit sensing model: a product of two decays about the visited cell, evaluated over the stated rings and bands rather than a tolerance nobody wrote down.",
+        "properties": {
+          "peak": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          },
+          "horizontal_efolding_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_efolding_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "rings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "band_reach": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "usable_threshold": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "θ: the usable-confidence threshold excess is measured against. Where nothing exceeds it, the honest recommendation is no route at all, stated with its reason."
+      },
+      "restarts": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "shortlist": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "projection": {
+        "type": "object",
+        "required": [
+          "step_seconds",
+          "horizon_seconds"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "step_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "horizon_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    }
+  },
   "config.query": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.query.schema.json",
@@ -1509,6 +1701,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "monitor",
       "scheduler",
       "model_runner",
+      "planner",
       "shell"
     ],
     "additionalProperties": false,
@@ -1557,6 +1750,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "model_runner": {
         "$ref": "config.model-runner.schema.json"
+      },
+      "planner": {
+        "$ref": "config.planner.schema.json"
       },
       "feature_store": {
         "$ref": "config.feature-store.schema.json"

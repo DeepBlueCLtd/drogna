@@ -44,6 +44,11 @@
         "subscribe": ["ctl/divergence", "ctl/run/published", "ctl/clock"]
       },
       {
+        "role": "planner",
+        "publish": ["ctl/plan", "ctl/heartbeat"],
+        "subscribe": ["obs/#", "ctl/run/published", "ctl/clock"]
+      },
+      {
         "role": "model-runner",
         "publish": ["ctl/run/started", "ctl/run/published", "ctl/heartbeat"],
         "subscribe": ["ctl/run/request", "ctl/clock"]
@@ -282,6 +287,37 @@
     "advection": { "east_km_per_day": 4, "north_km_per_day": 2 },
     "noise_std": { "temperature": 0.35, "salinity": 0.03 }
   },
+  "planner": {
+    "id": "planner",
+    "stream": "planner-restarts",
+    "topics": {
+      "clock": "ctl/clock",
+      "observations": "obs/#",
+      "run_published": "ctl/run/published",
+      "plan": "ctl/plan"
+    },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "replan_interval_ticks": 600,
+    "region_feature": "loiter-region",
+    "h3_resolution": 5,
+    "depth_bands": [
+      { "index": 0, "minimum_depth_m": 0, "maximum_depth_m": 120 },
+      { "index": 1, "minimum_depth_m": 120, "maximum_depth_m": 400 }
+    ],
+    "budget_seconds": 21600,
+    "speeds": { "horizontal_m_per_s": 2.5, "vertical_m_per_s": 0.5 },
+    "footprint": {
+      "peak": 0.85,
+      "horizontal_efolding_m": 12000,
+      "vertical_efolding_m": 120,
+      "rings": 2,
+      "band_reach": 1
+    },
+    "usable_threshold": 0.12,
+    "restarts": 4,
+    "shortlist": 3,
+    "projection": { "step_seconds": 1800, "horizon_seconds": 21600 }
+  },
   "feature_store": {
     "id": "feature-store",
     "topics": { "clock": "ctl/clock" },
@@ -353,7 +389,8 @@
       { "filter": "ctl/divergence", "schema": "divergence" },
       { "filter": "ctl/run/request", "schema": "run-request" },
       { "filter": "ctl/run/started", "schema": "run-started" },
-      { "filter": "ctl/run/published", "schema": "run-published" }
+      { "filter": "ctl/run/published", "schema": "run-published" },
+      { "filter": "ctl/plan", "schema": "plan" }
     ],
     "endpoints": { "clock_rate": "/api/ctl/clock/rate", "holdings": "/api/ctl/holdings" },
     "liveness": { "default_window_seconds": 6 },

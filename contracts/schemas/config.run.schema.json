@@ -20,6 +20,7 @@
     "monitor",
     "scheduler",
     "model_runner",
+    "planner",
     "shell"
   ],
   "additionalProperties": false,
@@ -68,6 +69,9 @@
     },
     "model_runner": {
       "$ref": "config.model-runner.schema.json"
+    },
+    "planner": {
+      "$ref": "config.planner.schema.json"
     },
     "feature_store": {
       "$ref": "config.feature-store.schema.json"

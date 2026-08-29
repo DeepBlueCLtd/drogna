@@ -318,6 +318,46 @@ export type ConfigObservationStore = {
   "heartbeat": ConfigCommonHeartbeat;
 };
 
+/** drogna planner configuration (V2-C14) — from config.planner.schema.json */
+export type ConfigPlanner = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+    "run_published": ConfigCommonTopic;
+    "plan": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "replan_interval_ticks": number;
+  "region_feature": string;
+  "h3_resolution": number;
+  "depth_bands": {
+    "index": number;
+    "minimum_depth_m": number;
+    "maximum_depth_m": number;
+  }[];
+  "budget_seconds": number;
+  "speeds": {
+    "horizontal_m_per_s": number;
+    "vertical_m_per_s": number;
+  };
+  "footprint": {
+    "peak": number;
+    "horizontal_efolding_m": number;
+    "vertical_efolding_m": number;
+    "rings": number;
+    "band_reach": number;
+  };
+  "usable_threshold": number;
+  "restarts": number;
+  "shortlist": number;
+  "projection": {
+    "step_seconds": number;
+    "horizon_seconds": number;
+  };
+};
+
 /** drogna query components configuration (V2-C09) — from config.query.schema.json */
 export type ConfigQuery = {
   "id": ConfigCommonComponentId;
@@ -348,6 +388,7 @@ export type ConfigRun = {
   "monitor": ConfigMonitor;
   "scheduler": ConfigScheduler;
   "model_runner": ConfigModelRunner;
+  "planner": ConfigPlanner;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
 };

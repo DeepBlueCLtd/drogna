@@ -7,7 +7,7 @@
  * the width it wants. Never scaled past legibility, and never rendered having
  * silently dropped its labels; the prose and the spine stay usable either way.
  */
-import { useEffect, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { FigureContext, Step, StepFigure } from './model.js';
 
 /**
@@ -30,30 +30,51 @@ export function useMeasuredWidth(ref: RefObject<HTMLElement>): number | undefine
   return width;
 }
 
-/** The drawing, or the honest statement of the width it wants. */
+/**
+ * The drawing, or the honest statement of the width it wants.
+ *
+ * It measures **its own** column rather than being told the panel's width. Where
+ * there is room, the prose sits beside the drawing and the drawing has roughly half
+ * the panel; comparing a figure's minimum against the whole panel would pass a
+ * figure that is in fact drawn at half of it, which is the case FR-024 is about.
+ *
+ * The measured element is the column, which is always present, and never the figure
+ * inside it. Measuring the figure meant the measurement could unmount the thing it
+ * was measuring: the observer then read a detached element as zero width, the floor
+ * gave way to the drawing, the drawing was measured again, and the two took turns.
+ * It settled on drawing, so the floor simply never appeared — watched happening,
+ * when a figure whose minimum nothing could satisfy was drawn anyway.
+ *
+ * `width` is an override for tests, which have no layout to measure.
+ */
 export function Figure({
   figure,
-  width,
+  width: given,
   context,
 }: {
   figure: StepFigure;
-  width: number | undefined;
+  width?: number;
   context: FigureContext;
 }): ReactNode {
-  if (width !== undefined && width < figure.minWidth) {
-    return (
-      <p className="bg-figure-floor" data-testid="figure-floor">
-        The diagram needs about {figure.minWidth}px. Widen the panel to see it.
-      </p>
-    );
-  }
+  const columnRef = useRef<HTMLDivElement>(null);
+  const measured = useMeasuredWidth(columnRef);
+  const width = given ?? measured;
+  const tooNarrow = width !== undefined && width < figure.minWidth;
   return (
-    <figure className="bg-figure">
-      <div className="bg-figure-frame" role="img" aria-label={figure.label}>
-        {figure.draw(context)}
-      </div>
-      {figure.caption ? <figcaption>{figure.caption}</figcaption> : null}
-    </figure>
+    <div className="bg-figure-column" ref={columnRef}>
+      {tooNarrow ? (
+        <p className="bg-figure-floor" data-testid="figure-floor">
+          The diagram needs about {figure.minWidth}px. Widen the panel to see it.
+        </p>
+      ) : (
+        <figure className="bg-figure">
+          <div className="bg-figure-frame" role="img" aria-label={figure.label}>
+            {figure.draw(context)}
+          </div>
+          {figure.caption ? <figcaption>{figure.caption}</figcaption> : null}
+        </figure>
+      )}
+    </div>
   );
 }
 

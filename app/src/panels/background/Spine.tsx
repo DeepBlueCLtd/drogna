@@ -15,10 +15,10 @@
  *   - **Nothing animates on arrival** (FR-019). The stage opens finished. There is no
  *     autoplay, no timer, and no clock read of any kind (Constitution I).
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Explainer, FigureContext } from './model.js';
 import { stepCount } from './model.js';
-import { Figure, LiveViewLink, useMeasuredWidth } from './layout.js';
+import { Figure, LiveViewLink } from './layout.js';
 import { Slides } from './Slides.js';
 import { ValuePanel } from './ValuePanel.js';
 
@@ -33,8 +33,6 @@ export interface SpineProps {
 export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNode {
   const total = stepCount(explainer);
   const [poke, setPoke] = useState<string | undefined>(undefined);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const width = useMeasuredWidth(stageRef);
 
   // Free play belongs to the step it was performed in (FR-018).
   useEffect(() => setPoke(undefined), [explainer.id, step]);
@@ -45,7 +43,6 @@ export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNod
   return (
     <div
       className="bg-stage"
-      ref={stageRef}
       data-explainer={explainer.id}
       data-step={step}
       data-form={explainer.form}
@@ -65,9 +62,9 @@ export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNod
           <p className="bg-figure-floor">This explainer states no consequences.</p>
         )
       ) : explainer.form === 'slides' ? (
-        <Slides step={content} width={width} context={context} onView={onView} />
+        <Slides step={content} context={context} onView={onView} />
       ) : (
-        <Interactive step={content} width={width} context={context} onView={onView} />
+        <Interactive step={content} context={context} onView={onView} />
       )}
       <nav className="bg-spine" aria-label={`${explainer.title}: step ${step} of ${total}`}>
         <button type="button" onClick={() => onStep(step - 1)} disabled={step <= 1}>
@@ -96,12 +93,10 @@ export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNod
  */
 function Interactive({
   step,
-  width,
   context,
   onView,
 }: {
   step: Explainer['steps'][number];
-  width: number | undefined;
   context: FigureContext;
   onView: (view: string) => void;
 }): ReactNode {
@@ -116,7 +111,7 @@ function Interactive({
         {step.note ? <p className="bg-note">{step.note}</p> : null}
         <LiveViewLink liveView={step.liveView} onView={onView} />
       </div>
-      {step.figure ? <Figure figure={step.figure} width={width} context={context} /> : null}
+      {step.figure ? <Figure figure={step.figure} context={context} /> : null}
     </div>
   );
 }

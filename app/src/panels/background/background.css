@@ -161,9 +161,16 @@
   max-width: 42em;
 }
 
-.bg-figure {
+/*
+ * The column is the measured element and is always present, so a figure withdrawn
+ * for want of width cannot change the width it was judged against (layout.tsx).
+ */
+.bg-figure-column {
   flex: 1 1 22em;
   min-width: 0;
+}
+
+.bg-figure {
   margin: 0;
 }
 
@@ -189,7 +196,6 @@
   border: 1px dashed var(--shell-refused);
   color: var(--shell-refused);
   padding: 0.8em;
-  flex: 1 1 14em;
   margin: 0;
 }
 
@@ -198,7 +204,7 @@
   flex-direction: column;
 }
 
-.bg-slide .bg-figure {
+.bg-slide .bg-figure-column {
   flex: 0 0 auto;
   width: 100%;
   max-width: 34em;

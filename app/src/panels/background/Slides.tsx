@@ -15,19 +15,17 @@ import { Figure, LiveViewLink } from './layout.js';
 
 export function Slides({
   step,
-  width,
   context,
   onView,
 }: {
   step: Explainer['steps'][number];
-  width: number | undefined;
   context: FigureContext;
   onView: (view: string) => void;
 }): ReactNode {
   return (
     <div className="bg-step bg-slide">
       <h3>{step.title}</h3>
-      {step.figure ? <Figure figure={step.figure} width={width} context={context} /> : null}
+      {step.figure ? <Figure figure={step.figure} context={context} /> : null}
       <div className="bg-prose">
         {step.prose.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>

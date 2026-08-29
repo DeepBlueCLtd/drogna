@@ -153,6 +153,12 @@ try {
       for (const label of await clippedLabels(page)) {
         failures.push(`${explainer.id}/${step}: a label is drawn outside its viewBox — "${label}"`);
       }
+      // The floor is honest behaviour at a narrow width and a mistake at this one: a
+      // 1440px viewport gives a figure roughly 420px of column, so a step that refuses
+      // to draw here has a minWidth nobody can satisfy.
+      if ((await page.locator('[data-testid="figure-floor"]').count()) > 0) {
+        failures.push(`${explainer.id}/${step}: the diagram refuses to draw at 1440px`);
+      }
       if (step === explainer.steps) break;
       if (!(await keyboardToNext(page))) {
         failures.push(`${explainer.id}: could not reach step ${step + 1} by keyboard`);

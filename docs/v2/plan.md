@@ -1,8 +1,12 @@
 # drogna Version 2 — the plan
 
-**Status:** Draft for review — nothing in this directory is adopted until the review says so
+**Status:** Draft for review — and the review gate for everything downstream: the SRD-v2
+and constitution 2.0.0 drafts are written only after this plan is approved (earlier
+drafts of both exist in this branch's history at `410fc03` as reference, carrying no
+standing)
 **Date:** 29 August 2026
-**Provenance:** an interview with the author, conducted 29 August 2026. Every decision
+**Provenance:** an interview with the author, conducted 29 August 2026, plus a sweep of
+the six open pull requests (#43–#47, #49) for emergent requirements (§6). Every decision
 below was put as a question and answered; the open questions at the end were not asked.
 
 ---
@@ -20,8 +24,9 @@ Two frustrations, named by the author:
    reads as one coherent system. The constitution, the SRD and the specs need refocusing
    more than any one component needs fixing.
 
-Version 2 answers both at once: a **pure client-side JavaScript system** in which the
-backend components are genuine programs that happen to run in the browser, separated
+Version 2 answers both at once: a **pure client-side TypeScript single-page
+application** in which the backend components are genuine programs that happen to run in
+the browser, separated
 from the front-end by a **wire-protocol seam** — so that Version 3 can replace them with
 a real backend by swapping a base URL, not by rewriting the client. All current software
 is retired and rewritten clean. The written record is refocused first, and the rewrite
@@ -42,8 +47,8 @@ document, not a silent divergence later.
 | D6 | **Determinism carries in full.** No wall-clock (Principle I) and seeded-RNG replay (Principle II) both survive: a simulation-clock component drives all time, every component draws from seeded streams, and replay-from-manifest remains a test. | The harness keeps its identity, and one language makes the gates *easier* to enforce, not harder. |
 | D7 | **React + Deck.gl inside GoldenLayout.** GoldenLayout 2.x owns the layout; each panel hosts a React root; the Map panel keeps Deck.gl. Top-level tabs at first run: **Intro, System, Map, Messages**; users may drag/drop to rearrange. | V1's rendering knowledge is reused. The GoldenLayout↔React integration is part of the foundations feature. |
 | D8 | **Arc = build order = demo.** One ordering serves all three: each feature adds the next beat of the story, and the Intro tab narrates it. Build runs in chronograph order: data generation first, map display last. | See §5 for the proposed beats. |
-| D9 | **Artefact order: SRD-v2 → constitution 2.0.0 → fresh spec series.** V1 specs are archived, never edited. The new series is far coarser — one feature per narrative beat. | Drafts of the first two accompany this plan. |
-| D10 | **All-JS toolchain, gates included.** pnpm / TypeScript 5 / vitest / Playwright only; the constitution gates are rewritten as TypeScript scripts behind a new gates registry; Python leaves the repository. | One toolchain, one language — the reviewability the rewrite exists for. The watched-failing discipline carries unchanged. |
+| D9 | **Artefact order: SRD-v2 → constitution 2.0.0 → fresh spec series.** V1 specs are archived, never edited. The new series is far coarser — one feature per narrative beat. | This plan is reviewed first; the SRD and constitution drafts follow its approval (§8). |
+| D10 | **All-TypeScript toolchain, gates included.** pnpm / TypeScript 5 / vitest / Playwright only; the constitution gates are rewritten as TypeScript scripts behind a new gates registry; Python leaves the repository. | One toolchain, one language — the reviewability the rewrite exists for. The watched-failing discipline carries unchanged. |
 | D11 | **Static site, in-memory.** V2 builds to static assets; every visit is a fresh seeded run (which V1's constitution already demanded of instances); manifest export/import gives replay without storage. | The demo becomes a URL. No server, no droplet dependency for the core demonstration. |
 | D12 | **The pub/sub seam is a broker component with MQTT semantics**: topic tree, wildcard subscription, ACL-shaped rules, behind a transport interface whose wire shape is MQTT-over-WebSocket. | The Messages tab and topic-tree view keep their V1 meaning; V3 swaps in a real broker. |
 | D13 | **Foundations feature first.** The GoldenLayout shell (four tabs, mostly empty), the clock, the RNG, the manifest, the seam skeleton and the gates land as feature one, so every later beat is *visible* the day it is built. | "Demonstrable before the next begins" holds from the first feature. |
@@ -69,7 +74,8 @@ carriageways, and everything the front-end knows about the backend crosses one o
    any query component sees it: default deny, path-prefix opt-in, denials observable.
 
 Two rules make the seam load-bearing rather than decorative, and both become
-constitutional (see the constitution 2.0 draft, Principle XI):
+constitutional (a new Principle XI in the 2.0.0 draft that follows this plan's
+approval):
 
 - **No import across the seam.** Front-end code never imports a backend component's
   modules, and vice versa; the only shared code is the generated types and the seam's
@@ -82,7 +88,8 @@ constitutional (see the constitution 2.0 draft, Principle XI):
 
 ## 4. What carries, what is reframed, what retires
 
-Read alongside the constitution 2.0 draft, which carries the full argument per principle.
+The constitution 2.0.0 draft (written after this plan is approved) will carry the full
+argument per principle; this section is the summary that draft descends from.
 
 **Carries unchanged:** no wall-clock (I); seeded randomness and deterministic replay
 (II); no literal paths or hosts (IV — the config document a component receives at
@@ -111,7 +118,7 @@ Python and its toolchain (D10).
 **Deliberately deferred, not dissolved:** offload export as a real file leaving a real
 system is thin when the whole system is one browser page; V2 keeps the *announcement*
 semantics (products observed leaving by subscription) and defers verified-receipt
-eviction to V3. The one genuinely open scope question this raises is recorded in §8.
+eviction to V3. The one genuinely open scope question this raises is recorded in §9.
 
 ## 5. The narrative arc, and the proposed feature series
 
@@ -142,7 +149,109 @@ walkthrough script. Interactive walkthrough machinery (a step-through mode drivi
 other panels) is deliberately not in this series; it is a candidate feature 110 once the
 arc exists to walk through.
 
-## 6. Repository mechanics
+## 6. Emergent requirements from the open pull requests
+
+Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,
+spec artefacts, trap entries — was swept for capabilities and requirements that V1's SRD
+never carried, because a requirement discovered in a PR and not written down here would
+be exactly the divergence V2 exists to end. Fifteen candidates, each with where it lands
+in SRD-v2; **E1 is the only one that changes behaviour rather than recording it, and
+needs an author's answer**.
+
+**From #49 (the watched turn — `spikes/watched-turn/FINDING.md`):**
+
+- **E1 — The loop can become permanently becalmed, and V1 recorded the question as
+  open.** Once the newest run's validity span lapses, the monitor scores no residual
+  against it, no divergence can ever fire again, nothing else requests a run — and every
+  component reports healthy. Watched live in the first scenario. SRD-v2's forecast-loop
+  beat (105) must *answer* what V1 deliberately left open: score against a lapsed field,
+  hold a scheduling cadence as a floor, or declare the calm a scenario's intended end
+  state — and whichever it is, the state must be legible in the shell.
+- **E2 — Quiet must be legible.** The scheduler correctly declining a breach inside its
+  minimum interval looks identical to a stall from the outside. The System view should
+  say *why* the loop is quiet: declined-by-policy, becalmed, or genuinely stalled.
+- **E3 — Provisioning goes through the components' own paths.** The initial run is
+  seeded by publishing it through the real publisher, so the first page load finds a lit
+  publish phase — seed data in the constitution's sense, never a fixture. V2's
+  provisioning requirement should mandate this shape: seed by running component code,
+  never by poking a store.
+- **E4 — The client validates every received message against its schema and shows a
+  refusal counter** ("0 refused by their schema" was itself a watched claim). Carries
+  into the Messages tab requirement.
+- **E5 — Publication integrity is checked, and refusals were watched.** A staged run
+  whose field does not match the digest its descriptor records is refused with that
+  sentence, the pointer untouched. Carries into V2's coverage-store publication
+  requirement.
+- **E6 — The watched turn as method.** The acceptance gate was *seen happening in the
+  client* and captured, not inferred from green tests. Candidate process requirement:
+  each beat's acceptance is watched live in the shell, with the capture as the record.
+
+**From #47 (one door):**
+
+- **E7 — One origin, relative URLs, structurally.** A client document naming an absolute
+  URL breaks behind a clearance at the preflight, so endpoints are relative and
+  same-origin *by requirement*, not convention. This independently confirms the seam
+  decision (D1/FR-04): V2 satisfies it trivially, and it binds V3's topology — page,
+  data and control through one door under one clearance.
+- **E8 — Measure at least one cleared request.** The proxy's credential fault hid for
+  the file's whole life because every test exercised refusals; the first cleared request
+  ever made found it in seconds. The release gate's tests (V2 and V3 alike) must include
+  the allowed path, not only the denials.
+
+**From #46 (the SensorThings spatial predicate — its ADR-0027):**
+
+- **E9 — A subset grows one predicate at a time, and every refusal names the thing
+  refused.** `st_within` on the observation's own location only; single-ring polygon
+  only; everything else refused by name; the conformance statement amended in the same
+  commit and its agreement with the served account held by a test. This grain — not just
+  "state the subset" — carries into the query-seam requirement.
+
+**From #45 (replay and residue):**
+
+- **E10 — AT-04's stronger form is now the standard.** Two-participant byte-identical
+  *lockstep* replay, a one-command replay proof, watched failing against three planted
+  violations. V2's AT-04 descendant inherits the strong claim, not the weaker original.
+- **E11 — The measurement geometry travels beside the export, never inside it.** A
+  run-manifest sibling carries the identification radius and every sampled
+  position/time — the ground truth the leakage gate scores the updated-region shape
+  against — deliberately outside the released members list, with producer/boundary
+  radius parity held by a test. Refines the leakage-test requirement and interacts with
+  open question §9.4 (offload's V2 shape).
+
+**From #44 (the topic tree — its ADR-0027 and spec):**
+
+- **E12 — The topic tree is a richer requirement than V1's SRD ever recorded**:
+  structure from the declared topology artefact and nothing else, illumination from
+  genuinely received traffic and nothing else, the two never mixing; consumer roles as a
+  first-class column connected to the subtrees their filters cover; pulse, ripple,
+  sustained intensity; wide branches collapsing to a summary node. Carries into the
+  Messages/System requirements at this grain.
+- **E13 — A display may not show cold where there is traffic.** V1 had to add a
+  read-only observer role because a tree that cannot hear a namespace misrepresents the
+  running system. V2's in-browser broker hears everything, so this is trivially
+  satisfied — but the requirement is recorded so V3's transport inherits it, together
+  with the role discipline (the shell's identity reads both namespaces and may never
+  publish).
+- **E14 — The topology is derived, committed, and drift-gated.** The topic list comes
+  from scanning declarations in the tree, never from a hand-maintained document. The
+  mechanism carries into V2 (the scanner reads component configuration instead of an
+  ACL file).
+
+**From #43 and issue #34 (the ocean reaches the browser):**
+
+- **E15 — "Delivered" is not "wired": a feature can pass while the path through it is
+  broken.** The V1 map surface was delivered and had never drawn a field — five broken
+  links, none in the client itself. This is the strongest argument for D8 (each beat
+  demonstrable end-to-end): SRD-v2 should require that a beat's demonstration exercises
+  the full path through the seam — generator to pixel — not the panel in isolation.
+
+One mechanical finding from the same sweep: PRs #44 and #46 *each* add an ADR numbered
+0027 (the number-collision gate `site/gates/check_adr_numbers.py` exists precisely for
+this, and one of the two records having been renumbered once already). The V2 reversal
+ADR will therefore take whatever number is free when it lands, after those PRs merge —
+the plan refers to it as "the reversal ADR" rather than by number.
+
+## 7. Repository mechanics
 
 - **Branching:** this plan and its drafts land via PR from `claude/drogna-v2-planning-ae8ln2`.
   Adoption (below) happens on the repository's normal flow after review.
@@ -167,7 +276,7 @@ arc exists to walk through.
 ├── .specify/memory/constitution.md   2.0.0
 ├── specs/1NN-slug/               the V2 series
 ├── contracts/                    masters: JSON Schema + OpenAPI (carried)
-├── docs/                         adr/ (carried, 0027+ are V2), architecture/ (rewritten), v1 archive banners
+├── docs/                         adr/ (carried; V2 records continue the numbering), architecture/ (rewritten), v1 archive banners
 ├── app/                          the one deliverable
 │   └── src/
 │       ├── shell/                GoldenLayout + panel hosts
@@ -176,25 +285,30 @@ arc exists to walk through.
 │       ├── seam/                 transport, interception, release gate, client interfaces
 │       └── generated/            GENERATED TS types (do not edit)
 ├── scripts/                      TS gates + gates.registry (pattern carried)
-└── site/                         fate is an open question, §8
+└── site/                         fate is an open question, §9
 ```
 
 - **The import-boundary gate** polices `shell|panels` ↔ `backend` (only `seam/` and
   `generated/` are importable from both sides), replacing V1's service-dependency gate
   at the same rank.
 
-## 7. Adoption sequence (after this review)
+## 8. Adoption sequence (after this review)
 
-1. Review comments on this PR are resolved; the three drafts are amended in place.
-2. **SRD-v2 adopted:** `docs/v2/srd-v2.md` moves to the root as `srd.md`;
-   `harness-srd.md` gets its archival banner.
-3. **Constitution 2.0.0 adopted:** the draft replaces `.specify/memory/constitution.md`;
-   ADR-0027 moves from Proposed to Accepted; the version log records the major bump.
+1. **This plan is reviewed and approved first.** Review comments are resolved in place;
+   the E-items of §6 are accepted, amended or struck; E1 and the §9 questions get their
+   answers.
+2. **SRD-v2 drafted** against the approved plan, folding in the accepted E-items, and
+   reviewed. On adoption it moves to the root as `srd.md`; `harness-srd.md` gets its
+   archival banner.
+3. **Constitution 2.0.0 drafted** against the adopted SRD, with the reversal ADR, and
+   reviewed. On adoption it replaces `.specify/memory/constitution.md`; the ADR moves to
+   Accepted; the version log records the major bump. (Superseded drafts of both
+   documents exist at `410fc03` in this branch's history as a starting point.)
 4. **Feature 101 specified** (spec-kit, against the new constitution), beginning with
    the retirement commit and the seam spike.
 5. Beats 102–109 follow in order, each demonstrable before the next begins.
 
-## 8. Open questions — raised here, not silently resolved
+## 9. Open questions — raised here, not silently resolved
 
 These were *not* asked in the interview. Each needs an answer before the feature that
 touches it, none blocks adoption of the plan itself.

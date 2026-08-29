@@ -14,12 +14,21 @@ on:
 
 permissions:
   contents: write
-  # The preview comment below. Nothing else here writes to a pull request.
+  # The instance is of no use to a reviewer who cannot find it, so the job also
+  # writes the address onto the pull request open on this branch.
   pull-requests: write
 
-# Serialised, never cancelled: two estate pushes racing would drop one instance.
+# Grouped per branch, and deliberately NOT shared with the site workflow. GitHub holds
+# at most ONE queued run per concurrency group: `cancel-in-progress: false` protects the
+# run that is already going, and the next arrival evicts and CANCELS the one waiting
+# behind it. A group shared across workflows therefore drops runs rather than
+# serialising them — which is how the V2 site publication was lost, cancelled four
+# seconds after it queued behind an instance deployment. Within one branch the eviction
+# is harmless and wanted: the run that displaces a waiting one carries the newer build.
+# Estate writers now race instead, and the push step below resolves that by re-placing
+# on the winner's state.
 concurrency:
-  group: gh-pages-estate
+  group: gh-pages-instances-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -51,112 +60,111 @@ jobs:
           ref: gh-pages
           path: estate
 
-      - name: Place this branch's instance
+      - name: Place this branch's instance and push, additively
         run: |
+          set -euo pipefail
           slug="$(echo "${GITHUB_REF_NAME}" | tr '/' '-')"
           echo "slug=${slug}" >> "$GITHUB_ENV"
-          rm -rf "estate/instances/${slug}"
-          mkdir -p "estate/instances/${slug}"
-          cp -r app/dist/. "estate/instances/${slug}/"
-          # What this instance was built from, written beside it. An instance outlives
-          # the branch it came from — that is the point of retaining it once the pull
-          # request completes — so its provenance has to travel with it rather than be
-          # looked up later against a ref that may be gone.
-          cat > "estate/instances/${slug}/instance.json" <<JSON
-          {
-            "ref": "${GITHUB_REF_NAME}",
-            "sha": "${GITHUB_SHA}",
-            "built": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Placement is a function of this build and whatever the estate holds right
+          # now, so a losing attempt re-does it on the winner's state rather than
+          # rebasing onto it. Both workflows regenerate instances/index.html, and
+          # rebasing one generated file onto another run's version of it conflicts,
+          # where re-deriving it from the estate just fetched cannot.
+          place() {
+            rm -rf "estate/instances/${slug}"
+            mkdir -p "estate/instances/${slug}"
+            cp -r app/dist/. "estate/instances/${slug}/"
+            # What this instance was built from, written beside it. An instance outlives
+            # the branch it came from — that is the point of retaining it once the pull
+            # request completes — so its provenance has to travel with it rather than be
+            # looked up later against a ref that may be gone.
+            printf '{\n  "ref": "%s",\n  "sha": "%s",\n  "built": "%s"\n}\n' \
+              "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              > "estate/instances/${slug}/instance.json"
+            # The index is what makes the instances a place rather than a set of URLs
+            # somebody has to already know (NFR-04). It is regenerated from what the
+            # estate holds, so it lists retired branches' instances too, for as long as
+            # the estate keeps them.
+            pnpm run estate:index estate
           }
-          JSON
 
-      # The index is what makes the instances a place rather than a set of URLs somebody
-      # has to already know (NFR-04). It is regenerated from what the estate holds, so it
-      # lists retired branches' instances too, for as long as the estate keeps them.
-      - name: Regenerate the instance index
-        run: pnpm run estate:index estate
+          git -C estate config user.name "drogna-instances"
+          git -C estate config user.email "actions@users.noreply.github.com"
 
-      - name: Push, additively
+          for delay in 2 4 8 16; do
+            place
+            git -C estate add "instances/${slug}" instances/index.html
+            if git -C estate diff --cached --quiet; then
+              echo "instance unchanged; nothing to push"
+              exit 0
+            fi
+            git -C estate commit -m "instance: ${slug} @ ${GITHUB_SHA}"
+            if git -C estate push; then exit 0; fi
+            echo "another writer moved the estate; taking its state and placing again"
+            git -C estate fetch origin gh-pages
+            git -C estate reset --hard origin/gh-pages
+            sleep "${delay}"
+          done
+          echo "could not push the instance into the estate after four attempts" >&2
+          exit 1
+
+      # A reviewer should not have to reconstruct the address of the thing under
+      # review. One comment per pull request, rewritten in place on every push, so a
+      # branch pushed ten times leaves one link rather than ten. The view list is read
+      # from the configuration the shell itself reads (Constitution IV): a list typed
+      # in here would be a copy that could fall behind. Missing on a push with no pull
+      # request open — which is the normal case for main — is not a failure.
+      - name: Link the instance from the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd estate
-          git config user.name "drogna-instances"
-          git config user.email "actions@users.noreply.github.com"
-          git add "instances/${slug}" instances/index.html
-          if git diff --cached --quiet; then
-            echo "instance unchanged; nothing to push"
+          number="$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number')"
+          if [ -z "${number}" ]; then
+            echo "no pull request open on ${GITHUB_REF_NAME}; nothing to link"
             exit 0
           fi
-          git commit -m "instance: ${slug} @ ${GITHUB_SHA}"
-          for delay in 2 4 8 16; do
-            if git push; then exit 0; fi
-            git pull --rebase origin gh-pages
-            sleep "$delay"
-          done
-          git push
+          url="https://deepbluecltd.github.io/drogna/instances/${slug}/"
+          # Joined by jq, not by paste: paste -d takes a list of single characters and
+          # cycles through the bytes of a multi-byte one, which turned the separator
+          # into mojibake when this was first run.
+          views="$(jq -r --arg url "${url}" \
+            '[.shell.views[] | "[\(.label)](\($url)#/view/\(.id))"] | join(" · ")' \
+            app/config/run.json)"
+          body="$(printf '%s\n' \
+            '<!-- drogna-instance -->' \
+            "### This branch, running: <${url}>" \
+            '' \
+            "${views}" \
+            '' \
+            "Built from \`${GITHUB_SHA}\`, and replaced in place by every further push to this branch. Synthetic throughout, as the header says.")"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${number}/comments" --paginate \
+            --jq 'map(select(.body | startswith("<!-- drogna-instance -->"))) | .[0].id // empty')"
+          if [ -n "${existing}" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="${body}" > /dev/null
+            echo "instance link updated on #${number}: ${url}"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${number}/comments" -f body="${body}" > /dev/null
+            echo "instance link posted on #${number}: ${url}"
+          fi
 
-      # The instance is published and addressable, and until now the only person told
-      # was whoever holds the ntfy topic. A reviewer arriving at the pull request had no
-      # way to reach the thing under review without knowing the estate's URL scheme by
-      # heart, which is exactly what NFR-04 says the estate exists not to require.
-      #
-      # One comment per pull request, rewritten in place on every push. Appending would
-      # bury the review under a stack of near-identical links, and the only one that is
-      # ever true is the newest.
-      - name: Comment the preview link on the pull request
-        if: github.ref_name != 'main'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const marker = '<!-- drogna-instance-preview -->';
-            // Written to GITHUB_ENV by the placement step, and deliberately not
-            // re-derived here: two definitions of the slug could disagree, and the one
-            // that matters is the directory the instance was actually written to.
-            const slug = process.env.slug;
-            if (!slug) {
-              core.setFailed('the instance slug is unset — a link to instances// helps nobody');
-              return;
-            }
-            const url = `https://deepbluecltd.github.io/drogna/instances/${slug}/`;
-            const { owner, repo } = context.repo;
-            const pulls = await github.rest.pulls.list({
-              owner, repo, state: 'open', head: `${owner}:${context.ref.replace('refs/heads/', '')}`,
-            });
-            if (pulls.data.length === 0) {
-              core.info('no open pull request for this branch; nothing to comment on');
-              return;
-            }
-            const body = [
-              marker,
-              `**Preview instance:** ${url}`,
-              '',
-              `Built from \`${context.sha.slice(0, 7)}\`. The whole harness runs in the page — the`,
-              'clock is a component, the tabs are live, and nothing is mocked below the seam.',
-              '',
-              'Deep links: ' + [
-                `[Intro](${url}#/view/intro)`,
-                `[Background](${url}#/view/background)`,
-                `[System](${url}#/view/system)`,
-                `[Holdings](${url}#/view/holdings)`,
-                `[Map](${url}#/view/map)`,
-                `[Messages](${url}#/view/messages)`,
-              ].join(' · '),
-              '',
-              'This comment is rewritten on every push to the branch, so the link above is',
-              'always the newest build.',
-            ].join('\n');
-            for (const pull of pulls.data) {
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner, repo, issue_number: pull.number,
-              });
-              const existing = comments.find((comment) => comment.body?.includes(marker));
-              if (existing) {
-                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
-                core.info(`updated the preview comment on #${pull.number}`);
-              } else {
-                await github.rest.issues.createComment({ owner, repo, issue_number: pull.number, body });
-                core.info(`posted the preview comment on #${pull.number}`);
-              }
-            }
+      # The pull request template asks for this URL, opened at the view the change is
+      # in. Writing it into the run summary is what makes it available without being
+      # assembled by hand from the branch name — a link a reviewer has to construct is
+      # a link that does not get pasted, which is how the estate came to hold instances
+      # no pull request pointed at.
+      - name: Say where the instance is
+        run: |
+          url="https://deepbluecltd.github.io/drogna/instances/${slug}/"
+          {
+            echo "## This branch's instance"
+            echo
+            echo "<${url}>"
+            echo
+            echo "Link it in the pull request **opened at the view the change is in**:"
+            echo "append \`#/view/map\`, \`#/view/messages\` or whichever view the change"
+            echo "shows in, rather than linking the shell's front door."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # D17: the author is told when something is ready to look at. The topic is a CI
       # secret (PR-01): with no secret configured, this step says so and does nothing.

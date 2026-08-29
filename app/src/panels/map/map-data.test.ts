@@ -9,6 +9,8 @@ import {
   graticule,
   gridCells,
   insideRing,
+  manifestInstants,
+  nearestInstant,
   projectionCells,
   rampColour,
   routePositionAt,
@@ -185,5 +187,44 @@ describe('the map data builders (feature 109)', () => {
     expect(insideRing(ring, -8, 46)).toBe(false);
     expect(insideRing(ring, -11, 44)).toBe(true);
     expect(insideRing(ring, -11, 48)).toBe(false);
+  });
+
+  it('takes the field\'s instants from the manifest and snaps the displayed one to them (#60)', () => {
+    const instants = manifestInstants({
+      origin_sim_time: '2026-01-01T00:00:00.000000Z',
+      start_offset_seconds: 0,
+      step_seconds: 3600,
+      count: 4,
+    });
+    expect(instants).toEqual([
+      '2026-01-01T00:00:00.000000Z',
+      '2026-01-01T01:00:00.000000Z',
+      '2026-01-01T02:00:00.000000Z',
+      '2026-01-01T03:00:00.000000Z',
+    ]);
+    // Inside the axis: the nearest step, which is the one the server's own
+    // nearest-neighbour sampler would answer with.
+    expect(nearestInstant(instants, '2026-01-01T00:29:00.000000Z')?.instant).toBe(
+      '2026-01-01T00:00:00.000000Z',
+    );
+    expect(nearestInstant(instants, '2026-01-01T00:31:00.000000Z')?.instant).toBe(
+      '2026-01-01T01:00:00.000000Z',
+    );
+    // A tie goes to the earlier step, by rule rather than by accident.
+    expect(nearestInstant(instants, '2026-01-01T00:30:00.000000Z')?.instant).toBe(
+      '2026-01-01T00:00:00.000000Z',
+    );
+    // Outside it: clamped, and named as outside, so the panel can admit that the
+    // field is showing an end of its extent rather than the instant displayed.
+    expect(nearestInstant(instants, '2025-12-31T23:00:00.000000Z')).toEqual({
+      instant: '2026-01-01T00:00:00.000000Z',
+      beyond: 'before',
+    });
+    expect(nearestInstant(instants, '2026-01-01T09:00:00.000000Z')).toEqual({
+      instant: '2026-01-01T03:00:00.000000Z',
+      beyond: 'after',
+    });
+    expect(nearestInstant([], '2026-01-01T00:00:00.000000Z')).toBeUndefined();
+    expect(nearestInstant(instants, '')).toBeUndefined();
   });
 });

@@ -20,6 +20,7 @@ import { runGate as siteLinks } from '../gates/check-site-links.js';
 import { runGate as siteResources } from '../gates/check-site-resources.js';
 import { inspect as publication } from '../gates/check-site-publication.js';
 import { runGate as siteDisclosure } from '../gates/check-site-disclosure.js';
+import { runGate as estateConcurrency } from '../gates/check-estate-concurrency.js';
 import { buildSite } from '../site/build.js';
 import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
@@ -97,6 +98,19 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     const stale = topologyDrift(REPO_ROOT, join(fixtures, 'stale-topology.json'));
     expect(stale.map((f) => f.message).join('\n')).toMatch(/drifted/);
     expect(topologyDrift(REPO_ROOT)).toEqual([]);
+  });
+
+  it('estate-concurrency: two workflows sharing a group fail; distinct groups pass', () => {
+    const shared = estateConcurrency(join(fixtures, 'workflows-shared'));
+    // Both sharers are named, because either one is the one that gets cancelled.
+    expect(shared.map((f) => f.file).sort()).toEqual([
+      '.github/workflows/frequent.yml',
+      '.github/workflows/rare.yml',
+    ]);
+    expect(shared.map((f) => f.message).join('\n')).toMatch(/gh-pages-estate/);
+    expect(estateConcurrency(join(fixtures, 'workflows-distinct'))).toEqual([]);
+    // And the tree this runs in, whose shared group cost the V2 site its publication.
+    expect(estateConcurrency(REPO_ROOT)).toEqual([]);
   });
 
   it('types-drift: a stale committed tree fails; the real one passes', () => {

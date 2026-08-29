@@ -4,7 +4,7 @@
   "title": "drogna telemetry configuration (V2-C15)",
   "description": "The telemetry component (SRD-v2 FR-35): aggregates the residual samples the monitor reports, computes running statistics and forecast skill against a persistence reference — saying plainly when the model is not earning its compute — counts throughput per simulation second, and serves the current account on its seam path. Skill's persistence baseline holds the forecast run's initial step constant across its validity; the formula is stated in every message.",
   "type": "object",
-  "required": ["id", "topics", "http", "heartbeat", "cadence_ticks", "staleness_window_seconds", "minimum_skill_samples"],
+  "required": ["id", "topics", "http", "heartbeat", "cadence_ticks", "staleness_window_seconds", "minimum_skill_samples", "regions"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
@@ -34,6 +34,21 @@
       "exclusiveMinimum": 0,
       "description": "A figure not updated within this much simulation time says stale and keeps saying its last update time — it does not go on presenting its last value as current."
     },
-    "minimum_skill_samples": { "type": "integer", "minimum": 2 }
+    "minimum_skill_samples": { "type": "integer", "minimum": 2 },
+    "regions": {
+      "type": "object",
+      "required": ["rows", "columns", "minimum_samples"],
+      "additionalProperties": false,
+      "description": "The bounded grid the region-level statistics scope is defined over (telemetry.schema.json's statistics_scope). Rows and columns are fixed before a run starts, so the number of region scopes a run can hold is fixed with them and cannot grow with the scenario. The grid's extent is deliberately not stated here: it is the extent of the forecast holding the residuals were scored against, which this component already reads through the store, and a second copy of the domain in configuration is a second thing to keep in step.",
+      "properties": {
+        "rows": { "type": "integer", "minimum": 1, "description": "Cells north to south." },
+        "columns": { "type": "integer", "minimum": 1, "description": "Cells west to east." },
+        "minimum_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Below this many residuals a region reports state 'insufficient-samples' and its figures stand as they are, rather than being folded into the scenario figure where nobody could tell they were thin."
+        }
+      }
+    }
   }
 }

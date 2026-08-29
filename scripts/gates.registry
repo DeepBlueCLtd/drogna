@@ -9,5 +9,6 @@ gates/check-site-links.ts
 gates/check-site-resources.ts
 gates/check-site-publication.ts
 gates/check-site-disclosure.ts
+gates/check-estate-concurrency.ts
 gates/check-background-inert.ts
 gates/check-background-marks.ts

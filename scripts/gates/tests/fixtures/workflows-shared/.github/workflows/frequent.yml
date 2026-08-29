@@ -1,0 +1,12 @@
+name: Frequent
+on:
+  push:
+    branches: ['**']
+concurrency:
+  group: gh-pages-estate
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo deploy

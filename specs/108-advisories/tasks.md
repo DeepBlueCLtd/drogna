@@ -22,8 +22,24 @@
       determinism, ceiling refusal (watched failing — seam disabled, suite red,
       reverted), advice-travels-light measured, E8/E9/E11 evidence, replay
       byte-identity for advisories and staged bundles
-- [ ] T708 Leakage mask-scoring gate — *deliberately not done: the kernel's
-      per-cell noise makes the change mask uninformative, so the comparison would
-      score at chance; recorded as an open question in spec.md rather than
-      dissolved. The geometry itself travels complete so a quieter V3 kernel can
-      score it without a shape change.*
+- [x] T708 Leakage mask scoring (issue #57): the comparison itself is built and
+      held by test — per-variable change masks, the buffered geometry, the worst-of
+      recovery statistic against a bound derived from the mask's own size, and every
+      inconclusive case named rather than passed. That a known leak is caught is a
+      permanent test, not a plant done once: a release that only updates where it measured is
+      scored and must be detected, and a domain-wide rewrite must not be able to
+      hide one leaking variable inside a union that scores at chance (V1's FR-015,
+      watched failing against a union-only reading).
+- [ ] T712 Leakage mask scoring as a **gate** — *not done, and the open question's
+      premise turned out to be only a third of it. Measured against this harness's
+      own releases: (1) the loiter scenario's measurements in a release interval
+      span 3.9 km against a 60 km identification radius, so the buffer is a single
+      blob and V1's FR-017 calls that inconclusive whatever the kernel does; (2)
+      with the per-cell noise suppressed, two successive releases initialised from
+      the same now-cast are identical value for value, so there is no mask at all;
+      (3) with the noise on, the mask is the whole domain and scores at chance — a
+      pass earned by noise rather than by mitigation, which is what the question
+      recorded. All three are held by a test that fails the day any of them stops
+      being true. A gate needs a scoring configuration whose sampling spans more
+      than the radius it is released under and whose successive releases differ:
+      that is a scenario and a release-terms change, not a kernel change.*

@@ -312,3 +312,17 @@ body,
   cursor: pointer;
   font-size: 0.8em;
 }
+
+/* The operator's region table (issue #61): one row per sampled region. */
+.operator-regions table {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+}
+
+.operator-regions td,
+.operator-regions th {
+  border: 1px solid #ccc7ba;
+  padding: 0.15rem 0.45rem;
+  text-align: left;
+}

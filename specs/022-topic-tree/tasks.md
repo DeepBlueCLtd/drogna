@@ -102,7 +102,23 @@ honestly absent (spec US3).
 
 - [x] T028 [P] Implement subtree collapse: — the state-layer half (the aggregate a summary node carries) is the tested part; the fold/expand control is view logic exercised live. Original text: a wide branch collapses to a summary node carrying its children's aggregate activity (the aggregate already exists), with a unit test in `client/tests/topictree/activity.test.ts` or `skeleton.test.ts`
 - [x] T029 Run the whole bar: — done 28 Aug. One genuine finding from CI rather than the local bar: the pair capture's zero-pixel contract collided with a panel that pulses on real-time heartbeats under a pinned clock; resolved by pinning the panel's animation (steady marks, in-flight decays completing to a floor) whenever the simulation is not advancing, watched failing on the planted CI fault. The full `uv run pytest` failed two compose-driving modules while this session's own live stack and captures were using the same project name — both pass clean in isolation, which is the contention CLAUDE.md warns about read in the other direction. Original text: `uv run ruff check . && uv run ruff format --check .`, `uv run pytest`, `./scripts/gates.sh`, `cd client && pnpm exec tsc --noEmit && pnpm lint && pnpm test`; bring the stack back up afterwards (`pytest` takes it down) and re-run the glance capture
-- [ ] T030 Reconcile this file against the tree — every tick checked, every deliberate omission carrying its reason — and stage/verify/commit per the repository's snapshot discipline
+
+**A second CI finding, and the one worth carrying.** The pair check failed with the
+*speed control* never acknowledging a pin — three files from the cause. The readiness
+check (`client/e2e/shared/readiness.ts`) decided the page had settled by blanking each
+held-aside element's `innerHTML` on the live page and putting it back: a mutation of a
+running application's DOM, taken in order to observe it. React owns that DOM, so
+re-inserting a string of the same shape leaves its fibres pointing at nodes no longer in
+the document. On the shell's four small text spans it never surfaced; on this panel —
+keyed children, conditional branches, an SVG — it broke the client outright and the page
+stopped updating. It measures from a clone now, which takes the observation without
+touching what is observed, and the panel states `data-animating` so it is held aside only
+while it animates and takes part in the stability check under a pin. Watched failing both
+ways against the running stack: before, the two determinism specs failed at the pin and
+with 116 pixels differing; after, both pass and the glance capture still produces its
+image.
+
+- [x] T030 Reconcile this file against the tree — every tick checked, every deliberate omission carrying its reason — and stage/verify/commit per the repository's snapshot discipline
 
 ## Dependencies & execution order
 

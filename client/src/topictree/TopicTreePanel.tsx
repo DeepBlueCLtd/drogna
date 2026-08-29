@@ -4,7 +4,7 @@
  * Self-contained on purpose: the shell integration is one element, and everything else —
  * the read-only subscription, the folding of arrivals, the frame discipline — lives
  * here. The panel deliberately does not share the shell's control subscription: it
- * listens under its own identity (ADR-0025), to both namespaces, and what it hears has
+ * listens under its own identity (ADR-0027), to both namespaces, and what it hears has
  * no route to the component shell's liveness state or any other surface (022 FR-010).
  *
  * The two sources never mix (Constitution VII): the skeleton is built once from the

@@ -48,5 +48,8 @@
       "maximum_depth_m": 1000.0
     },
     "graticule_spacing_degrees": 0.5
+  },
+  "site": {
+    "standards_url": "https://deepbluecltd.github.io/drogna/standards"
   }
 }

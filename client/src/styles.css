@@ -769,4 +769,123 @@ main {
 .tt-payload-reason {
   margin: 0 0 0.3rem;
   color: var(--muted);
+/* 018 — the read path, the topology matrix, and the standards badges. */
+
+.badge-toggle button,
+.read-path-reask button,
+.read-path-history button,
+.topology-cell-button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.read-path-reask button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.read-path-history button[data-selected="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.pane-badges {
+  margin: 0.2rem 0 0.8rem;
+}
+
+.standard-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.05rem 0.55rem;
+  margin-right: 0.4rem;
+}
+
+.standard-badge-words {
+  opacity: 0.7;
+}
+
+.read-path-witness[data-witness="inferred"] {
+  border-left: 3px dashed var(--line);
+  padding-left: 0.6rem;
+}
+
+.read-path-witness[data-witness="witnessed"] {
+  border-left: 3px solid var(--ink);
+  padding-left: 0.6rem;
+}
+
+.boundary-picker button[data-witness="inferred"] {
+  border-style: dashed;
+}
+
+.topology {
+  margin: 1rem 0;
+}
+
+.topology summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.topology-scroll {
+  overflow-x: auto;
+}
+
+.topology-table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.topology-table th,
+.topology-table td {
+  border: 1px solid var(--line);
+  padding: 0.15rem 0.4rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.topology-component {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* The broker's default refusal, visibly not the same thing as permitted-but-quiet. */
+.topology-forbidden {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--paper),
+    var(--paper) 3px,
+    var(--line) 3px,
+    var(--line) 4px
+  );
+  opacity: 0.6;
+}
+
+tr[data-lit="true"] .topology-lit {
+  background: color-mix(in srgb, var(--ink) 12%, var(--paper));
+}
+
+tr[data-flash="true"] .topology-lit {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.topology-undeclared th,
+.topology-undeclared td {
+  border-style: double;
+  font-style: italic;
+}
+
+.topology-cell-button {
+  border: none;
+  background: transparent;
+  padding: 0.05rem 0.2rem;
 }

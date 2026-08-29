@@ -128,7 +128,7 @@ topic read ctl/#
 
 # --- the topic tree (C-18), through the same upgrade location -----------------------------
 #
-# ADR-0025: the topic-tree panel (feature 022) draws the declared topology lit by live
+# ADR-0027: the topic-tree panel (feature 022) draws the declared topology lit by live
 # traffic, and a tree restricted to the control namespace would misrepresent the system it
 # exists to demonstrate. So the browser gains a second identity: read on both namespaces,
 # and — the property that makes the credential publishable, exactly as ADR-0020 argued for
@@ -145,7 +145,7 @@ topic read ctl/#
 # message — is answered rather than waved off: the connection still cannot write (this file),
 # the observation payloads are the synthetic measurements of a demonstration harness, and
 # the released products behind the proxy's clearance are a different credential on a
-# different route, untouched (ADR-0025 records the argument in full).
+# different route, untouched (ADR-0027 records the argument in full).
 
 user drogna_observer
 topic read obs/#

@@ -28,7 +28,7 @@ reads, extend the derivation with the configured expansion, regenerate the artef
 the drift gate watched failing first, and record the decision. Blocks all stories: US1
 needs both the skeleton rows and the live observation feed.
 
-- [x] T002 Append the `drogna_observer` block to `deploy/broker/acl`: `topic read obs/#`, `topic read ctl/#`, no write rule, with a comment arguing the grant the way the file's other blocks do (and pointing at ADR-0025)
+- [x] T002 Append the `drogna_observer` block to `deploy/broker/acl`: `topic read obs/#`, `topic read ctl/#`, no write rule, with a comment arguing the grant the way the file's other blocks do (and pointing at ADR-0027)
 - [x] T003 Append `"drogna_observer": "HARNESS_BROKER_SECRET_OBSERVER"` to `ROLE_SECRETS` in `deploy/lib/render_credentials.py`; confirm secret generation, password file and render all follow from the table (check `scripts/up.sh` and any deploy tests that enumerate `SECRET_NAMES`)
 - [x] T004 Change the broker URL username from `drogna_viewer` to `drogna_observer` in `config/local/client.json` and `config/droplet/client.json` (destinations must agree; this line is the role declaration the scanner reads)
 - [x] T005 Extend `scripts/scan_topology.py`: derive the configured observation topics `obs/<thing>/<datastream>` from the sensors configuration of every destination (located by shape — a `sensors` section naming a platform and datastreams — not by filename), require destinations to agree as roles already must, and emit them as ordinary topic rows; extend `resolve_schema` so any topic under the observation branch resolves to the observation master

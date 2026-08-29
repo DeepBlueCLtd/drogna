@@ -60,6 +60,10 @@ const PERTURBATION_ID = "capture-determinism-control";
 interface Half {
   readonly image: Buffer;
   readonly record: ReturnType<typeof fingerprint>;
+  /** The simulation time on the page when this half was taken, for the premise check. */
+  readonly simTime: string;
+  /** The lit components when this half was taken, for the premise check's other half. */
+  readonly lit: readonly string[];
 }
 
 /** One capture through the same steps the pair mechanism uses, minus the pin. */
@@ -70,6 +74,8 @@ async function half(page: Page, side: string, version: string): Promise<Half> {
   const image = await page.screenshot();
   return {
     image,
+    simTime: clock.simTime,
+    lit,
     record: fingerprint({
       browser: {
         name: capture.browser.name,
@@ -116,15 +122,78 @@ test("a pair captured across no change is empty, three consecutive times", async
   }
 });
 
+/**
+ * How many times a run may be retaken because a component genuinely lit or went dark
+ * between its halves. Liveness is real time by design — heartbeats continue at rate zero
+ * precisely so components stay lit through a capture — so a first heartbeat arriving
+ * mid-pair is the stack being real, not the comparator being wrong: CI watched C-01's own
+ * box light between two halves, 54,258 pixels of genuine change under a frozen clock.
+ * The retake is bounded, counted, and reported, because sustained churn is a different
+ * fact: a stack too unsettled to establish a no-change premise at all.
+ */
+const LIVENESS_RETRIES = 3;
+
+/**
+ * Two captures over which the premise actually held: simulated time did not move, and no
+ * component lit or went dark. A moving clock fails at once — the pin is broken and no
+ * retake may hide that. A liveness transition retakes the pair, up to the bound.
+ */
+async function unchangedPair(
+  page: Page,
+  version: string,
+  label: string,
+  pinned: string,
+): Promise<{ before: Half; after: Half; retaken: number }> {
+  let retaken = 0;
+  for (;;) {
+    const before = await half(page, `${label}-before`, version);
+    const after = await half(page, `${label}-after`, version);
+    expect(
+      after.simTime,
+      `${label}: simulated time advanced between the two halves ` +
+        `("${before.simTime}" then "${after.simTime}"), so this was not a capture of an ` +
+        "unchanging view: the clock was running while this spec believed it was not. " +
+        `The pin step had concluded: ${pinned}`,
+    ).toBe(before.simTime);
+    if (JSON.stringify(after.lit) === JSON.stringify(before.lit)) {
+      return { before, after, retaken };
+    }
+    retaken += 1;
+    expect(
+      retaken,
+      `${label}: the lit set changed between the halves ${LIVENESS_RETRIES + 1} times ` +
+        `running (latest: [${before.lit.join(", ")}] then [${after.lit.join(", ")}]). ` +
+        "A component lighting is real and allowed — heartbeats continue at rate zero by " +
+        "design — but churn this sustained means the stack cannot hold still long enough " +
+        "to establish a no-change premise at all.",
+    ).toBeLessThanOrEqual(LIVENESS_RETRIES);
+    process.stderr.write(
+      `[determinism] ${label}: a component genuinely lit or went dark between the halves ` +
+        `([${before.lit.join(", ")}] -> [${after.lit.join(", ")}]), so the pair is ` +
+        `retaken rather than compared. Retake ${retaken} of ${LIVENESS_RETRIES}.\n`,
+    );
+  }
+}
+
 async function captureNoChangeRuns(
   page: Page,
   version: string,
   pinned: string,
 ): Promise<void> {
   const runs: number[] = [];
+  let retakenInTotal = 0;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const before = await half(page, `no-change-${attempt}-before`, version);
-    const after = await half(page, `no-change-${attempt}-after`, version);
+    // The premise before the property: these are two captures of an *unchanging* view
+    // only if simulated time held still between them and no component lit or went dark.
+    // unchangedPair establishes exactly that — failing loudly on a moving clock, and
+    // retaking the pair (bounded, reported) on a genuine liveness transition.
+    const { before, after, retaken } = await unchangedPair(
+      page,
+      version,
+      `run ${attempt} of 3`,
+      pinned,
+    );
+    retakenInTotal += retaken;
     const outcome = difference(before, after);
     expect(outcome.refused, JSON.stringify(outcome.reasons ?? [])).toBe(false);
     runs.push(outcome.differingPixels);
@@ -141,7 +210,7 @@ async function captureNoChangeRuns(
   mkdirSync(area, { recursive: true });
   writeFileSync(
     join(area, "no-change.json"),
-    `${JSON.stringify({ pinned, differingPixelsPerRun: runs }, null, 2)}\n`,
+    `${JSON.stringify({ pinned, differingPixelsPerRun: runs, retakenInTotal }, null, 2)}\n`,
     "utf8",
   );
 
@@ -239,8 +308,12 @@ async function proveTheComparisonCatchesTheControl(
   await page.reload();
   await settled(page, capture.client);
   expect(await page.locator(`#${PERTURBATION_ID}`).count()).toBe(0);
-  const restoredBefore = await half(page, "restored-before", version);
-  const restoredAfter = await half(page, "restored-after", version);
+  const { before: restoredBefore, after: restoredAfter } = await unchangedPair(
+    page,
+    version,
+    "restored",
+    pinned,
+  );
   const restored = difference(restoredBefore, restoredAfter);
   expect(restored.refused).toBe(false);
   expect(
@@ -280,6 +353,8 @@ async function halfWithoutSettling(page: Page, side: string, version: string): P
   const image = await page.screenshot();
   return {
     image,
+    simTime: clock.simTime,
+    lit,
     record: fingerprint({
       browser: {
         name: capture.browser.name,
@@ -331,16 +406,48 @@ async function restore(page: Page, previous: number | null): Promise<void> {
 }
 
 async function pinIfAClockAnswers(page: Page): Promise<string> {
-  const observed = await readRate(page);
+  let observed = await readRate(page);
   if (observed.acknowledged === null) {
-    return "no clock answered: no ctl/clock sample has arrived, so simulated time is not advancing and there is no rate to pin";
+    // The first ctl/clock sample can lag the page's settle: the stack is up, the clock
+    // is genuinely running, and this page just has not heard it yet — which is how a CI
+    // runner concluded "no clock answered" one instant before samples began painting the
+    // clock panel at the destination's real rate, and run 2 compared two frames of a
+    // ticking display. So wait for a first acknowledgement or for the readiness budget,
+    // frame-polled like every other wait in a capture path (FR-019), and only then
+    // conclude that no clock is answering.
+    await page
+      .waitForFunction(
+        (selector) => {
+          const value = document
+            .querySelector(selector)
+            ?.getAttribute("data-acknowledged-rate");
+          return value !== null && value !== undefined && value !== "";
+        },
+        SPEED_CONTROL,
+        { timeout: capture.client.readinessTimeoutMs, polling: "raf" },
+      )
+      .catch(() => undefined);
+    observed = await readRate(page);
+  }
+  if (observed.acknowledged === null) {
+    return "no clock answered: no ctl/clock sample has arrived within the readiness budget, so simulated time is not advancing and there is no rate to pin";
   }
   if (observed.pinned) {
     return "the clock was already pinned at zero when this test began";
   }
   await askForRate(page, 0);
+  // Steady alone is not the pin: data-steady can still be true from the *previous*
+  // acknowledgement in the instant after the click, and a wait that accepts it lets the
+  // captures start while the zero is still in flight — or lost. Only an acknowledged
+  // zero (data-pinned) is the state this spec's premise needs.
   await page.waitForFunction(
-    (selector) => document.querySelector(selector)?.getAttribute("data-steady") === "true",
+    (selector) => {
+      const element = document.querySelector(selector);
+      return (
+        element?.getAttribute("data-pinned") === "true" &&
+        element.getAttribute("data-steady") === "true"
+      );
+    },
     SPEED_CONTROL,
     { timeout: capture.client.readinessTimeoutMs, polling: "raf" },
   );

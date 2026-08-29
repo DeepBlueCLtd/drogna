@@ -1,4 +1,4 @@
-# ADR-0025: The observation namespace reaches the browser read-only, under an explicit role
+# ADR-0027: The observation namespace reaches the browser read-only, under an explicit role
 
 **Status:** Accepted
 **Date:** 28 August 2026
@@ -100,10 +100,13 @@ the more load-bearing now that the document carries a credential with a wider re
   configuration; a destination that diverges stops the scan rather than being resolved
   silently.
 - The raw observation feed is as public as the control feed, at every destination that
-  serves the page. If the observation namespace ever stops being publishable-by-design,
-  the shape to reach for is the one ADR-0020 keeps unstruck: serve the page behind the
-  proxy's clearance, one door, one challenge — and this role's credential moves behind it
-  with the rest of the document.
+  serves the page *as it is served today*. That qualifier now has a date on it: ADR-0025
+  has since accepted the one-door topology — the page served through the proxy, behind the
+  boundary's one credential — which is the shape ADR-0020 kept unstruck and which this
+  record named as the thing to reach for. When it lands, this role's credential moves
+  behind the clearance with the rest of the served document, and the argument below gets
+  strictly stronger rather than changing: what makes the credential safe is what it can
+  do, and it can only watch.
 - A future consumer wanting observation *data* still belongs on the query layer; this
   role serves surfaces that show *arrival*. A second surface reusing `drogna_observer`
   inherits this record's obligations with it.

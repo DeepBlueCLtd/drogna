@@ -74,7 +74,7 @@ describe("the skeleton, from the artefact itself", () => {
     ]);
     const viewer = skeleton.roles.find((role) => role.role === "drogna_viewer");
     // The artefact records which components authenticate as which role; the column
-    // repeats it, and the client now authenticates as the observer (ADR-0025).
+    // repeats it, and the client now authenticates as the observer (ADR-0027).
     expect(observer?.components).toContain("client");
     expect(viewer?.components).not.toContain("client");
   });

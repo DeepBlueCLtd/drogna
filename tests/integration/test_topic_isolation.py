@@ -184,7 +184,7 @@ def test_the_browser_cannot_read_observation_traffic(broker: support.Broker) -> 
     assert "not-for-the-browser" not in log
 
 
-# The topic tree's identity (ADR-0025) ------------------------------------------------------
+# The topic tree's identity (ADR-0027) ------------------------------------------------------
 
 
 def test_the_observer_reads_the_observation_branch(broker: support.Broker) -> None:
@@ -209,7 +209,7 @@ def test_the_observer_reads_the_control_branch(broker: support.Broker) -> None:
 
 
 def test_the_observer_can_publish_nowhere(broker: support.Broker) -> None:
-    """The property that makes the credential publishable (ADR-0025, after ADR-0020's
+    """The property that makes the credential publishable (ADR-0027, after ADR-0020's
     argument for the viewer): holding it, a caller may watch and may not say one word."""
     refused = (
         "ctl/clock",

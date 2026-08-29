@@ -3,7 +3,7 @@
  *
  * The connection goes through the same proxy upgrade location as the shell's (ADR-0008)
  * and authenticates as the identity the configuration document names — `drogna_observer`
- * at both destinations, the role ADR-0025 argues: read on `obs/#` and `ctl/#`, publish
+ * at both destinations, the role ADR-0027 argues: read on `obs/#` and `ctl/#`, publish
  * on nothing. This module narrows the broker library to the same `BrokerClient`
  * interface the control transport declares, which has no way to publish on it, and no
  * call to `publish` appears anywhere under `topictree/` — the checkable form of the

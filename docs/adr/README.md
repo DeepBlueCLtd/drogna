@@ -28,11 +28,13 @@ sequentially, and is dated. Superseded records are kept and marked, never delete
 | [0018](0018-common-json-is-a-root-seed-not-a-set-of-defaults.md) | `common.json` is a root seed, and the defaults mechanism it describes does not exist | Accepted |
 | [0019](0019-the-planner-threshold-is-absolute-and-was-never-checked.md) | The planner's threshold stays absolute, and now has something to check it against | Accepted |
 | [0020](0020-clearance-delegated-for-the-control-upgrade.md) | Clearance is binary for the released prefix and delegated for the control upgrade | Accepted |
-| [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Proposed |
+| [0021](0021-the-clock-control-answers-the-browser-from-any-origin.md) | The clock's HTTP interface answers the browser from any origin | Accepted, to be superseded by ADR-0025 when the clock is routed |
 | [0022](0022-generator-selection-for-the-type-chain.md) | The type chain's generators, and why the TypeScript half is ours | Accepted |
 | [0023](0023-the-observation-store-authenticates-by-trust.md) | The observation store authenticates by trust, and models no database threat | Accepted |
 | [0024](0024-the-advisory-store-is-a-third-schema.md) | The advisory store is a third schema, not a second engine | Accepted |
-| [0025](0025-the-observation-namespace-reaches-the-browser-read-only.md) | The observation namespace reaches the browser read-only, under an explicit role | Accepted |
+| [0025](0025-the-operator-plane-sits-behind-the-clearance.md) | The operator plane sits behind the clearance, and the clock joins it there | Accepted |
+| [0026](0026-resource-sampling-and-the-runtime-socket.md) | The third wall-clock exemption is resource sampling, and the socket stops at the door | Accepted |
+| [0027](0027-the-observation-namespace-reaches-the-browser-read-only.md) | The observation namespace reaches the browser read-only, under an explicit role | Accepted |
 
 There is no ADR-0017. The number was never used — no file by that number appears anywhere
 in the history — and renumbering the records that exist would break references already in

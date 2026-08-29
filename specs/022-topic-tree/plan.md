@@ -100,7 +100,7 @@ Complexity Tracking entries needed.*
 | VII — Liveness, not configuration | The load-bearing principle. The skeleton is drawn from the declared artefact and is *visibly cold* until traffic arrives; cells, pulses, ripples, role connections and intensities light only from genuinely received messages. The two sources are separate modules with no route from skeleton to activity. Declared-but-silent is presented as information, never as liveness. |
 | VIII — Recommendations | Not touched. |
 | IX — Ground truth scored | Not touched. |
-| X — Default deny | The new role is an ACL append under mosquitto's default deny; the proxy's policy is untouched (the upgrade location already exists and its clearance posture is ADR-0020's). The role's refusals are asserted at a running broker, not read back from the file. The widened read is argued in ADR-0025 (below), not slipped in. |
+| X — Default deny | The new role is an ACL append under mosquitto's default deny; the proxy's policy is untouched (the upgrade location already exists and its clearance posture is ADR-0020's). The role's refusals are asserted at a running broker, not read back from the file. The widened read is argued in ADR-0027 (below), not slipped in. |
 
 ## Project Structure
 
@@ -171,7 +171,7 @@ FR-002 requires a new role with read on both namespaces and write on nothing, de
 the tracked sources the topology derivation reads. The interview already rejected
 restricting the tree to the client's current grant (the tree would misrepresent the
 system) and a server-side digest relay (a nineteenth component to keep the browser's
-grant narrow); ADR-0025 records all three with the argument.
+grant narrow); ADR-0027 records all three with the argument.
 
 The declaration is three appends and one substitution, all in sources the scanner or the
 render already reads:
@@ -197,7 +197,7 @@ its refusals stay tested. The panel opens its own connection with the same crede
 a derived client id, subscribing `obs/#` and `ctl/#`.
 
 The served configuration document will carry the observer secret world-readable, as it
-carries the viewer's today. ADR-0025 therefore re-makes ADR-0020's non-secret argument
+carries the viewer's today. ADR-0027 therefore re-makes ADR-0020's non-secret argument
 over the wider grant: holding the credential, a caller may *watch* the synthetic
 observation and control feeds of a demonstration harness and may not write one message
 anywhere; the released products behind the proxy's clearance are a different credential
@@ -350,5 +350,5 @@ alternatives; this plan honours both.
 No constitution violations to record. The two entries a reader might expect are not
 violations: the render path's host-time use rides the two existing exemptions without
 widening either (the markers and the gate are unchanged), and the observation namespace
-reaching the browser is a boundary decision carried by ADR-0025 under Principle X's
+reaching the browser is a boundary decision carried by ADR-0027 under Principle X's
 process, not an exception to it.

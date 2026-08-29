@@ -124,7 +124,7 @@ def test_the_query_layer_subscribes_to_nothing() -> None:
 
 
 def test_the_browser_can_publish_nowhere() -> None:
-    """ADR-0008, extended by ADR-0025: the browser's identity has no write rule.
+    """ADR-0008, extended by ADR-0027: the browser's identity has no write rule.
 
     The client now authenticates as `drogna_observer` (feature 022), which reads both
     namespaces — and the property that made its credential publishable is the one this

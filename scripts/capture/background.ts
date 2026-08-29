@@ -29,10 +29,20 @@
  * value panel with nothing clipped and the controls where they belong, or exit
  * non-zero naming what stopped them.
  *
+ * Every image is written with a `.provenance.json` sidecar beside it recording the
+ * seed, the viewport, the browser and what the clock was doing, because an image on
+ * the site has to be reproducible and a provenance typed by hand is a claim rather
+ * than a record. Background's clock entry is the honest one: it reads no clock at
+ * all, and the capture asserts that the page reached none of the running system.
+ *
+ * Nothing here is durable. A capture becomes publishable by being moved into
+ * site/docs/blog/assets/ by hand, which is the review gate (.gitignore).
+ *
  * Usage: pnpm capture:background [out-dir]
  */
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,6 +51,9 @@ import { chromium, type Page } from 'playwright';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const distDir = join(repoRoot, 'app', 'dist');
 const outDir = process.argv[2] ?? join(repoRoot, '.capture', 'background');
+
+/** Steps worth a published image. Named, so the site's filenames do not drift. */
+const PORTRAITS = [{ address: 'sensorthings/6', name: 'sensorthings-walk' }];
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -69,6 +82,48 @@ await new Promise<void>((ready) => server.listen(0, '127.0.0.1', ready));
 const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
+
+function revision(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'unversioned';
+  }
+}
+
+/**
+ * What produced an image, written beside it. The run's seed comes from the page's own
+ * manifest rather than from this script, so it records what actually ran.
+ */
+async function writeProvenance(
+  page: Page,
+  imagePath: string,
+  detail: Record<string, unknown>,
+): Promise<void> {
+  const runId = await page.locator('[title="run id"]').textContent();
+  await writeFile(
+    `${imagePath.replace(/\.png$/, '')}.provenance.json`,
+    `${JSON.stringify(
+      {
+        image: imagePath.split('/').pop(),
+        run_id: runId?.trim(),
+        revision: revision(),
+        viewport: page.viewportSize(),
+        browser: `chromium ${page.context().browser()?.version() ?? 'unknown'}`,
+        // Background reads no clock, simulation or host (Constitution I), so there is
+        // no rate to pin and none to report. The capture proves the stronger claim:
+        // it reached nothing of the running system at all.
+        clock: 'not read — Background renders identically with every component stopped',
+        ...detail,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
+}
 
 /** Reads the course from the page itself, so this script cannot hold a stale list. */
 async function courseFromPage(page: Page): Promise<{ id: string; steps: number }[]> {
@@ -166,7 +221,12 @@ try {
       await page.evaluate((value) => {
         document.documentElement.style.filter = value;
       }, filter);
-      await page.screenshot({ path: join(outDir, `${explainer.id}-${suffix}.png`) });
+      const imagePath = join(outDir, `${explainer.id}-${suffix}.png`);
+      await page.screenshot({ path: imagePath });
+      await writeProvenance(page, imagePath, {
+        address: `#/view/background/${explainer.id}/1`,
+        rendering: suffix === 'greyscale' ? 'colour removed by a page filter (SC-005)' : 'as served',
+      });
       await page.evaluate(() => {
         document.documentElement.style.filter = 'none';
       });
@@ -202,6 +262,33 @@ try {
     if (reached === 0) failures.push(`${explainer.id}: the keyboard walk did not reach the Consequences panel`);
     else console.log(`${explainer.id}: ${explainer.steps} steps walked by keyboard, colour and greyscale captured`);
   }
+  // Portraits: steps worth a published image, captured by the same mechanism as the
+  // proofs so that a picture on the site carries the same provenance as one in CI.
+  // A capture becomes publishable by being copied into site/docs/blog/assets/ by
+  // hand; nothing here writes into the site.
+  for (const portrait of PORTRAITS) {
+    for (const [suffix, filter] of [
+      ['colour', 'none'],
+      ['greyscale', 'grayscale(1)'],
+    ]) {
+      await page.goto(`${base}#/view/background/${portrait.address}`);
+      await page.locator('.bg-stage').waitFor();
+      await page.evaluate((value) => {
+        document.documentElement.style.filter = value;
+      }, filter);
+      const imagePath = join(outDir, `portrait-${portrait.name}-${suffix}.png`);
+      await page.screenshot({ path: imagePath });
+      await page.evaluate(() => {
+        document.documentElement.style.filter = 'none';
+      });
+      await writeProvenance(page, imagePath, {
+        address: `#/view/background/${portrait.address}`,
+        rendering: suffix === 'greyscale' ? 'colour removed by a page filter (SC-005)' : 'as served',
+      });
+    }
+    console.log(`portrait: ${portrait.name}`);
+  }
+
   const distinct = new Set(controlTops.values());
   if (distinct.size > 1) {
     const sample = [...controlTops.entries()].slice(0, 6).map(([at, top]) => `${at}@${top}`).join(', ');

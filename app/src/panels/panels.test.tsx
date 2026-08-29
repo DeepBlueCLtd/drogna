@@ -273,6 +273,49 @@ describe('the panels against a live backend', () => {
     }
   });
 
+  it('the depth cube asks one area query per level of the holding\'s own depth axis (#59)', async () => {
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const asked: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(String(input));
+      return seamFetch(input, init);
+    }) as typeof globalThis.fetch;
+    try {
+      render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // The plan view's own single-level query has already gone out; from here on
+      // every area query counted is the cube's.
+      asked.length = 0;
+      const view = [...document.querySelectorAll('.map-controls select')].at(-1) as HTMLSelectElement;
+      await act(async () => {
+        fireEvent.change(view, { target: { value: 'cube' } });
+        await Promise.resolve();
+      });
+      // The inventory, then one area query per level, and the levels are the ones
+      // the now-cast's ground-truth manifest states — not a list typed into the shell.
+      const nowcast = runtime.store.holdings().find((holding) => holding.era === 'nowcast');
+      if (!nowcast) throw new Error('the store holds no now-cast to take a depth axis from');
+      const depth = nowcast.manifest.grid.depth;
+      const expected = Array.from({ length: depth.count }, (_, index) => depth.minimum + index * depth.spacing);
+      await act(async () => {
+        for (let flush = 0; flush < expected.length * 4 + 8; flush++) await Promise.resolve();
+      });
+      const areaQueries = asked.filter((url) => url.includes('/area?'));
+      expect(areaQueries).toHaveLength(expected.length);
+      expect(areaQueries.map((url) => Number(new URL(url, 'http://x').searchParams.get('z')))).toEqual(expected);
+      expect(screen.getByText(new RegExp(`${expected.length} level\\(s\\), one area query each`))).toBeTruthy();
+      // Every level is drawn from a coverage that passed its master; a level that
+      // did not would be named as declined rather than quietly missing.
+      expect(screen.queryByText(/level\(s\) declined/)).toBeNull();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('Intro states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {
     render(<IntroPanel {...panelProps(config, runtime)} />);
     expect(screen.getByText(/deliberately\s+fake/)).toBeTruthy();

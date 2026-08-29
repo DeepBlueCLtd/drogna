@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Seventeen entries written during Version 1, one per feature, kept as the record of how it was built.">
+<title>The Version 1 blog — drogna</title>
+<link rel="stylesheet" href="../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../">Home</a></li><li><a href="../../demo/">The demo</a></li><li><a href="../../architecture/">The architecture</a></li><li><a href="../../components/">The component reference</a></li><li><a href="../../standards/">Standards primers</a><ul><li><a href="../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../algorithms/">Algorithm derivations</a><ul><li><a href="../../algorithms/advection/">Advection</a></li><li><a href="../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../glossary/">Glossary</a></li><li><a href="../../blog/">The blog</a></li><li><a href="../../decisions/">The decision records</a></li><li><a href="../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../">the current site</a> and <a href="../../archive/">the archive</a>.</p></div>
+<h1 id="the-version-1-blog">The Version 1 blog</h1>
+<p>These entries were written during Version 1, one per feature, after the feature worked.
+They describe a containerised system that has since been retired — see
+<a href="../">the archive</a> — and they are kept because how something was built is worth
+more than what it was built out of.</p>
+<p>Read them as a record of a particular fortnight, not as documentation of anything
+running. Several are not about drogna at all but about drogna's own checks: a gate that
+reported a file of deliberate violations as clean, a test that isolated nothing, a
+threshold nothing could reach, a return code that meant nothing. Those turned out to be
+the useful ones, and the two lessons at the head of the repository's <code>CLAUDE.md</code> are
+what was distilled from them.</p>
+<p>The <a href="../../blog/">Version 2 blog</a> starts fresh, to a different cadence and a
+tighter shape.</p>
+<h2 id="entries">Entries</h2>
+<ul>
+<li>
+<p><strong><a href="posts/a-file-a-stranger-can-open/">A file a stranger can open</a></strong> — 2026-08-28</p>
+<p>Exporting data so that somebody who has never seen your project can plot it without writing bespoke code. The standard that makes it possible also made a provenance scanner report the standard's own vocabulary as suspicious.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-average-that-hid-the-leak/">The average that hid the leak</a></strong> — 2026-08-28</p>
+<p>A check scored one number over everything released and reported it safe. One of the released variables was a perfect map of the thing being withheld, and the aggregate is the shape that makes that invisible.</p>
+</li>
+<li>
+<p><strong><a href="posts/borrowing-a-clock-you-are-not-allowed-to-read/">Borrowing a clock you are not allowed to read</a></strong> — 2026-08-28</p>
+<p>A rule says no component may read the host clock. A display that obeys it literally steps and stutters. The exemption that fixes it is three sentences, and the three sentences are the entire design.</p>
+</li>
+<li>
+<p><strong><a href="posts/a-threshold-nothing-could-reach/">A threshold nothing could reach</a></strong> — 2026-08-28</p>
+<p>A component compared a measured quantity against a configured threshold. The quantity could not physically reach the threshold, so the component returned &quot;nothing worth doing&quot; every time, correctly, for its whole life.</p>
+</li>
+<li>
+<p><strong><a href="posts/one-file-two-readings/">One file, two readings</a></strong> — 2026-08-28</p>
+<p>Two halves of a system were built at the same time against one shared convention. They disagreed about five things, every test on both sides passed, and nothing either of them wrote could ever have been read by the other.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-return-code-that-meant-nothing/">The return code that meant nothing</a></strong> — 2026-08-28</p>
+<p>A component said it had announced itself and the library agreed. The message had been refused at the broker, and the only display whose purpose is to show what is alive had been telling the truth about a lie all along.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-shape-nobody-had-declared/">The shape nobody had declared</a></strong> — 2026-08-28</p>
+<p>A check forbids hand-writing the shape of a message that crosses between two programs. It had been passing for weeks with two hand-written copies of one shape sitting in the tree, and the reason is the same sentence in both halves.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-box-that-had-nothing-to-say/">The box that had nothing to say</a></strong> — 2026-08-27</p>
+<p>Every screenshot this project has published shows an application in which nothing is running. The components were running. What none of them had was anything to publish with, and the one piece that could publish was locked inside a component that did not need it.</p>
+</li>
+<li>
+<p><strong><a href="posts/two-ways-to-compare-nothing/">Two ways to compare nothing</a></strong> — 2026-08-27</p>
+<p>A screenshot comparison is only evidence if two captures of an unchanging page come back identical. Showing that the check can fail took two sabotages, and they failed in two different places, which turns out to be the whole point.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-mean-of-magnitudes/">The mean of magnitudes</a></strong> — 2026-08-27</p>
+<p>A component published a count and a mean of its errors. Downstream needed a bias, an RMS and a skill score. None of the three survives that summary, and nothing in either component would have said so.</p>
+</li>
+<li>
+<p><strong><a href="posts/a-runner-with-no-list/">A runner with no list</a></strong> — 2026-08-26</p>
+<p>Six gates existed and were run one at a time, with CI keeping its own copy of the list. The fix was not a script that runs six things; it was a script that knows about none of them.</p>
+</li>
+<li>
+<p><strong><a href="posts/three-ways-to-lose-a-timestamp/">Three ways to lose a timestamp</a></strong> — 2026-08-26</p>
+<p>A requirement predicted one silent failure in a geometry library and prescribed a test for it. Measurement found three, and the one the deployment would actually have met is the one that test would have sailed past.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-gate-that-examined-nothing/">The gate that examined nothing</a></strong> — 2026-08-26</p>
+<p>Four scripts enforce the constitution's non-negotiables. Writing the tests for them revealed that two were reporting a file of deliberate violations as clean, and the rule that caught it was the reason the tests existed at all.</p>
+</li>
+<li>
+<p><strong><a href="posts/eighteen-boxes-none-of-them-lit/">Eighteen boxes, none of them lit</a></strong> — 2026-08-26</p>
+<p>The browser client draws drogna's whole intended architecture and reports that it has heard from none of it. An all-dark display is the correct display, and the rule that makes it correct also forbids the obvious way of improving it.</p>
+</li>
+<li>
+<p><strong><a href="posts/the-test-that-isolated-nothing/">The test that isolated nothing</a></strong> — 2026-08-26</p>
+<p>How fast a place forgets a measurement had to become a field rather than a property of a feature. Then a test written to isolate one feature turned out not to isolate it, and the generator was right.</p>
+</li>
+<li>
+<p><strong><a href="posts/one-configuration-two-destinations/">One configuration, two destinations</a></strong> — 2026-08-26</p>
+<p>A laptop and a small cloud server run the same stack, and the only thing that differs between them is a directory of values — checked by a script, because the drift starts on the day the second destination exists.</p>
+</li>
+<li>
+<p><strong><a href="posts/taking-a-requirements-document-apart/">Taking a requirements document apart</a></strong> — 2026-08-26</p>
+<p>Turning a requirements document into sixteen features that can be built in parallel, a constitution enforced by lint gates, and an open-questions section that empties itself.</p>
+</li>
+</ul>
+<h2 id="coverage">Coverage</h2>
+<p>The Version 1 features, against the entries that name them. The table is generated the
+same way it always was — counted from the feature directories under <code>specs/</code> and from
+each entry's own front matter — so the gaps are the real ones.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Beat</th>
+<th>Entries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>001</td>
+<td>deterministic foundations</td>
+<td><a href="posts/a-runner-with-no-list/">A runner with no list</a>, <a href="posts/the-box-that-had-nothing-to-say/">The box that had nothing to say</a>, <a href="posts/the-gate-that-examined-nothing/">The gate that examined nothing</a></td>
+</tr>
+<tr>
+<td>002</td>
+<td>edr trajectory spike</td>
+<td><a href="posts/three-ways-to-lose-a-timestamp/">Three ways to lose a timestamp</a></td>
+</tr>
+<tr>
+<td>003</td>
+<td>component shell client</td>
+<td><a href="posts/eighteen-boxes-none-of-them-lit/">Eighteen boxes, none of them lit</a></td>
+</tr>
+<tr>
+<td>004</td>
+<td>environment generator</td>
+<td><a href="posts/the-test-that-isolated-nothing/">The test that isolated nothing</a></td>
+</tr>
+<tr>
+<td>005</td>
+<td>compose deployment</td>
+<td><a href="posts/one-configuration-two-destinations/">One configuration, two destinations</a></td>
+</tr>
+<tr>
+<td>006</td>
+<td>generated types</td>
+<td><a href="posts/the-shape-nobody-had-declared/">The shape nobody had declared</a></td>
+</tr>
+<tr>
+<td>007</td>
+<td>observation path</td>
+<td><a href="posts/the-return-code-that-meant-nothing/">The return code that meant nothing</a></td>
+</tr>
+<tr>
+<td>008</td>
+<td>query layer</td>
+<td><a href="posts/one-file-two-readings/">One file, two readings</a></td>
+</tr>
+<tr>
+<td>009</td>
+<td>control loop</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>010</td>
+<td>telemetry quality</td>
+<td><a href="posts/the-mean-of-magnitudes/">The mean of magnitudes</a></td>
+</tr>
+<tr>
+<td>011</td>
+<td>adaptive planner</td>
+<td><a href="posts/a-threshold-nothing-could-reach/">A threshold nothing could reach</a></td>
+</tr>
+<tr>
+<td>012</td>
+<td>visualisation</td>
+<td><a href="posts/borrowing-a-clock-you-are-not-allowed-to-read/">Borrowing a clock you are not allowed to read</a></td>
+</tr>
+<tr>
+<td>013</td>
+<td>security proxy</td>
+<td><a href="posts/the-average-that-hid-the-leak/">The average that hid the leak</a></td>
+</tr>
+<tr>
+<td>014</td>
+<td>offload export</td>
+<td><a href="posts/a-file-a-stranger-can-open/">A file a stranger can open</a></td>
+</tr>
+<tr>
+<td>015</td>
+<td>published site</td>
+<td><a href="posts/taking-a-requirements-document-apart/">Taking a requirements document apart</a></td>
+</tr>
+<tr>
+<td>016</td>
+<td>visual capture</td>
+<td><a href="posts/two-ways-to-compare-nothing/">Two ways to compare nothing</a></td>
+</tr>
+<tr>
+<td>017</td>
+<td>map surface</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>018</td>
+<td>read path boundaries</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>019</td>
+<td>coverage holdings</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>020</td>
+<td>shore advisories</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>021</td>
+<td>operator plane</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>022</td>
+<td>topic tree</td>
+<td><em>no entry yet</em></td>
+</tr>
+<tr>
+<td>023</td>
+<td>edr query composer</td>
+<td><em>no entry yet</em></td>
+</tr>
+</tbody>
+</table>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

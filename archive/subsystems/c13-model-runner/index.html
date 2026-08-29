@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-13 Model runner — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-13-model-runner">C-13 Model runner</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>services/model_runner/</code> — <code>kernel.py</code> is the port, <code>analytic_kernel.py</code>
+the implementation behind it, and <code>ensemble.py</code> the perturbed members and their
+spread</li>
+<li><strong>Delivered by:</strong> <code>specs/009-control-loop</code></li>
+<li><strong>Covered by:</strong> <code>services/model_runner/tests/</code>, including <code>test_kernel_port.py</code>
+for the boundary and <code>test_member_failure.py</code> for a member that dies, plus
+<code>tests/integration/test_runner_publisher_handoff.py</code></li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> analytic <a href="../../../glossary/#advection">advection</a> and noise; ensemble
+member runs.
+<strong>Owns the failure mode of:</strong> being irreplaceable.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It takes an initialisation state and produces a gridded forecast field. It does
+this by <a href="../../../glossary/#advection">advecting</a> the seeded features forward
+analytically and adding noise. It runs a small ensemble with perturbed initial
+conditions and emits the <a href="../../../glossary/#ensemble-spread">ensemble spread</a> as an
+uncertainty field alongside the forecast.</p>
+<p>It does not implement real numerics, and it is not trying to. The numbers are
+deliberately fake.</p>
+<p>One property of that spread is worth stating here rather than leaving a reader to
+infer it: <strong>it does not grow with the forecast horizon.</strong> Measured over the runner's
+own fixture, the domain-mean spread is 0.221, 0.209 and 0.199 °C at t+0 for 4, 8 and
+200 members, and 0.220, 0.210 and 0.199 °C at t+6h for the same three. There are no
+dynamics here to amplify an initial-condition error, and no growth law is authored in
+their place. FR-29 asks for a spread emitted alongside the forecast, which this is; it
+does not ask for one that widens, and this one does not.
+<a href="../../../algorithms/ensemble-spread/">The derivation</a> says where the number comes from.</p>
+<h2 id="why-being-irreplaceable-is-the-failure-mode">Why &quot;being irreplaceable&quot; is the failure mode</h2>
+<p>This is the one component in drogna that is certain to be thrown away. Any real
+version of this architecture would put an actual ocean model here. So the whole
+value of building it is in the shape of the hole it leaves behind: initialisation
+state in, gridded field out, and nothing else crossing the boundary.</p>
+<p>A model runner that quietly acquired a dependency on the observation store, or
+that wrote its output somewhere only it knew about, or that needed to be told
+about the scenario in a way the interface did not express, would be a component
+that could not be swapped. That is what the failure mode names. The interface
+here is one of the four genuine ports, and it is genuine precisely because the
+second implementation is not hypothetical.</p>
+<h2 id="the-ensemble">The ensemble</h2>
+<p>The ensemble is small — this is a harness, not a forecasting centre — and its
+purpose is not accuracy. It is to produce an uncertainty field that behaves like
+a real one: larger where the initial state was less constrained, larger further
+into the forecast, and structured rather than uniform.</p>
+<p><strong>Requirements:</strong> FR-28, FR-29. <strong>Feature:</strong> 009.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

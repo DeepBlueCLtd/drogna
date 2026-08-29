@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0030: components are scheduled modules on the main thread, wired by one composition root — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0030-components-are-scheduled-modules-on-the-main-thread-wired-by-one-composition-root">ADR-0030: components are scheduled modules on the main thread, wired by one composition root</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 29 August 2026
+<strong>Feature:</strong> 101 (foundations &amp; shell)</p>
+<h2 id="context">Context</h2>
+<p>SRD-v2 §10 delegates to feature 101 whether the in-browser backend components run as
+Web Workers or as scheduled modules. Separately, Constitution XI forbids any import
+between front-end (<code>shell/</code>, <code>panels/</code>) and backend (<code>backend/</code>) — yet <em>something</em>
+must construct both halves and hand each its configuration and its seam client.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>Scheduled modules on the main thread.</strong> Web Workers communicate by asynchronous
+message passing whose interleaving the browser schedules; AT-04's byte-identical
+lockstep replay would require rebuilding determinism on top of that with a per-worker
+lockstep protocol — precisely the class of complexity V2 exists to shed
+(<code>spikes/seam-interception/FINDING.md</code>). As scheduled modules, broker delivery is
+synchronous in subscription order and reproducible by construction. The components
+remain genuine programs — each has its own configuration document, seed stream,
+heartbeat and lifecycle, and stops by ceasing to be scheduled, not by a flag. The
+transport interface is the honest port: a worker pool, like a V3 network backend,
+would replace the transport, never the components.</p>
+<p><strong>One composition root</strong>: <code>app/src/bootstrap/</code> is the only module allowed to import
+from both sides of the seam. It reads the run configuration document, creates the run
+manifest (the single point where entropy may enter, and is recorded), constructs the
+backend runtime, installs the fetch shim (ADR-0029), and mounts the shell — handing
+each half only configuration and seam interfaces. Nothing imports the bootstrap. The
+import-boundary gate encodes exactly this: <code>shell|panels</code> ↔ <code>backend</code> imports are
+violations anywhere, <code>bootstrap</code> may import both, and only <code>seam/</code> and <code>generated/</code>
+are importable from everywhere.</p>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<ul>
+<li><strong>Web Workers per component</strong> — determinism cost above; also multiplies the
+build/test surface (a scope vitest cannot reach) for no demonstrated need.</li>
+<li><strong>Letting the shell construct the backend</strong> — quietly turns the client into the
+monolith Principle XI names; the V3 swap would then be a refactor, not a
+configuration change.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

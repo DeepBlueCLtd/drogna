@@ -1,2152 +1,28 @@
-
 <!doctype html>
-<html lang="en" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="A learning harness for an environmental data architecture. Synthetic data, deliberately fake numerics, built to be understood rather than deployed.">
-      
-      
-      
-      
-        <link rel="prev" href="../sensorthings/">
-      
-      
-        <link rel="next" href="../cf-conventions/">
-      
-      
-        
-      
-      
-      <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
-    
-    
-      
-        <title>OGC API-EDR - drogna</title>
-      
-    
-    
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
-      
-        
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-    
-    
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-  <meta name="robots" content="noindex, nofollow">
-
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#ogc-api-edr" class="md-skip">
-          Skip to content
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-  
-
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="drogna" class="md-header__button md-logo" aria-label="drogna" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            drogna
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              OGC API-EDR
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      
-      
-        <label class="md-header__button md-icon" for="__search">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-        </label>
-        <div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
-      <label class="md-search__icon md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-      </label>
-      <nav class="md-search__options" aria-label="Search">
-        
-        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </nav>
-      
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="search-result">
-          <div class="md-search-result__meta">
-            Initializing search
-          </div>
-          <ol class="md-search-result__list" role="presentation"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-      
-    
-    
-  </nav>
-  
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>OGC API-EDR — drogna</title>
+<link rel="stylesheet" href="../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
 </header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-
-
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="drogna" class="md-nav__button md-logo" aria-label="drogna" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    drogna
-  </label>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../blog/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Blog
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Blog
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Archive
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Archive
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-    
-  
-  
-    <li class="md-nav__item">
-      <a href="../../blog/archive/2026/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    2026
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Categories
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Categories
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-    
-  
-  
-    <li class="md-nav__item">
-      <a href="../../blog/category/architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    
-  
-  
-    <li class="md-nav__item">
-      <a href="../../blog/category/feature/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Feature
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    
-  
-  
-    <li class="md-nav__item">
-      <a href="../../blog/category/process/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Process
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    
-  
-  
-    <li class="md-nav__item">
-      <a href="../../blog/category/standards/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Standards
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Architecture
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/overview/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../subsystems/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Subsystems
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Subsystems
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c01-simulation-clock/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-01 Simulation clock
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c02-environment-generator/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-02 Environment generator
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c03-broker/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-03 Broker
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c04-simulated-sensors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-04 Simulated sensors
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c05-ingest-client/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-05 Ingest client
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c06-observation-store/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-06 Observation store
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c07-feature-store/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-07 Feature store
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c08-coverage-store/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-08 Coverage store
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c09-query-layer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-09 Query layer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c10-reverse-proxy/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-10 Reverse proxy
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c11-monitor/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-11 Monitor
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c12-scheduler/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-12 Scheduler
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c13-model-runner/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-13 Model runner
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c14-publisher/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-14 Publisher
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c15-planner/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-15 Planner
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c16-telemetry/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-16 Telemetry
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c17-offload-packager/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-17 Offload packager
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../subsystems/c18-browser-client/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    C-18 Browser client
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../algorithms/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Algorithms
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Algorithms
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../algorithms/ensemble-spread/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Ensemble spread
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../algorithms/advection/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advection
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../algorithms/informative-path-planning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Informative path planning
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Standards
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Standards
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sensorthings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    SensorThings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OGC API-EDR
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OGC API-EDR
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-nine-query-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The nine query types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-a-question-is-written" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How a question is written
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-actually-happens-to-a-query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What actually happens to a query
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="What actually happens to a query">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-vertex-time-is-decided-before-the-plugin-not-inside-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The vertex time is decided before the plugin, not inside it
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-the-provider-is-handed-and-what-it-is-not" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the provider is handed, and what it is not
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-difference-between-the-nine-in-full" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The difference between the nine, in full
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#how-a-provider-says-what-it-can-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How a provider says what it can answer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-comes-back" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What comes back
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-drogna-implements-and-what-it-does-not" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What drogna implements, and what it does not
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-question-drogna-needs-it-to-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The question drogna needs it to answer
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-standard-itself" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The standard itself
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cf-conventions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CF conventions
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../coveragejson/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CoverageJSON
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-          
-        
-      
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../decisions/adr/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decisions
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/site-tooling/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Site tooling
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-nine-query-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The nine query types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-a-question-is-written" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How a question is written
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-actually-happens-to-a-query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What actually happens to a query
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="What actually happens to a query">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-vertex-time-is-decided-before-the-plugin-not-inside-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The vertex time is decided before the plugin, not inside it
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-the-provider-is-handed-and-what-it-is-not" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the provider is handed, and what it is not
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-difference-between-the-nine-in-full" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The difference between the nine, in full
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#how-a-provider-says-what-it-can-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How a provider says what it can answer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-comes-back" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What comes back
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-drogna-implements-and-what-it-does-not" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What drogna implements, and what it does not
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-question-drogna-needs-it-to-answer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The question drogna needs it to answer
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-standard-itself" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The standard itself
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              
-              <article class="md-content__inner md-typeset">
-                
-                  
-
-
-
-<h1 id="ogc-api-edr">OGC API-EDR<a class="headerlink" href="#ogc-api-edr" title="Permanent link">&para;</a></h1>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../">Home</a></li><li><a href="../../demo/">The demo</a></li><li><a href="../../architecture/">The architecture</a></li><li><a href="../../components/">The component reference</a></li><li><a href="../../standards/">Standards primers</a><ul><li><a href="../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../standards/ogc-api-edr/" aria-current="page">OGC API-EDR</a></li><li><a href="../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../algorithms/">Algorithm derivations</a><ul><li><a href="../../algorithms/advection/">Advection</a></li><li><a href="../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../glossary/">Glossary</a></li><li><a href="../../blog/">The blog</a></li><li><a href="../../decisions/">The decision records</a></li><li><a href="../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="ogc-api-edr">OGC API-EDR</h1>
 <p>Most questions asked of an environmental dataset have a shape. What is it like
 <em>here</em>. What is it like <em>inside this box</em>. What is it like <em>along this line, at
 the moment I reach each point on it</em>. OGC API — Environmental Data Retrieval,
@@ -2157,8 +33,8 @@ can therefore stand in for a query language.</p>
 ask everything the interface offers. There is no expression language to learn,
 nothing to escape, and nothing the server has to defend itself against beyond
 bounds it chooses for itself. EDR is the only way anything reads drogna's
-<a href="../../subsystems/c08-coverage-store/">coverage store</a>, and the
-<a href="../../subsystems/c09-query-layer/">query layer</a> that serves it is pygeoapi,
+<a href="../../archive/subsystems/c08-coverage-store/">coverage store</a>, and the
+<a href="../../archive/subsystems/c09-query-layer/">query layer</a> that serves it is pygeoapi,
 configured with two provider plugins written for this harness.</p>
 <p>This page is a primer for a reader who has not met the standard. It is also a
 record of what happens to a query once it arrives, which is where the standard's
@@ -2168,7 +44,7 @@ deployment pins, read from <code>pygeoapi/api/environmental_data_retrieval.py</c
 <code>pygeoapi/provider/base_edr.py</code> rather than from documentation. Where it differs
 from the 0.25 development line that drogna's spike measured, the difference is
 called out, because that divergence is one of the more instructive things here.</p>
-<h2 id="the-nine-query-types">The nine query types<a class="headerlink" href="#the-nine-query-types" title="Permanent link">&para;</a></h2>
+<h2 id="the-nine-query-types">The nine query types</h2>
 <p>A <strong>collection</strong> is a dataset. drogna publishes two: <code>forecast</code>, which carries
 the current model run's forecast and uncertainty fields as parameters of one
 collection, and <code>observations</code>, which is served through
@@ -2238,14 +114,14 @@ timestamp at every vertex, return the conditions forecast for the <em>moment of
 arrival</em> at each point, rather than the conditions at query time. For anything
 moving slowly through a changing medium — which is to say a ship — that is the
 only version of the question worth asking.</p>
-<h2 id="how-a-question-is-written">How a question is written<a class="headerlink" href="#how-a-question-is-written" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>GET /collections/forecast/trajectory
+<h2 id="how-a-question-is-written">How a question is written</h2>
+<pre><code class="language-text">GET /collections/forecast/trajectory
     ?coords=LINESTRING ZM (-3.6 48.4 -5 1788220800, -2.55 49.45 -100 1788226668)
     &amp;parameter-name=sea_water_temperature
     &amp;datetime=2026-09-01T00:00:00Z/2026-09-02T00:00:00Z
     &amp;z=0
     &amp;f=json
-</code></pre></div>
+</code></pre>
 <p>Nothing about it is exotic, and that is the point. <code>parameter-name</code> selects
 variables by name; <code>datetime</code> is an instant or a <code>begin/end</code> interval; <code>z</code>
 selects depth; <code>f</code> selects the response format. The geometry travels in <code>coords</code>
@@ -2263,7 +139,7 @@ specification text; it is the one assumption in the trajectory path that rests o
 convention rather than on measurement. The client and the provider agree on it in
 one named constant, because a disagreement between them would produce a plausible
 wrong answer rather than an error.</p>
-<h2 id="what-actually-happens-to-a-query">What actually happens to a query<a class="headerlink" href="#what-actually-happens-to-a-query" title="Permanent link">&para;</a></h2>
+<h2 id="what-actually-happens-to-a-query">What actually happens to a query</h2>
 <p>The figure below is the mechanism, top to bottom, for pygeoapi 0.20.0. The prose
 after it says the same things in the same order, so nothing here depends on
 seeing it.</p>
@@ -2293,27 +169,22 @@ svg.edrd #edrd-head path { fill: var(--md-default-fg-color--light); }
 <defs>
 <marker id="edrd-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker>
 </defs>
-
 <rect class="b" x="140" y="18" width="620" height="54" rx="6"/>
 <text class="m" x="450" y="42" text-anchor="middle">GET /collections/forecast/{query type}?coords=…&amp;datetime=…</text>
 <text class="s" x="450" y="61" text-anchor="middle">plus parameter-name, z, bbox, within, limit — all optional, all query string</text>
 <line class="ln" x1="450" y1="72" x2="450" y2="92" marker-end="url(#edrd-head)"/>
-
 <rect class="panel" x="30" y="94" width="840" height="314" rx="8"/>
 <text class="lbl" x="48" y="118">PYGEOAPI 0.20.0 · api/environmental_data_retrieval.py</text>
 <text class="s" x="48" y="137">Everything in this panel runs before any drogna code, and none of it is configurable.</text>
-
-<text class="m" x="48" y="168">query_type</text>
-<text class="t" x="196" y="168">Is it in the provider's advertised list? If not, 400 Unsupported query type.</text>
-
+<p><text class="m" x="48" y="168">query_type</text>
+<text class="t" x="196" y="168">Is it in the provider's advertised list? If not, 400 Unsupported query type.</text></p>
 <rect class="hz" x="44" y="182" width="812" height="84" rx="5"/>
 <circle class="dot" cx="64" cy="207" r="8"/>
 <text class="dotl" x="64" y="210.5" text-anchor="middle">M</text>
 <text class="m" x="84" y="211">coords → shapely.wkt.loads(coords) → a Shapely geometry, handed on untouched</text>
 <text class="a" x="84" y="233">The M ordinate — every vertex's arrival time — either survives this call or is silently lost.</text>
 <text class="s" x="84" y="253">Decided by the installed Shapely and GEOS. Three ways to lose it, and none of them raises.</text>
-
-<text class="m" x="48" y="294">datetime</text>
+<p><text class="m" x="48" y="294">datetime</text>
 <text class="t" x="196" y="294">validate_datetime() against the collection's configured extent. 400 outside it.</text>
 <text class="m" x="48" y="318">parameter-name</text>
 <text class="t" x="196" y="318">Checked against the provider's get_fields(). 400 InvalidParameterValue.</text>
@@ -2322,34 +193,27 @@ svg.edrd #edrd-head path { fill: var(--md-default-fg-color--light); }
 <text class="m" x="48" y="366">z · within · limit</text>
 <text class="t" x="196" y="366">Passed through unexamined. limit defaults to 10 and counts records, not vertices.</text>
 <text class="m" x="48" y="390">the raw strings</text>
-<text class="t" x="196" y="390">Not passed on. The provider gets the parsed geometry, never the text it came from.</text>
-
+<text class="t" x="196" y="390">Not passed on. The provider gets the parsed geometry, never the text it came from.</text></p>
 <line class="ln" x1="450" y1="408" x2="450" y2="430" marker-end="url(#edrd-head)"/>
-
 <rect class="b" x="180" y="432" width="540" height="62" rx="6"/>
 <text class="m" x="450" y="457" text-anchor="middle">query_args — twelve keyword arguments in one dict</text>
 <text class="m" x="450" y="479" text-anchor="middle">BaseEDRProvider.query() → getattr(self, query_type)(**query_args)</text>
-
 <line class="ln" x1="450" y1="494" x2="450" y2="512"/>
 <line class="ln" x1="320" y1="512" x2="750" y2="512"/>
 <line class="ln" x1="320" y1="512" x2="320" y2="526" marker-end="url(#edrd-head)"/>
 <line class="ln" x1="750" y1="512" x2="750" y2="526" marker-end="url(#edrd-head)"/>
-
 <rect class="panel" x="30" y="528" width="580" height="172" rx="8"/>
 <text class="lbl" x="46" y="552">ANSWERED — ONE DROGNA PROVIDER CLASS</text>
-
 <rect class="b" x="44" y="564" width="132" height="114" rx="5"/>
 <text class="th" x="110" y="590" text-anchor="middle">position</text>
 <text class="s" x="110" y="614" text-anchor="middle">a single point</text>
 <text class="s" x="110" y="632" text-anchor="middle">supplied: xarray-edr</text>
 <text class="s" x="110" y="658" text-anchor="middle">→ Point domain</text>
-
 <rect class="b" x="186" y="564" width="132" height="114" rx="5"/>
 <text class="th" x="252" y="590" text-anchor="middle">cube</text>
 <text class="s" x="252" y="614" text-anchor="middle">a bounding box</text>
 <text class="s" x="252" y="632" text-anchor="middle">supplied: xarray-edr</text>
 <text class="s" x="252" y="658" text-anchor="middle">→ Grid domain</text>
-
 <rect class="hzb" x="328" y="564" width="132" height="114" rx="5"/>
 <circle class="dot" cx="344" cy="578" r="8"/>
 <text class="dotl" x="344" y="581.5" text-anchor="middle">M</text>
@@ -2358,13 +222,11 @@ svg.edrd #edrd-head path { fill: var(--md-default-fg-color--light); }
 <text class="s" x="394" y="628" text-anchor="middle">at every vertex</text>
 <text class="s" x="394" y="646" text-anchor="middle">supplied: nothing</text>
 <text class="s" x="394" y="668" text-anchor="middle">→ Trajectory domain</text>
-
 <rect class="b" x="470" y="564" width="132" height="114" rx="5"/>
 <text class="th" x="536" y="590" text-anchor="middle">instances</text>
 <text class="s" x="536" y="612" text-anchor="middle">which model run,</text>
 <text class="s" x="536" y="628" text-anchor="middle">named or current</text>
 <text class="s" x="536" y="658" text-anchor="middle">→ a list of run ids</text>
-
 <rect class="panel" x="630" y="528" width="240" height="172" rx="8"/>
 <text class="lbl" x="646" y="552">REFUSED — NOT ADVERTISED</text>
 <rect class="bd" x="644" y="564" width="212" height="114" rx="5"/>
@@ -2372,15 +234,14 @@ svg.edrd #edrd-head path { fill: var(--md-default-fg-color--light); }
 <text class="t" x="750" y="618" text-anchor="middle">items · locations</text>
 <text class="s" x="750" y="646" text-anchor="middle">400 Unsupported query type,</text>
 <text class="s" x="750" y="664" text-anchor="middle">before the provider is called.</text>
-
 <circle class="dot" cx="38" cy="714" r="8"/>
 <text class="dotl" x="38" y="717.5" text-anchor="middle">M</text>
 <text class="s" x="54" y="718">marks where the per-vertex arrival time is decided, and the one query type that depends on it.</text>
 </svg>
+
 </div>
 <figcaption>An EDR query in pygeoapi 0.20.0: what the framework does to each parameter, how it dispatches, and what each of the nine query types meets in drogna's collection.</figcaption>
 </figure>
-
 <p>The framework's work is the top two-thirds of that picture, and it is worth
 saying plainly what it amounts to. pygeoapi checks that the query type is one the
 provider claims to support, validates <code>datetime</code> against the extent written in
@@ -2390,7 +251,7 @@ declare, validates <code>bbox</code> where a cube needs one, parses <code>coords
 method on the provider named after the query type. That is the entire framework
 contribution. Everything else — sampling, interpolation, the response document —
 is the provider's.</p>
-<h3 id="the-vertex-time-is-decided-before-the-plugin-not-inside-it">The vertex time is decided before the plugin, not inside it<a class="headerlink" href="#the-vertex-time-is-decided-before-the-plugin-not-inside-it" title="Permanent link">&para;</a></h3>
+<h3 id="the-vertex-time-is-decided-before-the-plugin-not-inside-it">The vertex time is decided before the plugin, not inside it</h3>
 <p>The single most useful thing the figure shows is that the <code>coords</code> step sits
 inside the framework panel. pygeoapi parses the WKT and hands the resulting
 geometry to the provider <em>untouched</em>, which is a virtue: nothing in the framework
@@ -2437,7 +298,7 @@ degraded status. The default outcome of losing M is a provider quietly evaluatin
 the whole route at a single time and returning HTTP 200 with values that look
 entirely reasonable: for the twenty-vertex route the spike measured, wrong by
 12.8 °C against 2.7 × 10⁻⁸ °C for the correct answer. The full account is in
-<a href="../../blog/three-ways-to-lose-a-timestamp/">three ways to lose a timestamp</a>.</p>
+<a href="../../archive/blog/posts/three-ways-to-lose-a-timestamp/">three ways to lose a timestamp</a>.</p>
 <p>drogna's response is in three parts. The deployment pins Shapely 2.1 or later
 with the reason written at the pin. The image build parses a known
 <code>LINESTRING ZM</code> and asserts that M comes back exactly <em>and</em> that Z is still the
@@ -2446,7 +307,7 @@ has moved the times into the depth axis. And the provider itself refuses: if any
 M is NaN or the geometry parses to fewer than four ordinates per vertex, the
 query is declined with a message naming the pin, rather than falling back to a
 single time.</p>
-<h3 id="what-the-provider-is-handed-and-what-it-is-not">What the provider is handed, and what it is not<a class="headerlink" href="#what-the-provider-is-handed-and-what-it-is-not" title="Permanent link">&para;</a></h3>
+<h3 id="what-the-provider-is-handed-and-what-it-is-not">What the provider is handed, and what it is not</h3>
 <p>The dispatch dict is generous — <code>query_type</code>, <code>instance</code>, <code>format_</code>,
 <code>datetime_</code>, <code>select_properties</code>, <code>wkt</code>, <code>z</code>, <code>bbox</code>, <code>within</code>, <code>within_units</code>,
 <code>limit</code> and <code>location_id</code> — but the raw <code>coords</code> string is not in it. Only the
@@ -2469,7 +330,7 @@ it naively would answer a twenty-vertex route with ten values and HTTP 200 —
 precisely the class of failure this component is arranged to avoid. drogna's
 provider ignores it and bounds routes by a configured vertex count instead,
 refusing rather than truncating.</p>
-<h3 id="the-difference-between-the-nine-in-full">The difference between the nine, in full<a class="headerlink" href="#the-difference-between-the-nine-in-full" title="Permanent link">&para;</a></h3>
+<h3 id="the-difference-between-the-nine-in-full">The difference between the nine, in full</h3>
 <p>The figure above shows one handler serving every query type. That raises a fair
 question: if there is one handler, what actually makes a <code>cube</code> query different
 from a <code>trajectory</code> one?</p>
@@ -2603,10 +464,10 @@ svg.edrq .dotl { fill: var(--md-default-fg-color); font-size: 9px; font-weight: 
 <text class="s" x="24" y="466">Every routed query type also receives datetime validated against the collection's extent, parameter-name validated against the</text>
 <text class="s" x="24" y="481">provider's fields, z passed through unexamined, and limit — which counts records, defaults to ten, and is not a vertex bound.</text>
 </svg>
+
 </div>
 <figcaption>What pygeoapi 0.20.0 parses for each EDR query type before calling a provider: five conditionals, of which three are the whole difference between the nine. Two query types lose something on the way, and one of those never arrives at all.</figcaption>
 </figure>
-
 <p>The three conditionals are these. <code>bbox</code> is validated only for <code>cube</code> and
 <code>locations</code>, and is required for <code>cube</code>. <code>coords</code> is passed to
 <code>shapely.wkt.loads</code> for every query type <em>except</em> those same two, and is required
@@ -2642,7 +503,7 @@ easy to misread as timidity, and it is not: <code>position</code> and <code>cube
 the <code>xarray-edr</code> provider, <code>trajectory</code> and <code>instances</code> are the two this project
 exists to write, and of the five it does not serve, one cannot be reached at all
 and another cannot be answered correctly by anybody.</p>
-<h3 id="how-a-provider-says-what-it-can-answer">How a provider says what it can answer<a class="headerlink" href="#how-a-provider-says-what-it-can-answer" title="Permanent link">&para;</a></h3>
+<h3 id="how-a-provider-says-what-it-can-answer">How a provider says what it can answer</h3>
 <p>The check at the top of the figure — is this query type advertised? — is why the
 registration mechanism matters, and pygeoapi has spelt it two different ways.</p>
 <figure>
@@ -2666,7 +527,6 @@ svg.edrr #edrr-head path { fill: var(--md-default-fg-color--light); }
 <defs>
 <marker id="edrr-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker>
 </defs>
-
 <rect class="panel" x="20" y="20" width="420" height="284" rx="8"/>
 <text class="lbl" x="36" y="44">PYGEOAPI 0.20.0 — THE RELEASE DROGNA PINS</text>
 <rect class="b" x="36" y="56" width="388" height="58" rx="5"/>
@@ -2683,7 +543,6 @@ svg.edrr #edrr-head path { fill: var(--md-default-fg-color--light); }
 <text class="s" x="36" y="246">@BaseEDRProvider.register() appends each name to that</text>
 <text class="s" x="36" y="264">one list. It belongs to the base class, so every provider</text>
 <text class="s" x="36" y="282">in the process shares it and sees the others' types.</text>
-
 <rect class="panel" x="460" y="20" width="420" height="284" rx="8"/>
 <text class="lbl" x="476" y="44">PYGEOAPI 0.25.dev0 — THE LINE THE SPIKE MEASURED</text>
 <rect class="b" x="476" y="56" width="388" height="78" rx="5"/>
@@ -2697,16 +556,15 @@ svg.edrr #edrr-head path { fill: var(--md-default-fg-color--light); }
 <text class="s" x="476" y="246">The inherited position and cube stop being advertised.</text>
 <text class="s" x="476" y="264">Not an error: the collection simply stops offering two</text>
 <text class="s" x="476" y="282">query types that its provider can still answer.</text>
-
 <rect class="hz" x="20" y="320" width="860" height="72" rx="6"/>
 <text class="a" x="450" y="344" text-anchor="middle">drogna satisfies both mechanisms rather than choosing between them.</text>
 <text class="s" x="450" y="364" text-anchor="middle">Every query type it serves is a method in the class's own __dict__, and is also named in a query_types</text>
 <text class="s" x="450" y="382" text-anchor="middle">list set on the class, which shadows the base's shared one. A test asserts the collection advertises all three.</text>
 </svg>
+
 </div>
 <figcaption>Advertising query types: a shared mutable list on the base class in pygeoapi 0.20.0, versus a per-subclass rebuild from <code>__dict__</code> in the 0.25 development line.</figcaption>
 </figure>
-
 <p>In 0.20.0, <code>BaseEDRProvider</code> carries <code>query_types = []</code> as a class attribute, and
 a <code>@BaseEDRProvider.register()</code> decorator appends each decorated method's name to
 it. The list belongs to the <em>base</em>, so every registration anywhere in the process
@@ -2725,7 +583,7 @@ made against the other. The served collection was checked live and advertises
 a primer at all: <strong>a measured finding is measured against a version.</strong> Pinning a
 version other than the one measured does not merely weaken the finding — it can
 replace the hazard with a different one.</p>
-<h2 id="what-comes-back">What comes back<a class="headerlink" href="#what-comes-back" title="Permanent link">&para;</a></h2>
+<h2 id="what-comes-back">What comes back</h2>
 <p>The response format is <a href="../coveragejson/">CoverageJSON</a>, which separates the
 <strong>domain</strong> (where and when the values sit) from the <strong>ranges</strong> (the values) and
 the <strong>parameters</strong> (what each value means). A
@@ -2758,7 +616,7 @@ domain type.</p>
 <td><code>trajectory</code></td>
 <td><code>Trajectory</code></td>
 <td>One <code>composite</code> axis whose every entry is a <code>(t, x, y, z)</code> tuple, one per vertex.</td>
-<td><code>NdArray</code> of shape <code>[n]</code> over <code>["composite"]</code>.</td>
+<td><code>NdArray</code> of shape <code>[n]</code> over <code>[&quot;composite&quot;]</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -2783,7 +641,7 @@ neither. And the provider interpolates linearly in all four dimensions rather
 than snapping to the nearest stored time step, which is a choice invisible from
 outside: snapping the acceptance test's route would have put a fifth of a degree
 of the harness's own arithmetic into what it reports.</p>
-<h2 id="what-drogna-implements-and-what-it-does-not">What drogna implements, and what it does not<a class="headerlink" href="#what-drogna-implements-and-what-it-does-not" title="Permanent link">&para;</a></h2>
+<h2 id="what-drogna-implements-and-what-it-does-not">What drogna implements, and what it does not</h2>
 <p><code>position</code>, <code>cube</code>, <code>trajectory</code> and <code>instances</code>, from a single provider class
 over a single collection. One collection rather than two, because two could
 disagree about which run they describe.</p>
@@ -2812,7 +670,7 @@ at 91 vertices — measured, not chosen: at six decimal places, 91 vertices is a
 server before pygeoapi sees it. There is no POST form of an EDR query; the
 endpoint answers 405. The ceiling is a server setting rather than anything about
 the standard, and it belongs with the limit it produces.</p>
-<h2 id="the-question-drogna-needs-it-to-answer">The question drogna needs it to answer<a class="headerlink" href="#the-question-drogna-needs-it-to-answer" title="Permanent link">&para;</a></h2>
+<h2 id="the-question-drogna-needs-it-to-answer">The question drogna needs it to answer</h2>
 <p>Whether a standards-based read interface can serve a four-dimensional trajectory
 query well enough to be the <em>only</em> read path, with no bespoke endpoint alongside
 it.</p>
@@ -2824,7 +682,7 @@ provider that had to be written, a version pin that guards a silent failure, and
 a registration mechanism honoured twice because two releases spell it
 differently. None of that is visible from outside, which is the reason for
 writing it down here.</p>
-<h2 id="the-standard-itself">The standard itself<a class="headerlink" href="#the-standard-itself" title="Permanent link">&para;</a></h2>
+<h2 id="the-standard-itself">The standard itself</h2>
 <p>The authoritative document is the
 <a href="https://docs.ogc.org/is/19-086r6/19-086r6.html">OGC API — Environmental Data Retrieval Standard</a>
 (OGC 19-086r6), with an overview and the current work at
@@ -2832,103 +690,12 @@ writing it down here.</p>
 it at length; where the two disagree, the standard is right and this page is a
 bug.</p>
 
-
-
-
-
-
-
-  
-  
-
-
-
-
-
-
-                
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
-  Back to top
-</button>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-    
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../sensorthings/" class="md-footer__link md-footer__link--prev" aria-label="Previous: SensorThings">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                SensorThings
-              </div>
-            </div>
-          </a>
-        
-        
-          
-          <a href="../cf-conventions/" class="md-footer__link md-footer__link--next" aria-label="Next: CF conventions">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                CF conventions
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
-            </div>
-          </a>
-        
-      </nav>
-    
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-  
+  </main>
 </div>
-      
-    </div>
-  </div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
 </footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "content.code.copy", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
-    
-    
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
-      
-    
-  </body>
+</body>
 </html>

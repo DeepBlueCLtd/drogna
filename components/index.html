@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Every component, what it may publish, what it may hear — generated from the declaration the program is built from.">
+<title>The component reference — drogna</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../">Home</a></li><li><a href="../demo/">The demo</a></li><li><a href="../architecture/">The architecture</a></li><li><a href="../components/" aria-current="page">The component reference</a></li><li><a href="../standards/">Standards primers</a><ul><li><a href="../standards/cf-conventions/">CF conventions</a></li><li><a href="../standards/coveragejson/">CoverageJSON</a></li><li><a href="../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../algorithms/">Algorithm derivations</a><ul><li><a href="../algorithms/advection/">Advection</a></li><li><a href="../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../glossary/">Glossary</a></li><li><a href="../blog/">The blog</a></li><li><a href="../decisions/">The decision records</a></li><li><a href="../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-component-reference">The component reference</h1>
+<p>Version 1's site carried one hand-written page per component. Eighteen of them. They
+were written before the code, because writing them was how the boundaries were argued
+about — a component whose page cannot be written without describing another component
+is not a component — and they earned their place. They also went stale, twice: first
+carrying a notice saying no code existed long after code existed, and then describing
+software that had been retired.</p>
+<p>So this reference is generated. Its spine comes from <code>contracts/topology.json</code>, which
+is itself derived from the configuration documents the components are constructed
+from, and which a drift gate rebuilds and compares on every run. A component that
+exists appears here. A component that stops publishing something stops saying it does.
+Nobody has to remember.</p>
+<p>What that buys is a narrow but real guarantee: <strong>this page cannot be wrong about who
+may say what.</strong> It can still be incomplete about what a component is <em>for</em>, and the
+prose below is where that is said.</p>
+<h2 id="the-components">The components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Source</th>
+<th>May publish on</th>
+<th>May subscribe to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>advisory-source</code></td>
+<td><em>not a module</em></td>
+<td><code>adv/advisories</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>advisory-store</code></td>
+<td><em>not a module</em></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>adv/advisories</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>boundary</code></td>
+<td><code>app/src/backend/boundary</code></td>
+<td><code>ctl/boundary/denial</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>broker</code></td>
+<td><code>app/src/backend/broker</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>clock</code></td>
+<td><code>app/src/backend/clock</code></td>
+<td><code>ctl/clock</code>, <code>ctl/heartbeat</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>coverage-store</code></td>
+<td><code>app/src/backend/coverage-store</code></td>
+<td><code>cov/holdings</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>env-generator</code></td>
+<td><code>app/src/backend/env-generator</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>feature-store</code></td>
+<td><code>app/src/backend/feature-store</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>ingest</code></td>
+<td><code>app/src/backend/ingest</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>obs/#</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>model-runner</code></td>
+<td><code>app/src/backend/model-runner</code></td>
+<td><code>ctl/run/started</code>, <code>ctl/run/published</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/run/request</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>monitor</code></td>
+<td><code>app/src/backend/monitor</code></td>
+<td><code>ctl/divergence</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
+<td><code>obs/#</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>observation-store</code></td>
+<td><code>app/src/backend/observation-store</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>offload</code></td>
+<td><code>app/src/backend/offload</code></td>
+<td><code>ctl/offload</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/run/published</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>operator</code></td>
+<td><code>app/src/backend/operator</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/heartbeat</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>planner</code></td>
+<td><code>app/src/backend/planner</code></td>
+<td><code>ctl/plan</code>, <code>ctl/heartbeat</code></td>
+<td><code>obs/#</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>query</code></td>
+<td><code>app/src/backend/query</code></td>
+<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>scheduler</code></td>
+<td><code>app/src/backend/scheduler</code></td>
+<td><code>ctl/run/request</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/divergence</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>sensors</code></td>
+<td><code>app/src/backend/sensors</code></td>
+<td><code>obs/+/+</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>shell</code></td>
+<td><code>app/src/shell</code></td>
+<td>—</td>
+<td><code>#</code></td>
+</tr>
+<tr>
+<td><code>telemetry</code></td>
+<td><code>app/src/backend/telemetry</code></td>
+<td><code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/telemetry</code>, <code>ctl/run/published</code>, <code>obs/#</code>, <code>ctl/clock</code></td>
+</tr>
+</tbody>
+</table>
+<p>The two entries with no source of their own — <code>advisory-source</code> and <code>advisory-store</code> —
+are roles the shore-advisory path fills without a module directory of its own.</p>
+<p>The permission columns are permissions, not behaviour: they say what the broker will
+carry for a component, not what it chooses to send. <code>#</code> is the read-everything filter,
+held by the shell alone, because the shell's job is to display whatever crosses.</p>
+<h2 id="what-each-of-them-is-for">What each of them is for</h2>
+<p><strong>The world.</strong> <code>clock</code> owns the time; nothing else in the system may read a wall clock,
+so its heartbeat is also the first liveness signal every other component follows.
+<code>env-generator</code> produces the 4D field — temperature, salinity, pressure, with
+<a href="../glossary/#sound-speed">sound speed</a> derived rather than stored — from a recorded
+seed, with four seeded features whose ground truth is written into a manifest so
+recovery can be scored.</p>
+<p><strong>Sensing.</strong> <code>sensors</code> sample the generated field along platform paths and publish
+observations. <code>ingest</code> is the one door into the observation store: a single writer,
+which is what makes the write path something you can reason about.</p>
+<p><strong>Storage.</strong> <code>observation-store</code> holds what was sensed, <code>feature-store</code> the ground
+truth, <code>coverage-store</code> the gridded holdings across their three eras — a multi-decade
+historic archive authored at provisioning, a now-cast replaced on a cadence, and the
+accumulating forecast instances once the loop turns.</p>
+<p><strong>Serving.</strong> <code>query</code> is the only read path. It answers
+<a href="../standards/ogc-api-edr/">OGC API-EDR</a> and
+<a href="../standards/sensorthings/">SensorThings</a> requests and returns
+<a href="../standards/coveragejson/">CoverageJSON</a>; no panel reads a store directly.
+<code>boundary</code> is the release gate, and publishes its refusals so a refusal is visible
+rather than silent.</p>
+<p><strong>The loop.</strong> <code>monitor</code> scores the forecast against what is arriving.
+<code>scheduler</code> decides when the loop should turn. <code>model-runner</code> advects the field
+forward — see the <a href="../algorithms/advection/">advection derivation</a> and
+<a href="../algorithms/ensemble-spread/">ensemble spread</a>. <code>planner</code> chooses where to sample
+next, by the <a href="../algorithms/informative-path-planning/">informative path planning</a>
+method.</p>
+<p><strong>The edges.</strong> <code>advisory-source</code> and <code>advisory-store</code> carry shore advisories — the
+world outside speaking. <code>offload</code> announces an export without performing one.
+<code>telemetry</code> reports on the machinery itself. <code>operator</code> is the machinery interrogated
+from the operator's side.</p>
+<p><strong>The view.</strong> <code>shell</code> is the front-end: the dockable panels, and the only component
+holding a read-everything subscription.</p>
+<h2 id="the-topics">The topics</h2>
+<p>Every topic on the broker, the schema its messages are governed by, and which
+components may publish and subscribe. This is the same generated source: a topic
+nobody declares does not appear, and a topic declared by a component nobody built
+would fail the drift gate before it reached this page.</p>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Message schema</th>
+<th>Published by</th>
+<th>Subscribed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>adv/advisories</code></td>
+<td><code>advisory.schema.json</code></td>
+<td><code>advisory-source</code></td>
+<td><code>advisory-store</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>cov/holdings</code></td>
+<td><code>holding-published.schema.json</code></td>
+<td><code>coverage-store</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/boundary/denial</code></td>
+<td><code>boundary-denial.schema.json</code></td>
+<td><code>boundary</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/clock</code></td>
+<td><code>clock.schema.json</code></td>
+<td><code>clock</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>ctl/divergence</code></td>
+<td><code>divergence.schema.json</code></td>
+<td><code>monitor</code></td>
+<td><code>scheduler</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/heartbeat</code></td>
+<td><code>heartbeat.schema.json</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>clock</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>telemetry</code></td>
+<td><code>operator</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/offload</code></td>
+<td><code>offload-telemetry.schema.json</code></td>
+<td><code>offload</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/plan</code></td>
+<td><code>plan.schema.json</code></td>
+<td><code>planner</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/run/published</code></td>
+<td><code>run-published.schema.json</code></td>
+<td><code>model-runner</code></td>
+<td><code>offload</code>, <code>planner</code>, <code>scheduler</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>ctl/run/request</code></td>
+<td><code>run-request.schema.json</code></td>
+<td><code>scheduler</code></td>
+<td><code>model-runner</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/run/started</code></td>
+<td><code>run-started.schema.json</code></td>
+<td><code>model-runner</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/telemetry</code></td>
+<td><code>telemetry.schema.json</code></td>
+<td><code>monitor</code>, <code>scheduler</code>, <code>telemetry</code></td>
+<td><code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/#</code></td>
+<td><code>observation.schema.json</code></td>
+<td>—</td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/platform-a/pressure-200m</code></td>
+<td><code>observation.schema.json</code></td>
+<td><code>sensors</code></td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/platform-a/salinity-050m</code></td>
+<td><code>observation.schema.json</code></td>
+<td><code>sensors</code></td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/platform-a/temperature-050m</code></td>
+<td><code>observation.schema.json</code></td>
+<td><code>sensors</code></td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/platform-a/temperature-200m</code></td>
+<td><code>observation.schema.json</code></td>
+<td><code>sensors</code></td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-version-1-reference">The Version 1 reference</h2>
+<p>The eighteen hand-written pages are kept in
+<a href="../archive/subsystems/">the archive</a>. They describe the containerised system
+Version 1 delivered — the reverse proxy, the publisher, the browser client as a
+separate thing — and they are accurate about it. They are not a description of what
+runs now.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

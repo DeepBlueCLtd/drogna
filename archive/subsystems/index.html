@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>Subsystem reference — drogna</title>
+<link rel="stylesheet" href="../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../">Home</a></li><li><a href="../../demo/">The demo</a></li><li><a href="../../architecture/">The architecture</a></li><li><a href="../../components/">The component reference</a></li><li><a href="../../standards/">Standards primers</a><ul><li><a href="../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../algorithms/">Algorithm derivations</a><ul><li><a href="../../algorithms/advection/">Advection</a></li><li><a href="../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../glossary/">Glossary</a></li><li><a href="../../blog/">The blog</a></li><li><a href="../../decisions/">The decision records</a></li><li><a href="../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../">the current site</a> and <a href="../../archive/">the archive</a>.</p></div>
+<h1 id="subsystem-reference">Subsystem reference</h1>
+<p>drogna is specified as eighteen components. This section carries one page per
+component: what it does, why it exists as a separate thing, and which failure
+mode it owns.</p>
+<p>The failure-mode column is the interesting one. It comes from the requirements
+document, which assigns each component a failure mode it is responsible for
+preventing. That is a more useful description of a component than a list of its
+methods, because it says what would be lost if the component were merged into
+its neighbour. The three columns after it say where to go and look.</p>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Sixteen are built, two are partly built</p>
+<p>These pages were first written before the code, because writing them is how
+the boundaries were argued about — a component whose page cannot be written
+without describing another component is not a component. Every one of them
+then carried a notice saying that no code existed, and that notice stayed
+long after it stopped being true.</p>
+<p>It has been replaced. Each page now names where its code is, which feature
+delivered it, what covers it, and — where something the page describes is
+absent — what is missing and why. The states below were established by
+reading the tree on 27 August 2026, not by reading the task lists, which had
+stopped being maintained.</p>
+<p>Two things are worth reading as they are written rather than as a summary.
+<strong>Partly built</strong> means a behaviour the page describes is not there, and the
+page says which. <strong>Built</strong> with an absence noted means the component does
+what it is for and something adjacent is outstanding — a step nobody has
+wired into the seeding path, a schema master nobody has written. Neither is
+an apology; both are the record being kept honest.</p>
+
+</div>
+<h2 id="the-eighteen">The eighteen</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Component</th>
+<th>Responsibility</th>
+<th>Owns the failure mode of</th>
+<th>State</th>
+<th>Code</th>
+<th>Feature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="c01-simulation-clock/">C-01</a></td>
+<td>Simulation clock</td>
+<td>Single source of time, rate-controllable</td>
+<td>Hidden wall-clock dependencies</td>
+<td>Built</td>
+<td><code>services/clock/</code></td>
+<td>001</td>
+</tr>
+<tr>
+<td><a href="c02-environment-generator/">C-02</a></td>
+<td>Environment generator</td>
+<td>Synthetic 4D fields plus ground-truth manifest</td>
+<td>Unverifiable truth</td>
+<td>Built</td>
+<td><code>services/env_generator/</code></td>
+<td>004</td>
+</tr>
+<tr>
+<td><a href="c03-broker/">C-03</a></td>
+<td>Broker (MQTT)</td>
+<td>Pub/sub transport, namespaced topics</td>
+<td>Cross-contamination of flows</td>
+<td>Partly built</td>
+<td><code>deploy/broker/</code></td>
+<td>007</td>
+</tr>
+<tr>
+<td><a href="c04-simulated-sensors/">C-04</a></td>
+<td>Simulated sensors</td>
+<td>Publish observations in SensorThings vocabulary</td>
+<td>—</td>
+<td>Built</td>
+<td><code>services/sensors/</code></td>
+<td>007</td>
+</tr>
+<tr>
+<td><a href="c05-ingest-client/">C-05</a></td>
+<td>Ingest client</td>
+<td>Validate and batch-write; the single ingestion seam</td>
+<td>Ingest backpressure</td>
+<td>Built</td>
+<td><code>services/ingest/</code></td>
+<td>007</td>
+</tr>
+<tr>
+<td><a href="c06-observation-store/">C-06</a></td>
+<td>Observation store</td>
+<td>Persist point observations</td>
+<td>—</td>
+<td>Built</td>
+<td><code>stores/observations/</code></td>
+<td>007</td>
+</tr>
+<tr>
+<td><a href="c07-feature-store/">C-07</a></td>
+<td>Feature store</td>
+<td>Static spatial reference</td>
+<td>—</td>
+<td>Built</td>
+<td><code>stores/features/</code></td>
+<td>007</td>
+</tr>
+<tr>
+<td><a href="c08-coverage-store/">C-08</a></td>
+<td>Coverage store</td>
+<td>Gridded forecast and uncertainty fields</td>
+<td>—</td>
+<td>Built</td>
+<td><code>stores/coverage/</code></td>
+<td>008</td>
+</tr>
+<tr>
+<td><a href="c09-query-layer/">C-09</a></td>
+<td>Query layer</td>
+<td>SensorThings and EDR read access</td>
+<td>—</td>
+<td>Built</td>
+<td><code>query/</code></td>
+<td>008</td>
+</tr>
+<tr>
+<td><a href="c10-reverse-proxy/">C-10</a></td>
+<td>Reverse proxy</td>
+<td>TLS, authentication, path policy</td>
+<td>Accidental exposure</td>
+<td>Built</td>
+<td><code>proxy/</code></td>
+<td>013</td>
+</tr>
+<tr>
+<td><a href="c11-monitor/">C-11</a></td>
+<td>Monitor</td>
+<td>Detect forecast divergence from observations</td>
+<td>Over-sensitivity</td>
+<td>Built</td>
+<td><code>services/monitor/</code></td>
+<td>009</td>
+</tr>
+<tr>
+<td><a href="c12-scheduler/">C-12</a></td>
+<td>Scheduler</td>
+<td>Decide whether a model run is warranted</td>
+<td>Thrashing</td>
+<td>Built</td>
+<td><code>services/scheduler/</code></td>
+<td>009</td>
+</tr>
+<tr>
+<td><a href="c13-model-runner/">C-13</a></td>
+<td>Model runner</td>
+<td>Analytic <a href="../../glossary/#advection">advection</a> and noise, ensemble members</td>
+<td>Being irreplaceable</td>
+<td>Built</td>
+<td><code>services/model_runner/</code></td>
+<td>009</td>
+</tr>
+<tr>
+<td><a href="c14-publisher/">C-14</a></td>
+<td>Publisher</td>
+<td>Make completed runs visible atomically; announce</td>
+<td>Partial visibility</td>
+<td>Built</td>
+<td><code>services/publisher/</code></td>
+<td>009</td>
+</tr>
+<tr>
+<td><a href="c15-planner/">C-15</a></td>
+<td>Planner</td>
+<td>Adaptive sampling recommendations</td>
+<td>Crossing into tactical advice</td>
+<td>Built</td>
+<td><code>services/planner/</code></td>
+<td>011</td>
+</tr>
+<tr>
+<td><a href="c16-telemetry/">C-16</a></td>
+<td>Telemetry</td>
+<td>Health and forecast-skill indicators</td>
+<td>Silent degradation</td>
+<td>Built</td>
+<td><code>services/telemetry/</code></td>
+<td>010</td>
+</tr>
+<tr>
+<td><a href="c17-offload-packager/">C-17</a></td>
+<td>Offload packager</td>
+<td>Export with an integrity guarantee</td>
+<td>Premature eviction</td>
+<td>Built</td>
+<td><code>services/offload/</code></td>
+<td>014</td>
+</tr>
+<tr>
+<td><a href="c18-browser-client/">C-18</a></td>
+<td>Browser client</td>
+<td>Visualisation and control</td>
+<td>—</td>
+<td>Partly built</td>
+<td><code>client/src/</code></td>
+<td>003, 012</td>
+</tr>
+</tbody>
+</table>
+<h2 id="core-and-plumbing">Core and plumbing</h2>
+<p>The components are not equal in interest. Inside the boundary sits the genuinely
+bespoke logic: residual and divergence rules, scheduling policy,
+<a href="../../glossary/#sound-speed">sound speed</a> computation, quality flagging, the
+uncertainty and planning mathematics. Outside
+it sits well-chosen plumbing: the broker, the query layer, the proxy, the stores.</p>
+<p>That list is the requirements document's, and one item on it takes a different
+form here from the one the phrase suggests. Nothing flags the quality of a
+reading, and no message or column carries a flag; the judgement is made at the
+ingestion seam instead, where a reading that fails its contract is refused and
+counted rather than stored with a mark against it. That is a decision and not a
+gap — the <a href="c04-simulated-sensors/">simulated sensors</a> page says what it means
+in practice, and <strong>ADR-0014</strong> says why, and what would bring the field back.</p>
+<p>The distinction matters because the plumbing is where a project can spend
+unlimited effort on nothing. The design intent is that the visualisation makes
+the split visible rather than hiding it, so that it stays obvious which parts
+were bought and which were built.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

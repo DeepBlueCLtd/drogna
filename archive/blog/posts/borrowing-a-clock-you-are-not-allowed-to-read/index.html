@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A rule says no component may read the host clock. A display that obeys it literally steps and stutters. The exemption that fixes it is three sentences, and the three sentences are the entire design.">
+<title>Borrowing a clock you are not allowed to read — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="borrowing-a-clock-you-are-not-allowed-to-read">Borrowing a clock you are not allowed to read</h1>
+<p>This project has a rule near the top of its list: nothing reads the wall clock of the
+machine it is running on. Everything is paced by a simulated clock published as a stream of
+discrete samples, so a run can be slowed down, sped up, paused or replayed and every part
+of the system agrees about what time it is.</p>
+<p>It is a good rule and it is genuinely load-bearing. It is also, read literally, a rule that
+makes a smooth display impossible.</p>
+<p>A browser draws sixty frames a second. Simulation time arrives as samples at whatever rate
+the transport delivers them — perhaps one a second, perhaps less. If the display only moves
+when a sample arrives, it moves once a second and holds still in between, which does not
+look like a slow clock. It looks like a broken program.</p>
+<!-- more -->
+<h2 id="the-conventional-fix-is-the-forbidden-thing">The conventional fix is the forbidden thing</h2>
+<p>Everybody solves this the same way. You keep the two most recent samples, and between them
+you interpolate using the browser's own animation timestamp — how far through the gap are
+we, in real milliseconds? — and you draw the intermediate value.</p>
+<p>That timestamp is host time. It is precisely what the rule forbids, and there is no clever
+substitute: the information you need is &quot;how much real time has passed since the last
+sample&quot;, and only the host can tell you.</p>
+<p>So there are three honest options. Break the rule quietly. Ship a display that stutters.
+Or write down an exemption narrow enough that it cannot grow.</p>
+<p>The first is how a principle becomes decoration — one silent violation, and the next person
+to want one has a precedent instead of a rule. The second is a real answer and it was
+weighed: a display that steps at the sample rate is not wrong, it is just bad. It was
+rejected on the grounds that the display exists to be watched, and a display nobody can
+bear to watch is not evidence of anything.</p>
+<h2 id="the-exemption-is-three-rules-and-they-are-the-design">The exemption is three rules, and they are the design</h2>
+<p>The client may read the browser's animation timestamp for one purpose: interpolating
+between two received simulation clock samples, for display. Three constraints bound it,
+and each one closes a specific way the exemption could turn into the thing it is an
+exemption from.</p>
+<p><strong>It may only interpolate between two samples actually received — never extrapolate past
+the most recent one.</strong> This is the important one. Extrapolation would mean the display
+inventing a simulation time the clock has not reached, which is not smoothing; it is the
+display making a claim about the system that the system has not made. Interpolation between
+two known points cannot do that: every value it produces is one the clock has already been
+through.</p>
+<p><strong>Every arriving sample is authoritative and snaps the display to it.</strong> The interpolated
+value is discarded on arrival rather than blended with the new one. Blending is the shape
+that feels gentler and is worse: it lets error accumulate, so the display's idea of the
+time drifts steadily away from the clock's while never visibly jumping. Snapping means the
+worst case is one visible correction, bounded by the sample interval, and never a
+compounding lie.</p>
+<p><strong>Nothing derived from it leaves the render path.</strong> Not into a query, not into a message,
+not into a stored measurement, not into a screenshot's recorded time, not into any
+assertion in any test. The moment an interpolated value is written down somewhere, it stops
+being a rendering convenience and becomes a fact the system believes.</p>
+<h2 id="what-did-not-work">What did not work</h2>
+<p>The first shape of this had the display continue moving when samples stopped arriving —
+carrying on at the last known rate, on the reasoning that a gap is probably transport
+latency rather than a stopped clock, and that freezing looks like a bug.</p>
+<p>It is wrong for a reason worth naming. If the clock is running at a rate of zero, samples
+stop; if the transport has failed, samples stop. The display cannot tell those apart, and
+a display that keeps moving has <em>chosen</em> one of them and shown it to a person as fact. A
+paused simulation would be drawn as a running one.</p>
+<p>Holding at the last sample gets both cases right by refusing to distinguish them: a rate of
+zero and a broken transport both look like a display that has stopped, which is exactly what
+is true in each. Preferring the reading that makes both cases honest, over the one that
+makes the common case prettier, is the trade this project keeps making.</p>
+<h2 id="what-is-now-known">What is now known</h2>
+<p>The value of an exemption is entirely in how narrowly it is written, and the way to write
+it narrowly is to enumerate the ways it could grow and forbid each one by name. &quot;Host time
+for display smoothing&quot; is a sentence anybody could argue their way past. &quot;Interpolate only,
+never extrapolate; snap on arrival; nothing leaves the render path&quot; is not.</p>
+<p>It was also worth the delay. This was originally carried in the feature's specification as
+an open complexity item rather than committed quietly to the code, which meant that when it
+came to be decided there was a written record of somebody knowing it was a violation — and
+that is the difference between an exemption and a slip that nobody has noticed yet.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

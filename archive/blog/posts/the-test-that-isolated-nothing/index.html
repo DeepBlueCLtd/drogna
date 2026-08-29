@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="How fast a place forgets a measurement had to become a field rather than a property of a feature. Then a test written to isolate one feature turned out not to isolate it, and the generator was right.">
+<title>The test that isolated nothing — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="the-test-that-isolated-nothing">The test that isolated nothing</h1>
+<p>You measured the temperature at a spot in the ocean an hour ago. How much is that
+measurement worth now? In water that is churning through a sharp
+<a href="../../../../glossary/#front">front</a>, very little.
+In quiet water a hundred metres down, a great deal. The quantity governing that decay
+is the
+<a href="../../../../glossary/#decorrelation-timescale">decorrelation timescale</a>, and drogna needs
+it because it decides where to sample next: fast-changing water gets revisited often
+and quiet water gets left alone.</p>
+<!-- more -->
+<p>The obvious place to put such a number is on the thing that makes the water
+interesting. drogna's synthetic ocean is built by seeding four features into a
+background — an eddy, a front, a <a href="../../../../glossary/#thermocline">thermocline</a> and one
+feature that drifts — so give
+each of them a timescale. An eddy decorrelates faster than open water; the model
+matches the intuition; it is trivial to record in the ground-truth manifest.</p>
+<p>It does not survive contact with what consumes it.</p>
+<h2 id="two-formulations-that-fail">Two formulations that fail</h2>
+<p><strong>Per feature.</strong> The requirement that quiet water be left alone is a statement about
+the background, and per-feature authoring gives the background no timescale at all.
+Every location outside a feature — most of the domain — would need a value invented
+for it at the point of use. An invented value is not ground truth, so it cannot be
+scored, and drogna's rule is that every claim about recovering the environment is
+measured against what the generator recorded rather than asserted.</p>
+<p><strong>Per region.</strong> A static map over the domain, giving everywhere a timescale including
+the background. This closes the gap and is defensible physically. It cannot follow the
+drifting feature: the fast-decorrelating patch would stay where it was authored while
+the water it describes moved away, so the revisit cadence would be applied to the
+wrong water — confidently, and with no symptom.</p>
+<p>So the timescale is a <strong>field</strong>: a value at every latitude, longitude, depth and time.
+Authored per feature over a domain-wide background, because that is how a person writes
+a scenario. Evaluated per location, because that is what every consumer needs. A moving
+feature carries its timescale with it.</p>
+<h2 id="rates-blend-timescales-do-not">Rates blend, timescales do not</h2>
+<p>Two features can overlap, so something has to say what happens where they do, and the
+rule that suggests itself — average the timescales — is wrong in a direction worth
+noticing. A location inside two fast features would come out <em>slower</em> than either of
+them.</p>
+<p>The blend is therefore done in rates: one over the timescale, which is how fast memory
+is lost, and losses compose by adding. Each feature contributes a membership weight
+from its spatial kernel. Where those weights sum to one or less, the rate is the
+background's plus, for each feature, its weight times the difference between that
+feature's rate and the background's. Where they sum above one, the weights are
+normalised by their sum and the background drops out.</p>
+<p>The normalisation is not tidiness. The additive form alone can drive the timescale
+<em>below</em> the shortest contributing one where two weights are both near one, which the
+requirement's own scenario forbids. Both branches are convex combinations and they
+agree exactly where the weights sum to one, so the field is continuous, equals the
+background where nothing overlaps, equals a feature's own authored timescale at its
+centre, and where features overlap lies between the shortest contributing timescale
+and the background. The rule is recorded in the manifest by name and version, so a
+different rule replaces it without a schema change.</p>
+<h2 id="the-test-that-did-not-do-what-it-said">The test that did not do what it said</h2>
+<p>The claim to be checked is that the minimum of the field sits on the drifting feature
+and moves with it. Testing it needs a world in which that feature is unambiguously the
+fastest thing present, so: give the other three the background timescale, and the
+drifting feature should be the only disturbance left.</p>
+<p>It is not. Run that world and the shortest timescale sits 14.8 km from the drifting
+feature's centre — a long way on a domain a couple of hundred kilometres across.</p>
+<p>Membership and timescale are separate quantities. A feature's weight at a location
+comes from its spatial kernel and its own geometry, and is completely unaffected by
+what timescale it carries. Where the weights sum above one, the blend normalises by
+their sum — and the background, the very value the other features were just given,
+drops out of the arithmetic entirely. A feature holding the background timescale still
+pulls the blend towards itself and still moves the argument of the minimum. Setting the
+value without removing the weight neutralised nothing.</p>
+<p>The generator was right and the test was wrong, which is worth stating plainly because
+the reflex when a test fails is the other way round. Isolating a feature means removing
+its geometry, not changing its number. The eddy and the front are shrunk to a kilometre
+and moved to the far corner of the domain, which is as close to absent as the generator
+permits — it refuses a feature placed outside the domain rather than clipping it, on
+the ground that a clipped feature is one the manifest describes and the field does not
+contain. The thermocline needs no such treatment: its weight is a function of depth
+alone, so it dilutes the field uniformly and cannot displace a horizontal minimum.</p>
+<p>All of that is written into the test, at length, because it is exactly the kind of
+thing the next reader will otherwise try again.</p>
+<p>The check that matters most does not use the isolated world at all. In the world the
+generator actually writes, with all four features pulling on the field, the location of
+the minimum is found at two simulation times three hours apart, and the displacement
+between them is asserted against the drift velocity times the elapsed time, to within
+one grid cell. That is the property the whole decision was made for.</p>
+<h2 id="a-refusal">A refusal</h2>
+<p>One more rule earns its place. A timescale shorter than a configured multiple of the
+time step — twice, today — is refused when the scenario is authored, before anything
+is written, with the offending ratio in the message so the author can see how far
+under it fell. A field cannot represent decay faster than its own sampling interval,
+and a timescale it cannot represent does not announce itself: it quietly produces a
+revisit cadence that is wrong.</p>
+<p>The values in use: three days for the background, thirty-six hours for the thermocline,
+eighteen for the front, twelve for the eddy, six for the drifter. All of them are
+recorded as ground truth, which means that recovering them later is a measurement
+rather than a claim.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

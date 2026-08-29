@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-06 Observation store — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-06-observation-store">C-06 Observation store</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>stores/observations/</code> — the migration, the grants in <code>roles.sql</code>, and
+<code>apply.py</code>, which orders them and emits a digest guard after each so an edited
+migration stops a run rather than leaving two instances quietly disagreeing</li>
+<li><strong>Delivered by:</strong> <code>specs/007-observation-path</code></li>
+<li><strong>Covered by:</strong> <code>tests/integration/test_observation_path.py</code>, which provisions a
+PostGIS container through the store's own tooling and reconciles the counts; it
+skips without a container runtime</li>
+<li><strong>Not present:</strong> nothing applies the provisioning at scenario start —
+<code>deploy/seed.d/</code> holds no steps yet, so <code>scripts/seed.sh</code> runs none and
+provisioning is a deliberate invocation. There is also no quality-flag column, for
+the reason given on the <a href="../c04-simulated-sensors/">simulated sensors</a> page</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> persist point observations.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>Postgres with PostGIS, holding point observations: position, depth, simulation
+time, value, and the <a href="../../../glossary/#datastream">datastream</a> the reading belongs
+to, which carries the <a href="../../../glossary/#observed-property">observed property</a>, the
+unit and the instrument that produced it. It is the punishing write path — many
+small inserts arriving continuously — as opposed to the read-mostly reference
+data next door.</p>
+<p>There is no quality flag on a stored reading, and that is a decision rather than
+an absence. A reading that fails its contract is refused at ingestion and
+counted, so what reaches a row has already been judged; a flag would record on
+every row a question that was answered before the row existed. <strong>ADR-0014</strong> sets
+this out, and the <a href="../c04-simulated-sensors/">simulated sensors</a> page says what it
+means where the readings are produced.</p>
+<h2 id="why-it-shares-an-instance-with-the-feature-store">Why it shares an instance with the feature store</h2>
+<p>The observation store and the <a href="../c07-feature-store/">feature store</a> are two
+schemas in one Postgres instance. The conceptual split is real and worth
+preserving in the schema names; the operational split is not worth two
+instances, two backup stories and two sets of connection configuration in a
+system meant to start with one command.</p>
+<h2 id="why-it-is-not-a-port">Why it is not a port</h2>
+<p>Postgres is not being swapped for anything. An interface over it would have
+exactly one implementation, would exist to look tidy, and would make the code
+harder to read in exchange for a flexibility nobody intends to use. drogna
+names the boundaries that are genuine ports — the model kernel, the coverage
+output, the clock, the RNG — and refuses to dress the others up as ports.
+Introducing an abstraction here requires a written decision record arguing why.</p>
+<p><strong>Requirements:</strong> FR-12, FR-18. <strong>Feature:</strong> 007.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>Architecture overview — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="architecture-overview">Architecture overview</h1>
+<p>drogna is an event-driven <strong>control loop</strong> with <strong>command–query separation</strong>.
+Those two phrases are the whole architecture, and the rest of this page is what
+they mean concretely, drawn as a flow rather than as a box diagram, because the
+interesting property of this system is temporal.</p>
+<p>Eighteen components are described one at a time in the
+<a href="../../subsystems/">subsystem reference</a>. This page is about how they fit
+together, and — in the last section — about how much pluggability the fitting
+actually buys, which is less than a diagram of this shape usually implies.</p>
+<h2 id="the-loop">The loop</h2>
+<p>The organising picture is a flow chart <strong>with a loop in it</strong>, not a hexagon. A
+static structural diagram of drogna would show the same components a hundred other
+systems have; what distinguishes it is the cycle, and a picture that cannot show
+a cycle cannot show the point.</p>
+<pre><code class="language-text">  ┌─▶ 1  SENSE
+  │       Simulated sensors sample the generated world at the platform's
+  │       position and publish readings on  obs/&lt;thing&gt;/&lt;datastream&gt;.
+  │
+  │       Two consumers, on purpose:
+  │         • the ingest client validates and batch-writes to the
+  │           observation store — the single ingestion seam
+  │         • the monitor subscribes to the same topics directly and
+  │           keeps a rolling window in memory
+  │            │
+  │            v
+  │   2  DECIDE
+  │       The monitor computes the residual between measured and forecast
+  │       sound speed — not temperature — and raises  ctl/divergence  only
+  │       when the residual persists in space or time. A single spike never
+  │       triggers a run. The monitor raises requests; it never invokes the
+  │       model.
+  │            │
+  │            v
+  │       The scheduler enforces a minimum interval between runs and rejects
+  │       a duplicate outstanding request, then raises  ctl/run-request.
+  │            │
+  │            v
+  │   3  ACT
+  │       The model runner announces  ctl/run-started  before computing
+  │       anything, runs the ensemble, and writes the forecast and
+  │       uncertainty fields into staging — and nowhere a reader can see.
+  │            │
+  │            v
+  │   4  PUBLISH
+  │       The publisher makes the completed run visible in one atomic step,
+  │       marks it current, and announces  ctl/run-published. Consumers
+  │       subscribe; nothing polls the query layer for freshness, because the
+  │       query layer has no notification mechanism.
+  │            │
+  └────────────┘
+        The newly published forecast is what the monitor scores the next
+        observations against. That is what closes the loop.
+</code></pre>
+<p>Three properties of that cycle are worth pulling out, because each is a decision
+that could have gone the other way.</p>
+<p><strong>Nothing polls.</strong> Every stage is entered because something announced that the
+previous one finished. The publisher's announcement is what tells the monitor its
+comparison target has changed, what tells the <a href="../../subsystems/c15-planner/">planner</a>
+there is a new uncertainty field to plan against, and what tells the browser client
+to redraw. A polling design would have worked and would have hidden every timing
+question this one makes visible.</p>
+<p><strong>Each stage may decline.</strong> The monitor may see a residual and stay quiet because
+it has not persisted. The scheduler may see a divergence and refuse because a run
+happened too recently. The planner may compute a route and publish an empty one
+because nothing was worth sampling. A loop in which every stage always fires is a
+loop with no policy in it.</p>
+<p><strong>The monitor reads the topics, not the store.</strong> It subscribes to observations
+directly and holds its window in memory, rather than querying the observation
+store during normal operation. This is the sharpest instance of the separation in
+the next section: the monitor is inside the system, and the store's read interface
+is for the outside.</p>
+<h2 id="commandquery-separation">Command–query separation</h2>
+<p>Two paths, and they do not meet.</p>
+<pre><code class="language-text">   WRITE PATH — commands                    READ PATH — queries
+
+   simulated sensors                        browser client
+        │  obs/&lt;thing&gt;/&lt;datastream&gt;              │  HTTPS
+        v                                        v
+   ingest client                             reverse proxy
+        │  the single ingestion seam:            │  TLS, authentication,
+        │  validate, batch, write                │  path policy, default deny
+        v                                        v
+   observation store  ◀───── select only ──  query layer (pygeoapi)
+   coverage store     ◀───── read only  ───────┘
+        ▲                                        │
+        │  atomic swap                           │  SensorThings over observations
+   publisher                                     │  OGC API-EDR over coverages
+                                                 v
+                                            CoverageJSON
+</code></pre>
+<p>Writes travel a short, direct path into storage through one seam. Reads are served
+<strong>exclusively</strong> through a standards-based query layer, and there is no bespoke read
+endpoint anywhere alongside it. That is the constraint the whole harness exists to
+test: not &quot;can a standards-based interface serve reads&quot;, but &quot;can it serve <em>all</em> of
+them, with nothing kept back for the awkward case&quot;.</p>
+<p>The interesting consequences are the awkward ones.</p>
+<ul>
+<li>The query layer holds <strong>select permission and nothing more</strong> on the observation
+store. It cannot write even by accident.</li>
+<li>The read path exposes <strong>no arrival time and no insertion time</strong> — only simulation
+time. A consumer able to filter on when a row was written could reconstruct the
+order the harness happened to write it in, which is not a fact about the
+simulated world.</li>
+<li>Internal consumers do <strong>not</strong> go out through the query layer and back. The
+planner reads the published uncertainty field directly through a port, because
+routing an internal consumer through the external read path would claim a seam
+that is not there.</li>
+<li>The query layer has no notification mechanism, which is precisely why the control
+namespace exists. Freshness is announced on the write side; the read side answers
+questions and volunteers nothing.</li>
+</ul>
+<h2 id="core-versus-plumbing">Core versus plumbing</h2>
+<p>Inside the boundary sits only the genuinely bespoke logic:</p>
+<ul>
+<li>residual and divergence rules</li>
+<li>scheduling policy</li>
+<li><a href="../../../glossary/#sound-speed">sound speed</a> computation</li>
+<li>quality flagging</li>
+<li>the uncertainty and planning mathematics — see the
+<a href="../../../algorithms/">algorithm derivations</a></li>
+<li>the data dictionary made executable</li>
+</ul>
+<p>Everything else — broker, query layer, reverse proxy, stores — is well-chosen
+plumbing. The distinction matters because it is the honest answer to &quot;what did you
+build?&quot;: six kinds of decision logic and a lot of configuration around them.</p>
+<h2 id="the-port-accounting">The port accounting</h2>
+<p>Ports-and-adapters is the governing discipline here, but it appears as annotation
+on the flow above rather than as the primary picture — and it is claimed only where
+it is real.</p>
+<p>This is the requirements document's own accounting, reproduced without rounding:</p>
+<table>
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Genuine port?</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model kernel</td>
+<td><strong>Yes</strong></td>
+<td>The numerics will certainly be replaced. Interface: initialisation state in, gridded field out.</td>
+</tr>
+<tr>
+<td>Coverage output</td>
+<td><strong>Yes</strong></td>
+<td>NetCDF today, Zarr plausibly later.</td>
+</tr>
+<tr>
+<td>Event publication</td>
+<td><strong>Marginal</strong></td>
+<td>The broker could change; unlikely to.</td>
+</tr>
+<tr>
+<td>Observation store</td>
+<td><strong>No</strong></td>
+<td>Postgres is not being swapped.</td>
+</tr>
+<tr>
+<td>Observation intake</td>
+<td><strong>No</strong></td>
+<td>Aspirational rather than real.</td>
+</tr>
+</tbody>
+</table>
+<p>Three of the five entries are the interesting ones, and they are the three that a
+system of this shape normally over-claims.</p>
+<p><strong>The model kernel is a genuine port and can be shown to be one.</strong> What makes it
+genuine is not that an interface was declared; it is that more than one
+implementation exists and is used. The analytic kernel
+<a href="../../../algorithms/advection/">advects and adds noise</a>; the persistence kernel holds
+the state still, which is simultaneously a second implementation and the reference
+a forecast has to beat. A test double satisfies the same protocol without either
+of them knowing. The contract is deliberately narrow — a state and a random
+generator in, two arrays out — and a kernel cannot read configuration, publish,
+write files, or know what an ensemble is.</p>
+<p><strong>Event publication is marginal, and is wrapped thinly and documented as
+marginal.</strong> It is not dressed up. Substituting the broker is conceivable and is
+not planned, and the wrapper is thin enough to be honest about that.</p>
+<p><strong>The observation store and observation intake are not ports and are not dressed
+as ports.</strong> Postgres is not being swapped, and an intake abstraction here would be
+aspiration rather than design. This is the row that matters most on this table,
+because it is the one a diagram would silently upgrade: draw a box around a
+database and an arrow into it, and a reader infers a seam that nobody intends to
+use. There is no such seam. The store is named, and its schema is part of the
+system.</p>
+<h3 id="two-more-from-the-constitution">Two more, from the constitution</h3>
+<p>The requirements document's table lists five boundaries. The project's constitution
+counts <strong>four</strong> genuine ports, and its list is the two &quot;Yes&quot; rows above plus two
+the table does not consider at all:</p>
+<ul>
+<li><strong>The clock.</strong> No component calls a wall-clock function for any operational
+purpose; all time comes from the simulation clock service through a port, which
+is what makes accelerated replay possible.</li>
+<li><strong>The random-number generator.</strong> All stochastic behaviour derives from explicitly
+seeded generators reached through a port, which is what makes a run reproducible
+from its manifest.</li>
+</ul>
+<p>These are not a disagreement between the two documents so much as a difference in
+what each was enumerating: the requirements table is an audit of the <em>architectural</em>
+boundaries a reader might otherwise assume were pluggable, and the constitution is
+a list of the interfaces every component must go through. Both are stated here
+rather than merged, because merging them would produce a count — &quot;four ports&quot; or
+&quot;two ports&quot; — that is wrong under one reading or the other.</p>
+<h3 id="the-boundaries-that-look-like-ports-and-are-not">The boundaries that look like ports and are not</h3>
+<p>Worth naming explicitly, because each is a place where an architecture diagram
+would happily draw a socket:</p>
+<table>
+<thead>
+<tr>
+<th>Looks like a seam</th>
+<th>What it actually is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The observation store</td>
+<td>A named Postgres schema. Not swappable, not abstracted.</td>
+</tr>
+<tr>
+<td>Observation intake</td>
+<td>One ingest client with one seam into one store.</td>
+</tr>
+<tr>
+<td>The query layer</td>
+<td>pygeoapi with two provider plugins written for this harness. Standards-based, but not a slot another implementation drops into.</td>
+</tr>
+<tr>
+<td>The reverse proxy</td>
+<td>nginx with a path policy. Configuration, not an interface.</td>
+</tr>
+<tr>
+<td>The broker</td>
+<td>Marginal at best; see the table above.</td>
+</tr>
+<tr>
+<td>The browser client</td>
+<td>A consumer of the read path. Nothing is pluggable behind it.</td>
+</tr>
+</tbody>
+</table>
+<p>The harness claims exactly the pluggability it has, and neither its code nor its
+documentation claims more. A demonstration system that overstated its seams would
+be worth less as evidence than one that states a small number of them accurately —
+which is the same argument the <a href="../../../standards/sensorthings/">SensorThings primer</a>
+makes about conformance, for the same reason.</p>
+<h2 id="where-to-go-next">Where to go next</h2>
+<ul>
+<li>The <a href="../../subsystems/">subsystem reference</a> — all eighteen components, one
+page each, with the failure mode each one owns.</li>
+<li>The <a href="../../../algorithms/">algorithm derivations</a> — the arithmetic inside the
+ACT and the planning stages.</li>
+<li>The <a href="../../../standards/">standards primers</a> — what the read path speaks.</li>
+<li>The <a href="../../../glossary/">glossary</a> — the vocabulary, none of it assumed.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

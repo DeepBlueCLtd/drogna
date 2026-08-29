@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-17 Offload packager — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-17-offload-packager">C-17 Offload packager</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>services/offload/</code> — <code>bundle.py</code> and <code>writer.py</code> for the package,
+<code>verify.py</code> and <code>ledger.py</code> for the integrity guarantee and the record of what has
+been confirmed, and <code>evict.py</code>, which will not delete anything the ledger does not
+show as received</li>
+<li><strong>Delivered by:</strong> <code>specs/014-offload-export</code></li>
+<li><strong>Covered by:</strong> <code>services/offload/tests/</code>,
+<code>tests/integration/test_offload_crash_recovery.py</code>,
+<code>tests/integration/test_offload_receipt_paths.py</code> and
+<code>tests/integration/test_offload_provenance_scan.py</code>; the CF conformance of what it
+writes is a build gate, <code>scripts/check_cf_conformance.py</code></li>
+<li><strong>Not present:</strong> the bundle's copy of the run manifest does not yet carry the
+measurement geometry block, which is the ground truth the second leakage check on
+the <a href="../c10-reverse-proxy/">reverse proxy</a> page scores against. The shape is
+declared and the reader refuses loudly without it; the producer would need a
+source of measurement positions this component does not have</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> export with an integrity guarantee.
+<strong>Owns the failure mode of:</strong> premature eviction.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It packages data for transfer off the system as NetCDF following the
+<a href="../../../standards/cf-conventions/">CF conventions</a>, with an integrity guarantee
+attached, so that the receiving end can establish that what arrived is what was
+sent.</p>
+<h2 id="premature-eviction">Premature eviction</h2>
+<p>The failure mode it owns is deleting the local copy before the transfer is
+confirmed. This sounds like a trivial ordering bug and is in fact the central
+design constraint: an offload packager that reports success on write rather than
+on confirmed receipt will, on the day the link drops mid-transfer, lose data
+that cannot be regenerated.</p>
+<p>The integrity guarantee is what makes confirmation possible. Without it,
+&quot;confirmed&quot; means &quot;the bytes stopped arriving&quot;, which is indistinguishable from
+a truncated transfer.</p>
+<h2 id="why-the-format-matters-here">Why the format matters here</h2>
+<p>An export is the point at which data leaves the system's own conventions and has
+to stand on its own. A CF-conforming NetCDF file carries its own units, its own
+coordinate definitions and its own description of what each variable means. A
+file whose meaning depends on documentation held elsewhere is a file that will
+be misread.</p>
+<p>This is also one of the two tested leakage paths: NetCDF global attributes are
+a natural home for provenance — paths, usernames, software versions — and
+reviewing them by eye is not a control.</p>
+<p><strong>Requirements:</strong> FR-43, FR-44. <strong>Feature:</strong> 014.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

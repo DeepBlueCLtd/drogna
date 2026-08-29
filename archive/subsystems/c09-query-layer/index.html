@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-09 Query layer — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-09-query-layer">C-09 Query layer</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>query/</code> — the pygeoapi configuration template, and the bespoke plugins
+under <code>query/plugins/</code>: the <a href="../../../glossary/#trajectory">trajectory</a> provider, the
+position and cube provider,
+the CoverageJSON encoder, the run catalogue and the SensorThings provider</li>
+<li><strong>Delivered by:</strong> <code>specs/008-query-layer</code>, after the spike recorded in
+<code>specs/002-edr-trajectory-spike</code> and <code>spikes/edr-trajectory/</code></li>
+<li><strong>Covered by:</strong> <code>tests/integration/test_edr_trajectory.py</code>,
+<code>test_edr_position_cube.py</code>, <code>test_sensorthings.py</code>,
+<code>tests/unit/test_wkt_m_ordinate.py</code> — the M-ordinate assertion described below —
+and <code>tests/acceptance/test_at01_trajectory.py</code></li>
+<li><strong>Not present:</strong> SensorThings Part 1 is served as a declared subset.
+<code>query/conformance.md</code> lists what is absent and why, including the MQTT
+subscription extension and query options inside an expansion</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> SensorThings and EDR read access.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>pygeoapi, configured to expose two read interfaces:
+<a href="../../../standards/sensorthings/">SensorThings</a> Part 1 over the observation store,
+and <a href="../../../standards/ogc-api-edr/">OGC API-EDR</a> over the coverage store. All
+reads go through here. Nothing else is permitted to read the stores directly,
+which is the query half of command–query separation and the reason the read path
+can be reasoned about at all.</p>
+<h2 id="the-trajectory-query">The trajectory query</h2>
+<p>The interesting query is the four-dimensional one: given a planned route with a
+timestamp at every vertex, return the conditions forecast for the <em>moment of
+arrival</em> at each point, not the conditions at query time. That is a
+<a href="../../../glossary/#trajectory">trajectory</a> query in EDR terms, and it is the
+client's centrepiece.</p>
+<p>It also turned out to be the load-bearing unknown. No supplied pygeoapi provider
+implements trajectory queries: the provider matrix lists the relevant provider
+as position and cube only, and its source defines no trajectory method. So it
+was a build and not a configuration exercise, and the bespoke EDR provider
+plugin that came out of it sits behind the coverage output port in
+<code>query/plugins/</code>.</p>
+<h2 id="the-version-pin-that-matters">The version pin that matters</h2>
+<p>EDR expresses per-vertex timestamps as WKT <code>LINESTRINGM</code>, with the M ordinate
+carrying vertex time. Below Shapely 2.1 built against GEOS 3.12, M comes back as
+NaN: the timestamps are lost silently, before any provider code runs, and the
+query returns a plausible wrong answer rather than an error. The deployment pins
+those versions, the pin carries a comment saying why, and a test asserts that M
+survives parsing.</p>
+<p><strong>Requirements:</strong> FR-19 to FR-21, FR-50, FR-51. <strong>Feature:</strong> 008.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

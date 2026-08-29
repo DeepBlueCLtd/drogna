@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A component published a count and a mean of its errors. Downstream needed a bias, an RMS and a skill score. None of the three survives that summary, and nothing in either component would have said so.">
+<title>The mean of magnitudes — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="the-mean-of-magnitudes">The mean of magnitudes</h1>
+<p>drogna's telemetry component exists to answer one question: is the forecast any
+good? It answers it by comparing what the model predicted against what the sensors
+measured, and — crucially — against what you would have got by assuming nothing
+changed. That last comparison is the one that matters. A forecast that beats
+<em>persistence</em> has earned its compute; one that does not is an expensive way of
+saying &quot;much as before&quot;.</p>
+<p>To do that it consumes what the monitor already publishes. And the monitor
+publishes this:</p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: &quot;residual-summary&quot;,
+  &quot;scored&quot;: 1184,
+  &quot;exceeding&quot;: 12,
+  &quot;outside_domain&quot;: 3,
+  &quot;shed&quot;: 0,
+  &quot;mean_absolute_m_per_s&quot;: 1.37
+}
+</code></pre>
+<p>A count, and a mean of the magnitudes. It is a perfectly sensible thing to
+publish. It answers &quot;how wrong are we, roughly?&quot; in one number, it costs nothing
+to compute, and it is what almost anyone would write.</p>
+<p>It also makes three of the four figures telemetry needs impossible to compute, and
+neither component contains anything that would tell you so.</p>
+<!-- more -->
+<h2 id="what-does-not-survive">What does not survive</h2>
+<p><strong>Bias is gone, and it went first.</strong> Bias is the <em>signed</em> mean: it tells you the
+forecast runs warm or runs cold. <code>mean_absolute_m_per_s</code> is the mean of <code>|r|</code>, and
+the absolute value is applied before the averaging. A forecast that is 1.4 m/s too
+warm everywhere and a forecast that is 1.4 m/s too warm in half the domain and 1.4
+too cold in the other half produce the identical number here. The first has a bias
+of +1.4 and is a calibration error you could correct in an afternoon. The second
+has a bias of 0 and is a structural problem. The summary cannot distinguish them,
+because the sign was discarded at the point of measurement and there is no
+arrangement of downstream arithmetic that brings it back.</p>
+<p><strong>RMS is gone, for a different and more fundamental reason.</strong> Root-mean-square
+needs the second moment — the mean of <code>r²</code> — and you cannot recover a second moment
+from a first. This is not a limitation of the format; it is that the mapping is
+not injective. Infinitely many error distributions share a mean absolute value and
+have wildly different RMS. Averaging is lossy in the way that matters: it is a
+projection, and what it projects away does not come back.</p>
+<p><strong>Skill is gone, and it was never close.</strong> The skill score is</p>
+<pre><code>skill = 1 − MSE(model) / MSE(persistence)
+</code></pre>
+<p>which needs two mean-squared errors, so it inherits the RMS problem twice over.
+Worse, it needs the <em>persistence</em> error, which means scoring each measurement
+against the reference field — the field that was current just before the latest
+forecast landed. That is a per-measurement operation. A summary has already thrown
+away the individual measurements, so there is nothing left to score.</p>
+<p>Of the four things telemetry wanted, exactly one survives the summary: the count.
+And the mean magnitude itself, which is a real number about a real thing, just not
+any of the ones being asked for.</p>
+<h2 id="the-interesting-part-is-that-nothing-breaks">The interesting part is that nothing breaks</h2>
+<p>Here is what makes this worth writing down rather than just fixing.</p>
+<p>If nobody notices, the system works. The monitor publishes correctly. Telemetry
+receives correctly. The schema validates. Every test passes. A skill score appears
+on a dashboard, and it is a number, and it is wrong — not wrong in the sense of
+miscalculated, but wrong in the sense that no calculation could have produced it
+from the available inputs, so whatever produced it was reaching for a value that
+was not there.</p>
+<p>That is the failure mode drogna is arranged against, and it is why the
+constitution has a principle that ground truth is <em>scored, not assumed</em>. The
+component could have divided the numbers it had and published something. It would
+have looked exactly like the truth.</p>
+<p>Instead the accumulator carries this:</p>
+<pre><code class="language-python">class Basis(StrEnum):
+    &quot;&quot;&quot;Which inputs an aggregate was built from, and so which figures it can support.&quot;&quot;&quot;
+
+    NONE = &quot;none&quot;
+    SAMPLES = &quot;samples&quot;
+    SUMMARIES = &quot;summaries&quot;
+    MIXED = &quot;mixed&quot;
+</code></pre>
+<p>Four states, and the whole design is in the docstring's second clause. An aggregate
+knows what it was built from, and therefore what it is entitled to claim. Fed
+per-measurement samples, it reports <code>samples</code> and every figure is available. Fed
+summaries, it reports <code>summaries</code>, publishes the count and the mean magnitude, and
+returns <strong>null</strong> for bias, RMS and extremes — not zero, not a placeholder, not a
+best guess. Null, with a state saying why.</p>
+<p><code>MIXED</code> is the state that shows the design was taken seriously. If a scope receives
+some samples and some summaries, the aggregate is neither one thing nor the other,
+and pretending otherwise would be the same error in miniature. It says so.</p>
+<p>A test pins the behaviour, and it is the sort of test that only gets written if
+somebody decided the gap mattered:</p>
+<pre><code>test_a_summary_yields_a_count_and_a_mean_magnitude_and_null_moments
+</code></pre>
+<h2 id="whose-bug-is-it">Whose bug is it?</h2>
+<p>Nobody's, which is the point.</p>
+<p>The monitor's summary is not wrong. Reset at each forecast-run boundary, a count
+and a mean magnitude is a reasonable thing for a component to say about itself, and
+it was designed before anything downstream wanted a bias. The telemetry
+component's requirements are not wrong either. What is wrong is the seam, and the
+seam is invisible from either end: the monitor cannot see what will be asked of its
+output, and telemetry cannot see that what it is receiving is a projection rather
+than a sample.</p>
+<p>Summarising is a design decision about <em>which questions remain answerable</em>, and it
+is almost always made implicitly, by whoever writes the producer, at a moment when
+the consumer does not exist yet. <code>mean(|r|)</code> versus <code>sum(r)</code>, <code>sum(r²)</code> and <code>n</code> is
+three numbers against one, and the second set answers every question the first does
+plus bias, plus RMS, plus everything derived from them. The cost is two more floats
+per summary. That is the entire trade, and it is invisible unless someone states it.</p>
+<p>So the contract now carries the shape for the day the monitor emits it:</p>
+<pre><code>residual-sample: position, depth, signed residual, measured sound speed, run id
+</code></pre>
+<p>Signed, and per-measurement. Until then, half of one user story and the whole of
+another are exercised from fixtures rather than from live traffic — and that
+sentence is in the feature's report, in the schema description, and now here,
+rather than being quietly true and unmentioned.</p>
+<p>The number is not available yet. The system says so. That is the feature working.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-03 Broker — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-03-broker-mqtt">C-03 Broker (MQTT)</h1>
+
+<div class="admonition admonition-warning">
+<p class="admonition-title">Status: partly built</p>
+<ul>
+<li><strong>Code:</strong> <code>deploy/broker/</code> — <code>mosquitto.conf</code>, the <code>acl</code> that is the substance of
+the separation, and the two-broker fallback under <code>deploy/broker/two-broker/</code>; the
+service is declared in <code>deploy/compose.yaml</code></li>
+<li><strong>Delivered by:</strong> <code>specs/007-observation-path</code></li>
+<li><strong>Covered by:</strong> <code>tests/integration/test_topic_isolation.py</code>, which attempts each
+forbidden publish and subscription against a running broker and asserts the
+refusal. It needs a container runtime and skips loudly without one</li>
+<li><strong>Not present:</strong> refused attempts are logged at the broker, but no count of them
+reaches the telemetry topic, so a component being denied is visible only to
+somebody reading the broker's log</li>
+</ul>
+<p>The credential half of this entry used to say the render step did not exist. It does:
+<code>deploy/lib/render_credentials.py</code> writes the broker's password file and each
+component's configuration from one set of per-role secrets, <code>deploy/env.template</code>
+declares a secret per role, and the tracked configurations name their role in the
+broker URL. Corrected 28 August 2026 — <strong>ADR-0016</strong>.</p>
+
+</div>
+<p><strong>Responsibility:</strong> pub/sub transport with namespaced topics.
+<strong>Owns the failure mode of:</strong> cross-contamination of flows.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>One MQTT broker carries two kinds of traffic on two separate topic namespaces:
+observations under one prefix, internal control events under another. Sensors
+are confined by access control list to the observation branch and cannot publish
+control traffic at all.</p>
+<p>The one exception the rules had to argue for is that a sensor may <em>read</em> the
+clock sample, and nothing else on the control branch. A component with no
+simulation time can only pace itself on the host clock, which is forbidden
+outright, so the property tested is not that a sensor cannot subscribe to the
+control namespace: it is that subscribing to it delivers the time and nothing
+else.</p>
+<h2 id="the-browsers-role-and-why-its-password-is-public">The browser's role, and why its password is public</h2>
+<p>The page in a browser is a fifth identity here, and the only one whose credential
+is readable by anyone who can load the page. That is deliberate rather than
+accidental, and it is safe for one reason: the role may <strong>subscribe to the control
+namespace and publish nothing at all</strong>. No observation branch, no write of any
+kind. The control namespace carries heartbeats, clock samples, telemetry
+indicators and run notices — material that is public-read by design — and the
+clearance protecting released data is a different credential on a different route,
+which is never placed in the document the browser fetches.</p>
+<p>The safety of that arrangement is entirely in the access control list, so the rule
+that keeps it true is that this role never gains a permission. The isolation test
+asserts the negative at a running broker rather than by reading the list back,
+which is the form that would notice if it did. <strong>ADR-0001</strong> and its amendment
+<strong>ADR-0020</strong> are the argument, in the
+<a href="../../../decisions/">decision records</a>.</p>
+<h2 id="why-one-broker-and-not-two">Why one broker and not two</h2>
+<p>Two brokers would enforce the separation physically and would double the
+operational surface for a system whose whole point is to be runnable from a
+clean checkout with one command. The separation that actually matters here is
+the one that prevents a misconfigured sensor from announcing a completed model
+run, and an access control list achieves that.</p>
+<p>Physical separation onto a second broker remains a documented fallback that
+requires configuration change only — which is a claim the topic-namespace
+discipline has to keep true. Once control traffic starts leaking into the
+observation namespace because it was convenient, the fallback stops being a
+configuration change and becomes a rewrite.</p>
+<h2 id="what-it-is-not">What it is not</h2>
+<p>It is not a queue with delivery guarantees the rest of the system leans on, and
+it is not the source of time. A broker-assigned timestamp used as truth is a
+wall-clock dependency wearing a disguise, and is prohibited for that reason.</p>
+<p><strong>Requirements:</strong> FR-14 to FR-16. <strong>Feature:</strong> 007.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-08 Coverage store — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-08-coverage-store">C-08 Coverage store</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>stores/coverage/</code> — <code>layout.md</code> is the normative convention and
+<code>validate_layout.py</code> enforces it; the files are written by <code>services/publisher/</code>
+and read through <code>query/plugins/coverage_catalogue.py</code> and
+<code>services/monitor/src/harness_monitor/coverage.py</code></li>
+<li><strong>Delivered by:</strong> <code>specs/008-query-layer</code>, with the writing half in
+<code>specs/009-control-loop</code></li>
+<li><strong>Covered by:</strong> <code>tests/unit/test_coverage_catalogue.py</code>,
+<code>tests/integration/test_coverage_store_seam.py</code> and
+<code>tests/integration/test_new_run_servable.py</code>, which publishes a run and asserts it
+is servable with no configuration edit</li>
+<li><strong>Not present:</strong> the run manifest's shape is stated normatively in <code>layout.md</code> and
+enforced by code, but it has no master under <code>contracts/schemas/</code> as a
+generated-types source, which is why the shape is written down twice — in the
+publisher that writes it and the catalogue that reads it. <code>layout.md</code> records this
+as an outstanding gap</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> gridded forecast and uncertainty fields.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It holds model output: gridded forecast fields and the matching uncertainty
+fields, written as NetCDF following the
+<a href="../../../standards/cf-conventions/">CF conventions</a>. One model run produces one
+set of files; the store keeps several runs and knows which is current.</p>
+<h2 id="the-cataloguing-convention">The cataloguing convention</h2>
+<p>The requirement that shapes this component is that a new model run must become
+servable <em>without editing collection configuration</em>. The naming and directory
+convention has to carry enough information — run identifier, valid time,
+variable — for the <a href="../c09-query-layer/">query layer</a> to discover a new run
+rather than be told about it.</p>
+<p>This sounds like a filing preference and is actually the difference between a
+control loop that closes and one that needs a human in it. If publishing a run
+requires a configuration edit, the sense → decide → act → publish cycle stops at
+&quot;act&quot; and waits.</p>
+<h2 id="why-the-output-is-a-port">Why the output is a port</h2>
+<p>NetCDF today, Zarr plausibly later. This is one of
+the four boundaries drogna is willing to call a genuine port, because a second
+implementation is actually conceivable rather than theoretically conceivable.
+The bespoke <a href="../../../glossary/#trajectory">trajectory</a> provider described under the
+<a href="../c09-query-layer/">query layer</a> sits behind this same port.</p>
+<p><strong>Requirements:</strong> FR-21, FR-29, FR-30. <strong>Feature:</strong> 008.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

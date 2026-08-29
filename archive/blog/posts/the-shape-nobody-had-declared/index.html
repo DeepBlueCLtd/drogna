@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A check forbids hand-writing the shape of a message that crosses between two programs. It had been passing for weeks with two hand-written copies of one shape sitting in the tree, and the reason is the same sentence in both halves.">
+<title>The shape nobody had declared — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="the-shape-nobody-had-declared">The shape nobody had declared</h1>
+<p>Two programs written in two languages have to agree about the contents of a message.
+One writes it, the other reads it, and if they disagree by one field name the failure
+arrives at runtime, in production, as a key error in the half that did not write the
+message.</p>
+<p>The standard answer is to write the shape down once, in a language-neutral schema, and
+generate both sides from it. Nobody hand-writes the Python class or the TypeScript
+interface; a script does, and a check compares the generated output against the schema
+so that an edit to the output is caught. That is what this project does, and it has a
+second check beside the first: a lint that fails if somebody declares a message shape by
+hand, beside the code that uses it, where nothing will ever regenerate it.</p>
+<p>Both checks were green. There were two hand-written copies of one shape in the tree, and
+had been for the whole life of the second check. Neither check was broken.</p>
+<!-- more -->
+<h2 id="the-check-can-only-forbid-what-it-has-been-told-about">The check can only forbid what it has been told about</h2>
+<p>The lint works by comparing candidate declarations against the schemas. It walks the
+repository looking for classes and interfaces that look like message payloads, and for
+each one it asks: is this the same shape as something under the schema directory? If it
+is, it is a second declaration of a shape that already has an authority, and that is a
+finding.</p>
+<p>Read that again with the failure in mind. A hand-written class is a finding <em>because a
+schema describes it</em>. A hand-written class describing something no schema describes is
+not a finding at all — it is an ordinary internal type, which the lint is explicitly not
+supposed to flag, because most classes in most programs are exactly that and a check that
+flagged them would be turned off within a day.</p>
+<p>So the rule has a hole shaped precisely like the problem it exists to prevent. The
+failure mode is somebody declaring a boundary shape beside the code that uses it and
+nothing regenerating it ever again — and the very first step of that failure, declaring
+it without a schema, is the step that makes it invisible.</p>
+<h2 id="what-was-actually-in-the-tree">What was actually in the tree</h2>
+<p>The security work scores a statistic against the ground truth of where measurements were
+taken: a list of positions and times, with a radius. That list was being carried around
+in a file beside the exported bundle, read with hand-written field checks, and described
+by no schema anywhere.</p>
+<p>Two places needed to read it. Both declared a small class called <code>Measurement</code> with the
+fields they expected. They had drifted no further than each other yet, which is the only
+luck in this story, and the checker that read the file accepted a longitude in the 0-360
+convention, a zero identification radius and any extra key you cared to add — silently,
+because a hand-written field check is a list of the mistakes its author happened to think
+of.</p>
+<p>The fix was not to the lint. The specification had said all along that a run's
+measurement locations belong in the run's own manifest, which is a document that <em>does</em>
+have a schema. Extending that schema with the block was a small edit.</p>
+<h2 id="what-did-not-work">What did not work</h2>
+<p>The first instinct was to treat the difference between the specification and the code as
+the specification being loose, and to reword it. That would have been the fourth time on
+this project that a requirement was quietly rewritten to match what had been built, and
+it would have been wrong here: the requirement was right. A run's measurement locations
+are the same kind of fact as its seeds and its versions, and the manifest is the document
+that carries facts of that kind.</p>
+<p>Putting the question the other way round — extend the schema or amend the requirement? —
+took a minute and produced the better answer. Folding the standalone document into the
+manifest also deleted two of its fields rather than moving them: they were the manifest's
+own identifiers, restated. A document that has to be carried beside another document
+usually turns out to be part of it.</p>
+<p>The second wrong turning was smaller and more instructive. Once the block was declared,
+the schema was deliberately weakened — the minimum-length rule and the longitude bounds
+removed, the types regenerated — to see whether the two tests that ought to notice would.
+They did not, at first. They had been asserting that a valid document was accepted, which
+a validator with no rules also does. They now assert refusal, and were watched failing
+with <code>DID NOT RAISE</code> before the schema was restored.</p>
+<h2 id="what-is-now-known">What is now known</h2>
+<p>Declaring the shape took about ten minutes and immediately produced two findings that had
+been sitting in the tree, invisible, for as long as the check that should have found them
+had existed. Both places now import the generated model, and ten malformed documents were
+each watched being refused by name and by field.</p>
+<p>The general form is worth stating because it applies to every check of this kind: <strong>a gate
+that compares the code against a declaration cannot see anything nobody declared.</strong> Its
+clean run is a statement about the declarations, not about the code. The cheap defence is
+that writing a schema is not documentation of a decision already taken — it is the thing
+that makes the decision visible to everything downstream, including the checks you are
+relying on to tell you when you get it wrong.</p>
+<p>One shape is still hand-written, in the component that reads observations, and it stays
+that way on purpose: it never crosses a boundary, so no schema describes it and none
+should.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

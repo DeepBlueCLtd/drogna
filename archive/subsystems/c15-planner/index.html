@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-15 Planner — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-15-planner">C-15 Planner</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>services/planner/</code> — <code>value.py</code>, <code>collapse.py</code> for the simulated
+collapse of uncertainty along a route, <code>select.py</code> for the prize-collecting
+selection, <code>projection.py</code> for the forward growth, and <code>commitment.py</code> for the
+receding horizon</li>
+<li><strong>Delivered by:</strong> <code>specs/011-adaptive-planner</code></li>
+<li><strong>Covered by:</strong> <code>services/planner/tests/</code>, including <code>test_optimality_gap.py</code> and
+<code>test_selection_determinism.py</code>, plus
+<code>tests/integration/test_planner_replans_on_new_field.py</code> and
+<code>tests/integration/test_plan_carries_no_instruction.py</code>, which asserts the
+boundary described below rather than trusting it</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> adaptive sampling recommendations.
+<strong>Owns the failure mode of:</strong> crossing into tactical advice.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It reads the uncertainty field and works out where sampling would reduce it
+most, then emits a route. The interesting part is that it simulates the
+<em>collapse</em> of uncertainty along each candidate route as that route is traversed,
+so the value of a distant objective decays as nearer sampling resolves the same
+thing. Without that, a planner recommends every high-uncertainty cell
+independently and produces a route that visits the same information twice.</p>
+<p>It replans on a receding horizon as measurements arrive, and it projects
+uncertainty growth forward so that it can report when a region <em>will</em> fall below
+usable confidence — which makes the output schedulable rather than merely
+reactive.</p>
+<p>The route selection problem is treated as
+<a href="../../../glossary/#orienteering">orienteering</a>, or prize-collecting: a
+budget is spent on the cells worth visiting. It is explicitly not a
+travelling-salesman problem, because nothing requires every cell to be visited
+and treating it that way produces long routes that acquire nothing.</p>
+<h2 id="the-boundary-it-defends">The boundary it defends</h2>
+<p>The planner emits recommendations. It does not command, does not task, and does
+not advise a human directly. Rendering and advice happen downstream.</p>
+<p>This is a line worth stating precisely, because it is easy to state loosely.
+Computing where sampling would most reduce uncertainty <em>is</em> decision logic, even
+when nothing ever draws it. The boundary being defended is not &quot;does the system
+decide&quot; — it does — but <em>who recommends</em>: the system produces a recommendation,
+and a human elsewhere decides what to do with it.</p>
+<p><strong>Requirements:</strong> FR-32 to FR-36. <strong>Feature:</strong> 011. See also the derivation of
+<a href="../../../algorithms/informative-path-planning/">informative path planning</a>.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

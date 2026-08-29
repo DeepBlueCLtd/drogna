@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Two halves of a system were built at the same time against one shared convention. They disagreed about five things, every test on both sides passed, and nothing either of them wrote could ever have been read by the other.">
+<title>One file, two readings — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="one-file-two-readings">One file, two readings</h1>
+<p>Two parts of a system share a directory on disk. One writes into it, the other reads out
+of it. That is a good seam: no network call, no shared library, no interface to keep in
+step — just a documented layout that both sides obey. It is the kind of dependency you
+can build either side of independently, which is why the plan put them in the same wave
+and named the layout as the one thing they shared.</p>
+<p>The plan also named the risk in a sentence: the two might disagree about the layout, so
+one of them owns the document. That mitigation is doing much less work than it looks like
+it is doing. Owning a document does not make anybody read it.</p>
+<p>They were built simultaneously and disagreed about five separate things, including the
+one that made the other four irrelevant.</p>
+<!-- more -->
+<h2 id="the-five-disagreements">The five disagreements</h2>
+<p>Where the root of the store sits. Whether runs sit directly under it or inside a
+subdirectory. What the file describing a run is called. What prefixes a run directory's
+name. And how the pointer that names the current run is written.</p>
+<p>The first four are spelling. Given time, somebody would have noticed a path that did not
+resolve, fixed one name, then the next, and so on. Annoying, visible, and self-announcing
+the moment the two halves were run together.</p>
+<p>The fifth is not spelling. The writer created the pointer as a <strong>symbolic link</strong> to the
+run's directory. The reader opened the pointer as a <strong>text file</strong> and expected one
+identifier on one line.</p>
+<p>Reading a symlink-to-a-directory as a text file does not return a name. It raises. So
+nothing the writing half published could ever have been visible to the reading half — in
+either direction, whatever the other four names had been spelt as. Correcting all four
+would have left the reader refusing every run for a fifth reason.</p>
+<h2 id="every-test-passed">Every test passed</h2>
+<p>Both sides were thoroughly tested, and every test on both sides was green throughout.</p>
+<p>The writer's tests wrote a store and read it back with the writer's own code. The reader's
+tests built a store fixture and read it with the reader's own code. Each half was
+internally consistent and each half was correct about the store it had itself built.
+Nothing anywhere drove one into the other.</p>
+<p>That is the shape to recognise, because it is not a testing failure in the usual sense —
+nobody omitted a test they had thought of. It is that a convention shared by two
+components is a thing neither component can test alone, and both components' test suites
+will look complete without it. The seam is the thing under test, and the seam is exactly
+what a fixture replaces.</p>
+<h2 id="what-did-not-work-and-the-fifth-divergence-that-showed-why">What did not work, and the fifth divergence that showed why</h2>
+<p>Reconciling the four names first felt like progress and was not. The genuinely useful
+discovery came last: even with the paths agreed, the <em>contents</em> of the run's descriptive
+file did not match either. The writer was moving a staging descriptor into the store
+unchanged, and its keys were not the reader's keys — <code>status</code>, <code>member_count</code> and
+<code>digests</code> against a schema version, a root seed, a run sequence, a generator version, a
+simulation time and an ensemble block.</p>
+<p>So the pointer was one problem and the document was another, and both of them were the
+same underlying mistake: each half had built what was convenient for itself and called it
+the convention. The fix was a translation step in the writer — produce the document the
+layout describes, rather than forwarding the document you happen to have.</p>
+<h2 id="the-argument-for-the-symlink-and-why-it-lost">The argument for the symlink, and why it lost</h2>
+<p>The symlink had two real advantages and they should be stated, because the decision is
+not obvious. A reader can open the current field at a fixed path in one step, with no
+indirection. And two consumers had already assumed it, which is evidence about what people
+expect.</p>
+<p>It lost on a property the layout asks for that a symlink cannot express. The layout
+requires that &quot;two runs claim to be current&quot; be a <strong>reportable state</strong> — a writer that
+half-failed should leave evidence, and a reader should refuse and say which two.</p>
+<p>A symlink points at one thing or at nothing. The conflict is inexpressible: the writer
+cannot leave the evidence and the reader cannot report it. A text file can hold two lines,
+and the reader refuses and names both identifiers. The atomicity argument that usually
+decides this question is a wash — replacing a pending file is as atomic as replacing a
+pending link.</p>
+<h2 id="what-is-now-known">What is now known</h2>
+<p>A shared convention between two components is a third artefact, and it needs a test that
+is not owned by either of them: one that drives the real writer into the real reader. Both
+halves being green means both halves agree with themselves.</p>
+<p>And when choosing a representation for a piece of coordination state, ask what failures it
+has to be able to <em>represent</em>, not only what it has to say when things are going well. The
+symlink is a better answer to &quot;where is the current run&quot; and no answer at all to &quot;two
+things claim to be the current run&quot;, which is the question the layout actually asked.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

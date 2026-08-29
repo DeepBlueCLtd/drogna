@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Exporting data so that somebody who has never seen your project can plot it without writing bespoke code. The standard that makes it possible also made a provenance scanner report the standard's own vocabulary as suspicious.">
+<title>A file a stranger can open — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="a-file-a-stranger-can-open">A file a stranger can open</h1>
+<p>Data leaves this system as a file. Somebody else receives it, and the test of whether the
+export is any good is simple to state and hard to pass: can a person who has never seen
+this project open the file in a standard tool and plot something, without writing code
+against a description of the format?</p>
+<p>Most exports fail that test in the same way. They are perfectly good arrays of numbers whose
+meaning lives somewhere else — in a wiki page, in a README, in the head of the person who
+wrote the exporter. Which is fine until the wiki moves, or until the reader in three years
+is not the reader the documentation was written for. The fix is not more documentation. It
+is putting the meaning inside the file.</p>
+<!-- more -->
+<h2 id="self-description-is-a-controlled-vocabulary-not-a-comment">Self-description is a controlled vocabulary, not a comment</h2>
+<p>The conventions this export follows do two things that a homemade format usually does not.</p>
+<p>Units say a number is in degrees Celsius. A <em>standard name</em> says what is in degrees Celsius,
+drawn from a published table rather than invented at the keyboard. That is the difference
+between a file a program can interpret and a file a person has to. &quot;temp&quot;, &quot;temperature&quot;,
+&quot;sea_temp&quot; and &quot;t&quot; are four names for one quantity and no tool can unify them; one name from
+a controlled list is a name every tool already knows.</p>
+<p>The second is the harder one, and it is about shape. This export carries a series of
+vertical <a href="../../../../glossary/#profile">profiles</a> — a column of measurements at a position —
+taken at a sequence of positions along a path. That combination has a name in the
+conventions, as one of a small set of
+<a href="../../../../glossary/#discrete-sampling-geometry">discrete sampling geometries</a>: a
+<a href="../../../../glossary/#trajectory">trajectory</a> of profiles. Declaring it means a reader knows,
+from the file alone, that the depths belong to positions and the positions are ordered in
+time, rather than having to infer it from the dimension names.</p>
+<h2 id="the-ragged-case-is-where-homemade-formats-break">The ragged case is where homemade formats break</h2>
+<p>The profiles are not all the same length. The seabed is closer in some places than others,
+so the deeper columns are longer, and a rectangular array cannot hold them without padding.</p>
+<p>Padding is the obvious answer and it is a bad one. A fill value in a numeric array is a
+value; whatever sentinel you pick, some tool somewhere will average it, plot it, or take its
+minimum. The convention has a proper representation for this — the observations are stored
+end to end, with a count per profile saying how many belong to each — so the file contains
+exactly the measurements taken and no fabricated ones. That the export does this is
+asserted by a compliance check on every build, over a fixture run pushed through the real
+packaging code rather than a sample file kept beside the test.</p>
+<h2 id="what-did-not-work">What did not work</h2>
+<p>The bundle is also scanned for provenance leakage: does anything in the file give away a
+path, a hostname, a user, or the identity of a piece of equipment? The scanner works from an
+allow-list of attributes known to be harmless, and anything not on the list is reported.</p>
+<p>Run against a produced bundle it reported zero identifying hits — no path, no host, no user,
+no equipment identifier, no revealing coordinate, in either the data file or its sidecar.
+Good. It also reported a handful of attributes that were not on the list at all: the keys
+that declare the sampling geometry, the dimension names it requires, the geometry's own type
+string, and a conventional time-units string.</p>
+<p>Every one of those is the standard's vocabulary. The allow-list had been calibrated against
+the gridded products the release boundary normally handles, and this file is not one of
+those. The scanner was not wrong; it was being asked about a kind of file it had never been
+shown.</p>
+<p>The tempting move was to widen the allow-list on the spot and get a clean run. That was
+declined, for two reasons. Widening it is meant to be a deliberate, reviewable edit owned by
+the component that owns the boundary — making it a side effect of some other feature's work
+is how an allow-list stops meaning anything. And an exported bundle is not a released
+artefact in the sense that list is about, so the edit would have been made in the wrong
+place for the wrong reason.</p>
+<p>What was done instead: the specific attributes are pinned by name in the test, so a hit that
+is <em>not</em> one of them fails. &quot;Zero identifying hits&quot; is asserted. &quot;Zero findings from an
+unmodified rule file&quot; is not asserted, and the difference is written down rather than
+smoothed over.</p>
+<h2 id="what-is-now-known">What is now known</h2>
+<p>Two things, one about the standard and one about the record.</p>
+<p>Following a real convention costs more than inventing a format and it buys something
+specific: the file stops depending on documentation, which means it stops depending on the
+documentation still being findable and still being read. The ragged-profile representation
+is the part that would have been got wrong, because padding is easier and looks fine right
+up until somebody takes a mean.</p>
+<p>And a check that reports something you were not expecting is worth more than a check you
+tuned into silence. The honest close here was to write down exactly which claim is being
+made and which is not — because a green run whose rule file was edited to make it green is
+the same colour as a green run that means something, and only the record can tell them
+apart.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0028: dockview hosts the shell — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0028-dockview-hosts-the-shell">ADR-0028: dockview hosts the shell</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 29 August 2026
+<strong>Feature:</strong> 101 (foundations &amp; shell)</p>
+<h2 id="context">Context</h2>
+<p>SRD-v2 FR-14 requires a dockable multi-panel shell — tabs Intro, System, Map, Messages
+at first run, user-rearrangeable by drag and drop — hosting React panel content, with
+the arrangement serialisable as a per-viewer convenience. The plan (§9.5) deliberately
+did not pin a library: dockable drag/drop tabs are the requirement, and feature 101
+opens with a spike comparing golden-layout 2.x against maintained alternatives.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>dockview 8.x</strong> (<code>spikes/layout-manager/FINDING.md</code>). golden-layout has had no release
+since February 2023 and hosts React only by the manual-root pattern that made V1's
+shell wrapper its most delicate code; flexlayout-react is a sound second choice,
+recorded as such.</p>
+<p>The React-hosting pattern, which this ADR exists to record:</p>
+<ul>
+<li>One <code>DockviewReact</code> element owns the shell. Each panel is registered in a
+<code>components</code> map as an ordinary React component receiving <code>IDockviewPanelProps</code>;
+dockview mounts each into its own React subtree, so a panel re-renders on its own
+state and never re-mounts on layout changes.</li>
+<li>Panels are added once, in <code>onReady</code>, from the shell's configuration document —
+never from literals in the shell source (Constitution IV).</li>
+<li>The panel <code>id</code> is the unit of URL addressability (FR-15): <code>#/view/&lt;id&gt;</code> activates
+the panel via <code>api.getPanel(id).api.setActive()</code>, and activation writes the hash
+back, so the address bar always names the active view.</li>
+<li>Layout serialisation (<code>api.toJSON</code>) is presentation only. It is never persisted by
+the harness and never consulted by any component; a deep link selects what is
+shown, never what happened.</li>
+</ul>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<ul>
+<li><strong>golden-layout 2.x</strong> — unmaintained upstream; manual React roots.</li>
+<li><strong>flexlayout-react</strong> — viable; larger surface, more dependencies; kept as fallback.</li>
+<li><strong>Hand-rolled tabs</strong> — drag/drop docking is real work already done well elsewhere,
+and the shell is not the demonstration.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

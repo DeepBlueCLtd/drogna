@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR 0031 — The site is built in TypeScript, and the estate has two tenants — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0031-the-site-is-built-in-typescript-and-the-estate-has-two-tenants">ADR 0031 — The site is built in TypeScript, and the estate has two tenants</h1>
+<p><strong>Status:</strong> Accepted, 29 August 2026. Supersedes ADR-0010 (V1 site tooling).
+<strong>Date:</strong> 29 August 2026
+<strong>Requirements:</strong> SRD-v2 PR-04, PR-04a, NFR-04, NFR-05, PR-01; plan D16, D18, D19</p>
+<h2 id="context">Context</h2>
+<p>The published site was V1's, in three senses. Its tooling was MkDocs with
+mkdocs-material, pinned in <code>site/requirements.txt</code> — a second language runtime, which
+NFR-01 and NFR-05 now forbid outright. Its content described twelve containers and
+eighteen components, none of which run any more; its landing page said &quot;Nothing yet,
+other than this site.&quot; And its publication gates — five Python scripts checking links,
+external resources, the FR-01 statement, indexing and the documentation manifest — ran
+only inside <code>.github/workflows/pages.yml</code>, which the V2 retirement commit deleted. They
+had therefore been checking nothing for the whole of V2's implementation, and a tree
+where nothing checks the site looks exactly like a tree where the site is fine.</p>
+<p>Meanwhile the estate on <code>gh-pages</code> had gained a second tenant. <code>instances.yml</code> publishes
+a per-branch build of the app under <code>instances/&lt;slug&gt;/</code>, retained after its pull request
+completes (NFR-04), so that a review comment can deep-link a specific build at a specific
+view (D16, FR-15). Nothing listed them: the addresses existed and were discoverable only
+by already knowing them. And nothing had yet reconciled that tenant with the V1 site
+sitting at the estate root, which a V2 publication would have to replace without
+touching it.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>One.</strong> The site generator is TypeScript, under <code>scripts/site/</code>, run by
+<code>pnpm site:build</code>. Markdown is rendered by <code>markdown-it</code>, a build-time dependency in the
+same category MkDocs occupied — it never ships to a reader, and what reaches the estate
+is HTML with no script and no fetched sub-resource. The corpus was surveyed before the
+renderer was written (no footnotes, no mathematics, no definition lists, admonitions of
+exactly two kinds), so what is implemented is what the content uses. <code>site/mkdocs.yml</code>,
+<code>site/requirements.txt</code>, <code>site/overrides/</code>, <code>site/hooks/</code>, <code>site/tools/</code> and
+<code>site/gates/</code> are deleted. No Python remains under <code>site/</code>.</p>
+<p><strong>Two.</strong> The publication disciplines become four gates in <code>scripts/gates.registry</code> —
+<code>check-site-links</code>, <code>check-site-resources</code>, <code>check-site-publication</code>,
+<code>check-site-disclosure</code> — so they run in <code>pnpm gates</code>, in <code>pnpm check</code> and in CI, not
+only in a publishing workflow. Each builds the site into memory and inspects it, so no
+build step has to have run first. Each was watched failing on a planted violation before
+it was trusted.</p>
+<p><strong>Three.</strong> Two faults are removed rather than detected. Navigation is derived from the
+directory tree, so a page cannot be missing from it (V1 kept the navigation in
+<code>mkdocs.yml</code> and had <code>--strict</code> fail the build when a page was left out). The Version 1
+banner is a property of sitting under <code>archive/</code>, so it cannot be forgotten on a page and
+cannot be left on one that moves out.</p>
+<p><strong>Four.</strong> What carried, what was archived, what was retired:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Carried</strong></td>
+<td>The glossary and the component reference as first-class pages (D18); the standards primers and algorithm derivations, which are true of V2 unchanged; the decision records, published from <code>docs/adr/</code> with each status read out of the record; the no-external-request, noindex and FR-01-statement disciplines.</td>
+</tr>
+<tr>
+<td><strong>Archived</strong></td>
+<td>The seventeen V1 blog entries; the eighteen-component subsystem reference; the V1 architecture overview. All published, all bannered, all reached only from <code>archive/</code>.</td>
+</tr>
+<tr>
+<td><strong>Retired</strong></td>
+<td>The MkDocs toolchain and the Python gates; <code>site/docs/decisions/site-tooling.md</code>, which was a pointer to ADR-0010; <code>docs/manifest.yaml</code>; the OCR pass over published images.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Five.</strong> The component reference is generated from <code>contracts/topology.json</code> — the same
+master the app is built against and the topology-drift gate rebuilds — rather than
+written. V1's eighteen hand-written pages went stale twice, first claiming no code
+existed long after it did, then describing retired software. The generated reference
+cannot be wrong about which component may publish what; it can still be incomplete about
+what a component is <em>for</em>, and that is what the prose beside the tables is.</p>
+<p><strong>Six.</strong> The estate has two tenants and the boundary is enforced in code. The site owns
+the root; <code>instances/</code> is owned by <code>instances.yml</code>. <code>scripts/publish-site.ts</code> records a
+manifest of what it published and, next time, removes only those paths — and refuses to
+write or reap under another tenant's path even when handed a manifest that claims one.
+<code>scripts/estate-index.ts</code> regenerates <code>instances/index.html</code> from what the estate
+actually holds, so retained instances of completed branches stay listed. Each deployment
+writes an <code>instance.json</code> beside its build recording ref, commit and date; instances
+published before that file existed are listed saying their provenance is not recorded,
+rather than dropped or given a plausible blank.</p>
+<h2 id="consequences">Consequences</h2>
+<p>The site is buildable, checkable and previewable by anyone who has run <code>pnpm install</code>,
+with no second toolchain, and the disciplines that guard it are now part of the same
+check every other rule runs under. A gate can no longer be orphaned by deleting a
+workflow.</p>
+<p><code>docs/manifest.yaml</code> is retired rather than ported. Every gate that read it is deleted;
+its page list names V1 pages that are now archived, its component list names C-01 to
+C-21, and its one load-bearing entry — <code>adrs.published</code> — is now unconditional and
+covered by a test asserting that every record under <code>docs/adr/</code> is published. What is
+lost is the word-count floor machinery, which measured stubs by length; the part of it
+that did the work, that a page declaring itself a stub is a stub whatever its length,
+is kept as an assertion in <code>check-site-publication</code>. Should stubs reappear in quantity,
+the floors are worth rebuilding in TypeScript, and the reasoning that derived them from
+what was on disk is in this repository's history.</p>
+<p>One check is genuinely lost rather than ported. V1's site gate ran <strong>OCR over every
+published image</strong>, hunting an address bar or a host path burnt into a screenshot — the
+one place text reaches a reader that no source scan can see. An OCR engine is a second
+language runtime, which NFR-01 forbids outright, so it goes. What replaces it is not
+another check but a discipline that was already there: every screenshot comes from the
+capture mechanism under <code>scripts/capture/</code>, capture output is committed deliberately
+rather than swept in, and the entries that matter embed a running instance instead of a
+picture of one. The text half of that gate is carried as <code>check-site-disclosure</code>, which
+reads the published pages for an email address or a home-directory path.</p>
+<p>Its tracked-entity noun scan is deliberately not carried, and that is an inheritance
+rather than an omission: V1 ruled that documentation must be able to discuss a
+prohibition in order to state it, excluded the site from that scan, and recorded the
+reason. Seven lines of this site would match today and all seven are sentences about the
+rule. <code>check-vocabulary</code> still scans everything that is not documentation.</p>
+<p>The V1 site's URLs change. <code>/subsystems/c13-model-runner/</code> is now
+<code>/archive/subsystems/c13-model-runner/</code>, and the V1 entries move under <code>/archive/blog/</code>.
+The alternative was leaving the V1 tree in place beneath the V2 one, which would have
+published two contradictory sites at overlapping addresses; the content is kept, the
+addresses are not. The first publication finds no manifest — V1's estate was written by
+a tool that kept none — and that case is treated as the migration it is: everything at
+the root that is not another tenant is replaced.</p>
+<p>Only the default branch publishes the site. A branch's <em>app</em> is reviewable as its own
+instance, which is what review needs; a branch's <em>site</em> is reviewable by building it.</p>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<p><strong>Keep MkDocs.</strong> It works, the theme is good, and the corpus is written for it. It is
+also Python, and NFR-01's whole claim is that no step of building, testing, gating or
+demonstrating the system needs a second language runtime. A site build is a step. The
+cost of the rewrite is a renderer that supports what this corpus uses rather than
+everything Python-Markdown does; the cost of keeping it is that the claim becomes
+false, with an asterisk.</p>
+<p><strong>Port the Python gates one for one.</strong> Two of them — the manifest gate and the subsystem
+coverage gate — check a document structure that V2 does not have. Porting them would
+have meant keeping <code>docs/manifest.yaml</code> alive to give them something to read.</p>
+<p><strong>Leave the V1 site published beside the V2 one, at its own addresses.</strong> Attractive,
+because D18 says the estate grows rather than being rebuilt. Rejected because the site is
+one tenant, not two: two sites at overlapping roots would disagree, and the reader has no
+way to tell which is current. D18's concern is that a <em>review instance</em> not wait for a
+merge, and that instances stay addressable; both hold, and are enforced.</p>
+<p><strong>Hand-write the V2 component reference.</strong> It reads better. It is also the thing that
+went stale twice, and the second time it went stale it was describing software that had
+been deleted.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

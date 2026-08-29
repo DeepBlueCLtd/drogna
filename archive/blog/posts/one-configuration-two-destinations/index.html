@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A laptop and a small cloud server run the same stack, and the only thing that differs between them is a directory of values — checked by a script, because the drift starts on the day the second destination exists.">
+<title>One configuration, two destinations — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="one-configuration-two-destinations">One configuration, two destinations</h1>
+<p>drogna runs in two places: a laptop, and a small cloud server that exists so a
+demonstration has an address which persists. The usual arrangement for that is two
+compose files, or one plus a pile of overrides, and by the third month they are two
+systems that share a git repository.</p>
+<!-- more -->
+<p>The alternative here is a rule with no exceptions. There is one Compose file, naming
+every service drogna will ever have. A destination is a directory of values under
+<code>config/</code>. Nothing else distinguishes one from another: no service definition, no
+image, and no source file knows where it is running.</p>
+<p>That is held up by a constitutional rule about source code. No component contains a
+literal filename, directory path, hostname, port or URL. Each reads exactly one
+environment variable, which names its own configuration file, and validates that file
+against its schema as the first thing it does — before any I/O, so that invalid
+configuration is a startup failure with a readable message rather than a surprise
+three hours in. A <a href="../the-gate-that-examined-nothing/">lint gate</a> fails the build on a
+literal that slips through.</p>
+<h2 id="the-exceptions-and-why-they-are-the-honest-kind">The exceptions, and why they are the honest kind</h2>
+<p>A browser reads no environment variables. So for the client the single-variable rule
+becomes a single served document, fetched at start-up from one relative URL, and that
+URL is the only location named anywhere in the client's source. It carries an inline
+exemption marker giving that reason, and appears in the repository's list of
+exemptions where a reviewer will see it.</p>
+<p>Postgres and nginx read no drogna configuration file at all. They are configured
+through the interfaces their own publishers define — <code>POSTGRES_DB</code> and its siblings,
+a template directory and the values substituted into it. Every one of those values
+still comes from the destination's configuration, by way of an environment file that
+is generated at deploy time from a tracked template carrying names and no values.
+Nothing is written literally anywhere; the third-party images are simply the boundary
+where drogna's convention stops and someone else's begins, and saying so is more
+useful than pretending the convention is universal.</p>
+<h2 id="the-check-that-exists-from-day-one">The check that exists from day one</h2>
+<p>Two destination directories must hold the same files and, within each file, the same
+keys. Only values may differ. A script compares them and fails the build otherwise,
+reporting every difference rather than stopping at the first.</p>
+<p>The reason it was written on the day the second destination appeared, rather than the
+day it first caused trouble, is that this particular drift has no symptom. A key added
+to one destination and forgotten in the other does not break anything until the code
+consuming it runs at the destination that lacks it, which is usually the remote one,
+usually during a demonstration. Adding a third destination, for the same reason, is a
+directory of the same shape and not a code change.</p>
+<h2 id="what-a-profile-means-and-what-it-must-never-mean">What a profile means, and what it must never mean</h2>
+<p>Compose profiles decide which services start at a destination. Most of drogna's
+eighteen components do not exist yet, so their service entries sit there complete and
+profiled out, and arriving at one of them is a matter of writing the component and
+adding its profile rather than designing the deployment again.</p>
+<p>A profile says what runs here today. It says nothing about what ought to exist and —
+this is the part with a test guarding it — nothing whatever about which components the
+<a href="../eighteen-boxes-none-of-them-lit/">client draws as alive</a>. That is heartbeats, only
+heartbeats. A test asserts that nothing under the client reads the Compose file, the
+generated environment file, the active profile list or a component list from any
+configuration key, and it is tested against a fabricated offender as well as against
+the real client so that it still means something later. The two mechanisms look
+similar enough to join, and joining them would turn the display into something that
+believes a file.</p>
+<h2 id="seed-data-is-produced-never-accumulated">Seed data is produced, never accumulated</h2>
+<p>Every volume holds derived data, and removing any of them loses nothing that cannot be
+made again: the stores are refilled by a seeding script from the root seed, and the
+broker's persistence by the messages a running stack produces inside its own liveness
+windows. That is what makes an instance disposable, and it is why a fresh instance is
+equivalent to one that has been running for a week.</p>
+<p>&quot;Equivalent&quot; is worth little as an assertion, so seeding writes a record: the root
+seed, the version of the seeding driver, the active profiles, a digest of every
+configuration file the destination carries, and a digest of every artefact each
+seeding step produced. It is written whole or not at all, so an interrupted seed can
+never be mistaken for a completed one.</p>
+<p>The record carries no timestamp, for two reasons that happen to agree. There is no
+host clock to read — the constitution forbids it, and would forbid it here even if
+nobody minded — and a timestamp would make two equivalent instances compare unequal,
+which is the exact opposite of what the record is for.</p>
+<p>So the question becomes a diff. Seed; copy the record aside; reset, which removes
+every volume, brings the stack back up and reseeds; diff the two records. That has
+been run from this checkout and they match. The same comparison across two machines
+answers the same question about two instances.</p>
+<p>Base images are pinned by digest rather than by tag, for the same family of reasons. A
+replay resting on a floating base image is not a replay, and two destinations pulling
+different content for the same tag are two destinations again, whatever the
+configuration says.</p>
+<h2 id="what-has-not-been-done">What has not been done</h2>
+<p>There are no seeding steps. Not one, because no component with a store has been built
+yet. The record is still written and still fixes the seed, the profiles and the
+configuration digests, and it grows a step per store as components arrive — but the
+machinery above is currently seeding nothing into an empty database.</p>
+<p>And the second of the two destinations has never been run. No cloud server was
+available while this was written, so the provisioning script, the boot unit and the
+pruning step are unexercised: they follow the documented installation and conventional
+practice, and they are recorded in the deployment's own documentation as untested
+until somebody runs them and corrects that paragraph. The local destination has been
+taken through bring-up, repeat bring-up, seed, reseed, down, up and reset.</p>
+<p>One destination is a thing that works. The other is a claim, and it is labelled as one
+in the place a person would look.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

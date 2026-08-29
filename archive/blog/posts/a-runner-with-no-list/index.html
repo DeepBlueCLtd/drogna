@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Six gates existed and were run one at a time, with CI keeping its own copy of the list. The fix was not a script that runs six things; it was a script that knows about none of them.">
+<title>A runner with no list — drogna</title>
+<link rel="stylesheet" href="../../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../../">Home</a></li><li><a href="../../../../demo/">The demo</a></li><li><a href="../../../../architecture/">The architecture</a></li><li><a href="../../../../components/">The component reference</a></li><li><a href="../../../../standards/">Standards primers</a><ul><li><a href="../../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../../algorithms/advection/">Advection</a></li><li><a href="../../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../../glossary/">Glossary</a></li><li><a href="../../../../blog/">The blog</a></li><li><a href="../../../../decisions/">The decision records</a></li><li><a href="../../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../../">the current site</a> and <a href="../../../../archive/">the archive</a>.</p></div>
+<h1 id="a-runner-with-no-list">A runner with no list</h1>
+<p>drogna's constitution has ten principles and five of them are enforced by a script
+that fails the build. Those scripts got written one at a time, as the features that
+needed them arrived, and each one landed the obvious way: a new file in <code>scripts/</code>,
+and a new step in the CI workflow that runs it.</p>
+<p>By the seventh, that had stopped being obvious and started being a problem.</p>
+<!-- more -->
+<h2 id="the-shape-of-the-problem">The shape of the problem</h2>
+<p>Here is what the workflow looked like:</p>
+<pre><code class="language-yaml">- name: Gate — no wall-clock time (Constitution I)
+  run: uv run python scripts/check_no_wallclock.py
+
+- name: Gate — seeded randomness (Constitution II)
+  run: uv run python scripts/check_seeded_rng.py
+
+- name: Gate — no literal paths or hosts (Constitution IV)
+  run: uv run python scripts/check_no_literal_paths.py
+</code></pre>
+<p>...and four more like it. Nothing wrong with any single line. The problem is the
+whole: this is a list of the gates, and it is the <em>only</em> list of the gates, and it
+lives somewhere a contributor never looks.</p>
+<p>Two things follow from that, and both of them are worse than they look.</p>
+<p><strong>A contributor cannot run what the build runs.</strong> Not without reading a YAML file
+and copying seven commands out of it by hand — which means, in practice, that they
+push and find out. Every gate failure becomes a round trip through CI. The gates
+were written to catch mistakes early; a gate you can only run late is a gate that
+has given most of its value away.</p>
+<p><strong>The list can fall behind the thing it lists.</strong> A feature adds a gate, writes the
+script, writes its tests, and forgets the workflow step. Everything is green. The
+tests for the new gate pass, because they invoke the gate directly. The gate itself
+runs against nothing, because nothing invokes it. This is the exact failure mode the
+gates exist to prevent — a check that has quietly stopped checking — reproduced one
+level up, in the machinery that runs the checks.</p>
+<p>The requirement had actually anticipated this. FR-036 asks for two things:</p>
+<blockquote>
+<p>The gates MUST be runnable locally by a single documented command, and MUST be
+written so that later features can add gates to the same runner without editing
+the existing ones.</p>
+</blockquote>
+<p>The second clause is the interesting one, and it is easy to read past. It is not
+asking for a script that runs six things. A script that runs six things has the
+list in it, and adding a seventh means editing the script — which is exactly what
+&quot;without editing the existing ones&quot; rules out.</p>
+<h2 id="the-list-goes-in-a-file">The list goes in a file</h2>
+<p>So the list is not in the runner. It is in <code>scripts/gates.registry</code>:</p>
+<pre><code>Constitution I — no wall-clock time|uv run python scripts/check_no_wallclock.py
+Constitution II — seeded randomness|uv run python scripts/check_seeded_rng.py
+Constitution IV — no literal paths or hosts|uv run python scripts/check_no_literal_paths.py
+Constitution V — no tracked-entity vocabulary|uv run python scripts/check_forbidden_vocabulary.py
+Constitution III — schema conventions|uv run python scripts/check_schema_conventions.py
+Constitution III — no hand-written boundary types|uv run python scripts/check_handwritten_types.py
+Constitution III — generated types are current|./scripts/check_types_drift.sh
+</code></pre>
+<p>One gate per line: the principle it enforces, a bar, the command that checks it.
+The label is not decoration. When a gate fails, the summary names the principle
+rather than the filename, because &quot;no wall-clock time&quot; tells you what you broke and
+<code>check_no_wallclock.py</code> tells you where to go and read about it — and the first of
+those is the one you want at the moment of failure.</p>
+<p><code>scripts/gates.sh</code> reads that file and mentions no gate at all. Adding a gate is
+appending a line. That is the whole of it, and CI does not change, and the runner
+does not change, and the six gates that already exist are not touched.</p>
+<h2 id="two-decisions-that-were-not-obvious">Two decisions that were not obvious</h2>
+<p><strong>Every gate runs, even after one fails.</strong> The instinct is <code>set -e</code> and stop at the
+first failure — it is faster, and it is what most runners do. It is also wrong here.
+A gate run is a report, and a report that stops at the first item sends you round
+the loop once per violation. So the runner keeps going, collects the exit codes, and
+tells you at the end how many of how many failed and which ones. <code>--fail-fast</code> is
+there for when you want the other behaviour, which is mostly when you are working on
+one gate and do not care about the rest.</p>
+<p><strong>The exemption inventory prints once.</strong> Every gate supports an inline exemption
+marker — <code>harness:allow-wallclock</code>, with a reason, on the offending line — and a
+marker without a reason is itself a violation, because an exemption nobody had to
+justify is an exemption nobody reviewed. FR-034 asks that every marker in the
+repository be listed in one place, so a reviewer can see the full set of things the
+constitution has been asked to make an exception for. Each gate can print its own
+inventory with <code>--inventory</code>, which is useful when working on that gate alone. The
+runner prints it once, after all the findings, from the shared machinery that owns
+it. Seven copies of a list are not a list.</p>
+<p>The result reads like this:</p>
+<pre><code>── Constitution I — no wall-clock time
+no-wallclock: clean.
+
+── Constitution II — seeded randomness
+seeded-rng: clean.
+
+...
+
+Exemption inventory:
+  client/src/time/host.ts:22: harness:allow-wallclock — ADR-0006, heartbeat
+    cadence and liveness windows are real time
+  libs/harness_core/src/harness_core/clock_service.py:303: harness:allow-wallclock —
+    the clock service's real-time driver (Constitution I, FR-009)
+  ...
+
+gates: all 7 clean.
+</code></pre>
+<p>Forty-six exemptions across the tree, each with a reason someone had to write down.
+That list is worth more than any single gate's output: it is the record of every
+place the project has decided a principle should not apply, in one place, where a
+reviewer can see it growing.</p>
+<h2 id="proving-the-runner-can-fail">Proving the runner can fail</h2>
+<p>There is a post on this blog about <a href="../the-gate-that-examined-nothing/">a gate that examined
+nothing</a> — two of the constitution gates were
+reporting a file of deliberate violations as clean, and it took writing the tests to
+find out. The lesson generalises upward. A runner that reports &quot;clean&quot; whatever its
+gates say is worse than no runner, because it looks like assurance.</p>
+<p>So the runner takes <code>--registry PATH</code>, and its tests use it:</p>
+<pre><code class="language-python">DIRTY = &quot;python3 -c 'print(\&quot;probe: 1 violation(s).\&quot;); raise SystemExit(1)'&quot;
+
+
+def test_a_failing_gate_fails_the_run(tmp_path: Path) -&gt; None:
+    &quot;&quot;&quot;The assertion the rest depend on: the runner can report a failure.&quot;&quot;&quot;
+    result = run(&quot;--registry&quot;, registry(tmp_path, f&quot;probe|{DIRTY}&quot;), &quot;--no-inventory&quot;)
+    assert result.returncode == 1, result.stdout
+    assert &quot;1 of 1 failed&quot; in result.stdout
+</code></pre>
+<p>That is the load-bearing test. The ones that assert a clean run exits zero mean
+nothing on their own — a runner that always exits zero passes all of them.</p>
+<p>Two more are worth naming, because they cover the failure that is hardest to see:</p>
+<pre><code class="language-python">def test_an_empty_registry_is_a_failure_not_a_pass(tmp_path: Path) -&gt; None:
+    &quot;&quot;&quot;Nothing checked and everything clean must not look the same from outside.&quot;&quot;&quot;
+    result = run(&quot;--registry&quot;, registry(tmp_path, &quot;# only a comment&quot;), &quot;--no-inventory&quot;)
+    assert result.returncode == 2
+</code></pre>
+<p>A registry that registers nothing exits 2, and so does a registry that is not there
+at all. Both of those would otherwise present as a clean run, and a clean run is
+precisely the thing a reviewer takes as permission to merge.</p>
+<p>And the one that closes the loop the registry opened:</p>
+<pre><code class="language-python">def test_the_registry_covers_every_gate_in_the_scripts_directory() -&gt; None:
+    &quot;&quot;&quot;A gate added to scripts/ but never registered is a gate nobody runs.&quot;&quot;&quot;
+</code></pre>
+<p>It globs <code>scripts/check_*.py</code> and <code>scripts/check_*.sh</code> and fails if any of them is
+missing from the registry. Moving the list out of CI removed one way for it to fall
+behind; this test removes the other. A future feature can now forget to register its
+gate, and the build will say so.</p>
+<h2 id="what-it-cost">What it cost</h2>
+<p>A shell script, a text file, eleven tests, and seven lines of CI collapsed into one.
+<code>scripts/gates.sh</code> is now in the README next to <code>ruff</code> and <code>pytest</code>, which is where
+a contributor was always going to look for it.</p>
+<p>The part worth keeping is smaller than the diff. The requirement said &quot;without
+editing the existing ones&quot;, and the natural reading of that is a plea for good
+manners — be careful, do not disturb your neighbours. It is not. It is a constraint
+on the design, and there is exactly one structure that satisfies it: the runner does
+not know what it runs. Everything else — the aggregated exit codes, the single
+inventory, the registry coverage test — followed from taking that literally.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

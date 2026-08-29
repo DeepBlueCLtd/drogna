@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR 0027 — Version 2 is a client-side rewrite behind a wire-protocol seam — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0027-version-2-is-a-client-side-rewrite-behind-a-wire-protocol-seam">ADR 0027 — Version 2 is a client-side rewrite behind a wire-protocol seam</h1>
+<p><strong>Status:</strong> Accepted, 29 August 2026, with the adoption of constitution 2.0.0. The
+number was assigned at adoption: the two V1 pull requests that each claimed ADR-0027
+(#44, #46) closed without merging — their findings were carried into the plan as
+E-items instead — so 0027 was free on the default branch.
+<strong>Date:</strong> 29 August 2026</p>
+<h2 id="context">Context</h2>
+<p>Version 1 delivered what it set out to prove: seventeen features, all four acceptance
+criteria passing, the control loop wired live and watched turning. It also accumulated
+the costs that motivate this record, both named by the author in the planning
+interviews of 29 August 2026:</p>
+<ol>
+<li><strong>Pace, caused by reviewability.</strong> The backend is twelve services across Python,
+SQL, nginx configuration and Compose. Reviewing a change means reasoning across
+containers, and the traps section of <code>CLAUDE.md</code> is a catalogue of what that
+surface cost: bind-mount semantics that differ by host OS, health checks naming
+programs images do not carry, per-image ignore files, TLS interception in build
+contexts, a broker dying on file ownership only on Linux, a proxy credential fault
+invisible until the first cleared request in the repository's history. Each lesson
+was real and each was paid for in time the demonstration did not need to spend.</li>
+<li><strong>Divergence.</strong> Requirements were identified as understanding grew — the SRD went
+from four sections to thirteen, 23 specs and 25 ADRs — and the artefact set no
+longer reads as one coherent system.</li>
+</ol>
+<p>A rewrite was therefore considered, with the question being its shape. The plan this
+record accompanies (<code>docs/v2/plan.md</code>) was developed by structured interview, swept the
+six open pull requests for emergent requirements, and was endorsed by the author on
+29 August 2026.</p>
+<h2 id="decision">Decision</h2>
+<p>Version 2 is a <strong>pure client-side TypeScript single-page application</strong>. The backend
+components — clock, generator, broker, sensors, stores, loop, planner, query — are
+genuine programs running in the browser, separated from the front-end by a
+<strong>wire-protocol seam</strong>: HTTP answered by an interception layer with genuine
+(subsetted) OGC API-EDR and SensorThings JSON, and pub/sub through a broker component
+with MQTT topic semantics whose wire shape is MQTT-over-WebSocket. <strong>Version 3</strong>
+replaces the in-browser components with a real backend by configuration — a base URL
+and a broker URL — with the recorded seam-traffic corpus as its conformance suite
+(AT-05).</p>
+<p>The consequential decisions taken with it, each an explicit interview answer recorded
+in the plan (D1–D17, §9):</p>
+<ul>
+<li>All V1 software is retired and rewritten clean, in the same repository; the written
+record (specs, ADRs, spikes, SRD) is archived in place, never edited. The droplet is
+decommissioned at V1 retirement; delivery is a static site.</li>
+<li>The artefacts are refocused first, in order: the plan, then SRD-v2, then
+constitution 2.0.0 (this record is its amendment ADR), then a fresh, coarser spec
+series numbered from 101 — one feature per beat of a narrative arc that is
+simultaneously the build order and the demo script, data generation first, map
+display last.</li>
+<li>All ten constitutional principles survive. Determinism (I, II) carries in full — a
+simulation clock component, seeded streams, byte-identical lockstep replay from an
+exportable manifest. III, VI, VII and X are re-scoped to the seam; a new Principle
+XI makes the seam itself non-negotiable. The in-browser components are real
+components under Principle VII: illumination still comes only from received
+heartbeats, and fixture data remains forbidden.</li>
+<li>One toolchain: TypeScript 5, pnpm, vitest, Playwright, React, Deck.gl, and a
+dockable multi-panel shell (tabs Intro, System, Map, Messages; user-rearrangeable;
+layout library chosen by feature 101's spike). The constitution gates are rewritten
+as TypeScript scripts behind the registry pattern. Python leaves the repository.</li>
+<li>Implementation proceeds with developer autonomy in one long-lived PR: decisions and
+spike outcomes need no author endorsement; PR comments link gh-pages-hosted
+instances opened at the relevant view by anchor URL; ntfy notices and blog posts
+mark significant arrivals.</li>
+</ul>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<ul>
+<li><strong>Continue V1 incrementally, refocusing only the documents.</strong> Rejected: the pace
+problem is structural — the review surface is the container estate itself — and no
+document refocus shrinks it.</li>
+<li><strong>A new repository.</strong> Rejected: the record (25 ADRs, 8 spikes, the reconciliation
+history) is the most valuable output of V1 and the thing a fresh session navigates
+by; carrying it by hand loses provenance, and git history preserves the retired
+code at zero cost.</li>
+<li><strong>A TypeScript port seam</strong> (front-end calls interfaces; HTTP arrives only in V3).
+Rejected: cheaper now, but the wire shapes would stay unexercised until V3, which
+is exactly when discovering they are wrong is most expensive. The wire-protocol
+seam makes the standards claim inspectable in V2 and makes V3 a swap rather than an
+integration.</li>
+<li><strong>Relaxing determinism for a UI demonstration.</strong> Rejected on V1's own finding:
+deterministic replay is the one property that cannot be retrofitted at acceptable
+cost, and in a single language it gets cheaper to enforce, not dearer.</li>
+<li><strong>Retiring the standards (bespoke JSON API).</strong> Rejected: the demonstration's claim
+is that standard interfaces sit over the synthetic ocean; a bespoke API would
+retire the claim, not the cost.</li>
+<li><strong>Pinning the layout library now.</strong> Rejected in the second interview round: dockable
+drag/drop tabs are the requirement, not a named library; feature 101's spike
+chooses between golden-layout 2.x and maintained alternatives and records the
+choice.</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>The demo becomes a URL; the operational traps of the container estate retire, and
+their lessons remain in the archived record.</li>
+<li>Everything server-shaped becomes a role: proxy → release-gate component, pygeoapi →
+query components, Postgres → in-memory stores behind store interfaces, mosquitto →
+broker component. The semantics carry; the engines return in V3.</li>
+<li>The wall-clock exemption count returns to two: ADR-0026's container resource
+sampling retires with the containers.</li>
+<li>The seam is a standing obligation, not a feature: an import across it, a seam shape
+without a committed master, or a client configuration carrying an absolute URL is a
+constitution violation from feature 101 onward.</li>
+<li>The shell must support URL-addressable views from feature 101, and CI must publish
+per-PR instances into an additively grown gh-pages estate, retained on completion —
+the single-PR review model and the blog's embedded demos depend on both.</li>
+<li>Offload's real transfer and verified-receipt eviction, and the second-broker
+fallback, are deferred to V3 with reasons recorded in SRD-v2 §11.</li>
+<li>With this record Accepted, constitution 2.0.0 governs; 1.6.0 is archived at
+<code>docs/v1/constitution-1.6.0.md</code> and <code>docs/v2/plan.md</code> remains the planning record.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

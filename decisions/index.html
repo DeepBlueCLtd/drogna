@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Every decision that was hard to reverse or genuinely contested, with the status read out of the record itself.">
+<title>The decision records — drogna</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../">Home</a></li><li><a href="../demo/">The demo</a></li><li><a href="../architecture/">The architecture</a></li><li><a href="../components/">The component reference</a></li><li><a href="../standards/">Standards primers</a><ul><li><a href="../standards/cf-conventions/">CF conventions</a></li><li><a href="../standards/coveragejson/">CoverageJSON</a></li><li><a href="../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../algorithms/">Algorithm derivations</a><ul><li><a href="../algorithms/advection/">Advection</a></li><li><a href="../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../glossary/">Glossary</a></li><li><a href="../blog/">The blog</a></li><li><a href="../decisions/" aria-current="page">The decision records</a></li><li><a href="../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-decision-records">The decision records</h1>
+<p>An architecture decision record is written for any decision that is hard to reverse,
+was genuinely contested, or where a plausible alternative was rejected. Routine choices
+do not earn one. Each record carries Status, Context, Decision and Consequences, is
+numbered sequentially, and is dated. Superseded records are kept and marked, never
+deleted — the numbering continues across the version boundary rather than restarting,
+so a record's number is a fixed address for the life of the project.</p>
+<p>The records live in the repository, at <code>docs/adr/</code>. They are published here from there:
+the direction of travel is out of the repository record and into the site, never the
+other way, and nothing on this site is the master copy of a decision.</p>
+<p>The <strong>status column is read out of each record</strong>, not retyped beside it. A record
+amended by a later one says so in its own status line and therefore says so here. That
+is the whole reason the table is generated: V1's index was hand-maintained, and the
+first thing that went wrong with it was a status that had moved on in the record and
+not in the list.</p>
+<p>Records 0001 to 0026 belong to Version 1 and describe software that has been retired.
+They are kept because the reasoning is the part worth keeping, and each carries a banner
+saying what it is. <strong>0027</strong> is the reversal itself; the records from 0028 on are
+Version 2's.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0001</td>
+<td><a href="adr/0001-binary-access/">Binary access rather than tiered or per-field</a></td>
+<td>Accepted, amended by ADR-0020</td>
+</tr>
+<tr>
+<td>0002</td>
+<td><a href="adr/0002-decorrelation-timescale-as-a-field/">Decorrelation timescale is a field, authored per feature</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0003</td>
+<td><a href="adr/0003-bespoke-edr-trajectory-provider/">Trajectory queries are served by a bespoke pygeoapi provider</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0004</td>
+<td><a href="adr/0004-bespoke-sensorthings-provider/">SensorThings is served by a bespoke pygeoapi provider</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0005</td>
+<td><a href="adr/0005-sound-speed-is-derived-not-stored/">Sound speed is derived at the point of use, not stored</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0006</td>
+<td><a href="adr/0006-heartbeat-cadence-is-real-time/">Heartbeat cadence and liveness windows are real time</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0007</td>
+<td><a href="adr/0007-host-time-for-display-smoothing/">Host time may smooth the display between clock samples</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0008</td>
+<td><a href="adr/0008-control-messages-reach-the-client-by-websocket-upgrade/">Control messages reach the client by WebSocket upgrade at the proxy</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0009</td>
+<td><a href="adr/0009-clock-transport-and-lockstep-mode/">The clock publishes on the control namespace, and gains a lockstep mode</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0010</td>
+<td><a href="adr/0010-site-tooling/">Tooling for the published site</a></td>
+<td>Superseded by ADR-0031</td>
+</tr>
+<tr>
+<td>0011</td>
+<td><a href="adr/0011-the-coverage-store-pointer-is-text/">The current-run pointer is a text file, not a symlink</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0012</td>
+<td><a href="adr/0012-sensors-may-read-the-clock-and-nothing-else/">Sensors and the ingest client may read the clock, and nothing else on the control branch</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0013</td>
+<td><a href="adr/0013-leakage-is-scored-per-released-variable/">A leakage statistic is scored per released variable, and the worst one is the answer</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0014</td>
+<td><a href="adr/0014-quality-flagging-is-the-ingestion-seam/">Quality flagging is the ingestion seam, not a field on an observation</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0015</td>
+<td><a href="adr/0015-a-sensor-may-announce-itself/">A sensor may announce itself, because the alternative was a display that lied</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0016</td>
+<td><a href="adr/0016-the-broker-credential-path-is-half-built/">No component could authenticate, and the credential path is now whole</a></td>
+<td>Accepted, and amended the same day — see &quot;What changed a few hours later&quot;</td>
+</tr>
+<tr>
+<td>0018</td>
+<td><a href="adr/0018-common-json-is-a-root-seed-not-a-set-of-defaults/"><code>common.json</code> is a root seed, and the defaults mechanism it describes does not exist</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0019</td>
+<td><a href="adr/0019-the-planner-threshold-is-absolute-and-was-never-checked/">The planner's threshold stays absolute, and now has something to check it against</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0020</td>
+<td><a href="adr/0020-clearance-delegated-for-the-control-upgrade/">Clearance is binary for the released prefix and delegated for the control upgrade</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0021</td>
+<td><a href="adr/0021-the-clock-control-answers-the-browser-from-any-origin/">The clock's HTTP interface answers the browser from any origin</a></td>
+<td>Accepted (by the owner, 28 August 2026, by structured interview) — to be superseded by ADR-0025 when the clock's control surface is routed through the boundary (wave 7, lane I); it records the running system's shape until then</td>
+</tr>
+<tr>
+<td>0022</td>
+<td><a href="adr/0022-generator-selection-for-the-type-chain/">The type chain's generators, and why the TypeScript half is ours</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0023</td>
+<td><a href="adr/0023-the-observation-store-authenticates-by-trust/">The observation store authenticates by trust, and models no database threat</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0024</td>
+<td><a href="adr/0024-the-advisory-store-is-a-third-schema/">The advisory store is a third schema, not a second engine</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0025</td>
+<td><a href="adr/0025-the-operator-plane-sits-behind-the-clearance/">The operator plane sits behind the clearance, and the clock joins it there</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0026</td>
+<td><a href="adr/0026-resource-sampling-and-the-runtime-socket/">The third wall-clock exemption is resource sampling, and the socket stops at the door</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0027</td>
+<td><a href="adr/0027-version-2-client-side-rewrite/">Version 2 is a client-side rewrite behind a wire-protocol seam</a></td>
+<td>Accepted, 29 August 2026, with the adoption of constitution 2.0.0. The</td>
+</tr>
+<tr>
+<td>0028</td>
+<td><a href="adr/0028-dockview-hosts-the-shell/">dockview hosts the shell</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0029</td>
+<td><a href="adr/0029-the-http-seam-is-a-fetch-shim/">the HTTP seam is a fetch-level shim, not a Service Worker</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0030</td>
+<td><a href="adr/0030-scheduled-modules-and-the-composition-root/">components are scheduled modules on the main thread, wired by one composition root</a></td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>0031</td>
+<td><a href="adr/0031-the-site-is-typescript-and-the-estate-has-two-tenants/">The site is built in TypeScript, and the estate has two tenants</a></td>
+<td>Accepted, 29 August 2026. Supersedes ADR-0010 (V1 site tooling)</td>
+</tr>
+</tbody>
+</table>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

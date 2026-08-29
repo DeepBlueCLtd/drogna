@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-10 Reverse proxy — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-10-reverse-proxy">C-10 Reverse proxy</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>proxy/</code> — <code>policy.py</code> for path normalisation, <code>render_config.py</code>, and
+the nginx templates it renders; the two leakage checks are <code>tests/leakage/</code>, run
+as a gate by <code>scripts/check_leakage.py</code></li>
+<li><strong>Delivered by:</strong> <code>specs/013-security-proxy</code></li>
+<li><strong>Covered by:</strong> <code>proxy/tests/</code>, <code>tests/integration/test_request_matrix.py</code>,
+<code>tests/unit/test_client_reaches_the_proxy.py</code>, and the leakage corpus under
+<code>tests/leakage/fixtures/</code>, which carries controls so a run reporting nothing has
+been shown to be capable of reporting something</li>
+<li><strong>Not present:</strong> the second of the two leaks below is scored against a measurement
+geometry that no component in the harness yet writes. The contract for it exists
+in <code>contracts/schemas/run-manifest.schema.json</code> and the gate refuses loudly rather
+than defaulting when it is missing, but today only the committed fixtures supply
+one</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> TLS, authentication, path policy.
+<strong>Owns the failure mode of:</strong> accidental exposure.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>nginx in front of everything, terminating TLS, authenticating, and applying a
+path policy that is default-deny. Released collections sit under a dedicated
+path prefix. Everything not under that prefix is refused.</p>
+<h2 id="why-default-deny-is-the-whole-design">Why default-deny is the whole design</h2>
+<p>Because the failure this component owns is not &quot;someone broke in&quot;. It is
+&quot;someone added a collection and it was public before anyone noticed&quot;. An
+allow-list of forbidden paths fails open every time something new is added; a
+default-deny prefix fails closed, and exposure becomes an act rather than an
+oversight.</p>
+<p>Access is binary: cleared for all the data or none of it. There is no per-field
+redaction, and that is recorded as a decision rather than left as an assumption,
+because softening it to tiered access would change the architecture materially
+rather than adding a feature to it.</p>
+<h2 id="the-one-route-that-is-deliberately-open-and-the-credential-that-is-not-a-secret">The one route that is deliberately open, and the credential that is not a secret</h2>
+<p>There is exactly one exception, it is named, and it is a decision rather than a
+gap: the WebSocket upgrade the browser uses to reach the control namespace.</p>
+<p>A browser cannot present a user name and password on a WebSocket handshake. The
+constructor takes a URL and a list of subprotocols and has nowhere to put a
+header, which is a property of the platform rather than of this configuration —
+so no arrangement of credentials makes the authenticated shape reachable. The
+observable form of that was the shell showing every component dark for the whole
+life of the page while the boundary refused each reconnect.</p>
+<p>So authentication is declared once for the whole server and exactly one location
+opts out of it: that upgrade. Clearance there is delegated rather than dropped.
+The broker refuses anonymous clients, the page connects as a named subscribe-only
+role, and the broker's access control list decides what that role may receive.
+The released prefix is untouched and stays binary. The guard against this
+becoming a habit is narrow by construction — one declaration and one <em>named</em>
+opt-out, which must be the upgrade — and a test fails if a second appears
+anywhere.</p>
+<p><strong>The credential the page carries is not a secret, and that is the intended
+design.</strong> The browser has to fetch its own configuration, so the document
+carrying that role's password is served world-readable, outside the boundary.
+What the role can do is the reason this costs nothing: it may subscribe to the
+control namespace and it may publish nothing at all — no observations, no
+released collection, no write of any kind. The control namespace carries
+heartbeats, clock samples, telemetry indicators and run notices, and it is
+public-read by design; the clearance this component exists to enforce is a
+different credential on a different route, and it is never placed in the served
+configuration. The reasoning in full is <strong>ADR-0001</strong> and its amendment
+<strong>ADR-0020</strong>, in the <a href="../../../decisions/">decision records</a>.</p>
+<h2 id="the-two-leaks-that-are-tested-not-reviewed">The two leaks that are tested, not reviewed</h2>
+<ul>
+<li><strong>Provenance metadata in exported files.</strong> A NetCDF export carries attributes.
+Attributes carry paths, usernames, software versions and run identifiers, and
+reviewing them by eye works until the day it does not.</li>
+<li><strong>The shape of the freshly updated region.</strong> The area a model has just
+refreshed traces where sampling has been happening. That shape is inferable
+from a response even when every value in it is permitted, which makes it the
+kind of leak that cannot be found by looking at field names.</li>
+</ul>
+<p><strong>Requirements:</strong> FR-39 to FR-42. <strong>Feature:</strong> 013.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

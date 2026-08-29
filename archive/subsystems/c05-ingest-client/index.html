@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-05 Ingest client — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-05-ingest-client">C-05 Ingest client</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>services/ingest/</code> — subscription, validation, batching, the writer, and
+the backpressure signal each separately</li>
+<li><strong>Delivered by:</strong> <code>specs/007-observation-path</code></li>
+<li><strong>Covered by:</strong> <code>services/ingest/tests/</code> and
+<code>tests/integration/test_backpressure.py</code>, which drives the broker faster than the
+store accepts and watches the indicator appear and the backlog drain</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> validate and batch-write; the single ingestion seam.
+<strong>Owns the failure mode of:</strong> ingest backpressure.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It subscribes to the observation namespace, validates each message against its
+schema, batches, and writes to the observation store. It is the only thing that
+writes observations. Nothing else has credentials to.</p>
+<h2 id="why-a-single-seam">Why a single seam</h2>
+<p>Because &quot;the only way in&quot; is a property that can be tested, and &quot;mostly the only
+way in&quot; is not. Every guarantee about what the store contains — that the units
+are the declared units, that the observed property is one of the three the
+contract admits, that the timestamps came from the simulation clock — holds only
+if there is one place where those guarantees are applied.</p>
+<p>It is also the only honest place to observe backpressure. When the broker
+delivers faster than the store accepts, something has to notice and say so. If
+writes are spread across several components, the pressure appears in several
+places at once and none of them has the whole picture.</p>
+<h2 id="what-it-deliberately-is-not">What it deliberately is not</h2>
+<p>It is not an abstraction over intake with a pluggable interface. The requirements
+document is explicit that observation intake is aspirational as a port rather
+than real: there is one implementation and there is not a second one in
+prospect. Wrapping it in an interface would claim pluggability the system does
+not have, which is a rule drogna takes seriously enough to require a written
+argument before breaking it.</p>
+<p><strong>Requirements:</strong> FR-17, FR-18. <strong>Feature:</strong> 007.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

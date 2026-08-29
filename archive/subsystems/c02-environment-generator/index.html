@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-02 Environment generator — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-02-environment-generator">C-02 Environment generator</h1>
+
+<div class="admonition admonition-success">
+<p class="admonition-title">Status: built</p>
+<ul>
+<li><strong>Code:</strong> <code>services/env_generator/</code> — the four features, the background, the
+composition, the manifest writer and the timescale field each in their own module</li>
+<li><strong>Delivered by:</strong> <code>specs/004-environment-generator</code></li>
+<li><strong>Covered by:</strong> <code>services/env_generator/tests/</code> and
+<code>tests/acceptance/test_at03_eddy_recovery.py</code>, which scores a recovered eddy
+against the seeded parameters in the manifest</li>
+<li><strong>Not present:</strong> no check reconstructs a fully composed value — background plus
+four anomalies, plus pressure, plus <a href="../../../glossary/#sound-speed">sound speed</a> —
+from the manifest's documented
+forms alone; the pieces are each reconstructed separately</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> synthetic four-dimensional fields plus a ground-truth manifest.
+<strong>Owns the failure mode of:</strong> unverifiable truth.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>It invents an ocean. The output is a field over latitude, longitude, depth and
+time carrying temperature, <a href="../../../glossary/#salinity">salinity</a> and pressure,
+from which <a href="../../../glossary/#sound-speed">sound speed</a> is derived. Four features
+are seeded into it with recorded parameters: a
+<a href="../../../glossary/#mesoscale-eddy">mesoscale eddy</a> of known centre, radius and
+strength; a <a href="../../../glossary/#front">front</a> of known position and sharpness; a
+<a href="../../../glossary/#thermocline">thermocline</a> at known depth; and a moving feature
+of known drift velocity.</p>
+<p>Alongside each generated field it writes a manifest recording those parameters,
+the seed the generator was given, and the generator's own version.</p>
+<h2 id="why-the-manifest-is-the-point">Why the manifest is the point</h2>
+<p>Without it, every later claim is unfalsifiable. &quot;The eddy is recoverable from
+the observations&quot; means nothing on its own; it means something when the recovery
+error is computed against the centre and radius that were seeded, and reported
+as a number. Two of the four acceptance tests score against this manifest.</p>
+<p>The generator therefore owns the failure mode of unverifiable truth: if the
+manifest is incomplete, or drifts out of step with what was actually generated,
+every downstream measurement of skill is decoration.</p>
+<h2 id="the-decorrelation-timescale">The decorrelation timescale</h2>
+<p>The manifest also records the
+<a href="../../../glossary/#decorrelation-timescale">decorrelation timescale</a>, which is not
+a constant. It is a field: authored per feature over a domain-wide background
+value, evaluated per location, and advecting with a feature that moves. Quiet
+water gets the background value; a fast-turning eddy gets its own; the planner
+needs an answer at every cell it scores, not only inside features.</p>
+<p><strong>Requirements:</strong> FR-02 to FR-05. <strong>Feature:</strong> 004.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

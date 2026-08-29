@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>C-18 Browser client — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<div class="admonition admonition-warning"><p class="admonition-title">Version 1 record</p><p>This page describes software that has been retired. It is accurate about Version 1 and is not a description of what runs now — see <a href="../../../">the current site</a> and <a href="../../../archive/">the archive</a>.</p></div>
+<h1 id="c-18-browser-client">C-18 Browser client</h1>
+
+<div class="admonition admonition-warning">
+<p class="admonition-title">Status: partly built</p>
+<ul>
+<li><strong>Code:</strong> <code>client/src/</code> — the component diagram and its layout, the liveness
+reducer and its windows, the speed control, the arrival-time control, the
+<a href="../../../glossary/#trajectory">trajectory</a> query, and the route and uncertainty
+layer data</li>
+<li><strong>Delivered by:</strong> <code>specs/003-component-shell-client</code>, extended by
+<code>specs/012-visualisation</code>; the capture harness under <code>client/e2e/</code> by
+<code>specs/016-visual-capture</code></li>
+<li><strong>Covered by:</strong> <code>client/tests/</code>, including <code>no-mock.test.ts</code> for the rule below
+and <code>recorded.test.ts</code> against recorded broker traffic, plus the end-to-end
+specifications in <code>client/e2e/</code></li>
+<li><strong>Not present:</strong> there is no map surface. The route and uncertainty layers exist
+as data, accessors and downsampling with a stated resolution, and are tested as
+such, but no Deck.gl layer object is constructed and nothing renders the forecast
+volume — the component diagram was delivered without a map base, so there is
+nothing yet to put a layer on</li>
+</ul>
+
+</div>
+<p><strong>Responsibility:</strong> visualisation and control.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>React, TypeScript and Deck.gl. It draws the component layout, the forecast
+volume, the planned route as a four-dimensional curve through that volume with a
+time control showing conditions at arrival, and the uncertainty field decaying
+and refreshing over time. It also exposes the simulation speed control, which
+means the client drives the <a href="../c01-simulation-clock/">clock</a> rather than merely
+observing it.</p>
+<h2 id="liveness-not-configuration">Liveness, not configuration</h2>
+<p>The client renders all eighteen components from the first day, greyed out, and
+lights each one only because a message from it arrived within that component's
+declared liveness window. There is no manual override, no <code>enabled: true</code> flag,
+and no hardcoded list of what is running.</p>
+<p>There is also no mocked traffic, ever. A mock asserts the existence of something
+that does not exist, which is precisely the failure this rule exists to prevent.
+There is no demo mode, no fixture mode, and no path that populates the display
+for a screenshot.</p>
+<p>The consequence, on day one, was a screen on which nothing was lit. That looked
+like a broken application and was the only honest picture of a system with
+nothing running. The first thing to light it was the simulation clock's
+heartbeat, and every component since has lit the same way — which is why a
+component that is running against a stack that is not shows nothing, still, and
+correctly.</p>
+<p>Those two states are worth seeing side by side, because the difference between
+them is the whole of this rule.</p>
+<figure markdown="span">
+![The component shell with every one of the eighteen boxes grey and labelled NOT HEARD FROM. The line beneath the heading reads "0 of 18 components heard from within the window each declared", and the transport panel reports that the page is not connected to the broker.](../blog/assets/003-shell-all-dark.png)
+<figcaption>Nothing running, and the display says so. Every box grey; nothing
+asserts a component that has not spoken.</figcaption>
+</figure>
+<figure markdown="span">
+![The same component shell with one box changed. The line beneath the heading now reads "1 of 18 components heard from within the window each declared", the transport panel reads "Connected, and receiving control traffic", and the box for C-01 Simulation clock is dark and filled, labelled HEARD FROM with the line "reports starting · at 2026-01-01T00:00". The other seventeen boxes remain grey.](../blog/assets/001-the-clock-lights-its-box.png)
+<figcaption>One real heartbeat, from one running component. Nothing else changed,
+and nothing else lit.</figcaption>
+</figure>
+<p>Neither picture was arranged. The second was taken against a running clock
+publishing to a real broker, and the seventeen boxes that stayed grey stayed grey
+because those components were genuinely not running. There is no path in the
+client that could have produced the second image without the first being true
+first.</p>
+<h2 id="making-the-core-visible">Making the core visible</h2>
+<p>The requirements ask the visualisation to make the distinction between bespoke
+logic and bought plumbing visible rather than hiding it — so that it stays
+obvious which parts of the system were built and which were configured.</p>
+<p><strong>Requirements:</strong> FR-01, FR-45 to FR-49, FR-52. <strong>Feature:</strong> 003, extended by 012.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

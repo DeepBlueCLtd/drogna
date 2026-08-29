@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="The running harness, the current build of the default branch, and the per-branch instances published for review.">
+<title>The demo — drogna</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../">Home</a></li><li><a href="../demo/" aria-current="page">The demo</a></li><li><a href="../architecture/">The architecture</a></li><li><a href="../components/">The component reference</a></li><li><a href="../standards/">Standards primers</a><ul><li><a href="../standards/cf-conventions/">CF conventions</a></li><li><a href="../standards/coveragejson/">CoverageJSON</a></li><li><a href="../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../algorithms/">Algorithm derivations</a><ul><li><a href="../algorithms/advection/">Advection</a></li><li><a href="../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../glossary/">Glossary</a></li><li><a href="../blog/">The blog</a></li><li><a href="../decisions/">The decision records</a></li><li><a href="../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-demo">The demo</h1>
+<p>drogna builds to static assets and runs entirely in the page. There is no server to
+provision, no account, and nothing to install: the demo is a URL.</p>
+<p><a href="../instances/main/"><strong>Open the current build</strong></a> — built from the default branch, at
+its latest commit.</p>
+<p>Every visit provisions a fresh seeded run. Nothing persists between visits, which is
+deliberate: a harness that accumulated state between demonstrations would stop being
+reproducible, and reproducibility is the only reason to trust anything it shows. Export
+and import of a run manifest is how a particular run is replayed.</p>
+<h2 id="opening-it-at-a-particular-view">Opening it at a particular view</h2>
+<p>The shell's views are addressable, so a link can open the page at the thing being
+discussed rather than at the front door. Append <code>#/view/&lt;id&gt;</code> to any instance URL:</p>
+<table>
+<thead>
+<tr>
+<th>View</th>
+<th>Address</th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intro</td>
+<td><a href="../instances/main/#/view/intro"><code>#/view/intro</code></a></td>
+<td>What the harness is, and what its numbers are not</td>
+</tr>
+<tr>
+<td>System</td>
+<td><a href="../instances/main/#/view/system"><code>#/view/system</code></a></td>
+<td>The components, lit by the heartbeats they are actually sending</td>
+</tr>
+<tr>
+<td>Holdings</td>
+<td><a href="../instances/main/#/view/holdings"><code>#/view/holdings</code></a></td>
+<td>The coverage holdings, and the eras they span</td>
+</tr>
+<tr>
+<td>Map</td>
+<td><a href="../instances/main/#/view/map"><code>#/view/map</code></a></td>
+<td>The field, the doubt over it, and the route chosen through it</td>
+</tr>
+<tr>
+<td>Messages</td>
+<td><a href="../instances/main/#/view/messages"><code>#/view/messages</code></a></td>
+<td>The traffic on the broker, as it crosses</td>
+</tr>
+<tr>
+<td>Operator</td>
+<td><a href="../instances/main/#/view/operator"><code>#/view/operator</code></a></td>
+<td>The machinery interrogated from the operator's side</td>
+</tr>
+</tbody>
+</table>
+<p>Activating a view writes the address back, so the address bar always names what is on
+screen and a link can be copied out of it.</p>
+<h2 id="instances-under-review">Instances under review</h2>
+<p>Every branch that CI builds is published as its own instance and <strong>kept after its pull
+request completes</strong>. A review comment can therefore link a specific build at a specific
+view, and the link still resolves a year later — which is the point: a comment that
+says &quot;see the map panel&quot; is worth less than one that opens it.</p>
+<p><a href="../instances/"><strong>The instance index</strong></a> lists every instance the estate holds, with the
+commit each was built from. The addresses are stable and predictable:</p>
+<pre><code class="language-text">instances/main/                  the default branch
+instances/&lt;branch-with-slashes-as-hyphens&gt;/   any other branch CI has built
+</code></pre>
+<p>A branch named <code>claude/website-v2-redesign-tqrtn0</code> is published at
+<code>instances/claude-website-v2-redesign-tqrtn0/</code>.</p>
+<p>Instances are grown into the estate additively: a deployment replaces its own subtree
+and touches nothing else. Nothing is rebuilt wholesale at a merge, because a review
+instance cannot wait for one.</p>
+<h2 id="what-it-is-not">What it is not</h2>
+<p>The numbers are invented. The forecast is <a href="../glossary/#advection">advection</a> plus
+noise. The sensors sample a generator, not an ocean. Everything the demo shows about
+<em>how the parts fit together</em> is real; nothing it shows about the sea is.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

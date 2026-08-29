@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="The Version 1 record, kept and labelled: seventeen blog entries, an eighteen-component reference, and the architecture overview of a system that no longer runs.">
+<title>The Version 1 archive — drogna</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../">Home</a></li><li><a href="../demo/">The demo</a></li><li><a href="../architecture/">The architecture</a></li><li><a href="../components/">The component reference</a></li><li><a href="../standards/">Standards primers</a><ul><li><a href="../standards/cf-conventions/">CF conventions</a></li><li><a href="../standards/coveragejson/">CoverageJSON</a></li><li><a href="../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../algorithms/">Algorithm derivations</a><ul><li><a href="../algorithms/advection/">Advection</a></li><li><a href="../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../glossary/">Glossary</a></li><li><a href="../blog/">The blog</a></li><li><a href="../decisions/">The decision records</a></li><li><a href="../archive/" aria-current="page">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-version-1-archive">The Version 1 archive</h1>
+<p>Version 1 was twelve services across Python, SQL, nginx configuration and Compose,
+deployed to a server. It delivered seventeen features and all four of its acceptance
+criteria, and it was retired — not because it failed, but because reviewing a change to
+it meant reasoning across containers, and that was the cost that mattered.
+<a href="../decisions/adr/0027-version-2-client-side-rewrite/">ADR-0027</a> is the record of
+that decision.</p>
+<p>Nothing here has been deleted, and nothing here has been quietly updated to describe
+Version 2 instead. These pages are accurate about software that no longer runs, which
+is a useful thing for a page to be and a dangerous thing for a page to be silent about.
+Each one is reached only from this section.</p>
+<h2 id="what-is-kept">What is kept</h2>
+<ul>
+<li><a href="blog/"><strong>The Version 1 blog</strong></a> — seventeen entries, one per feature, written
+as each feature came to work. Several are about faults found in drogna's own checks
+rather than in drogna, and those are the ones that aged best: a gate that reported a
+file of deliberate violations as clean, a test that isolated nothing, a threshold
+nothing could reach.</li>
+<li><a href="subsystems/"><strong>The eighteen-component reference</strong></a> — one page per component:
+what it did, why it existed as a separate thing, and which failure mode it owned. The
+failure-mode column is the part worth reading. The Version 2
+<a href="../components/">component reference</a> is generated rather than written, and
+is a different kind of document.</li>
+<li><a href="architecture/overview/"><strong>The Version 1 architecture overview</strong></a> — the container
+layout, the port accounting, and the reverse proxy that fronted it.</li>
+</ul>
+<h2 id="what-is-not-kept">What is not kept</h2>
+<p>The Version 1 decision records are not here, because they were never site content: they
+live in the repository at <code>docs/adr/</code> and are published with everything else in
+<a href="../decisions/">the decision records</a>, each marked as a Version 1 record. The
+numbering runs straight through the version boundary, so ADR-0009 is still ADR-0009.</p>
+<p>The site's own Version 1 tooling — a Python static-site generator and the publication
+gates written against it — is retired rather than archived. It was build machinery, not
+a record, and Version 2 admits no second language runtime.</p>
+<p>The droplet the Version 1 site and demo were served from is decommissioned. Both the
+site and the demo are static now, so nothing drogna runs needs a server.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

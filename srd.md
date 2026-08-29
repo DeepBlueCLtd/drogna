@@ -160,7 +160,7 @@ mode; the ancestry column is the map back into the archived record.
 | V2-C16 | Shore advisory source | Deterministic advisory authoring; the advisory ingestion seam | C-19 |
 | V2-C17 | Advisory store | Append-only advisories, read by the query components alone | C-20 |
 | V2-C18 | Operator surface | Aggregated component state; commands with observable refusals | C-21 (sans container runtime) |
-| V2-C19 | Shell | Dockable multi-panel front-end: Intro, Background, System, Map, Messages | C-18 |
+| V2-C19 | Shell | Dockable multi-panel front-end: Intro, Background, System, Holdings, Map, Messages | C-18 |
 | V2-C20 | Offload packager | Export shape and departure announcements; no real transfer until V3 | C-17 |
 
 - **FR-12** Store semantics carry although the engines do not: one writer per store
@@ -184,15 +184,17 @@ directed → the machinery is interrogated → advice travels light → it is se
 ### 5.1 Foundations and shell (feature 101)
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
-  **Intro, Background, System, Map, Messages** at first run, user-rearrangeable by drag
-  and drop. Background is specified by §5.10 and built by feature 111; it is named here
-  because a tab that arrives without a requirement behind it is exactly the divergence
-  V2 exists to end.
-  The layout library is chosen by feature 101's spike (plan §9.5; golden-layout 2.x
-  the leading candidate) and recorded with its React-hosting pattern in an ADR. Panel
-  arrangement is presentation only: no arrangement changes what any component does,
-  and a saved arrangement is a per-viewer convenience, never state the system depends
-  on.
+  **Intro, Background, System, Holdings, Map, Messages** at first run,
+  user-rearrangeable by drag and drop. Background is specified by §5.10 and built by
+  feature 111; it is named here because a tab that arrives without a requirement behind
+  it is exactly the divergence V2 exists to end. **Holdings** is named for the same
+  reason and with the debt admitted: it shipped with feature 102 and this list did not
+  follow it, so §5.2 still owes it a requirement of its own.
+  The layout library is **dockview 8.x**, chosen by feature 101's spike
+  (`spikes/layout-manager/FINDING.md`) and recorded with its React-hosting pattern in
+  ADR-0028. Panel arrangement is presentation only: no arrangement changes what any
+  component does, and a saved arrangement is a per-viewer convenience, never state the
+  system depends on.
 - **FR-15** Views shall be URL-addressable from feature 101: an anchor URL opens the
   shell in a named view (a tab, a panel arrangement, a beat's demonstration), so a PR
   comment or a blog post can link a reader straight into the running instance at the

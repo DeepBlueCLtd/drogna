@@ -13,18 +13,22 @@ interactive infographic."
 
 ## Context
 
-Version 2 is a clean rewrite that has not started: there is no `app/`, and
-`specs/` stops at `023-edr-query-composer`, all of it V1. This feature therefore sits
-behind feature 101 (the shell), which supplies the dockable layout, the tab bar and the
-URL-addressable views this feature depends on.
+Features 101 and 102 have landed (`app/`, `srd.md` at the root, constitution 2.0.0),
+so this feature builds on a real shell rather than a planned one: dockview hosts the
+layout (ADR-0028), panels are registered from `config.run`'s `shell` document, and
+`app/src/shell/views.ts` addresses a panel by hash. `plan.md` records the two places
+this feature must reach into that shell, and why one of them amends ADR-0028.
 
 **Feature number.** `docs/v2/plan.md` §5 reserves "a candidate feature 110" for
 interactive walkthrough machinery. That candidate is unclaimed but named, so this
 feature takes 111 rather than renumbering somebody else's slot.
 
-**SRD change.** SRD-v2 FR-14 names four top-level tabs — Intro, System, Map, Messages.
-Background is a fifth, and FR-14 is amended by this feature rather than the tab arriving
-without a requirement behind it.
+**SRD change.** `srd.md` FR-14 named four top-level tabs. Background joins them, and
+FR-14 is amended by this feature rather than the tab arriving without a requirement
+behind it. Amending it surfaced a second omission and fixed that too: **Holdings**
+shipped with feature 102 and the tab list never followed it, so the requirement named
+four tabs while the shell served five. §5.2 still owes Holdings a requirement of its
+own; that debt is stated in FR-14 rather than left to be discovered again.
 
 ### What was decided in the interview, and what it rules out
 
@@ -274,7 +278,8 @@ loop steps through a full cycle from the viewer's input alone.
 
 - Feature 101 has landed: the dockable shell, the top-level tab bar, the panel-hosting
   pattern, and FR-15's URL-addressable views. Background is a consumer of all four and
-  builds none of them.
+  builds none of them — except the addressing, which it must extend below the panel
+  (`plan.md`, T010 to T013).
 - Features 103–109 have landed far enough that FR-005's outward links have somewhere to
   land. Where a target view does not exist yet, the link is omitted rather than left
   dangling, and the explainer still stands.

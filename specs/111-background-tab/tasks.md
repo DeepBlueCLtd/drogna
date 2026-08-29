@@ -1,18 +1,21 @@
 # Feature 111 — tasks
 
-Nothing is built yet. Ticked as built, per the V1 reconciliation lesson: the reason is
-written at the moment a task is declined, never reconstructed later.
+No code is built yet; the record tasks are. Ticked as built, per the V1 reconciliation
+lesson: the reason is written at the moment a task is declined, never reconstructed
+later.
 
-Feature 101 is a hard prerequisite for everything below T001 — the shell, the panel
-registration, the configuration document and the addressing all come from it.
+Feature 101 is a hard prerequisite for everything below the record group — the shell,
+the panel registration, the configuration document and the addressing all come from it,
+and this branch now carries them.
 
 ## Record
 
-- [ ] T001 Re-aim the FR-14 amendment at `srd.md`. Feature 101's adoption commit moves
-      the SRD to the repository root and deletes `docs/v2/srd-v2.md`, which is where
-      `spec.md`'s FR-001 currently writes. Whichever lands second carries the move; if
-      neither does, the amendment is deleted by a merge and the tab has no requirement
-      behind it. Also carry §5.10 (FR-43 to FR-45) and the V2-C19 row across.
+- [x] T001 Re-aim the FR-14 amendment at `srd.md`. Done by merging the implementation
+      branch in: git's rename detection carried the edit across, and it was verified in
+      place rather than assumed. §5.10 (FR-43 to FR-45) and the V2-C19 row came with it.
+      Re-reading the amended paragraph against the tree also found Holdings missing from
+      the tab list and the layout library still written as an open question; both fixed,
+      and the reasons are in `plan.md`.
 - [ ] T002 ADR amending ADR-0028: addressability below the panel. The three options and
       the rejections are in `plan.md`; the record is owed before the code, because a
       shared link is what makes it hard to reverse.

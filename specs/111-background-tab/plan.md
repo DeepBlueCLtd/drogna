@@ -125,10 +125,21 @@ the addressing work is the only part that can go wrong for anyone but this featu
 explainers then land in their course order, each independently reviewable: US2 (points
 and fields, NetCDF), US3 (SensorThings, EDR, pygeoapi), US4 (MQTT, the control loop).
 
-## Dependency on the SRD amendment
+## The SRD amendment, resolved
 
-`spec.md`'s FR-001 amends FR-14 to name Background as a fifth top-level tab. That
-amendment currently sits on `docs/v2/srd-v2.md`, which feature 101's adoption commit
-replaces with `srd.md` at the repository root. It must be re-aimed at `srd.md` before
-either lands, or the amendment is deleted by a merge and nothing says the tab is
-required. Carried as T001.
+`spec.md`'s FR-001 amends FR-14 to name Background a top-level tab. The amendment was
+written against `docs/v2/srd-v2.md`, which feature 101's adoption commit renames to
+`srd.md` at the repository root; merging that branch in carried the edit across on
+git's rename detection, and it was checked in place rather than assumed.
+
+Re-reading the amended paragraph against the tree found two further faults, both from
+101 and 102 and both now corrected in `srd.md`, because publishing a list known to be
+wrong is worse than the list being short:
+
+- **Holdings was missing.** The shell serves Intro, System, Holdings, Map, Messages;
+  FR-14 named four of the five. Adding Background to a list already wrong would have
+  compounded it. Holdings is named now, with its debt admitted: §5.2 still owes it a
+  requirement of its own, which is 102's to write, not this feature's.
+- **The layout library was still an open question in the prose.** FR-14 read "chosen by
+  feature 101's spike ... golden-layout 2.x the leading candidate" after the spike had
+  run and chosen dockview. It now records dockview 8.x and ADR-0028 as settled.

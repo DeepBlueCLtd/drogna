@@ -234,6 +234,43 @@ export type ConfigEnvGeneratorGridCounts = {
   "depth": number;
 };
 
+/** drogna feature store configuration (V2-C07) — from config.feature-store.schema.json */
+export type ConfigFeatureStore = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "features": {
+    "feature_id": string;
+    "name": string;
+    "kind": "domain" | "loiter_region" | "reference_area";
+    "geometry": {
+      "type": "Polygon";
+      "coordinates": number[][][];
+    };
+  }[];
+};
+
+/** drogna ingestion seam configuration (V2-C05) — from config.ingest.schema.json */
+export type ConfigIngest = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+};
+
+/** drogna observation store configuration (V2-C06) — from config.observation-store.schema.json */
+export type ConfigObservationStore = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+};
+
 /** drogna run configuration — from config.run.schema.json */
 export type ConfigRun = {
   "schema_version": 1;
@@ -243,7 +280,46 @@ export type ConfigRun = {
   "boundary": ConfigBoundary;
   "env_generator": ConfigEnvGenerator;
   "coverage_store": ConfigCoverageStore;
+  "sensors": ConfigSensors;
+  "ingest": ConfigIngest;
+  "observation_store": ConfigObservationStore;
+  "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
+};
+
+/** drogna sensors configuration (V2-C04) — from config.sensors.schema.json */
+export type ConfigSensors = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observation_prefix": string;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "platform": {
+    "thing_id": string;
+    "name": string;
+    "description": string;
+    "loiter": {
+      "centre_latitude": number;
+      "centre_longitude": number;
+      "radius_km": number;
+      "period_seconds": number;
+    };
+  };
+  "sample_interval_ticks": number;
+  "instruments": {
+    "sensor_id": string;
+    "datastream_id": string;
+    "observed_property": "temperature" | "salinity" | "pressure";
+    "depth_m": number;
+    "noise_std": number;
+    "unit": {
+      "name": string;
+      "symbol": string;
+      "definition": string;
+    };
+  }[];
 };
 
 /** drogna shell configuration (V2-C19) — from config.shell.schema.json */
@@ -1170,7 +1246,7 @@ export type TopologyComponentIdentity = {
 /** topology.schema.json #/$defs/topic_entry */
 export type TopologyTopicEntry = {
   "topic": string;
-  "namespace": "obs" | "ctl";
+  "namespace": "obs" | "ctl" | "cov" | "adv";
   "schema": string | null;
   "publishers": string[];
   "subscribers": string[];

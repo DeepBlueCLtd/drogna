@@ -235,3 +235,70 @@ body,
 .map-pending {
   color: var(--shell-dim);
 }
+
+.topic-tree {
+  min-width: 16em;
+  max-width: 22em;
+  overflow: auto;
+  border-right: 1px solid #1d252e;
+  padding-right: 0.8em;
+}
+
+.topic-branch {
+  list-style: none;
+  margin: 0;
+  padding-left: 1em;
+}
+
+.topic-tree > .topic-branch {
+  padding-left: 0;
+}
+
+.topic-node {
+  font-family: monospace;
+  font-size: 0.9em;
+  transition: opacity 0.35s ease, text-shadow 0.35s ease;
+}
+
+.topic-pulse {
+  color: var(--shell-accent);
+  text-shadow: 0 0 8px var(--shell-accent);
+}
+
+.topic-undeclared {
+  color: var(--shell-refused);
+}
+
+.topic-flag {
+  margin-left: 0.5em;
+  font-size: 0.75em;
+  color: var(--shell-refused);
+}
+
+.topic-count {
+  margin-left: 0.5em;
+  color: var(--shell-dim);
+  font-size: 0.8em;
+}
+
+.topic-roles {
+  margin-left: 0.6em;
+}
+
+.topic-role-chip {
+  display: inline-block;
+  margin-right: 0.3em;
+  padding: 0 0.35em;
+  border: 1px solid #2c3742;
+  border-radius: 3px;
+  font-size: 0.7em;
+  color: var(--shell-dim);
+}
+
+.topic-summary {
+  background: none;
+  border: 1px dashed #2c3742;
+  color: var(--shell-dim);
+  cursor: pointer;
+  font-size: 0.8em;
+}

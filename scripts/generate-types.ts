@@ -171,8 +171,16 @@ for (const [file, doc] of documents) {
 }
 documentsOut += '};\n';
 
+// The derived topology artefact (contracts/topology.json, scripts/derive-topology.ts)
+// travels into the app the same way the masters do: embedded, typed, drift-gated.
+const topologyJson = readFileSync(join(repoRoot, 'contracts', 'topology.json'), 'utf8').trimEnd();
+const topologyOut =
+  banner +
+  `\nimport type { Topology } from './types.js';\n\nexport const topology: Topology = ${topologyJson.replace(/\n/g, '\n')};\n`;
+
 const outDir = process.env.DROGNA_GENERATED_OUT ?? join(repoRoot, 'app', 'src', 'generated');
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'types.ts'), typesOut);
 writeFileSync(join(outDir, 'schema-documents.ts'), documentsOut);
+writeFileSync(join(outDir, 'topology.ts'), topologyOut);
 process.stdout.write(`generated ${documents.size} masters into ${outDir}\n`);

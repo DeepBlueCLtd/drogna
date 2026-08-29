@@ -65,18 +65,22 @@ describe('the panels against a live backend', () => {
       'clock',
       'coverage-store',
       'env-generator',
+      'feature-store',
+      'ingest',
+      'observation-store',
+      'sensors',
     ]);
     // The full declared layout renders from day one (FR-16): every future beat greyed.
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 5);
+    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 9);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(5);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(9);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));
@@ -109,6 +113,28 @@ describe('the panels against a live backend', () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+
+  it('the topic tree lights only from received traffic, and never hides an undeclared topic (E12, E13)', () => {
+    render(<MessagesPanel {...panelProps(config, runtime)} />);
+    // Structure renders dark: declared nodes exist before any traffic is heard by
+    // this subscription.
+    const obsNode = document.querySelector('[data-topic-path="obs"]');
+    expect(obsNode).not.toBeNull();
+    expect(obsNode?.getAttribute('data-lit')).toBe('false');
+    // A sample tick produces observation traffic; the branch and its leaves light.
+    act(() => {
+      for (let i = 0; i < 30; i++) runtime.clock.tickOnce();
+    });
+    expect(document.querySelector('[data-topic-path="obs"]')?.getAttribute('data-lit')).toBe('true');
+    expect(
+      document.querySelector('[data-topic-path="obs/platform-a/temperature-050m"]')?.getAttribute('data-lit'),
+    ).toBe('true');
+    // An arrival on a topic no declaration names is a visible finding, not a silence.
+    const rogue = runtime.transport.connect('rogue', 'sensors');
+    act(() => rogue.publish('obs/platform-a/mystery', { not: 'declared' }));
+    const undeclared = document.querySelector('[data-topic-path="obs/platform-a/mystery"]');
+    expect(undeclared?.className).toMatch(/topic-undeclared/);
   });
 
   it('Intro states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {

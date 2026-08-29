@@ -15,6 +15,7 @@ import { runGate as literalPaths } from '../gates/check-literal-paths.js';
 import { runGate as vocabulary } from '../gates/check-vocabulary.js';
 import { runGate as importBoundary } from '../gates/check-import-boundary.js';
 import { runGate as typesDrift } from '../gates/check-types-drift.js';
+import { runGate as topologyDrift } from '../gates/check-topology-drift.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -60,6 +61,12 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       "'panels' may not import from 'backend' (Constitution XI)",
     ]);
     expect(importBoundary(clean)).toEqual([]);
+  });
+
+  it('topology-drift: a stale committed artefact fails; the real one passes', () => {
+    const stale = topologyDrift(REPO_ROOT, join(fixtures, 'stale-topology.json'));
+    expect(stale.map((f) => f.message).join('\n')).toMatch(/drifted/);
+    expect(topologyDrift(REPO_ROOT)).toEqual([]);
   });
 
   it('types-drift: a stale committed tree fails; the real one passes', () => {

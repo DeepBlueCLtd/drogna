@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.feature-store.schema.json",
+  "title": "drogna feature store configuration (V2-C07)",
+  "description": "The read-only spatial reference store, provisioned at scenario start from the geometries declared here and immutable for the rest of the run (SRD-v2 FR-12). Reference geometry only: the domain, the loiter region, and any named reference area — never anything the harness did not place.",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock"],
+      "additionalProperties": false,
+      "properties": { "clock": { "$ref": "config.common.schema.json#/$defs/topic" } }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["feature_id", "name", "kind", "geometry"],
+        "additionalProperties": false,
+        "properties": {
+          "feature_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["domain", "loiter_region", "reference_area"] },
+          "geometry": {
+            "type": "object",
+            "required": ["type", "coordinates"],
+            "additionalProperties": false,
+            "description": "GeoJSON geometry, Polygon only at this beat; the query seam's subset statement says so when it serves these (feature 104).",
+            "properties": {
+              "type": { "type": "string", "const": "Polygon" },
+              "coordinates": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "description": "A single ring: the outer boundary, closed, no holes — the subset grows one capability at a time (E9).",
+                "items": {
+                  "type": "array",
+                  "minItems": 4,
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

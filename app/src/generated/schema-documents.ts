@@ -1053,6 +1053,175 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.feature-store": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.feature-store.schema.json",
+    "title": "drogna feature store configuration (V2-C07)",
+    "description": "The read-only spatial reference store, provisioned at scenario start from the geometries declared here and immutable for the rest of the run (SRD-v2 FR-12). Reference geometry only: the domain, the loiter region, and any named reference area — never anything the harness did not place.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "features"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "features": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "feature_id",
+            "name",
+            "kind",
+            "geometry"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "feature_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "domain",
+                "loiter_region",
+                "reference_area"
+              ]
+            },
+            "geometry": {
+              "type": "object",
+              "required": [
+                "type",
+                "coordinates"
+              ],
+              "additionalProperties": false,
+              "description": "GeoJSON geometry, Polygon only at this beat; the query seam's subset statement says so when it serves these (feature 104).",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "Polygon"
+                },
+                "coordinates": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "description": "A single ring: the outer boundary, closed, no holes — the subset grows one capability at a time (E9).",
+                  "items": {
+                    "type": "array",
+                    "minItems": 4,
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "config.ingest": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.ingest.schema.json",
+    "title": "drogna ingestion seam configuration (V2-C05)",
+    "description": "The observation ingestion seam: subscribes to the observation namespace, validates every message against its master, refuses what fails with the fault named and counts it observably, and is the observation store's sole writer (SRD-v2 FR-22). Redelivery is a no-op: the deterministic observation_id is the store's key (at-least-once carried from V1).",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      }
+    }
+  },
+  "config.observation-store": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.observation-store.schema.json",
+    "title": "drogna observation store configuration (V2-C06)",
+    "description": "The observation store: in-memory point observations behind a store interface, written only by the ingestion seam, keyed by the deterministic observation_id so redelivery is a no-op. Its heartbeat carries its row count, which is how the shell can say what it holds without reaching past the seam.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      }
+    }
+  },
   "config.run": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.run.schema.json",
@@ -1067,6 +1236,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "boundary",
       "env_generator",
       "coverage_store",
+      "sensors",
+      "ingest",
+      "observation_store",
+      "feature_store",
       "shell"
     ],
     "additionalProperties": false,
@@ -1095,8 +1268,190 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "coverage_store": {
         "$ref": "config.coverage-store.schema.json"
       },
+      "sensors": {
+        "$ref": "config.sensors.schema.json"
+      },
+      "ingest": {
+        "$ref": "config.ingest.schema.json"
+      },
+      "observation_store": {
+        "$ref": "config.observation-store.schema.json"
+      },
+      "feature_store": {
+        "$ref": "config.feature-store.schema.json"
+      },
       "shell": {
         "$ref": "config.shell.schema.json"
+      }
+    }
+  },
+  "config.sensors": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.sensors.schema.json",
+    "title": "drogna sensors configuration (V2-C04)",
+    "description": "The sensors component's configuration document (SRD-v2 FR-22): one simulated platform loitering deterministically, carrying instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Sensors read the clock and nothing else (ADR-0012, carried).",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "platform",
+      "sample_interval_ticks",
+      "instruments"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The RNG stream sensor noise draws from."
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observation_prefix"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observation_prefix": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$",
+            "description": "The namespace observations are published under; the topic is <prefix>/<thing_id>/<datastream_id>."
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "platform": {
+        "type": "object",
+        "required": [
+          "thing_id",
+          "name",
+          "description",
+          "loiter"
+        ],
+        "additionalProperties": false,
+        "description": "The sampling platform: a coordinate and a sampler, no history, no identity beyond its id (Constitution V).",
+        "properties": {
+          "thing_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "loiter": {
+            "type": "object",
+            "required": [
+              "centre_latitude",
+              "centre_longitude",
+              "radius_km",
+              "period_seconds"
+            ],
+            "additionalProperties": false,
+            "description": "The deterministic loiter: position is a pure function of simulation time. The planner's committed routes take over steering at feature 106.",
+            "properties": {
+              "centre_latitude": {
+                "type": "number"
+              },
+              "centre_longitude": {
+                "type": "number"
+              },
+              "radius_km": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "period_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      },
+      "sample_interval_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "instruments": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "sensor_id",
+            "datastream_id",
+            "observed_property",
+            "depth_m",
+            "noise_std",
+            "unit"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "sensor_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "datastream_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            "observed_property": {
+              "type": "string",
+              "enum": [
+                "temperature",
+                "salinity",
+                "pressure"
+              ]
+            },
+            "depth_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "noise_std": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Gaussian noise standard deviation, declared here and restated in the sensor's SensorThings metadata so a stored value can be scored against the generator's field."
+            },
+            "unit": {
+              "type": "object",
+              "required": [
+                "name",
+                "symbol",
+                "definition"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "definition": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -5653,7 +6008,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/topology.schema.json",
     "title": "drogna broker topology",
-    "description": "Who may say what to whom on the broker, and where the tree says it. Derived from the repository by scripts/scan_topology.py and written to contracts/topology.json, which is generated and gated: scripts/check_topology_drift.py fails when the committed instance no longer matches a fresh scan, for the same reason the generated type trees have a drift check. Two layers, and they are deliberately not the same thing. The publishers and subscribers of a topic are permissions, read from deploy/broker/acl, which mosquitto enforces and which is therefore the only complete statement of the boundary; they are coarse wherever that file is coarse, and the control role's readwrite over the whole control namespace is the coarsest place. What narrows them is named_by, the places in the tree that actually name the topic. Neither layer is a claim about a running system: nothing here says a component exists, is alive, or has ever sent anything, and a display built on it must light a cell from received traffic and never from this document (Constitution VII).",
+    "description": "Who may say what to whom on the broker, and where the tree says it. Derived from the repository by scripts/derive-topology.ts and written to contracts/topology.json, which is generated and gated: scripts/gates/check-topology-drift.ts fails when the committed instance no longer matches a fresh scan, for the same reason the generated type trees have a drift check. Two layers, and they are deliberately not the same thing. The publishers and subscribers of a topic are permissions, read in V2 from the broker component’s configured role rules, which the broker enforces and which are therefore the complete statement of the boundary (E14: the scanner reads component configuration, never a hand-maintained file); they are coarse wherever that file is coarse, and the control role's readwrite over the whole control namespace is the coarsest place. What narrows them is named_by, the places in the tree that actually name the topic. Neither layer is a claim about a running system: nothing here says a component exists, is alive, or has ever sent anything, and a display built on it must light a cell from received traffic and never from this document (Constitution VII).",
     "type": "object",
     "required": [
       "generator",
@@ -5701,7 +6056,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "properties": {
           "role": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*$",
+            "pattern": "^[a-z][a-z0-9_-]*$",
             "description": "The user name in the access control list. The password that authenticates it is produced at deploy time, appears in no tracked file, and is not read by the scanner."
           },
           "rules": {
@@ -5754,7 +6109,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "role": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*$",
+            "pattern": "^[a-z][a-z0-9_-]*$",
             "description": "The role named in the component's broker URL. Both destinations are read and are required to agree; a disagreement stops the scan rather than being resolved in favour of one."
           },
           "source_root": {
@@ -5787,7 +6142,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "enum": [
               "obs",
-              "ctl"
+              "ctl",
+              "cov",
+              "adv"
             ],
             "description": "The two namespaces are conventions of the harness rather than configuration: obs carries observations, ctl carries control events, and the access control list is what makes the separation a control rather than a custom."
           },
@@ -5859,7 +6216,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     },
     "examples": [
       {
-        "generator": "scripts/scan_topology.py",
+        "generator": "scripts/derive-topology.ts",
         "roles": [
           {
             "role": "drogna_sensor",

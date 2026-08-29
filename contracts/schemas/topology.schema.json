@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/topology.schema.json",
   "title": "drogna broker topology",
-  "description": "Who may say what to whom on the broker, and where the tree says it. Derived from the repository by scripts/scan_topology.py and written to contracts/topology.json, which is generated and gated: scripts/check_topology_drift.py fails when the committed instance no longer matches a fresh scan, for the same reason the generated type trees have a drift check. Two layers, and they are deliberately not the same thing. The publishers and subscribers of a topic are permissions, read from deploy/broker/acl, which mosquitto enforces and which is therefore the only complete statement of the boundary; they are coarse wherever that file is coarse, and the control role's readwrite over the whole control namespace is the coarsest place. What narrows them is named_by, the places in the tree that actually name the topic. Neither layer is a claim about a running system: nothing here says a component exists, is alive, or has ever sent anything, and a display built on it must light a cell from received traffic and never from this document (Constitution VII).",
+  "description": "Who may say what to whom on the broker, and where the tree says it. Derived from the repository by scripts/derive-topology.ts and written to contracts/topology.json, which is generated and gated: scripts/gates/check-topology-drift.ts fails when the committed instance no longer matches a fresh scan, for the same reason the generated type trees have a drift check. Two layers, and they are deliberately not the same thing. The publishers and subscribers of a topic are permissions, read in V2 from the broker component’s configured role rules, which the broker enforces and which are therefore the complete statement of the boundary (E14: the scanner reads component configuration, never a hand-maintained file); they are coarse wherever that file is coarse, and the control role's readwrite over the whole control namespace is the coarsest place. What narrows them is named_by, the places in the tree that actually name the topic. Neither layer is a claim about a running system: nothing here says a component exists, is alive, or has ever sent anything, and a display built on it must light a cell from received traffic and never from this document (Constitution VII).",
   "type": "object",
   "required": ["generator", "roles", "components", "topics"],
   "additionalProperties": false,
@@ -36,7 +36,7 @@
       "properties": {
         "role": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$",
+          "pattern": "^[a-z][a-z0-9_-]*$",
           "description": "The user name in the access control list. The password that authenticates it is produced at deploy time, appears in no tracked file, and is not read by the scanner."
         },
         "rules": {
@@ -76,7 +76,7 @@
         },
         "role": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$",
+          "pattern": "^[a-z][a-z0-9_-]*$",
           "description": "The role named in the component's broker URL. Both destinations are read and are required to agree; a disagreement stops the scan rather than being resolved in favour of one."
         },
         "source_root": {
@@ -97,7 +97,7 @@
         },
         "namespace": {
           "type": "string",
-          "enum": ["obs", "ctl"],
+          "enum": ["obs", "ctl", "cov", "adv"],
           "description": "The two namespaces are conventions of the harness rather than configuration: obs carries observations, ctl carries control events, and the access control list is what makes the separation a control rather than a custom."
         },
         "schema": {
@@ -149,7 +149,7 @@
   },
   "examples": [
     {
-      "generator": "scripts/scan_topology.py",
+      "generator": "scripts/derive-topology.ts",
       "roles": [
         { "role": "drogna_sensor", "rules": [{ "access": "write", "filter": "obs/#" }] }
       ],

@@ -24,6 +24,14 @@
         "subscribe": ["ctl/clock"]
       },
       { "role": "env-generator", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      { "role": "sensors", "publish": ["obs/+/+", "ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "ingest",
+        "publish": ["ctl/heartbeat"],
+        "subscribe": ["obs/#", "ctl/clock"]
+      },
+      { "role": "feature-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      { "role": "observation-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
       {
         "role": "coverage-store",
         "publish": ["cov/holdings", "ctl/heartbeat"],
@@ -137,6 +145,93 @@
     "http": { "holdings_path": "/api/ctl/holdings" },
     "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
   },
+  "sensors": {
+    "id": "sensors",
+    "stream": "sensors-noise",
+    "topics": { "clock": "ctl/clock", "observation_prefix": "obs" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "platform": {
+      "thing_id": "platform-a",
+      "name": "sampling platform A",
+      "description": "A simulated sampling platform. A coordinate and a sampler.",
+      "loiter": {
+        "centre_latitude": 46.1,
+        "centre_longitude": -11.2,
+        "radius_km": 45,
+        "period_seconds": 43200
+      }
+    },
+    "sample_interval_ticks": 30,
+    "instruments": [
+      {
+        "sensor_id": "ctd-temp-050",
+        "datastream_id": "temperature-050m",
+        "observed_property": "temperature",
+        "depth_m": 50,
+        "noise_std": 0.02,
+        "unit": { "name": "degree Celsius", "symbol": "degC", "definition": "degree_C" }
+      },
+      {
+        "sensor_id": "ctd-sal-050",
+        "datastream_id": "salinity-050m",
+        "observed_property": "salinity",
+        "depth_m": 50,
+        "noise_std": 0.01,
+        "unit": { "name": "practical salinity unit", "symbol": "psu", "definition": "1e-3" }
+      },
+      {
+        "sensor_id": "ctd-temp-200",
+        "datastream_id": "temperature-200m",
+        "observed_property": "temperature",
+        "depth_m": 200,
+        "noise_std": 0.02,
+        "unit": { "name": "degree Celsius", "symbol": "degC", "definition": "degree_C" }
+      },
+      {
+        "sensor_id": "ctd-pres-200",
+        "datastream_id": "pressure-200m",
+        "observed_property": "pressure",
+        "depth_m": 200,
+        "noise_std": 0.5,
+        "unit": { "name": "decibar", "symbol": "dbar", "definition": "dbar" }
+      }
+    ]
+  },
+  "ingest": {
+    "id": "ingest",
+    "topics": { "clock": "ctl/clock", "observations": "obs/#" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "observation_store": {
+    "id": "observation-store",
+    "topics": { "clock": "ctl/clock" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+  },
+  "feature_store": {
+    "id": "feature-store",
+    "topics": { "clock": "ctl/clock" },
+    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "features": [
+      {
+        "feature_id": "domain",
+        "name": "scenario domain",
+        "kind": "domain",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[-14, 44], [-8, 44], [-8, 48], [-14, 48], [-14, 44]]]
+        }
+      },
+      {
+        "feature_id": "loiter-region",
+        "name": "loiter region",
+        "kind": "loiter_region",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[-11.8, 45.7], [-10.6, 45.7], [-10.6, 46.5], [-11.8, 46.5], [-11.8, 45.7]]]
+        }
+      }
+    ]
+  },
   "shell": {
     "id": "shell",
     "role": "shell",
@@ -178,7 +273,8 @@
       { "filter": "ctl/clock", "schema": "clock" },
       { "filter": "ctl/heartbeat", "schema": "heartbeat" },
       { "filter": "ctl/boundary/denial", "schema": "boundary-denial" },
-      { "filter": "cov/holdings", "schema": "holding-published" }
+      { "filter": "cov/holdings", "schema": "holding-published" },
+      { "filter": "obs/#", "schema": "observation" }
     ],
     "endpoints": { "clock_rate": "/api/ctl/clock/rate", "holdings": "/api/ctl/holdings" },
     "liveness": { "default_window_seconds": 6 },

@@ -4,3 +4,4 @@ gates/check-types-drift.ts
 gates/check-literal-paths.ts
 gates/check-vocabulary.ts
 gates/check-import-boundary.ts
+gates/check-topology-drift.ts

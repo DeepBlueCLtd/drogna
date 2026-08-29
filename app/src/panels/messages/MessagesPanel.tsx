@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 import type { PanelParams } from '../../shell/Shell.js';
 import { topicMatchesFilter } from './topic-match.js';
+import { TopicTree } from './TopicTree.js';
 
 interface Row {
   seq: number;
@@ -51,6 +52,7 @@ export function MessagesPanel({ params }: IDockviewPanelProps<PanelParams>) {
         {counters.current.received} received · {counters.current.refused} refused by their schema
       </p>
       <div className="messages-split">
+        <TopicTree client={client} />
         <table className="messages-list">
           <tbody>
             {rows.map((row) => (

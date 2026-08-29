@@ -57,10 +57,24 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           recovery against it.
         </p>
       </section>
+      <section>
+        <h3>103 — it is sampled</h3>
+        <p>
+          A simulated platform loiters over the eddy, and its instruments sample the
+          true field on a fixed cadence, publishing observations in SensorThings
+          vocabulary over the broker — where the role rules confine them to the
+          observation namespace. The ingestion seam validates every message against
+          its master and is the observation store&rsquo;s only way in; refusals are
+          counted where you can see them. The{' '}
+          <a href={hashForView('messages')}>Messages</a> tab now draws the topic
+          tree: structure from the derived topology artefact, light from received
+          traffic, and the two never mixing.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          Sensing (103), the query seam (104), the forecast loop (105), uncertainty
+          The query seam (104), the forecast loop (105), uncertainty
           and planning (106), the operator&rsquo;s view (107), shore advisories (108)
           and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
           is built. Until then their components stay grey, because nothing here lights

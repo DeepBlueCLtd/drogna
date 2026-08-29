@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.ingest.schema.json",
+  "title": "drogna ingestion seam configuration (V2-C05)",
+  "description": "The observation ingestion seam: subscribes to the observation namespace, validates every message against its master, refuses what fails with the fault named and counts it observably, and is the observation store's sole writer (SRD-v2 FR-22). Redelivery is a no-op: the deterministic observation_id is the store's key (at-least-once carried from V1).",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock", "observations"],
+      "additionalProperties": false,
+      "properties": {
+        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "observations": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+      }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" }
+  }
+}

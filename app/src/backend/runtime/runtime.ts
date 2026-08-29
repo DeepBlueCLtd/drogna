@@ -20,6 +20,11 @@ import { createInBrowserTransport } from '../broker/transport-adapter.js';
 import { Clock } from '../clock/clock.js';
 import { CoverageStore } from '../coverage-store/store.js';
 import { EnvGenerator } from '../env-generator/generator.js';
+import { salinityAt, temperatureAt } from '../env-generator/analytic.js';
+import { Sensors, type WorldSampler } from '../sensors/sensors.js';
+import { Ingest } from '../ingest/ingest.js';
+import { ObservationStore } from '../observation-store/store.js';
+import { FeatureStore } from '../feature-store/store.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
@@ -33,6 +38,9 @@ export interface BackendRuntime {
   readonly runId: string;
   readonly clock: Clock;
   readonly store: CoverageStore;
+  readonly observationStore: ObservationStore;
+  readonly featureStore: FeatureStore;
+  readonly ingest: Ingest;
   stop(): void;
 }
 
@@ -60,11 +68,16 @@ export function buildBackend(
   validated(validator, 'config.boundary', config.boundary);
   validated(validator, 'config.env-generator', config.env_generator);
   validated(validator, 'config.coverage-store', config.coverage_store);
+  validated(validator, 'config.sensors', config.sensors);
+  validated(validator, 'config.ingest', config.ingest);
+  validated(validator, 'config.observation-store', config.observation_store);
+  validated(validator, 'config.feature-store', config.feature_store);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
   const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, [
     config.env_generator.stream,
+    config.sensors.stream,
   ]);
 
   const broker = new Broker(config.broker);
@@ -90,6 +103,38 @@ export function buildBackend(
     store,
     runId,
     options.rootSeed,
+  );
+
+  // The world-sampler port: the sensors' one line to the truth (Constitution VI).
+  const secondsPerTick = config.clock.tick_interval_us / 1e6;
+  const worldSampler: WorldSampler = {
+    temperatureAt: (lon, lat, depth, tick) => temperatureAt(generator.world, lon, lat, depth, tick * secondsPerTick),
+    salinityAt: (lon, lat, depth, tick) => salinityAt(generator.world, lon, lat, depth, tick * secondsPerTick),
+  };
+  const sensors = new Sensors(
+    config.sensors,
+    transport.connect(config.sensors.id, config.sensors.id),
+    worldSampler,
+    runId,
+    options.rootSeed,
+    secondsPerTick,
+  );
+  const observationStore = new ObservationStore(
+    config.observation_store,
+    transport.connect(config.observation_store.id, config.observation_store.id),
+    runId,
+  );
+  const ingest = new Ingest(
+    config.ingest,
+    transport.connect(config.ingest.id, config.ingest.id),
+    observationStore,
+    validator,
+    runId,
+  );
+  const featureStore = new FeatureStore(
+    config.feature_store,
+    transport.connect(config.feature_store.id, config.feature_store.id),
+    runId,
   );
 
   // Each component's heartbeat carries the simulation time that component last
@@ -140,11 +185,16 @@ export function buildBackend(
     ),
   ];
 
-  // The generator subscribes before the clock starts, so the clock's first sample —
-  // the moment simulation time exists — is what triggers provisioning, through the
-  // store's own publication seam (FR-11).
+  // The generator and every consumer subscribe before the clock starts, so the
+  // clock's first sample — the moment simulation time exists — triggers
+  // provisioning through the store's own publication seam (FR-11) and reaches the
+  // whole loop in one deterministic order.
   generator.start();
+  ingest.start();
+  sensors.start();
   store.heartbeat.start();
+  observationStore.heartbeat.start();
+  featureStore.heartbeat.start();
   clock.start();
   for (const heartbeat of heartbeats) heartbeat.start();
 
@@ -155,10 +205,17 @@ export function buildBackend(
     runId,
     clock,
     store,
+    observationStore,
+    featureStore,
+    ingest,
     stop(): void {
       for (const heartbeat of heartbeats) heartbeat.stop();
       generator.stop();
+      sensors.stop();
+      ingest.stop();
       store.heartbeat.stop();
+      observationStore.heartbeat.stop();
+      featureStore.heartbeat.stop();
       clock.stop();
     },
   };

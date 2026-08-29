@@ -9,7 +9,7 @@
     "check": "pnpm -C app run check && pnpm run test && pnpm run gates",
     "test": "vitest run -c scripts/vitest.config.ts",
     "gates": "tsx scripts/run-gates.ts",
-    "generate": "tsx scripts/generate-types.ts",
+    "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
     "capture:glance": "tsx scripts/capture/glance.ts"
   },
   "devDependencies": {

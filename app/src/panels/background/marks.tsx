@@ -25,6 +25,12 @@ export interface CategoryStyle {
   readonly stroke: string;
   /** The texture, as a reference to a pattern defined by <MarkDefs/>. */
   readonly fill: string;
+  /**
+   * The same texture at full strength, for the key. A drawing carries labels over
+   * its fills and needs the texture faint; the key carries none and needs it plain,
+   * because the key is where the texture is learned.
+   */
+  readonly keyFill: string;
   readonly strokeWidth: number;
   readonly strokeDasharray?: string;
   /** What this category means, for legends and for prose that names it. */
@@ -39,18 +45,21 @@ const CATEGORIES: Readonly<Record<Category, CategoryStyle>> = {
   points: {
     stroke: '#e39a44',
     fill: 'url(#mark-texture-points)',
+    keyFill: 'url(#mark-key-points)',
     strokeWidth: 2.6,
     meaning: 'observations — casts, readings, what a sensor sampled',
   },
   fields: {
     stroke: '#5fb8ac',
     fill: 'url(#mark-texture-fields)',
+    keyFill: 'url(#mark-key-fields)',
     strokeWidth: 1.3,
     meaning: 'fields — gridded and computed, a value everywhere',
   },
   archive: {
     stroke: '#93a8b0',
     fill: 'url(#mark-texture-archive)',
+    keyFill: 'url(#mark-key-archive)',
     strokeWidth: 1,
     strokeDasharray: '5 3',
     meaning: 'the archive — the coarse prior already held',
@@ -65,9 +74,11 @@ export const CATEGORY_ORDER: readonly Category[] = ['points', 'fields', 'archive
 
 /** Neutral ink for the parts of a drawing that carry no category. */
 export const INK = {
-  line: '#7d909b',
+  line: '#8b9ca6',
   strong: '#d5dde5',
-  quiet: '#61707c',
+  // Lifted from #61707c: a gloss under a label is the line most often set over a
+  // texture, and at the old value it was dim before the texture even reached it.
+  quiet: '#8b9aa5',
   /** A refusal, a fault, a cost. Never a category. */
   warn: '#e08a76',
 } as const;
@@ -89,12 +100,27 @@ export const POKE_OUTLINE: SVGProps<SVGRectElement> = {
  * The pattern definitions the category fills reference. Every figure renders this
  * once inside its own <svg>, because an SVG pattern is resolved within its document
  * fragment and a figure must be legible on its own.
+ *
+ * The textures are deliberately faint. They started at full strength and made the
+ * label inside a filled box hard to read — a texture that costs you the words it
+ * surrounds has taken more than it gave. What matters for FR-011 is that the three
+ * categories stay *distinguishable* without hue, and they do: dots, diagonal hatch
+ * and a grid are different shapes at any opacity, and the outline that carries each
+ * category's line weight is drawn at full strength regardless.
  */
+const TEXTURE_OPACITY = 0.16;
+
 export function MarkDefs(): ReactNode {
   return (
     <defs>
       <pattern id="mark-texture-points" width="6" height="6" patternUnits="userSpaceOnUse">
-        <circle cx="1.6" cy="1.6" r="1.25" fill={CATEGORIES.points.stroke} />
+        <circle
+          cx="1.6"
+          cy="1.6"
+          r="1.15"
+          fill={CATEGORIES.points.stroke}
+          opacity={TEXTURE_OPACITY + 0.08}
+        />
       </pattern>
       <pattern
         id="mark-texture-fields"
@@ -103,10 +129,40 @@ export function MarkDefs(): ReactNode {
         patternUnits="userSpaceOnUse"
         patternTransform="rotate(45)"
       >
-        <line x1="0" y1="0" x2="0" y2="6" stroke={CATEGORIES.fields.stroke} strokeWidth="2.4" />
+        <line
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="6"
+          stroke={CATEGORIES.fields.stroke}
+          strokeWidth="1.6"
+          opacity={TEXTURE_OPACITY}
+        />
       </pattern>
       <pattern id="mark-texture-archive" width="7" height="7" patternUnits="userSpaceOnUse">
-        <path d="M0 0H7M0 0V7" stroke={CATEGORIES.archive.stroke} strokeWidth="0.8" fill="none" />
+        <path
+          d="M0 0H7M0 0V7"
+          stroke={CATEGORIES.archive.stroke}
+          strokeWidth="0.7"
+          fill="none"
+          opacity={TEXTURE_OPACITY + 0.06}
+        />
+      </pattern>
+      {/* The same three at full strength, for the key alone. */}
+      <pattern id="mark-key-points" width="6" height="6" patternUnits="userSpaceOnUse">
+        <circle cx="1.6" cy="1.6" r="1.25" fill={CATEGORIES.points.stroke} />
+      </pattern>
+      <pattern
+        id="mark-key-fields"
+        width="6"
+        height="6"
+        patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)"
+      >
+        <line x1="0" y1="0" x2="0" y2="6" stroke={CATEGORIES.fields.stroke} strokeWidth="2.2" />
+      </pattern>
+      <pattern id="mark-key-archive" width="7" height="7" patternUnits="userSpaceOnUse">
+        <path d="M0 0H7M0 0V7" stroke={CATEGORIES.archive.stroke} strokeWidth="0.9" fill="none" />
       </pattern>
     </defs>
   );
@@ -120,14 +176,14 @@ export function CategoryKey(): ReactNode {
         const style = categoryStyle(category);
         return (
           <li key={category}>
-            <svg width="26" height="14" aria-hidden="true">
+            <svg width="34" height="16" aria-hidden="true">
               <MarkDefs />
               <rect
                 x="1"
                 y="1"
-                width="24"
-                height="12"
-                fill={style.fill}
+                width="32"
+                height="14"
+                fill={style.keyFill}
                 stroke={style.stroke}
                 strokeWidth={style.strokeWidth}
                 strokeDasharray={style.strokeDasharray}

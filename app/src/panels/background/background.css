@@ -8,17 +8,29 @@
  * transition would be an animation on arrival by another name.
  */
 
+/*
+ * The panel owns the height and does not scroll: the rail, the explainer's title and
+ * the spine controls all stay put, and only the step's content moves. A tall step
+ * used to push Next below the fold, so the one control a viewer uses on every step
+ * was the one that moved.
+ */
 .bg-panel {
   display: flex;
   gap: 1.4em;
-  align-items: flex-start;
+  align-items: stretch;
   line-height: 1.55;
+  height: 100%;
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 .bg-main {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 62em;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* ---- the rail (FR-021) ---- */
@@ -27,8 +39,8 @@
   flex: 0 0 15em;
   border-right: 1px solid #232c36;
   padding-right: 1em;
-  position: sticky;
-  top: 0;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .bg-rail h2 {
@@ -117,6 +129,22 @@
   flex-wrap: wrap;
 }
 
+/* The stage fills what the head leaves, and splits it into a scrolling region and
+ * the controls pinned beneath it. */
+.bg-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bg-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.6em;
+}
+
 /* ---- the head ---- */
 
 .bg-frame {
@@ -124,6 +152,10 @@
   font-size: 0.85em;
   max-width: 52em;
   margin: 0 0 1em;
+}
+
+.bg-head {
+  flex: 0 0 auto;
 }
 
 .bg-head h1 {
@@ -180,6 +212,24 @@
   padding: 0.6em;
 }
 
+/*
+ * Every label in every figure is drawn over a halo of the figure's own background.
+ * A category's texture sits behind the shapes it fills, and small type over a
+ * texture is hard to read — the destination box in the SensorThings walk was the
+ * least legible thing in a drawing whose whole point it was.
+ *
+ * Doing it here rather than per-label means the rule cannot be forgotten by the next
+ * figure. Over plain background the halo is the background, so it shows as nothing;
+ * over a texture it cuts the label a clean ground. It costs no colour distinction,
+ * so greyscale is unaffected (FR-011).
+ */
+.bg-figure-frame svg text {
+  paint-order: stroke;
+  stroke: #0c1218;
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+
 .bg-readout {
   color: var(--shell-fg);
   font-size: 0.88em;
@@ -232,15 +282,17 @@
   cursor: pointer;
 }
 
-/* ---- the spine control ---- */
+/* ---- the spine control, pinned at the foot ---- */
 
 .bg-spine {
+  flex: 0 0 auto;
   display: flex;
   gap: 0.5em;
   align-items: center;
-  margin-top: 1.4em;
-  padding-top: 0.8em;
+  margin-top: 0;
+  padding: 0.8em 0 0.2em;
   border-top: 1px solid #232c36;
+  background: var(--shell-bg);
 }
 
 .bg-spine button {
@@ -318,6 +370,7 @@
   margin-top: 1.8em;
   padding-top: 0.8em;
   border-top: 1px solid #232c36;
+  padding-bottom: 0.4em;
 }
 
 .bg-key {

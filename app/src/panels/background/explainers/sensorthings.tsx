@@ -17,14 +17,26 @@ import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
 
+/**
+ * The walk, drawn as a walk. Four hops sit on the spine — a reading resolves to its
+ * stream, the stream to the platform carrying it, and the platform to where it was —
+ * and two hang off the stream saying what was measured and what did the measuring.
+ *
+ * The spine ends at Location on purpose. "Where was the platform when this number was
+ * made" is the question provenance is usually asked, and a chain that stops at the
+ * instrument answers everything except it.
+ */
 const CHAIN = [
-  { id: 'observation', label: 'Observation', gloss: '8.4 °C at 09:14', path: 'Observations(1041)' },
-  { id: 'datastream', label: 'Datastream', gloss: 'temperature at 50 m, this hull', path: 'Observations(1041)/Datastream' },
-  { id: 'property', label: 'ObservedProperty', gloss: 'sea water temperature', path: 'Datastreams(3)/ObservedProperty' },
-  { id: 'sensor', label: 'Sensor', gloss: 'CTD, calibrated 2026-02-11', path: 'Datastreams(3)/Sensor' },
-  { id: 'thing', label: 'Thing', gloss: 'the buoy', path: 'Datastreams(3)/Thing' },
-  { id: 'location', label: 'Location', gloss: 'where the buoy is', path: 'Things(7)/Locations' },
+  { id: 'observation', label: 'Observation', gloss: '8.4 °C at 09:14', path: 'Observations(1041)', spine: true },
+  { id: 'datastream', label: 'Datastream', gloss: 'temperature at 50 m', path: 'Observations(1041)/Datastream', spine: true },
+  { id: 'thing', label: 'Thing', gloss: 'the buoy carrying it', path: 'Datastreams(3)/Thing', spine: true },
+  { id: 'location', label: 'Location', gloss: '46.1°N, 11.2°W at 09:14', path: 'Things(7)/Locations', spine: true },
+  { id: 'property', label: 'ObservedProperty', gloss: 'sea water temperature', path: 'Datastreams(3)/ObservedProperty', spine: false },
+  { id: 'sensor', label: 'Sensor', gloss: 'CTD, calibrated 2026-02-11', path: 'Datastreams(3)/Sensor', spine: false },
 ];
+
+const SPINE = CHAIN.filter((hop) => hop.spine);
+const BRANCHES = CHAIN.filter((hop) => !hop.spine);
 
 const HOST = 'sensors.example.org/v1.1/';
 
@@ -207,13 +219,13 @@ export const sensorthings: Explainer = {
                 </text>
               </g>
             ))}
-            <line x1="100" y1="52" x2="164" y2="42" stroke={INK.line} />
-            <rect x="164" y="24" width="140" height="36" fill="none" stroke={INK.line} />
+            <path d="M100 52 H132 V42 H164" fill="none" stroke={points.stroke} strokeWidth={points.strokeWidth} />
+            <rect x="164" y="24" width="140" height="36" fill={points.fill} stroke={points.stroke} strokeWidth={points.strokeWidth} />
             <text x="234" y="40" fontSize="9.5" textAnchor="middle" fill={INK.strong}>
               Location
             </text>
             <text x="234" y="53" fontSize="8.5" textAnchor="middle" fill={INK.quiet}>
-              where the hull is
+              where the platform was
             </text>
             <line x1="100" y1="110" x2="164" y2="118" stroke={INK.line} />
             <rect x="164" y="100" width="140" height="36" fill="none" stroke={INK.line} strokeDasharray="4 3" />
@@ -232,7 +244,8 @@ export const sensorthings: Explainer = {
     {
       title: 'Walk it backwards from any number',
       prose: [
-        'From one reading to the stream, the instrument, its calibration, the hull and its position.',
+        'From one reading to the stream that holds it, to the platform carrying that stream, to where the platform was when the reading was made. Four hops, and the last one is the one people actually need.',
+        'What the stream measures and what did the measuring hang off that walk rather than sitting on it.',
         'The navigation is the data model rather than an added provenance feature, so a client that has never seen this system can walk it.',
       ],
       note: 'The paths are generic to the standard, against a fictional host. Nothing here is a route this page serves.',
@@ -240,35 +253,97 @@ export const sensorthings: Explainer = {
       liveView: { view: 'messages', label: 'Watch real observations arriving in this run' },
       figure: {
         minWidth: 380,
-        label: 'The full chain walked backwards from a single reading, with the request path at each hop',
-        caption: 'Each hop is defined by the standard, not by this server.',
+        label: 'The chain walked backwards from a single reading to where the platform was, with what the stream measures hanging off it',
+        caption: 'Solid: the walk back to where the platform was. Dashed: what the stream is about. Every hop is defined by the standard, not by this server.',
         draw: ({ poke, onPoke }) => {
           const chosen = CHAIN.find((hop) => hop.id === poke) ?? CHAIN[0];
+          const onSpine = SPINE.some((hop) => hop.id === chosen.id);
+          // Vertical, because the walk has four hops and each needs a name and a
+          // gloss. Laid out across the width they were cramped into eleven characters
+          // apiece, which is how a diagram silently loses its labels.
+          const row = (index: number) => 16 + index * 46;
           return (
             <>
-              <svg viewBox="0 0 320 190" width="100%">
+              <svg viewBox="0 0 320 214" width="100%">
               <MarkDefs />
-              {CHAIN.map((hop, index) => (
-                <PokeRegion
-                  key={hop.id}
-                  x={12}
-                  y={16 + index * 24}
-                  width={296}
-                  height={22}
-                  label={`the hop to ${hop.label}`}
-                  active={chosen.id === hop.id}
-                  onPoke={() => onPoke(hop.id)}
-                >
-                  <text x={22} y={31 + index * 24} fontSize="9.5" fill={INK.strong}>
-                    {hop.label}
-                  </text>
-                  <text x={128} y={31 + index * 24} fontSize="8.5" fill={INK.quiet}>
-                    {hop.gloss}
-                  </text>
-                </PokeRegion>
+              {SPINE.map((hop, index) => (
+                <g key={hop.id}>
+                  {index > 0 ? (
+                    <path
+                      d={`M97 ${row(index - 1) + 34} V${row(index)}`}
+                      fill="none"
+                      stroke={points.stroke}
+                      strokeWidth={points.strokeWidth}
+                    />
+                  ) : null}
+                  <PokeRegion
+                    x={12}
+                    y={row(index)}
+                    width={170}
+                    height={34}
+                    label={`the hop to ${hop.label}`}
+                    active={chosen.id === hop.id}
+                    onPoke={() => onPoke(hop.id)}
+                  >
+                    {/* The destination is emphasised by weight and a mark, not by a
+                        textured fill: this box exists to be read, and a texture behind
+                        small type costs more than it says. */}
+                    {index === SPINE.length - 1 ? (
+                      <>
+                        <rect
+                          x={14}
+                          y={row(index) + 2}
+                          width={166}
+                          height={30}
+                          fill="none"
+                          stroke={points.stroke}
+                          strokeWidth={points.strokeWidth}
+                        />
+                        {Sample({ x: 172, y: row(index) + 17, scale: 0.7 })}
+                      </>
+                    ) : null}
+                    <text x={24} y={row(index) + 15} fontSize="9" fill={INK.strong}>
+                      {hop.label}
+                    </text>
+                    <text x={24} y={row(index) + 27} fontSize="8" fill={INK.quiet}>
+                      {hop.gloss}
+                    </text>
+                  </PokeRegion>
+                </g>
+              ))}
+              {BRANCHES.map((hop, index) => (
+                <g key={hop.id}>
+                  <path
+                    d={`M182 ${row(1) + 17} H${196} V${row(index + 2) + 17} H${208}`}
+                    fill="none"
+                    stroke={INK.quiet}
+                    strokeDasharray="3 3"
+                  />
+                  <PokeRegion
+                    x={208}
+                    y={row(index + 2)}
+                    width={100}
+                    height={34}
+                    label={`the hop to ${hop.label}`}
+                    active={chosen.id === hop.id}
+                    onPoke={() => onPoke(hop.id)}
+                  >
+                    <text x={216} y={row(index + 2) + 15} fontSize="7.5" fill={INK.strong}>
+                      {hop.label}
+                    </text>
+                    <text x={216} y={row(index + 2) + 27} fontSize="7" fill={INK.quiet}>
+                      {hop.id === 'property' ? 'what is measured' : 'what measured it'}
+                    </text>
+                  </PokeRegion>
+                </g>
               ))}
               </svg>
               <Readout>
+                <b>{chosen.label}</b> — {chosen.gloss}.{' '}
+                {onSpine
+                  ? 'On the walk from the reading to where the platform was.'
+                  : 'Off the walk: this says what the stream is about, not where it was.'}
+                <br />
                 <code>
                   GET {HOST}
                   {chosen.path}

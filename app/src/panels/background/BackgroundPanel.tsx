@@ -68,10 +68,17 @@ export function BackgroundPanel({ params }: IDockviewPanelProps<PanelParams>): R
           <h1>{explainer.title}</h1>
           <p className="bg-idea">{explainer.idea}</p>
         </header>
-        <Spine explainer={explainer} step={position.step} onStep={onStep} onView={onView} />
-        <footer className="bg-foot">
-          <CategoryKey />
-        </footer>
+        <Spine
+          explainer={explainer}
+          step={position.step}
+          onStep={onStep}
+          onView={onView}
+          legend={
+            <footer className="bg-foot">
+              <CategoryKey />
+            </footer>
+          }
+        />
       </div>
     </div>
   );

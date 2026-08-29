@@ -209,6 +209,48 @@ and this branch now carries them.
 - [x] T028 Explainer 1, "why a standard at all" (slides). The argument the other seven are
       judged by, so it lands with the spine rather than after it.
 
+## From viewing the built course
+
+Three faults the tests could not have found, because all three are about how the thing
+reads rather than what it contains. Found by the author looking at the deployed instance.
+
+- [x] T016 The spine controls are pinned to the foot of the stage, and the step's content
+      scrolls behind them. They sat below the content, so a tall step — explainer 1's
+      first slide, and pygeoapi's — pushed **Next** off the bottom of the panel: the one
+      control a viewer uses sixty-nine times was the one that moved, and on some steps had
+      to be scrolled to. Measured before the fix rather than described: Next sat at 32
+      different heights across the course and was outside the panel on the pygeoapi slide.
+      The capture proof now records where Next is on every step and fails if it moves or
+      leaves the panel, and was watched reporting exactly that against the old layout.
+
+- [x] T017 The textures are faint, and no label is drawn over a bare one. Hatching at full
+      strength made the words inside a filled box hard to read — worst in pygeoapi's eight
+      capability boxes, and worst of all in the SensorThings walk, where the destination
+      box was the least legible thing in a drawing whose whole point it was.
+
+      Three changes, because there were three causes. The texture opacity drops to 0.16,
+      which is what the author's own diagnosis asked for. Every figure label is drawn over
+      a halo of the figure's own background, set once in CSS so the next figure cannot
+      forget it. And `INK.quiet`, the colour of every gloss under a label, was lifted: it
+      was dim before a texture ever reached it.
+
+      The key keeps the textures at full strength, through its own patterns. A drawing
+      carries labels over its fills and needs them faint; the key carries none and is
+      where the texture is learned, so showing it faint there would teach nothing.
+      Greyscale legibility re-checked by capture: dots, diagonal hatch and grid are still
+      three different shapes, and the line weights and the archive's dash are untouched.
+
+- [x] T018 The SensorThings walk ends where the platform was, and is drawn as a walk. It
+      was a flat list of six rows, which stated the hops without showing that they lead
+      anywhere. It is now a vertical spine — reading → stream → platform → **where the
+      platform was** — with what the stream measures and what did the measuring hanging
+      off it, dashed. The last hop is the one people actually need, and it is now the one
+      the drawing arrives at.
+
+      Drawn across the width first, which cramped each hop into eleven characters and
+      clipped two of them. The clipped-label proof caught it; laid out vertically, every
+      hop has room for a name and a gloss.
+
 ## Inertness (US1, and the feature's one real claim)
 
 - [x] T030 `scripts/gates/check-background-inert.ts` + one appended line in

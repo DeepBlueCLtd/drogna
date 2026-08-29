@@ -19,8 +19,15 @@
  * half. So every text node in every figure is measured against its viewBox as the
  * walk passes through, and an overflow fails the run naming the step and the words.
  *
- * The walk and the measurement are proofs, not pictures: they either arrive at every
- * value panel with nothing clipped, or exit non-zero naming what stopped them.
+ * A fourth rides along for the same reason. The spine controls are pinned to the foot
+ * of the stage so that Next is in the same place on all sixty-nine steps; before that
+ * they sat below the content and a tall step pushed Next off the bottom of the panel,
+ * so the one control used on every step was the one that moved. The walk records where
+ * Next actually is and fails if it moves or leaves the panel.
+ *
+ * The walk and the measurements are proofs, not pictures: they either arrive at every
+ * value panel with nothing clipped and the controls where they belong, or exit
+ * non-zero naming what stopped them.
  *
  * Usage: pnpm capture:background [out-dir]
  */
@@ -105,6 +112,24 @@ async function clippedLabels(page: Page): Promise<string[]> {
   );
 }
 
+/**
+ * Where the Next button is, and whether it is reachable without scrolling. Rounded,
+ * because sub-pixel layout differences are not what this is watching for.
+ */
+async function controlPosition(page: Page): Promise<{ top: number; inPanel: boolean }> {
+  return page.evaluate(() => {
+    const next = document.querySelector('.bg-next');
+    const panel = document.querySelector('.bg-panel');
+    if (!next || !panel) return { top: -1, inPanel: false };
+    const button = next.getBoundingClientRect();
+    const frame = panel.getBoundingClientRect();
+    return {
+      top: Math.round(button.top),
+      inPanel: button.bottom <= frame.bottom + 1 && button.top >= frame.top,
+    };
+  });
+}
+
 /** Advances by keyboard alone: Tab to the next control, Enter to press it. */
 async function keyboardToNext(page: Page): Promise<boolean> {
   for (let press = 0; press < 60; press += 1) {
@@ -120,6 +145,8 @@ async function keyboardToNext(page: Page): Promise<boolean> {
 
 const browser = await chromium.launch({ executablePath: process.env.DROGNA_CHROMIUM_PATH });
 const failures: string[] = [];
+/** Where Next sat on each step. One distinct value, or the button moved. */
+const controlTops = new Map<string, number>();
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
   await page.goto(`${base}#/view/background`);
@@ -150,6 +177,11 @@ try {
     await page.locator('.bg-stage').waitFor();
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     for (let step = 1; step <= explainer.steps; step += 1) {
+      const control = await controlPosition(page);
+      if (!control.inPanel) {
+        failures.push(`${explainer.id}/${step}: the Next control is outside the panel — it has to be scrolled to`);
+      }
+      controlTops.set(`${explainer.id}/${step}`, control.top);
       for (const label of await clippedLabels(page)) {
         failures.push(`${explainer.id}/${step}: a label is drawn outside its viewBox — "${label}"`);
       }
@@ -169,6 +201,15 @@ try {
     const reached = await page.locator('[data-testid="value-panel"]').count();
     if (reached === 0) failures.push(`${explainer.id}: the keyboard walk did not reach the Consequences panel`);
     else console.log(`${explainer.id}: ${explainer.steps} steps walked by keyboard, colour and greyscale captured`);
+  }
+  const distinct = new Set(controlTops.values());
+  if (distinct.size > 1) {
+    const sample = [...controlTops.entries()].slice(0, 6).map(([at, top]) => `${at}@${top}`).join(', ');
+    failures.push(
+      `the Next control sits at ${distinct.size} different heights across the course (${sample}…) — it must not move between steps`,
+    );
+  } else {
+    console.log(`Next sat at the same height on all ${controlTops.size} steps`);
   }
   console.log(`captures in ${outDir}`);
 } finally {

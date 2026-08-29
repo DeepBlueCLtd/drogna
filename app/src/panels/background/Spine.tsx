@@ -14,6 +14,11 @@
  *     same thing.
  *   - **Nothing animates on arrival** (FR-019). The stage opens finished. There is no
  *     autoplay, no timer, and no clock read of any kind (Constitution I).
+ *
+ * The controls are pinned to the foot of the stage and the step's content scrolls
+ * behind them. A tall step used to push Next off the bottom of the panel, so
+ * advancing meant scrolling to find a button that had moved — which is a poor thing
+ * to ask of the one control every viewer uses sixty-nine times.
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Explainer, FigureContext } from './model.js';
@@ -28,9 +33,15 @@ export interface SpineProps {
   readonly step: number;
   readonly onStep: (step: number) => void;
   readonly onView: (view: string) => void;
+  /**
+   * Rendered at the end of the scrolling region, below the step. The mark key lives
+   * here rather than under the controls so that the controls are genuinely the last
+   * thing at the foot and never shift.
+   */
+  readonly legend?: ReactNode;
 }
 
-export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNode {
+export function Spine({ explainer, step, onStep, onView, legend }: SpineProps): ReactNode {
   const total = stepCount(explainer);
   const [poke, setPoke] = useState<string | undefined>(undefined);
 
@@ -53,19 +64,22 @@ export function Spine({ explainer, step, onStep, onView }: SpineProps): ReactNod
         event.preventDefault();
       }}
     >
-      {content === undefined ? (
-        explainer.value ? (
-          <ValuePanel value={explainer.value} />
+      <div className="bg-scroll">
+        {content === undefined ? (
+          explainer.value ? (
+            <ValuePanel value={explainer.value} />
+          ) : (
+            // FR-020 says this cannot happen in the course. It can happen in the
+            // fixture SC-007's test is watched catching, and it must not be a blank.
+            <p className="bg-figure-floor">This explainer states no consequences.</p>
+          )
+        ) : explainer.form === 'slides' ? (
+          <Slides step={content} context={context} onView={onView} />
         ) : (
-          // FR-020 says this cannot happen in the course. It can happen in the
-          // fixture SC-007's test is watched catching, and it must not be a blank.
-          <p className="bg-figure-floor">This explainer states no consequences.</p>
-        )
-      ) : explainer.form === 'slides' ? (
-        <Slides step={content} context={context} onView={onView} />
-      ) : (
-        <Interactive step={content} context={context} onView={onView} />
-      )}
+          <Interactive step={content} context={context} onView={onView} />
+        )}
+        {legend}
+      </div>
       <nav className="bg-spine" aria-label={`${explainer.title}: step ${step} of ${total}`}>
         <button type="button" onClick={() => onStep(step - 1)} disabled={step <= 1}>
           ← previous

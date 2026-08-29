@@ -519,6 +519,74 @@ describe('the panels against a live backend', () => {
     }
   });
 
+  it('the depth cube stops asking the moment the panel goes away', async () => {
+    // The bug this pins: the cube's effect awaited one query per depth level and only
+    // consulted its `abandoned` flag AFTER the loop, so unmounting set the flag and
+    // changed nothing — the remaining levels went out anyway, each outliving the effect
+    // that started them. Two tests above work around it by unmounting before the shim
+    // comes off, and their comments say the leak "lands in whichever test runs next";
+    // no unmount order helps once the last iteration is holding a relative URL and the
+    // real fetch is back.
+    //
+    // The loop has to be caught mid-flight or there is nothing to abandon: the in-page
+    // backend answers in microtasks, so a plain unmount-then-flush lets every level
+    // finish first and passes against the bug — watched doing exactly that. So each
+    // answer is held here until this test releases it, which parks the loop on level one
+    // with the rest still to come.
+    const realFetch = globalThis.fetch;
+    const seamFetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    const release: (() => void)[] = [];
+    let unmounted = false;
+    const afterUnmount: string[] = [];
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (unmounted && url.includes('/area?')) afterUnmount.push(url);
+      if (!url.includes('/area?')) return seamFetch(input, init);
+      return new Promise((resolve) => {
+        release.push(() => resolve(seamFetch(input, init)));
+      });
+    }) as typeof globalThis.fetch;
+    let mounted: ReturnType<typeof render> | undefined;
+    try {
+      mounted = render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      const nowcast = runtime.store.holdings().find((holding) => holding.era === 'nowcast');
+      if (!nowcast) throw new Error('the store holds no now-cast to take a depth axis from');
+      // More than one level, or there is no "rest of the loop" to abandon and this test
+      // would pass against the bug for want of anything to leak.
+      expect(nowcast.manifest.grid.depth.count).toBeGreaterThan(1);
+
+      const view = [...document.querySelectorAll('.map-controls select')].at(-1) as HTMLSelectElement;
+      await act(async () => {
+        fireEvent.change(view, { target: { value: 'cube' } });
+        await Promise.resolve();
+      });
+      // Parked: the cube has asked for its first level and is waiting on the answer.
+      expect(release.length).toBeGreaterThan(0);
+
+      mounted.unmount();
+      mounted = undefined;
+      unmounted = true;
+
+      // Now let every held answer through, and keep letting them through, so an
+      // abandoned loop has every chance to ask for the level after the one it is on.
+      await act(async () => {
+        for (let round = 0; round < nowcast.manifest.grid.depth.count + 4; round++) {
+          for (const let_go of release.splice(0)) let_go();
+          for (let flush = 0; flush < 8; flush++) await Promise.resolve();
+        }
+      });
+      expect(afterUnmount).toEqual([]);
+    } finally {
+      for (const let_go of release.splice(0)) let_go();
+      mounted?.unmount();
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it('Operator shows the region table and the latency figure the report carries (#61)', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);

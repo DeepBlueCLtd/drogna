@@ -358,6 +358,14 @@ export function MapPanel({ params }: IDockviewPanelProps<PanelParams>) {
       const levels: VolumeLevel[] = [];
       const refusals: string[] = [];
       for (const requestedDepthM of axisValues(grid.depth)) {
+        // Checked per level, not once after the loop. The cleanup below sets the flag,
+        // but a loop already in flight kept issuing the remaining queries regardless —
+        // one await per depth level, each outliving the effect that started it. In the
+        // panel that is a burst of queries whose answers are discarded; under test it is
+        // worse, because the shim `panels.test.tsx` installs comes off when the test
+        // ends and the next iteration hands a relative URL to the real fetch, which
+        // cannot parse one ("Failed to parse URL from /api/edr/…").
+        if (abandoned) return;
         const query = new URLSearchParams({
           coords: wkt,
           z: String(requestedDepthM),

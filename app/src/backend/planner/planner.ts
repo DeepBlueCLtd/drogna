@@ -45,6 +45,12 @@ export class Planner {
   private state: PlannerState = 'no-field';
   private deficits: DeficitState = new Map();
   private readonly informed = new Set<string>();
+  /**
+   * Soundings this planner has let inform its age field. Public for the same reason
+   * the monitor's residual count is: whether an ownship observation was mistaken for a
+   * measurement of the sea is a claim a test has to be able to check (FR-51).
+   */
+  soundingsInformed = 0;
   private platform: { latitude: number; longitude: number; depth_m: number } | undefined;
   private spreadHoldingId: string | undefined;
   private spreadDigest: string | null = null;
@@ -113,10 +119,17 @@ export class Planner {
    * observation naming the same pair informs nothing new.
    */
   private inform(observation: Observation): void {
+    // The age field says when the ocean was last measured here. An ownship
+    // observation measures the platform, so counting one would refresh confidence
+    // everywhere the platform went without a single sounding being taken — the trap
+    // this feature is most likely to spring, and the reason a test fails when this
+    // line is removed (FR-51).
+    if (this.config.excluded_datastreams?.includes(observation.datastream_id)) return;
     this.platform = { ...observation.location };
     const soundingKey = `${observation.thing_id}:${observation.tick}`;
     if (this.informed.has(soundingKey)) return;
     this.informed.add(soundingKey);
+    this.soundingsInformed += 1;
     const model = this.model();
     if (!model) return;
     const band = this.bandFor(observation.location.depth_m);

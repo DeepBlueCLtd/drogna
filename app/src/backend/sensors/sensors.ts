@@ -1,13 +1,32 @@
 /**
- * The sensors (V2-C04): simulated instruments on one loitering platform, sampling
- * the true field on a tick cadence, adding their declared seeded noise, and
- * publishing observations in SensorThings vocabulary on obs/<thing>/<datastream>
- * (SRD-v2 FR-22; observation.schema.json).
+ * The sensors (V2-C04): simulated instruments sampling the true field on a tick
+ * cadence, adding their declared seeded noise, and publishing observations in
+ * SensorThings vocabulary on obs/<thing>/<datastream> (SRD-v2 FR-22;
+ * observation.schema.json).
  *
- * Sensors read the clock and nothing else (ADR-0012, carried): position is a pure
- * function of simulation time, truth comes through the world-sampler port the
- * runtime hands them, and every stochastic draw comes from their named stream in a
- * deterministic order (tick-major, instrument-minor).
+ * Truth comes through the world-sampler port the runtime hands them, and every
+ * stochastic draw comes from their named stream in a deterministic order
+ * (tick-major, instrument-minor).
+ *
+ * **Where they are is no longer their own business** (FR-50, feature 112). The
+ * sensors used to evaluate a closed-form loiter from their own configuration, which
+ * meant two places would have computed the platform's position the moment a platform
+ * component existed. They now sample at the position they last heard on the ownship
+ * datastreams, and before they have heard one they publish nothing and say so:
+ * sampling the ocean at a place nobody has reported would be inventing the place.
+ *
+ * That widens ADR-0012 — the sensors read the clock and now the ownship namespace —
+ * and makes their output depend on delivery order. The order is deterministic in
+ * lockstep, so AT-04 holds; the dependency is stated here and in the replay claim's
+ * boundary rather than left to be discovered.
+ *
+ * A heard position also goes off. Sampling at a position last reported long ago would
+ * claim the platform is still there, which is the same class of untruth as a display
+ * lighting a component nothing has been heard from — so a position older than one
+ * sampling interval is not where the platform is now, and the sensors say so and
+ * publish nothing. The bound is the sensors' own declared cadence rather than a number
+ * typed in here: stop the platform and the sensors go quiet by themselves, one
+ * sampling interval later.
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type { ConfigSensors, Observation } from '../../generated/types.js';
@@ -15,7 +34,7 @@ import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { fnv1a32 } from '../lib/rng.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
-import { KM_PER_DEGREE_LATITUDE, pressureDbar } from '../env-generator/analytic.js';
+import { pressureDbar } from '../env-generator/analytic.js';
 
 /** The honest port to the true ocean (Constitution VI): truth in, nothing else out. */
 export interface WorldSampler {
@@ -50,6 +69,10 @@ export class Sensors {
   private simTime = { value: '', tick: 0 };
   private publishedCount = 0;
   private lastSampledTick = -1;
+  /** The last ownship position heard, and the tick it was heard at. */
+  private heardPosition: { latitude: number; longitude: number; tick: number } | undefined;
+  /** Ticks on which sampling was skipped for want of a position. Counted, not hidden. */
+  private skippedForNoPosition = 0;
 
   constructor(
     private readonly config: ConfigSensors,
@@ -57,7 +80,6 @@ export class Sensors {
     private readonly world: WorldSampler,
     private readonly runId: string,
     rootSeed: number,
-    private readonly secondsPerTick: number,
   ) {
     this.rng = new Rng(rootSeed, config.stream);
     this.heartbeat = new HeartbeatEmitter(
@@ -68,26 +90,53 @@ export class Sensors {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `${this.publishedCount} observation(s) published from ${this.config.instruments.length} instrument(s)`,
+        detail: this.detail(),
       }),
       runId,
       configDigest(config),
     );
   }
 
-  /** The platform's loiter: position as a pure function of simulation seconds. */
-  positionAt(seconds: number): { latitude: number; longitude: number } {
-    const { loiter } = this.config.platform;
-    const angle = (2 * Math.PI * seconds) / loiter.period_seconds;
-    const latitude = loiter.centre_latitude + (loiter.radius_km * Math.sin(angle)) / KM_PER_DEGREE_LATITUDE;
-    const longitude =
-      loiter.centre_longitude +
-      (loiter.radius_km * Math.cos(angle)) /
-        (KM_PER_DEGREE_LATITUDE * Math.cos((loiter.centre_latitude * Math.PI) / 180));
-    return { latitude, longitude };
+  /**
+   * What the sensors are doing, and when they are doing nothing, why. FR-32's rule
+   * carried to a new quiet: a component that goes silent without saying why is
+   * indistinguishable from one that has failed.
+   */
+  detail(): string {
+    if (!this.heardPosition) {
+      return 'no ownship position heard yet; publishing nothing rather than sampling a place nobody has reported';
+    }
+    const published = `${this.publishedCount} observation(s) published from ${this.config.instruments.length} instrument(s)`;
+    // The skip count is a footnote, never the headline: what the sensors are doing now
+    // has to lead, or one cold-start skip masks the live state for the rest of the run.
+    const skipped =
+      this.skippedForNoPosition > 0
+        ? `; ${this.skippedForNoPosition} sampling tick(s) skipped for want of a fresh position`
+        : '';
+    const age = this.simTime.tick - this.heardPosition.tick;
+    if (age > this.config.sample_interval_ticks) {
+      return `${published}; quiet: the last ownship position is ${age} ticks old, beyond the ${this.config.sample_interval_ticks}-tick sampling interval — where the platform is now is not something anything has reported${skipped}`;
+    }
+    return `${published}; sampling where ownship reported at tick ${this.heardPosition.tick}${skipped}`;
+  }
+
+  /** The last ownship position heard, for the tests and the runtime to read. */
+  lastKnownPosition(): { latitude: number; longitude: number; tick: number } | undefined {
+    return this.heardPosition;
   }
 
   start(): void {
+    // Position arrives as an ordinary observation, on the ordinary namespace: the
+    // platform publishes it, the ingestion seam stores it, and the sensors happen to
+    // be another subscriber. No private channel, and nothing here re-derives it.
+    this.client.subscribe(this.config.topics.ownship, (message) => {
+      const observation = message.payload as Observation;
+      this.heardPosition = {
+        latitude: observation.location.latitude,
+        longitude: observation.location.longitude,
+        tick: observation.tick,
+      };
+    });
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
@@ -107,8 +156,15 @@ export class Sensors {
   }
 
   private sampleAll(tick: number, simTime: string): void {
-    const seconds = tick * this.secondsPerTick;
-    const position = this.positionAt(seconds);
+    const position = this.heardPosition;
+    // A position is current for exactly as long as one sampling interval: the freshest
+    // one a sampling tick can hold was reported an interval ago, because the platform's
+    // report for this tick is still queued behind the clock sample being handled. Older
+    // than that and the platform has stopped saying where it is.
+    if (!position || tick - position.tick > this.config.sample_interval_ticks) {
+      this.skippedForNoPosition += 1;
+      return;
+    }
     for (const instrument of this.config.instruments) {
       const truth =
         instrument.observed_property === 'temperature'

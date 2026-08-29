@@ -58,6 +58,11 @@
     "heartbeat": {
       "$ref": "config.common.schema.json#/$defs/heartbeat"
     },
+    "excluded_datastreams": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
+      "description": "Datastreams on the observation namespace that the planner must not treat as measurements of the ocean \u2014 the platform's own ownship series (FR-51). The planner informs its observation-age field from whatever arrives, so what it must ignore has to be named; counting an ownship row would refresh confidence everywhere the platform went without a single sounding being taken. Named rather than pattern-matched, because a rule that guesses which datastreams are about the sea will one day guess wrong. The monitor needs no such list: its pairs name the thing and datastreams it scores outright, which is an allowlist and stronger. A test fails when a name here is removed."
+    },
     "replan_interval_ticks": {
       "type": "integer",
       "exclusiveMinimum": 0

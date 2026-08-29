@@ -10,16 +10,20 @@
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
     "topics": {
       "type": "object",
-      "required": ["clock", "heartbeat"],
+      "required": ["clock", "heartbeat", "platform_demand"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "heartbeat": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+        "heartbeat": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+        "platform_demand": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where a demand is published. The operator surface is the only publisher today; the broker's rules are written so an adaptive sampler could be a second without a change here."
+        }
       }
     },
     "http": {
       "type": "object",
-      "required": ["components_path", "step_path", "command_prefix"],
+      "required": ["components_path", "step_path", "command_prefix", "platform_demand_path"],
       "additionalProperties": false,
       "properties": {
         "components_path": { "$ref": "config.common.schema.json#/$defs/relative_path" },
@@ -27,6 +31,10 @@
         "command_prefix": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "POST <prefix>/<component-id>/stop|start|restart."
+        },
+        "platform_demand_path": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "POST a demanded course, speed and depth (platform-demand.schema.json). The surface publishes it on the demand topic; it does not apply it, and the response says only what was dispatched. Whether the platform can reach the demand is the platform's own answer, and it arrives on the state topic like everything else a component says about itself (FR-048)."
         }
       }
     },

@@ -28,6 +28,7 @@ import { Clock } from '../clock/clock.js';
 import { CoverageStore } from '../coverage-store/store.js';
 import { EnvGenerator } from '../env-generator/generator.js';
 import { salinityAt, temperatureAt } from '../env-generator/analytic.js';
+import { Platform } from '../platform/platform.js';
 import { Sensors, type WorldSampler } from '../sensors/sensors.js';
 import { Ingest } from '../ingest/ingest.js';
 import { ObservationStore } from '../observation-store/store.js';
@@ -61,6 +62,8 @@ export interface BackendRuntime {
   readonly advisoryStore: AdvisoryStore;
   readonly offload: OffloadPackager;
   readonly ingest: Ingest;
+  readonly platform: Platform;
+  readonly sensors: Sensors;
   readonly monitor: Monitor;
   readonly scheduler: Scheduler;
   readonly planner: Planner;
@@ -103,6 +106,7 @@ export function buildBackend(
   validated(validator, 'config.boundary', config.boundary);
   validated(validator, 'config.env-generator', config.env_generator);
   validated(validator, 'config.coverage-store', config.coverage_store);
+  validated(validator, 'config.platform', config.platform);
   validated(validator, 'config.sensors', config.sensors);
   validated(validator, 'config.ingest', config.ingest);
   validated(validator, 'config.observation-store', config.observation_store);
@@ -122,6 +126,7 @@ export function buildBackend(
   const runId = deriveRunId(config.scenario, options.rootSeed);
   const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, [
     config.env_generator.stream,
+    config.platform.stream,
     config.sensors.stream,
     config.model_runner.stream,
     config.planner.stream,
@@ -188,10 +193,21 @@ export function buildBackend(
     temperatureAt: (lon, lat, depth, tick) => temperatureAt(generator.world, lon, lat, depth, tick * secondsPerTick),
     salinityAt: (lon, lat, depth, tick) => salinityAt(generator.world, lon, lat, depth, tick * secondsPerTick),
   };
-  register(config.sensors.id, () => {
+  // Registration order IS subscription order, and the platform must be subscribed
+  // before the sensors: the sensors sample where ownship last reported, so a platform
+  // that joined after them would leave them silent for a whole sampling interval
+  // rather than a tick. Recorded here rather than left to module import order.
+  const platformBox = register(config.platform.id, () => {
+    const client = transport.connect(config.platform.id, config.platform.id);
+    return {
+      component: new Platform(config.platform, client, runId, options.rootSeed, secondsPerTick),
+      client,
+    };
+  });
+  const sensorsBox = register(config.sensors.id, () => {
     const client = transport.connect(config.sensors.id, config.sensors.id);
     return {
-      component: new Sensors(config.sensors, client, worldSampler, runId, options.rootSeed, secondsPerTick),
+      component: new Sensors(config.sensors, client, worldSampler, runId, options.rootSeed),
       client,
     };
   });
@@ -203,7 +219,10 @@ export function buildBackend(
   );
   const ingestBox = register(config.ingest.id, () => {
     const client = transport.connect(config.ingest.id, config.ingest.id);
-    return { component: new Ingest(config.ingest, client, observationStore, validator, runId), client };
+    return {
+      component: new Ingest(config.ingest, client, observationStore, validator, runId, config.platform.limits),
+      client,
+    };
   });
   const featureStore = new FeatureStore(
     config.feature_store,
@@ -365,6 +384,8 @@ export function buildBackend(
     advisoryStore,
     offload: offloadBox.component as OffloadPackager,
     ingest: ingestBox.component as Ingest,
+    platform: platformBox.component as Platform,
+    sensors: sensorsBox.component as Sensors,
     monitor: monitorBox.component as Monitor,
     scheduler: schedulerBox.component as Scheduler,
     planner: plannerBox.component as Planner,

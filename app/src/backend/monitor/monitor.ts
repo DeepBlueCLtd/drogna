@@ -8,6 +8,14 @@
  * Quiet is legible (FR-32): the heartbeat detail always says why nothing is
  * happening — no forecast to score against, nothing breaching, or how far a streak
  * has got.
+ *
+ * An ownship observation is not a sample of the ocean (FR-51), and the monitor needs
+ * no rule to say so: `pairs` names the thing and the two datastreams it scores, so an
+ * observation it did not ask for informs nothing. That is an allowlist, and it is
+ * stronger than the denylist the planner carries — the planner informs on whatever
+ * arrives, so what it must ignore has to be named. A denylist was written here too and
+ * then removed: planted against, the suite stayed green, which is the definition of a
+ * check worth nothing (CLAUDE.md, lesson 2).
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type { ConfigMonitor, Divergence, Observation } from '../../generated/types.js';

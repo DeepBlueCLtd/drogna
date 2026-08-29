@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/platform-state.schema.json",
+  "title": "drogna platform state",
+  "description": "What the platform reports about itself (SRD-v2 FR-47): demanded beside current, never conflated, and the limit that is binding where the two differ. This is the component's own account for the Operator view, not a measurement — the measurements are ownship observations on the observation namespace, and position appears here for the reader rather than as the record. A consumer that wants where the platform has been reads the observations through the query layer, because a state message is the present and a track is a history.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "current",
+    "demanded",
+    "limits",
+    "binding_limit"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+    "scenario_run_id": { "type": "string" },
+    "sim_time": { "type": "string", "description": "ISO-8601 UTC with microsecond precision." },
+    "tick": { "type": "integer", "minimum": 0 },
+    "current": { "$ref": "#/$defs/vector" },
+    "demanded": {
+      "oneOf": [{ "$ref": "#/$defs/demanded" }, { "type": "null" }],
+      "description": "The standing demand, or null where none has ever been heard. Null is a statement: it means the platform is holding what it was configured with, not that it has been told to."
+    },
+    "demand_from": {
+      "type": ["string", "null"],
+      "description": "The component id that issued the standing demand. Null with no demand standing."
+    },
+    "limits": { "$ref": "#/$defs/limits" },
+    "binding_limit": {
+      "type": "string",
+      "enum": ["none", "turn_rate", "acceleration", "dive_rate", "maximum_speed", "maximum_depth"],
+      "description": "Which limit is holding current away from demanded right now. 'none' means the platform is where it was asked to be, or has not been asked. This is why a platform that is not obeying can never be mistaken on screen for one that is."
+    },
+    "shortfall": {
+      "oneOf": [{ "$ref": "#/$defs/shortfall" }, { "type": "null" }],
+      "description": "Where the standing demand asked for something outside a declared limit, what was asked and what the limit allowed. Null when the demand is reachable. A clipped demand that said nothing would be the platform quietly rewriting its orders."
+    },
+    "note": { "type": "string", "description": "The note carried on the standing demand, if it had one." }
+  },
+  "$defs": {
+    "vector": {
+      "title": "Ownship state",
+      "type": "object",
+      "required": ["latitude", "longitude", "course_degrees", "speed_m_per_s", "depth_m"],
+      "additionalProperties": false,
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "course_degrees": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
+        "speed_m_per_s": { "type": "number", "minimum": 0 },
+        "depth_m": { "type": "number", "minimum": 0 }
+      }
+    },
+    "demanded": {
+      "title": "Demanded state",
+      "description": "What was asked for. Position is absent by design: a demand names a way to go, not a place to be — routing is the planner's business, and the planner does not publish demands.",
+      "type": "object",
+      "required": ["course_degrees", "speed_m_per_s", "depth_m"],
+      "additionalProperties": false,
+      "properties": {
+        "course_degrees": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
+        "speed_m_per_s": { "type": "number", "minimum": 0 },
+        "depth_m": { "type": "number", "minimum": 0 }
+      }
+    },
+    "limits": {
+      "title": "Declared limits",
+      "description": "Restated on every report so a reader of the message alone can judge the gap between demanded and current without holding the configuration.",
+      "type": "object",
+      "required": [
+        "maximum_speed_m_per_s",
+        "maximum_depth_m",
+        "turn_rate_degrees_per_second",
+        "acceleration_m_per_s2",
+        "dive_rate_m_per_s"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "maximum_speed_m_per_s": { "type": "number", "exclusiveMinimum": 0 },
+        "maximum_depth_m": { "type": "number", "exclusiveMinimum": 0 },
+        "turn_rate_degrees_per_second": { "type": "number", "exclusiveMinimum": 0 },
+        "acceleration_m_per_s2": { "type": "number", "exclusiveMinimum": 0 },
+        "dive_rate_m_per_s": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "shortfall": {
+      "title": "Unreachable demand",
+      "type": "object",
+      "required": ["quantity", "asked", "allowed", "statement"],
+      "additionalProperties": false,
+      "properties": {
+        "quantity": { "type": "string", "enum": ["speed_m_per_s", "depth_m"] },
+        "asked": { "type": "number" },
+        "allowed": { "type": "number" },
+        "statement": {
+          "type": "string",
+          "description": "The shortfall in the platform's own words, so every consumer says the same thing about it."
+        }
+      }
+    }
+  }
+}

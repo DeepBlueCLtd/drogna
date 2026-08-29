@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.sensors.schema.json",
   "title": "drogna sensors configuration (V2-C04)",
-  "description": "The sensors component's configuration document (SRD-v2 FR-22): one simulated platform loitering deterministically, carrying instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Sensors read the clock and nothing else (ADR-0012, carried).",
+  "description": "The sensors component's configuration document (SRD-v2 FR-22, amended by FR-50): instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Until feature 112 this document also carried a loiter, and the sensors evaluated the platform's position from it in closed form. That block is gone: position now comes from the platform component, over the broker, and no component computes it twice. Sensors read the clock and the ownship datastreams, and nothing else (ADR-0012, widened by FR-50 and stated rather than assumed \u2014 sampling now depends on delivery order, which is deterministic in lockstep and is named in AT-04's boundary).",
   "type": "object",
   "required": ["id", "stream", "topics", "heartbeat", "platform", "sample_interval_ticks", "instruments"],
   "additionalProperties": false,
@@ -11,10 +11,14 @@
     "stream": { "type": "string", "minLength": 1, "description": "The RNG stream sensor noise draws from." },
     "topics": {
       "type": "object",
-      "required": ["clock", "observation_prefix"],
+      "required": ["clock", "observation_prefix", "ownship"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "ownship": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The filter the sensors take the platform's position from. Before a position has been heard on it the sensors publish nothing and say so in their heartbeat: sampling the ocean at a place nobody has reported would be inventing the place."
+        },
         "observation_prefix": {
           "type": "string",
           "pattern": "^[a-z0-9]+$",
@@ -25,25 +29,13 @@
     "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
     "platform": {
       "type": "object",
-      "required": ["thing_id", "name", "description", "loiter"],
+      "required": ["thing_id", "name", "description"],
       "additionalProperties": false,
-      "description": "The sampling platform: a coordinate and a sampler, no history, no identity beyond its id (Constitution V).",
+      "description": "The sampling platform these instruments are mounted on: the SensorThings Thing the ocean observations belong to. A coordinate and a sampler, no history, no identity beyond its id (Constitution V). Where it IS is not here \u2014 that is the platform component's business, and the loiter this block used to carry retired with feature 112 (FR-50).",
       "properties": {
         "thing_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
         "name": { "type": "string", "minLength": 1 },
-        "description": { "type": "string", "minLength": 1 },
-        "loiter": {
-          "type": "object",
-          "required": ["centre_latitude", "centre_longitude", "radius_km", "period_seconds"],
-          "additionalProperties": false,
-          "description": "The deterministic loiter: position is a pure function of simulation time. The planner's committed routes take over steering at feature 106.",
-          "properties": {
-            "centre_latitude": { "type": "number" },
-            "centre_longitude": { "type": "number" },
-            "radius_km": { "type": "number", "exclusiveMinimum": 0 },
-            "period_seconds": { "type": "number", "exclusiveMinimum": 0 }
-          }
-        }
+        "description": { "type": "string", "minLength": 1 }
       }
     },
     "sample_interval_ticks": { "type": "integer", "exclusiveMinimum": 0 },

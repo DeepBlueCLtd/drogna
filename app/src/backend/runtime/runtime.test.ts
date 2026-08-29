@@ -74,6 +74,7 @@ describe('the backend runtime', () => {
       'offload',
       'operator',
       'planner',
+      'platform',
       'query',
       'scheduler',
       'sensors',

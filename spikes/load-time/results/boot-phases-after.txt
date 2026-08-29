@@ -1,0 +1,54 @@
+cpu=1x   first contentful paint at 136ms, load at 120ms
+  module evaluation (the whole bundle)                   47.1ms
+  createSeamValidator (ajv holds every master)           54.1ms
+  validating 21 configuration documents                 103.7ms
+  constructing the components                            10.9ms
+  starting them (subscriptions only)                      1.2ms
+  clock.start() -> the provisioning cascade             183.1ms
+    of which the archive holding:
+        evaluating the field                             76.6ms
+        sha256 over the field bytes                      41.7ms
+        assembling the manifest                           0.6ms
+        store.publish (re-hash, then fan-out)            33.4ms
+    of which the now-cast holding:
+        evaluating the field                              9.8ms
+        sha256 over the field bytes                       3.6ms
+        store.publish (re-hash, then fan-out)             4.0ms
+  buildBackend total                                    299.6ms
+  rendering the shell over the starting frame             0.2ms
+cpu=4x   first contentful paint at 240ms, load at 210ms
+  module evaluation (the whole bundle)                  113.3ms
+  createSeamValidator (ajv holds every master)          265.6ms
+  validating 21 configuration documents                 545.9ms
+  constructing the components                            33.4ms
+  starting them (subscriptions only)                      6.2ms
+  clock.start() -> the provisioning cascade             793.6ms
+    of which the archive holding:
+        evaluating the field                            336.5ms
+        sha256 over the field bytes                     167.8ms
+        assembling the manifest                           3.3ms
+        store.publish (re-hash, then fan-out)           151.4ms
+    of which the now-cast holding:
+        evaluating the field                             43.2ms
+        sha256 over the field bytes                      21.4ms
+        store.publish (re-hash, then fan-out)            17.3ms
+  buildBackend total                                   1382.5ms
+  rendering the shell over the starting frame             1.4ms
+cpu=6x   first contentful paint at 300ms, load at 256ms
+  module evaluation (the whole bundle)                  151.6ms
+  createSeamValidator (ajv holds every master)          419.9ms
+  validating 21 configuration documents                 828.4ms
+  constructing the components                            52.5ms
+  starting them (subscriptions only)                      9.7ms
+  clock.start() -> the provisioning cascade            1196.6ms
+    of which the archive holding:
+        evaluating the field                            508.3ms
+        sha256 over the field bytes                     244.0ms
+        assembling the manifest                           5.4ms
+        store.publish (re-hash, then fan-out)           224.6ms
+    of which the now-cast holding:
+        evaluating the field                             73.8ms
+        sha256 over the field bytes                      27.7ms
+        store.publish (re-hash, then fan-out)            27.8ms
+  buildBackend total                                   2091.3ms
+  rendering the shell over the starting frame             3.1ms

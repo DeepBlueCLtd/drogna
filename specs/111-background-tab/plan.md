@@ -115,6 +115,17 @@ Two checks rather than one because they fail differently: the gate catches the i
 that has not been called yet, and the test catches the call that came in by a route the
 gate did not model.
 
+## The storyboard leads
+
+`storyboard.html` in this directory is the authoring brief: all eight explainers, every
+step, its wireframe, its prose and its value panel, plus the panel chrome at wide and
+narrow width. It is committed beside the spec rather than left in a review link because
+**it leads what gets implemented** — a step that is not in the storyboard has not been
+designed, and a diagram built without one is a drawing nobody agreed to.
+
+Open it in a browser; it needs no build. Where it and this plan disagree, the storyboard
+is the newer claim and one of the two is wrong — check, then fix the loser.
+
 ## How an explainer works, and what it costs to build
 
 The mechanics are settled in `spec.md` FR-016 to FR-024. Three of them shape the code

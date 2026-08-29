@@ -22,6 +22,16 @@ and this branch now carries them.
 - [ ] T003 Note in `docs/v2/plan.md` §5 if the walkthrough candidate 110 is dropped, so
       the numbering is reconciled openly rather than quietly.
 
+## Design
+
+- [x] T005 Storyboard all eight explainers — steps, prose, wireframes, value panels, and
+      the panel chrome at both widths. `storyboard.html`, committed here because it leads
+      implementation rather than records it.
+- [ ] T006 Settle what the storyboard left open: EDR's step budget, whether the value
+      panel must cost a step in every explainer, the poke affordance, and whether the
+      "ground truth you never have" grey earns a place in the shared vocabulary or stays
+      local to explainer 2.
+
 ## Addressing (US1, and the only work that can break another feature)
 
 - [ ] T010 Extend `app/src/shell/views.ts`: parse `#/view/<id>` into a view id and an

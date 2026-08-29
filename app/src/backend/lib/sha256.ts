@@ -22,8 +22,8 @@ function rotr(x: number, n: number): number {
   return (x >>> n) | (x << (32 - n));
 }
 
-export function sha256Hex(input: string): string {
-  const bytes = new TextEncoder().encode(input);
+export function sha256Hex(input: string | Uint8Array): string {
+  const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
   const bitLength = bytes.length * 8;
   const padded = new Uint8Array(((bytes.length + 8) >> 6 << 6) + 64);
   padded.set(bytes);

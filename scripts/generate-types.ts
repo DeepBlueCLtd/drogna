@@ -84,7 +84,16 @@ function tsType(node: SchemaNode, currentFile: string, indent: string): string {
   }
   if (Array.isArray(node.oneOf) || Array.isArray(node.anyOf)) {
     const parts = (node.oneOf ?? node.anyOf) as SchemaNode[];
-    return parts.map((n) => `(${tsType(n, currentFile, indent)})`).join(' | ');
+    const union = parts.map((n) => `(${tsType(n, currentFile, indent)})`).join(' | ');
+    // A schema carrying base properties AND variants (e.g. manifest's feature) is
+    // the intersection of the base shape with the variant union.
+    if (node.properties !== undefined || node.type !== undefined) {
+      const base: SchemaNode = { ...node };
+      delete base.oneOf;
+      delete base.anyOf;
+      return `(${tsType(base, currentFile, indent)}) & (${union})`;
+    }
+    return union;
   }
   if (Array.isArray(node.enum)) return (node.enum as unknown[]).map(literal).join(' | ');
   if ('const' in node) return literal(node.const);

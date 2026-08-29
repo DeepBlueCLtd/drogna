@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/holding-published.schema.json",
+  "title": "drogna holding-published announcement",
+  "description": "Published by the coverage store on its declared topic each time a staged holding passes its digest check and becomes visible (SRD-v2 FR-21, FR-30's announce-not-poll discipline). Light on purpose: the descriptor and manifest are served by the inventory; this message says only that, and when, and under which digest, something became visible.",
+  "type": "object",
+  "required": ["component", "holding_id", "era", "run_id", "sim_time", "tick", "field_sha256"],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+    "holding_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
+    "era": { "type": "string", "enum": ["archive", "nowcast", "instance"] },
+    "run_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "sim_time": { "type": "string", "minLength": 1 },
+    "tick": { "type": "integer", "minimum": 0 },
+    "field_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

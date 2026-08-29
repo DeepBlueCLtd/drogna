@@ -100,6 +100,140 @@ export type ConfigCommonHeartbeat = {
   "liveness_window_seconds": number;
 };
 
+/** drogna coverage store configuration (V2-C08) — from config.coverage-store.schema.json */
+export type ConfigCoverageStore = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "published": ConfigCommonTopic;
+  };
+  "http": {
+    "holdings_path": ConfigCommonRelativePath;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+};
+
+/** drogna environment generator configuration (V2-C02) — from config.env-generator.schema.json */
+export type ConfigEnvGenerator = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "domain": {
+    "latitude": ConfigEnvGeneratorExtent;
+    "longitude": ConfigEnvGeneratorExtent;
+    "depth": ConfigEnvGeneratorExtent;
+  };
+  "nowcast": {
+    "grid": ConfigEnvGeneratorGridCounts;
+    "interval_ticks": number;
+    "time_steps": number;
+    "step_seconds": number;
+  };
+  "archive": {
+    "grid": ConfigEnvGeneratorGridCounts;
+    "months": number;
+    "month_seconds": number;
+  };
+  "background": {
+    "surface_temperature_c": number;
+    "deep_temperature_c": number;
+    "temperature_scale_depth_m": number;
+    "surface_salinity_psu": number;
+    "deep_salinity_psu": number;
+    "salinity_scale_depth_m": number;
+  };
+  "features": {
+    "eddy": {
+      "nominal": {
+        "centre_latitude": number;
+        "centre_longitude": number;
+        "radius_km": number;
+        "strength_c": number;
+        "salinity_strength_psu": number;
+        "sign": -1 | 1;
+        "depth_centre_m": number;
+        "depth_half_thickness_m": number;
+      };
+      "jitter": {
+        "centre_degrees": number;
+        "radius_km": number;
+        "strength_c": number;
+      };
+    };
+    "front": {
+      "nominal": {
+        "anchor_latitude": number;
+        "anchor_longitude": number;
+        "bearing_degrees": number;
+        "sharpness_km": number;
+        "amplitude_c": number;
+        "salinity_amplitude_psu": number;
+        "depth_scale_m": number;
+      };
+      "jitter": {
+        "anchor_degrees": number;
+        "bearing_degrees": number;
+      };
+    };
+    "thermocline": {
+      "nominal": {
+        "depth_m": number;
+        "thickness_m": number;
+        "temperature_drop_c": number;
+        "salinity_rise_psu": number;
+      };
+      "jitter": {
+        "depth_m": number;
+        "temperature_drop_c": number;
+      };
+    };
+    "moving": {
+      "nominal": {
+        "centre_latitude": number;
+        "centre_longitude": number;
+        "radius_km": number;
+        "strength_c": number;
+        "salinity_strength_psu": number;
+        "sign": -1 | 1;
+        "depth_centre_m": number;
+        "depth_half_thickness_m": number;
+        "drift_east_km_per_day": number;
+        "drift_north_km_per_day": number;
+      };
+      "jitter": {
+        "centre_degrees": number;
+        "drift_km_per_day": number;
+      };
+    };
+  };
+  "timescale": {
+    "background_seconds": number;
+    "floor_ratio": number;
+    "feature_seconds": {
+      "eddy": number;
+      "front": number;
+      "thermocline": number;
+      "moving": number;
+    };
+  };
+};
+
+/** config.env-generator.schema.json #/$defs/extent */
+export type ConfigEnvGeneratorExtent = {
+  "minimum": number;
+  "maximum": number;
+};
+
+/** config.env-generator.schema.json #/$defs/grid_counts */
+export type ConfigEnvGeneratorGridCounts = {
+  "longitude": number;
+  "latitude": number;
+  "depth": number;
+};
+
 /** drogna run configuration — from config.run.schema.json */
 export type ConfigRun = {
   "schema_version": 1;
@@ -107,6 +241,8 @@ export type ConfigRun = {
   "clock": ConfigClock;
   "broker": ConfigBroker;
   "boundary": ConfigBoundary;
+  "env_generator": ConfigEnvGenerator;
+  "coverage_store": ConfigCoverageStore;
   "shell": ConfigShell;
 };
 
@@ -126,6 +262,7 @@ export type ConfigShell = {
   "topics": {
     "clock": ConfigCommonTopicFilter;
     "heartbeat": ConfigCommonTopicFilter;
+    "holdings": ConfigCommonTopicFilter;
     "all": ConfigCommonTopicFilter;
   };
   "message_schemas": {
@@ -134,6 +271,7 @@ export type ConfigShell = {
   }[];
   "endpoints": {
     "clock_rate": ConfigCommonRelativePath;
+    "holdings": ConfigCommonRelativePath;
   };
   "liveness": {
     "default_window_seconds": number;
@@ -141,6 +279,24 @@ export type ConfigShell = {
   "messages": {
     "buffer": number;
   };
+};
+
+/** drogna coverage holding — from coverage-holding.schema.json */
+export type CoverageHolding = {
+  "schema_version": 1;
+  "holding_id": string;
+  "era": "archive" | "nowcast" | "instance";
+  "run_id": string;
+  "published_at": {
+    "sim_time": string;
+    "tick": number;
+  };
+  "field": {
+    "format": "drogna-f32-v1";
+    "sha256": string;
+    "byte_length": number;
+  };
+  "manifest": Manifest;
 };
 
 /** drogna coverage run manifest — from coverage-run-manifest.schema.json */
@@ -213,6 +369,23 @@ export type Heartbeat = {
   "heartbeat_interval_seconds"?: number;
   "liveness_window_seconds"?: number;
   "detail"?: string;
+};
+
+/** drogna holding-published announcement — from holding-published.schema.json */
+export type HoldingPublished = {
+  "component": string;
+  "holding_id": string;
+  "era": "archive" | "nowcast" | "instance";
+  "run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "field_sha256": string;
+};
+
+/** drogna holdings inventory — from holdings-inventory.schema.json */
+export type HoldingsInventory = {
+  "schema_version": 1;
+  "holdings": CoverageHolding[];
 };
 
 /** drogna ingest telemetry — from ingest-telemetry.schema.json */
@@ -393,6 +566,15 @@ export type ManifestResolution = {
 
 /** manifest.schema.json #/$defs/feature */
 export type ManifestFeature = ({
+  "id": string;
+  "kind": "eddy" | "front" | "thermocline" | "moving";
+  "timescale_seconds": number;
+  "timescale_to_time_step_ratio": number;
+  "resolution": ManifestResolution;
+  "parameters": {
+    [key: string]: unknown;
+  };
+}) & (({
   "kind"?: "eddy";
   "parameters"?: ManifestEddyParameters;
 }) | ({
@@ -404,7 +586,7 @@ export type ManifestFeature = ({
 }) | ({
   "kind"?: "moving";
   "parameters"?: ManifestMovingParameters;
-});
+}));
 
 /** manifest.schema.json #/$defs/eddy_parameters */
 export type ManifestEddyParameters = {
@@ -927,6 +1109,26 @@ export type TelemetryResidualStatistics = {
 
 /** telemetry.schema.json #/$defs/forecast_skill */
 export type TelemetryForecastSkill = ({
+  "component": TelemetryComponentId;
+  "scenario_run_id": TelemetryScenarioRunId;
+  "sim_time": TelemetrySimInstant;
+  "tick": TelemetryTickIndex;
+  "kind": "forecast-skill";
+  "forecast_run_id": string | null;
+  "reference_run_id": string | null;
+  "reference_changed": boolean;
+  "sample_count": number;
+  "minimum_sample_count": number;
+  "model_mean_square_error": number | null;
+  "persistence_mean_square_error": number | null;
+  "skill_score": number | null;
+  "formula": "1 - model_mean_square_error / persistence_mean_square_error";
+  "state": "beating-persistence" | "not-beating-persistence" | "insufficient-samples" | "insufficient-reference" | "reference-without-error" | "no-forecast";
+  "statement": string;
+  "last_updated_sim_time": TelemetryNullableSimInstant;
+  "freshness": TelemetryFreshness;
+  "sound_speed_equation": TelemetrySoundSpeedEquation;
+}) & (({
   "state"?: "beating-persistence" | "not-beating-persistence";
   "skill_score": number;
   "model_mean_square_error": number;
@@ -936,7 +1138,7 @@ export type TelemetryForecastSkill = ({
 }) | ({
   "state"?: "insufficient-samples" | "insufficient-reference" | "reference-without-error" | "no-forecast";
   "skill_score": null;
-});
+}));
 
 /** drogna broker topology — from topology.schema.json */
 export type Topology = {

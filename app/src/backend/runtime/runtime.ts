@@ -18,6 +18,8 @@ import type { ConfigRun, RunManifest } from '../../generated/types.js';
 import { Broker } from '../broker/broker.js';
 import { createInBrowserTransport } from '../broker/transport-adapter.js';
 import { Clock } from '../clock/clock.js';
+import { CoverageStore } from '../coverage-store/store.js';
+import { EnvGenerator } from '../env-generator/generator.js';
 import { ReleaseGate } from '../boundary/gate.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
@@ -29,6 +31,8 @@ export interface BackendRuntime {
   readonly httpBackend: SeamHttpBackend;
   readonly manifest: RunManifest;
   readonly runId: string;
+  readonly clock: Clock;
+  readonly store: CoverageStore;
   stop(): void;
 }
 
@@ -54,10 +58,14 @@ export function buildBackend(
   validated(validator, 'config.clock', config.clock);
   validated(validator, 'config.broker', config.broker);
   validated(validator, 'config.boundary', config.boundary);
+  validated(validator, 'config.env-generator', config.env_generator);
+  validated(validator, 'config.coverage-store', config.coverage_store);
   validated(validator, 'config.shell', config.shell);
 
   const runId = deriveRunId(config.scenario, options.rootSeed);
-  const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, []);
+  const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, [
+    config.env_generator.stream,
+  ]);
 
   const broker = new Broker(config.broker);
   const transport = createInBrowserTransport(broker);
@@ -69,6 +77,20 @@ export function buildBackend(
   const clockClient = transport.connect(config.clock.id, config.clock.id);
   const clock = new Clock(config.clock, clockClient, runId);
   router.register('PUT', config.clock.http.rate_path, (request) => clock.handleRateRequest(request));
+
+  const store = new CoverageStore(
+    config.coverage_store,
+    transport.connect(config.coverage_store.id, config.coverage_store.id),
+    runId,
+    router,
+  );
+  const generator = new EnvGenerator(
+    config.env_generator,
+    transport.connect(config.env_generator.id, config.env_generator.id),
+    store,
+    runId,
+    options.rootSeed,
+  );
 
   // Each component's heartbeat carries the simulation time that component last
   // heard over the seam; only the clock's carries the time it is the source of.
@@ -118,6 +140,11 @@ export function buildBackend(
     ),
   ];
 
+  // The generator subscribes before the clock starts, so the clock's first sample —
+  // the moment simulation time exists — is what triggers provisioning, through the
+  // store's own publication seam (FR-11).
+  generator.start();
+  store.heartbeat.start();
   clock.start();
   for (const heartbeat of heartbeats) heartbeat.start();
 
@@ -126,8 +153,12 @@ export function buildBackend(
     httpBackend: gate,
     manifest,
     runId,
+    clock,
+    store,
     stop(): void {
       for (const heartbeat of heartbeats) heartbeat.stop();
+      generator.stop();
+      store.heartbeat.stop();
       clock.stop();
     },
   };

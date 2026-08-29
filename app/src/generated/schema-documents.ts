@@ -467,6 +467,592 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.coverage-store": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.coverage-store.schema.json",
+    "title": "drogna coverage store configuration (V2-C08)",
+    "description": "The coverage store's configuration document. The store holds gridded fields across three eras behind a store interface, admits writes only through its staged-publication seam with the digest check of SRD-v2 FR-13, announces each publication on its declared topic, and serves its inventory on its declared seam path.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "http",
+      "heartbeat"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "published"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "http": {
+        "type": "object",
+        "required": [
+          "holdings_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "holdings_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      }
+    }
+  },
+  "config.env-generator": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.env-generator.schema.json",
+    "title": "drogna environment generator configuration (V2-C02)",
+    "description": "The generator's one configuration document: the domain and grids, the background profiles, the four features' NOMINAL parameters with the jitter each is authored under, and the timescale authoring (SRD-v2 FR-20, FR-21; ADR-0002). The jittered values the run actually used are recorded in the ground-truth manifest, never here: this document is what every run of the scenario shares, the manifest is what one run drew.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "domain",
+      "nowcast",
+      "archive",
+      "background",
+      "features",
+      "timescale"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The RNG stream name the jitter draws from."
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "domain": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "depth"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "$ref": "#/$defs/extent"
+          },
+          "longitude": {
+            "$ref": "#/$defs/extent"
+          },
+          "depth": {
+            "$ref": "#/$defs/extent"
+          }
+        }
+      },
+      "nowcast": {
+        "type": "object",
+        "required": [
+          "grid",
+          "interval_ticks",
+          "time_steps",
+          "step_seconds"
+        ],
+        "additionalProperties": false,
+        "description": "The fine grid, replaced on a cadence counted in clock ticks; its manifest records the derivation each time.",
+        "properties": {
+          "grid": {
+            "$ref": "#/$defs/grid_counts"
+          },
+          "interval_ticks": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "time_steps": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "step_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "archive": {
+        "type": "object",
+        "required": [
+          "grid",
+          "months",
+          "month_seconds"
+        ],
+        "additionalProperties": false,
+        "description": "The multi-decade monthly historic archive, authored deterministically at provisioning through the publisher's path (FR-11, FR-21). Months are a fixed synthetic length so the time axis has constant step.",
+        "properties": {
+          "grid": {
+            "$ref": "#/$defs/grid_counts"
+          },
+          "months": {
+            "type": "integer",
+            "minimum": 24
+          },
+          "month_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "background": {
+        "type": "object",
+        "required": [
+          "surface_temperature_c",
+          "deep_temperature_c",
+          "temperature_scale_depth_m",
+          "surface_salinity_psu",
+          "deep_salinity_psu",
+          "salinity_scale_depth_m"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "surface_temperature_c": {
+            "type": "number"
+          },
+          "deep_temperature_c": {
+            "type": "number"
+          },
+          "temperature_scale_depth_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "surface_salinity_psu": {
+            "type": "number"
+          },
+          "deep_salinity_psu": {
+            "type": "number"
+          },
+          "salinity_scale_depth_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "features": {
+        "type": "object",
+        "required": [
+          "eddy",
+          "front",
+          "thermocline",
+          "moving"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "eddy": {
+            "type": "object",
+            "required": [
+              "nominal",
+              "jitter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "nominal": {
+                "type": "object",
+                "required": [
+                  "centre_latitude",
+                  "centre_longitude",
+                  "radius_km",
+                  "strength_c",
+                  "salinity_strength_psu",
+                  "sign",
+                  "depth_centre_m",
+                  "depth_half_thickness_m"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "centre_latitude": {
+                    "type": "number"
+                  },
+                  "centre_longitude": {
+                    "type": "number"
+                  },
+                  "radius_km": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "strength_c": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "salinity_strength_psu": {
+                    "type": "number"
+                  },
+                  "sign": {
+                    "type": "integer",
+                    "enum": [
+                      -1,
+                      1
+                    ]
+                  },
+                  "depth_centre_m": {
+                    "type": "number"
+                  },
+                  "depth_half_thickness_m": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                }
+              },
+              "jitter": {
+                "type": "object",
+                "required": [
+                  "centre_degrees",
+                  "radius_km",
+                  "strength_c"
+                ],
+                "additionalProperties": false,
+                "description": "Half-widths of the uniform jitter each parameter is drawn within. AT-03's error bound derives from what is written here and in the manifest, never from a number typed into a test.",
+                "properties": {
+                  "centre_degrees": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "radius_km": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "strength_c": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "front": {
+            "type": "object",
+            "required": [
+              "nominal",
+              "jitter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "nominal": {
+                "type": "object",
+                "required": [
+                  "anchor_latitude",
+                  "anchor_longitude",
+                  "bearing_degrees",
+                  "sharpness_km",
+                  "amplitude_c",
+                  "salinity_amplitude_psu",
+                  "depth_scale_m"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "anchor_latitude": {
+                    "type": "number"
+                  },
+                  "anchor_longitude": {
+                    "type": "number"
+                  },
+                  "bearing_degrees": {
+                    "type": "number"
+                  },
+                  "sharpness_km": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "amplitude_c": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "salinity_amplitude_psu": {
+                    "type": "number"
+                  },
+                  "depth_scale_m": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                }
+              },
+              "jitter": {
+                "type": "object",
+                "required": [
+                  "anchor_degrees",
+                  "bearing_degrees"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "anchor_degrees": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "bearing_degrees": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "thermocline": {
+            "type": "object",
+            "required": [
+              "nominal",
+              "jitter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "nominal": {
+                "type": "object",
+                "required": [
+                  "depth_m",
+                  "thickness_m",
+                  "temperature_drop_c",
+                  "salinity_rise_psu"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "depth_m": {
+                    "type": "number"
+                  },
+                  "thickness_m": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "temperature_drop_c": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "salinity_rise_psu": {
+                    "type": "number"
+                  }
+                }
+              },
+              "jitter": {
+                "type": "object",
+                "required": [
+                  "depth_m",
+                  "temperature_drop_c"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "depth_m": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "temperature_drop_c": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "moving": {
+            "type": "object",
+            "required": [
+              "nominal",
+              "jitter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "nominal": {
+                "type": "object",
+                "required": [
+                  "centre_latitude",
+                  "centre_longitude",
+                  "radius_km",
+                  "strength_c",
+                  "salinity_strength_psu",
+                  "sign",
+                  "depth_centre_m",
+                  "depth_half_thickness_m",
+                  "drift_east_km_per_day",
+                  "drift_north_km_per_day"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "centre_latitude": {
+                    "type": "number"
+                  },
+                  "centre_longitude": {
+                    "type": "number"
+                  },
+                  "radius_km": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "strength_c": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "salinity_strength_psu": {
+                    "type": "number"
+                  },
+                  "sign": {
+                    "type": "integer",
+                    "enum": [
+                      -1,
+                      1
+                    ]
+                  },
+                  "depth_centre_m": {
+                    "type": "number"
+                  },
+                  "depth_half_thickness_m": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "drift_east_km_per_day": {
+                    "type": "number"
+                  },
+                  "drift_north_km_per_day": {
+                    "type": "number"
+                  }
+                }
+              },
+              "jitter": {
+                "type": "object",
+                "required": [
+                  "centre_degrees",
+                  "drift_km_per_day"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "centre_degrees": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "drift_km_per_day": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "timescale": {
+        "type": "object",
+        "required": [
+          "background_seconds",
+          "floor_ratio",
+          "feature_seconds"
+        ],
+        "additionalProperties": false,
+        "description": "ADR-0002: tau is authored per feature over a background and evaluated per location; the moving feature's tau advects with it because membership shares the anomaly's geometry.",
+        "properties": {
+          "background_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "floor_ratio": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "feature_seconds": {
+            "type": "object",
+            "required": [
+              "eddy",
+              "front",
+              "thermocline",
+              "moving"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "eddy": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "front": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "thermocline": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "moving": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "$defs": {
+      "extent": {
+        "type": "object",
+        "required": [
+          "minimum",
+          "maximum"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "minimum": {
+            "type": "number"
+          },
+          "maximum": {
+            "type": "number"
+          }
+        }
+      },
+      "grid_counts": {
+        "type": "object",
+        "required": [
+          "longitude",
+          "latitude",
+          "depth"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "longitude": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "latitude": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 2
+          }
+        }
+      }
+    }
+  },
   "config.run": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.run.schema.json",
@@ -479,6 +1065,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "clock",
       "broker",
       "boundary",
+      "env_generator",
+      "coverage_store",
       "shell"
     ],
     "additionalProperties": false,
@@ -500,6 +1088,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "boundary": {
         "$ref": "config.boundary.schema.json"
+      },
+      "env_generator": {
+        "$ref": "config.env-generator.schema.json"
+      },
+      "coverage_store": {
+        "$ref": "config.coverage-store.schema.json"
       },
       "shell": {
         "$ref": "config.shell.schema.json"
@@ -586,6 +1180,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "heartbeat",
+          "holdings",
           "all"
         ],
         "additionalProperties": false,
@@ -594,6 +1189,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
           },
           "heartbeat": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "holdings": {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
           },
           "all": {
@@ -628,12 +1226,16 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "endpoints": {
         "type": "object",
         "required": [
-          "clock_rate"
+          "clock_rate",
+          "holdings"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
         "properties": {
           "clock_rate": {
+            "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "holdings": {
             "$ref": "config.common.schema.json#/$defs/relative_path"
           }
         }
@@ -665,6 +1267,93 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "description": "How many recent seam messages the Messages panel retains for display."
           }
         }
+      }
+    }
+  },
+  "coverage-holding": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
+    "title": "drogna coverage holding",
+    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. Three eras (SRD-v2 FR-21): the historic archive authored at provisioning, the now-cast replaced on its cadence, and the forecast instances that accumulate once the loop turns (whose fuller descriptor is coverage-run-manifest.schema.json; the holding wraps it). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "holding_id",
+      "era",
+      "run_id",
+      "published_at",
+      "field",
+      "manifest"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "holding_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+        "description": "Deterministic: derived from era, run and the tick of publication, never from entropy."
+      },
+      "era": {
+        "type": "string",
+        "enum": [
+          "archive",
+          "nowcast",
+          "instance"
+        ]
+      },
+      "run_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$"
+      },
+      "published_at": {
+        "type": "object",
+        "required": [
+          "sim_time",
+          "tick"
+        ],
+        "additionalProperties": false,
+        "description": "Simulation time of publication, from the clock port. No host time.",
+        "properties": {
+          "sim_time": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tick": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "field": {
+        "type": "object",
+        "required": [
+          "format",
+          "sha256",
+          "byte_length"
+        ],
+        "additionalProperties": false,
+        "description": "The stored bytes: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "drogna-f32-v1"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "byte_length": {
+            "type": "integer",
+            "minimum": 8
+          }
+        }
+      },
+      "manifest": {
+        "$ref": "manifest.schema.json",
+        "description": "The ground-truth manifest, embedded whole: a holding is inspectable without a second fetch, and AT-01/AT-03 score against exactly what the catalogue serves."
       }
     }
   },
@@ -1034,6 +1723,81 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "detail": {
         "type": "string",
         "description": "One line for a human. Never a substitute for status."
+      }
+    }
+  },
+  "holding-published": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/holding-published.schema.json",
+    "title": "drogna holding-published announcement",
+    "description": "Published by the coverage store on its declared topic each time a staged holding passes its digest check and becomes visible (SRD-v2 FR-21, FR-30's announce-not-poll discipline). Light on purpose: the descriptor and manifest are served by the inventory; this message says only that, and when, and under which digest, something became visible.",
+    "type": "object",
+    "required": [
+      "component",
+      "holding_id",
+      "era",
+      "run_id",
+      "sim_time",
+      "tick",
+      "field_sha256"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "component": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "holding_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+      },
+      "era": {
+        "type": "string",
+        "enum": [
+          "archive",
+          "nowcast",
+          "instance"
+        ]
+      },
+      "run_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$"
+      },
+      "sim_time": {
+        "type": "string",
+        "minLength": 1
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "field_sha256": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    }
+  },
+  "holdings-inventory": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/holdings-inventory.schema.json",
+    "title": "drogna holdings inventory",
+    "description": "The HTTP answer to 'what does the coverage store hold': every holding's descriptor with its ground-truth manifest embedded (SRD-v2 FR-20's inspectability). Served through the seam and the release gate like everything else; the query components of feature 104 serve the same holdings through EDR, and this inventory is the control-plane view of them.",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "holdings"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "holdings": {
+        "type": "array",
+        "items": {
+          "$ref": "coverage-holding.schema.json"
+        }
       }
     }
   },

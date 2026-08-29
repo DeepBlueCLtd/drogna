@@ -37,6 +37,8 @@ export function buildRunManifest(
       { id: config.clock.id, role: 'observer', config_digest: configDigest(config.clock), registered_tick: 0 },
       { id: config.broker.id, role: 'observer', config_digest: configDigest(config.broker), registered_tick: 0 },
       { id: config.boundary.id, role: 'observer', config_digest: configDigest(config.boundary), registered_tick: 0 },
+      { id: config.env_generator.id, role: 'observer', config_digest: configDigest(config.env_generator), registered_tick: 0 },
+      { id: config.coverage_store.id, role: 'observer', config_digest: configDigest(config.coverage_store), registered_tick: 0 },
       { id: config.shell.id, role: 'observer', config_digest: configDigest(config.shell), registered_tick: 0 },
     ],
     streams: [...streams],

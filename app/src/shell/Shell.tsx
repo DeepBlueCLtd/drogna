@@ -18,6 +18,7 @@ import type { SeamValidator } from '../seam/validate.js';
 import { hashForView, viewFromHash } from './views.js';
 import { IntroPanel } from '../panels/intro/IntroPanel.js';
 import { SystemPanel } from '../panels/system/SystemPanel.js';
+import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
 import { MapPanel } from '../panels/map/MapPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { ClockStrip } from './ClockStrip.js';
@@ -43,6 +44,7 @@ export interface PanelParams {
 const panelComponents: Record<string, React.FunctionComponent<IDockviewPanelProps<PanelParams>>> = {
   intro: IntroPanel,
   system: SystemPanel,
+  holdings: HoldingsPanel,
   map: MapPanel,
   messages: MessagesPanel,
 };

@@ -48,11 +48,12 @@
     },
     "topics": {
       "type": "object",
-      "required": ["clock", "heartbeat", "all"],
+      "required": ["clock", "heartbeat", "holdings", "all"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
         "heartbeat": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+        "holdings": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
         "all": {
           "$ref": "config.common.schema.json#/$defs/topic_filter",
           "description": "The Messages panel's subscription: everything, because a display may not show cold where there is traffic (E13)."
@@ -79,11 +80,12 @@
     },
     "endpoints": {
       "type": "object",
-      "required": ["clock_rate"],
+      "required": ["clock_rate", "holdings"],
       "additionalProperties": false,
       "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
       "properties": {
-        "clock_rate": { "$ref": "config.common.schema.json#/$defs/relative_path" }
+        "clock_rate": { "$ref": "config.common.schema.json#/$defs/relative_path" },
+        "holdings": { "$ref": "config.common.schema.json#/$defs/relative_path" }
       }
     },
     "liveness": {

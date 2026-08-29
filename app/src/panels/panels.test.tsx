@@ -14,8 +14,10 @@ import type { ConfigRun } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
 import type { PanelParams } from '../shell/Shell.js';
+import { createSeamFetch } from '../seam/http.js';
 import { SystemPanel } from './system/SystemPanel.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
+import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
 
 const validator = createSeamValidator();
@@ -61,18 +63,20 @@ describe('the panels against a live backend', () => {
       'boundary',
       'broker',
       'clock',
+      'coverage-store',
+      'env-generator',
     ]);
     // The full declared layout renders from day one (FR-16): every future beat greyed.
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 3);
+    expect(screen.getAllByText('not heard').length).toBe(config.shell.components.length - 5);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(3);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(5);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));
@@ -86,6 +90,25 @@ describe('the panels against a live backend', () => {
     const counter = screen.getByTestId('refusal-counter');
     expect(counter.textContent).toMatch(/\d+ received · 0 refused by their schema/);
     expect(Number(/^(\d+) received/.exec(counter.textContent ?? '')?.[1])).toBeGreaterThan(0);
+  });
+
+  it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = createSeamFetch('/api', runtime.httpBackend, realFetch);
+    try {
+      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      // Flush the fetch → validate → setState chain (microtasks only; timers are fake).
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId('holdings-count').textContent).toMatch(/^2 holding\(s\)/);
+      const archiveRow = document.querySelector('tr[data-era="archive"]');
+      expect(archiveRow).not.toBeNull();
+      act(() => (archiveRow as HTMLElement).click());
+      expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it('Intro states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {

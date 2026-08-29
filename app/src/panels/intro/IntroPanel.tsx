@@ -42,14 +42,29 @@ export function IntroPanel({ params }: IDockviewPanelProps<PanelParams>) {
           byte-for-byte is exportable from the header.
         </p>
       </section>
+      <section>
+        <h3>102 — a world exists</h3>
+        <p>
+          The environment generator authored a synthetic ocean when this page opened:
+          four-dimensional temperature and salinity, a warm-core eddy, a front, a
+          thermocline and a drifting feature, each with jittered parameters drawn from
+          this run&rsquo;s seed and recorded — with the exact draw order — in a
+          ground-truth manifest. Twenty years of monthly history and a rolling
+          now-cast were published through the coverage store&rsquo;s own
+          digest-checked seam, and both are inspectable, manifest and all, in{' '}
+          <a href={hashForView('holdings')}>Holdings</a>. The manifest is sufficient:
+          anyone holding it can reconstruct the field at any point and score a
+          recovery against it.
+        </p>
+      </section>
       <section className="not-landed">
         <h3>What has not landed yet</h3>
         <p>
-          The synthetic ocean (102), sensing (103), the query seam (104), the forecast
-          loop (105), uncertainty and planning (106), the operator&rsquo;s view (107),
-          shore advisories (108) and the <a href={hashForView('map')}>map</a> (109)
-          each arrive as their beat is built. Until then their components stay grey,
-          because nothing here lights without a heartbeat.
+          Sensing (103), the query seam (104), the forecast loop (105), uncertainty
+          and planning (106), the operator&rsquo;s view (107), shore advisories (108)
+          and the <a href={hashForView('map')}>map</a> (109) each arrive as their beat
+          is built. Until then their components stay grey, because nothing here lights
+          without a heartbeat.
         </p>
       </section>
     </div>

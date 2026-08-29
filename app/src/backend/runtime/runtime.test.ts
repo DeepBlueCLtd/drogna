@@ -58,7 +58,13 @@ describe('the backend runtime', () => {
       heard.set(heartbeat.component, heartbeat);
     });
     vi.advanceTimersByTime(2500);
-    expect([...heard.keys()].sort()).toEqual(['boundary', 'broker', 'clock']);
+    expect([...heard.keys()].sort()).toEqual([
+      'boundary',
+      'broker',
+      'clock',
+      'coverage-store',
+      'env-generator',
+    ]);
     expect(heard.get('broker')?.sim_time).toBe('2026-01-01T00:00:00.000000Z');
     runtime.stop();
   });

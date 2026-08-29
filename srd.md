@@ -187,9 +187,9 @@ directed → the machinery is interrogated → advice travels light → it is se
   **Intro, Background, System, Holdings, Map, Messages** at first run,
   user-rearrangeable by drag and drop. Background is specified by §5.10 and built by
   feature 111; it is named here because a tab that arrives without a requirement behind
-  it is exactly the divergence V2 exists to end. **Holdings** is named for the same
-  reason and with the debt admitted: it shipped with feature 102 and this list did not
-  follow it, so §5.2 still owes it a requirement of its own.
+  it is exactly the divergence V2 exists to end. **Holdings** was named here with the debt
+  admitted — it shipped with feature 102 and this list did not follow it — and §5.2
+  now carries FR-46, written from the tab as built.
   The layout library is **dockview 8.x**, chosen by feature 101's spike
   (`spikes/layout-manager/FINDING.md`) and recorded with its React-hosting pattern in
   ADR-0028. Panel arrangement is presentation only: no arrangement changes what any
@@ -228,6 +228,21 @@ directed → the machinery is interrogated → advice travels light → it is se
   cadence, its manifest recording its derivation; and the accumulating forecast
   **instances** once the loop turns. Each holding's discovery document states its
   extent truthfully, verified against the store by test *(v1 FR-54 to FR-58)*.
+- **FR-46** The **Holdings** tab shall show the coverage store's inventory as the store
+  itself reports it: fetched through the seam and the release gate as a GET against the
+  configured relative path (FR-17 — no path literal in the shell), validated against the
+  `holdings-inventory` master before anything is displayed, and listing for each holding
+  its era, identifier, publication instant in simulation time, grid shape and field
+  digest. Selecting a holding shall open its embedded manifest whole — the ground truth
+  AT-01 and AT-03 score against, sufficient with the generator version it names to
+  reconstruct the field without the stored bytes. The tab shall refresh only when the
+  store announces a publication on its declared topic; it shall not poll. Where the
+  inventory is refused or fails its master, the tab shall state the refusal rather than
+  render an empty store, an empty table being a claim the shell is not entitled to make
+  *(Constitution VII)*. Numbered after FR-45 rather than inserted in sequence: these
+  numbers are cited across `specs/` and the ADRs, so renumbering would break the
+  citations to buy tidiness. (The `v1 FR-46` cited at FR-23 is V1's numbering, which
+  §1 declares a separate space; this is V2's FR-46.)
 
 ### 5.3 Sensing (feature 103)
 

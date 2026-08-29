@@ -1,8 +1,11 @@
 # Feature 102 — the synthetic ocean
 
 **Beat:** *a world exists* (plan §5).
-**Source of scope:** SRD-v2 §3 (FR-05 to FR-08, FR-11) and §5.2 (FR-20, FR-21);
-FR-13 for publication integrity.
+**Source of scope:** SRD-v2 §3 (FR-05 to FR-08, FR-11) and §5.2 (FR-20, FR-21,
+FR-46); FR-13 for publication integrity. FR-46 was written after the fact (issue
+#58): the tab shipped here, §5.2 did not follow it, and the requirement is written
+from the tab as built rather than the tab rebuilt to a requirement — the code was
+the one that was right.
 
 ## What this feature delivers, visibly
 

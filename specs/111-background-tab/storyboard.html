@@ -1,0 +1,2110 @@
+<title>Background Tab Storyboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Public+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F0F3F4; --surface:#FFFFFF; --sunk:#E4E9EA;
+  --ink:#0E1B22; --body:#26383F; --muted:#5C6E77; --line:#C9D4D7;
+  --pts:#B4650F;      /* points / observations */
+  --fld:#1F6C63;      /* fields / gridded */
+  --ghost:#9FB4B9;    /* truth the viewer never has */
+  --warn:#9C3320;
+  --rail:#DCE4E5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+    --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
+    --pts:#E39A44; --fld:#5FB8AC; --ghost:#3D5259; --warn:#E08A76;
+    --rail:#18262C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+  --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
+  --pts:#E39A44; --fld:#5FB8AC; --ghost:#3D5259; --warn:#E08A76;
+  --rail:#18262C;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--body);
+  font-family:'Public Sans',system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.6; margin:0;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+h1,h2,h3,h4{font-family:Spectral,Georgia,serif;color:var(--ink);text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,4.4vw,3rem);font-weight:600;line-height:1.12;letter-spacing:-.01em}
+h2{font-size:clamp(1.4rem,2.6vw,1.9rem);font-weight:600;line-height:1.2}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+code,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
+a{color:var(--fld)}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);
+}
+
+/* ---- masthead ---- */
+header.top{
+  border-bottom:1px solid var(--line); padding:56px 0 36px; margin-bottom:8px;
+  display:flex; flex-direction:column; gap:18px;
+}
+header.top .lede{font-size:1.12rem;max-width:62ch;color:var(--body)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+
+/* ---- generic blocks ---- */
+section.blk{padding:44px 0;border-bottom:1px solid var(--line)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.prose{max-width:66ch}
+.note{
+  border-left:3px solid var(--pts); background:var(--sunk);
+  padding:14px 18px; font-size:.94rem;
+}
+.note.q{border-left-color:var(--warn)}
+.note b{color:var(--ink)}
+
+/* ---- key / legend ---- */
+.key{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:.85rem;color:var(--muted);align-items:center}
+.key span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:22px;height:10px;border-radius:2px;display:inline-block}
+
+/* ---- explainer header ---- */
+.exhead{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.num{
+  font-family:Spectral,serif;font-size:2.4rem;line-height:1;color:var(--pts);
+  font-weight:600;font-variant-numeric:tabular-nums;
+}
+.form{
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;
+  text-transform:uppercase;border:1px solid var(--line);border-radius:99px;
+  padding:3px 10px;color:var(--muted);
+}
+.idea{font-family:Spectral,serif;font-style:italic;font-size:1.08rem;color:var(--ink);max-width:60ch}
+
+/* ---- step strip ---- */
+.steps{display:flex;flex-direction:column;gap:2px;margin-top:26px}
+.step{
+  display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:26px;
+  background:var(--surface);border:1px solid var(--line);padding:20px 22px;align-items:start;
+}
+.step + .step{border-top:none}
+.step figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.step svg{width:100%;height:auto;display:block;background:var(--sunk);border-radius:3px}
+.step figcaption{font-size:.76rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.sid{
+  font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--muted);
+  display:block;margin-bottom:5px;
+}
+.step h4{font-size:1rem;margin-bottom:7px}
+.step .say{font-size:.95rem}
+.step .say em{color:var(--ink);font-style:italic}
+.tag{
+  display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;
+  background:var(--rail);color:var(--muted);margin-top:9px;
+}
+.tag.beat{background:var(--pts);color:var(--surface)}
+.tag.poke{background:transparent;border:1px dashed var(--line)}
+.tag.view{background:transparent;border:1px solid var(--fld);color:var(--fld)}
+
+/* value panel row */
+.step.vp{background:var(--sunk)}
+.axes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:10px}
+.axis{border-top:2px solid var(--fld);padding-top:8px}
+.axis h5{margin:0 0 4px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.axis p{font-size:.9rem}
+.axis.off{border-top-color:var(--line);opacity:.75}
+
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto}
+@media (max-width:760px){ .step{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">drogna · feature 111 · storyboard for review</span>
+  <h1>The Background Tab, step by step</h1>
+  <p class="lede">Ten explainers of the standards the architecture rests on — and of what it takes to use
+  them honestly — drawn out as wireframes: what each step shows, what it says, and what the viewer can poke. This is the
+  authoring brief the spec (FR-016&ndash;FR-024) governs, made visible enough to argue with.</p>
+  <div class="meta">
+    <span><b>Audience</b> evaluator · domain expert · future maintainer</span>
+    <span><b>Course</b> 11 explainers &middot; 69 steps</span>
+    <span><b>Budget</b> 60&ndash;90s each &mdash; about 10s a step</span>
+    <span><b>Path</b> Next performs the interaction</span>
+  </div>
+</header>
+
+<section class="blk stack">
+  <h2>How to read these</h2>
+  <p class="prose">Each row is one step on the explainer&rsquo;s spine. Pressing <b>Next</b> moves
+  down the rows and drives the mechanism itself, so a viewer who never touches a diagram still sees
+  every state and reaches the consequences panel. Interaction is a second route to those states,
+  never the only one.</p>
+  <div class="key">
+    <span><i class="sw" style="background:var(--pts)"></i> points &mdash; observations, casts, readings</span>
+    <span><i class="sw" style="background:var(--fld)"></i> fields &mdash; gridded, computed everywhere</span>
+    <span><i class="sw" style="background:var(--ghost)"></i> the archive &mdash; the coarse prior you already hold</span>
+  </div>
+  <div class="note"><b>Interactive regions carry a dashed outline</b> &mdash; learned once, applied
+  across all nine. Static, so nothing animates on arrival, and it survives greyscale. The rail also
+  shows each explainer&rsquo;s length, so a viewer knows what they are starting.</div>
+  <p class="prose" style="font-size:.94rem;color:var(--muted)">Those two hues carry the course&rsquo;s
+  central distinction, so they mean the same thing in every explainer. In the built version each
+  also carries a texture and a line weight, so the distinction survives greyscale by construction
+  rather than by promise (FR-011).</p>
+  <div class="note"><b>Grey means the archive, not unknowable truth.</b> The first draft used it
+  for &ldquo;ground truth you never have&rdquo;, which is wrong here: drogna holds a multi-decade
+  monthly archive (SRD FR-21) and records ground truth in a manifest so recovery is scored
+  (Constitution IX). Grey is the coarse prior &mdash; dated, real and queryable.</div>
+  <div class="note"><b>Interactive regions carry a dashed outline.</b> Nothing animates on arrival,
+  so the outline is the only signal that a diagram responds. Learned once, it applies across all
+  nine and survives greyscale. The rail also shows each explainer&rsquo;s length, so a viewer knows
+  what they are starting.</div>
+</section>
+<section class="blk stack">
+  <h2>The panel, before any explainer</h2>
+  <p class="prose">The chrome every explainer sits inside: the numbered rail on the left carrying
+  course position, prose beside the diagram, and the spine control below. The value panel is the
+  last step, not a permanent fixture.</p>
+
+  <figure style="margin:0;display:flex;flex-direction:column;gap:10px">
+  <svg viewBox="0 0 720 380" role="img" aria-label="Background panel layout: numbered rail at left, prose beside diagram, spine control below">
+    <rect x="1" y="1" width="718" height="378" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="1" y="1" width="718" height="30" fill="var(--rail)" stroke="var(--line)"/>
+    <text x="16" y="21" font-size="12" font-family="monospace" fill="var(--muted)">Intro</text>
+    <rect x="60" y="1" width="86" height="30" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="72" y="21" font-size="12" font-family="monospace" fill="var(--ink)">Background</text>
+    <text x="160" y="21" font-size="12" font-family="monospace" fill="var(--muted)">System</text>
+    <text x="222" y="21" font-size="12" font-family="monospace" fill="var(--muted)">Holdings</text>
+    <text x="292" y="21" font-size="12" font-family="monospace" fill="var(--muted)">Map</text>
+    <text x="336" y="21" font-size="12" font-family="monospace" fill="var(--muted)">Messages</text>
+
+    <rect x="1" y="31" width="150" height="348" fill="var(--sunk)" stroke="var(--line)"/>
+    <text x="16" y="52" font-size="10" font-family="monospace" fill="var(--muted)" letter-spacing="1.4">THE COURSE</text>
+    <rect x="9" y="140" width="134" height="16" fill="var(--pts)" opacity="0.16"/>
+    <line x1="9" y1="140" x2="9" y2="156" stroke="var(--pts)" stroke-width="3"/>
+    <text x="18" y="72" font-size="9.5" fill="var(--muted)">1 · Why a standard</text>
+    <text x="136" y="72" font-size="8.5" text-anchor="end" fill="var(--muted)">5</text>
+    <text x="18" y="88" font-size="9.5" fill="var(--muted)">2 · Points and fields</text>
+    <text x="136" y="88" font-size="8.5" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="104" font-size="9.5" fill="var(--muted)">3 · NetCDF</text>
+    <text x="136" y="104" font-size="8.5" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="120" font-size="9.5" fill="var(--muted)">4 · What a holding is</text>
+    <text x="136" y="120" font-size="8.5" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="136" font-size="9.5" fill="var(--ink)" font-weight="600">5 · SensorThings</text>
+    <text x="136" y="136" font-size="8.5" text-anchor="end" fill="var(--ink)">7</text>
+    <text x="18" y="152" font-size="9.5" fill="var(--muted)">6 · OGC API-EDR</text>
+    <text x="136" y="152" font-size="8.5" text-anchor="end" fill="var(--muted)">7</text>
+    <text x="18" y="168" font-size="9.5" fill="var(--muted)">7 · pygeoapi</text>
+    <text x="136" y="168" font-size="8.5" text-anchor="end" fill="var(--muted)">5</text>
+    <text x="18" y="184" font-size="9.5" fill="var(--muted)">8 · MQTT</text>
+    <text x="136" y="184" font-size="8.5" text-anchor="end" fill="var(--muted)">7</text>
+    <text x="18" y="200" font-size="9.5" fill="var(--muted)">9 · Reads and writes</text>
+    <text x="136" y="200" font-size="8.5" text-anchor="end" fill="var(--muted)">6</text>
+    <text x="18" y="216" font-size="9.5" fill="var(--muted)">10 · The control loop</text>
+    <text x="136" y="216" font-size="8.5" text-anchor="end" fill="var(--muted)">7</text>
+    <text x="18" y="232" font-size="9.5" fill="var(--muted)">11 · What may leave</text>
+    <text x="136" y="232" font-size="8.5" text-anchor="end" fill="var(--muted)">7</text>
+
+    <text x="176" y="62" font-size="15" font-family="Georgia,serif" fill="var(--ink)">Every number knows its instrument</text>
+    <line x1="176" y1="76" x2="330" y2="76" stroke="var(--line)"/>
+    <text x="176" y="100" font-size="11" fill="var(--body)">A reading on its own is a number in a</text>
+    <text x="176" y="116" font-size="11" fill="var(--body)">row. SensorThings makes the chain back</text>
+    <text x="176" y="132" font-size="11" fill="var(--body)">to the instrument part of the shape of</text>
+    <text x="176" y="148" font-size="11" fill="var(--body)">the data, not a column someone</text>
+    <text x="176" y="164" font-size="11" fill="var(--body)">remembered to add.</text>
+    <rect x="176" y="186" width="164" height="26" fill="none" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <text x="186" y="203" font-size="10" font-family="monospace" fill="var(--muted)">GET /Datastreams(3)/Sensor</text>
+
+    <rect x="372" y="48" width="330" height="248" fill="var(--sunk)" stroke="var(--line)"/>
+    <text x="382" y="66" font-size="10" font-family="monospace" fill="var(--muted)">DIAGRAM</text>
+    <circle cx="420" cy="150" r="15" fill="var(--pts)"/>
+    <line x1="435" y1="150" x2="483" y2="150" stroke="var(--muted)" stroke-width="1.5"/>
+    <rect x="483" y="134" width="60" height="32" fill="none" stroke="var(--ink)"/>
+    <text x="513" y="154" font-size="10" text-anchor="middle" fill="var(--ink)">stream</text>
+    <line x1="543" y1="150" x2="591" y2="150" stroke="var(--muted)" stroke-width="1.5"/>
+    <rect x="591" y="134" width="60" height="32" fill="none" stroke="var(--ink)"/>
+    <text x="621" y="154" font-size="10" text-anchor="middle" fill="var(--ink)">sensor</text>
+    <text x="420" y="186" font-size="10" text-anchor="middle" fill="var(--muted)">8.4</text>
+
+    <line x1="151" y1="320" x2="719" y2="320" stroke="var(--line)"/>
+    <rect x="176" y="336" width="30" height="22" fill="none" stroke="var(--line)"/>
+    <text x="191" y="351" font-size="11" text-anchor="middle" fill="var(--muted)">&#8592;</text>
+    <rect x="212" y="336" width="30" height="22" fill="var(--ink)"/>
+    <text x="227" y="351" font-size="11" text-anchor="middle" fill="var(--surface)">&#8594;</text>
+    <text x="256" y="351" font-size="11" font-family="monospace" fill="var(--muted)">step 3 of 6</text>
+    <text x="702" y="351" font-size="10" font-family="monospace" fill="var(--muted)" text-anchor="end">#/view/background/sensorthings/3</text>
+  </svg>
+  <figcaption>Wide: rail shows all eleven with their step counts and marks position; prose sits beside the diagram; the
+  address always names the step.</figcaption>
+  </figure>
+
+  <figure style="margin:14px 0 0;display:flex;flex-direction:column;gap:10px;max-width:300px">
+  <svg viewBox="0 0 280 300" role="img" aria-label="Narrow panel: rail collapsed to a dropdown, diagram replaced by a statement of the width it needs">
+    <rect x="1" y="1" width="278" height="298" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="1" y="1" width="278" height="26" fill="var(--rail)" stroke="var(--line)"/>
+    <text x="12" y="18" font-size="11" font-family="monospace" fill="var(--ink)">Background</text>
+    <rect x="12" y="40" width="256" height="26" fill="var(--sunk)" stroke="var(--line)"/>
+    <text x="22" y="57" font-size="11" fill="var(--ink)">5 &middot; SensorThings</text>
+    <text x="256" y="57" font-size="11" text-anchor="end" fill="var(--muted)">&#9662;</text>
+    <text x="12" y="92" font-size="13" font-family="Georgia,serif" fill="var(--ink)">Every number knows its</text>
+    <text x="12" y="108" font-size="13" font-family="Georgia,serif" fill="var(--ink)">instrument</text>
+    <text x="12" y="132" font-size="10" fill="var(--body)">A reading on its own is a number in a row.</text>
+    <text x="12" y="146" font-size="10" fill="var(--body)">SensorThings makes the chain back to the</text>
+    <text x="12" y="160" font-size="10" fill="var(--body)">instrument part of the shape of the data.</text>
+    <rect x="12" y="180" width="256" height="58" fill="none" stroke="var(--warn)" stroke-dasharray="4 3"/>
+    <text x="140" y="205" font-size="10" text-anchor="middle" fill="var(--warn)">The diagram needs about 360px.</text>
+    <text x="140" y="222" font-size="10" text-anchor="middle" fill="var(--warn)">Widen the panel to see it.</text>
+    <rect x="12" y="256" width="26" height="20" fill="none" stroke="var(--line)"/>
+    <text x="25" y="270" font-size="10" text-anchor="middle" fill="var(--muted)">&#8592;</text>
+    <rect x="44" y="256" width="26" height="20" fill="var(--ink)"/>
+    <text x="57" y="270" font-size="10" text-anchor="middle" fill="var(--surface)">&#8594;</text>
+    <text x="82" y="270" font-size="10" font-family="monospace" fill="var(--muted)">3 of 6</text>
+  </svg>
+  <figcaption>Narrow: the diagram says what it needs rather than shrinking past legibility
+  (FR-024). Prose and spine stay usable.</figcaption>
+  </figure>
+</section>
+<section class="blk">
+  <div class="exhead"><span class="num">1</span><h2>Why a standard at all</h2><span class="form">slides · 5 steps</span></div>
+  <p class="idea">A bespoke interface is cheap to build and expensive to live with. The interface should outlive the system behind it.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">One of only two explainers that opens on the painful alternative, because here the alternative is genuinely what most people do.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="One interface line persisting above three successive systems">
+        <line x1="20" y1="42" x2="260" y2="42" stroke="var(--fld)" stroke-width="3"/>
+        <text x="20" y="32" font-size="11" fill="var(--fld)">the interface</text>
+        <rect x="24" y="76" width="60" height="34" fill="none" stroke="var(--muted)"/>
+        <text x="54" y="97" font-size="10" text-anchor="middle" fill="var(--muted)">system v1</text>
+        <rect x="110" y="76" width="60" height="34" fill="none" stroke="var(--muted)"/>
+        <text x="140" y="97" font-size="10" text-anchor="middle" fill="var(--muted)">v2</text>
+        <rect x="196" y="76" width="60" height="34" fill="none" stroke="var(--ink)"/>
+        <text x="226" y="97" font-size="10" text-anchor="middle" fill="var(--ink)">v3</text>
+        <line x1="54" y1="76" x2="54" y2="42" stroke="var(--muted)" stroke-dasharray="2 2"/>
+        <line x1="140" y1="76" x2="140" y2="42" stroke="var(--muted)" stroke-dasharray="2 2"/>
+        <line x1="226" y1="76" x2="226" y2="42" stroke="var(--muted)" stroke-dasharray="2 2"/>
+        <text x="140" y="136" font-size="10" text-anchor="middle" fill="var(--muted)">2009 &#8594; 2016 &#8594; 2024</text>
+      </svg>
+      <figcaption>Three systems over fifteen years, one interface across all of them.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/why-a-standard/1</span>
+        <h4>The interface outlives the system</h4>
+        <p class="say">Systems get replaced. What outlasts a replacement is the agreement about
+        how other people reach them, so that agreement is worth choosing carefully.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A bespoke server reached by three consumers, each through its own adapter">
+        <rect x="16" y="56" width="62" height="40" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <text x="47" y="80" font-size="10" text-anchor="middle" fill="var(--ink)">your API</text>
+        <rect x="130" y="16" width="26" height="20" fill="var(--pts)" opacity=".8"/>
+        <rect x="130" y="66" width="26" height="20" fill="var(--pts)" opacity=".8"/>
+        <rect x="130" y="116" width="26" height="20" fill="var(--pts)" opacity=".8"/>
+        <text x="143" y="10" font-size="8" text-anchor="middle" fill="var(--muted)">adapter</text>
+        <line x1="78" y1="70" x2="130" y2="28" stroke="var(--muted)"/>
+        <line x1="78" y1="76" x2="130" y2="76" stroke="var(--muted)"/>
+        <line x1="78" y1="82" x2="130" y2="124" stroke="var(--muted)"/>
+        <line x1="156" y1="26" x2="204" y2="26" stroke="var(--muted)"/>
+        <line x1="156" y1="76" x2="204" y2="76" stroke="var(--muted)"/>
+        <line x1="156" y1="126" x2="204" y2="126" stroke="var(--muted)"/>
+        <rect x="204" y="14" width="60" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="234" y="30" font-size="9" text-anchor="middle" fill="var(--muted)">consumer</text>
+        <rect x="204" y="64" width="60" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="234" y="80" font-size="9" text-anchor="middle" fill="var(--muted)">consumer</text>
+        <rect x="204" y="114" width="60" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="234" y="130" font-size="9" text-anchor="middle" fill="var(--muted)">consumer</text>
+      </svg>
+      <figcaption>One adapter per consumer, each with an owner.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/why-a-standard/2</span>
+        <h4>The bespoke interface, on the day it ships</h4>
+        <p class="say">It fits your data exactly and it is the cheapest option to build. Each
+        consumer needs an adapter, but there are three of them and you know all three.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The same bespoke diagram five years later, adapters failing and documentation drifted">
+        <rect x="16" y="56" width="62" height="40" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <text x="47" y="80" font-size="10" text-anchor="middle" fill="var(--ink)">your API</text>
+        <text x="47" y="112" font-size="9" text-anchor="middle" fill="var(--warn)">v2.3, undocumented</text>
+        <rect x="130" y="16" width="26" height="20" fill="none" stroke="var(--warn)" stroke-dasharray="3 2"/>
+        <rect x="130" y="66" width="26" height="20" fill="var(--pts)" opacity=".5"/>
+        <rect x="130" y="116" width="26" height="20" fill="none" stroke="var(--warn)" stroke-dasharray="3 2"/>
+        <line x1="78" y1="70" x2="130" y2="28" stroke="var(--warn)" stroke-dasharray="3 2"/>
+        <line x1="78" y1="76" x2="130" y2="76" stroke="var(--muted)"/>
+        <line x1="78" y1="82" x2="130" y2="124" stroke="var(--warn)" stroke-dasharray="3 2"/>
+        <text x="200" y="30" font-size="9" fill="var(--warn)">author left</text>
+        <text x="200" y="80" font-size="9" fill="var(--muted)">still works</text>
+        <text x="200" y="130" font-size="9" fill="var(--warn)">new consumer:</text>
+        <text x="200" y="142" font-size="9" fill="var(--warn)">a project</text>
+      </svg>
+      <figcaption>The same topology five years on. Two adapters unmaintained, one still working.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/why-a-standard/3</span>
+        <h4>Five years later</h4>
+        <p class="say">The author moved on. Documentation and code drifted, and only one of them
+        is executable. A fourth consumer now needs someone who can say what the interface currently
+        does &mdash; a cost that recurs with each new consumer.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A standards-serving API reached directly by three consumers that already speak it">
+        <rect x="16" y="56" width="62" height="40" fill="none" stroke="var(--fld)" stroke-width="2"/>
+        <text x="47" y="74" font-size="9" text-anchor="middle" fill="var(--fld)">API that</text>
+        <text x="47" y="86" font-size="9" text-anchor="middle" fill="var(--fld)">speaks EDR</text>
+        <line x1="78" y1="68" x2="188" y2="30" stroke="var(--fld)" stroke-width="1.4"/>
+        <line x1="78" y1="76" x2="188" y2="76" stroke="var(--fld)" stroke-width="1.4"/>
+        <line x1="78" y1="84" x2="188" y2="122" stroke="var(--fld)" stroke-width="1.4"/>
+        <rect x="188" y="18" width="76" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="226" y="34" font-size="9" text-anchor="middle" fill="var(--muted)">a GIS client</text>
+        <rect x="188" y="64" width="76" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="226" y="80" font-size="9" text-anchor="middle" fill="var(--muted)">a browser app</text>
+        <rect x="188" y="110" width="76" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="226" y="126" font-size="9" text-anchor="middle" fill="var(--muted)">another agency</text>
+        <text x="133" y="146" font-size="9" text-anchor="middle" fill="var(--fld)">no adapter &mdash; they already speak it</text>
+      </svg>
+      <figcaption>The adapter layer is absent.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/why-a-standard/4</span>
+        <h4>The same picture, with a standard</h4>
+        <p class="say">Same consumers, but they arrive already knowing how to ask. The adapters
+        are gone, and so is the work of maintaining them.</p>
+        <span class="tag">this is the criterion the other seven are judged by</span>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div>
+        <span class="sid">/why-a-standard/5</span>
+        <h4>Consequences</h4>
+      </div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>A bespoke interface is supported by whoever wrote it. A standard is supported by everyone who implements it. <span style="color:var(--muted)">Argued, not measured.</span></p></div>
+          <div class="axis"><h5>Interoperability</h5><p>A consumer that already speaks the standard needs no integration work.</p></div>
+          <div class="axis off"><h5>What you don&rsquo;t build</h5><p><em>Little to say here.</em> This explainer sets the criterion; the seven that follow are where it is spent.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:20px"><b>Note.</b> The omitted third axis is deliberate and is the first thing a reader meets &mdash; it teaches that an empty box carries a reason rather than padding (FR-008).</div>
+</section>
+<section class="blk">
+  <div class="exhead"><span class="num">2</span><h2>Points and fields</h2><span class="form">interactive · 6 steps</span></div>
+  <p class="idea">A cast and a forecast are different animals. This is why explainers 4 and 5 are a pair and not a duplication.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Section view throughout &mdash; depth down the page, the natural frame for a cast. The load-bearing explainer: if this doesn&rsquo;t land, SensorThings and EDR read as two ways to do one thing.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 160" role="img" aria-label="Section through the sea showing continuous structure: eddy, front and thermocline">
+        <rect x="20" y="20" width="240" height="118" fill="var(--ghost)" opacity=".22"/>
+        <rect x="20" y="20" width="240" height="26" fill="var(--ghost)" opacity=".30"/>
+        <rect x="20" y="46" width="240" height="14" fill="var(--ghost)" opacity=".55"/>
+        <ellipse cx="88" cy="46" rx="34" ry="20" fill="var(--ghost)" opacity=".6"/>
+        <path d="M176 20 L192 138" stroke="var(--ghost)" stroke-width="2.5" fill="none"/>
+        <text x="88" y="50" font-size="9" text-anchor="middle" fill="var(--ink)">eddy</text>
+        <text x="214" y="36" font-size="9" fill="var(--ink)">front</text>
+        <text x="40" y="57" font-size="8" fill="var(--ink)">thermocline</text>
+        <line x1="20" y1="20" x2="20" y2="138" stroke="var(--muted)"/>
+        <text x="14" y="26" font-size="8" text-anchor="end" fill="var(--muted)">0</text>
+        <text x="14" y="138" font-size="8" text-anchor="end" fill="var(--muted)">1000m</text>
+        <text x="140" y="152" font-size="9" text-anchor="middle" fill="var(--muted)">a value everywhere</text>
+      </svg>
+      <figcaption>The field is continuous. Everything that follows is a sample of it.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/points-and-fields/1</span>
+        <h4>The sea has a temperature everywhere</h4>
+        <p class="say">A warm core, a front, the thermocline across the section. Every point in
+        this water has a value. You have measured none of them.</p>
+        <span class="tag view">section view · depth down the page</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 160" role="img" aria-label="Three casts sampling the section, the true field faint behind them">
+        <rect x="20" y="20" width="240" height="118" fill="var(--ghost)" opacity=".14"/>
+        <g stroke="var(--ghost)" stroke-width=".9" opacity=".85" fill="none">
+          <line x1="100" y1="20" x2="100" y2="138"/><line x1="180" y1="20" x2="180" y2="138"/>
+          <line x1="20" y1="59" x2="260" y2="59"/><line x1="20" y1="99" x2="260" y2="99"/>
+        </g>
+        <text x="252" y="34" font-size="7.5" text-anchor="end" fill="var(--muted)">monthly archive</text>
+        <line x1="62" y1="22" x2="62" y2="120" stroke="var(--pts)" stroke-width="1.2"/>
+        <line x1="146" y1="22" x2="146" y2="132" stroke="var(--pts)" stroke-width="1.2"/>
+        <line x1="228" y1="22" x2="228" y2="96" stroke="var(--pts)" stroke-width="1.2"/>
+        <circle cx="62" cy="30" r="3" fill="var(--pts)"/><circle cx="62" cy="54" r="3" fill="var(--pts)"/>
+        <circle cx="62" cy="82" r="3" fill="var(--pts)"/><circle cx="62" cy="116" r="3" fill="var(--pts)"/>
+        <circle cx="146" cy="30" r="3" fill="var(--pts)"/><circle cx="146" cy="62" r="3" fill="var(--pts)"/>
+        <circle cx="146" cy="96" r="3" fill="var(--pts)"/><circle cx="146" cy="128" r="3" fill="var(--pts)"/>
+        <circle cx="228" cy="30" r="3" fill="var(--pts)"/><circle cx="228" cy="60" r="3" fill="var(--pts)"/>
+        <circle cx="228" cy="92" r="3" fill="var(--pts)"/>
+        <text x="140" y="152" font-size="9" text-anchor="middle" fill="var(--pts)">11 readings, over a prior six cells wide.</text>
+      </svg>
+      <figcaption>Casts in ochre over the archive in grey.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/points-and-fields/2</span>
+        <h4>You never have the sea. You have where you looked.</h4>
+        <p class="say">Three casts, eleven readings, each attached to an instrument, a moment and
+        a depth. Behind them in grey is the monthly archive &mdash; six cells across and years out
+        of date, but what you held before anyone went to sea. The casts correct it rather than
+        filling gaps in nothing.</p>
+        <span class="tag poke">poke: drag a cast to a new position and watch what it catches</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 160" role="img" aria-label="A model grid covering the same section, every cell carrying a computed value">
+        <rect x="20" y="20" width="240" height="118" fill="var(--ghost)" opacity=".1"/>
+        <g stroke="var(--fld)" stroke-width=".8" fill="none" opacity=".95">
+          <rect x="20" y="20" width="240" height="118"/>
+          <line x1="60" y1="20" x2="60" y2="138"/><line x1="100" y1="20" x2="100" y2="138"/>
+          <line x1="140" y1="20" x2="140" y2="138"/><line x1="180" y1="20" x2="180" y2="138"/>
+          <line x1="220" y1="20" x2="220" y2="138"/>
+          <line x1="20" y1="49" x2="260" y2="49"/><line x1="20" y1="79" x2="260" y2="79"/>
+          <line x1="20" y1="108" x2="260" y2="108"/>
+        </g>
+        <rect x="60" y="20" width="40" height="29" fill="var(--fld)" opacity=".38"/>
+        <rect x="100" y="20" width="40" height="29" fill="var(--fld)" opacity=".26"/>
+        <rect x="60" y="49" width="40" height="30" fill="var(--fld)" opacity=".2"/>
+        <rect x="180" y="20" width="40" height="29" fill="var(--fld)" opacity=".14"/>
+        <text x="140" y="152" font-size="9" text-anchor="middle" fill="var(--fld)">every cell has a value, because every cell was computed</text>
+      </svg>
+      <figcaption>A forecast field over the same water. Complete by construction.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/points-and-fields/3</span>
+        <h4>A forecast has a value everywhere</h4>
+        <p class="say">Computed rather than measured. A different object from the casts:
+        complete and regular, and only as good as the model and the observations that fed it.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 160" role="img" aria-label="The same question asked of both: the field answers, the observations report nothing measured there">
+        <rect x="14" y="24" width="118" height="94" fill="none" stroke="var(--fld)"/>
+        <g stroke="var(--fld)" stroke-width=".6" opacity=".7">
+          <line x1="44" y1="24" x2="44" y2="118"/><line x1="74" y1="24" x2="74" y2="118"/>
+          <line x1="104" y1="24" x2="104" y2="118"/>
+          <line x1="14" y1="54" x2="132" y2="54"/><line x1="14" y1="86" x2="132" y2="86"/>
+        </g>
+        <circle cx="88" cy="70" r="6" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <line x1="88" y1="60" x2="88" y2="80" stroke="var(--ink)"/><line x1="78" y1="70" x2="98" y2="70" stroke="var(--ink)"/>
+        <text x="73" y="136" font-size="10" fill="var(--fld)">8.4 &deg;C</text>
+        <text x="73" y="16" font-size="9" text-anchor="middle" fill="var(--muted)">the field</text>
+
+        <rect x="148" y="24" width="118" height="94" fill="none" stroke="var(--pts)"/>
+        <line x1="176" y1="26" x2="176" y2="100" stroke="var(--pts)" stroke-width="1.2"/>
+        <line x1="240" y1="26" x2="240" y2="90" stroke="var(--pts)" stroke-width="1.2"/>
+        <circle cx="176" cy="34" r="3" fill="var(--pts)"/><circle cx="176" cy="64" r="3" fill="var(--pts)"/>
+        <circle cx="176" cy="96" r="3" fill="var(--pts)"/><circle cx="240" cy="34" r="3" fill="var(--pts)"/>
+        <circle cx="240" cy="70" r="3" fill="var(--pts)"/>
+        <circle cx="222" cy="70" r="6" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <line x1="222" y1="60" x2="222" y2="80" stroke="var(--ink)"/><line x1="212" y1="70" x2="232" y2="70" stroke="var(--ink)"/>
+        <text x="207" y="136" font-size="10" fill="var(--warn)">nothing measured here</text>
+        <text x="207" y="16" font-size="9" text-anchor="middle" fill="var(--muted)">the observations</text>
+      </svg>
+      <figcaption>One question, two answers of different kinds.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/points-and-fields/4</span>
+        <h4>Ask them both the same question</h4>
+        <p class="say">&ldquo;What is the temperature at 200 metres, here?&rdquo; The field
+        answers everywhere. The observations answer &ldquo;nothing was measured there&rdquo;, which
+        is distinct from a null and from a refusal. An interface has to be able to say all three
+        separately.</p>
+        <span class="tag beat">the beat &mdash; everything downstream depends on this landing</span>
+        <span class="tag poke">poke: move the crosshair and watch both answers change</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 160" role="img" aria-label="What each shape needs from an interface, listed side by side">
+        <rect x="14" y="18" width="120" height="124" fill="none" stroke="var(--pts)"/>
+        <text x="74" y="36" font-size="10" text-anchor="middle" fill="var(--pts)">points ask</text>
+        <text x="26" y="58" font-size="9" fill="var(--body)">which instrument?</text>
+        <text x="26" y="76" font-size="9" fill="var(--body)">calibrated when?</text>
+        <text x="26" y="94" font-size="9" fill="var(--body)">what units?</text>
+        <text x="26" y="112" font-size="9" fill="var(--body)">what else did it</text>
+        <text x="26" y="124" font-size="9" fill="var(--body)">measure alongside?</text>
+        <rect x="146" y="18" width="120" height="124" fill="none" stroke="var(--fld)"/>
+        <text x="206" y="36" font-size="10" text-anchor="middle" fill="var(--fld)">fields ask</text>
+        <text x="158" y="58" font-size="9" fill="var(--body)">give me this slice</text>
+        <text x="158" y="76" font-size="9" fill="var(--body)">along this track</text>
+        <text x="158" y="94" font-size="9" fill="var(--body)">at these depths</text>
+        <text x="158" y="112" font-size="9" fill="var(--body)">valid at this time</text>
+      </svg>
+      <figcaption>Two vocabularies, with little overlap.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/points-and-fields/5</span>
+        <h4>So they need different questions asked of them</h4>
+        <p class="say">Points want provenance: which instrument, calibrated when, in what units,
+        measuring what else at the same time. Fields want geometry: this slice, along this track, at
+        these depths, valid then. Two shapes, two query languages &mdash; which is why SensorThings
+        and EDR are a pair rather than a redundancy.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/points-and-fields/6</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Choosing two stores and two query languages up front costs less than retrofitting the second when one interface has to answer both.</p></div>
+          <div class="axis off"><h5>Interoperability</h5><p><em>Not this explainer&rsquo;s.</em> This is about the shape of the data; interoperability arrives with the standards that serve each shape, in 4 and 5.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>Knowing which shape you hold tells you which standard already covers it.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="blk">
+  <div class="exhead"><span class="num">3</span><h2>NetCDF</h2><span class="form">interactive · 6 steps</span></div>
+  <p class="idea">A file that explains itself. Units, reference frame and time origin travel inside it, so a reader in thirty years needs no surviving author.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A bare block of numbers with no labels of any kind">
+        <g font-family="monospace" font-size="10" fill="var(--muted)">
+          <text x="34" y="42">8.42  8.39  8.11  7.94</text>
+          <text x="34" y="62">8.40  8.36  8.02  7.81</text>
+          <text x="34" y="82">7.98  7.92  7.70  7.55</text>
+          <text x="34" y="102">7.44  7.38  7.21  7.09</text>
+        </g>
+        <text x="140" y="132" font-size="10" text-anchor="middle" fill="var(--warn)">Of what? Where? When? In what units?</text>
+      </svg>
+      <figcaption>Values with no units, no axes and no reference frame.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/netcdf/1</span>
+        <h4>A block of numbers means nothing</h4>
+        <p class="say">Sixteen values. Celsius or Kelvin? Which way is down? Is the first row the
+        surface or the seabed? The rest of this explainer is about putting those answers inside the
+        file rather than beside it.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The same block gaining named dimensions along its axes">
+        <rect x="60" y="30" width="150" height="76" fill="var(--fld)" opacity=".12" stroke="var(--fld)"/>
+        <g stroke="var(--fld)" stroke-width=".7" opacity=".8">
+          <line x1="97" y1="30" x2="97" y2="106"/><line x1="135" y1="30" x2="135" y2="106"/>
+          <line x1="172" y1="30" x2="172" y2="106"/>
+          <line x1="60" y1="55" x2="210" y2="55"/><line x1="60" y1="81" x2="210" y2="81"/>
+        </g>
+        <line x1="60" y1="118" x2="210" y2="118" stroke="var(--ink)" stroke-width="1.2"/>
+        <text x="135" y="132" font-size="9" text-anchor="middle" fill="var(--ink)">longitude</text>
+        <line x1="48" y1="30" x2="48" y2="106" stroke="var(--ink)" stroke-width="1.2"/>
+        <text x="40" y="72" font-size="9" text-anchor="end" fill="var(--ink)">depth</text>
+        <line x1="216" y1="34" x2="240" y2="20" stroke="var(--ink)" stroke-width="1.2"/>
+        <text x="244" y="20" font-size="9" fill="var(--ink)">time</text>
+        <text x="244" y="34" font-size="9" fill="var(--ink)">lat</text>
+      </svg>
+      <figcaption>Dimensions give each value an index along four axes.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/netcdf/2</span>
+        <h4>Dimensions give each number a position</h4>
+        <p class="say">Four axes: longitude, latitude, depth, time. The block is now an addressed
+        volume, though the addresses do not yet correspond to anywhere on Earth.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The axes gaining real coordinate values">
+        <rect x="66" y="30" width="150" height="76" fill="var(--fld)" opacity=".12" stroke="var(--fld)"/>
+        <g stroke="var(--fld)" stroke-width=".7" opacity=".8">
+          <line x1="103" y1="30" x2="103" y2="106"/><line x1="141" y1="30" x2="141" y2="106"/>
+          <line x1="178" y1="30" x2="178" y2="106"/>
+          <line x1="66" y1="55" x2="216" y2="55"/><line x1="66" y1="81" x2="216" y2="81"/>
+        </g>
+        <g font-family="monospace" font-size="8" fill="var(--ink)">
+          <text x="66" y="120">-14.0</text><text x="128" y="120">-11.0</text><text x="196" y="120">-8.0</text>
+          <text x="60" y="34" text-anchor="end">0</text>
+          <text x="60" y="60" text-anchor="end">200</text>
+          <text x="60" y="86" text-anchor="end">600</text>
+          <text x="60" y="108" text-anchor="end">1000</text>
+        </g>
+        <text x="141" y="140" font-size="9" text-anchor="middle" fill="var(--muted)">degrees east &middot; metres below surface</text>
+      </svg>
+      <figcaption>Coordinates map each index to a position on Earth.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/netcdf/3</span>
+        <h4>Coordinates put the position on Earth</h4>
+        <p class="say">The axes now carry values: 14&deg;W to 8&deg;W, surface to a thousand
+        metres. Each number resolves to a specific volume of water.</p>
+        <span class="tag poke">poke: click any cell to see the coordinate it resolves to</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Attributes attaching units, reference frame and time origin to the block">
+        <rect x="20" y="34" width="112" height="66" fill="var(--fld)" opacity=".12" stroke="var(--fld)"/>
+        <text x="76" y="72" font-size="10" text-anchor="middle" fill="var(--fld)">the block</text>
+        <g font-family="monospace" font-size="8.5" fill="var(--ink)">
+          <text x="152" y="34">units = &quot;degree_Celsius&quot;</text>
+          <text x="152" y="52">standard_name = sea_water_</text>
+          <text x="152" y="63">  temperature</text>
+          <text x="152" y="81">crs = EPSG:4326</text>
+          <text x="152" y="99">time:units = &quot;seconds since</text>
+          <text x="152" y="110">  1970-01-01T00:00:00Z&quot;</text>
+          <text x="152" y="128">_FillValue = -999.0</text>
+        </g>
+        <g stroke="var(--pts)" stroke-width="1">
+          <line x1="132" y1="50" x2="148" y2="31"/><line x1="132" y1="60" x2="148" y2="49"/>
+          <line x1="132" y1="70" x2="148" y2="78"/><line x1="132" y1="80" x2="148" y2="96"/>
+          <line x1="132" y1="90" x2="148" y2="125"/>
+        </g>
+      </svg>
+      <figcaption>Attributes carry units, reference frame, time origin and fill value.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/netcdf/4</span>
+        <h4>Attributes make the file answer for itself</h4>
+        <p class="say">Celsius, WGS 84, seconds since 1970, and an explicit fill value so missing
+        data is declared rather than inferred from a suspicious zero. None of it lives outside the
+        file.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The same file opened decades later without its author, beside a CSV whose headers no longer mean anything">
+        <rect x="18" y="28" width="112" height="80" fill="none" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="74" y="52" font-size="10" text-anchor="middle" fill="var(--fld)">the same file</text>
+        <text x="74" y="70" font-size="9" text-anchor="middle" fill="var(--muted)">opened in 2056</text>
+        <text x="74" y="90" font-size="9" text-anchor="middle" fill="var(--fld)">still legible</text>
+        <rect x="150" y="28" width="112" height="80" fill="none" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="206" y="52" font-size="10" text-anchor="middle" fill="var(--warn)">temp_v2_final.csv</text>
+        <text x="206" y="70" font-size="9" text-anchor="middle" fill="var(--muted)">opened in 2056</text>
+        <text x="206" y="90" font-size="9" text-anchor="middle" fill="var(--warn)">&ldquo;t&rdquo;, &ldquo;d&rdquo;, &ldquo;val&rdquo;&hellip;?</text>
+        <text x="140" y="132" font-size="9" text-anchor="middle" fill="var(--muted)">no author, no wiki, no schema registry &mdash; in both cases</text>
+      </svg>
+      <figcaption>The same two files opened decades later.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/netcdf/5</span>
+        <h4>Thirty years on</h4>
+        <p class="say">Same file, no author, no wiki, no schema registry. It still opens and still
+        describes itself. The alternative is not a worse format but a format that depends on someone
+        who has moved on.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/netcdf/6</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Self-description removes the obligation to keep a separate document accurate. That obligation is rarely funded and usually assumed.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>Existing readers open it without a per-producer parser.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>A metadata sidecar, a schema registry, and a convention document to keep in step with both.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">4</span><h2>What a holding is</h2><span class="form">interactive &middot; 6 steps</span></div>
+  <p class="idea">A field is not one thing. A collection spans a coarse archive, a current now-cast, and every forecast run the loop has published &mdash; each queryable the same way.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">New in this draft. It goes here because knowing what is there precedes knowing how to ask for it &mdash; and because the previous three explainers have been quietly saying &ldquo;the field&rdquo; as though there were only one.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="One collection name spanning three kinds of holding">
+        <rect x="40" y="18" width="200" height="26" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="140" y="36" font-size="10" text-anchor="middle" font-family="monospace" fill="var(--ink)">sea_water_temperature</text>
+        <g stroke="var(--muted)"><line x1="90" y1="44" x2="66" y2="72"/><line x1="140" y1="44" x2="140" y2="72"/><line x1="190" y1="44" x2="214" y2="72"/></g>
+        <rect x="20" y="72" width="92" height="42" fill="var(--ghost)" opacity=".3" stroke="var(--ghost)"/>
+        <text x="66" y="90" font-size="9" text-anchor="middle" fill="var(--ink)">archive</text>
+        <text x="66" y="103" font-size="7.5" text-anchor="middle" fill="var(--muted)">20 years, monthly</text>
+        <rect x="118" y="72" width="44" height="42" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <text x="140" y="90" font-size="9" text-anchor="middle" fill="var(--ink)">now-cast</text>
+        <text x="140" y="103" font-size="7.5" text-anchor="middle" fill="var(--muted)">one</text>
+        <g fill="var(--fld)" opacity=".22" stroke="var(--fld)">
+          <rect x="176" y="78" width="76" height="36"/><rect x="180" y="74" width="76" height="36"/><rect x="184" y="70" width="76" height="36"/></g>
+        <text x="222" y="92" font-size="9" text-anchor="middle" fill="var(--ink)">instances</text>
+        <text x="222" y="104" font-size="7.5" text-anchor="middle" fill="var(--muted)">and growing</text>
+        <text x="140" y="140" font-size="9" text-anchor="middle" fill="var(--muted)">one name, three eras, one query language</text>
+      </svg>
+      <figcaption>One collection name over three kinds of holding.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/1</span>
+        <h4>A collection is not a file</h4>
+        <p class="say">Ask for sea water temperature and there are three possible answers: the
+        long coarse record, the current best picture, or one of the forecasts. All three sit under
+        one collection name and answer the same queries.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Two decades of monthly archive cells, coarse and complete">
+        <g fill="var(--ghost)" opacity=".55">
+          <rect x="16" y="40" width="14" height="26"/><rect x="34" y="40" width="14" height="26"/>
+          <rect x="52" y="40" width="14" height="26"/><rect x="70" y="40" width="14" height="26"/>
+          <rect x="88" y="40" width="14" height="26"/><rect x="106" y="40" width="14" height="26"/>
+          <rect x="124" y="40" width="14" height="26"/><rect x="142" y="40" width="14" height="26"/>
+          <rect x="160" y="40" width="14" height="26"/><rect x="178" y="40" width="14" height="26"/>
+          <rect x="196" y="40" width="14" height="26"/><rect x="214" y="40" width="14" height="26"/>
+          <rect x="232" y="40" width="14" height="26"/><rect x="250" y="40" width="14" height="26"/>
+        </g>
+        <text x="16" y="82" font-size="8" fill="var(--muted)">2006</text>
+        <text x="264" y="82" font-size="8" text-anchor="end" fill="var(--muted)">2026</text>
+        <text x="140" y="108" font-size="9" text-anchor="middle" fill="var(--ink)">coarse, dated, and never missing</text>
+        <text x="140" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">authored at provisioning, through the publisher&rsquo;s own path</text>
+      </svg>
+      <figcaption>Twenty years of monthly means, always present.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/2</span>
+        <h4>The archive: what you knew before anyone sailed</h4>
+        <p class="say">Two decades of monthly means: too coarse to navigate by, too old for today,
+        and complete everywhere. This is the grey behind the casts in explainer 2, and why a gap in
+        the observations is not a gap in what you hold.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A single now-cast replaced on a cadence">
+        <rect x="104" y="44" width="72" height="46" fill="var(--fld)" opacity=".22" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="140" y="66" font-size="10" text-anchor="middle" fill="var(--ink)">now-cast</text>
+        <text x="140" y="80" font-size="8" text-anchor="middle" fill="var(--muted)">valid now</text>
+        <path d="M104 100 C 80 118, 200 118, 176 100" stroke="var(--fld)" fill="none" stroke-width="1.2"/>
+        <polygon points="176,100 170,108 182,107" fill="var(--fld)"/>
+        <text x="140" y="128" font-size="8.5" text-anchor="middle" fill="var(--muted)">replaced on a cadence &mdash; there is only ever one</text>
+        <text x="140" y="28" font-size="8.5" text-anchor="middle" fill="var(--muted)">its manifest records what it was derived from</text>
+      </svg>
+      <figcaption>Replaced on a cadence rather than accumulated.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/3</span>
+        <h4>The now-cast: one, and current</h4>
+        <p class="say">A single field, replaced on a cadence, so there is never a second one to
+        choose between. It carries a manifest recording what it was derived from, like every other
+        holding.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Forecast runs accumulating, each carrying its own manifest">
+        <g stroke="var(--fld)" fill="var(--fld)" fill-opacity=".16">
+          <rect x="16" y="70" width="52" height="40"/><rect x="76" y="62" width="52" height="48"/>
+          <rect x="136" y="52" width="52" height="58"/><rect x="196" y="40" width="52" height="70"/>
+        </g>
+        <g font-size="7.5" font-family="monospace" fill="var(--muted)" text-anchor="middle">
+          <text x="42" y="122">run-0041</text><text x="102" y="122">run-0042</text>
+          <text x="162" y="122">run-0043</text><text x="222" y="122">run-0044</text>
+        </g>
+        <g fill="var(--pts)"><circle cx="42" cy="80" r="3.2"/><circle cx="102" cy="72" r="3.2"/>
+        <circle cx="162" cy="62" r="3.2"/><circle cx="222" cy="50" r="3.2"/></g>
+        <text x="140" y="24" font-size="9" text-anchor="middle" fill="var(--pts)">each carries the manifest that reconstructs it</text>
+        <text x="140" y="140" font-size="8.5" text-anchor="middle" fill="var(--muted)">nothing is overwritten &mdash; the record of what you believed, and when</text>
+      </svg>
+      <figcaption>Runs accumulate; the ochre dot on each is its manifest.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/4</span>
+        <h4>Instances: every run you ever published</h4>
+        <p class="say">The loop adds rather than overwrites, so you can ask what the forecast said
+        last Tuesday and what it was made from. Each run carries the manifest that reconstructs it
+        byte for byte, which is what makes a past decision auditable.</p>
+        <span class="tag beat">the beat &mdash; provenance you can replay, not provenance you assert</span>
+        <span class="tag poke">poke: pick a run and see the manifest it carries</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A discovery document stating extents truthfully, checked against the store">
+        <rect x="14" y="24" width="118" height="96" fill="none" stroke="var(--fld)"/>
+        <text x="73" y="42" font-size="9" text-anchor="middle" fill="var(--fld)">what it claims</text>
+        <g font-family="monospace" font-size="7.5" fill="var(--body)">
+          <text x="24" y="62">2006-01 &#8594; 2026-08</text><text x="24" y="78">-14 &#8594; -8 degE</text>
+          <text x="24" y="94">0 &#8594; 1000 m</text></g>
+        <text x="73" y="112" font-size="8" text-anchor="middle" fill="var(--fld)">&#10003; matches the store</text>
+        <rect x="148" y="24" width="118" height="96" fill="none" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="207" y="42" font-size="9" text-anchor="middle" fill="var(--warn)">if it over-claimed</text>
+        <g font-family="monospace" font-size="7.5" fill="var(--muted)">
+          <text x="158" y="62">2000-01 &#8594; 2026-08</text><text x="158" y="78">-20 &#8594; -2 degE</text>
+          <text x="158" y="94">0 &#8594; 4000 m</text></g>
+        <text x="207" y="112" font-size="8" text-anchor="middle" fill="var(--warn)">a client would plan on it</text>
+      </svg>
+      <figcaption>Declared extent, checked against the store.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/holdings/5</span>
+        <h4>And it says truthfully what it holds</h4>
+        <p class="say">Every collection publishes its extent: the years, the box, the depths. An
+        over-claiming document is not a documentation defect but a client planning through water
+        nobody modelled. Here the claim is verified against the store by test.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/holdings/6</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Questions about past runs are answered by replay rather than by whoever remembers the configuration.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>A client that reads the now-cast reads twenty years of archive with no additional code.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>The extent and discovery vocabulary. The remaining work is stating it accurately.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">5</span><h2>SensorThings</h2><span class="form">interactive &middot; 7 steps</span></div>
+  <p class="idea">Provenance is structural. Every number walks back to the instrument that made it, because that path is the shape of the data rather than a column someone remembered to add.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Vocabulary hazard: the gate forbids two entity nouns this explainer would reach for naturally. A sensor <em>samples</em>; an instrument <em>reports</em>.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A single reading sitting alone in a table row">
+        <rect x="60" y="52" width="160" height="30" fill="none" stroke="var(--line)"/>
+        <line x1="130" y1="52" x2="130" y2="82" stroke="var(--line)"/>
+        <text x="95" y="72" font-size="11" text-anchor="middle" font-family="monospace" fill="var(--pts)">8.4</text>
+        <text x="175" y="72" font-size="10" text-anchor="middle" font-family="monospace" fill="var(--muted)">09:14:22Z</text>
+        <text x="140" y="112" font-size="10" text-anchor="middle" fill="var(--warn)">true, and almost useless</text>
+      </svg>
+      <figcaption>A value and a timestamp, with no other context.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/1</span>
+        <h4>A reading, on its own</h4>
+        <p class="say">8.4 at 09:14. Not wrong, but unusable: nothing here says whether to trust
+        it, what to compare it against, or how to correct it.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The eight SensorThings entity types shown once, with the five this explainer walks marked">
+        <g font-size="8.5" text-anchor="middle">
+          <rect x="12" y="26" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="43" fill="var(--ink)">Thing</text>
+          <rect x="104" y="26" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="140" y="43" fill="var(--ink)">Location</text>
+          <rect x="196" y="26" width="72" height="26" fill="none" stroke="var(--line)" stroke-dasharray="3 2"/>
+          <text x="232" y="43" fill="var(--muted)">HistoricalLoc.</text>
+          <rect x="12" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="79" fill="var(--ink)">Datastream</text>
+          <rect x="104" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="140" y="79" fill="var(--ink)">Sensor</text>
+          <rect x="196" y="62" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="232" y="79" font-size="7.5" fill="var(--ink)">ObservedProperty</text>
+          <rect x="12" y="98" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="48" y="115" fill="var(--ink)">Observation</text>
+          <rect x="104" y="98" width="72" height="26" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+          <text x="140" y="115" font-size="7.5" fill="var(--ink)">FeatureOfInterest</text>
+        </g>
+        <text x="232" y="115" font-size="8" text-anchor="middle" fill="var(--muted)">eight, and that is all</text>
+      </svg>
+      <figcaption>The whole model, once: seven walked here, one named and left. It is bounded.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/2</span>
+        <h4>The whole model fits on one screen</h4>
+        <p class="say">Eight types, and that is the entire standard. Worth seeing once, because the
+        usual fear about adopting a standard is that it is unbounded &mdash; <em>this one you can
+        hold in your head.</em> We walk the seven that answer &ldquo;can I trust this reading&rdquo;;
+        HistoricalLocation is named but not walked.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The reading linked to the datastream it belongs to">
+        <circle cx="54" cy="70" r="15" fill="var(--pts)"/>
+        <text x="54" y="74" font-size="9" text-anchor="middle" fill="var(--surface)">8.4</text>
+        <line x1="70" y1="70" x2="120" y2="70" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="95" y="62" font-size="8" text-anchor="middle" fill="var(--muted)">belongs to</text>
+        <rect x="120" y="52" width="90" height="36" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="165" y="68" font-size="10" text-anchor="middle" fill="var(--ink)">Datastream</text>
+        <text x="165" y="80" font-size="8" text-anchor="middle" fill="var(--muted)">one series, one buoy</text>
+        <text x="140" y="122" font-size="9" text-anchor="middle" font-family="monospace" fill="var(--muted)">GET /Observations(4821)/Datastream</text>
+      </svg>
+      <figcaption>The first hop: a reading resolves to its stream.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/3</span>
+        <h4>It belongs to a stream</h4>
+        <p class="say">A stream is one quantity, from one instrument, on one platform, over time.
+        The reading is a member of it, and the rest of the chain hangs off this relationship.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The datastream linked to what it measures and the instrument that samples it">
+        <rect x="14" y="58" width="80" height="34" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="54" y="79" font-size="9" text-anchor="middle" fill="var(--ink)">Datastream</text>
+        <line x1="94" y1="70" x2="146" y2="36" stroke="var(--ink)"/>
+        <line x1="94" y1="80" x2="146" y2="112" stroke="var(--ink)"/>
+        <rect x="146" y="18" width="120" height="36" fill="none" stroke="var(--fld)"/>
+        <text x="206" y="34" font-size="9" text-anchor="middle" fill="var(--fld)">ObservedProperty</text>
+        <text x="206" y="47" font-size="8" text-anchor="middle" fill="var(--muted)">sea water temperature</text>
+        <rect x="146" y="94" width="120" height="36" fill="none" stroke="var(--fld)"/>
+        <text x="206" y="110" font-size="9" text-anchor="middle" fill="var(--fld)">Sensor</text>
+        <text x="206" y="123" font-size="8" text-anchor="middle" fill="var(--muted)">CTD, calibrated 2026-03</text>
+      </svg>
+      <figcaption>Two links: what is measured, and what did the measuring.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/4</span>
+        <h4>What it measures, and what did the measuring</h4>
+        <p class="say">The property is the quantity: sea water temperature, defined the same way
+        everywhere. The sensor is the device, with its make, calibration date and sampling
+        behaviour. The model keeps them separate.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The datastream linked to the platform carrying it and that platform's location">
+        <rect x="14" y="58" width="80" height="34" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <text x="54" y="79" font-size="9" text-anchor="middle" fill="var(--ink)">Datastream</text>
+        <line x1="94" y1="74" x2="140" y2="74" stroke="var(--ink)"/>
+        <rect x="140" y="56" width="66" height="36" fill="none" stroke="var(--pts)" stroke-width="1.4"/>
+        <text x="173" y="72" font-size="9" text-anchor="middle" fill="var(--pts)">Thing</text>
+        <text x="173" y="85" font-size="8" text-anchor="middle" fill="var(--muted)">buoy 044</text>
+        <line x1="206" y1="66" x2="226" y2="52" stroke="var(--ink)"/>
+        <rect x="226" y="38" width="46" height="28" fill="none" stroke="var(--pts)"/>
+        <text x="249" y="51" font-size="7.5" text-anchor="middle" fill="var(--pts)">Location</text>
+        <text x="249" y="61" font-size="7" text-anchor="middle" fill="var(--muted)">the hull</text>
+        <line x1="206" y1="82" x2="226" y2="96" stroke="var(--ink)"/>
+        <rect x="226" y="84" width="46" height="28" fill="none" stroke="var(--fld)"/>
+        <text x="249" y="97" font-size="7" text-anchor="middle" fill="var(--fld)">FeatureOf-</text>
+        <text x="249" y="106" font-size="7" text-anchor="middle" fill="var(--fld)">Interest</text>
+        <text x="140" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">where the instrument is, and where the water it sampled was</text>
+        <text x="140" y="138" font-size="8.5" text-anchor="middle" fill="var(--muted)">&mdash; not always the same place</text>
+      </svg>
+      <figcaption>Where the instrument sits, and where the observation applies.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/5</span>
+        <h4>What it is attached to</h4>
+        <p class="say">A Thing is the buoy. It has a location, and carries several streams at once
+        &mdash; temperature, salinity, pressure, from the same hull at the same moment, which is how
+        you find out what else was happening when a reading looked odd. Beside it sits the feature
+        of interest: what the reading is about. For a moored instrument in a current, the water it
+        sampled has already moved on, so where the sensor is and where the observation applies are
+        different facts.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The full chain walked backwards from a single reading, with the request path at each hop">
+        <circle cx="30" cy="40" r="12" fill="var(--pts)"/>
+        <text x="30" y="44" font-size="8" text-anchor="middle" fill="var(--surface)">8.4</text>
+        <line x1="42" y1="40" x2="76" y2="40" stroke="var(--ink)"/>
+        <rect x="76" y="26" width="62" height="28" fill="none" stroke="var(--ink)"/>
+        <text x="107" y="44" font-size="8.5" text-anchor="middle" fill="var(--ink)">Datastream</text>
+        <line x1="138" y1="40" x2="172" y2="40" stroke="var(--ink)"/>
+        <rect x="172" y="26" width="52" height="28" fill="none" stroke="var(--fld)"/>
+        <text x="198" y="44" font-size="8.5" text-anchor="middle" fill="var(--fld)">Sensor</text>
+        <line x1="107" y1="54" x2="107" y2="78" stroke="var(--ink)"/>
+        <rect x="76" y="78" width="62" height="26" fill="none" stroke="var(--pts)"/>
+        <text x="107" y="95" font-size="8.5" text-anchor="middle" fill="var(--pts)">Thing</text>
+        <g font-family="monospace" font-size="8" fill="var(--muted)">
+          <text x="14" y="126">GET /Observations(4821)/Datastream/Sensor</text>
+          <text x="14" y="140">GET /Things(44)/Datastreams?$filter=&hellip;</text>
+        </g>
+      </svg>
+      <figcaption>Each hop is defined by the standard.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/sensorthings/6</span>
+        <h4>Walk it backwards from any number</h4>
+        <p class="say">From one reading to the stream, the instrument, its calibration, the hull
+        and its position. The navigation is the data model rather than an added provenance feature,
+        so a client that has never seen this system can walk it.</p>
+        <span class="tag">URLs generic to the standard, against a fictional host (FR-022)</span>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/sensorthings/7</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Structural provenance has no separate convention to sustain, so none to lapse.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>A client written against SensorThings works against any SensorThings server.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>The entity model, the navigation links and the filter syntax.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="blk">
+  <div class="exhead"><span class="num">6</span><h2>OGC API-EDR</h2><span class="form">interactive &middot; 7 steps &middot; the long one</span></div>
+  <p class="idea">The query <em>is</em> a geometry. &ldquo;Conditions along my planned track&rdquo; is one request, not a client-side loop.</p>
+  <div class="note q" style="margin-top:14px"><b>Budget risk.</b> Seven steps against a 60&ndash;90 second promise. This is the one explainer that does not obviously fit, and step 3/4 could merge &mdash; at the cost of the viewpoint switch being less clearly signposted. Flagged rather than silently crammed; see the open questions at the end.</div>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A client issuing many separate point requests along a track and stitching the answers">
+        <rect x="14" y="46" width="58" height="34" fill="none" stroke="var(--ink)"/>
+        <text x="43" y="67" font-size="9" text-anchor="middle" fill="var(--ink)">client</text>
+        <g stroke="var(--warn)" stroke-width=".9">
+          <line x1="72" y1="52" x2="196" y2="22"/><line x1="72" y1="56" x2="196" y2="38"/>
+          <line x1="72" y1="60" x2="196" y2="54"/><line x1="72" y1="64" x2="196" y2="70"/>
+          <line x1="72" y1="68" x2="196" y2="86"/><line x1="72" y1="72" x2="196" y2="102"/>
+          <line x1="72" y1="76" x2="196" y2="118"/>
+        </g>
+        <rect x="196" y="46" width="62" height="34" fill="none" stroke="var(--ink)"/>
+        <text x="227" y="67" font-size="9" text-anchor="middle" fill="var(--ink)">server</text>
+        <text x="140" y="138" font-size="9" text-anchor="middle" fill="var(--warn)">40 requests, then stitch and interpolate. Every client, again.</text>
+      </svg>
+      <figcaption>Without EDR: the track is decomposed client-side, once per client.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/1</span>
+        <h4>You want conditions along a planned track</h4>
+        <p class="say">A point interface answers about points. Each client picks forty positions,
+        issues forty requests, stitches the results and interpolates the gaps &mdash; and each
+        client does it slightly differently. The disagreements surface later.</p>
+        <span class="tag">the second of only two &ldquo;old way&rdquo; openings</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The same track sent as one request, the server returning the sampled path">
+        <rect x="14" y="46" width="58" height="34" fill="none" stroke="var(--ink)"/>
+        <text x="43" y="67" font-size="9" text-anchor="middle" fill="var(--ink)">client</text>
+        <path d="M78 64 C 120 40, 150 92, 192 62" stroke="var(--fld)" stroke-width="2.4" fill="none"/>
+        <text x="134" y="34" font-size="9" text-anchor="middle" fill="var(--fld)">one request, shaped like the track</text>
+        <rect x="196" y="46" width="62" height="34" fill="none" stroke="var(--ink)"/>
+        <text x="227" y="67" font-size="9" text-anchor="middle" fill="var(--ink)">server</text>
+        <text x="140" y="132" font-size="9" text-anchor="middle" fill="var(--muted)">the subsetting happens where the data lives</text>
+      </svg>
+      <figcaption>The geometry travels to the data rather than the data to the client.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/2</span>
+        <h4>Send the shape of the question</h4>
+        <p class="say">EDR makes the query a geometry. The track goes to the server, which does
+        the subsetting where the field already sits: one request, one answer, and one implementation
+        of the interpolation rather than one per client.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Position and vertical profile queries drawn in section view">
+        <rect x="14" y="24" width="112" height="92" fill="var(--ghost)" opacity=".15" stroke="var(--line)"/>
+        <circle cx="70" cy="66" r="4" fill="var(--fld)"/>
+        <text x="70" y="132" font-size="9" text-anchor="middle" fill="var(--fld)">position</text>
+        <text x="70" y="16" font-size="8" text-anchor="middle" fill="var(--muted)">one place, one depth</text>
+        <rect x="154" y="24" width="112" height="92" fill="var(--ghost)" opacity=".15" stroke="var(--line)"/>
+        <line x1="210" y1="28" x2="210" y2="112" stroke="var(--fld)" stroke-width="2.4"/>
+        <circle cx="210" cy="36" r="2.6" fill="var(--fld)"/><circle cx="210" cy="58" r="2.6" fill="var(--fld)"/>
+        <circle cx="210" cy="80" r="2.6" fill="var(--fld)"/><circle cx="210" cy="102" r="2.6" fill="var(--fld)"/>
+        <text x="210" y="132" font-size="9" text-anchor="middle" fill="var(--fld)">vertical profile</text>
+        <text x="210" y="16" font-size="8" text-anchor="middle" fill="var(--muted)">one place, all depths</text>
+      </svg>
+      <figcaption>Section view: the two queries whose shape is about depth.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/3</span>
+        <h4>The queries that are about depth</h4>
+        <p class="say">A position asks one place at one depth. A vertical profile asks one place
+        at all depths &mdash; the shape of a cast, served from a field. Both read naturally in
+        section.</p>
+        <span class="tag view">section view · depth down the page</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Radius, area and corridor queries drawn in plan view">
+        <text x="140" y="14" font-size="9" text-anchor="middle" fill="var(--fld)">&#8595; looking down now, not through &#8595;</text>
+        <rect x="10" y="26" width="80" height="80" fill="var(--ghost)" opacity=".15" stroke="var(--line)"/>
+        <circle cx="50" cy="66" r="24" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <circle cx="50" cy="66" r="2.5" fill="var(--fld)"/>
+        <text x="50" y="122" font-size="9" text-anchor="middle" fill="var(--fld)">radius</text>
+        <rect x="100" y="26" width="80" height="80" fill="var(--ghost)" opacity=".15" stroke="var(--line)"/>
+        <polygon points="118,44 166,38 172,86 128,94" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <text x="140" y="122" font-size="9" text-anchor="middle" fill="var(--fld)">area</text>
+        <rect x="190" y="26" width="80" height="80" fill="var(--ghost)" opacity=".15" stroke="var(--line)"/>
+        <path d="M200 92 C 220 50, 244 88, 262 44" stroke="var(--fld)" stroke-width="12" fill="none" opacity=".25"/>
+        <path d="M200 92 C 220 50, 244 88, 262 44" stroke="var(--fld)" stroke-width="1.6" fill="none"/>
+        <text x="230" y="122" font-size="9" text-anchor="middle" fill="var(--fld)">corridor</text>
+      </svg>
+      <figcaption>Plan view: the three queries whose shape is horizontal.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/4</span>
+        <h4>The queries that are about area</h4>
+        <p class="say">Everything within a radius, inside a polygon, or within a stated width of a
+        route. These cannot be drawn in section, so the viewpoint changes here and the step says
+        so.</p>
+        <span class="tag view">plan view · looking down</span>
+        <span class="tag poke">poke: drag the corridor width and watch the catchment change</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A trajectory query carrying time along its length, giving conditions at arrival rather than now">
+        <path d="M22 108 C 80 92, 120 40, 250 34" stroke="var(--fld)" stroke-width="2.4" fill="none"/>
+        <circle cx="22" cy="108" r="4" fill="var(--fld)"/>
+        <circle cx="112" cy="66" r="4" fill="var(--fld)"/>
+        <circle cx="250" cy="34" r="4" fill="var(--fld)"/>
+        <text x="22" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">t+0h</text>
+        <text x="112" y="84" font-size="8.5" text-anchor="middle" fill="var(--muted)">t+6h</text>
+        <text x="248" y="52" font-size="8.5" text-anchor="middle" fill="var(--muted)">t+14h</text>
+        <text x="140" y="20" font-size="9" text-anchor="middle" fill="var(--ink)">each vertex carries its own time</text>
+        <text x="140" y="144" font-size="9" text-anchor="middle" fill="var(--pts)">conditions on arrival &mdash; not conditions now</text>
+      </svg>
+      <figcaption>The query moves through the forecast in time as well as space.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/5</span>
+        <h4>Trajectory: the one with time in it</h4>
+        <p class="say">Every vertex carries its own time, so each is sampled from the forecast
+        valid at that moment rather than from one snapshot. The answer is the water as it will be on
+        arrival.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Five differently shaped queries all returning the same response format">
+        <g stroke="var(--fld)" fill="none">
+          <circle cx="30" cy="26" r="8"/><rect x="22" y="48" width="16" height="16"/>
+          <path d="M22 86 L38 78"/><polygon points="22,104 40,100 38,118 24,120"/>
+          <line x1="30" y1="134" x2="30" y2="146"/>
+        </g>
+        <g stroke="var(--muted)" stroke-width=".9">
+          <line x1="46" y1="26" x2="118" y2="70"/><line x1="46" y1="56" x2="118" y2="70"/>
+          <line x1="46" y1="82" x2="118" y2="70"/><line x1="46" y1="110" x2="118" y2="70"/>
+          <line x1="46" y1="140" x2="118" y2="70"/>
+        </g>
+        <rect x="118" y="50" width="144" height="42" fill="var(--fld)" opacity=".14" stroke="var(--fld)"/>
+        <text x="190" y="68" font-size="10" text-anchor="middle" fill="var(--fld)">CoverageJSON</text>
+        <text x="190" y="82" font-size="8" text-anchor="middle" fill="var(--muted)">one shape, whatever was asked</text>
+      </svg>
+      <figcaption>Six query shapes in; one response format out.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/edr/6</span>
+        <h4>What comes back is the same shape every time</h4>
+        <p class="say">Whatever the geometry of the question, the response is CoverageJSON: one
+        structure, one way of saying where and when a value applies, and one way of saying there is
+        no value. A client parses it once.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/edr/7</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>One implementation of subsetting and interpolation beside the data, rather than one per client, each drifting independently.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>The query types mean the same thing on every EDR service.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>Subsetting, path interpolation, the response format, and the vocabulary for absent values.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">7</span><h2>pygeoapi</h2><span class="form">slides · 5 steps</span></div>
+  <p class="idea">One server, many standards, plugin-shaped. New capability arrives as configuration rather than as a project.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Written in the present tense about the real deployment. Step 4 carries FR-013&rsquo;s obligation: this page is not a pygeoapi instance and must say so.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="One server in front of the stores, speaking several standards at once">
+        <rect x="12" y="34" width="56" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="40" y="50" font-size="8" text-anchor="middle" fill="var(--muted)">observations</text>
+        <rect x="12" y="66" width="56" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="40" y="82" font-size="8" text-anchor="middle" fill="var(--muted)">coverages</text>
+        <rect x="12" y="98" width="56" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="40" y="114" font-size="8" text-anchor="middle" fill="var(--muted)">advisories</text>
+        <line x1="68" y1="46" x2="102" y2="70" stroke="var(--muted)"/>
+        <line x1="68" y1="78" x2="102" y2="76" stroke="var(--muted)"/>
+        <line x1="68" y1="110" x2="102" y2="84" stroke="var(--muted)"/>
+        <rect x="102" y="50" width="58" height="54" fill="var(--fld)" opacity=".16" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="131" y="74" font-size="9" text-anchor="middle" fill="var(--fld)">one</text>
+        <text x="131" y="87" font-size="9" text-anchor="middle" fill="var(--fld)">server</text>
+        <g font-family="monospace" font-size="8.5" fill="var(--ink)">
+          <text x="176" y="46">EDR</text><text x="176" y="64">Features</text>
+          <text x="176" y="82">Coverages</text><text x="176" y="100">SensorThings</text>
+        </g>
+        <g stroke="var(--fld)"><line x1="160" y1="62" x2="172" y2="43"/><line x1="160" y1="70" x2="172" y2="61"/>
+        <line x1="160" y1="80" x2="172" y2="79"/><line x1="160" y1="90" x2="172" y2="97"/></g>
+      </svg>
+      <figcaption>Three stores, one server, four standards.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/pygeoapi/1</span>
+        <h4>One server, several standards</h4>
+        <p class="say">The data stays where it is. A single server in front of it speaks several
+        OGC standards over the same holdings. You configure collections rather than write
+        endpoints.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Capabilities that arrive on day one from configuration alone">
+        <rect x="20" y="22" width="240" height="106" fill="none" stroke="var(--line)"/>
+        <text x="140" y="40" font-size="9" text-anchor="middle" fill="var(--muted)">from a configuration file, on day one</text>
+        <g font-size="9" fill="var(--fld)">
+          <text x="38" y="64">&#10003; collection discovery</text>
+          <text x="38" y="84">&#10003; conformance declaration</text>
+          <text x="38" y="104">&#10003; HTML and JSON of everything</text>
+          <text x="164" y="64">&#10003; queryables</text>
+          <text x="164" y="84">&#10003; paging</text>
+          <text x="164" y="104">&#10003; CRS handling</text>
+        </g>
+      </svg>
+      <figcaption>Machinery every API needs, available from configuration.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/pygeoapi/2</span>
+        <h4>What arrives without being asked for</h4>
+        <p class="say">Discovery, conformance, queryables, paging, and both HTML and JSON
+        representations. This tier of work is invisible in a demo and rarely appears in an
+        estimate.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Capabilities not yet enabled, available later without a new system">
+        <rect x="16" y="24" width="118" height="102" fill="none" stroke="var(--fld)"/>
+        <text x="75" y="42" font-size="9" text-anchor="middle" fill="var(--fld)">on today</text>
+        <g font-size="8.5" fill="var(--fld)"><text x="30" y="64">EDR</text><text x="30" y="82">SensorThings</text><text x="30" y="100">Features</text></g>
+        <rect x="146" y="24" width="118" height="102" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/>
+        <text x="205" y="42" font-size="9" text-anchor="middle" fill="var(--muted)">a config change away</text>
+        <g font-size="8.5" fill="var(--muted)"><text x="160" y="64">Tiles &mdash; for a map client</text>
+        <text x="160" y="82">Records &mdash; a catalogue</text><text x="160" y="100">Processes &mdash; derive</text>
+        <text x="160" y="112" font-size="8">on demand</text></g>
+      </svg>
+      <figcaption>Enabled today on the left; available without new code on the right.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/pygeoapi/3</span>
+        <h4>And what it opens next</h4>
+        <p class="say">Tiles for a fast map client, Records for a catalogue, Processes for derived
+        products computed on demand. Each is a configuration change rather than a new
+        component.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Where the standard runs ahead of its implementations, a provider is written">
+        <rect x="16" y="40" width="104" height="46" fill="none" stroke="var(--fld)"/>
+        <text x="68" y="62" font-size="9" text-anchor="middle" fill="var(--fld)">the server</text>
+        <text x="68" y="76" font-size="8" text-anchor="middle" fill="var(--muted)">plugin seam</text>
+        <line x1="120" y1="63" x2="156" y2="63" stroke="var(--pts)" stroke-width="1.6"/>
+        <rect x="156" y="44" width="106" height="38" fill="var(--pts)" opacity=".18" stroke="var(--pts)"/>
+        <text x="209" y="60" font-size="9" text-anchor="middle" fill="var(--pts)">a provider you write</text>
+        <text x="209" y="74" font-size="8" text-anchor="middle" fill="var(--muted)">drogna wrote two</text>
+        <text x="140" y="112" font-size="9" text-anchor="middle" fill="var(--muted)">where the standard is ahead of its implementations,</text>
+        <text x="140" y="126" font-size="9" text-anchor="middle" fill="var(--muted)">you write the adapter rather than bend the architecture</text>
+      </svg>
+      <figcaption>Extension happens at the plugin seam, not in the server.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/pygeoapi/4</span>
+        <h4>Where it does not reach, you extend it</h4>
+        <p class="say">Adoption is not free. Where a standard is newer than its implementations
+        you write a provider against the plugin seam; drogna wrote two. The cost is bounded and
+        lands in one place.</p>
+        <span class="tag beat">FR-013: also states plainly that this page serves its interfaces in the browser, not through pygeoapi</span>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/pygeoapi/5</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>The server is maintained upstream, and new capability arrives as configuration.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>Several standards from one deployment over one set of holdings.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>Discovery, conformance, content negotiation, paging, HTML views and the collection machinery.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="blk">
+  <div class="exhead"><span class="num">8</span><h2>MQTT</h2><span class="form">interactive &middot; 7 steps</span></div>
+  <p class="idea">A new consumer is a subscription, not a change to the producer.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">No sea in this one &mdash; the subject is the topic tree, so the viewpoint question does not arise.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Three producers wired directly to four consumers, twelve connections in all">
+        <g fill="none" stroke="var(--warn)" stroke-width=".8">
+          <line x1="66" y1="30" x2="196" y2="24"/><line x1="66" y1="30" x2="196" y2="60"/>
+          <line x1="66" y1="30" x2="196" y2="96"/><line x1="66" y1="30" x2="196" y2="128"/>
+          <line x1="66" y1="76" x2="196" y2="24"/><line x1="66" y1="76" x2="196" y2="60"/>
+          <line x1="66" y1="76" x2="196" y2="96"/><line x1="66" y1="76" x2="196" y2="128"/>
+          <line x1="66" y1="120" x2="196" y2="24"/><line x1="66" y1="120" x2="196" y2="60"/>
+          <line x1="66" y1="120" x2="196" y2="96"/><line x1="66" y1="120" x2="196" y2="128"/>
+        </g>
+        <g fill="var(--pts)"><circle cx="60" cy="30" r="7"/><circle cx="60" cy="76" r="7"/><circle cx="60" cy="120" r="7"/></g>
+        <g fill="none" stroke="var(--ink)"><rect x="196" y="16" width="46" height="16"/><rect x="196" y="52" width="46" height="16"/>
+        <rect x="196" y="88" width="46" height="16"/><rect x="196" y="120" width="46" height="16"/></g>
+        <text x="20" y="145" font-size="8.5" fill="var(--muted)">producers</text>
+        <text x="260" y="145" font-size="8.5" text-anchor="end" fill="var(--muted)">consumers</text>
+      </svg>
+      <figcaption>Point to point: connections grow with producers times consumers.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/1</span>
+        <h4>Everyone wired to everyone</h4>
+        <p class="say">Each producer holds a list of who wants its output. Adding a consumer means
+        editing, testing and redeploying every producer that consumer needs, so a small change
+        becomes a release.</p>
+        <span class="tag">the second &ldquo;old way&rdquo; opening &mdash; and this one people really do</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Producers publishing to a broker which consumers subscribe to">
+        <g fill="var(--pts)"><circle cx="34" cy="34" r="7"/><circle cx="34" cy="76" r="7"/><circle cx="34" cy="118" r="7"/></g>
+        <g stroke="var(--pts)"><line x1="41" y1="36" x2="108" y2="70"/><line x1="41" y1="76" x2="108" y2="76"/><line x1="41" y1="116" x2="108" y2="82"/></g>
+        <rect x="108" y="46" width="60" height="60" fill="var(--fld)" opacity=".16" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="138" y="80" font-size="9" text-anchor="middle" fill="var(--fld)">broker</text>
+        <g stroke="var(--fld)"><line x1="168" y1="66" x2="222" y2="30"/><line x1="168" y1="76" x2="222" y2="76"/><line x1="168" y1="86" x2="222" y2="122"/></g>
+        <g fill="none" stroke="var(--ink)"><rect x="222" y="22" width="44" height="16"/><rect x="222" y="68" width="44" height="16"/><rect x="222" y="114" width="44" height="16"/></g>
+        <text x="72" y="140" font-size="8.5" text-anchor="middle" fill="var(--muted)">publish</text>
+        <text x="196" y="140" font-size="8.5" text-anchor="middle" fill="var(--muted)">subscribe</text>
+      </svg>
+      <figcaption>The broker removes the producer&rsquo;s knowledge of its consumers.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/2</span>
+        <h4>Publish to a topic, not to a person</h4>
+        <p class="say">The producer publishes and does not know who is listening, or whether
+        anyone is. That is what makes the next consumer cheap to add.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A hierarchical topic tree with meaningful segments">
+        <text x="20" y="28" font-size="10" font-family="monospace" fill="var(--ink)">obs/</text>
+        <text x="44" y="48" font-size="10" font-family="monospace" fill="var(--ink)">ctd/</text>
+        <text x="68" y="68" font-size="10" font-family="monospace" fill="var(--ink)">044/</text>
+        <text x="92" y="88" font-size="10" font-family="monospace" fill="var(--pts)">temperature</text>
+        <text x="92" y="106" font-size="10" font-family="monospace" fill="var(--pts)">salinity</text>
+        <text x="68" y="126" font-size="10" font-family="monospace" fill="var(--ink)">051/</text>
+        <g stroke="var(--line)"><line x1="30" y1="32" x2="30" y2="126"/><line x1="30" y1="44" x2="42" y2="44"/>
+        <line x1="54" y1="52" x2="54" y2="122"/><line x1="54" y1="64" x2="66" y2="64"/><line x1="54" y1="122" x2="66" y2="122"/>
+        <line x1="78" y1="72" x2="78" y2="102"/><line x1="78" y1="84" x2="90" y2="84"/><line x1="78" y1="102" x2="90" y2="102"/></g>
+        <text x="196" y="60" font-size="8.5" fill="var(--muted)">kind of instrument</text>
+        <text x="196" y="78" font-size="8.5" fill="var(--muted)">which platform</text>
+        <text x="196" y="96" font-size="8.5" fill="var(--muted)">which quantity</text>
+      </svg>
+      <figcaption>Each segment is a level of the hierarchy.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/3</span>
+        <h4>The topic tree carries meaning</h4>
+        <p class="say">Each level carries meaning: kind of instrument, which platform, which
+        quantity. A well-designed tree makes the next subscription expressible without a schema
+        change.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A wildcard subscription matching several topics and not others">
+        <text x="16" y="26" font-size="10" font-family="monospace" fill="var(--fld)">obs/+/044/#</text>
+        <text x="120" y="26" font-size="8.5" fill="var(--muted)">one subscription</text>
+        <g font-family="monospace" font-size="9">
+          <text x="16" y="56" fill="var(--pts)">obs/ctd/044/temperature</text>
+          <text x="16" y="76" fill="var(--pts)">obs/ctd/044/salinity</text>
+          <text x="16" y="96" fill="var(--pts)">obs/adcp/044/current</text>
+          <text x="16" y="120" fill="var(--muted)">obs/ctd/051/temperature</text>
+        </g>
+        <g font-size="10"><text x="196" y="56" fill="var(--fld)">&#10003; caught</text>
+        <text x="196" y="76" fill="var(--fld)">&#10003; caught</text>
+        <text x="196" y="96" fill="var(--fld)">&#10003; caught</text>
+        <text x="196" y="120" fill="var(--warn)">&#10007; different hull</text></g>
+      </svg>
+      <figcaption>One pattern, three matches and one miss.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/4</span>
+        <h4>One subscription, many streams</h4>
+        <p class="say"><code>+</code> matches one level, <code>#</code> matches the rest, so
+        &ldquo;everything from hull 044, whatever the instrument&rdquo; is one subscription. The
+        fourth topic does not match, which is how the rule is learned.</p>
+        <span class="tag poke">poke: edit the pattern and watch which topics light</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A retained message giving a late joiner the current value immediately, and delivery guarantees for messages that must not be lost">
+        <rect x="14" y="22" width="120" height="106" fill="none" stroke="var(--fld)"/>
+        <text x="74" y="38" font-size="9" text-anchor="middle" fill="var(--fld)">retained</text>
+        <rect x="30" y="48" width="88" height="20" fill="var(--fld)" opacity=".22" stroke="var(--fld)"/>
+        <text x="74" y="62" font-size="8" text-anchor="middle" fill="var(--ink)">last value, kept</text>
+        <line x1="74" y1="68" x2="74" y2="86" stroke="var(--fld)"/>
+        <polygon points="74,92 70,84 78,84" fill="var(--fld)"/>
+        <rect x="34" y="94" width="80" height="20" fill="none" stroke="var(--ink)"/>
+        <text x="74" y="108" font-size="8" text-anchor="middle" fill="var(--ink)">a client that just joined</text>
+        <text x="74" y="126" font-size="7.5" text-anchor="middle" fill="var(--muted)">no wait for the next publish</text>
+        <rect x="146" y="22" width="120" height="106" fill="none" stroke="var(--pts)"/>
+        <text x="206" y="38" font-size="9" text-anchor="middle" fill="var(--pts)">delivery guarantee</text>
+        <g font-size="8" fill="var(--body)">
+          <text x="158" y="60">0 &mdash; at most once</text>
+          <text x="158" y="80">1 &mdash; at least once</text>
+          <text x="158" y="100">2 &mdash; exactly once</text></g>
+        <text x="206" y="122" font-size="7.5" text-anchor="middle" fill="var(--muted)">cost rises with certainty</text>
+      </svg>
+      <figcaption>Retained state for late joiners; three delivery guarantees.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/5</span>
+        <h4>What else comes with the broker</h4>
+        <p class="say">A retained message hands a late-joining client the current value
+        immediately instead of leaving it blank until the next publish; that is how this page
+        populates on load. Each message also carries a delivery guarantee, from fire-and-forget for
+        a reading superseded within a second to exactly-once for one that must not be lost.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A fourth consumer added by subscribing, with no change to any producer">
+        <g fill="var(--pts)"><circle cx="34" cy="46" r="7"/><circle cx="34" cy="94" r="7"/></g>
+        <text x="34" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">unchanged</text>
+        <g stroke="var(--pts)"><line x1="41" y1="50" x2="104" y2="66"/><line x1="41" y1="90" x2="104" y2="78"/></g>
+        <rect x="104" y="48" width="56" height="48" fill="var(--fld)" opacity=".16" stroke="var(--fld)"/>
+        <text x="132" y="76" font-size="9" text-anchor="middle" fill="var(--fld)">broker</text>
+        <g stroke="var(--fld)"><line x1="160" y1="62" x2="216" y2="34"/><line x1="160" y1="72" x2="216" y2="76"/></g>
+        <line x1="160" y1="84" x2="216" y2="118" stroke="var(--pts)" stroke-width="2"/>
+        <g fill="none" stroke="var(--ink)"><rect x="216" y="26" width="48" height="16"/><rect x="216" y="68" width="48" height="16"/></g>
+        <rect x="216" y="110" width="48" height="16" fill="none" stroke="var(--pts)" stroke-width="2"/>
+        <text x="240" y="140" font-size="8.5" text-anchor="middle" fill="var(--pts)">new</text>
+      </svg>
+      <figcaption>One new subscription; the producers are unchanged.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/mqtt/6</span>
+        <h4>Adding a consumer changes nothing upstream</h4>
+        <p class="say">A new client subscribes and starts receiving. No producer edited, no
+        release cut, nothing redeployed. In step 1 the same request required changes to every
+        producer.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/mqtt/7</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>The cost of a new consumer stops scaling with the number of producers.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>Topic semantics, wildcards and delivery guarantees are portable across brokers, with clients in most languages.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>Fan-out, subscription management, reconnection and back-off, and the wire protocol.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">9</span><h2>Reads and writes are separate</h2><span class="form">interactive &middot; 6 steps</span></div>
+  <p class="idea">Observations arrive by one path and leave by another. The query components cannot write; the ingestion seam does not serve.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">Placed here because both paths have now been shown: SensorThings and EDR serve reads, MQTT carries writes. This explainer only has to name the separation.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Observations entering a store by one path and leaving by another">
+        <rect x="106" y="58" width="68" height="36" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <text x="140" y="80" font-size="9" text-anchor="middle" fill="var(--ink)">the store</text>
+        <g fill="var(--pts)"><circle cx="22" cy="40" r="6"/><circle cx="22" cy="76" r="6"/></g>
+        <line x1="30" y1="44" x2="104" y2="70" stroke="var(--pts)" stroke-width="1.4"/>
+        <line x1="30" y1="76" x2="104" y2="74" stroke="var(--pts)" stroke-width="1.4"/>
+        <text x="60" y="102" font-size="8" text-anchor="middle" fill="var(--pts)">writes</text>
+        <line x1="176" y1="76" x2="248" y2="50" stroke="var(--fld)" stroke-width="1.4"/>
+        <line x1="176" y1="80" x2="248" y2="104" stroke="var(--fld)" stroke-width="1.4"/>
+        <g fill="none" stroke="var(--fld)"><rect x="240" y="38" width="30" height="18"/><rect x="240" y="96" width="30" height="18"/></g>
+        <text x="220" y="128" font-size="8" text-anchor="middle" fill="var(--fld)">reads</text>
+        <text x="140" y="26" font-size="8.5" text-anchor="middle" fill="var(--muted)">different transports, different processes</text>
+      </svg>
+      <figcaption>One store, two paths. Nothing crosses between them.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/cqrs/1</span>
+        <h4>Two paths, one store</h4>
+        <p class="say">Observations arrive over the broker and are written by the ingestion seam.
+        They leave over HTTP, through the query components. The two paths share the store and
+        nothing else.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The write path: sensors publish, one ingestion seam validates and writes">
+        <g fill="var(--pts)"><circle cx="20" cy="46" r="6"/><circle cx="20" cy="76" r="6"/><circle cx="20" cy="106" r="6"/></g>
+        <g stroke="var(--pts)"><line x1="28" y1="48" x2="64" y2="72"/><line x1="28" y1="76" x2="64" y2="76"/><line x1="28" y1="104" x2="64" y2="80"/></g>
+        <rect x="64" y="60" width="46" height="32" fill="var(--fld)" opacity=".16" stroke="var(--fld)"/>
+        <text x="87" y="80" font-size="8" text-anchor="middle" fill="var(--fld)">broker</text>
+        <line x1="110" y1="76" x2="140" y2="76" stroke="var(--ink)" stroke-width="1.6"/>
+        <rect x="140" y="58" width="62" height="36" fill="var(--pts)" opacity=".2" stroke="var(--pts)" stroke-width="1.6"/>
+        <text x="171" y="74" font-size="8.5" text-anchor="middle" fill="var(--ink)">ingestion</text>
+        <text x="171" y="86" font-size="8.5" text-anchor="middle" fill="var(--ink)">seam</text>
+        <line x1="202" y1="76" x2="228" y2="76" stroke="var(--ink)" stroke-width="1.6"/>
+        <rect x="228" y="58" width="42" height="36" fill="none" stroke="var(--ink)"/>
+        <text x="249" y="80" font-size="8" text-anchor="middle" fill="var(--ink)">store</text>
+        <text x="171" y="118" font-size="8" text-anchor="middle" fill="var(--pts)">the only writer</text>
+      </svg>
+      <figcaption>One seam, one writer. Every write passes the same validation.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/cqrs/2</span>
+        <h4>The write path has one writer</h4>
+        <p class="say">Sensors publish; the ingestion seam validates against the message schema and
+        writes. It is the store&rsquo;s only writer, so the invariants are enforced in one place
+        rather than in every component that might insert a row.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The read path, with no write capability at all">
+        <rect x="14" y="58" width="42" height="36" fill="none" stroke="var(--ink)"/>
+        <text x="35" y="80" font-size="8" text-anchor="middle" fill="var(--ink)">store</text>
+        <line x1="56" y1="76" x2="90" y2="76" stroke="var(--fld)" stroke-width="1.6"/>
+        <rect x="90" y="56" width="72" height="40" fill="var(--fld)" opacity=".16" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="126" y="72" font-size="8.5" text-anchor="middle" fill="var(--fld)">query</text>
+        <text x="126" y="84" font-size="8.5" text-anchor="middle" fill="var(--fld)">components</text>
+        <line x1="162" y1="76" x2="200" y2="76" stroke="var(--fld)" stroke-width="1.6"/>
+        <rect x="200" y="58" width="66" height="36" fill="none" stroke="var(--ink)"/>
+        <text x="233" y="80" font-size="8" text-anchor="middle" fill="var(--ink)">callers</text>
+        <path d="M126 108 L126 122" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="3 2"/>
+        <line x1="118" y1="118" x2="134" y2="130" stroke="var(--warn)" stroke-width="1.6"/>
+        <line x1="134" y1="118" x2="118" y2="130" stroke="var(--warn)" stroke-width="1.6"/>
+        <text x="176" y="128" font-size="8" fill="var(--warn)">no write path exists</text>
+      </svg>
+      <figcaption>The read side has no write capability, so a query defect cannot corrupt the store.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/cqrs/3</span>
+        <h4>The read path cannot write</h4>
+        <p class="say">The query components hold no write capability at all. That is a property of
+        the topology rather than a rule someone enforces, so a defect in query code cannot corrupt
+        stored data.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="An ingestion burst and a heavy query occurring together without affecting each other">
+        <text x="70" y="20" font-size="8.5" text-anchor="middle" fill="var(--pts)">ingest load</text>
+        <line x1="20" y1="66" x2="130" y2="66" stroke="var(--muted)" stroke-width=".7"/>
+        <polyline points="20,62 44,60 62,30 84,32 104,58 130,60" fill="none" stroke="var(--pts)" stroke-width="1.8"/>
+        <text x="70" y="80" font-size="7.5" text-anchor="middle" fill="var(--muted)">a burst of casts</text>
+        <text x="210" y="20" font-size="8.5" text-anchor="middle" fill="var(--fld)">query load</text>
+        <line x1="156" y1="66" x2="264" y2="66" stroke="var(--muted)" stroke-width=".7"/>
+        <polyline points="156,60 178,58 200,26 222,28 244,56 264,58" fill="none" stroke="var(--fld)" stroke-width="1.8"/>
+        <text x="210" y="80" font-size="7.5" text-anchor="middle" fill="var(--muted)">a trajectory over 20 years</text>
+        <line x1="140" y1="14" x2="140" y2="96" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <rect x="34" y="104" width="212" height="30" fill="none" stroke="var(--ink)"/>
+        <text x="140" y="123" font-size="9" text-anchor="middle" fill="var(--ink)">neither curve is in the other&rsquo;s way</text>
+      </svg>
+      <figcaption>Separate paths, separate load. The two sides tune and fail independently.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/cqrs/4</span>
+        <h4>The two loads never contend</h4>
+        <p class="say">A trajectory query spanning twenty years of archive is expensive. A burst of
+        casts arriving at once is expensive in a different way. Because they run on separate paths,
+        neither one slows the other, and each can be tuned, cached or scaled without regard to the
+        other&rsquo;s behaviour.</p>
+        <span class="tag beat">the beat &mdash; the two sides have different load shapes and different remedies</span>
+        <span class="tag poke">poke: raise either load and watch the other stay flat</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A reading either accepted into the store or refused and counted outside it, with no quality column">
+        <circle cx="30" cy="72" r="8" fill="var(--pts)"/>
+        <line x1="40" y1="72" x2="76" y2="72" stroke="var(--ink)"/>
+        <rect x="76" y="54" width="46" height="36" fill="var(--pts)" opacity=".2" stroke="var(--pts)"/>
+        <text x="99" y="76" font-size="8" text-anchor="middle" fill="var(--ink)">seam</text>
+        <line x1="122" y1="64" x2="164" y2="44" stroke="var(--fld)"/>
+        <rect x="164" y="30" width="60" height="28" fill="none" stroke="var(--fld)"/>
+        <text x="194" y="48" font-size="8" text-anchor="middle" fill="var(--fld)">stored</text>
+        <line x1="122" y1="82" x2="164" y2="102" stroke="var(--warn)"/>
+        <rect x="164" y="88" width="60" height="28" fill="none" stroke="var(--warn)" stroke-dasharray="3 2"/>
+        <text x="194" y="100" font-size="7.5" text-anchor="middle" fill="var(--warn)">refused, counted,</text>
+        <text x="194" y="110" font-size="7.5" text-anchor="middle" fill="var(--warn)">reason kept</text>
+        <text x="140" y="138" font-size="8.5" text-anchor="middle" fill="var(--muted)">no third outcome, and no quality column</text>
+      </svg>
+      <figcaption>Acceptance is binary and decided once, at the write.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/cqrs/5</span>
+        <h4>Acceptance is decided once, at the seam</h4>
+        <p class="say">A reading is stored or it is refused, counted and kept outside the store with
+        its payload and the reason. There is no third state, so there is no quality column on the
+        observation &mdash; and no reader has to remember to filter on one.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/cqrs/6</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>The read side can be replaced without touching ingestion. Swapping the query layer is a read-path change; the store&rsquo;s invariants are untouched.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>The read side is free to be standards-shaped without that shape constraining how data is written or validated.</p></div>
+          <div class="axis"><h5>Cost</h5><p>Two paths to operate and monitor rather than one, and a data model that serves reads well is not always the one that accepts writes well. The separation is real work, not free.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">10</span><h2>The control loop</h2><span class="form">interactive &middot; 7 steps</span></div>
+  <p class="idea">The loop is observable. Every transition is a message you can watch, which is why the seams are where they are.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">The only explainer about behaviour rather than an interface, and the closing impression. It is also the one with no standard to teach &mdash; it exists to show where the previous seven sit.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Four stations of the loop, all dark and nothing moving">
+        <g fill="none" stroke="var(--muted)" stroke-dasharray="3 3">
+          <rect x="24" y="26" width="70" height="34"/><rect x="186" y="26" width="70" height="34"/>
+          <rect x="186" y="92" width="70" height="34"/><rect x="24" y="92" width="70" height="34"/>
+        </g>
+        <g font-size="9" fill="var(--muted)" text-anchor="middle">
+          <text x="59" y="47">sense</text><text x="221" y="47">decide</text>
+          <text x="221" y="113">act</text><text x="59" y="113">publish</text>
+        </g>
+        <g stroke="var(--line)"><line x1="94" y1="43" x2="186" y2="43"/><line x1="221" y1="60" x2="221" y2="92"/>
+        <line x1="186" y1="109" x2="94" y2="109"/><line x1="59" y1="92" x2="59" y2="60"/></g>
+        <text x="140" y="144" font-size="9" text-anchor="middle" fill="var(--muted)">nothing lit, because nothing has happened</text>
+      </svg>
+      <figcaption>Four stations, unlit until a message arrives.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/1</span>
+        <h4>Four stations, none of them lit</h4>
+        <p class="say">Sense, decide, act, publish. Nothing is running, so nothing is lit, under
+        the same rule the System tab obeys: a box brightens because a message arrived, not because a
+        flag says it should.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The sense station lit, scoring residuals between observations and the current forecast">
+        <rect x="24" y="26" width="70" height="34" fill="var(--pts)" opacity=".2" stroke="var(--pts)" stroke-width="1.6"/>
+        <text x="59" y="47" font-size="9" text-anchor="middle" fill="var(--ink)">sense</text>
+        <g fill="none" stroke="var(--muted)" stroke-dasharray="3 3">
+          <rect x="186" y="26" width="70" height="34"/><rect x="186" y="92" width="70" height="34"/><rect x="24" y="92" width="70" height="34"/></g>
+        <g font-size="9" fill="var(--muted)" text-anchor="middle"><text x="221" y="47">decide</text><text x="221" y="113">act</text><text x="59" y="113">publish</text></g>
+        <circle cx="130" cy="80" r="3" fill="var(--pts)"/><circle cx="146" cy="88" r="3" fill="var(--pts)"/>
+        <circle cx="162" cy="76" r="3" fill="var(--pts)"/>
+        <line x1="120" y1="82" x2="176" y2="82" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="148" y="112" font-size="8.5" text-anchor="middle" fill="var(--muted)">observed vs forecast</text>
+        <text x="148" y="60" font-size="8.5" text-anchor="middle" fill="var(--pts)">residual</text>
+      </svg>
+      <figcaption>Residual: measured minus predicted, scored continuously.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/2</span>
+        <h4>Sense: score the difference</h4>
+        <p class="say">Observations are compared against the forecast that predicted them, and the
+        residual is the gap. Instruments produce spikes, so the monitor watches for a sustained
+        pattern rather than a single reading.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The decide station lit, refusing a run because the minimum interval has not elapsed">
+        <rect x="186" y="26" width="70" height="34" fill="var(--pts)" opacity=".2" stroke="var(--pts)" stroke-width="1.6"/>
+        <text x="221" y="47" font-size="9" text-anchor="middle" fill="var(--ink)">decide</text>
+        <g fill="none" stroke="var(--muted)" stroke-dasharray="3 3">
+          <rect x="24" y="26" width="70" height="34"/><rect x="186" y="92" width="70" height="34"/><rect x="24" y="92" width="70" height="34"/></g>
+        <g font-size="9" fill="var(--muted)" text-anchor="middle"><text x="59" y="47">sense</text><text x="221" y="113">act</text><text x="59" y="113">publish</text></g>
+        <rect x="30" y="72" width="150" height="46" fill="none" stroke="var(--warn)"/>
+        <text x="105" y="90" font-size="8.5" text-anchor="middle" fill="var(--warn)">refused: minimum interval</text>
+        <text x="105" y="104" font-size="8.5" text-anchor="middle" fill="var(--warn)">not elapsed (18 min of 30)</text>
+        <text x="105" y="134" font-size="8" text-anchor="middle" fill="var(--muted)">the refusal is published too</text>
+      </svg>
+      <figcaption>A refusal names the rule and the margin.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/3</span>
+        <h4>Decide: and often, decline</h4>
+        <p class="say">Divergence crossing a threshold is a request, not a command. The scheduler
+        applies a minimum interval and a cadence floor and frequently declines. The refusal is
+        published on the same topic as an acceptance, naming the rule and the margin.</p>
+        <span class="tag beat">most scheduler outcomes are refusals, and they are published too</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The act station lit, running a small ensemble">
+        <rect x="186" y="92" width="70" height="34" fill="var(--pts)" opacity=".2" stroke="var(--pts)" stroke-width="1.6"/>
+        <text x="221" y="113" font-size="9" text-anchor="middle" fill="var(--ink)">act</text>
+        <g fill="none" stroke="var(--muted)" stroke-dasharray="3 3">
+          <rect x="24" y="26" width="70" height="34"/><rect x="186" y="26" width="70" height="34"/><rect x="24" y="92" width="70" height="34"/></g>
+        <g font-size="9" fill="var(--muted)" text-anchor="middle"><text x="59" y="47">sense</text><text x="221" y="47">decide</text><text x="59" y="113">publish</text></g>
+        <g stroke="var(--fld)" fill="none">
+          <path d="M34 74 C 80 50, 120 62, 168 44"/><path d="M34 74 C 80 58, 120 74, 168 60"/>
+          <path d="M34 74 C 80 66, 120 86, 168 76"/><path d="M34 74 C 80 74, 120 98, 168 92"/>
+        </g>
+        <circle cx="34" cy="74" r="3" fill="var(--pts)"/>
+        <text x="100" y="126" font-size="8.5" text-anchor="middle" fill="var(--muted)">one start, several futures &mdash; the spread is the uncertainty</text>
+      </svg>
+      <figcaption>A small ensemble; the spread becomes the uncertainty field.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/4</span>
+        <h4>Act: run it, several times</h4>
+        <p class="say">A handful of forecasts from slightly different starting points. Where they
+        agree, confidence is higher; where they diverge, lower. The spread is what the uncertainty
+        field is computed from.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="The publish station lit, swapping the current pointer atomically after a digest check">
+        <rect x="24" y="92" width="70" height="34" fill="var(--pts)" opacity=".2" stroke="var(--pts)" stroke-width="1.6"/>
+        <text x="59" y="113" font-size="9" text-anchor="middle" fill="var(--ink)">publish</text>
+        <g fill="none" stroke="var(--muted)" stroke-dasharray="3 3">
+          <rect x="24" y="26" width="70" height="34"/><rect x="186" y="26" width="70" height="34"/><rect x="186" y="92" width="70" height="34"/></g>
+        <g font-size="9" fill="var(--muted)" text-anchor="middle"><text x="59" y="47">sense</text><text x="221" y="47">decide</text><text x="221" y="113">act</text></g>
+        <rect x="112" y="34" width="60" height="24" fill="none" stroke="var(--muted)"/>
+        <text x="142" y="49" font-size="8" text-anchor="middle" fill="var(--muted)">staged</text>
+        <rect x="112" y="70" width="60" height="24" fill="var(--fld)" opacity=".2" stroke="var(--fld)"/>
+        <text x="142" y="85" font-size="8" text-anchor="middle" fill="var(--fld)">digest ok</text>
+        <line x1="142" y1="58" x2="142" y2="70" stroke="var(--muted)"/>
+        <line x1="172" y1="82" x2="204" y2="82" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="222" y="78" font-size="8" fill="var(--fld)">current</text>
+        <text x="222" y="90" font-size="8" fill="var(--muted)">swapped</text>
+        <text x="140" y="140" font-size="8.5" text-anchor="middle" fill="var(--muted)">no reader ever sees half a field</text>
+      </svg>
+      <figcaption>Staged, digest-checked, then revealed by moving one pointer.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/5</span>
+        <h4>Publish: all at once, or not at all</h4>
+        <p class="say">The run is staged, its bytes checked against the recorded digest, and only
+        then does the current pointer move. A mismatch is refused by name with the pointer
+        untouched, so no reader observes a partial field.</p>
+        <span class="tag poke">poke: push the residual up and watch the loop re-plan rather than replay</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Forecast error compared against a persistence reference, with one run that failed to beat it">
+        <line x1="30" y1="118" x2="264" y2="118" stroke="var(--muted)"/>
+        <line x1="30" y1="24" x2="30" y2="118" stroke="var(--muted)"/>
+        <text x="24" y="30" font-size="7.5" text-anchor="end" fill="var(--muted)">error</text>
+        <polyline points="46,62 92,58 138,66 184,54 230,60" fill="none" stroke="var(--ghost)" stroke-width="2" stroke-dasharray="4 3"/>
+        <text x="238" y="58" font-size="7.5" fill="var(--muted)">persistence</text>
+        <polyline points="46,88 92,80 138,92 184,50 230,84" fill="none" stroke="var(--fld)" stroke-width="2"/>
+        <text x="238" y="90" font-size="7.5" fill="var(--fld)">the model</text>
+        <circle cx="184" cy="50" r="4.5" fill="none" stroke="var(--warn)" stroke-width="1.6"/>
+        <text x="184" y="40" font-size="7.5" text-anchor="middle" fill="var(--warn)">worse than doing nothing</text>
+        <text x="146" y="138" font-size="8.5" text-anchor="middle" fill="var(--muted)">and the display says so, rather than hiding it</text>
+      </svg>
+      <figcaption>Model error against a persistence reference, including one run that lost.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/control-loop/6</span>
+        <h4>Was it better than doing nothing?</h4>
+        <p class="say">The reference is persistence: assume tomorrow resembles today, then check
+        whether the model beat that. Usually it does. When it does not, the display names the run
+        rather than averaging it into the others.</p>
+        <span class="tag beat">Constitution IX &mdash; ground truth is scored, never assumed</span>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/control-loop/7</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Every transition is a message on a topic, so the loop can be observed later without a debugger or a rebuild.</p></div>
+          <div class="axis off"><h5>Interoperability</h5><p><em>Nothing to claim.</em> This arrangement is drogna&rsquo;s own, not a standard. It is here to show where the seven standards sit, not to be adopted.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>A justification for autonomous action: the planner recommends and a person decides.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="exhead"><span class="num">11</span><h2>What is allowed to leave</h2><span class="form">interactive &middot; 7 steps</span></div>
+  <p class="idea">Data that is fine inside is not automatically fine outside. The boundary denies by default, withholds by absence rather than by filtering, and publishes its refusals.</p>
+  <p class="prose" style="margin-top:12px;font-size:.94rem;color:var(--muted)">New, and it closes the course. Not a standard &mdash; drogna&rsquo;s own arrangement &mdash; but for an evaluator in this domain it is the question asked first, and the course was silent on it.</p>
+
+  <div class="steps">
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Holdings inside a boundary, with a caller outside asking for them">
+        <line x1="150" y1="14" x2="150" y2="136" stroke="var(--ink)" stroke-width="2"/>
+        <text x="76" y="26" font-size="9" text-anchor="middle" fill="var(--muted)">inside</text>
+        <text x="216" y="26" font-size="9" text-anchor="middle" fill="var(--muted)">outside</text>
+        <g fill="none" stroke="var(--fld)">
+          <rect x="24" y="42" width="94" height="20"/><rect x="24" y="70" width="94" height="20"/>
+          <rect x="24" y="98" width="94" height="20"/></g>
+        <g font-size="8" fill="var(--body)"><text x="32" y="56">now-cast</text><text x="32" y="84">observations</text>
+        <text x="32" y="112">run manifests</text></g>
+        <rect x="188" y="70" width="60" height="24" fill="none" stroke="var(--ink)"/>
+        <text x="218" y="86" font-size="8.5" text-anchor="middle" fill="var(--ink)">a caller</text>
+        <text x="218" y="112" font-size="14" text-anchor="middle" fill="var(--warn)">?</text>
+      </svg>
+      <figcaption>Which of these may cross the line, and for whom.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/1</span>
+        <h4>Fine inside is not fine outside</h4>
+        <p class="say">Everything so far has been about serving data well; none of it has asked
+        whether a given caller should see a given holding. A run manifest records exactly where and
+        when sampling happened: useful inside, and not something to publish.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Three different requests receiving one identical refusal, so the boundary cannot be probed">
+        <g font-family="monospace" font-size="8" fill="var(--body)">
+          <text x="14" y="42">/released/now-cast</text>
+          <text x="14" y="76">/internal/manifests</text>
+          <text x="14" y="110">/nothing/here/at/all</text></g>
+        <rect x="128" y="26" width="14" height="98" fill="var(--ink)"/>
+        <g stroke="var(--warn)"><line x1="112" y1="38" x2="126" y2="38"/><line x1="118" y1="72" x2="126" y2="72"/>
+        <line x1="118" y1="106" x2="126" y2="106"/></g>
+        <g font-family="monospace" font-size="8" fill="var(--warn)">
+          <text x="154" y="42">404</text><text x="154" y="76">404</text><text x="154" y="110">404</text></g>
+        <text x="216" y="76" font-size="8.5" text-anchor="middle" fill="var(--muted)">identical</text>
+        <text x="216" y="88" font-size="8.5" text-anchor="middle" fill="var(--muted)">every time</text>
+        <text x="140" y="140" font-size="8.5" text-anchor="middle" fill="var(--ink)">an uncleared caller cannot tell which paths exist</text>
+      </svg>
+      <figcaption>Three different requests, one indistinguishable refusal.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/2</span>
+        <h4>Denied by default, and identically</h4>
+        <p class="say">Everything is refused unless a rule allows it, so adding a collection never
+        exposes it by accident. The refusals are identical: a released path, an unreleased path and
+        a path that never existed all answer the same way to an uncleared caller, so probing yields
+        no information.</p>
+        <span class="tag poke">poke: type any path and watch the answer not change</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Withholding by absence from configuration, contrasted with a filter that rewrites responses">
+        <rect x="12" y="24" width="120" height="98" fill="none" stroke="var(--fld)"/>
+        <text x="72" y="42" font-size="9" text-anchor="middle" fill="var(--fld)">by absence</text>
+        <g font-family="monospace" font-size="7.5" fill="var(--body)">
+          <text x="22" y="62">released:</text><text x="30" y="76">- now-cast</text>
+          <text x="30" y="90">- archive</text></g>
+        <text x="72" y="112" font-size="8" text-anchor="middle" fill="var(--fld)">no route exists at all</text>
+        <rect x="148" y="24" width="120" height="98" fill="none" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="208" y="42" font-size="9" text-anchor="middle" fill="var(--warn)">by filtering</text>
+        <text x="208" y="64" font-size="8" text-anchor="middle" fill="var(--muted)">route exists,</text>
+        <text x="208" y="78" font-size="8" text-anchor="middle" fill="var(--muted)">body rewritten on the way out</text>
+        <text x="208" y="104" font-size="8" text-anchor="middle" fill="var(--warn)">correct only while the</text>
+        <text x="208" y="115" font-size="8" text-anchor="middle" fill="var(--warn)">rewriting stays correct</text>
+      </svg>
+      <figcaption>Withholding by absence and by filtering, with different failure modes.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/3</span>
+        <h4>Withholding is absence, not filtering</h4>
+        <p class="say">A holding that must not leave is absent from the released list, so the
+        boundary has no route to it, and nothing rewrites a response body on the way out. The
+        difference is the failure mode: a broken filter leaks quietly, while a route that does not
+        exist cannot open.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="A denial published on a topic and counted in the shell, rather than discarded">
+        <rect x="14" y="58" width="14" height="42" fill="var(--ink)"/>
+        <line x1="28" y1="78" x2="76" y2="78" stroke="var(--warn)" stroke-width="1.4"/>
+        <text x="52" y="70" font-size="8" text-anchor="middle" fill="var(--warn)">denial</text>
+        <rect x="76" y="62" width="72" height="32" fill="var(--fld)" opacity=".18" stroke="var(--fld)"/>
+        <text x="112" y="82" font-size="8.5" text-anchor="middle" fill="var(--fld)">a topic</text>
+        <line x1="148" y1="78" x2="192" y2="78" stroke="var(--fld)"/>
+        <rect x="192" y="56" width="72" height="44" fill="none" stroke="var(--ink)"/>
+        <text x="228" y="74" font-size="8.5" text-anchor="middle" fill="var(--ink)">the shell</text>
+        <text x="228" y="88" font-size="8" text-anchor="middle" fill="var(--muted)">refusals: 3</text>
+        <text x="140" y="128" font-size="8.5" text-anchor="middle" fill="var(--muted)">a boundary nobody watches is a boundary nobody knows is working</text>
+      </svg>
+      <figcaption>Denials are published and counted, not discarded.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/4</span>
+        <h4>A refusal is published, not swallowed</h4>
+        <p class="say">Every denial goes onto a topic where it can be watched and counted &mdash;
+        for the operator, not the caller, who still learns nothing. A silent refusal is
+        indistinguishable from a boundary nobody has tested.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Leakage scored per variable, where the aggregate passes but the worst variable fails">
+        <line x1="40" y1="112" x2="264" y2="112" stroke="var(--muted)"/>
+        <line x1="40" y1="24" x2="40" y2="112" stroke="var(--muted)"/>
+        <line x1="40" y1="52" x2="264" y2="52" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="264" y="48" font-size="7.5" text-anchor="end" fill="var(--warn)">threshold</text>
+        <rect x="58" y="88" width="26" height="24" fill="var(--fld)" opacity=".5"/>
+        <rect x="98" y="96" width="26" height="16" fill="var(--fld)" opacity=".5"/>
+        <rect x="138" y="34" width="26" height="78" fill="var(--warn)" opacity=".7"/>
+        <rect x="178" y="100" width="26" height="12" fill="var(--fld)" opacity=".5"/>
+        <rect x="222" y="78" width="26" height="34" fill="none" stroke="var(--ink)" stroke-dasharray="3 2"/>
+        <g font-size="7" text-anchor="middle" fill="var(--muted)">
+          <text x="71" y="124">temp</text><text x="111" y="124">salin</text><text x="151" y="124">press</text>
+          <text x="191" y="124">depth</text><text x="235" y="124">mean</text></g>
+        <text x="151" y="28" font-size="7.5" text-anchor="middle" fill="var(--warn)">this one</text>
+        <text x="235" y="70" font-size="7.5" text-anchor="middle" fill="var(--ink)">passes</text>
+      </svg>
+      <figcaption>The mean clears the threshold. One variable does not. The gate reads the worst.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/5</span>
+        <h4>The worst variable, not the average</h4>
+        <p class="say">Evidence that the boundary holds is computed per released variable, and the
+        gate acts on the worst, reported with the variable name. The aggregate is still shown, since
+        its distance from the worst is informative, but it is not what decides. An average over four
+        variables will hide one that is leaking; this repository has watched that happen.</p>
+        <span class="tag beat">the beat &mdash; the aggregate passes the case the gate exists to catch</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <figure>
+      <svg viewBox="0 0 280 150" role="img" aria-label="Boundary tests exercising an allowed request as well as the refusals">
+        <rect x="16" y="34" width="112" height="76" fill="none" stroke="var(--warn)"/>
+        <text x="72" y="52" font-size="9" text-anchor="middle" fill="var(--warn)">refusals tested</text>
+        <g font-size="8" fill="var(--muted)" text-anchor="middle">
+          <text x="72" y="72">unreleased &#10007;</text><text x="72" y="88">uncleared &#10007;</text>
+          <text x="72" y="104">nonexistent &#10007;</text></g>
+        <rect x="152" y="34" width="112" height="76" fill="var(--fld)" opacity=".12" stroke="var(--fld)" stroke-width="1.6"/>
+        <text x="208" y="52" font-size="9" text-anchor="middle" fill="var(--fld)">and one that works</text>
+        <text x="208" y="76" font-size="8" text-anchor="middle" fill="var(--fld)">released + cleared &#10003;</text>
+        <text x="208" y="98" font-size="7.5" text-anchor="middle" fill="var(--muted)">byte-identical to upstream</text>
+        <text x="140" y="134" font-size="8.5" text-anchor="middle" fill="var(--ink)">a boundary that has never been entered is untested from the inside</text>
+      </svg>
+      <figcaption>Refusals tested, and one allowed request tested alongside them.</figcaption>
+      </figure>
+      <div>
+        <span class="sid">/boundary/6</span>
+        <h4>And it is tested from the inside</h4>
+        <p class="say">A boundary that refuses everything passes every refusal test and serves
+        nobody. The tests exercise at least one allowed request as well, checking the response is
+        byte-identical to what upstream produced. A boundary that has never been entered is untested
+        from the inside.</p>
+      </div>
+    </div>
+
+    <div class="step vp">
+      <div><span class="sid">/boundary/7</span><h4>Consequences</h4></div>
+      <div>
+        <div class="axes">
+          <div class="axis"><h5>Through-life cost</h5><p>Binary clearance is testable in a way per-field redaction is not: redaction must be re-proven whenever a field is added.</p></div>
+          <div class="axis"><h5>Interoperability</h5><p>The boundary does not fork the API. A cleared caller receives the ordinary standard responses byte for byte.</p></div>
+          <div class="axis"><h5>What you don&rsquo;t build</h5><p>A redaction engine, and the recurring review of whether it is still correct.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <h2>Settled</h2>
+  <div class="stack" style="margin-top:16px">
+    <div class="note"><b>Grey means the archive.</b> The first draft used it for ground truth the
+    viewer never has, which is wrong here: drogna holds a multi-decade archive and scores against a
+    recorded ground truth. Correcting it produced explainer 4.</div>
+    <div class="note"><b>EDR was not over budget.</b> At about ten seconds a step, seven steps is
+    seventy seconds. The first draft&rsquo;s flag was arithmetic not done. Six explainers now run to
+    seven, so the rail shows length for all of them.</div>
+    <div class="note"><b>The frame is the standards, and what it takes to use them honestly.</b>
+    Explainers 4, 9 and 11 are drogna&rsquo;s own arrangement rather than a standard, and the course
+    states that rather than implying otherwise.</div>
+    <div class="note"><b>Consequences, not benefits.</b> The closing panel is headed Consequences and
+    an axis may record a cost: explainer 9 records two paths to operate, and 7 records the bespoke
+    providers. FR-008 changes from three benefit axes to three consequence axes.</div>
+    <div class="note"><b>No short path, and no explainer skips the panel.</b> Dip-in works and the
+    rail shows lengths; thinness is handled at the axis, not by dropping the panel.</div>
+  </div>
+
+  <h2 style="margin-top:36px">Still open</h2>
+  <div class="stack" style="margin-top:16px">
+    <div class="note q"><b>1 &middot; Eleven explainers, 69 steps.</b> Roughly eleven minutes at ten
+    seconds a step, less now the prose is shorter. The course has grown by nearly 50% in two passes
+    and each addition was justified individually. Nothing has argued for the whole against a
+    reader&rsquo;s time.</div>
+    <div class="note q"><b>2 &middot; Three of eleven are not standards.</b> Holdings, read/write
+    separation and the boundary. Each earns its place; the frame now admits them, which also means
+    the frame no longer excludes much.</div>
+    <div class="note q"><b>3 &middot; The boundary closes the course</b>, displacing the control
+    loop, which was designed as the last impression. Releasability is what a bid reviewer asks
+    first, so it is defensible &mdash; but it was a side effect of adding explainer 11, not a
+    decision taken on its merits.</div>
+    <div class="note q"><b>4 &middot; Explainer 9 asserts independent scaling without measuring
+    it.</b> The two-curves diagram is drawn, not observed. In a repository whose first lesson is
+    that an unwatched check is worth nothing, an unmeasured performance claim is the same shape.
+    Either it is marked as argued rather than measured, like the cost claims, or the running system
+    is made to produce the curves.</div>
+  </div>
+</section>
+
+</div>

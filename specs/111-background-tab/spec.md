@@ -36,7 +36,7 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 |---|---|
 | Audience is the technical evaluator, the domain expert without architecture, and future maintainers — **not** the generalist software engineer | Vocabulary is ocean-first. Every software concept arrives through a domain example. A Thing is a buoy, not an entity. |
 | Explainers are **self-contained illustration**, not live | No explainer reads run state. Constitution VII is not engaged, because these tabs teach the standards; they do not stand in for a component. |
-| The frame is **the standards themselves, drogna as worked example** | Reusable outside this repo. Where a tab claims something about drogna specifically, it links to the live view rather than depicting it. |
+| The frame is **the standards, and what it takes to use them honestly** | Widened from "the standards themselves" once three explainers (holdings, the control loop, the boundary) turned out to be drogna's own arrangement rather than a standard. The course says so up front instead of pretending otherwise. Where a tab claims something about drogna specifically, it links to the live view rather than depicting it. |
 | **Value delivered**, not candidates-and-alternatives | Options are shown only where an option genuinely existed. The recurring axes are through-life cost, interoperability, and what you do not have to build. |
 | A **bespoke slide component** | NFR-05's closed toolchain is unchanged. No slide library, no ADR, no amendment. |
 | **60–90 seconds** per explainer | One idea per tab. Four to six steps, or a single interaction with one revealed consequence. |
@@ -46,20 +46,23 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 
 ## The eight explainers
 
-Ordered as a course: what shape the data is → how it is stored → the two ways it is
-served → the server that serves both → how consumers hear about it → the whole thing
-turning.
+Ordered as a course: what shape the data is → how it is stored → what a holding actually
+contains → the two ways it is served → the server that serves both → how consumers hear
+about it → the whole thing turning. **69 steps.**
 
-| # | Explainer | Form | The one idea | The interaction |
+| # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
-| 1 | Why a standard at all | slides | A bespoke interface is cheap to build and expensive to live with. The interface should outlive the vendor. | — |
-| 2 | Points and fields | interactive | Two irreducibly different data shapes. This is why 4 and 5 are a pair and not a duplication. | Sample a schematic sea: sparse dots against a filled grid |
-| 3 | NetCDF | interactive | Self-describing. Units, CRS and time origin travel *in* the file, so a reader in thirty years needs no side channel. | Peel a 4D block apart: dimensions, coordinates, variables, attributes |
-| 4 | SensorThings | interactive | Provenance is structural — every number walks back to the instrument that made it. | Walk buoy → sensor → property → stream → readings, with the URL shown at each step |
-| 5 | OGC API-EDR | interactive | The query *is* a geometry. "Conditions along my track" is one request, not a client-side loop. | Choose position, radius, area, cube, trajectory or corridor and see what each returns |
-| 6 | pygeoapi | slides | One server, many standards, plugin-shaped. New capability is configuration, not a project. | — |
-| 7 | MQTT | interactive | A new consumer is a subscription, not a change to the producer. | A topic tree with wildcards: publish, and watch who catches it |
-| 8 | The control loop | interactive | The loop is observable — every transition is a message you can watch. | Step sense → decide → act → publish; nudge it and watch it re-plan |
+| 1 | Why a standard at all | slides | 5 | A bespoke interface is cheap to build and expensive to live with |
+| 2 | Points and fields | interactive | 6 | Two irreducibly different data shapes; why 5 and 6 are a pair |
+| 3 | NetCDF | interactive | 6 | Units, CRS and time origin travel *in* the file |
+| 4 | What a holding is | interactive | 6 | A field is not one thing: archive, now-cast, and every run published |
+| 5 | SensorThings | interactive | 7 | Provenance is structural — every number walks back to its instrument |
+| 6 | OGC API-EDR | interactive | 7 | The query *is* a geometry |
+| 7 | pygeoapi | slides | 5 | One server, many standards; new capability is configuration |
+| 8 | MQTT | interactive | 7 | A new consumer is a subscription, not a producer change |
+| 9 | Reads and writes are separate | interactive | 6 | Two paths, one store; the loads never contend |
+| 10 | The control loop | interactive | 7 | Every transition is a message you can watch |
+| 11 | What is allowed to leave | interactive | 7 | Deny by default, withhold by absence, publish the refusal |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -191,7 +194,7 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002**: Background MUST contain the eight explainers named above, in the order
+- **FR-002**: Background MUST contain the eleven explainers named above, in the order
   given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
@@ -207,20 +210,37 @@ loop steps through a full cycle from the viewer's input alone.
   library is adopted, and SRD-v2 NFR-05's toolchain is unchanged by this feature.
 - **FR-007**: Each explainer's headline path MUST be completable in 60–90 seconds. Depth
   beyond that belongs in the linked ADRs and site pages, not in the tab.
-- **FR-008**: Each explainer MUST close on the same value panel, in the same position,
-  with the same three axes: **through-life cost**, **interoperability**, and **what you
-  do not have to build**. An axis carrying little weight for a topic MUST be omitted with
-  the reason stated, never padded.
+- **FR-008**: Each explainer MUST close on the same panel, headed **Consequences**, in the
+  same position, with the same three axes: **through-life cost**, **interoperability**, and
+  **what you do not have to build**. An axis MUST be free to record a **cost** rather than a
+  benefit where one exists — the panel reports consequences, it does not advertise. An axis
+  carrying little weight for a topic MUST be omitted with the reason stated, never padded.
 - **FR-009**: Every through-life-cost claim MUST be marked as a qualitative argument and
   not a measurement. No figure appears that the repository cannot support.
 - **FR-010**: Language MUST be domain-first. A software concept is introduced through the
   ocean example that motivates it, never through its own vocabulary first.
-- **FR-011**: Illustrations MUST be schematic and visually distinct from the Map panel,
-  and every distinction they draw MUST survive rendering in greyscale.
-- **FR-012**: Illustrations MUST use drogna's own seeded scenario vocabulary — the eddy,
-  the front, the thermocline, the drifting feature (SRD FR-06) — so that a viewer moving
-  between Background and Map recognises what they are seeing, while FR-005 keeps the
-  drawings from claiming to be readouts.
+- **FR-026**: Prose is written engineer-to-engineer: short declarative sentences that state
+  the mechanism and its consequence. No aphorisms, no closing flourishes, no rhetorical
+  reversals, no superlatives about the architecture. A reader who would wince at a sales
+  deck is the intended reader. Two short sentences beat one long one, and a step that needs
+  three is usually carrying two ideas.
+- **FR-011**: Illustrations MUST be schematic and visually distinct from the Map panel.
+  They are designed in colour, and every distinction they draw MUST survive rendering in
+  greyscale. That guarantee MUST be structural rather than a promise kept by review:
+  categories come from one shared vocabulary in which a category is a hue **together
+  with** a texture and a line weight, so a colour-only distinction cannot be expressed.
+  A category style is never authored inline in an explainer. The vocabulary carries three
+  meanings, not two: **points** (observations), **fields** (gridded and computed), and the
+  **archive** — the coarse multi-decade prior the system already holds (SRD FR-21). The
+  third is not "truth you cannot have": drogna holds ground truth in a manifest and scores
+  recovery against it (Constitution IX), and an explainer must not teach otherwise.
+- **FR-012**: Explainers do NOT share a scene. Each frames the geography its own argument
+  needs, because forcing one patch of sea on eight different points costs more than the
+  continuity it buys. What is shared is the **vocabulary**: the marks for drogna's own
+  seeded features — the eddy, the front, the thermocline, the drifting feature (SRD
+  FR-06) — are drawn the same way wherever they appear, so a viewer moving between
+  Background and Map recognises the thing named even in an unfamiliar frame. FR-005 keeps
+  the drawings from claiming to be readouts.
 - **FR-013**: The pygeoapi explainer MUST be written in the present tense about the real
   deployment, and MUST state plainly that V2 serves these interfaces in the browser
   rather than through pygeoapi, so no viewer concludes the running page is a pygeoapi
@@ -230,12 +250,62 @@ loop steps through a full cycle from the viewer's input alone.
   in the course is presentation, and is discarded like any other per-viewer convenience
   (SRD FR-14, FR-15).
 
+#### How an explainer works
+
+Settled by interview on 29 August 2026. These are the mechanics every explainer obeys,
+so that eight of them read as one course rather than eight bespoke toys.
+
+- **FR-016**: Every explainer, slides and interactive alike, MUST have an ordered spine
+  of steps. Next always works, every step is addressable (FR-003), and following the
+  spine from first step to last is the 60-to-90-second headline path of FR-007.
+- **FR-017**: **Next performs the interaction.** In an interactive explainer, advancing
+  the spine drives the mechanism itself — the sampler sweeps, the query fires, the
+  subscriber catches — so a viewer who never touches the diagram still sees every
+  mechanism and reaches the value panel. It follows that **every step MUST be meaningful
+  without the viewer having poked anything**: an interaction may enrich a step, and may
+  never be the only route to one. This is also what makes an explainer capturable and
+  keyboard-traversable (FR-014) without a second code path.
+- **FR-018**: Within a step, free exploration MUST be available and MUST NOT change the
+  address. Poking is a second route to the states the spine already reaches, for the
+  viewer who wants to ask their own question.
+- **FR-019**: Nothing animates on arrival. An explainer opens in a finished, readable
+  state and moves only when the viewer advances the spine or pokes the diagram. There is
+  no autoplay, no timer, and no clock read of any kind (Constitution I).
+- **FR-020**: The value panel (FR-008) is the **final step** of every explainer, reached
+  by following the spine to its end. **No explainer omits it.** Thinness is handled at the
+  axis, not the panel: FR-008 already allows an axis to be omitted with its reason stated,
+  which three explainers use. Dropping a whole panel would remove the argument from the
+  longest and densest explainers to save a step in the shortest.
+- **FR-025**: Every region that responds to the viewer MUST carry a consistent static
+  affordance — a dashed outline — so that free exploration (FR-018) is discoverable
+  without anything animating on arrival (FR-019). It is learned once and applies across
+  every explainer, and it must survive greyscale like any other mark.
+- **FR-021**: Explainers are reached from a numbered rail listing all nine with their
+  course positions **and their lengths**, so a viewer knows what they are starting,
+  collapsing below a width threshold to a dropdown with previous and next controls. There
+  is deliberately **no curated short path**: dip-in already works and the lengths are
+  shown, so a second navigation surface would be built, tested and kept addressable for a
+  viewer who can simply choose. Course order is fixed (FR-002); the rail shows position in it.
+- **FR-022**: URLs shown inside an explainer are **generic examples of the standard's own
+  shape against a fictional host**, never a path this application serves and never
+  anything that looks pasteable into this page. An explainer teaches a standard; the
+  running system is reached through FR-005's links, not imitated in a drawing.
+- **FR-023**: Prose sits beside the diagram where there is width for it, and stacks below
+  the diagram when there is not.
+- **FR-024**: Below the width an explainer's diagram needs, the diagram MUST be replaced
+  by a short statement of the width it requires, with the step's prose and the rail still
+  usable. A diagram is never scaled down past legibility, and never renders having
+  silently dropped its labels.
+
 ### Key Entities
 
 - **Explainer**: one sub-tab. Carries a title, a form (slides or interactive), an
   ordered sequence of steps, and exactly one closing value panel.
-- **Step**: one addressable position within an explainer — a slide, or a named state of
-  an interaction. The unit an anchor URL selects.
+- **Step**: one addressable position on an explainer's spine — a slide, or a named state
+  of an interaction. The unit an anchor URL selects, and the unit Next advances. Every
+  step is reachable by advancing alone (FR-017).
+- **Category style**: a hue together with a texture and a line weight, drawn from one
+  shared vocabulary. The unit a diagram distinguishes things by; never authored inline.
 - **Value panel**: the fixed closing beat. Three axes, each either filled or explicitly
   omitted with a reason.
 - **Course**: the ordered sequence of eight explainers, and the viewer's position in it.
@@ -251,16 +321,28 @@ loop steps through a full cycle from the viewer's input alone.
   against a deliberately-wired explainer before it is trusted.
 - **SC-003**: Every explainer and every step is reachable by anchor URL, and an unknown
   step falls back to the explainer's first step rather than erroring.
-- **SC-004**: Each explainer's headline path is completable in 60–90 seconds, measured by
-  a walk-through capture rather than asserted.
-- **SC-005**: Every explainer is legible with colour removed, verified by capture.
+- **SC-004**: Each explainer's headline path is completable in 60–90 seconds by advancing
+  the spine alone, touching no diagram (FR-017). Measured by a walk-through capture rather
+  than asserted.
+- **SC-005**: Every explainer is legible with colour removed, verified by capture. The
+  capture is the check on the drawing; the guard against the fault is FR-011's shared
+  category vocabulary, which makes a colour-only distinction unexpressible rather than
+  merely discouraged.
 - **SC-006**: Every explainer is completable by keyboard alone.
 - **SC-007**: Every value panel carries the three axes in the same order and position, and
-  every omitted axis carries a stated reason. Asserted by a test over the content, so a
-  ninth explainer cannot be added without one.
+  every omitted axis carries a stated reason. Content is authored as components and the
+  test introspects the render, which is only sound under two conditions, and both are
+  required: the test **enumerates from the explainer registry** rather than a hand-written
+  list, so a ninth explainer is in scope automatically; and a fixture explainer that omits
+  its value panel is held permanently in the test tree, so the test has been *watched*
+  catching the omission rather than trusted to. Without both, an assertion over markup
+  passes by simply not finding what it did not look for.
 - **SC-008**: A reader who has completed the course can state why SensorThings and OGC
   API-EDR both exist, in terms of the shape of the data rather than the names of the
   standards. Assessed by asking one, not by a test.
+- **SC-009**: A reader can state, after explainer 11, why withholding by absence fails more
+  safely than withholding by filtering. This is the question a sceptical evaluator asks
+  first, and the course was silent on it until this pass.
 
 ## Out of Scope
 

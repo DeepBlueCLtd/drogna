@@ -16,8 +16,15 @@ app/
         ├── BackgroundPanel.tsx         the panel dockview mounts; sub-tab strip + course position
         ├── Slides.tsx                  the bespoke slide component (FR-006)
         ├── ValuePanel.tsx              the fixed closing beat (FR-008)
-        ├── sea.tsx                     shared schematic SVG primitives — the nameless sea,
-        │                               the four seeded features, the grid (FR-011, FR-012)
+        ├── marks.tsx                   the shared category vocabulary: each category a
+        │                               hue WITH a texture and a weight, so a colour-only
+        │                               distinction cannot be expressed (FR-011); plus the
+        │                               marks for the four seeded features (FR-012).
+        │                               No shared scene — each explainer frames its own.
+        ├── Rail.tsx                    the numbered course rail, collapsing to a
+        │                               dropdown below the width threshold (FR-021)
+        ├── registry.ts                 the eight explainers in course order — read by the
+        │                               rail, the anchor scheme and SC-007's test alike
         ├── explainers/
         │   ├── why-a-standard.tsx      slides
         │   ├── points-and-fields.tsx   interactive
@@ -107,6 +114,42 @@ halves are watched failing against a deliberately-wired explainer held permanent
 Two checks rather than one because they fail differently: the gate catches the import
 that has not been called yet, and the test catches the call that came in by a route the
 gate did not model.
+
+## The storyboard leads
+
+`storyboard.html` in this directory is the authoring brief: all eight explainers, every
+step, its wireframe, its prose and its value panel, plus the panel chrome at wide and
+narrow width. It is committed beside the spec rather than left in a review link because
+**it leads what gets implemented** — a step that is not in the storyboard has not been
+designed, and a diagram built without one is a drawing nobody agreed to.
+
+Open it in a browser; it needs no build. Where it and this plan disagree, the storyboard
+is the newer claim and one of the two is wrong — check, then fix the loser.
+
+## How an explainer works, and what it costs to build
+
+The mechanics are settled in `spec.md` FR-016 to FR-024. Three of them shape the code
+rather than the prose:
+
+- **Next performs the interaction (FR-017).** Each step is a named state the reducer can
+  be driven into, by the spine or by the viewer. That is one state machine per interactive
+  explainer, not two code paths — and it is what makes capture, keyboard traversal and
+  the 60-to-90-second measurement fall out for free rather than each needing its own
+  scaffolding. The authoring rule to hold the line: no step may exist that only a pointer
+  can reach.
+- **The category vocabulary is a guard, not a palette (FR-011).** Colour-first was chosen
+  for liveliness, and the greyscale fallback is exactly the kind of promise this
+  repository has watched rot. Making a category a `(hue, texture, weight)` triple in one
+  module means the fault cannot be written, which beats any test that looks for it. About
+  thirty lines, and it earns them.
+- **The registry is load-bearing (FR-021, SC-007).** The rail, the anchor scheme and the
+  value-panel test all read the same list, so a ninth explainer joins the course, becomes
+  addressable and comes under test in one edit. Two consumers would have been convenience;
+  three make it the thing that stops SC-007 passing vacuously.
+
+There is deliberately **no shared scene**. Eight arguments want eight framings, and the
+continuity is carried by the mark vocabulary instead — the eddy drawn the same way
+wherever it appears, in whatever water suits the point.
 
 ## Decisions to record
 

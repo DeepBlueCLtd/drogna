@@ -22,6 +22,40 @@ and this branch now carries them.
 - [ ] T003 Note in `docs/v2/plan.md` §5 if the walkthrough candidate 110 is dropped, so
       the numbering is reconciled openly rather than quietly.
 
+## Design
+
+- [x] T005 Storyboard all eight explainers — steps, prose, wireframes, value panels, and
+      the panel chrome at both widths. `storyboard.html`, committed here because it leads
+      implementation rather than records it.
+- [x] T006 Settle what the first storyboard left open. EDR was never over budget — at
+      ~10s a step, seven steps is ~70s, inside the promise; four explainers now run to
+      seven and the rail shows length for all of them. The value panel stays in every
+      explainer (FR-020): FR-008 already handles thinness at the axis. Interactive regions
+      carry a dashed outline (FR-025). And the grey was simply wrong — it meant "truth you
+      never have", when drogna holds a multi-decade archive and scores against a recorded
+      ground truth; it now means the coarse prior, which is what produced explainer 4.
+- [x] T007 Settle what the second storyboard left open. No curated short path — dip-in
+      works and the rail shows lengths, so a second navigation surface would earn nothing.
+      The frame is widened to "the standards, and what it takes to use them honestly",
+      which admits explainers 4, 9 and 10 honestly rather than hiding them.
+      FeatureOfInterest folds into the Thing step, where the contrast with Location makes
+      the point at no cost in steps. And the boundary earns its own explainer, closing the
+      course: for an evaluator in this domain it is the first question asked, and the
+      course was silent on it.
+- [x] T009 Add the read/write separation explainer at position 9, after MQTT, so both paths
+      are on the table before the separation is named. Its beat is that the two loads never
+      contend. Also: the closing panel becomes Consequences and may record a cost (FR-008),
+      and the prose is rewritten engineer-to-engineer (FR-026) — the first draft read as a
+      sales deck, which would alienate the colleagues most likely to review it.
+- [ ] T010 Explainer 9 asserts independent scaling with a drawn diagram, not a measurement.
+      Either mark it argued-not-measured as the cost claims are, or have the running system
+      produce the curves. An unmeasured performance claim is the same shape as an unwatched
+      check.
+- [ ] T008 Settle what the third storyboard left open: whether ten explainers and sixty-three
+      steps is defensible against a time-poor reader; whether closing on the boundary rather
+      than on the loop actually turning is the right last impression; and what bar a fourth
+      non-standards explainer would have to clear, now the frame is wide enough to admit one.
+
 ## Addressing (US1, and the only work that can break another feature)
 
 - [ ] T010 Extend `app/src/shell/views.ts`: parse `#/view/<id>` into a view id and an
@@ -39,16 +73,35 @@ and this branch now carries them.
 
 ## The spine (US1, P1)
 
-- [ ] T020 `BackgroundPanel`: the sub-tab strip, the course order, the viewer's position
-      in it, registered in `panelComponents` and in `config.run`'s `shell.views`.
-- [ ] T021 `Slides`: step index, click and keyboard advance, per-step reveal, each step
-      addressable. No dependency added (FR-006).
-- [ ] T022 `ValuePanel`: the three fixed axes, same position and wording everywhere; an
-      omitted axis renders its stated reason rather than an empty box (FR-008).
-- [ ] T023 Explainer 1, "why a standard at all" (slides). The argument the other seven
-      are judged by, so it lands with the spine rather than after it.
-- [ ] T024 `sea.tsx`: the shared schematic primitives — the nameless sea, the eddy,
-      front, thermocline and drifting feature, the grid (FR-011, FR-012).
+- [ ] T020 `registry.ts`: the eight explainers in course order. Load-bearing — the rail,
+      the anchor scheme and SC-007's test all read it, which is what stops any of the
+      three going stale independently. Build it before its three consumers.
+- [ ] T021 `BackgroundPanel`: hosts the rail and the active explainer, registered in
+      `panelComponents` and in `config.run`'s `shell.views`.
+- [ ] T022 `Rail`: the numbered course rail with position, collapsing to a dropdown plus
+      previous/next below the width threshold (FR-021).
+- [ ] T023 `Spine`: the ordered step machine every explainer obeys (FR-016). Next always
+      works and drives the mechanism itself (FR-017); free play within a step does not
+      change the address (FR-018); nothing animates on arrival (FR-019). Click and
+      keyboard advance, each step addressable. No dependency added (FR-006).
+- [ ] T024 `ValuePanel`: the three fixed axes, same position and wording everywhere; an
+      omitted axis renders its stated reason rather than an empty box (FR-008). Rendered
+      as the spine's final step (FR-020).
+- [ ] T025 SC-007's test, under both conditions that make introspecting a render sound:
+      it enumerates from `registry.ts`, never a hand-written list; and a fixture explainer
+      omitting its value panel lives permanently in the test tree. **Watch it catch that
+      fixture** — an assertion over markup otherwise passes by not finding what it did not
+      look for, which is how two of this repository's original gates reported a file of
+      deliberate violations as clean.
+- [ ] T026 `marks.tsx`: the shared category vocabulary — each category a hue *with* a
+      texture and a line weight, so a colour-only distinction cannot be expressed
+      (FR-011) — plus the marks for the four seeded features (FR-012). No shared scene;
+      each explainer frames its own.
+- [ ] T027 The narrow-width floor: below the width a diagram needs, replace it with a
+      statement of the width required, keeping prose and rail usable (FR-024). Never scale
+      a diagram past legibility, and never render one that has silently dropped its labels.
+- [ ] T028 Explainer 1, "why a standard at all" (slides). The argument the other seven are
+      judged by, so it lands with the spine rather than after it.
 
 ## Inertness (US1, and the feature's one real claim)
 
@@ -65,18 +118,33 @@ and this branch now carries them.
 ## The shape of the data (US2, P2)
 
 - [ ] T040 Explainer 2, points and fields (interactive): sample the schematic sea as
-      points, then as a field; the two results differ in kind, not density.
+      points over the archive prior, then as a field; the results differ in kind, not
+      density. Step 4 is the beat — one question, two honest answers.
+- [ ] T042 Explainer 4, what a holding is (interactive): the three eras under one
+      collection name; step 4 is the beat — instances accumulate, each carrying the
+      manifest that reconstructs it; step 5, the extent stated truthfully and verified
+      against the store by test.
 - [ ] T041 Explainer 3, NetCDF (interactive): peel the 4D block into dimensions,
       coordinates, variables, attributes; units, CRS and time origin shown travelling
       inside the file.
 
 ## The two ways it is served (US3, P3)
 
-- [ ] T050 Explainer 4, SensorThings (interactive): the instrument chain, each step
-      showing the URL that walks it. **Vocabulary hazard** — the gate forbids
+- [ ] T053 Explainer 10, what is allowed to leave (interactive): default deny with
+      indistinguishable refusals so the boundary cannot be probed; withholding by absence
+      rather than by filtering; the published denial; and step 5, the beat — leakage scored
+      per released variable with the worst one deciding, because an average over four
+      variables will hide one that is leaking, which this repository has watched happen.
+      Then step 6: the tests exercise an allowed request too, since a boundary never
+      entered is untested from the inside.
+- [ ] T050 Explainer 5, SensorThings (interactive): the instrument chain, each step
+      showing the URL that walks it — generic to the standard, against a fictional host,
+      never a path this application serves and never something that looks pasteable into
+      this page (FR-022). **Vocabulary hazard** — the gate forbids
       `contact` and `detection`; write around them rather than reaching for the marker.
 - [ ] T051 Explainer 5, OGC API-EDR (interactive): the six query types, each drawn as
-      the geometry it takes and the shape it returns.
+      the geometry it takes and the shape it returns; URLs generic per FR-022, with the
+      live EDR composer reached by link (FR-005) rather than imitated.
 - [ ] T052 Explainer 6, pygeoapi (slides): present tense about the real deployment, and
       an unambiguous statement that this page is not serving through it (FR-013).
 

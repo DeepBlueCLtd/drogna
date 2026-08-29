@@ -15,7 +15,7 @@ OGC SensorThings API Part 1 (Sensing) is a standard answer to that. It fixes an
 entity model for observations and their metadata, and a web interface for reading
 them. drogna adopts its vocabulary at the *source* — a simulated sensor publishes
 in SensorThings terms, the store persists those terms, and the
-[query layer](../subsystems/c09-query-layer.md) serves them out again — so there
+[query layer](../archive/subsystems/c09-query-layer.md) serves them out again — so there
 is one data dictionary rather than three.
 
 This page is a primer for a reader who has not met the standard, and then a plain

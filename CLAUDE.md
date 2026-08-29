@@ -43,6 +43,7 @@ pnpm gates        # the constitution gates alone (scripts/gates.registry)
 pnpm generate     # regenerate app/src/generated/ from contracts/ masters
 pnpm -C app dev   # the shell, live, at a local URL
 pnpm -C app build # the static site V2 delivers
+pnpm site:build   # the published site, into site/build/ (ADR-0031)
 ```
 
 `pnpm gates` runs the gates listed in `scripts/gates.registry`, one per line. **A new

@@ -1,5 +1,6 @@
 ---
 title: Glossary
+order: 60
 ---
 
 # Glossary
@@ -22,7 +23,7 @@ that is simply the current carrying it somewhere else, as opposed to the parts
 caused by mixing, heating or cooling.
 
 It is the cheapest useful thing a forecast model can do, which is why drogna's
-[model runner](subsystems/c13-model-runner.md) does it and nothing more: the
+[model runner](archive/subsystems/c13-model-runner.md) does it and nothing more: the
 seeded features are moved forward along a known velocity and noise is added. The
 result is deliberately not a real forecast. It is a field that changes over time
 in a way that is structured rather than random, which is all the rest of the
@@ -68,7 +69,7 @@ It is lowered through the water measuring as it descends.
 Conductivity is the interesting one. It is not itself of much direct interest;
 it is measured because [salinity](#salinity) can be derived from it together with
 temperature and pressure. In drogna the CTD is simulated: the
-[sensors](subsystems/c04-simulated-sensors.md) sample the generated field at the
+[sensors](archive/subsystems/c04-simulated-sensors.md) sample the generated field at the
 vessel's position and publish readings with instrument noise added. No quality
 flag is added, and none is carried: whether a reading is acceptable is judged at
 the ingestion seam rather than recorded on the reading (ADR-0014).
@@ -104,7 +105,7 @@ a location's tau is the background blended with the contribution of any feature
 overlapping it, and the timescale of a moving feature advects with that feature.
 Three requirements force this shape — the background water needs a timescale of
 its own, a drifting feature must take its timescale with it, and the
-[planner](subsystems/c15-planner.md) needs an answer at every cell it scores, not
+[planner](archive/subsystems/c15-planner.md) needs an answer at every cell it scores, not
 only inside features.
 
 ## Discrete sampling geometry
@@ -165,7 +166,7 @@ its neighbours has to decide what to do about the difference, and every choice i
 a fudge. Every neighbour of a hexagon is the same distance away, which removes the
 question.
 
-drogna indexes the horizontal for [planning](subsystems/c15-planner.md) at H3
+drogna indexes the horizontal for [planning](archive/subsystems/c15-planner.md) at H3
 resolution 6 — cells of about 36 square kilometres, some 7 km corner to corner —
 and indexes depth separately in bands,
 because the vertical correlation structure is nothing like the horizontal one. A
@@ -216,7 +217,7 @@ orienteering formulation most candidates are deliberately left unvisited, and th
 count of what was considered against what was chosen is what prize-collecting looks
 like from outside.
 
-drogna's [planner](subsystems/c15-planner.md) is an orienteering problem in which
+drogna's [planner](archive/subsystems/c15-planner.md) is an orienteering problem in which
 the prize at a cell is the uncertainty a visit would remove, the cost is time, and
 the budget is seconds. The prizes are not fixed: visiting one cell reduces the prize
 at its neighbours, which is the whole difficulty. See the
@@ -232,7 +233,7 @@ conditions it is remarkably hard to beat. It is therefore the reference every
 real forecast is scored against. A model that does not beat persistence is not
 earning its compute, whatever its absolute error looks like.
 
-drogna's [telemetry](subsystems/c16-telemetry.md) always reports forecast skill
+drogna's [telemetry](archive/subsystems/c16-telemetry.md) always reports forecast skill
 against persistence, and the client displays it that way, specifically so that a
 model cannot look useful by being merely plausible.
 
@@ -281,7 +282,7 @@ temperature [front](#front) is also a sound speed front.
 Sound speed is not measured directly. It is computed from temperature, salinity
 and pressure, and that computation is one of the few pieces of genuinely bespoke
 logic inside drogna's boundary. It is also the quantity the
-[monitor](subsystems/c11-monitor.md) computes its residual on — deliberately not
+[monitor](archive/subsystems/c11-monitor.md) computes its residual on — deliberately not
 temperature, because a temperature residual can be large while the derived
 quantity that actually matters is fine.
 
@@ -317,8 +318,8 @@ most common mistake on this material.
   [discrete sampling geometries](#discrete-sampling-geometry). The path is the
   answer.
 
-drogna does both, and they meet in the [query layer](subsystems/c09-query-layer.md):
-a trajectory query over the [coverage store](subsystems/c08-coverage-store.md)
+drogna does both, and they meet in the [query layer](archive/subsystems/c09-query-layer.md):
+a trajectory query over the [coverage store](archive/subsystems/c08-coverage-store.md)
 returns a [CoverageJSON](#coveragejson) trajectory domain, whose composite axis is
 one (time, longitude, latitude, depth) tuple per vertex. See the
 [CoverageJSON primer](standards/coveragejson.md).
@@ -337,5 +338,5 @@ that the depths belong to profiles rather than being another sampling dimension.
 
 Not to be confused with EDR's **trajectory** query, which asks for values *along*
 a path rather than describing data collected along one. They meet in the
-[query layer](subsystems/c09-query-layer.md), where a trajectory query over the
+[query layer](archive/subsystems/c09-query-layer.md), where a trajectory query over the
 coverage store returns a CoverageJSON trajectory domain.

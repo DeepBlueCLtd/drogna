@@ -1,5 +1,6 @@
 ---
 title: Algorithm derivations
+order: 50
 ---
 
 # Algorithm derivations
@@ -17,9 +18,9 @@ and is explicit about the parts that do not do what their names imply.
 
 | Derivation | Component | Status |
 |---|---|---|
-| [Ensemble spread](ensemble-spread.md) | [C-13 Model runner](../subsystems/c13-model-runner.md) | Written |
-| [Advection](advection.md) | [C-13 Model runner](../subsystems/c13-model-runner.md) | Written |
-| [Informative path planning](informative-path-planning.md) | [C-15 Planner](../subsystems/c15-planner.md) | Written |
+| [Ensemble spread](ensemble-spread.md) | [C-13 Model runner](../archive/subsystems/c13-model-runner.md) | Written |
+| [Advection](advection.md) | [C-13 Model runner](../archive/subsystems/c13-model-runner.md) | Written |
+| [Informative path planning](informative-path-planning.md) | [C-15 Planner](../archive/subsystems/c15-planner.md) | Written |
 
 Each page ends with a table of the files it was derived from, so a reader who
 wants the source can find it without searching, and a reader who suspects the page
@@ -50,7 +51,7 @@ end.
 ## A note on notation
 
 None of the three pages uses mathematical notation. The site serves no renderer
-for it — the reasoning is in [Site tooling](../decisions/site-tooling.md) — so
+for it — the reasoning is in [Site tooling](../decisions/index.md) — so
 formulas appear as fenced blocks in the form the source states them, and
 everything else is prose and tables. That constraint turned out to cost these
 three derivations very little: what needed writing down was a regrowth law, a

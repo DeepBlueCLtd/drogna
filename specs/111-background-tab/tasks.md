@@ -34,11 +34,18 @@ and this branch now carries them.
       carry a dashed outline (FR-025). And the grey was simply wrong — it meant "truth you
       never have", when drogna holds a multi-decade archive and scores against a recorded
       ground truth; it now means the coarse prior, which is what produced explainer 4.
-- [ ] T007 Settle what the second storyboard left open: which three explainers a viewer
-      with four minutes is steered to; whether two non-standards explainers (4 and 9) sit
-      comfortably in a course framed as "the standards themselves"; whether
-      FeatureOfInterest earns a step having been named as the subtle one; and whether a
-      refusal at the boundary belongs in explainer 7 or nowhere.
+- [x] T007 Settle what the second storyboard left open. No curated short path — dip-in
+      works and the rail shows lengths, so a second navigation surface would earn nothing.
+      The frame is widened to "the standards, and what it takes to use them honestly",
+      which admits explainers 4, 9 and 10 honestly rather than hiding them.
+      FeatureOfInterest folds into the Thing step, where the contrast with Location makes
+      the point at no cost in steps. And the boundary earns its own explainer, closing the
+      course: for an evaluator in this domain it is the first question asked, and the
+      course was silent on it.
+- [ ] T008 Settle what the third storyboard left open: whether ten explainers and sixty-three
+      steps is defensible against a time-poor reader; whether closing on the boundary rather
+      than on the loop actually turning is the right last impression; and what bar a fourth
+      non-standards explainer would have to clear, now the frame is wide enough to admit one.
 
 ## Addressing (US1, and the only work that can break another feature)
 
@@ -114,7 +121,14 @@ and this branch now carries them.
 
 ## The two ways it is served (US3, P3)
 
-- [ ] T050 Explainer 4, SensorThings (interactive): the instrument chain, each step
+- [ ] T053 Explainer 10, what is allowed to leave (interactive): default deny with
+      indistinguishable refusals so the boundary cannot be probed; withholding by absence
+      rather than by filtering; the published denial; and step 5, the beat — leakage scored
+      per released variable with the worst one deciding, because an average over four
+      variables will hide one that is leaking, which this repository has watched happen.
+      Then step 6: the tests exercise an allowed request too, since a boundary never
+      entered is untested from the inside.
+- [ ] T050 Explainer 5, SensorThings (interactive): the instrument chain, each step
       showing the URL that walks it — generic to the standard, against a fictional host,
       never a path this application serves and never something that looks pasteable into
       this page (FR-022). **Vocabulary hazard** — the gate forbids

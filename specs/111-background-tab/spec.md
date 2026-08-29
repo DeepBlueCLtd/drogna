@@ -36,7 +36,7 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 |---|---|
 | Audience is the technical evaluator, the domain expert without architecture, and future maintainers — **not** the generalist software engineer | Vocabulary is ocean-first. Every software concept arrives through a domain example. A Thing is a buoy, not an entity. |
 | Explainers are **self-contained illustration**, not live | No explainer reads run state. Constitution VII is not engaged, because these tabs teach the standards; they do not stand in for a component. |
-| The frame is **the standards themselves, drogna as worked example** | Reusable outside this repo. Where a tab claims something about drogna specifically, it links to the live view rather than depicting it. |
+| The frame is **the standards, and what it takes to use them honestly** | Widened from "the standards themselves" once three explainers (holdings, the control loop, the boundary) turned out to be drogna's own arrangement rather than a standard. The course says so up front instead of pretending otherwise. Where a tab claims something about drogna specifically, it links to the live view rather than depicting it. |
 | **Value delivered**, not candidates-and-alternatives | Options are shown only where an option genuinely existed. The recurring axes are through-life cost, interoperability, and what you do not have to build. |
 | A **bespoke slide component** | NFR-05's closed toolchain is unchanged. No slide library, no ADR, no amendment. |
 | **60–90 seconds** per explainer | One idea per tab. Four to six steps, or a single interaction with one revealed consequence. |
@@ -48,7 +48,7 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 
 Ordered as a course: what shape the data is → how it is stored → what a holding actually
 contains → the two ways it is served → the server that serves both → how consumers hear
-about it → the whole thing turning. **56 steps, roughly ten minutes end to end.**
+about it → the whole thing turning. **63 steps, roughly eleven minutes end to end.**
 
 | # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
@@ -61,6 +61,7 @@ about it → the whole thing turning. **56 steps, roughly ten minutes end to end
 | 7 | pygeoapi | slides | 5 | One server, many standards; new capability is configuration |
 | 8 | MQTT | interactive | 7 | A new consumer is a subscription, not a producer change |
 | 9 | The control loop | interactive | 7 | Every transition is a message you can watch |
+| 10 | What is allowed to leave | interactive | 7 | Deny by default, withhold by absence, publish the refusal |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -192,7 +193,7 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002**: Background MUST contain the nine explainers named above, in the order
+- **FR-002**: Background MUST contain the ten explainers named above, in the order
   given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
@@ -274,7 +275,10 @@ so that eight of them read as one course rather than eight bespoke toys.
   every explainer, and it must survive greyscale like any other mark.
 - **FR-021**: Explainers are reached from a numbered rail listing all nine with their
   course positions **and their lengths**, so a viewer knows what they are starting,
-  collapsing below a width threshold to a dropdown with previous and next controls. Course order is fixed (FR-002); the rail shows position in it.
+  collapsing below a width threshold to a dropdown with previous and next controls. There
+  is deliberately **no curated short path**: dip-in already works and the lengths are
+  shown, so a second navigation surface would be built, tested and kept addressable for a
+  viewer who can simply choose. Course order is fixed (FR-002); the rail shows position in it.
 - **FR-022**: URLs shown inside an explainer are **generic examples of the standard's own
   shape against a fictional host**, never a path this application serves and never
   anything that looks pasteable into this page. An explainer teaches a standard; the
@@ -329,6 +333,9 @@ so that eight of them read as one course rather than eight bespoke toys.
 - **SC-008**: A reader who has completed the course can state why SensorThings and OGC
   API-EDR both exist, in terms of the shape of the data rather than the names of the
   standards. Assessed by asking one, not by a test.
+- **SC-009**: A reader can state, after explainer 10, why withholding by absence fails more
+  safely than withholding by filtering. This is the question a sceptical evaluator asks
+  first, and the course was silent on it until this pass.
 
 ## Out of Scope
 

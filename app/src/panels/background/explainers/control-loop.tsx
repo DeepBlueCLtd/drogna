@@ -5,6 +5,7 @@
  * so by omitting the interoperability axis with its reason (FR-008).
  */
 import { INK, MarkDefs, PokeRegion, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
@@ -12,7 +13,7 @@ const fields = categoryStyle('fields');
 
 const STATIONS = ['sense', 'decide', 'act', 'publish'];
 
-function Loop({ lit, caption }: { lit: number; caption: string }) {
+function Loop({ lit }: { lit: number }) {
   return (
     <svg viewBox="0 0 320 150" width="100%">
       <MarkDefs />
@@ -50,9 +51,6 @@ function Loop({ lit, caption }: { lit: number; caption: string }) {
         );
       })}
       <path d="M298 84 V108 H44 V84" fill="none" stroke={INK.quiet} strokeDasharray="3 3" />
-      <text x="12" y="132" fontSize="9" fill={INK.quiet}>
-        {caption}
-      </text>
     </svg>
   );
 }
@@ -74,7 +72,12 @@ export const controlLoop: Explainer = {
         minWidth: 340,
         label: 'Four stations of the loop, all dark and nothing moving',
         caption: 'Four stations, unlit until a message arrives.',
-        draw: () => <Loop lit={-1} caption="Nothing has arrived, so nothing is lit." />,
+        draw: () => (
+          <>
+            <Loop lit={-1} />
+            <Readout>Nothing has arrived, so nothing is lit.</Readout>
+          </>
+        ),
       },
     },
     {
@@ -88,9 +91,10 @@ export const controlLoop: Explainer = {
         label: 'The sense station lit, scoring residuals between observations and the current forecast',
         caption: 'Residual: measured minus predicted, scored continuously.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
-            <Loop lit={0} caption="A sustained score is published as a divergence. A single spike is not." />
+            <Loop lit={0} />
             <line x1="12" y1="150" x2="308" y2="150" stroke={INK.quiet} />
             {range(12).map((index) => (
               <line
@@ -103,10 +107,9 @@ export const controlLoop: Explainer = {
                 strokeWidth={points.strokeWidth}
               />
             ))}
-            <text x="196" y="166" fontSize="8.5" fill={points.stroke}>
-              sustained, not a spike
-            </text>
           </svg>
+          <Readout>A sustained score is published as a divergence. A single spike is not.</Readout>
+          </>
         ),
       },
     },
@@ -122,14 +125,16 @@ export const controlLoop: Explainer = {
         label: 'The decide station lit, refusing a run because the minimum interval has not elapsed',
         caption: 'A refusal names the rule and the margin.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
-            <Loop lit={1} caption="Acceptance and refusal travel on the same topic." />
-            <rect x="12" y="130" width="296" height="32" fill="none" stroke={INK.warn} strokeDasharray="4 3" />
-            <text x="20" y="150" fontSize="9" fill={INK.warn} fontFamily="monospace">
-              declined: minimum interval 900s, elapsed 412s, margin 488s
-            </text>
+            <Loop lit={1} />
           </svg>
+          <Readout>
+            Acceptance and refusal travel on the same topic.{' '}
+            <code>declined: minimum interval 900s, elapsed 412s, margin 488s</code>
+          </Readout>
+          </>
         ),
       },
     },
@@ -144,16 +149,19 @@ export const controlLoop: Explainer = {
         label: 'The act station lit, running a small ensemble whose spread becomes the uncertainty field',
         caption: 'A small ensemble; the spread becomes the uncertainty field.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
-            <Loop lit={2} caption="Members agree near the start and part later." />
+            <Loop lit={2} />
             <path d="M20 146 C 90 142, 150 130, 300 122" fill="none" stroke={fields.stroke} strokeWidth={fields.strokeWidth} />
             <path d="M20 146 C 90 144, 150 140, 300 140" fill="none" stroke={fields.stroke} strokeWidth={fields.strokeWidth} />
             <path d="M20 146 C 90 148, 150 152, 300 158" fill="none" stroke={fields.stroke} strokeWidth={fields.strokeWidth} />
-            <text x="234" y="118" fontSize="8.5" fill={fields.stroke}>
+            <text x="240" y="112" fontSize="8.5" fill={fields.stroke}>
               spread
             </text>
           </svg>
+          <Readout>Members agree near the start and part later. That parting is the spread.</Readout>
+          </>
         ),
       },
     },
@@ -171,9 +179,10 @@ export const controlLoop: Explainer = {
         draw: ({ poke, onPoke }) => {
           const perturbed = poke === 'perturbed';
           return (
-            <svg viewBox="0 0 320 190" width="100%">
+            <>
+              <svg viewBox="0 0 320 190" width="100%">
               <MarkDefs />
-              <Loop lit={3} caption="The pointer moves last, or not at all." />
+              <Loop lit={3} />
               <PokeRegion
                 x={12}
                 y={128}
@@ -187,15 +196,13 @@ export const controlLoop: Explainer = {
                   {perturbed ? 'residual raised' : 'perturb the residual'}
                 </text>
               </PokeRegion>
-              <text x="12" y="170" fontSize="9" fill={perturbed ? points.stroke : INK.quiet}>
+              </svg>
+              <Readout>
                 {perturbed
-                  ? 'The next cycle starts from the new observations: a fresh plan, not the previous one replayed.'
-                  : 'Staged bytes, digest checked, pointer moved. A mismatch is refused by name.'}
-              </text>
-              <text x="12" y="184" fontSize="9" fill={INK.quiet}>
-                {perturbed ? 'The stations run again in order; none of them is skipped.' : ''}
-              </text>
-            </svg>
+                  ? 'The next cycle starts from the new observations: a fresh plan, not the previous one replayed. The stations run again in order, and none is skipped.'
+                  : 'Staged bytes, digest checked, pointer moved. A mismatch is refused by name, with the pointer untouched.'}
+              </Readout>
+              </>
           );
         },
       },
@@ -213,6 +220,7 @@ export const controlLoop: Explainer = {
         label: 'Forecast error compared against a persistence reference, with one run that failed to beat it',
         caption: 'Model error against a persistence reference, including one run that lost.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             <line x1="34" y1="20" x2="34" y2="130" stroke={INK.quiet} />
@@ -238,10 +246,9 @@ export const controlLoop: Explainer = {
             <text x="196" y="44" fontSize="8.5" fill={points.stroke}>
               persistence reference
             </text>
-            <text x="12" y="152" fontSize="9" fill={INK.warn}>
-              Run 5 did not beat persistence. It is named, not averaged away.
-            </text>
           </svg>
+          <Readout>Run 5 did not beat persistence. It is named, not averaged away.</Readout>
+          </>
         ),
       },
     },

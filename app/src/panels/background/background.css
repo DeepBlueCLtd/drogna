@@ -173,6 +173,12 @@
   padding: 0.6em;
 }
 
+.bg-readout {
+  color: var(--shell-fg);
+  font-size: 0.88em;
+  margin: 0.6em 0 0;
+}
+
 .bg-figure figcaption {
   color: var(--shell-dim);
   font-size: 0.82em;

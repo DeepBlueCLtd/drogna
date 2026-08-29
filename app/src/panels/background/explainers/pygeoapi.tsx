@@ -6,6 +6,7 @@
  * concluded this page were a pygeoapi instance would have been misled by us.
  */
 import { INK, MarkDefs, categoryStyle } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const fields = categoryStyle('fields');
@@ -156,6 +157,7 @@ export const pygeoapi: Explainer = {
         label: 'Where the standard runs ahead of its implementations, a provider is written at the plugin seam',
         caption: 'Extension happens at the plugin seam, not in the server.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 150" width="100%">
             <MarkDefs />
             <rect x="12" y="20" width="180" height="100" fill="none" stroke={fields.stroke} strokeWidth={fields.strokeWidth} />
@@ -173,10 +175,9 @@ export const pygeoapi: Explainer = {
             <text x="264" y="80" fontSize="9" textAnchor="middle" fill={INK.strong}>
               provider
             </text>
-            <text x="12" y="140" fontSize="9" fill={INK.quiet}>
-              Two of them, in drogna&rsquo;s case. The cost was bounded and it stayed put.
-            </text>
           </svg>
+          <Readout>Two of them, in drogna&rsquo;s case. The cost was bounded and it stayed put.</Readout>
+          </>
         ),
       },
     },

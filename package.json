@@ -11,6 +11,7 @@
     "gates": "tsx scripts/run-gates.ts",
     "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
     "capture:glance": "tsx scripts/capture/glance.ts",
+    "capture:background": "tsx scripts/capture/background.ts",
     "replay-proof": "tsx scripts/replay-proof.ts"
   },
   "devDependencies": {

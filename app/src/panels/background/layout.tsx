@@ -78,3 +78,19 @@ export function LiveViewLink({
     </p>
   );
 }
+
+/**
+ * A sentence that belongs beside a drawing rather than inside it.
+ *
+ * Prose set as SVG <text> does not wrap: it runs past the viewBox and is clipped,
+ * which looks like a finished diagram with a sentence cut in half. FR-024 forbids a
+ * drawing that renders having silently dropped its labels, so a figure says its
+ * words here, in HTML, where they wrap. A figure's own labels stay in the drawing;
+ * what it concludes comes out here.
+ *
+ * The capture proof measures every remaining <text> against its viewBox and fails on
+ * an overflow, which is what stops this rule from decaying back into a habit.
+ */
+export function Readout({ children }: { children: ReactNode }): ReactNode {
+  return <p className="bg-readout">{children}</p>;
+}

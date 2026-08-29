@@ -6,6 +6,7 @@
  * Section view throughout: depth down the page, the natural frame for a cast.
  */
 import { Eddy, Front, INK, MarkDefs, PokeRegion, Sample, Thermocline, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
@@ -54,9 +55,9 @@ export const pointsAndFields: Explainer = {
         caption: 'The field is continuous. Everything that follows is a sample of it.',
         draw: () => (
           <Section>
-            <Thermocline x={160} y={58} width={280} label="thermocline" />
-            {Eddy({ x: 100, y: 110, scale: 1.4, label: 'eddy' })}
-            {Front({ x: 240, y: 112, scale: 1.2, label: 'front' })}
+            <Thermocline x={160} y={56} width={272} label="thermocline" />
+            {Eddy({ x: 96, y: 104, scale: 1.2, label: 'eddy' })}
+            {Front({ x: 244, y: 100, scale: 1, label: 'front' })}
           </Section>
         ),
       },
@@ -73,6 +74,7 @@ export const pointsAndFields: Explainer = {
         label: 'Three casts sampling the section over the coarse archive behind them',
         caption: 'Casts over the archive. The archive is dated and real, not a blank.',
         draw: ({ poke, onPoke }) => (
+          <>
           <Section>
             {range(4).map((row) =>
               range(6).map((column) => (
@@ -111,13 +113,13 @@ export const pointsAndFields: Explainer = {
                 {[36, 62, 92, 126, 154].map((depth) => Sample({ x: cast.x, y: depth, scale: 0.6 }))}
               </PokeRegion>
             ))}
-            {poke ? (
-              <text x="16" y="184" fontSize="9" fill={points.stroke}>
-                {CAST_POSITIONS.find((cast) => cast.id === poke)?.label}: five readings, one column, one hour.
-                Everywhere else is still the archive.
-              </text>
-            ) : null}
           </Section>
+          <Readout>
+            {poke
+              ? `${CAST_POSITIONS.find((cast) => cast.id === poke)?.label}: five readings, one column, one hour. Everywhere else is still the archive.`
+              : 'Pick a cast. Everywhere it does not reach, the archive is still what you hold.'}
+          </Readout>
+          </>
         ),
       },
     },
@@ -132,6 +134,7 @@ export const pointsAndFields: Explainer = {
         label: 'A model grid covering the same section, every cell carrying a computed value',
         caption: 'A forecast field over the same water. Complete by construction.',
         draw: () => (
+          <>
           <Section>
             {range(6).map((row) =>
               range(12).map((column) => (
@@ -147,10 +150,9 @@ export const pointsAndFields: Explainer = {
                 />
               )),
             )}
-            <text x="16" y="184" fontSize="9" fill={fields.stroke}>
-              Every cell carries a value. None of them was measured.
-            </text>
           </Section>
+          <Readout>Every cell carries a value. None of them was measured.</Readout>
+          </>
         ),
       },
     },
@@ -170,7 +172,8 @@ export const pointsAndFields: Explainer = {
           const asked = CAST_POSITIONS.find((cast) => cast.id === poke) ?? CAST_POSITIONS[1];
           const onACast = poke === undefined || poke === 'middle';
           return (
-            <Section>
+            <>
+              <Section>
               {range(6).map((row) =>
                 range(12).map((column) => (
                   <rect
@@ -201,13 +204,13 @@ export const pointsAndFields: Explainer = {
               ))}
               <line x1={asked.x - 20} y1={94} x2={asked.x + 20} y2={94} stroke={INK.strong} />
               <line x1={asked.x} y1={74} x2={asked.x} y2={114} stroke={INK.strong} />
-              <text x="16" y="180" fontSize="9" fill={fields.stroke}>
-                field: 11.2 °C
-              </text>
-              <text x="140" y="180" fontSize="9" fill={onACast ? points.stroke : INK.warn}>
-                {onACast ? 'observations: 11.4 °C, CTD, 09:14' : 'observations: nothing was measured there'}
-              </text>
-            </Section>
+              </Section>
+              <Readout>
+                <b>field</b>: 11.2 °C. <b>observations</b>:{' '}
+                {onACast ? '11.4 °C, CTD, 09:14.' : 'nothing was measured there.'} That third answer is
+                not a null and not a refusal, and an interface has to be able to say all three apart.
+              </Readout>
+              </>
           );
         },
       },

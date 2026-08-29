@@ -6,6 +6,7 @@
  * looked pasteable would invite a viewer to paste it.
  */
 import { INK, MarkDefs, PokeRegion, Sample, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const fields = categoryStyle('fields');
@@ -36,6 +37,7 @@ export const edr: Explainer = {
         label: 'A client issuing many separate point requests along a route and stitching the answers',
         caption: 'Without EDR: the route is decomposed on the client, once per client.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 160" width="100%">
             <MarkDefs />
             <rect x="12" y="40" width="70" height="46" fill="none" stroke={INK.line} />
@@ -57,13 +59,12 @@ export const edr: Explainer = {
             <text x="258" y="67" fontSize="9.5" textAnchor="middle" fill={INK.strong}>
               the server
             </text>
-            <text x="12" y="118" fontSize="9.5" fill={INK.warn}>
-              forty requests · stitched on the client · gaps interpolated on the client
-            </text>
-            <text x="12" y="136" fontSize="9" fill={INK.quiet}>
-              and once more, differently, in the next client.
-            </text>
           </svg>
+          <Readout>
+            Forty requests, stitched on the client, gaps interpolated on the client — and once more,
+            differently, in the next client.
+          </Readout>
+          </>
         ),
       },
     },
@@ -78,6 +79,7 @@ export const edr: Explainer = {
         label: 'The same route sent as one request, the server returning the sampled path',
         caption: 'The geometry travels to the data rather than the data to the client.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 160" width="100%">
             <MarkDefs />
             <rect x="12" y="40" width="70" height="46" fill="none" stroke={INK.line} />
@@ -96,10 +98,11 @@ export const edr: Explainer = {
             <text x="98" y="110" fontSize="9" fill={fields.stroke}>
               the sampled path, as one answer
             </text>
-            <text x="12" y="140" fontSize="9" fill={INK.quiet} fontFamily="monospace">
-              GET {HOST}corridor?coords=LINESTRING(…)
-            </text>
           </svg>
+          <Readout>
+            <code>GET {HOST}corridor?coords=LINESTRING(…)</code>
+          </Readout>
+          </>
         ),
       },
     },
@@ -149,7 +152,8 @@ export const edr: Explainer = {
         draw: ({ poke, onPoke }) => {
           const chosen = AREA_QUERIES.find((query) => query.id === poke) ?? AREA_QUERIES[0];
           return (
-            <svg viewBox="0 0 320 190" width="100%">
+            <>
+              <svg viewBox="0 0 320 190" width="100%">
               <MarkDefs />
               <rect x="12" y="16" width="290" height="118" fill="none" stroke={INK.line} />
               {chosen.id === 'radius' ? (
@@ -187,14 +191,16 @@ export const edr: Explainer = {
                   </text>
                 </PokeRegion>
               ))}
-              <text x="12" y="176" fontSize="8.5" fill={points.stroke} fontFamily="monospace">
-                GET {HOST}
-                {chosen.path.slice(0, 58)}
-              </text>
-              <text x="12" y="187" fontSize="8.5" fill={INK.quiet}>
+              </svg>
+              <Readout>
                 {chosen.gloss}
-              </text>
-            </svg>
+                <br />
+                <code>
+                  GET {HOST}
+                  {chosen.path}
+                </code>
+              </Readout>
+              </>
           );
         },
       },
@@ -210,6 +216,7 @@ export const edr: Explainer = {
         label: 'A trajectory query carrying time along its length, giving conditions at arrival rather than now',
         caption: 'The query moves through the forecast in time as well as space.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             {range(4).map((slab) => (
@@ -235,13 +242,12 @@ export const edr: Explainer = {
               [172, 62],
               [246, 46],
             ].map(([x, y]) => Sample({ x, y, scale: 0.7 }))}
-            <text x="12" y="136" fontSize="9" fill={points.stroke}>
-              each vertex carries its own time
-            </text>
-            <text x="12" y="152" fontSize="9" fill={INK.quiet}>
-              so each is answered from the forecast valid then, not from one snapshot.
-            </text>
           </svg>
+          <Readout>
+            Each vertex carries its own time, so each is answered from the forecast valid then rather
+            than from one snapshot.
+          </Readout>
+          </>
         ),
       },
     },

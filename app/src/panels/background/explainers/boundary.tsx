@@ -6,6 +6,7 @@
  * standard either: it is what it takes to use the standards honestly.
  */
 import { INK, MarkDefs, PokeRegion, categoryStyle } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
@@ -44,6 +45,7 @@ export const boundary: Explainer = {
         label: 'Holdings inside a boundary, with a caller outside asking for them',
         caption: 'Which of these may cross the line, and for whom.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             <line x1="196" y1="8" x2="196" y2="150" stroke={INK.warn} strokeWidth="2" />
@@ -78,10 +80,9 @@ export const boundary: Explainer = {
             <text x="261" y="87" fontSize="9" textAnchor="middle" fill={INK.strong}>
               a caller
             </text>
-            <text x="12" y="164" fontSize="9" fill={INK.quiet}>
-              The manifest says where and when someone sampled. That is not a publication.
-            </text>
           </svg>
+          <Readout>The manifest says where and when someone sampled. That is not a publication.</Readout>
+          </>
         ),
       },
     },
@@ -99,7 +100,8 @@ export const boundary: Explainer = {
         draw: ({ poke, onPoke }) => {
           const probe = PROBES.find((entry) => entry.id === poke) ?? PROBES[0];
           return (
-            <svg viewBox="0 0 320 170" width="100%">
+            <>
+              <svg viewBox="0 0 320 170" width="100%">
               <MarkDefs />
               {PROBES.map((entry, index) => (
                 <PokeRegion
@@ -125,13 +127,13 @@ export const boundary: Explainer = {
               <text x="272" y="70" fontSize="8" textAnchor="middle" fill={INK.warn}>
                 denied
               </text>
-              <text x="12" y="128" fontSize="9" fill={INK.quiet}>
-                Same status, same body, same timing. The caller learns nothing about what exists.
-              </text>
-              <text x="12" y="146" fontSize="9" fill={INK.quiet}>
-                A refusal that varied would be a directory listing in disguise.
-              </text>
-            </svg>
+              </svg>
+              <Readout>
+                Same status, same body, same timing, whichever of the three you picked. The caller
+                learns nothing about what exists. A refusal that varied would be a directory listing
+                in disguise.
+              </Readout>
+              </>
           );
         },
       },
@@ -147,6 +149,7 @@ export const boundary: Explainer = {
         label: 'Withholding by absence from configuration, contrasted with a filter that rewrites responses',
         caption: 'Withholding by absence and by filtering, with different failure modes.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             <text x="12" y="18" fontSize="9" fill={fields.stroke}>
@@ -181,13 +184,12 @@ export const boundary: Explainer = {
             <text x="176" y="110" fontSize="8.5" fill={INK.warn}>
               misses a field leaks quietly
             </text>
-            <text x="12" y="150" fontSize="9" fill={INK.quiet}>
-              Both can be correct on the day they ship. Only one of them stays correct
-            </text>
-            <text x="12" y="164" fontSize="9" fill={INK.quiet}>
-              when somebody adds a field.
-            </text>
           </svg>
+          <Readout>
+            Both can be correct on the day they ship. Only one of them stays correct when somebody
+            adds a field.
+          </Readout>
+          </>
         ),
       },
     },
@@ -203,6 +205,7 @@ export const boundary: Explainer = {
         label: 'A denial published on a topic and counted in the shell, rather than discarded',
         caption: 'Denials are published and counted, not discarded.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 150" width="100%">
             <MarkDefs />
             <rect x="12" y="46" width="76" height="40" fill="none" stroke={INK.warn} strokeWidth="2" />
@@ -219,10 +222,9 @@ export const boundary: Explainer = {
             <text x="285" y="70" fontSize="9" textAnchor="middle" fill={INK.strong}>
               counted
             </text>
-            <text x="12" y="122" fontSize="9" fill={INK.quiet}>
-              The caller still receives the same opaque refusal. The operator sees the count.
-            </text>
           </svg>
+          <Readout>The caller still receives the same opaque refusal. The operator sees the count.</Readout>
+          </>
         ),
       },
     },
@@ -241,7 +243,8 @@ export const boundary: Explainer = {
         draw: () => {
           const mean = VARIABLES.reduce((total, variable) => total + variable.leakage, 0) / VARIABLES.length;
           return (
-            <svg viewBox="0 0 320 190" width="100%">
+            <>
+              <svg viewBox="0 0 320 190" width="100%">
               <MarkDefs />
               <line x1="90" y1="14" x2="90" y2="140" stroke={INK.quiet} />
               {VARIABLES.map((variable, index) => {
@@ -272,10 +275,9 @@ export const boundary: Explainer = {
               <text x="84" y={140} fontSize="8.5" textAnchor="end" fill={points.stroke}>
                 mean
               </text>
-              <text x="12" y="176" fontSize="9" fill={INK.warn}>
-                The mean passes. Spread does not. The gate refuses on spread, by name.
-              </text>
-            </svg>
+              </svg>
+              <Readout>The mean passes. Spread does not. The gate refuses on spread, by name.</Readout>
+              </>
           );
         },
       },
@@ -292,6 +294,7 @@ export const boundary: Explainer = {
         label: 'Boundary tests exercising an allowed request as well as the refusals',
         caption: 'Refusals tested, and one allowed request tested alongside them.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 150" width="100%">
             <MarkDefs />
             {['an unreleased path', 'a path that never existed', 'an uncleared caller'].map((probe, index) => (
@@ -312,10 +315,9 @@ export const boundary: Explainer = {
             <text x="200" y="113" fontSize="8.5" fill={fields.stroke}>
               byte-identical
             </text>
-            <text x="12" y="142" fontSize="9" fill={INK.quiet}>
-              Without the last row, a boundary that refuses everything looks perfect.
-            </text>
           </svg>
+          <Readout>Without the last row, a boundary that refuses everything looks perfect.</Readout>
+          </>
         ),
       },
     },

@@ -7,6 +7,7 @@
  * rather than depicting it (FR-005).
  */
 import { INK, MarkDefs, PokeRegion, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const fields = categoryStyle('fields');
@@ -118,6 +119,7 @@ export const holdings: Explainer = {
         label: 'A single now-cast replaced on a cadence rather than accumulated',
         caption: 'Replaced on a cadence rather than accumulated.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             {range(3).map((generation) => (
@@ -143,10 +145,9 @@ export const holdings: Explainer = {
             <text x="256" y="84" fontSize="9.5" fill={INK.line}>
               not added to
             </text>
-            <text x="20" y="146" fontSize="9" fill={INK.quiet}>
-              Exactly one now-cast exists, so no client has to choose between two.
-            </text>
           </svg>
+          <Readout>Exactly one now-cast exists, so no client has to choose between two.</Readout>
+          </>
         ),
       },
     },
@@ -166,7 +167,8 @@ export const holdings: Explainer = {
         draw: ({ poke, onPoke }) => {
           const chosen = RUNS.find((run) => run.id === poke);
           return (
-            <svg viewBox="0 0 320 170" width="100%">
+            <>
+              <svg viewBox="0 0 320 170" width="100%">
               <MarkDefs />
               {RUNS.map((run, index) => (
                 <PokeRegion
@@ -194,15 +196,13 @@ export const holdings: Explainer = {
                   </text>
                 </PokeRegion>
               ))}
-              <text x="12" y="146" fontSize="9.5" fill={chosen ? points.stroke : INK.quiet}>
+              </svg>
+              <Readout>
                 {chosen
-                  ? `${chosen.label}: ${chosen.reason}. Manifest carries the seeds, the inputs and the code revision.`
-                  : 'Each run keeps its manifest. Nothing is overwritten.'}
-              </text>
-              <text x="12" y="162" fontSize="9" fill={INK.quiet}>
-                {chosen ? 'Replaying that manifest reproduces the run byte for byte.' : ''}
-              </text>
-            </svg>
+                  ? `${chosen.label}: ${chosen.reason}. Its manifest carries the seeds, the inputs and the code revision, and replaying it reproduces the run byte for byte.`
+                  : 'Each run keeps its own manifest. Nothing is overwritten. Pick one.'}
+              </Readout>
+              </>
           );
         },
       },
@@ -219,6 +219,7 @@ export const holdings: Explainer = {
         label: 'A discovery document stating extents truthfully, checked against the store',
         caption: 'Declared extent, checked against the store.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             <rect x="12" y="18" width="140" height="120" fill="none" stroke={fields.stroke} strokeWidth={fields.strokeWidth} />
@@ -247,10 +248,9 @@ export const holdings: Explainer = {
             <text x="204" y="96" fontSize="9.5" fill={INK.line}>
               by a test
             </text>
-            <text x="12" y="158" fontSize="9" fill={INK.quiet}>
-              A document that over-claims sends a client through unmodelled water.
-            </text>
           </svg>
+          <Readout>A document that over-claims sends a client through unmodelled water.</Readout>
+          </>
         ),
       },
     },

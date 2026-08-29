@@ -5,6 +5,7 @@
  * so a reader in thirty years needs no surviving author.
  */
 import { INK, MarkDefs, PokeRegion, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const fields = categoryStyle('fields');
@@ -113,6 +114,7 @@ export const netcdf: Explainer = {
         label: 'The axes gaining real coordinate values, each cell resolving to a position',
         caption: 'Coordinates map each index to a position on Earth.',
         draw: ({ poke, onPoke }) => (
+          <>
           <svg viewBox="0 0 300 170" width="100%">
             <MarkDefs />
             <Block labelled />
@@ -140,12 +142,13 @@ export const netcdf: Explainer = {
                 />
               )),
             )}
-            <text x="90" y="168" fontSize="9" fill={fields.stroke}>
-              {poke
-                ? `resolves to ${['14°W', '12°W', '10°W', '8°W'][Number(poke.split('-')[1])]}, 46.0°N, ${['0 m', '50 m', '200 m', '800 m'][Number(poke.split('-')[0])]}`
-                : 'every index resolves to a position, a depth and an instant'}
-            </text>
           </svg>
+          <Readout>
+            {poke
+              ? `That cell resolves to ${['14°W', '12°W', '10°W', '8°W'][Number(poke.split('-')[1])]}, 46.0°N, ${['0 m', '50 m', '200 m', '800 m'][Number(poke.split('-')[0])]}.`
+              : 'Every index resolves to a position, a depth and an instant. Pick a cell to see one.'}
+          </Readout>
+          </>
         ),
       },
     },

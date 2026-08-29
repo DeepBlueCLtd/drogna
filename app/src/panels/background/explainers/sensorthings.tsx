@@ -12,6 +12,7 @@
  * artwork about a shape, never a path this page serves.
  */
 import { INK, MarkDefs, PokeRegion, Sample, categoryStyle } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
@@ -44,6 +45,7 @@ export const sensorthings: Explainer = {
         label: 'A single reading sitting alone in a table row',
         caption: 'A value and a timestamp, with no other context.',
         draw: () => (
+          <>
           <svg viewBox="0 0 300 120" width="100%">
             <MarkDefs />
             <rect x="60" y="40" width="180" height="34" fill="none" stroke={INK.line} />
@@ -54,10 +56,9 @@ export const sensorthings: Explainer = {
               8.4
             </text>
             {Sample({ x: 216, y: 57 })}
-            <text x="60" y="96" fontSize="9.5" fill={INK.quiet}>
-              Degrees of what? Measured by what? Correct for what?
-            </text>
           </svg>
+          <Readout>Degrees of what? Measured by what? Correct for what?</Readout>
+          </>
         ),
       },
     },
@@ -127,18 +128,18 @@ export const sensorthings: Explainer = {
         label: 'The reading linked to the datastream it belongs to',
         caption: 'The first hop: a reading resolves to its stream.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 120" width="100%">
             <MarkDefs />
-            {Sample({ x: 46, y: 54, scale: 1.4, label: '8.4 °C' })}
+            {Sample({ x: 46, y: 48, scale: 1.4, label: '8.4 °C' })}
             <line x1="66" y1="54" x2="128" y2="54" stroke={INK.line} strokeWidth="1.5" />
             <rect x="128" y="36" width="130" height="36" fill="none" stroke={points.stroke} strokeWidth={points.strokeWidth} />
             <text x="193" y="58" fontSize="10" textAnchor="middle" fill={INK.strong}>
               Datastream
             </text>
-            <text x="128" y="94" fontSize="9" fill={INK.quiet}>
-              one quantity · one instrument · one hull · over time
-            </text>
           </svg>
+          <Readout>One quantity, one instrument, one hull, over time.</Readout>
+          </>
         ),
       },
     },
@@ -191,6 +192,7 @@ export const sensorthings: Explainer = {
         label: 'The datastream linked to the platform carrying it, that platform’s location, and the water the reading is about',
         caption: 'Where the instrument sits, and where the observation applies.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 170" width="100%">
             <MarkDefs />
             <rect x="12" y="20" width="88" height="120" fill="none" stroke={points.stroke} strokeWidth={points.strokeWidth} />
@@ -221,10 +223,9 @@ export const sensorthings: Explainer = {
             <text x="234" y="129" fontSize="8.5" textAnchor="middle" fill={INK.quiet}>
               the water the reading is about
             </text>
-            <text x="12" y="160" fontSize="9" fill={INK.quiet}>
-              In a current these are not the same place, and the model does not pretend they are.
-            </text>
           </svg>
+          <Readout>In a current these are not the same place, and the model does not pretend they are.</Readout>
+          </>
         ),
       },
     },
@@ -244,7 +245,8 @@ export const sensorthings: Explainer = {
         draw: ({ poke, onPoke }) => {
           const chosen = CHAIN.find((hop) => hop.id === poke) ?? CHAIN[0];
           return (
-            <svg viewBox="0 0 320 190" width="100%">
+            <>
+              <svg viewBox="0 0 320 190" width="100%">
               <MarkDefs />
               {CHAIN.map((hop, index) => (
                 <PokeRegion
@@ -265,11 +267,14 @@ export const sensorthings: Explainer = {
                   </text>
                 </PokeRegion>
               ))}
-              <text x="12" y="176" fontSize="9" fill={points.stroke} fontFamily="monospace">
-                GET {HOST}
-                {chosen.path}
-              </text>
-            </svg>
+              </svg>
+              <Readout>
+                <code>
+                  GET {HOST}
+                  {chosen.path}
+                </code>
+              </Readout>
+              </>
           );
         },
       },

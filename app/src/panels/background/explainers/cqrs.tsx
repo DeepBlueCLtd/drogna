@@ -6,6 +6,7 @@
  * it. Its Consequences panel records a **cost**, because one exists (FR-008).
  */
 import { INK, MarkDefs, PokeRegion, categoryStyle, range } from '../marks.js';
+import { Readout } from '../layout.js';
 import type { Explainer } from '../model.js';
 
 const points = categoryStyle('points');
@@ -75,6 +76,7 @@ export const cqrs: Explainer = {
         label: 'The write path: sensors publish, one ingestion seam validates and writes',
         caption: 'One seam, one writer. Every write passes the same validation.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 150" width="100%">
             <MarkDefs />
             {range(3).map((sensor) => (
@@ -95,10 +97,9 @@ export const cqrs: Explainer = {
             <text x="276" y="74" fontSize="9" textAnchor="middle" fill={INK.strong}>
               store
             </text>
-            <text x="12" y="136" fontSize="9" fill={INK.quiet}>
-              Nothing else has a route in, so nothing else can hold a different idea of valid.
-            </text>
           </svg>
+          <Readout>Nothing else has a route in, so nothing else can hold a different idea of valid.</Readout>
+          </>
         ),
       },
     },
@@ -201,6 +202,7 @@ export const cqrs: Explainer = {
         label: 'A reading either accepted into the store or refused and counted outside it, with no quality column',
         caption: 'Acceptance is binary and decided once, at the write.',
         draw: () => (
+          <>
           <svg viewBox="0 0 320 160" width="100%">
             <MarkDefs />
             <rect x="12" y="58" width="70" height="34" fill={points.fill} stroke={points.stroke} strokeWidth={points.strokeWidth} />
@@ -225,10 +227,9 @@ export const cqrs: Explainer = {
             <text x="277" y="108" fontSize="8.5" textAnchor="middle" fill={INK.warn}>
               counted
             </text>
-            <text x="12" y="146" fontSize="9" fill={INK.quiet}>
-              Two outcomes. No quality column, so no reader can forget to read one.
-            </text>
           </svg>
+          <Readout>Two outcomes. No quality column, so no reader can forget to read one.</Readout>
+          </>
         ),
       },
     },

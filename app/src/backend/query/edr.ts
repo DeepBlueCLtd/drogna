@@ -32,14 +32,24 @@ export class EdrComponent {
     private readonly store: CoverageStore,
   ) {}
 
-  /** era-or-instance collection ids resolved to holdings, by convention (FR-29). */
+  /**
+   * Collection ids resolved to holdings, by convention (FR-29).
+   *
+   * An era names the collection where the era holds one field — there is one archive
+   * and one now-cast, and asking for `nowcast` is asking for the current one. Where an
+   * era holds several distinct fields the holding names it instead: a run publishes a
+   * forecast and its uncertainty, and an analysis cycle publishes the analysis, the
+   * error it left and the provenance of every cell. Naming those by era would collapse
+   * three fields onto one id and serve whichever was published last, which is what it
+   * did until feature 116 put a second multi-field era in the store.
+   */
   private collectionsById(): Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }> {
     const result = new Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }>();
     for (const descriptor of this.store.holdings()) {
       const entry = this.store.holding(descriptor.holding_id);
       if (!entry) continue;
-      const id = descriptor.era === 'instance' ? descriptor.holding_id : descriptor.era;
-      result.set(id, entry);
+      const manyPerEra = descriptor.era === 'instance' || descriptor.era === 'analysis';
+      result.set(manyPerEra ? descriptor.holding_id : descriptor.era, entry);
     }
     return result;
   }

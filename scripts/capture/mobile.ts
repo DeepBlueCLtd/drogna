@@ -82,7 +82,7 @@ const MAY_SCROLL_SIDEWAYS = [
   // remove one, which is why the list view is not this canvas's small-screen
   // replacement. Every other view is still held to the rule.
   '.flow-canvas-scroll',
-  // The Intro architecture drawing (feature 116), and the third instance of the same
+  // The Intro architecture drawing (feature 117), and the third instance of the same
   // case. It scales to fit where the shortfall is small and pans at full size below
   // that floor; a phone is always below it, so a phone always pans. The alternative is
   // a 618-pixel drawing rendered at 0.6, which is FR-024's own prohibition — scaled

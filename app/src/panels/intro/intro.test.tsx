@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Intro walkthrough (feature 116, FR-76 to FR-79).
+ * The Intro walkthrough (feature 117, FR-76 to FR-79).
  *
  * Three things are held here, and each is watched failing rather than trusted:
  *
@@ -33,6 +33,8 @@ import {
   type Beat,
 } from './storyboard.js';
 import { METRICS, collapse, place, region, route } from './geometry.js';
+import { buildFlow } from '../operator/graph.js';
+import { topology } from '../../generated/topology.js';
 import { restForStep, stepFromRest } from './address.js';
 
 afterEach(cleanup);
@@ -188,7 +190,13 @@ describe('the drawing is held to the declaration (FR-77)', () => {
     );
   });
 
-  it('draws the loop as a ring: four corners, and the wires that close it', () => {
+  it('draws the loop as a ring: the band closes, through every node in it', () => {
+    // Asserted as a property, not as a list of names. The first version of this test
+    // named the four members, and when feature 116 landed the analyst it failed for the
+    // right reason and had to be hand-edited to a new list — which is a check that has to
+    // be maintained rather than one that holds. What the band actually claims is that the
+    // loop turns there, so that is what is checked: everything inside it declares the loop
+    // band, and the derived wires carry a cycle that visits all of them.
     const inLoop = nodesOf().filter(
       (node) =>
         node.place.col >= LOOP_REGION.from.col &&
@@ -196,15 +204,34 @@ describe('the drawing is held to the declaration (FR-77)', () => {
         node.place.row >= LOOP_REGION.from.row &&
         node.place.row <= LOOP_REGION.to.row,
     );
-    expect(inLoop.map((node) => node.component).sort()).toEqual([
-      'coverage-store',
-      'model-runner',
-      'monitor',
-      'scheduler',
-    ]);
-    // Each occupies its own corner of the band: a ring drawn with two boxes in a row
-    // would be a line.
-    expect(new Set(inLoop.map((node) => `${node.place.col},${node.place.row}`)).size).toBe(4);
+    expect(inLoop.length).toBeGreaterThan(2);
+    // Each in its own cell: a ring with two boxes in one place would be a line.
+    expect(new Set(inLoop.map((node) => `${node.place.col},${node.place.row}`)).size).toBe(
+      inLoop.length,
+    );
+    const declared = new Map(shell.components.map((component) => [component.id, component.band]));
+    for (const node of inLoop) expect(declared.get(node.component)).toBe('loop');
+
+    // The wires, derived exactly as the drawing derives them, restricted to the band.
+    const members = new Set(inLoop.map((node) => node.component));
+    const out = new Map([...members].map((id) => [id, [] as string[]]));
+    for (const link of collapse(buildFlow(shell, topology).edges)) {
+      if (members.has(link.from) && members.has(link.to) && link.from !== link.to) {
+        out.get(link.from)?.push(link.to);
+      }
+    }
+    // A cycle through every member, found rather than assumed. Five nodes, so the search
+    // is trivial; what matters is that the claim on the band is the claim being tested.
+    const walk = (at: string, seen: string[]): boolean => {
+      if (seen.length === members.size) return (out.get(at) ?? []).includes(seen[0]);
+      for (const next of out.get(at) ?? []) {
+        if (seen.includes(next)) continue;
+        if (walk(next, [...seen, next])) return true;
+      }
+      return false;
+    };
+    const start = inLoop[0].component;
+    expect(walk(start, [start]), `no cycle visits every node in the loop band`).toBe(true);
   });
 });
 

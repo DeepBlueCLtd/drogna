@@ -48,7 +48,7 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
   // without going back to the rail ten times.
   //
   // Where the listener sits and what it guards against moved to `shell/arrow-keys.ts`
-  // when the Intro walkthrough needed the same three guards (feature 116). The reasoning
+  // when the Intro walkthrough needed the same three guards (feature 117). The reasoning
   // that was written out here is written out there.
   //
   // At the two ends of the course there is nowhere to go and the key does nothing.
@@ -79,7 +79,7 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
       <div className="bg-main">
         <header className="bg-head">
           <p className="bg-frame">
-            The standards, and what it takes to use them honestly. Ten explainers, in
+            The standards, and what it takes to use them honestly. Eleven explainers, in
             order. Nothing here reads the running system: these are drawings about
             interfaces, and where a claim is about drogna it links to the view that shows
             it rather than depicting it.

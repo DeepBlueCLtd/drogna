@@ -159,6 +159,19 @@
         "subscribe": [
           "ctl/operator/command",
           "obs/#",
+          "ctl/analysis/published",
+          "ctl/clock"
+        ]
+      },
+      {
+        "role": "analyst",
+        "publish": [
+          "ctl/analysis/published",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "obs/#",
+          "ctl/run/request",
           "ctl/run/published",
           "ctl/clock"
         ]
@@ -171,7 +184,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
-          "ctl/run/request",
+          "ctl/analysis/published",
           "ctl/clock"
         ]
       },
@@ -658,6 +671,7 @@
     "topics": {
       "clock": "ctl/clock",
       "run_request": "ctl/run/request",
+      "analysis_published": "ctl/analysis/published",
       "run_started": "ctl/run/started",
       "run_published": "ctl/run/published"
     },
@@ -676,6 +690,37 @@
     "noise_std": {
       "temperature": 0.35,
       "salinity": 0.03
+    }
+  },
+  "analyst": {
+    "id": "analyst",
+    "stream": "analyst-perturbations",
+    "topics": {
+      "clock": "ctl/clock",
+      "observations": "obs/#",
+      "run_request": "ctl/run/request",
+      "run_published": "ctl/run/published",
+      "analysis_published": "ctl/analysis/published"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
+    "correlation": {
+      "horizontal_km": 30,
+      "vertical_m": 160
+    },
+    "excluded_datastreams": [
+      "ownship-course",
+      "ownship-speed",
+      "ownship-depth"
+    ],
+    "shares": {
+      "archive": "archive",
+      "departure": "departure forecast",
+      "measurement": "measurement",
+      "model": "model"
     }
   },
   "planner": {
@@ -717,13 +762,6 @@
     "speeds": {
       "horizontal_m_per_s": 2.5,
       "vertical_m_per_s": 0.5
-    },
-    "footprint": {
-      "peak": 0.85,
-      "horizontal_efolding_m": 12000,
-      "vertical_efolding_m": 120,
-      "rings": 2,
-      "band_reach": 1
     },
     "usable_threshold": 0.12,
     "restarts": 4,
@@ -1186,11 +1224,18 @@
         "rank": 3
       },
       {
+        "id": "analyst",
+        "label": "Analyst",
+        "beat": 116,
+        "band": "loop",
+        "rank": 4
+      },
+      {
         "id": "model-runner",
         "label": "Model runner",
         "beat": 105,
         "band": "loop",
-        "rank": 4
+        "rank": 5
       },
       {
         "id": "planner",
@@ -1241,6 +1286,7 @@
       "holdings": "cov/holdings",
       "plan": "ctl/plan",
       "run_published": "ctl/run/published",
+      "analysis_published": "ctl/analysis/published",
       "advisories": "adv/advisories",
       "all": "#",
       "platform_state": "ctl/platform/state",
@@ -1378,7 +1424,7 @@
         {
           "from": "ingest",
           "to": "observation-store",
-          "label": "the store\u2019s sole writer"
+          "label": "the store’s sole writer"
         },
         {
           "from": "observation-store",

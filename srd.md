@@ -241,11 +241,15 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 - **FR-20** §3's world: generator, seeded features, tau, manifests — inspectable in
   the shell.
-- **FR-21** The coverage holdings span three eras from the start of a scenario: a
+- **FR-21** The coverage holdings span four eras from the start of a scenario: a
   multi-decade monthly **historic archive** authored deterministically at provisioning
   (through the publisher's path, FR-11); a **now-cast** replaced on a configured
-  cadence, its manifest recording its derivation; and the accumulating forecast
-  **instances** once the loop turns. Each holding's discovery document states its
+  cadence, its manifest recording its derivation; the **analysis** an assimilation
+  cycle publishes, being the forecast corrected by what the platform measured, with the
+  error that correction left and the provenance of every cell beside it (feature 116);
+  and the accumulating forecast **instances** once the loop turns. The now-cast is
+  evaluated from the true field and is therefore the reference the monitor scores
+  against — nothing forecasts from it, and a gate holds that. Each holding's discovery document states its
   extent truthfully, verified against the store by test *(v1 FR-54 to FR-58)*.
 - **FR-46** The **Holdings** tab shall show the coverage store's inventory as the store
   itself reports it: fetched through the seam and the release gate as a GET against the
@@ -322,8 +326,14 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-30** The loop carries whole: the monitor subscribes to observation topics,
   computes sound-speed residuals against the current forecast, and raises divergence
   events only on sustained persistence; the scheduler enforces a minimum interval and
-  deduplicates; the model runner advects analytically with noise behind the kernel
-  port and runs a small ensemble, emitting spread as an uncertainty field; the
+  deduplicates; **the analyst corrects the standing forecast by the observations taken
+  since its last cycle, by optimal interpolation with the background error from the
+  run's own published spread and the observation error from each instrument's declared
+  noise, and publishes the analysis, its error and its provenance before announcing**
+  (feature 116); the model runner initialises from what that announcement names,
+  perturbs its members by the error the analysis left, advects analytically with noise
+  behind the kernel port and runs a small ensemble, emitting spread as an uncertainty
+  field; the
   publisher makes runs visible atomically (digest-checked, FR-13), retains them as
   instances, and announces each on the control namespace — consumers subscribe,
   nothing polls *(v1 FR-22 to FR-31)*.
@@ -340,10 +350,15 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 ### 5.6 Uncertainty and planning (feature 106)
 
-- **FR-33** Uncertainty combines ensemble spread with observation age against tau; the
-  planner simulates the collapse of uncertainty along candidate routes, commits a
-  single route with diminishing returns incorporated, replans on a receding horizon,
-  and projects when regions fall below usable confidence *(v1 FR-32 to FR-35)*.
+- **FR-33** Uncertainty is the error the analysis published, decayed against tau; the
+  planner simulates the collapse of uncertainty along candidate routes — using the
+  analysis's own correlation and its own closed form for what a visit would leave,
+  never a separately declared footprint — commits a single route with diminishing
+  returns incorporated, replans on a receding horizon, and projects when regions fall
+  below usable confidence *(v1 FR-32 to FR-35; amended by feature 116, which retired
+  the observation-age term: until an analysis existed the ensemble spread carried no
+  spatial structure at all, every member starting from the same state, and the age
+  field was the proxy that supplied it)*.
 - **FR-34** The planner emits recommendations only; the harness is headless with
   respect to decisions *(v1 FR-36; Constitution VIII)*.
 
@@ -757,14 +772,14 @@ pass only one of the three is not finished.
   regions their panels declare — so that a surface gaining a feature and not a step is
   reported by name. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
-### 5.16 The architecture, drawn (feature 116)
+### 5.16 The architecture, drawn (feature 117)
 
 The Intro tab was a numbered list of landed features. A reader arriving at it wants to
 know what the thing is made of and how the parts fit together, and a changelog ordered by
 when the work landed answers that only for somebody who already knows. This beat changes
 no simulation, adds no component, moves no data and needs no new master: it is entirely
 about what the first tab shows of what already runs. The specification is
-`specs/116-intro-architecture/`.
+`specs/117-intro-architecture/`.
 
 - **FR-76** The Intro tab shall carry a **drawing of the system architecture** that is
   built up **one step at a time under the reader's own control** — arrow keys, and

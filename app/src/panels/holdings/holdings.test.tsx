@@ -20,6 +20,7 @@ import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, CoverageHolding } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
+import { driveTicks, driveUntil } from '../../backend/test-support/drive.js';
 import { createSeamFetch } from '../../seam/http.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import type { PanelParams } from '../../shell/Shell.js';
@@ -71,7 +72,15 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
   }
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    // Everything but setImmediate, and for a reason worth stating. These tests turn the
+    // loop thousands of times, and a drive that never reaches a macrotask turn stops the
+    // vitest worker answering the main process — birpc's deadline for that reply is 60
+    // seconds and is not configurable, so the run exits non-zero on
+    // `Timeout calling "onTaskUpdate"` with every test in it passing. test-support/drive.ts
+    // yields with setImmediate for exactly that, and cannot help a file that fakes it.
+    // What this file actually needs faked is the clock the heartbeats run on, which is
+    // setTimeout, setInterval and Date; setImmediate is not one of them.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     config = lockstepConfig();
     runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
     asked = [];
@@ -177,7 +186,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     // inside the validity it forecasts — the common case, and the one the panel must
     // refuse rather than compare against a truth that has not happened.
     await act(async () => {
-      for (let tick = 0; tick < 3000 && !published; tick++) runtime.clock.tickOnce();
+      await driveUntil(runtime.clock, () => published, 3000);
       await settle(() => document.querySelector('[data-era="instance"]') !== null);
     });
     if (!published) throw new Error('no run published in 3000 ticks; the loop is not turning');
@@ -208,13 +217,13 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     // covering the instant it forecast exists.
     let comparable: HTMLElement | undefined;
     await act(async () => {
-      for (let tick = 0; tick < 6000 && !published; tick++) runtime.clock.tickOnce();
+      await driveUntil(runtime.clock, () => published, 6000);
       await settle(() => document.querySelector('[data-era="instance"]') !== null);
     });
     if (!published) throw new Error('no run published; the loop is not turning');
     for (let round = 0; round < 40 && !comparable; round++) {
       await act(async () => {
-        for (let tick = 0; tick < 200; tick++) runtime.clock.tickOnce();
+        await driveTicks(runtime.clock, 200);
         await settle(() => false, 200);
       });
       for (const bar of [...document.querySelectorAll('[data-holding][data-era="instance"]')]) {

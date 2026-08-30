@@ -18,13 +18,15 @@
 import { cellToLatLng, latLngToCell, polygonToCells, gridDisk } from 'h3-js';
 import type { SeamClient } from '../../seam/transport.js';
 import type {
+  AnalysisPublished,
+  ConfigAnalyst,
+  ConfigSensors,
   ConfigPlanner,
   Observation,
   OperatorCommand,
   Plan,
   PlanProjectionEntry,
   PlanVertex,
-  RunPublished,
 } from '../../generated/types.js';
 import { Rng, fnv1a32 } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
@@ -62,9 +64,17 @@ export class Planner {
    */
   soundingsInformed = 0;
   private platform: { latitude: number; longitude: number; depth_m: number } | undefined;
-  private spreadHoldingId: string | undefined;
-  private spreadDigest: string | null = null;
-  private spreadRunId: string | undefined;
+  /**
+   * The analysis error field the plan is scored against, and the run it came from.
+   * Until feature 116 this was the ensemble spread multiplied by an observation-age
+   * field — a proxy that had to exist because the spread carries no spatial structure
+   * at all: every ensemble member starts from the same state, so its divergence is a
+   * function of lead time and nothing else. The analysis error has the structure for
+   * real, because a measurement reduces it where the measurement reached.
+   */
+  private errorHoldingId: string | undefined;
+  private errorDigest: string | null = null;
+  private errorRunId: string | undefined;
   private coverCells: PlanningCell[] | undefined;
   /** The doubt threshold in force, where the operator plane has changed it. */
   private tunedUsable: number | undefined;
@@ -74,6 +84,8 @@ export class Planner {
 
   constructor(
     private readonly config: ConfigPlanner,
+    private readonly analyst: ConfigAnalyst,
+    private readonly sensors: ConfigSensors,
     private readonly client: SeamClient,
     private readonly store: CoverageStore,
     private readonly featureStore: FeatureStore,
@@ -119,16 +131,19 @@ export class Planner {
     this.client.subscribe(this.config.topics.command, (message) => {
       this.obey(message.payload as OperatorCommand);
     });
-    this.client.subscribe(this.config.topics.run_published, (message) => {
-      const published = message.payload as RunPublished;
-      if (published.current) {
-        this.spreadHoldingId = published.collections.uncertainty;
-        this.spreadDigest = published.digests.uncertainty;
-        this.spreadRunId = published.run_id;
-        // The field the last plan was computed from has been replaced: replan on
-        // the next tick rather than waiting out the cadence.
-        this.lastPlanTick = -1;
-      }
+    // Read from the analyst's own configuration rather than restated in the planner's:
+    // the topic an analysis is announced on is declared once, by the component that
+    // announces it. This replaced a subscription to run_published, under which the
+    // planner scored the ensemble spread — a field with no spatial structure at all,
+    // which is why it needed an observation-age term beside it (feature 116).
+    this.client.subscribe(this.analyst.topics.analysis_published, (message) => {
+      const published = message.payload as AnalysisPublished;
+      this.errorHoldingId = published.collections.error;
+      this.errorDigest = published.digests.error;
+      this.errorRunId = published.run_id;
+      // The field the last plan was computed from has been replaced: replan on
+      // the next tick rather than waiting out the cadence.
+      this.lastPlanTick = -1;
     });
     this.heartbeat.start();
   }
@@ -181,12 +196,12 @@ export class Planner {
   private cachedModel: { key: string; model: UncertaintyModel } | undefined;
 
   private model(): UncertaintyModel | undefined {
-    if (!this.spreadHoldingId) return undefined;
-    const holding = this.store.holding(this.spreadHoldingId);
+    if (!this.errorHoldingId) return undefined;
+    const holding = this.store.holding(this.errorHoldingId);
     if (!holding) return undefined;
     const nowcast = this.store.currentNowcast();
     if (!nowcast) return undefined;
-    // One model per (spread, now-cast) pairing: its memoised geometry and field
+    // One model per (error field, now-cast) pairing: its memoised geometry and field
     // samples are what make the search affordable, and both inputs are immutable
     // once published.
     const key = `${holding.descriptor.holding_id}|${nowcast.descriptor.holding_id}`;
@@ -195,6 +210,8 @@ export class Planner {
     // evaluation at a point, never a blend of the planner's own (ADR-0002).
     const model = createUncertaintyModel(
       this.config,
+      this.analyst,
+      this.sensors,
       holding,
       worldFromManifest(nowcast.descriptor.manifest),
       timescaleFromManifest(nowcast.descriptor.manifest),
@@ -390,7 +407,7 @@ export class Planner {
     candidateCount: number,
     secondValue: number,
   ): void {
-    if (!this.platform || !this.spreadRunId) return;
+    if (!this.platform || !this.errorRunId) return;
     const planId = fnv1a32(`${this.runId}:plan:${this.planOrdinal}`).toString(16).padStart(8, '0');
     const now = this.posixNow();
     const horizonEnd = now + this.config.budget_seconds;
@@ -426,9 +443,9 @@ export class Planner {
         span_seconds: this.config.budget_seconds,
       },
       uncertainty_field: {
-        run_id: this.spreadRunId,
-        variable: 'temperature_spread',
-        digest: this.spreadDigest,
+        run_id: this.errorRunId,
+        variable: 'temperature_error',
+        digest: this.errorDigest,
       },
       indexing: {
         h3_resolution: this.config.h3_resolution,

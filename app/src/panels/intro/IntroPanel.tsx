@@ -1,5 +1,5 @@
 /**
- * The Intro tab (SRD-v2 FR-42 as amended, FR-76 to FR-79; feature 116): the system
+ * The Intro tab (SRD-v2 FR-42 as amended, FR-76 to FR-79; feature 117): the system
  * architecture, drawn, and grown one component at a time under the reader's own arrow
  * keys.
  *

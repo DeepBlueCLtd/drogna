@@ -1,14 +1,21 @@
 /**
- * The Intro tab's architecture walkthrough (SRD-v2 FR-76 to FR-79, feature 116): what
+ * The Intro tab's architecture walkthrough (SRD-v2 FR-76 to FR-79, feature 117): what
  * is revealed, in what order, what is said about it, and where it sits.
  *
- * **This is a curated picture, and it says which parts it leaves out.** Twenty
- * components run; thirteen are drawn. The four flows a reader arrives wanting — samples
+ * **This is a curated picture, and it says which parts it leaves out.** Twenty-one
+ * components run; fourteen are drawn. The four flows a reader arrives wanting — samples
  * in, validated and stored, the forecast updated when the field drifts or the cadence
  * falls due, and the result interrogated from outside through standard interfaces — are
- * carried by those thirteen, and the other seven are a second subject each. The Operator
- * tab already draws all twenty with every wire; a second complete flow chart here would
- * be the same picture told worse.
+ * carried by those fourteen, and the other seven are a second subject each. The Operator
+ * tab already draws all twenty-one with every wire; a second complete flow chart here
+ * would be the same picture told worse.
+ *
+ * The fourteenth arrived by merge rather than by design. Feature 116 landed the analyst
+ * while this was in flight, and the gate below stopped the build naming it, because a
+ * component that had landed was in neither the drawing nor the omissions. It is drawn,
+ * and the model runner's step was rewritten around it — that step said the runner
+ * assimilated the observations, which had stopped being true. That is the whole case for
+ * the gate, made by an event rather than by a plant.
  *
  * A curated picture is only honest if the curation is recorded, so `NOT_DRAWN` names
  * every omission **with its reason**, and `storyboardFindings` fails on a component that
@@ -24,10 +31,10 @@
  * shell's declared endpoints.
  *
  * The composition is the argument. The top row is the world and the instruments in it;
- * the right column is the write path, straight down — sample, validate, store; the four
- * boxes at the left are drawn as an actual rectangle because the forecast loop is a
- * loop, and a picture of it that is not a ring has lost the one thing worth saying about
- * it; the foot is the way out.
+ * the right column is the write path, straight down — sample, validate, store; the five
+ * boxes at the left are banded because the forecast loop is a loop, and a picture of it
+ * that is not a ring has lost the one thing worth saying about it; the foot is the way
+ * out.
  */
 import type { ConfigShell } from '../../generated/types.js';
 
@@ -77,10 +84,10 @@ export interface Beat {
 export const PLANE_ROW = 4;
 
 /**
- * The cells the loop turns in, drawn as a band behind them. The rectangle is the
- * argument of the whole drawing — store, monitor, scheduler, runner, and back to the
- * store — and a band around it is what stops a reader having to trace four wires to see
- * that it closes.
+ * The cells the loop turns in, drawn as a band behind them. The ring is the argument of
+ * the whole drawing — store, monitor, scheduler, analyst, runner, and back to the store —
+ * and a band around it is what stops a reader having to trace five wires to see that it
+ * closes.
  *
  * The band is authored, like the cells; what is checked is that everything inside it
  * declares `band: "loop"`. The check is one-directional on purpose: the environment
@@ -89,7 +96,7 @@ export const PLANE_ROW = 4;
  */
 export const LOOP_REGION = {
   from: { col: 0, row: 1 },
-  to: { col: 1, row: 2 },
+  to: { col: 1, row: 3 },
 } as const;
 
 export const STORYBOARD: readonly Beat[] = [
@@ -197,28 +204,51 @@ export const STORYBOARD: readonly Beat[] = [
     title: 'A run is warranted — by drift, or by the clock',
     prose: [
       'The scheduler holds the policy, and it has two doors. A sustained divergence asks ' +
-        'for a run; so does the cadence floor, which fires when enough simulation time ' +
+        'for a cycle; so does the cadence floor, which fires when enough simulation time ' +
         'has elapsed whether or not anything has drifted. A run warranted by the floor ' +
         'alone is labelled scheduled, never divergence-driven, wherever runs appear.',
       'The other half of the policy is the minimum interval: a breach that arrives too ' +
         'soon after the last run is declined, observably, with the bound named. Between ' +
         'the two the loop can neither be stampeded nor becalmed for good.',
     ],
-    reveals: [{ component: 'scheduler', place: { col: 1, row: 2 } }],
+    reveals: [{ component: 'scheduler', place: { col: 0, row: 3 } }],
     liveView: { view: 'operator', label: 'What it decided last, in Operator' },
   },
   {
-    id: 'the-loop',
-    title: 'The forecast updates, and the loop closes',
+    id: 'assimilation',
+    title: 'The measurements are let into the field',
     prose: [
-      'The model runner takes three things: the archive as its prior, the observations ' +
-        'since the last run, and the current holding as the state to start from. It ' +
-        'advects an ensemble behind a kernel port and publishes the mean with its spread ' +
-        'back into the coverage store, through the same digest-checked seam as ' +
-        'everything else.',
-      'That write is the fourth side of the rectangle. The store feeds the monitor, the ' +
-        'monitor feeds the scheduler, the scheduler asks for a run, the run writes the ' +
-        'store — and the picture is a ring because the system is one.',
+      'This is the step the loop went without until feature 116, and it is where the ' +
+        'question a reader arrives with — what did the platform\u2019s measurements ' +
+        'actually change? — is finally answerable. The analyst takes the standing ' +
+        'forecast as its background and corrects it by the observations taken since its ' +
+        'last cycle, by optimal interpolation: the background error comes from the ' +
+        'run\u2019s own published spread and the observation error from each ' +
+        'instrument\u2019s declared noise, so the weight a reading is given is derived ' +
+        'from what the system already said about its own confidence rather than tuned by ' +
+        'hand.',
+      'It publishes three things, not one: the analysis, the error the correction left ' +
+        'behind, and a provenance field saying what share of each cell came from the ' +
+        'archive, from the forecast and from the measurements. The doubt the planner ' +
+        'reads is that error field, so confidence falls where sampling genuinely reduced ' +
+        'it rather than where a timer said it should have.',
+    ],
+    reveals: [{ component: 'analyst', place: { col: 1, row: 2 } }],
+    liveView: { view: 'map', label: 'Where the measurements landed, on the Map' },
+  },
+  {
+    id: 'the-loop',
+    title: 'The forecast runs on, and the loop closes',
+    prose: [
+      'The model runner initialises from what the analysis announcement names — not from ' +
+        'the last forecast, which is the whole difference the analysis step makes — ' +
+        'perturbs its members by the error the analysis left, and advects a small ' +
+        'ensemble behind the kernel port. It publishes the mean with its spread back into ' +
+        'the coverage store, through the same digest-checked seam as everything else.',
+      'That write is the last side of the ring. The store feeds the monitor, the monitor ' +
+        'feeds the scheduler, the scheduler asks for a cycle, the analyst lets the ' +
+        'measurements in, the runner carries the result forward and writes the store — ' +
+        'five turns, and the picture is a ring because the system is one.',
     ],
     reveals: [{ component: 'model-runner', place: { col: 1, row: 1 } }],
     liveView: { view: 'holdings', label: 'The instances it published' },
@@ -240,7 +270,7 @@ export const STORYBOARD: readonly Beat[] = [
         'time.',
     ],
     reveals: [
-      { component: 'query', place: { col: 1, row: 3 }, servesOutside: true },
+      { component: 'query', place: { col: 2, row: 3 }, servesOutside: true },
       { component: 'boundary', place: { col: 2, row: PLANE_ROW } },
     ],
     liveView: { view: 'map', label: 'Compose an EDR query yourself' },

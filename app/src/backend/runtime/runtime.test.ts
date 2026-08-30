@@ -61,6 +61,7 @@ describe('the backend runtime', () => {
     expect([...heard.keys()].sort()).toEqual([
       'advisory-source',
       'advisory-store',
+      'analyst',
       'boundary',
       'broker',
       'clock',

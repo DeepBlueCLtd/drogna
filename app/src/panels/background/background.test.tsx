@@ -5,7 +5,7 @@
  * FR-004 says no explainer reads run state, subscribes to the broker, or issues a
  * request across the seam, and that the tab renders identically with every component
  * stopped. So this file starts nothing. It hands the panel a client whose every
- * method throws and a fetch that throws, walks all ten explainers end to end, and
+ * method throws and a fetch that throws, walks all eleven explainers end to end, and
  * reports anything either trap caught.
  *
  * Every absence asserted here is also watched being found. The planted faults live
@@ -80,7 +80,7 @@ function underNothingRunning(draw: (props: IDockviewPanelProps<PanelParams>) => 
 }
 
 describe('Background is inert (FR-004, SC-001, SC-002)', () => {
-  it('renders and traverses all ten explainers with every component stopped', () => {
+  it('renders and traverses all eleven explainers with every component stopped', () => {
     const reached = underNothingRunning((props) => {
       render(<BackgroundPanel {...props} />);
       for (const explainer of COURSE) {
@@ -205,12 +205,17 @@ describe('every explainer closes on the same three axes (FR-008, FR-020, SC-007)
  * ------------------------------------------------------------------ */
 
 describe('the course', () => {
-  it('carries the ten explainers in order, each with a distinct id (FR-002)', () => {
+  it('carries the eleven explainers in order, each with a distinct id (FR-002)', () => {
     expect(COURSE.map((explainer) => explainer.id)).toEqual([
       'why-a-standard',
       'points-and-fields',
       'netcdf',
       'holdings',
+      // Feature 116. It follows 'What a holding is' because that one introduced the
+      // eras as different things, and this one shows a measurement moving between
+      // them. It is the only explainer depicting drogna's own maths rather than a
+      // standard, and it says so.
+      'analysis',
       'sensorthings',
       'edr',
       'pygeoapi',
@@ -536,7 +541,7 @@ describe('the narrow panel (FR-021, FR-024)', () => {
     const options = [...document.querySelectorAll('option')];
     expect(options).toHaveLength(COURSE.length);
     expect(options.map((option) => option.value)).toEqual(COURSE.map((explainer) => explainer.id));
-    expect(options[7].textContent).toMatch(/8 · MQTT · \d+ steps/);
+    expect(options[8].textContent).toMatch(/9 · MQTT · \d+ steps/);
     cleanup();
     render(<Rail course={COURSE} current="mqtt" onSelect={() => {}} width={RAIL_WIDTH_THRESHOLD + 1} />);
     expect(document.querySelector('.bg-rail')?.getAttribute('data-collapsed')).toBe('false');

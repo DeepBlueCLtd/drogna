@@ -330,9 +330,9 @@ as a table.
   it "engaging" would mean making it a demonstration, and every demonstration it would
   contain is one tab away and linked from the sentence that mentions it.
 
-  *Superseded by feature 116, 30 August 2026, and the reason is worth recording because
+  *Superseded by feature 117, 30 August 2026, and the reason is worth recording because
   this bullet was wrong in a specific way. The objection it answers — "engaging" meaning
-  a second copy of a demonstration that lives one tab away — still stands, and 116 does
+  a second copy of a demonstration that lives one tab away — still stands, and 117 does
   not do that. What this bullet missed is that the numbered list was never answering the
   question a first-time reader arrives with, and that the tab had a subject of its own
   available: the architecture, which no other tab draws for a reader who has not met the

@@ -1,6 +1,6 @@
 /**
  * The Intro tab's drawing: the architecture, grown one step at a time
- * (SRD-v2 FR-76 to FR-78, feature 116).
+ * (SRD-v2 FR-76 to FR-78, feature 117).
  *
  * The composition follows the Operator flow chart's arrangement for the same reason it
  * does there: wires in one SVG layer, nodes as absolutely-positioned real DOM on top.
@@ -146,7 +146,8 @@ export function Diagram({
     node.place.row >= LOOP_REGION.from.row &&
     node.place.row <= LOOP_REGION.to.row;
   // Only once the ring closes: the band says the loop turns here, and it does not turn
-  // until the write that closes it exists.
+  // until the write that closes it exists. Five turns since feature 116 added the
+  // analyst, and the condition is the cells' own membership rather than a count.
   const loopClosed = nodes.filter(inLoop).every((node) => shown.has(node.component));
   const loop = region(LOOP_REGION.from, LOOP_REGION.to);
 

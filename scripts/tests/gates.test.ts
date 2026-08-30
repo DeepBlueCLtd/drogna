@@ -28,6 +28,7 @@ import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
+import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
 import { runGate as introStoryboard } from '../gates/check-intro-storyboard.js';
 import {
   NOT_DRAWN,
@@ -41,6 +42,19 @@ const violations = join(fixtures, 'violations');
 const clean = join(fixtures, 'clean');
 
 describe('each gate catches its planted violation and passes a clean tree', () => {
+  it('truth-initialisation: a component reaching for the true field fails; the real tree passes', () => {
+    // The leak this feature closed: for nine features the model runner initialised
+    // from a now-cast evaluated from the true ocean, so nothing the platform measured
+    // ever changed a field value. Planted here as a component outside the permitted
+    // four calling the accessor that hands back those bytes.
+    const found = truthInitialisation(violations);
+    expect(found.map((f) => f.message)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/may not read the truth-derived now-cast/)]),
+    );
+    expect(found.some((f) => f.file.includes('model-runner'))).toBe(true);
+    expect(truthInitialisation(clean)).toEqual([]);
+  });
+
   it('wallclock', () => {
     const found = wallclock(violations);
     expect(found.map((f) => f.message)).toEqual(

@@ -139,9 +139,18 @@ export class PulseBoard {
   /**
    * A message crossed the broker on `topic`, and the wires that carry it light. Which
    * kind of light is the clock's verdict, not this module's.
+   *
+   * Returns how many wires it lit, which is often none: a good share of the topics
+   * light nothing, either because they are the plane or because this display is the
+   * only thing subscribed to them (`Flow.suppressed` and `Flow.topicsTerminal` are the
+   * two lists, and neither is counted here). The caller uses it to tell a picture that
+   * is dark because nothing arrived from one that is dark because what arrived was
+   * never drawn — which, at real time, is most of the time.
    */
-  mark(topic: string, kind: PulseKind): void {
+  mark(topic: string, kind: PulseKind): number {
+    let lit = 0;
     for (const key of this.carrying(topic)) {
+      lit += 1;
       this.owed.set(key, kind === 'held' ? 1 : this.linger);
       const element = this.elements.get(key);
       if (!element) continue;
@@ -159,6 +168,7 @@ export class PulseBoard {
       element.setAttribute('data-pulse', 'fading');
       element.setAttribute('data-pulse-turn', next);
     }
+    return lit;
   }
 
   /**

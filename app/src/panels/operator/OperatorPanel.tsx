@@ -132,6 +132,18 @@ export function OperatorPanel({ params }: PanelProps) {
    * change must not tear every subscription down and build it again.
    */
   const pulseKindRef = useRef<PulseKind>('fading');
+  /**
+   * The tick the clock last reported, and the tick at which something last ran down a
+   * wire the picture draws. Refs because the broker subscription is established once
+   * and reads them, and because the sweep already re-renders the panel every beat —
+   * a piece of state per message would re-render it per message instead.
+   *
+   * The second one is why a reader can tell a dark picture apart from a broken one. It
+   * is a tick and not a host duration on purpose: a display that answered "14 seconds"
+   * would be answering in the one unit the harness does not run on.
+   */
+  const tickRef = useRef<number | null>(null);
+  const lastCrossingRef = useRef<number | null>(null);
   const holdingSizesRef = useRef<number[]>([]);
   /**
    * Ocean datastreams the shell has genuinely heard, in arrival order. Kept rather
@@ -242,7 +254,15 @@ export function OperatorPanel({ params }: PanelProps) {
         // subscription as the counter above and under the same rule: this says traffic
         // crossed, which is true of a message whichever way its master then judges it.
         // A light is not a figure drawn from a payload, and nothing below reads one.
-        pulses.mark(message.topic, pulseKindRef.current);
+        //
+        // Most messages light nothing, and that is the picture being honest rather than
+        // idle: the clock and the heartbeats are the plane, and several namespaces are
+        // heard by this display alone. So what is remembered is the last message that
+        // reached a *drawn* wire — the one figure that separates "nothing is happening"
+        // from "this thing is broken", which nothing on screen could answer before.
+        if (pulses.mark(message.topic, pulseKindRef.current) > 0) {
+          lastCrossingRef.current = tickRef.current;
+        }
       }),
       client.subscribe(config.topics.heartbeat, (message) => {
         if (!drawable(message.topic, message.payload)) return;
@@ -270,6 +290,7 @@ export function OperatorPanel({ params }: PanelProps) {
       }),
       client.subscribe(config.topics.clock, (message) => {
         const sample = message.payload as { tick: number; rate?: number };
+        tickRef.current = sample.tick;
         setClock({ tick: sample.tick, rate: sample.rate });
       }),
       client.subscribe(config.topics.holdings, () => {
@@ -413,6 +434,19 @@ export function OperatorPanel({ params }: PanelProps) {
   const selectedNode = flow.nodes.find((node) => node.id === selected);
   /** Named rather than counted, and derived rather than listed (pulse.ts). */
   const shared = useMemo(() => topicsWithSeveralSenders(flow.edges), [flow]);
+  /**
+   * How long the picture has been dark, in the harness's own units. Counted here — the
+   * shell watched its own subscription — and said so, because a figure that does not
+   * say which kind it is is the mistake FR-008 exists to stop.
+   */
+  const quiet = (() => {
+    if (tickRef.current === null) return 'The clock has not reported a tick yet.';
+    if (lastCrossingRef.current === null) {
+      return 'Nothing has crossed a drawn wire since this tab opened, counted here.';
+    }
+    const ticks = tickRef.current - lastCrossingRef.current;
+    return `Last message down a drawn wire: ${ticks} tick(s) ago, counted here.`;
+  })();
 
   /**
    * The components in the order the arrows walk them, which is `flow.nodes` itself and
@@ -632,16 +666,31 @@ export function OperatorPanel({ params }: PanelProps) {
           watches the flicker become a steady light should be able to find out why
           without reading the source. */}
       {asList ? null : (
-        <p className="panel-footnote" data-testid="flow-pulse-note">
-          {holding
-            ? `A wire stays lit while traffic runs down it — the clock is at ${clock.rate}× real time, and a light restarted for every message at that rate is a flicker rather than a signal.`
-            : `A wire lights as a message crosses it, and fades over ${config.flow.pulse.fade_ms / 1000} s.`}{' '}
-          What lights is derived, like the wires themselves: the broker hands a subscriber
-          a topic and never a sender, so a topic more than one component publishes lights
-          all of their wires
-          {shared.length > 0 ? ` — ${shared.join(' and ')} today` : ''}. A port carries no
-          broker traffic and never lights at all.
-        </p>
+        <>
+          <p className="panel-footnote" data-testid="flow-pulse-note">
+            {holding
+              ? `A wire stays lit while traffic runs down it — the clock is at ${clock.rate}× real time, and a light restarted for every message at that rate is a flicker rather than a signal.`
+              : `A wire lights as a message crosses it, and fades over ${config.flow.pulse.fade_ms / 1000} s.`}{' '}
+            What lights is derived, like the wires themselves: the broker hands a subscriber
+            a topic and never a sender, so a topic more than one component publishes lights
+            all of their wires
+            {shared.length > 0 ? ` — ${shared.join(' and ')} today` : ''}. A port carries no
+            broker traffic and never lights at all.
+          </p>
+          {/* The sentence this tab did not have, and the one a reader wants first: at
+              real time the chart is dark far more often than it is lit, and until now
+              nothing on screen distinguished that from a display that had stopped
+              working. It is the question the change itself provoked the moment it was
+              watched at ×1. */}
+          <p className="panel-footnote" data-testid="flow-quiet-note">
+            <span className="flow-drawer-counted">{quiet}</span>{' '}
+            {flow.suppressed.length} filter(s) are drawn as the plane and{' '}
+            {flow.topicsTerminal.length} topic(s) are heard by this display alone: both
+            kinds cross the broker constantly and light nothing, so traffic can be flowing
+            while every wire is dark. What lights the wires is the instruments publishing,
+            on the cadence their own face reports rather than on every tick.
+          </p>
+        </>
       )}
 
       <Legend />

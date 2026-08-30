@@ -70,6 +70,25 @@ describe('which wires a message runs down', () => {
     expect(edgesCarrying([port, wire], 'obs/platform-a/temperature-050m')).toEqual([edgeKey(wire)]);
   });
 
+  it('reports how many wires a message lit, and most messages light none', () => {
+    // The figure the panel needs to tell a dark picture from a broken one. Every topic
+    // the wiring declares is put through it, and the ones that light nothing are named
+    // by the two lists that already exist rather than by a list here — this is the fact
+    // that made the chart look asleep at real time, so it is pinned rather than assumed.
+    const board = new PulseBoard(flow.edges, 3);
+    const dark = topology.topics
+      .map((entry) => entry.topic)
+      .filter((topic) => board.mark(topic, 'fading') === 0);
+    const accountedFor = new Set([...flow.suppressed, ...flow.topicsTerminal]);
+    for (const topic of dark) expect(accountedFor.has(topic)).toBe(true);
+    // Not a vacuous pass: something does light, and something does not.
+    expect(dark.length).toBeGreaterThan(0);
+    expect(dark.length).toBeLessThan(topology.topics.length);
+    // The one that crosses on every tick at real time, and draws nothing: the platform
+    // reports its state to this display and to nothing else in the picture.
+    expect(dark).toContain('ctl/platform/state');
+  });
+
   it('names the topics whose lights are an approximation, from the wiring', () => {
     // The panel says this sentence on screen, so the list had better be the wiring's
     // and not a phrase someone typed. Recomputed here from the topology itself.

@@ -158,6 +158,13 @@ composition root (ADR-0030), the operator surface and the map all come from them
       that clears a light nobody saw, a port allowed to light, the panel hearing traffic
       and lighting nothing, and — once the fade outgrew the sweep — a light put out
       mid-fade and a derivation that forgot a fade can outlast a beat.
+      Watching it at ×1 asked the question the tab could not answer: the wires are dark
+      for twenty-seven seconds in every thirty, because the instruments sample every
+      thirty ticks and everything crossing in between is either the plane or a topic
+      only the shell subscribes to — and nothing on screen distinguished that from a
+      display that had stopped. So the chart now says how many ticks since anything ran
+      down a drawn wire (counted here), and how much of the traffic legitimately lights
+      nothing, both derived from the graph rather than written into a sentence.
       What the lights cannot say is said on screen instead — the seam hands a subscriber
       a topic and never a sender, so a topic with two publishers lights both their wires,
       and the panel names those topics from the edge set rather than from a phrase.

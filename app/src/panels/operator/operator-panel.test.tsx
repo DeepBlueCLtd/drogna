@@ -1194,6 +1194,56 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(lit()).toEqual([]);
     });
 
+    it('says how long the picture has been dark, so quiet is not mistaken for broken', async () => {
+      // The complaint this answers: at real time the instruments sample every thirty
+      // ticks, so for twenty-seven seconds in every thirty the chart is legitimately
+      // dark — and nothing on screen said whether that was the system being quiet or
+      // the display having stopped. Found by watching the running page at ×1, not here.
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const quiet = () => screen.getByTestId('flow-quiet-note').textContent ?? '';
+      // Ticking without reaching a sampling tick: traffic crosses the broker the whole
+      // time and lights nothing, which is exactly the state that looked broken.
+      await act(async () => {
+        runtime.clock.tickOnce();
+      });
+      expect(lit()).toEqual([]);
+      expect(quiet()).toContain('Nothing has crossed a drawn wire');
+      // And it says so as a figure it counted itself (FR-008).
+      expect(quiet()).toContain('counted here');
+
+      // Once something has crossed, the gap is reported in ticks — the harness's unit,
+      // not the host's. Asserted as growth rather than as a value: the gap after a
+      // sampling tick is however far past it the run got, and pinning that number would
+      // be pinning the sensors' cadence in a test about the display.
+      const ticksAgo = () => Number(/(\d+) tick\(s\) ago/.exec(quiet())?.[1]);
+      await act(async () => {
+        sampleOnce();
+      });
+      const settled = ticksAgo();
+      expect(Number.isNaN(settled)).toBe(false);
+      await act(async () => {
+        for (let tick = 0; tick < 7; tick++) runtime.clock.tickOnce();
+      });
+      expect(ticksAgo()).toBe(settled + 7);
+    });
+
+    it('names what crosses the broker and lights nothing, from the wiring', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const flow = buildFlow(config.shell, topology);
+      const quiet = screen.getByTestId('flow-quiet-note').textContent ?? '';
+      // Counted from the same graph the picture is drawn from: a topic that stops being
+      // terminal moves this number without anybody editing a sentence.
+      expect(quiet).toContain(`${flow.suppressed.length} filter(s)`);
+      expect(quiet).toContain(`${flow.topicsTerminal.length} topic(s)`);
+      expect(flow.topicsTerminal.length).toBeGreaterThan(0);
+    });
+
     it('names the topics whose lights are an approximation, because the broker names no sender', async () => {
       render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {

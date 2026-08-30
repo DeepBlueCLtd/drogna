@@ -74,6 +74,16 @@
  * Wrapping is what makes the drawing hold at any width without a second layout: the parts
  * keep their order and take as many rows as they need.
  *
+ * **Where a lane breaks is decided by its parts' flex basis, not by their minimum**, and
+ * that is why every basis below is written equal to its own `min-width`. A wrapping flex
+ * container lays items out at their basis, breaks the line when the next one will not
+ * fit, and only then shrinks what is on the line — so a basis above the minimum wraps a
+ * lane that would still have fitted. It did: at a desktop width the loop lane broke with
+ * eighty spare pixels in it and left `The forecast` orphaned on a row of its own, under
+ * `Measurements`, which reads as a second stage of the flow rather than the end of the
+ * first. Basis at the minimum means the parts fit whenever they can and grow into what is
+ * left over, and wrap only when they genuinely cannot.
+ *
  * Centred rather than stretched, because the lower lane stacks two channels between its
  * roles and with `stretch` the roles grew to that height — two labels marooned in a box
  * four times the size of the ones above them.
@@ -89,7 +99,7 @@
 }
 
 .intro-pair {
-  flex: 1 1 14em;
+  flex: 1 1 8em;
   min-width: 8em;
   display: flex;
   flex-direction: column;
@@ -108,7 +118,7 @@
 /* ---- a role ---- */
 
 .intro-role {
-  flex: 1 1 9em;
+  flex: 1 1 7.5em;
   max-width: 14em;
   min-width: 7.5em;
   display: flex;
@@ -149,7 +159,7 @@
  */
 
 .intro-chan {
-  flex: 1 1 8em;
+  flex: 1 1 6.5em;
   min-width: 6.5em;
   display: flex;
   flex-direction: column;

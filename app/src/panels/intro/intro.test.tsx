@@ -197,21 +197,49 @@ describe('it grows, under the reader (FR-86)', () => {
 });
 
 describe('it holds at any width (FR-86)', () => {
+  // jsdom lays nothing out, so neither of these can look at a rendered lane. What they
+  // check instead are the two stylesheet properties that between them make the two faults
+  // impossible — each fault having been met in a browser first, not imagined.
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'intro.css'), 'utf8');
+  // Anchored to the start of a line, because unanchored it finds the selector inside a
+  // longer one: `.intro-chan` matched the `.intro-drop .intro-chan` override and the
+  // checks below were reading a rule nobody meant them to read. The earlier version of
+  // this file did exactly that and passed, which is what a check examining the wrong
+  // thing looks like from the outside.
+  const rule = (selector: string) => {
+    const found = new RegExp(`^\\${selector}\\s*\\{([^}]*)\\}`, 'm').exec(css);
+    if (!found) throw new Error(`${selector} declares nothing`);
+    return found[1];
+  };
+
   it('lays the lanes out as a flow that wraps, not a row that overflows', () => {
     // Watched failing on an iPad: seven parts would not sit side by side, the lane
     // overflowed its column, and the last of them was painted over by the narration
-    // beside it. jsdom lays nothing out, so what is checked is the property that makes
-    // the overflow impossible — the lane wraps, and its parts may shrink.
-    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'intro.css'), 'utf8');
-    const rule = (selector: string) => {
-      const found = new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`).exec(css);
-      if (!found) throw new Error(`${selector} declares nothing`);
-      return found[1];
-    };
+    // beside it.
     expect(rule('.intro-lane')).toMatch(/flex-wrap:\s*wrap/);
     // A part with a fixed basis cannot give ground, which is what forced the overflow.
     expect(rule('.intro-role')).not.toMatch(/flex:\s*0\s+0/);
     expect(rule('.intro-chan')).not.toMatch(/flex:\s*0\s+0/);
+  });
+
+  it('gives every wrapping part a basis equal to its minimum, so it wraps only when it must', () => {
+    // The second half of the same fault, and the less obvious half. A wrapping flex
+    // container places items at their *basis*, breaks the line when the next will not
+    // fit, and only shrinks what is already on the line — so a basis above the minimum
+    // breaks a lane that would still have fitted. It did: at 1440px the loop lane broke
+    // with eighty spare pixels in it, leaving 'The forecast' alone on a second row under
+    // 'Measurements', where it reads as a second stage rather than the end of the first.
+    // Basis at the minimum is what makes the wrap honest — it happens when, and only
+    // when, the parts genuinely cannot fit.
+    for (const selector of ['.intro-role', '.intro-chan', '.intro-pair']) {
+      const declared = rule(selector);
+      const basis = /flex:\s*[\d.]+\s+[\d.]+\s+([\d.]+)em/.exec(declared);
+      const floor = /min-width:\s*([\d.]+)em/.exec(declared);
+      if (!basis || !floor) throw new Error(`${selector} states no flex basis and minimum in em`);
+      expect(Number(basis[1]), `${selector} wraps before it has to: basis ${basis[1]}em over a ${floor[1]}em minimum`).toBe(
+        Number(floor[1]),
+      );
+    }
   });
 });
 

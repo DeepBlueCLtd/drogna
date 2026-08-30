@@ -1,5 +1,5 @@
 /**
- * The shore-updates branch (feature 120, FR-15, FR-16): advice from shore, drawn.
+ * The shore-updates branch (feature 121, FR-15, FR-16): advice from shore, drawn.
  *
  * Advisories have had a store, a publisher and a Features collection since feature 108
  * and have never been drawn anywhere. What they have instead of a picture is a document
@@ -271,7 +271,10 @@ export function ShoreUpdates({
 
           <p className="panel-footnote" data-testid="advisory-legend">
             {domain ? 'The lighter plane is the scenario domain' : 'No domain geometry was served'}
-            {inner.length > 0 && `, the green outline the ${inner.length === 1 ? 'loiter region' : 'reference regions'}`}
+            {inner.length > 0 &&
+              `, the green outline${inner.length === 1 ? '' : 's'} the ${inner
+                .map((entry) => entry.id.replace(/-/g, ' '))
+                .join(' and the ')}`}
             . Advised regions are drawn over them, coloured by kind and faded once their
             validity has lapsed. The grid is one degree, generated here — no tiles, no
             third party.

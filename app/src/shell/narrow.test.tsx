@@ -46,7 +46,7 @@ async function shellAt(hash: string, viewport: number, height = 900) {
   const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;
   config.clock.mode = 'lockstep';
   config.clock.rate = 0;
-  const runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+  const runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
   const realFetch = globalThis.fetch;
   globalThis.fetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
   widthOf(viewport);
@@ -374,7 +374,7 @@ describe('nothing is lost at a narrow width (FR-011, SC-007)', () => {
     const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;
     config.clock.mode = 'lockstep';
     config.clock.rate = 0;
-    const runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+    const runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
     widthOf(viewport);

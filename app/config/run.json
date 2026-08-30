@@ -62,6 +62,15 @@
         ]
       },
       {
+        "role": "snapshot-source",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
+      {
         "role": "platform",
         "publish": [
           "obs/ownship/+",
@@ -1104,6 +1113,38 @@
             ]
           ]
         }
+      },
+      {
+        "feature_id": "quay-approaches",
+        "name": "quay approaches",
+        "kind": "reference_area",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -8.9,
+                47.3
+              ],
+              [
+                -8.5,
+                47.3
+              ],
+              [
+                -8.5,
+                47.6
+              ],
+              [
+                -8.9,
+                47.6
+              ],
+              [
+                -8.9,
+                47.3
+              ]
+            ]
+          ]
+        }
       }
     ]
   },
@@ -1181,6 +1222,13 @@
         "rank": 0
       },
       {
+        "id": "snapshot-source",
+        "label": "Snapshot source",
+        "beat": 120,
+        "band": "loop",
+        "rank": 1
+      },
+      {
         "id": "platform",
         "label": "Platform",
         "beat": 112,
@@ -1192,7 +1240,7 @@
         "label": "Coverage store",
         "beat": 102,
         "band": "loop",
-        "rank": 1
+        "rank": 2
       },
       {
         "id": "sensors",
@@ -1234,28 +1282,28 @@
         "label": "Monitor",
         "beat": 105,
         "band": "loop",
-        "rank": 2
+        "rank": 3
       },
       {
         "id": "scheduler",
         "label": "Scheduler",
         "beat": 105,
         "band": "loop",
-        "rank": 3
+        "rank": 4
       },
       {
         "id": "analyst",
         "label": "Analyst",
         "beat": 116,
         "band": "loop",
-        "rank": 4
+        "rank": 5
       },
       {
         "id": "model-runner",
         "label": "Model runner",
         "beat": 105,
         "band": "loop",
-        "rank": 5
+        "rank": 6
       },
       {
         "id": "planner",
@@ -1490,7 +1538,7 @@
       "buffer": 200
     },
     "consumers": {
-      "notice": "Downstream consumer \u2014 not part of drogna",
+      "notice": "Downstream consumer — not part of drogna",
       "hexes": {
         "minimum_resolution": 4,
         "maximum_resolution": 7,
@@ -1498,9 +1546,19 @@
         "cell_ceiling": 45000
       },
       "sampling": {
-        "time_budget_hours": [3, 6, 12, 24],
+        "time_budget_hours": [
+          3,
+          6,
+          12,
+          24
+        ],
         "default_time_budget_hours": 6,
-        "expendable_interval_hours": [1, 6, 12, 24],
+        "expendable_interval_hours": [
+          1,
+          6,
+          12,
+          24
+        ],
         "default_expendable_interval_hours": 6,
         "depth_zones": 6,
         "nominal_speed_m_per_s": 2.5,
@@ -1539,10 +1597,22 @@
           }
         ],
         "objectives": [
-          { "id": "evasion", "label": "Evasion" },
-          { "id": "investigation", "label": "Investigation" },
-          { "id": "monitoring", "label": "Monitoring" },
-          { "id": "stealthy-reconnaissance", "label": "Stealthy reconnaissance" }
+          {
+            "id": "evasion",
+            "label": "Evasion"
+          },
+          {
+            "id": "investigation",
+            "label": "Investigation"
+          },
+          {
+            "id": "monitoring",
+            "label": "Monitoring"
+          },
+          {
+            "id": "stealthy-reconnaissance",
+            "label": "Stealthy reconnaissance"
+          }
         ],
         "default_objective": "investigation",
         "candidate_count": 4,
@@ -1658,7 +1728,7 @@
             "label": "Downloaded vector forecast",
             "kind": "continuous",
             "provenance": "seam",
-            "unit": "\u00b0C",
+            "unit": "°C",
             "default_confidence": "high",
             "minimum": 0,
             "maximum": 25
@@ -1670,9 +1740,20 @@
             "label": "Shallow survey line",
             "duration_minutes": 180,
             "requirements": [
-              { "lane": "sea-state", "sense": "at-most", "threshold": 3 },
-              { "lane": "daylight", "sense": "present" },
-              { "lane": "endurance", "sense": "at-least", "threshold": 30 }
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 3
+              },
+              {
+                "lane": "daylight",
+                "sense": "present"
+              },
+              {
+                "lane": "endurance",
+                "sense": "at-least",
+                "threshold": 30
+              }
             ]
           },
           {
@@ -1680,8 +1761,15 @@
             "label": "Ferry lane crossing",
             "duration_minutes": 60,
             "requirements": [
-              { "lane": "ferry-timetable", "sense": "absent" },
-              { "lane": "sea-state", "sense": "at-most", "threshold": 4 }
+              {
+                "lane": "ferry-timetable",
+                "sense": "absent"
+              },
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 4
+              }
             ]
           },
           {
@@ -1689,9 +1777,20 @@
             "label": "Expendable recovery",
             "duration_minutes": 120,
             "requirements": [
-              { "lane": "sea-state", "sense": "at-most", "threshold": 2 },
-              { "lane": "tide", "sense": "at-least", "threshold": 2.4 },
-              { "lane": "daylight", "sense": "present" }
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 2
+              },
+              {
+                "lane": "tide",
+                "sense": "at-least",
+                "threshold": 2.4
+              },
+              {
+                "lane": "daylight",
+                "sense": "present"
+              }
             ]
           },
           {
@@ -1699,8 +1798,15 @@
             "label": "Satellite uplink",
             "duration_minutes": 30,
             "requirements": [
-              { "lane": "satellite-overpass", "sense": "present" },
-              { "lane": "endurance", "sense": "at-least", "threshold": 20 }
+              {
+                "lane": "satellite-overpass",
+                "sense": "present"
+              },
+              {
+                "lane": "endurance",
+                "sense": "at-least",
+                "threshold": 20
+              }
             ]
           },
           {
@@ -1708,9 +1814,20 @@
             "label": "Night transit",
             "duration_minutes": 240,
             "requirements": [
-              { "lane": "daylight", "sense": "absent" },
-              { "lane": "moon", "sense": "at-most", "threshold": 0.45 },
-              { "lane": "sea-state", "sense": "at-most", "threshold": 4 }
+              {
+                "lane": "daylight",
+                "sense": "absent"
+              },
+              {
+                "lane": "moon",
+                "sense": "at-most",
+                "threshold": 0.45
+              },
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 4
+              }
             ]
           },
           {
@@ -1718,9 +1835,21 @@
             "label": "Deep cast",
             "duration_minutes": 150,
             "requirements": [
-              { "lane": "sea-state", "sense": "at-most", "threshold": 3 },
-              { "lane": "vector-forecast", "sense": "at-least", "threshold": 11 },
-              { "lane": "endurance", "sense": "at-least", "threshold": 40 }
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 3
+              },
+              {
+                "lane": "vector-forecast",
+                "sense": "at-least",
+                "threshold": 11
+              },
+              {
+                "lane": "endurance",
+                "sense": "at-least",
+                "threshold": 40
+              }
             ]
           },
           {
@@ -1728,8 +1857,15 @@
             "label": "Crew handover",
             "duration_minutes": 90,
             "requirements": [
-              { "lane": "crew-rest", "sense": "present" },
-              { "lane": "range-from-port", "sense": "at-most", "threshold": 120 }
+              {
+                "lane": "crew-rest",
+                "sense": "present"
+              },
+              {
+                "lane": "range-from-port",
+                "sense": "at-most",
+                "threshold": 120
+              }
             ]
           },
           {
@@ -1737,13 +1873,400 @@
             "label": "Return to port",
             "duration_minutes": 210,
             "requirements": [
-              { "lane": "range-from-port", "sense": "at-most", "threshold": 90 },
-              { "lane": "endurance", "sense": "at-least", "threshold": 15 },
-              { "lane": "sea-state", "sense": "at-most", "threshold": 5 }
+              {
+                "lane": "range-from-port",
+                "sense": "at-most",
+                "threshold": 90
+              },
+              {
+                "lane": "endurance",
+                "sense": "at-least",
+                "threshold": 15
+              },
+              {
+                "lane": "sea-state",
+                "sense": "at-most",
+                "threshold": 5
+              }
             ]
           }
         ]
       }
+    }
+  },
+  "start_conditions": {
+    "default": "arriving",
+    "conditions": [
+      {
+        "id": "leaving",
+        "label": "Leaving quay-side",
+        "situation": "Alongside at the quay approaches and casting off for the work area, 240 km to the south-west. The instruments are not streaming yet.",
+        "holds": [
+          "twenty years of monthly archive",
+          "one now-cast of the ocean as it stands",
+          "a departure forecast, assimilated from the now-cast alone",
+          "the ownship track since the quay — and no measurement of the ocean"
+        ],
+        "root_seed": 1180001,
+        "snapshot_eras": [
+          "archive",
+          "nowcast"
+        ],
+        "platform": {
+          "latitude": 47.45,
+          "longitude": -8.7,
+          "course_degrees": 232,
+          "speed_m_per_s": 1.0,
+          "depth_m": 5
+        },
+        "legs": [
+          {
+            "note": "clearing the quay, instruments not yet streamed",
+            "ticks": 900,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 232,
+              "speed_m_per_s": 3.0,
+              "depth_m": 30,
+              "note": "make for the work area"
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
+          },
+          {
+            "note": "the departure forecast the cadence floor warranted",
+            "ticks": 900,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "arriving",
+        "label": "Arriving in the work area",
+        "situation": "Closing the work area from the north-east after a long passage, instruments streaming the whole way in. Nothing has been assimilated under way.",
+        "holds": [
+          "twenty years of monthly archive",
+          "a now-cast, and the forecasts the passage was run under",
+          "measurements the length of the passage in",
+          "not one measurement inside the work area itself",
+          "no word from shore since the quay"
+        ],
+        "root_seed": 1180002,
+        "snapshot_eras": [
+          "archive",
+          "nowcast"
+        ],
+        "platform": {
+          "latitude": 46.78,
+          "longitude": -10.3,
+          "course_degrees": 232,
+          "speed_m_per_s": 2.4,
+          "depth_m": 60
+        },
+        "legs": [
+          {
+            "note": "the passage in — instruments streaming since the quay",
+            "ticks": 4800,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 232,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "close the work area from the north-east"
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
+          },
+          {
+            "note": "closing the area, under the forecast the passage was run on",
+            "ticks": 1140,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "prompt": [
+              "run-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "loitering",
+        "label": "Loitering in the work area",
+        "situation": "On station inside the work area, running a box and sampling it, with the shore link up and advisories arriving on their cadence.",
+        "holds": [
+          "the archive and the now-cast",
+          "measurements throughout the work area, and nowhere else",
+          "analyses corrected by what was measured there, and the forecasts that followed",
+          "shore advisories received over the link"
+        ],
+        "root_seed": 1180003,
+        "snapshot_eras": [
+          "archive",
+          "nowcast"
+        ],
+        "platform": {
+          "latitude": 46.1,
+          "longitude": -11.2,
+          "course_degrees": 90,
+          "speed_m_per_s": 2.4,
+          "depth_m": 50
+        },
+        "legs": [
+          {
+            "note": "on station, the first leg of the box",
+            "ticks": 1800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 75,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "first leg of the box"
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
+          },
+          {
+            "note": "the second leg of the box, deeper",
+            "ticks": 1800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 165,
+              "speed_m_per_s": 2.4,
+              "depth_m": 90,
+              "note": "second leg of the box"
+            }
+          },
+          {
+            "note": "a run on what the box has given up",
+            "ticks": 1200,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 255,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "third leg of the box"
+            },
+            "prompt": [
+              "run-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "returning",
+        "label": "Returning to quay-side",
+        "situation": "A period on station spent and outbound for the quay, with a full picture of the work area to review and a package staged for the shore.",
+        "holds": [
+          "the archive, the now-cast, and the forecasts of a whole period on station",
+          "measurements across the work area and out along the passage home",
+          "shore advisories through the period",
+          "a package staged for offload, with the measurement geometry beside it"
+        ],
+        "root_seed": 1180004,
+        "snapshot_eras": [
+          "archive",
+          "nowcast"
+        ],
+        "platform": {
+          "latitude": 46.28,
+          "longitude": -10.8,
+          "course_degrees": 60,
+          "speed_m_per_s": 2.4,
+          "depth_m": 80
+        },
+        "legs": [
+          {
+            "note": "the period on station, working the area to its north-eastern corner",
+            "ticks": 4800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 60,
+              "speed_m_per_s": 2.4,
+              "depth_m": 80,
+              "note": "work the area north-eastward"
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
+          },
+          {
+            "note": "an advisory from shore, and the last run of the period",
+            "ticks": 900,
+            "stopped": [
+              "planner"
+            ],
+            "prompt": [
+              "advisory-now",
+              "run-now"
+            ]
+          },
+          {
+            "note": "outbound for the quay, staging what the shore will want",
+            "ticks": 3600,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 52,
+              "speed_m_per_s": 3.5,
+              "depth_m": 30,
+              "note": "make for the quay"
+            },
+            "prompt": [
+              "offload-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "snapshot_source": {
+    "id": "snapshot-source",
+    "topics": {
+      "clock": "ctl/clock"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
+    "artefacts": {
+      "path_prefix": "./snapshots/",
+      "path_suffix": ".snapshot"
+    },
+    "authors": {
+      "archive": "env-generator",
+      "nowcast": "env-generator",
+      "analysis": "analyst",
+      "instance": "model-runner"
     }
   }
 }

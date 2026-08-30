@@ -601,6 +601,8 @@ export type ConfigRun = {
   "offload": ConfigOffload;
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
+  "start_conditions": ConfigStartConditions;
+  "snapshot_source": ConfigSnapshotSource;
 };
 
 /** drogna scheduler configuration (V2-C12) — from config.scheduler.schema.json */
@@ -799,6 +801,70 @@ export type ConfigShell = {
   "messages": {
     "buffer": number;
   };
+};
+
+/** drogna snapshot source configuration (V2-C22) — from config.snapshot-source.schema.json */
+export type ConfigSnapshotSource = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "artefacts": {
+    "path_prefix": string;
+    "path_suffix": string;
+  };
+  "authors": {
+    "archive": ConfigCommonComponentId;
+    "nowcast": ConfigCommonComponentId;
+    "analysis": ConfigCommonComponentId;
+    "instance": ConfigCommonComponentId;
+  };
+};
+
+/** drogna start conditions — from config.start-conditions.schema.json */
+export type ConfigStartConditions = {
+  "default": ConfigStartConditionsConditionId;
+  "conditions": ConfigStartConditionsCondition[];
+};
+
+/** config.start-conditions.schema.json #/$defs/condition_id */
+export type ConfigStartConditionsConditionId = string;
+
+/** config.start-conditions.schema.json #/$defs/condition */
+export type ConfigStartConditionsCondition = {
+  "id": ConfigStartConditionsConditionId;
+  "label": string;
+  "situation": string;
+  "holds": string[];
+  "root_seed": number;
+  "snapshot_eras"?: ("archive" | "nowcast" | "analysis" | "instance")[];
+  "platform": {
+    "latitude": number;
+    "longitude": number;
+    "course_degrees": number;
+    "speed_m_per_s": number;
+    "depth_m": number;
+  };
+  "legs": ConfigStartConditionsLeg[];
+};
+
+/** config.start-conditions.schema.json #/$defs/leg */
+export type ConfigStartConditionsLeg = {
+  "note": string;
+  "ticks": number;
+  "stopped"?: ConfigCommonComponentId[];
+  "demand"?: {
+    "course_degrees"?: number;
+    "speed_m_per_s"?: number;
+    "depth_m"?: number;
+    "note"?: string;
+  };
+  "tune"?: {
+    "id": string;
+    "value": number;
+  }[];
+  "prompt"?: string[];
 };
 
 /** drogna telemetry configuration (V2-C15) — from config.telemetry.schema.json */
@@ -1701,6 +1767,7 @@ export type QuerySubsets = {
 export type RunManifest = {
   "schema_version": 1;
   "run_id": string;
+  "start_condition": string;
   "root_seed": number;
   "seed_derivation": {
     "rule": string;
@@ -1888,6 +1955,20 @@ export type SensorthingsSubsetObservationEntity = {
       "coordinates": number[];
     };
   };
+};
+
+/** drogna seed-data snapshot header — from snapshot.schema.json */
+export type Snapshot = {
+  "format": "drogna-snapshot-1";
+  "start_condition": string;
+  "run_id": string;
+  "root_seed": number;
+  "config_digest": string;
+  "code_revision": string;
+  "holdings": {
+    "descriptor": CoverageHolding;
+    "byte_length": number;
+  }[];
 };
 
 /** drogna telemetry report — from telemetry-report.schema.json */

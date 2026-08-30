@@ -60,7 +60,7 @@ describe('the Operator flow chart (feature 113)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 41, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 41, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     // The seam shim, exactly as the bootstrap installs it: seam paths answered by the
     // backend, everything else passed through.
     vi.stubGlobal('fetch', createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch));
@@ -1152,7 +1152,7 @@ describe('the Operator flow chart (feature 113)', () => {
       const fast = lockstepConfig();
       fast.clock.rate = config.shell.flow.pulse.hold_above_rate + 19;
       runtime.stop();
-      runtime = buildBackend(fast, { rootSeed: 41, revision: 'test', dirty: false }, validator);
+      runtime = buildBackend(fast, { rootSeed: 41, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
       vi.stubGlobal('fetch', createSeamFetch(fast.boundary.api_prefix, runtime.httpBackend, realFetch));
 
       render(<OperatorPanel {...panelProps(fast, runtime)} />);

@@ -1,7 +1,7 @@
 ---
 title: A forecast made from the truth is not a forecast
 date: 2026-08-30
-feature: specs/120-data-navigator
+feature: specs/121-data-navigator
 description: >-
   Building one browser over everything the system holds turned up a branch with nothing
   behind it. Filling it needed a forecast, and the only field to hand was the truth —

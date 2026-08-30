@@ -1,4 +1,4 @@
-# Feature 120 — tasks
+# Feature 121 — tasks
 
 One feature, one pull request, on the author's decision recorded in `spec.md`. Ticked as
 they were done, with the reasons written at the moment they were taken (CLAUDE.md,
@@ -123,7 +123,7 @@ lesson 1).
       after. The tab was busiest exactly when it looked most static.
 - [x] T039 Arrivals are counted rather than acted on; the head states how many are waiting
       and a refresh applies them, the open chart included. The author's own framing —
-      refreshing on every update would be jittery — is the requirement now, and FR-95
+      refreshing on every update would be jittery — is the requirement now, and FR-97
       carries the reversal with its reason.
 - [x] T040 The count is part of the control, not decoration: "three waiting" and "nothing
       waiting" are different facts about how old the picture is, and a button whose effect
@@ -170,18 +170,18 @@ lesson 1).
 ## The record
 
 - [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,
-      FR-70 and FR-75 re-homed, and §5.18 appended as FR-91 to FR-101.
+      FR-70 and FR-75 re-homed, and §5.19 appended as FR-93 to FR-103.
 - [x] T035 The view-id gate named the links a search by hand would have missed: three in
       the Intro tab, one Background explainer, the demo index and a published blog entry.
       All updated.
 - [x] T036 The blog entry, within the 300-word budget, with a motion capture.
-- [x] T043 SRD: FR-95 rewritten as the reversal above, with what it got wrong and why.
+- [x] T043 SRD: FR-97 rewritten as the reversal above, with what it got wrong and why.
 
 ## Not done, and why
 
 - **No cross-tab wiring.** No "show this on the map", no filtering of the Messages traffic
   from a selected datastream. Both were offered in the interview and declined: the address
-  of FR-96 is the linkage this feature builds, and anything more is a second feature's
+  of FR-98 is the linkage this feature builds, and anything more is a second feature's
   worth of coupling between four panels.
 - **The chart shows one datastream, not a residual.** Drawing a measurement against the
   forecast it was scored on needs an EDR position query per observation, and the monitor
@@ -193,4 +193,4 @@ lesson 1).
   contrast more sharply with the now-cast, and nothing in the tree computes a mean across
   archive months. Persistence costs nothing new and is already a named reference here.
 - **The tree does not name the standard that answers each branch.** The cost of a
-  kind-first spine, taken deliberately and recorded in `spec.md` and in FR-91.
+  kind-first spine, taken deliberately and recorded in `spec.md` and in FR-93.

@@ -39,7 +39,7 @@ import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 
 const validator = createSeamValidator();
-const options = { rootSeed: 5150, revision: 'test', dirty: false };
+const options = { rootSeed: 5150, startCondition: 'loitering', revision: 'test', dirty: false };
 
 function lockstepConfig(): ConfigRun {
   const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;

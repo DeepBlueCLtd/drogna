@@ -1,5 +1,5 @@
 /**
- * The departure brief (feature 120, FR-17 to FR-20): the forecast the vessel was
+ * The departure brief (feature 121, FR-17 to FR-20): the forecast the vessel was
  * issued at the quay-side.
  *
  * The property under test is the one that makes it a forecast at all. This generator
@@ -25,9 +25,9 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 4242, revision: 'test', dirty: false };
+const options = { rootSeed: 4242, startCondition: 'loitering', revision: 'test', dirty: false };
 
-describe('the departure brief (feature 120)', () => {
+describe('the departure brief (feature 121)', () => {
   it('is authored at provisioning, master-valid, and names persistence as its derivation', () => {
     const runtime = buildBackend(lockstepConfig(), options, validator);
     const brief = runtime.store.departureHolding();

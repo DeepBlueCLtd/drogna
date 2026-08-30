@@ -25,7 +25,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 909, revision: 'test', dirty: false };
+const options = { rootSeed: 909, startCondition: 'loitering', revision: 'test', dirty: false };
 
 async function turnLoop(runtime: BackendRuntime, ticks: number): Promise<void> {
   await driveTicks(runtime.clock, ticks);

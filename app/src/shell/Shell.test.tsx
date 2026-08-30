@@ -34,7 +34,7 @@ function lockstepRuntime() {
   const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;
   config.clock.mode = 'lockstep';
   config.clock.rate = 0;
-  const runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+  const runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
   return { config, runtime };
 }
 

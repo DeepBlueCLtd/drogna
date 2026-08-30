@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * The coverage branches of the Data tab against a live backend (feature 115's FR-69 and
- * FR-70, carried by feature 120 into the tab that absorbed them). Nothing here is mocked
+ * FR-70, carried by feature 121 into the tab that absorbed them). Nothing here is mocked
  * below the seam: the coverage store is the real one, the EDR service answers the real
  * queries, and the coverages differenced are the ones the seam actually served.
  *
@@ -90,7 +90,7 @@ describe('the Data tab’s coverage branches (features 115, 118)', { timeout: 18
     // setTimeout, setInterval and Date; setImmediate is not one of them.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     asked = [];
     const seamFetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
     vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {

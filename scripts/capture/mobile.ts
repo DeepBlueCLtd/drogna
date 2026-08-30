@@ -49,6 +49,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from 'playwright';
+import runConfigDocument from '../../app/config/run.json' with { type: 'json' };
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const distDir = join(repoRoot, 'app', 'dist');
@@ -133,6 +134,23 @@ await new Promise<void>((ready) => server.listen(0, '127.0.0.1', ready));
 const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
+
+/**
+ * How long a capture waits for the shell to be there.
+ *
+ * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
+ * that is not going to. Feature 120 changed what that number is measuring: the shell is
+ * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
+ * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
+ * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
+ * render"; it was a coin toss on the longest condition.
+ */
+const SHELL_TIMEOUT = 60_000;
+
+// Which situation these pictures are of (feature 120), read from the configuration
+// document rather than typed here, so a renamed condition moves the captures with it.
+const startCondition = process.env.DROGNA_START ?? runConfigDocument.start_conditions.default;
+
 
 function revision(): string {
   try {
@@ -246,8 +264,10 @@ try {
 
   for (const size of SIZES) {
     const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
-    await page.goto(base);
-    await page.locator('.stack-tabs').waitFor({ timeout: 10_000 });
+    // The front door is the welcome page since feature 120; this capture is of the shell
+    // at a phone's width, so it names the situation it wants rather than the front door.
+    await page.goto(`${base}?start=${startCondition}`);
+    await page.locator('.stack-tabs').waitFor({ timeout: SHELL_TIMEOUT });
 
     // Pin the clock through the shell's own seam, so a picture of a stopped system is
     // never handed over as a live one (FR-19). Rate zero is a legitimate rate.
@@ -267,7 +287,7 @@ try {
       // one asked for rather than for an interval to pass (Constitution I).
       await page
         .locator(`.stack-view[data-view="${view.id}"]:not([hidden])`)
-        .waitFor({ timeout: 10_000 });
+        .waitFor({ timeout: SHELL_TIMEOUT });
       // And for the panel itself, not the placeholder a deferred one shows while its
       // chunk arrives (`shell/registry.tsx`). Without this the map view was measured and
       // photographed as one line of text: the proof passed, and had stopped saying
@@ -322,7 +342,7 @@ try {
     // SC-008, at the portrait size: the course's own advice has to stay followable.
     if (size.name === 'phone-portrait') {
       await page.goto(`${base}#/view/background`);
-      await page.locator('.bg-rail select').waitFor({ timeout: 10_000 });
+      await page.locator('.bg-rail select').waitFor({ timeout: SHELL_TIMEOUT });
       const course = await page.evaluate(() =>
         [...document.querySelectorAll('.bg-rail select option')].map((option) => ({
           id: option.getAttribute('value') ?? '',
@@ -334,7 +354,7 @@ try {
       for (const explainer of course) {
         for (let step = 1; step <= explainer.steps; step += 1) {
           await page.goto(`${base}#/view/background/${explainer.id}/${step}`);
-          await page.locator(`.bg-stage[data-step="${step}"]`).waitFor({ timeout: 10_000 });
+          await page.locator(`.bg-stage[data-step="${step}"]`).waitFor({ timeout: SHELL_TIMEOUT });
           const seen = await page.evaluate(() => ({
             floor: document.querySelector('[data-testid="figure-floor"]')?.textContent ?? null,
             pan: document.querySelector('[data-testid="figure-pan"]') !== null,
@@ -367,7 +387,7 @@ try {
   const preview = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
   await preview.goto(`${base}mobile.html#/view/map`);
   const framed = preview.frameLocator('iframe#frame');
-  await framed.locator('.stack-tabs').waitFor({ timeout: 10_000 });
+  await framed.locator('.stack-tabs').waitFor({ timeout: SHELL_TIMEOUT });
   const inFrame = await framed
     .locator('.stack-view:not([hidden])')
     .getAttribute('data-view');

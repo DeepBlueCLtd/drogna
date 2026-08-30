@@ -24,7 +24,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 1234, revision: 'test', dirty: false };
+const options = { rootSeed: 1234, startCondition: 'loitering', revision: 'test', dirty: false };
 
 function worldFromManifest(manifest: Manifest): WorldParameters {
   const byId = Object.fromEntries(manifest.features.map((feature) => [feature.id, feature.parameters]));
@@ -118,7 +118,7 @@ describe('the synthetic ocean (feature 102)', () => {
     expect(second).not.toBe(first);
     // The archive and the departure brief stay; the old now-cast was replaced, not
     // accumulated. The brief being here after a cadence turn is the point of it: it is
-    // issued once and never refreshed (feature 120).
+    // issued once and never refreshed (feature 121).
     expect(runtime.store.holdings().map((holding) => holding.era).sort()).toEqual([
       'archive',
       'departure',

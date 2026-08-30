@@ -47,7 +47,7 @@
           "kind": {
             "type": "string",
             "enum": ["harness", "consumer"],
-            "description": "What the view is a face of (feature 116, FR-76). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which \u2014 a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
+            "description": "What the view is a face of (feature 116, FR-91). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which \u2014 a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
           }
         }
       }
@@ -76,8 +76,8 @@
           "beat": {
             "type": "integer",
             "minimum": 101,
-            "maximum": 116,
-            "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
+            "maximum": 120,
+            "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching. Raised to 120 by the snapshot source, which is the first component to land outside the arc."
           },
           "band": {
             "type": "string",
@@ -331,7 +331,7 @@
         "notice": {
           "type": "string",
           "minLength": 1,
-          "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-76). Here rather than in the frame so the sentence exists once."
+          "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-91). Here rather than in the frame so the sentence exists once."
         },
         "hexes": {
           "type": "object",
@@ -376,7 +376,7 @@
             "depth_zones": {
               "type": "integer",
               "exclusiveMinimum": 0,
-              "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-77)."
+              "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-92)."
             },
             "observation_backfill": {
               "type": "integer",

@@ -1,5 +1,5 @@
 /**
- * The measurements branch (feature 120, FR-07 to FR-09): what the sensors have reported,
+ * The measurements branch (feature 121, FR-07 to FR-09): what the sensors have reported,
  * walked platform → datastream → chart.
  *
  * The grouping is SensorThings' own — a Thing carries Datastreams, a Datastream carries

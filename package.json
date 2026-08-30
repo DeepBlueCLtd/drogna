@@ -10,6 +10,7 @@
     "test": "vitest run -c scripts/vitest.config.ts",
     "gates": "tsx scripts/run-gates.ts",
     "generate": "tsx scripts/derive-topology.ts && tsx scripts/generate-types.ts",
+    "snapshots": "tsx scripts/build-snapshots.ts",
     "capture:glance": "tsx scripts/capture/glance.ts",
     "capture:background": "tsx scripts/capture/background.ts",
     "capture:messages": "tsx scripts/capture/messages.ts",

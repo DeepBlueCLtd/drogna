@@ -76,8 +76,11 @@ mkdirSync(outDir, { recursive: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`${base}#/view/map`);
-  await page.getByTestId('sim-time').waitFor({ timeout: 20_000 });
-  await page.getByTestId('ownship-status').waitFor({ timeout: 30_000 });
+  // Sixty seconds, not twenty: the shell is mounted only once the chosen situation's
+  // pre-roll has finished (feature 120), which is seconds of stepped ticks before the
+  // page has anything to show, and a CI runner is slower than a desktop.
+  await page.getByTestId('sim-time').waitFor({ timeout: 60_000 });
+  await page.getByTestId('ownship-status').waitFor({ timeout: 60_000 });
 
   // Run the world forward so the platform has genuinely reported positions to draw: an
   // empty track in every projection would satisfy a check that only compared them.

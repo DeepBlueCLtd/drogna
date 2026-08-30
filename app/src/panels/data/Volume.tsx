@@ -1,5 +1,5 @@
 /**
- * The coverage volume with its fourth axis (feature 120, FR-13, FR-14).
+ * The coverage volume with its fourth axis (feature 121, FR-13, FR-14).
  *
  * The Map's cube already rotates longitude, latitude and depth, one genuine EDR area
  * query per level of the holding's own depth axis. It draws one instant. This draws the

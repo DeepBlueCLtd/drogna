@@ -225,8 +225,22 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           no tracked entity, no contact, no detection — and never will. Nothing here is a
           candidate system. Behind this drawing are genuine programs running in this browser
           page, behind a wire-protocol seam a real backend can replace by swapping a base
-          URL. This run was seeded fresh when you opened the page: run{' '}
-          <code>{manifest.run_id}</code>, root seed <code>{manifest.root_seed}</code>.
+          URL. This run is <code>{manifest.run_id}</code>, from root seed{' '}
+          <code>{manifest.root_seed}</code> — the situation&rsquo;s own seed rather than one
+          drawn when the page opened, so two people following one link see the same ocean.
+        </p>
+        <p>
+          It also did not start at its epoch. It began in the situation chosen on the
+          welcome page — <code>{manifest.start_condition}</code> — and the platform, the
+          instruments and the loop were run forward to it through the same controls the{' '}
+          <a href={hashForView('operator')}>Operator</a> tab offers, before this console
+          opened. Nothing was written into a store to arrange it, and the whole pre-roll is
+          in <a href={hashForView('messages')}>Messages</a> where you can read it back. The
+          ocean itself — the archive and the now-cast — was authored <em>ahead of time</em>,
+          by these same components from this same seed, and arrives as a committed artefact
+          the snapshot source republishes through the coverage store&rsquo;s one
+          digest-checked write path: a gate rebuilds it on every change and fails the build
+          if a byte differs from what the generator would author now.
         </p>
         <p>
           The drawing is a schematic; the system is the rest of the shell. Watch the

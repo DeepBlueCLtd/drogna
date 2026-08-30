@@ -1,5 +1,5 @@
 /**
- * The shore-updates canvas's model (feature 120, FR-15, FR-16, SC-011).
+ * The shore-updates canvas's model (feature 121, FR-15, FR-16, SC-011).
  */
 import { describe, expect, it } from 'vitest';
 import type { FeaturesResponseFeatureCollection } from '../../generated/types.js';

@@ -199,10 +199,10 @@ directed → the machinery is interrogated → advice travels light → it is se
   configuration served seven. The tree is the authority; this line is the claim, and it
   is now checked — a test enumerates `config.shell.views` and both presentations render
   what it names (feature 112, SC-004).
-  **Amended by feature 120:** Holdings is renamed **Data** and keeps its slot, so drogna's
+  **Amended by feature 121:** Holdings is renamed **Data** and keeps its slot, so drogna's
   own tabs read *Intro, Background, Data, Operator, Map, Messages* — still six. The rename
   follows the content: the tab now carries measurements and shore advisories beside the
-  coverage inventory (§5.18), and a tab called Holdings would have been a true name for a
+  coverage inventory (§5.19), and a tab called Holdings would have been a true name for a
   third of what it holds. The label is one word because the narrow tab strip of §5.11 has
   to render it; "Data Navigator", the name the work was commissioned under, would be the
   longest label in the shell by half again.
@@ -265,7 +265,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   and the accumulating forecast **instances** once the loop turns. The now-cast is
   evaluated from the true field and is therefore the reference the monitor scores
   against — nothing forecasts from it, and a gate holds that.
-  **Amended by feature 120** with a fifth era, the **departure** forecast: the brief the
+  **Amended by feature 121** with a fifth era, the **departure** forecast: the brief the
   vessel was issued at the quay-side, authored once at provisioning, valid forward from
   the scenario origin, and never refreshed. It is authored as **persistence** — the true
   field evaluated at the origin and held constant across its whole validity window — and
@@ -294,9 +294,9 @@ directed → the machinery is interrogated → advice travels light → it is se
   joins the manifest view (FR-70). The refusal rule and the no-polling rule above are
   carried verbatim, and selecting a holding still opens its manifest whole. Numbered after FR-45 rather than inserted in sequence: these
   numbers are cited across `specs/` and the ADRs, so renumbering would break the
-  citations to buy tidiness. **Amended by feature 120:** every obligation in this
+  citations to buy tidiness. **Amended by feature 121:** every obligation in this
   requirement carries, and the tab it is discharged in is the **Data** tab, where the
-  coverage inventory is one branch of seven (§5.18). Nothing here is weakened by the
+  coverage inventory is one branch of seven (§5.19). Nothing here is weakened by the
   move: the inventory is still fetched through the seam against the configured relative
   path, still validated against `holdings-inventory` before anything is displayed, still
   refreshed only on the store's announcement, and a refusal is still stated rather than
@@ -405,7 +405,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   commands: clock rate within bounds, step, and stop/start/restart of in-browser
   components. A refused command names the bound or rule; refusals are surfaced, and a
   stopped component goes dark because its heartbeats cease, never because the surface
-  says so *(v1 FR-67, FR-71, FR-72, FR-76)*. Commands are ephemeral and outside
+  says so *(v1 FR-67, FR-71, FR-72, FR-91)*. Commands are ephemeral and outside
   AT-04's replay claim, stated wherever replay is claimed *(v1 FR-73)*. **Amended by feature
   113:** the surface's behaviour is unchanged, and its *presentation* moves to §5.12 —
   the tab becomes the flow chart of FR-57 to FR-59, of which the table specified here is
@@ -471,7 +471,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never
   stubbed; results rendered where they were asked for, with null, declined and absent
-  as three different facts *(v1 FR-77 to FR-83)*. The copied URL is a genuine GET —
+  as three different facts *(v1 FR-92 to FR-83)*. The copied URL is a genuine GET —
   which the wire-protocol seam is what makes true even in V2. The query's position
   may be placed by clicking the canvas in any projection the map offers, as well as
   typed; what the canvas draws for the composed query — the position, and an area
@@ -759,7 +759,7 @@ pass only one of the three is not finished.
   **The parity check is written before the display**, bounded by that master rather than
   by the table's five columns, so that a holding gaining a field is named by the check. If
   the check cannot be satisfied the table stays and the reason is recorded in `tasks.md`.
-  **Amended by feature 120:** the timeline is drawn **once per era**, as the presentation
+  **Amended by feature 121:** the timeline is drawn **once per era**, as the presentation
   of that era's branch, rather than once with a lane per era. Its lane list is now read
   from the `coverage-holding` master rather than typed beside the display — feature 116's
   `analysis` era had never reached the three literals that stood there, so an analysis
@@ -777,8 +777,8 @@ pass only one of the three is not finished.
   be shown beside it and shall not be recomputed, with a sentence saying which question
   each answers. Where no now-cast holding covers the chosen instant — the common case for
   an instance still inside its validity — the panel shall say so and offer nothing; it
-  shall never compare an instance against itself. **Carried unchanged by feature 120**,
-  the three URLs included: §5.18 makes the Data tab a rendered surface that shows no
+  shall never compare an instance against itself. **Carried unchanged by feature 121**,
+  the three URLs included: §5.19 makes the Data tab a rendered surface that shows no
   request URLs, and this comparison is its one stated exception, because it is the only
   figure in that tab the shell derives rather than fetches.
 - **FR-71** The **Messages** tab shall lead with a **traffic display**: received messages
@@ -810,13 +810,13 @@ pass only one of the three is not finished.
   be held to something on disk in the way FR-61 holds the component tour to the declared
   component list — the map's to its own layer registry, Holdings' and Messages' to the
   regions their panels declare — so that a surface gaining a feature and not a step is
-  reported by name. **Amended by feature 120:** Holdings' tour becomes the **Data** tour
+  reported by name. **Amended by feature 121:** Holdings' tour becomes the **Data** tour
   and grows with the tab, covering the tree, the chart, the volume and the shore canvas
   beside the three regions it already explained. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
 
 
-### 5.16 The downstream consumers (feature 120)
+### 5.16 The downstream consumers (feature 118)
 
 Every beat so far has shown the harness. This one shows what the harness is *for*: three
 tabs that are not part of drogna at all, but separate notional systems consuming its
@@ -829,17 +829,17 @@ screenshot lifted out of context still says what it is. Constitution VIII draws 
 these tabs stand on the far side of — the boundary it defends is *who recommends*, not
 *who renders*, and a downstream consumer is exactly what the principle presumes exists.
 
-The numbering starts at FR-76 because feature 115 — the tabs beyond Operator, §5.15 —
+The numbering starts at FR-91 because feature 115 — the tabs beyond Operator, §5.15 —
 landed while this one was being built and took FR-68 to FR-75 with it. This beat was
 drafted as 115 against a tree where that feature was specified and unbuilt; the tree is
 the authority and the record is a claim about it, so this is 116 and the record was
 corrected rather than the collision left to be discovered.
 
-- **FR-76** The shell shall host **downstream consumer views**, declared in configuration
+- **FR-91** The shell shall host **downstream consumer views**, declared in configuration
   as a view kind, rendered in bright yellow with black text in both presentations
   (ADR-0033), each under a persistent, non-dismissible strip naming it as not part of
   drogna. The shell holds no list of which views these are; it reads the declared kind.
-- **FR-77** A consumer view shall reach drogna **only through the seam** — configured
+- **FR-92** A consumer view shall reach drogna **only through the seam** — configured
   relative endpoints and configured broker topics — and shall import no backend module
   (Constitution XI). It is a client of the same interfaces a Version 3 client would use,
   and nothing in it may know whether the seam is answered in this page or over a network.
@@ -957,7 +957,49 @@ records what it caught before it went.*
   shall be expressed without reading the host clock — CSS animation, not a timer — so that
   Constitution I is not engaged and no wall-clock exemption is spent on decoration, and
   shall hold still under `prefers-reduced-motion` with the drawing still legible.
-### 5.18 The Data tab (feature 120)
+### 5.18 Start conditions, chosen on a welcome page (feature 120)
+
+Every visit began at the epoch, so the parts of the harness that mean something only once
+there is data to work on could be reached only by leaving the page running. A visit now
+begins in a situation the reader picks, and each situation is made true by the run having
+actually reached it.
+
+- **FR-91** A visit shall begin in a **start condition** chosen on a **welcome page** shown
+  before the shell (ADR-0040). The conditions are declared in configuration
+  (`config.start-conditions.schema.json`) and each names the platform's initial state and a
+  **pre-roll**: an ordered script of legs the composition root drives through the operator
+  plane's own endpoints — stop and start (FR-36), a platform demand (FR-53), a prompted
+  event (FR-65), and the clock's step (FR-09) — with the clock pinned to rate zero for the
+  duration and restored after it. Nothing shall be written into a store to arrange a
+  situation: what a condition promises is authored by the components that author it, which
+  is FR-11 applied to the whole pre-roll rather than to provisioning alone. Each condition's
+  card shall state what the run will hold, and shall be **held to that by test** against the
+  stores the pre-roll leaves behind. The choice shall travel in the address as `?start=<id>`
+  beside the view address rather than inside it (ADR-0032 unchanged), and an address naming
+  a view shall open the shell at that view without asking (D16). The condition shall enter
+  the run id and be recorded in the run manifest, so a manifest replays the condition it was
+  exported from; a condition's demands and prompts being configuration issued at fixed
+  ticks, the pre-roll is inside AT-04's claim rather than outside it with a reader's
+  commands. The four conditions are *leaving quay-side*, *arriving in the work area*
+  (the default), *loitering in the work area* and *returning to quay-side*.
+- **FR-92** A start condition's coverage eras may be **produced ahead of time and
+  committed** as a build artefact (ADR-0041; Constitution 2.1.0's amended Data
+  constraint), on three conditions that hold together. The artefact is produced by the
+  same components the running system uses, by constructing the backend and driving that
+  condition's pre-roll — never by writing a file. A **drift gate** regenerates it and
+  fails the build on any difference in descriptors or field bytes, which is what makes it
+  derived output rather than a fixture, on the discipline the generated types already
+  answer to. And it re-enters the run through the **coverage store's own publication
+  seam**, republished on the clock by a declared component (`snapshot-source`) at the
+  instant each descriptor records, so the digest check, the atomicity and the announcement
+  are the ones a live publication passes. Each condition declares which eras its artefact
+  carries and the **root seed** it is built from — a seed being declared rather than drawn
+  is what a committed field requires, and removes the last entry of entropy from the
+  application. A missing or unreadable artefact shall be a **slow run and not a broken
+  one**: the run authors the fields live and the source reports, degraded, which artefact
+  it could not use.
+
+### 5.19 The Data tab (feature 121)
 
 Three stores hold everything this harness knows and three standard interfaces serve them,
 and until this feature one of the three was browsable, one was queryable by an expert, and
@@ -967,7 +1009,7 @@ measurements had no face at all, and the advisories — a store, a publisher, a 
 collection, a whole feature's work in 108 — had never been drawn. This section makes all
 three browsable from one place.
 
-- **FR-91** A view **`data`, labelled "Data"**, shall present everything the three stores
+- **FR-93** A view **`data`, labelled "Data"**, shall present everything the three stores
   hold as **one tree beside a detail region**, organised **by data kind**: measurements,
   the coverage eras in the order the store fills them, then what shore has sent. The tab
   absorbs Holdings and carries its obligations whole (FR-46, FR-69, FR-70 as amended).
@@ -976,25 +1018,25 @@ three browsable from one place.
   the tree says which store holds a thing rather than which standard answers for it. That
   is the reader's own vocabulary, and it is affordable only because §5.10's Background
   explains all three interfaces and FR-41's composer shows EDR on the wire in full.
-- **FR-92** The branch list shall be **derived from the `coverage-holding` master**, not
+- **FR-94** The branch list shall be **derived from the `coverage-holding` master**, not
   written beside the display. The reason is on disk: the timeline's own lane list was
   three literals, feature 116's `analysis` era never reached it, and an analysis holding
   was therefore drawn on no lane with nothing to say so. A second hand-maintained list of
   the same eras in the same tab would be the same fault waiting to happen twice.
-- **FR-93** The views shall be **rendered**, showing no request URLs, with FR-70's
+- **FR-95** The views shall be **rendered**, showing no request URLs, with FR-70's
   comparison as the one stated exception. This is a deliberate step back from FR-41's
   discipline and the reason is division of labour rather than indifference: the composer
   exists for reading the wire and is one tab away, and this tab exists for reading data.
   If it ever comes to be used as evidence rather than as a browser, this is the decision
   to revisit first.
-- **FR-94** Everything drawn shall be fetched **through the seam**, as relative-path GETs
+- **FR-96** Everything drawn shall be fetched **through the seam**, as relative-path GETs
   against configured prefixes, validated against the master the response declares before
   anything is displayed (FR-02, FR-03, FR-17). Where a store refuses, or a response fails
   its master, the branch shall state the refusal **where its content would have been**,
   carrying the query component's own words — which name the thing refused (FR-27). It
   shall never draw an empty table, an empty canvas or a chart with no points as though
   those were the answer (Constitution VII).
-- **FR-95** Nothing in the tab shall poll (FR-46), and **not every announcement is acted
+- **FR-97** Nothing in the tab shall poll (FR-46), and **not every announcement is acted
   on**. The coverage store and the advisory store announce rarely — a publication, an
   advisory — so those branches refresh on the announcement and at no other time. The
   observation namespace announces continuously, and those arrivals shall be **counted**
@@ -1016,7 +1058,7 @@ three browsable from one place.
   what is waiting is part of the requirement, not decoration on it. A control whose effect
   a reader can discover only by pressing it has stopped saying anything, and "three
   waiting" and "nothing waiting" are different facts about how old the picture is.
-- **FR-96** The **selected node shall be addressable** (FR-15): `#/view/data/<branch>` and
+- **FR-98** The **selected node shall be addressable** (FR-15): `#/view/data/<branch>` and
   `#/view/data/<branch>/<node>`, so a pull request or a blog entry links a reader to a
   chosen datastream or holding rather than to the tab's front door. Selecting writes the
   address; **mounting does not** — a panel that wrote its own default branch on mount
@@ -1025,7 +1067,7 @@ three browsable from one place.
   not hold shall **say which node was asked for**, and shall never open silently on
   something else: a link to a holding the store has since replaced is a question this tab
   knows the answer to.
-- **FR-97** The measurements branch shall be counted in **measurements**, not in
+- **FR-99** The measurements branch shall be counted in **measurements**, not in
   datastreams: how many observations the store holds, as the store itself reports the
   figure. Reported against the built tab, where the branch showed how many properties were
   being measured — a fact about how the platform is instrumented, which does not move,
@@ -1038,11 +1080,11 @@ three browsable from one place.
   expectation looks the same whether an instrument behaved or failed high, which is the
   one thing plotting a measurement is for. A datastream with no observations shall say so
   rather than draw empty axes.
-- **FR-98** The analysis branch shall present **cycles, not fields**: a cycle publishes the
+- **FR-100** The analysis branch shall present **cycles, not fields**: a cycle publishes the
   corrected field, the error it left and the per-cell provenance together, and they are
   three views of one publication. Naming them by era alone collapses three fields onto one
   node.
-- **FR-99** A coverage holding shall offer a **volume**: longitude, latitude and depth as
+- **FR-101** A coverage holding shall offer a **volume**: longitude, latitude and depth as
   FR-73's cube already draws them, from genuine EDR area queries per level, with a fourth
   axis stepping **the time values the holding's own manifest declares** — months for the
   archive, hours for a forecast run. Steps shall be fetched **as they are asked for** and
@@ -1050,7 +1092,7 @@ three browsable from one place.
   fetched**: scrubbing to an unfetched step shows that step arriving and never a
   neighbouring step's field, which would be a picture of an instant the store was never
   asked about and would be indistinguishable from a volume that had loaded.
-- **FR-100** Shore advisories shall be drawn as **their advised regions**, coloured by kind,
+- **FR-102** Shore advisories shall be drawn as **their advised regions**, coloured by kind,
   with the guidance document opened whole on selection. An advisory whose validity has
   lapsed shall be drawn **spent rather than removed**: what shore has said is a record, and
   a canvas that dropped an advisory when its window closed would answer "has anything been
@@ -1067,7 +1109,7 @@ three browsable from one place.
   the regions on nothing, and the reader's report of that was exact: no vector data on a
   map. An advised bbox alone states that a region was advised and nothing whatever about
   where, which is half of what an advisory is.
-- **FR-101** The tab's two WebGL surfaces — the volume and the shore canvas — shall be
+- **FR-103** The tab's two WebGL surfaces — the volume and the shore canvas — shall be
   **code-split from the tab**, as the map is code-split from the shell and for the same
   measured reason (`spikes/load-time`): the deck.gl stack is about a third of the bundle,
   and a tab that imported it directly would pull it into the first load through a door the

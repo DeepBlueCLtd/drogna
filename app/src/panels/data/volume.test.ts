@@ -1,5 +1,5 @@
 /**
- * The volume's fourth axis (feature 120, FR-13, FR-14, SC-010).
+ * The volume's fourth axis (feature 121, FR-13, FR-14, SC-010).
  *
  * The rule under test is that an unfetched step is *absent* rather than approximated.
  * It is easy to write a cache that returns the nearest thing it has and very hard to

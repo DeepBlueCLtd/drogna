@@ -111,7 +111,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
   beforeEach(() => {
     vi.useFakeTimers();
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 7, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 7, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
   });
 
   afterEach(async () => {
@@ -291,7 +291,7 @@ describe('the consumer tabs are marked in both presentations (FR-76)', () => {
 
   async function shellAt(viewport: number) {
     const config = lockstepConfig();
-    const runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+    const runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     const realFetch = globalThis.fetch;
     globalThis.fetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: viewport });

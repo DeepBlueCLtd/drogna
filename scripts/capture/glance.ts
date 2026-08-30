@@ -28,6 +28,7 @@ import { mkdirSync } from 'node:fs';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import runConfigDocument from '../../app/config/run.json' with { type: 'json' };
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const distDir = join(repoRoot, 'app', 'dist');
@@ -62,6 +63,24 @@ const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
 
+/**
+ * How long a capture waits for the shell to be there.
+ *
+ * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
+ * that is not going to. Feature 120 changed what that number is measuring: the shell is
+ * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
+ * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
+ * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
+ * render"; it was a coin toss on the longest condition.
+ */
+const SHELL_TIMEOUT = 60_000;
+
+
+// Which situation the capture opens in (feature 120). The default comes from the
+// configuration document rather than from a literal here, so a renamed condition moves
+// the captures with it.
+const startCondition = process.env.DROGNA_START ?? runConfigDocument.start_conditions.default;
+
 // A container that carries its own Chromium names it here rather than downloading
 // another; CI installs the version Playwright pins and leaves this unset.
 const browser = await chromium.launch({ executablePath: process.env.DROGNA_CHROMIUM_PATH });
@@ -74,8 +93,13 @@ try {
     throw new Error(`DROGNA_GLANCE_VIEWPORT should be like 390x844, not ${process.env.DROGNA_GLANCE_VIEWPORT}`);
   }
   const page = await browser.newPage({ viewport: { width, height } });
-  await page.goto(viewId ? `${base}#/view/${viewId}` : base);
-  await page.getByTestId('sim-time').waitFor({ timeout: 10_000 });
+  // The front door is the welcome page since feature 120, so a capture of the shell
+  // names the situation it wants in the query string. It is named even when a view is
+  // deep-linked — a deep link opens the shell on its own, but a picture of "whichever
+  // situation happens to be the default" is a picture whose contents nobody can account
+  // for, and the sidecar should be able to say which run this was.
+  await page.goto(`${base}?start=${startCondition}${viewId ? `#/view/${viewId}` : ''}`);
+  await page.getByTestId('sim-time').waitFor({ timeout: SHELL_TIMEOUT });
 
   // Optionally let the run get somewhere first. A harness photographed at its
   // epoch shows an honest empty board, which is the right picture for the shell

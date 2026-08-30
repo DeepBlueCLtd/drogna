@@ -1,5 +1,5 @@
 /**
- * The measurement chart's pure half (feature 120, FR-08, FR-09): observations in,
+ * The measurement chart's pure half (feature 121, FR-08, FR-09): observations in,
  * plotted geometry out.
  *
  * Nothing here fetches and nothing here knows what an SVG element is, which is what lets

@@ -1122,7 +1122,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "step_seconds"
         ],
         "additionalProperties": false,
-        "description": "The forecast the vessel was issued at the quay-side (feature 120): authored once at provisioning, valid forward from the scenario origin, and never refreshed. It is a persistence forecast — the true field at the origin held constant across every step — because this component evaluates the true ocean, and a brief evaluated from truth at each step would be right about the future, which no forecast is. Its error grows on its own as the world moves away from it.",
+        "description": "The forecast the vessel was issued at the quay-side (feature 121): authored once at provisioning, valid forward from the scenario origin, and never refreshed. It is a persistence forecast — the true field at the origin held constant across every step — because this component evaluates the true ocean, and a brief evaluated from truth at each step would be right about the future, which no forecast is. Its error grows on its own as the world moves away from it.",
         "properties": {
           "grid": {
             "$ref": "#/$defs/grid_counts"
@@ -2661,7 +2661,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "advisory_source",
       "advisory_store",
       "offload",
-      "shell"
+      "shell",
+      "start_conditions",
+      "snapshot_source"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2739,6 +2741,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "shell": {
         "$ref": "config.shell.schema.json"
+      },
+      "start_conditions": {
+        "$ref": "config.start-conditions.schema.json"
+      },
+      "snapshot_source": {
+        "$ref": "config.snapshot-source.schema.json"
       }
     }
   },
@@ -3029,7 +3037,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 "harness",
                 "consumer"
               ],
-              "description": "What the view is a face of (feature 116, FR-76). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which — a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
+              "description": "What the view is a face of (feature 116, FR-91). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which — a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
             }
           }
         }
@@ -3058,8 +3066,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "beat": {
               "type": "integer",
               "minimum": 101,
-              "maximum": 116,
-              "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
+              "maximum": 120,
+              "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching. Raised to 120 by the snapshot source, which is the first component to land outside the arc."
             },
             "band": {
               "type": "string",
@@ -3319,7 +3327,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "notice": {
             "type": "string",
             "minLength": 1,
-            "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-76). Here rather than in the frame so the sentence exists once."
+            "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-91). Here rather than in the frame so the sentence exists once."
           },
           "hexes": {
             "type": "object",
@@ -3398,7 +3406,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "depth_zones": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-77)."
+                "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-92)."
               },
               "observation_backfill": {
                 "type": "integer",
@@ -3792,6 +3800,344 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.snapshot-source": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.snapshot-source.schema.json",
+    "title": "drogna snapshot source configuration (V2-C22)",
+    "description": "The component that republishes a committed seed-data artefact into the coverage store (feature 120, ADR-0041). It is a component and not a loader in the composition root on purpose: the holdings go in through the store's one write path, published by something that subscribes to the clock, heartbeats, appears in the Operator flow chart and can be stopped — so the digest check, the atomicity and the announcement are the same ones a live publication passes, and a reader can see that the ocean came from an artefact rather than having to be told. Where a start condition declares no artefact this component runs and says so, rather than being absent: a node missing from the picture reads as a beat that has not landed, and 'the ocean was authored live here' is information.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "artefacts",
+      "authors"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "artefacts": {
+        "type": "object",
+        "required": [
+          "path_prefix",
+          "path_suffix"
+        ],
+        "additionalProperties": false,
+        "description": "Where a condition's artefact is fetched from: prefix, the condition id, suffix. A relative same-origin path like every other address the page uses (FR-04) — the estate serves an instance from an arbitrary path, so an absolute one would be portable to exactly one deployment.",
+        "properties": {
+          "path_prefix": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_./-]*$",
+            "description": "Relative to the page. Not the seam's api prefix: an artefact is a build asset the page loads, like its own script, and it does not cross the wire-protocol seam."
+          },
+          "path_suffix": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]*$"
+          }
+        }
+      },
+      "authors": {
+        "type": "object",
+        "required": [
+          "archive",
+          "nowcast",
+          "analysis",
+          "instance"
+        ],
+        "additionalProperties": false,
+        "description": "Which component authors each coverage era. Declared rather than inferred, and it earns its place twice: the build knows which component's output an artefact stands for, and the page knows which component to hold back while the artefact stands in for it. Getting this wrong in either direction is silent — a component left running beside its own artefact republishes what is already there, and one held back with no artefact behind it leaves an era missing — so it is written down once and read by both.",
+        "properties": {
+          "archive": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "nowcast": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "analysis": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "instance": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          }
+        }
+      }
+    }
+  },
+  "config.start-conditions": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.start-conditions.schema.json",
+    "title": "drogna start conditions",
+    "description": "The situations a visit may begin in, offered on the welcome page before the shell is mounted. A start condition is configuration and not state: it says where the platform is when the first tick arrives, and it scripts a pre-roll — a sequence of legs the composition root drives through the operator plane's own HTTP endpoints, exactly as a reader could drive them by hand. Nothing here writes into a store: the archive, the measurements, the analyses, the forecasts and the advisories a condition promises are authored by the components that author them during a run, on the clock's own step (SRD-v2 FR-11, FR-09). What a condition changes is therefore only how much of the run has already happened when the reader arrives, and which components were running while it did — both stated here, on disk, rather than left to be inferred from the result.",
+    "type": "object",
+    "required": [
+      "default",
+      "conditions"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "default": {
+        "$ref": "#/$defs/condition_id",
+        "description": "The condition a visit starts in when the address names a view rather than a choice, and the one the welcome page offers first. It names a condition in the list below; a default naming no condition is a welcome page whose first card does not exist."
+      },
+      "conditions": {
+        "type": "array",
+        "minItems": 1,
+        "description": "The conditions offered, in the order the welcome page draws them. The order is the arc — quayside, arrival, station, return — because a reader choosing between four situations is choosing a point in a passage, not an item from a menu.",
+        "items": {
+          "$ref": "#/$defs/condition"
+        }
+      }
+    },
+    "$defs": {
+      "condition_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "condition": {
+        "title": "Start condition",
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "situation",
+          "holds",
+          "root_seed",
+          "platform",
+          "legs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/condition_id",
+            "description": "Identity of the condition. It joins the scenario name and the root seed in deriving the run id, so two visits that chose differently can never share one — and it is recorded in the run manifest, so an imported manifest replays the condition it was exported from rather than whichever one the reader happens to be sitting in."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The card's heading on the welcome page."
+          },
+          "situation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One sentence saying where the platform is and what it has been doing. Written for the reader choosing, not for the machinery."
+          },
+          "holds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "What the run will hold when the shell opens, in the reader's terms — and what it will not. Drawn on the card and asserted by test against the stores the pre-roll actually leaves behind, so a card that promises measurements in the work area is a claim the suite can fail.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "root_seed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The seed this condition's run is built from, declared rather than drawn. Before feature 120's snapshots a fresh visit drew one from entropy and every visit got a different ocean; a committed artefact is a function of the seed, so a visit that drew its own would have the sensors sampling an ocean the artefact does not describe. Declaring it is also the stronger position under Constitution II — the one place entropy entered the harness is now no places — and it makes an instance link reproducible, which for a demonstration harness is most of the point: two people opening the same address see the same run."
+          },
+          "snapshot_eras": {
+            "type": "array",
+            "description": "Which coverage eras this condition's committed artefact carries. The components that would have authored them are held back for the pre-roll and the snapshot source republishes them instead. Absent or empty means no artefact: the condition is authored live, start to finish, and the source says so. Which eras are worth committing is a measured trade and is meant to be edited — the ocean eras compress to a fraction of a megabyte and buy about half the pre-roll, the forecast eras carry ensemble noise and cost megabytes for the rest (ADR-0041).",
+            "items": {
+              "type": "string",
+              "enum": [
+                "archive",
+                "nowcast",
+                "analysis",
+                "instance"
+              ]
+            }
+          },
+          "platform": {
+            "type": "object",
+            "required": [
+              "latitude",
+              "longitude",
+              "course_degrees",
+              "speed_m_per_s",
+              "depth_m"
+            ],
+            "additionalProperties": false,
+            "description": "Where the platform is, and how it is moving, when the first tick arrives. Replaces the platform document's own initial vector for this visit — configuration, on the same footing as the vector it replaces, and digested into the manifest's participant entry like any other configuration.",
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "course_degrees": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 360
+              },
+              "speed_m_per_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "depth_m": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "legs": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The pre-roll, in order. Each leg is a stretch of simulation time with a stated crew: which components are running, what the platform has been told to do, and what it was asked to do now. A condition with one empty leg is a cold start, which is what the harness did before this document existed.",
+            "items": {
+              "$ref": "#/$defs/leg"
+            }
+          }
+        }
+      },
+      "leg": {
+        "title": "Pre-roll leg",
+        "type": "object",
+        "required": [
+          "note",
+          "ticks"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this leg is, in one phrase. Shown while the pre-roll runs, so the reader watching the progress is reading what is happening rather than a bar."
+          },
+          "ticks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Simulation ticks the leg advances, each one stepped through the clock's own step operation and published, heard and acted on exactly as a free-running tick is (FR-09). Zero is legitimate: a leg that only issues a demand or a prompt still costs a leg to say so."
+          },
+          "stopped": {
+            "type": "array",
+            "description": "Component ids not running during this leg, stopped and started through the operator plane's own control endpoints (FR-36). A leg that stops the analyst is a leg during which nothing was assimilated, and the card says so; the honesty is that the fact is declared here rather than achieved by not calling something.",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          },
+          "demand": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "A demanded course, speed and depth, published at the head of the leg through the operator surface's demand endpoint. The platform applies it under its own limits and says what is binding; nothing here claims it was reached.",
+            "properties": {
+              "course_degrees": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 360
+              },
+              "speed_m_per_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "depth_m": {
+                "type": "number",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "tune": {
+            "type": "array",
+            "description": "Settings to put in force for this leg, through the operator plane's tuning endpoint, named by the tunable id that plane declares. A pre-roll uses this for what a vessel uses it for: a passage samples on a coarser cadence than a box worked on station, and the last leg puts back what the configuration declares so the console opens at the cadence the run ships with. It is the plane's own control, published as a command and visible in the Messages tab, and the plane enforces its own declared bounds — a leg cannot ask for something a reader could not ask for by hand.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$",
+                  "description": "The tunable's id in the operator's configuration, which is what carries the target and the setting. Named by id rather than by target-and-setting so a leg cannot address a setting the plane does not offer."
+                },
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "prompt": {
+            "type": "array",
+            "description": "Operator event ids asked for at the head of the leg, in order, through the event endpoint. The target component decides: a prompted run goes through the scheduler's ordinary policy and may be declined, and a decline is published like any other decision. Naming an event this plane does not offer is refused by the plane, not silently ignored.",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          }
+        }
+      }
+    },
+    "examples": [
+      {
+        "default": "arriving",
+        "conditions": [
+          {
+            "id": "arriving",
+            "label": "Arriving in the work area",
+            "situation": "Closing the work area from the north-east, instruments streaming since the quay.",
+            "holds": [
+              "the archive",
+              "a now-cast",
+              "measurements along the passage",
+              "no measurement inside the work area"
+            ],
+            "platform": {
+              "latitude": 46.72,
+              "longitude": -10.35,
+              "course_degrees": 233,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60
+            },
+            "legs": [
+              {
+                "note": "the passage in",
+                "ticks": 4800,
+                "stopped": [
+                  "analyst",
+                  "model-runner",
+                  "advisory-source"
+                ],
+                "demand": {
+                  "course_degrees": 233,
+                  "speed_m_per_s": 2.4,
+                  "depth_m": 60,
+                  "note": "close the work area"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "config.telemetry": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.telemetry.schema.json",
@@ -3898,7 +4244,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
     "title": "drogna coverage holding",
-    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. The eras (SRD-v2 FR-21): the historic archive authored at provisioning; the departure forecast issued at the scenario origin and never refreshed — authored as persistence, because a forecast evaluated from the true field at each of its steps would be a perfect forecast and so not a forecast at all (feature 120); the now-cast replaced on its cadence; the analysis an assimilation cycle publishes; and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. The eras (SRD-v2 FR-21): the historic archive authored at provisioning; the departure forecast issued at the scenario origin and never refreshed — authored as persistence, because a forecast evaluated from the true field at each of its steps would be a perfect forecast and so not a forecast at all (feature 121); the now-cast replaced on its cadence; the analysis an assimilation cycle publishes; and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
     "type": "object",
     "required": [
       "schema_version",
@@ -8159,6 +8505,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "required": [
       "schema_version",
       "run_id",
+      "start_condition",
       "root_seed",
       "seed_derivation",
       "clock",
@@ -8178,6 +8525,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9_-]*$",
         "description": "Identity of the run. Deterministic: derived from seed and scenario, never from entropy or a host clock."
+      },
+      "start_condition": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which of the offered start conditions this run began in (config.start-conditions.schema.json). Required, and required for the same reason the root seed is: a condition scripts a pre-roll, so a manifest that did not name one would replay a different world under the same run id — silently, since everything downstream of the pre-roll would still be derived correctly from the seed. It also appears inside run_id, which is how two visits that chose differently are kept from sharing an identity; it is recorded here as a field as well because reading meaning out of an identifier is not reading a record."
       },
       "root_seed": {
         "type": "integer",
@@ -8994,6 +9346,78 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  },
+  "snapshot": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/snapshot.schema.json",
+    "title": "drogna seed-data snapshot header",
+    "description": "The header of a committed seed-data artefact: what it holds, what produced it, and what it is only valid against. A snapshot is not a fixture — it is the output of the same components the running system uses, driven at build time by the same pre-roll the browser drives, and a drift gate regenerates it and fails on any difference (Constitution, Data, as amended at 2.1.0). This document is what makes that checkable at load rather than only at build: the run it was made for, the seed it was made from, the digest of the configuration it was made under and the code revision that made it are all recorded here, so a page opening a stale artefact refuses it by name instead of opening a console over fields no component would have authored today. The field bytes follow the header in the order the holdings are listed, byte-plane shuffled and the whole file gzipped; shuffling is lossless and is worth its line because a float32 field's exponent plane is nearly constant while its low mantissa plane is noise, and a compressor that sees them apart does several times better on the smooth eras.",
+    "type": "object",
+    "required": [
+      "format",
+      "start_condition",
+      "run_id",
+      "root_seed",
+      "config_digest",
+      "code_revision",
+      "holdings"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "format": {
+        "type": "string",
+        "const": "drogna-snapshot-1",
+        "description": "The layout of the bytes after this header. A const rather than a version range: a reader that does not know a layout must refuse it, never guess at it."
+      },
+      "start_condition": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "The start condition this artefact was built for (config.start-conditions.schema.json). A snapshot is specific to one: the pre-roll that produced it is that condition's script."
+      },
+      "run_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$",
+        "description": "The run identity the holdings carry, stamped into every holding id inside them. Recorded so a page can refuse an artefact whose holdings name a different run than the one it is about to open."
+      },
+      "root_seed": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "The seed the run was built from. A snapshot fixes it: the fields are a function of it, and a visit that drew a fresh one would sample an ocean the fields do not describe. This is the seed the condition declares, and the reason it declares one."
+      },
+      "config_digest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "description": "SHA-256 of the environment generator's configuration document as the build read it. The one thing that decides what the fields contain besides the seed, so a page whose configuration has moved refuses the artefact rather than mixing an old ocean with new bounds."
+      },
+      "code_revision": {
+        "type": "string",
+        "description": "The commit the artefact was generated at, for the record. Not enforced at load: the drift gate is what holds the bytes to the code, and a revision comparison would refuse every artefact on every uncommitted working tree while proving nothing the gate does not prove better."
+      },
+      "holdings": {
+        "type": "array",
+        "minItems": 1,
+        "description": "The holdings this artefact carries, in publication order — the order the source republishes them in, which is the order the era pointers were moved in the run that produced them.",
+        "items": {
+          "type": "object",
+          "required": [
+            "descriptor",
+            "byte_length"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "descriptor": {
+              "$ref": "coverage-holding.schema.json",
+              "description": "The holding's descriptor, whole and unaltered — including the ground-truth manifest and the digest of its field. The digest is what the coverage store checks the bytes against when the source publishes them, which is how an artefact whose bytes were corrupted in transit is refused by the same check that refuses a corrupted live publication."
+            },
+            "byte_length": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Length of this holding's field bytes in the body, repeated here so the body can be cut into holdings before any descriptor is trusted."
             }
           }
         }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Data tab against a live backend (feature 120): the tree, the address, the liveness
+ * The Data tab against a live backend (feature 121): the tree, the address, the liveness
  * rule, the measurement chart and the shore canvas.
  *
  * Nothing here is mocked below the seam. The three stores are the real ones, the three
@@ -56,7 +56,7 @@ async function arrive(until: () => boolean, rounds = 200): Promise<void> {
   }
 }
 
-describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
+describe('the Data tab (feature 121)', { timeout: 180_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
   let asked: string[];
@@ -91,7 +91,7 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 77, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 77, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     asked = [];
     rest = undefined;
     listener = undefined;
@@ -219,7 +219,7 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     expect(observationRequests()).toBe(observationsBefore);
   });
 
-  it('the open chart is stale until refreshed, and the tab says how stale (feature 120, reported)', async () => {
+  it('the open chart is stale until refreshed, and the tab says how stale (feature 121, reported)', async () => {
     // The fault this was written for, reported against the built page and reproduced at
     // ×600: the chart held 66 points while twenty-six simulated minutes ran past it,
     // because its fetch was keyed on the datastream alone. The tab was busiest exactly
@@ -270,7 +270,7 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     expect(screen.getByTestId('data-waiting').textContent).toMatch(/nothing has arrived/);
   });
 
-  it('does not refetch the datastream list on every observation (feature 120)', async () => {
+  it('does not refetch the datastream list on every observation (feature 121)', async () => {
     // The other half of the same fault: the observation subscription refetched the
     // platforms and the datastream list on every single sample — two requests each, for
     // a list that changes when a sensor first reports and at no other time.

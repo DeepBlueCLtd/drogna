@@ -1,8 +1,8 @@
 /**
- * The tree's shape, held to the master rather than to this file (feature 120).
+ * The tree's shape, held to the master rather than to this file (feature 121).
  *
  * The check that matters is the first one. A branch list typed by hand is the fault
- * feature 120 found on the timeline's lanes — three literals that feature 116's new era
+ * feature 121 found on the timeline's lanes — three literals that feature 116's new era
  * never reached — and the tab would carry a second copy of it if this were not derived.
  */
 import { describe, expect, it } from 'vitest';
@@ -18,7 +18,7 @@ function holding(id: string, era: CoverageHolding['era']): CoverageHolding {
   return { holding_id: id, era } as CoverageHolding;
 }
 
-describe('the Data tree (feature 120)', () => {
+describe('the Data tree (feature 121)', () => {
   it('carries a branch for every era the master declares, and one is not lost to a typo', () => {
     const covered = BRANCHES.filter((branch) => branch.kind === 'coverage').map((branch) => branch.era);
     expect(covered).toEqual(declared);

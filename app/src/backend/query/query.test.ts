@@ -26,7 +26,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 555, revision: 'test', dirty: false };
+const options = { rootSeed: 555, startCondition: 'loitering', revision: 'test', dirty: false };
 
 describe('the query seam (feature 104)', () => {
   let runtime: BackendRuntime;

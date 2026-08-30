@@ -120,6 +120,7 @@ const NO_TEXT_ON: Record<string, string> = {
   '.intro-mark': 'a 12px message crossing a channel; its label is for a screen reader and is never painted',
   '.intro-mark.is-ann': 'the same mark, carrying an event rather than an observation',
   '.intro-mark.is-res': 'the same mark, carrying a query or its answer',
+  '.welcome-progress-fill': 'the fill inside the welcome page’s progress track; the figure is written under it',
   '.walkthrough-button:hover': 'the help button under the pointer; its own rule sets the text colour',
   '.driver-popover.walkthrough-popover button:hover': 'a popover button under the pointer; its own rule sets the text colour',
 };

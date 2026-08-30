@@ -52,7 +52,7 @@ prose below is where that is said.</p>
 <td><code>advisory-source</code></td>
 <td><em>not a module</em></td>
 <td><code>adv/advisories</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>advisory-store</code></td>
@@ -88,7 +88,7 @@ prose below is where that is said.</p>
 <td><code>env-generator</code></td>
 <td><code>app/src/backend/env-generator</code></td>
 <td><code>ctl/heartbeat</code></td>
-<td><code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>feature-store</code></td>
@@ -112,7 +112,7 @@ prose below is where that is said.</p>
 <td><code>monitor</code></td>
 <td><code>app/src/backend/monitor</code></td>
 <td><code>ctl/divergence</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
-<td><code>obs/#</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>obs/#</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>observation-store</code></td>
@@ -124,25 +124,25 @@ prose below is where that is said.</p>
 <td><code>offload</code></td>
 <td><code>app/src/backend/offload</code></td>
 <td><code>ctl/offload</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/run/published</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>operator</code></td>
 <td><code>app/src/backend/operator</code></td>
-<td><code>ctl/heartbeat</code>, <code>ctl/platform/demand</code></td>
+<td><code>ctl/heartbeat</code>, <code>ctl/platform/demand</code>, <code>ctl/operator/command</code></td>
 <td><code>ctl/heartbeat</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>planner</code></td>
 <td><code>app/src/backend/planner</code></td>
 <td><code>ctl/plan</code>, <code>ctl/heartbeat</code></td>
-<td><code>obs/#</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>obs/#</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>platform</code></td>
 <td><code>app/src/backend/platform</code></td>
 <td><code>obs/ownship/+</code>, <code>ctl/platform/state</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/platform/demand</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/platform/demand</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>query</code></td>
@@ -154,13 +154,13 @@ prose below is where that is said.</p>
 <td><code>scheduler</code></td>
 <td><code>app/src/backend/scheduler</code></td>
 <td><code>ctl/run/request</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/divergence</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/divergence</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>sensors</code></td>
 <td><code>app/src/backend/sensors</code></td>
 <td><code>obs/+/+</code>, <code>ctl/heartbeat</code></td>
-<td><code>obs/ownship/+</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>obs/ownship/+</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>shell</code></td>
@@ -269,6 +269,12 @@ would fail the drift gate before it reached this page.</p>
 <td><code>offload-telemetry.schema.json</code></td>
 <td><code>offload</code></td>
 <td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/operator/command</code></td>
+<td><code>operator-command.schema.json</code></td>
+<td><code>operator</code></td>
+<td><code>advisory-source</code>, <code>env-generator</code>, <code>monitor</code>, <code>offload</code>, <code>planner</code>, <code>platform</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code></td>
 </tr>
 <tr>
 <td><code>ctl/plan</code></td>

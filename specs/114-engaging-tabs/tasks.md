@@ -38,26 +38,30 @@ the Operator flow chart all come from them.
 
 ## Record — owed before the code
 
-- [ ] T006 ADR: *the shell may derive, and says so*. The fourth kind of figure beside
+- [x] T006 ADR: *the shell may derive, and says so*. The fourth kind of figure beside
       113's three; why a derived difference is not a Constitution VII violation and what
       would make one; why the request URLs are constitutive of the display rather than a
       convenience; why telemetry keeps skill. Owed before the comparison is built, because
       a display that computes is exactly what ADR-0035's three kinds were drawn to prevent
       and the next reader must find the argument, not infer it.
-- [ ] T007 ADR: *the help control belongs to the panel*. Why the header button goes rather
+- [x] T007 ADR: *the help control belongs to the panel*. Why the header button goes rather
       than staying as a fallback; what the absence of a button now means; how the
       completeness rule generalises from the declared component list to a per-surface list
       on disk. Amends the record of feature 110 rather than replacing it.
-- [ ] T008 Amend `srd.md`: new §5.14 with FR-63 to FR-70; FR-14, FR-16, FR-23, FR-24,
+- [x] T008 Amend `srd.md`: new §5.14 with FR-63 to FR-70; FR-14, FR-16, FR-23, FR-24,
       FR-40, FR-46 and FR-61 amended in place. FR-16's obligation is named as discharged
       by the Operator flow chart — the amendment must say that, not merely delete System.
-- [ ] T009 Note feature 114 in `docs/v2/plan.md` §5, beside the notes 111, 112 and 113
+- [x] T009 Note feature 114 in `docs/v2/plan.md` §5, beside the notes 111, 112 and 113
       left, so the numbering stays reconciled openly.
-- [ ] T010 Design the three displays before any of them is built: the traffic display, the
+- [x] T010 Design the three displays before any of them is built: the traffic display, the
       holdings timeline, the comparison. A committed mockup that leads implementation
       rather than records it, as 113's `mockup.html` did — at both densities, with the
       four kinds of figure annotated, the empty and refused states drawn, and the keyboard
-      order shown.
+      order shown. Landed as `mockup.html`: the four treatments, the traffic display with
+      its still and first-seconds states, the tree and the schema-aware inspector, the
+      timeline with its refused and empty states, the comparison with both differences on
+      one shared scale and the three URLs, both densities, and the keyboard order drawn as
+      tab stops.
 
 ## Messages — built first
 

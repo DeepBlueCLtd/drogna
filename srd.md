@@ -186,7 +186,7 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
   **Intro, Background, Holdings, Operator, Map, Messages** at first run,
-  user-rearrangeable by drag and drop. **Amended by feature 115:** the list read
+  user-rearrangeable by drag and drop. **Amended by feature 116:** the list read
   *Intro, Background, System, Holdings, Operator, Map, Messages* until FR-68 withdrew
   the System tab, its obligation discharged by the Operator flow chart. Six tabs, and
   nothing replaces the seventh. Background is specified by §5.10 and built by
@@ -218,7 +218,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   driven solely by heartbeats received over the broker within each component's declared
   liveness window. No configuration flag, no fixture, no override *(v1 FR-45, FR-52;
   Constitution VII)*. The clock's heartbeat is the first liveness signal and the
-  pattern every component follows. **Amended by feature 115:** this obligation is
+  pattern every component follows. **Amended by feature 116:** this obligation is
   discharged by the **Operator flow chart** (FR-57), which draws every declared
   component greyed until a heartbeat from it arrives — it is not deleted with the System
   tab that used to carry it. The two facts System carried alone, each component's
@@ -241,11 +241,15 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 - **FR-20** §3's world: generator, seeded features, tau, manifests — inspectable in
   the shell.
-- **FR-21** The coverage holdings span three eras from the start of a scenario: a
+- **FR-21** The coverage holdings span four eras from the start of a scenario: a
   multi-decade monthly **historic archive** authored deterministically at provisioning
   (through the publisher's path, FR-11); a **now-cast** replaced on a configured
-  cadence, its manifest recording its derivation; and the accumulating forecast
-  **instances** once the loop turns. Each holding's discovery document states its
+  cadence, its manifest recording its derivation; the **analysis** an assimilation
+  cycle publishes, being the forecast corrected by what the platform measured, with the
+  error that correction left and the provenance of every cell beside it (feature 116);
+  and the accumulating forecast **instances** once the loop turns. The now-cast is
+  evaluated from the true field and is therefore the reference the monitor scores
+  against — nothing forecasts from it, and a gate holds that. Each holding's discovery document states its
   extent truthfully, verified against the store by test *(v1 FR-54 to FR-58)*.
 - **FR-46** The **Holdings** tab shall show the coverage store's inventory as the store
   itself reports it: fetched through the seam and the release gate as a GET against the
@@ -258,7 +262,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   store announces a publication on its declared topic; it shall not poll. Where the
   inventory is refused or fails its master, the tab shall state the refusal rather than
   render an empty store, an empty table being a claim the shell is not entitled to make
-  *(Constitution VII)*. **Amended by feature 115:** the inventory is presented as a
+  *(Constitution VII)*. **Amended by feature 116:** the inventory is presented as a
   timeline in simulation time rather than a list in arrival order (FR-69), and a derived
   comparison of a forecast instance against the truth published for the same instant
   joins the manifest view (FR-70). The refusal rule and the no-polling rule above are
@@ -286,7 +290,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   kept beside the traffic display rather than replaced.
 - **FR-24** The topic tree draws the declared topology lit by live traffic: structure
   from the derived topology artefact and nothing else, illumination from genuinely
-  received messages and nothing else, the two never mixing; **amended by feature 115**,
+  received messages and nothing else, the two never mixing; **amended by feature 116**,
   which promotes it out of its disclosure to a primary region of the panel and makes
   selecting a node filter the traffic display and the list (FR-72), changing where it is
   and nothing about what it draws; consumer roles as a
@@ -322,8 +326,14 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-30** The loop carries whole: the monitor subscribes to observation topics,
   computes sound-speed residuals against the current forecast, and raises divergence
   events only on sustained persistence; the scheduler enforces a minimum interval and
-  deduplicates; the model runner advects analytically with noise behind the kernel
-  port and runs a small ensemble, emitting spread as an uncertainty field; the
+  deduplicates; **the analyst corrects the standing forecast by the observations taken
+  since its last cycle, by optimal interpolation with the background error from the
+  run's own published spread and the observation error from each instrument's declared
+  noise, and publishes the analysis, its error and its provenance before announcing**
+  (feature 116); the model runner initialises from what that announcement names,
+  perturbs its members by the error the analysis left, advects analytically with noise
+  behind the kernel port and runs a small ensemble, emitting spread as an uncertainty
+  field; the
   publisher makes runs visible atomically (digest-checked, FR-13), retains them as
   instances, and announces each on the control namespace — consumers subscribe,
   nothing polls *(v1 FR-22 to FR-31)*.
@@ -340,10 +350,15 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 ### 5.6 Uncertainty and planning (feature 106)
 
-- **FR-33** Uncertainty combines ensemble spread with observation age against tau; the
-  planner simulates the collapse of uncertainty along candidate routes, commits a
-  single route with diminishing returns incorporated, replans on a receding horizon,
-  and projects when regions fall below usable confidence *(v1 FR-32 to FR-35)*.
+- **FR-33** Uncertainty is the error the analysis published, decayed against tau; the
+  planner simulates the collapse of uncertainty along candidate routes — using the
+  analysis's own correlation and its own closed form for what a visit would leave,
+  never a separately declared footprint — commits a single route with diminishing
+  returns incorporated, replans on a receding horizon, and projects when regions fall
+  below usable confidence *(v1 FR-32 to FR-35; amended by feature 116, which retired
+  the observation-age term: until an analysis existed the ensemble spread carried no
+  spatial structure at all, every member starting from the same state, and the age
+  field was the proxy that supplied it)*.
 - **FR-34** The planner emits recommendations only; the harness is headless with
   respect to decisions *(v1 FR-36; Constitution VIII)*.
 
@@ -406,7 +421,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   holding's own depth axis, each from a genuine area query, and shall say how many
   levels answered — EDR's `cube` query type remains outside the served subset, and
   the composer says so by name *(v1 FR-49's cube, restored client-side)*.
-  **Amended by feature 115:** the platform's historic track and demanded course are
+  **Amended by feature 116:** the platform's historic track and demanded course are
   required in *every* projection the panel offers, the depth volume included, where the
   track is drawn at the depths the platform reported (FR-74). That is parity, not a new
   layer. The time
@@ -594,7 +609,7 @@ left the slot named but unclaimed. It is spent. The specification is
   declared component list and presented in the order the Operator flow chart draws
   them, so a component with no step — or a step for something that is not a component —
   is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
-  covering a component would read as a complete tour. **Amended by feature 115
+  covering a component would read as a complete tour. **Amended by feature 116
   (FR-75, ADR-0037):** the control is carried by the panel it explains rather than by the
   shell header, and so no longer opens a view before running; and the completeness rule
   generalises from the declared component list to a per-surface list on disk, one for
@@ -605,7 +620,7 @@ left the slot named but unclaimed. It is spent. The specification is
   precedent) — and the reason that stays true is the rule above, not the intention. The
   control shall be parameterised by the tour it starts and shall open that tour's view
   before running, so a tour for another view is a tour and not a second control.
-  **Amended by feature 115:** it is parameterised by its tour still, and is carried by
+  **Amended by feature 116:** it is parameterised by its tour still, and is carried by
   the panel; the view-opening clause retires with the header placement.
 
 ### 5.14 The operator's controls (feature 114)
@@ -666,7 +681,6 @@ itself arrives.
   says which is which. Fault injection is declared in configuration, component by
   component: a component that declares none cannot be asked.
 
-
 ### 5.15 The tabs beyond Operator (feature 115)
 
 Feature 113 set a bar and the rest of the shell divided sharply in two: Background is
@@ -674,7 +688,7 @@ designed, the Map is an instrument, Intro is prose doing its job — and System,
 and Messages were tables, each showing the least interesting projection of the most
 interesting thing it had. This beat changes no simulation, adds no component, moves no
 data and needs no new master: everything it draws was already crossing the seam. The
-specification is `specs/115-engaging-tabs/`.
+specification is `specs/116-engaging-tabs/`.
 
 A tab earns its place against three yardsticks, all three: **something is moving**, **the
 reader can poke it**, **the instrument is bespoke to the thing**. A surface that would
@@ -753,7 +767,7 @@ pass only one of the three is not finished.
   the same place in both presentations (FR-50, ADR-0033).
 
 
-### 5.16 The downstream consumers (feature 116)
+### 5.16 The downstream consumers (feature 117)
 
 Every beat so far has shown the harness. This one shows what the harness is *for*: three
 tabs that are not part of drogna at all, but separate notional systems consuming its

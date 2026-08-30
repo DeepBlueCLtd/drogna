@@ -1,5 +1,5 @@
 /**
- * The consumer tabs' proofs (feature 116, T035).
+ * The consumer tabs' proofs (feature 117, T035).
  *
  * Two claims that markup cannot answer on its own, made against the built site the same
  * way Background's are:

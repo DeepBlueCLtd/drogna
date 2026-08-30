@@ -1,4 +1,4 @@
-# ADR-0038: a consumer may synthesise its own inputs; it may never synthesise drogna's
+# ADR-0039: a consumer may synthesise its own inputs; it may never synthesise drogna's
 
 **Status:** Accepted
 **Date:** 30 August 2026
@@ -28,7 +28,7 @@ assert the existence of something that is not running.** Fixture data, canned tr
 a "populate for the screenshot" mode are each named and each forbidden. The whole
 evidential value of drogna rests on that.
 
-Read carelessly, feature 116 is a fixture-data feature with a coat of paint. That reading
+Read carelessly, feature 117 is a fixture-data feature with a coat of paint. That reading
 has to be answered before a single synthesised lane is drawn, because if it is right the
 feature must not be built, and if it is wrong the next reader must be able to find the
 argument rather than reconstruct it.

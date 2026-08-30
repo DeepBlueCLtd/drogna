@@ -48,6 +48,19 @@ export default defineConfig({
     // to lose the race against vitest's 5s default under parallel load — the spread
     // test at ~5.3s, and its file-neighbour failing behind it because a timed-out test
     // leaves its runtime ticking. The bound is raised rather than the tests trimmed.
-    testTimeout: 20_000,
+    //
+    // Raised again at feature 115, for the same reason and with the same choice made
+    // the same way. The analysis put another component in the loop and three more
+    // holdings on every run, each digested over its own bytes, so every scenario test
+    // turning the loop got dearer; the end-to-end analysis test then ran past 20s on a
+    // CI runner under parallel load while taking half that here. Trimming the scenario
+    // would have meant a configuration authored to make a test finish, and the thing
+    // these tests are for is the loop as it ships.
+    testTimeout: 60_000,
+    // Two files now turn the loop once in a hook and share it across their assertions,
+    // which is what stops five drives being paid for where one would do. The hook then
+    // carries the cost the tests used to, and vitest budgets hooks separately — at ten
+    // seconds by default, which is under what one drive costs even here.
+    hookTimeout: 60_000,
   },
 });

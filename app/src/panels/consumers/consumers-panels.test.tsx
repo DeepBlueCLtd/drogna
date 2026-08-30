@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The consumer tabs against a genuine backend (feature 116).
+ * The consumer tabs against a genuine backend (feature 117).
  *
  * Nothing below the seam is mocked: the runtime is provisioned exactly as the bootstrap
  * provisions it, the forecast these panels go stale against is one the model runner

@@ -1,5 +1,5 @@
 /**
- * The chrome every downstream consumer view wears (FR-76, FR-78, ADR-0038).
+ * The chrome every downstream consumer view wears (FR-76, FR-78, ADR-0039).
  *
  * Three tabs in this shell are not part of drogna. They are notional systems consuming
  * its forecast to reach a decision, and the boundary is only defensible if it is visible
@@ -93,7 +93,7 @@ export function ConsumerFrame({
 /**
  * A source's provenance, drawn on the source itself. Three values and three different
  * claims: served over the seam, computed by this view from something that was, or
- * synthesised here because drogna does not model it (ADR-0038).
+ * synthesised here because drogna does not model it (ADR-0039).
  */
 export function Provenance({ of }: { of: 'seam' | 'seam-derived' | 'synthesised' }) {
   const says = {

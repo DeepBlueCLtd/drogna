@@ -7,7 +7,7 @@
 **Status**: Draft for development
 
 **Input**: *Drogna — Downstream Consumer Tabs*, a Software Requirements Document supplied
-by the author, reproduced in full at `specs/116-downstream-consumers/source-srd.md`.
+by the author, reproduced in full at `specs/117-downstream-consumers/source-srd.md`.
 
 ## 1. What this feature delivers, visibly
 
@@ -45,7 +45,7 @@ rather than left to be discovered. Like 111–115 it sits outside the arc of
 `docs/v2/plan.md` §5: it adds no component, changes no simulation and moves no data
 across the seam that was not already crossing it.
 
-**SRD-v2 change.** A new §5.16 carries **FR-76 to FR-85**, beginning where the landed
+**SRD-v2 change.** A new §5.16 (feature 117) carries **FR-76 to FR-85**, beginning where the landed
 §5.15 ends.
 
 **Out of scope, and said so.** The source's §1.2 rules out every consumer that needs
@@ -79,7 +79,7 @@ vocabulary gate holds it to that.
 
 The source's §1.1 permits synthesis freely, and Tab 3 needs it: drogna models no ferry
 timetable, no satellite overpass and no crew watch cycle. Constitution VII forbids fixture
-data. Both are right, and ADR-0038 records why they do not collide:
+data. Both are right, and ADR-0039 records why they do not collide:
 
 - A synthesised quantity is an input to a **consumer's own reasoning**, never a claim
   about a drogna component. Nothing synthesised is ever published back over the seam,

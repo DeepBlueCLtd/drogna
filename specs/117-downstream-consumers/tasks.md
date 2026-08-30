@@ -17,7 +17,7 @@ broker, the coverage store and its EDR service, the planner and the map surface.
 - [x] T002 Carry the author's SRD into the feature directory unmodified as
       `source-srd.md`, so what was asked for sits beside what was decided.
 - [x] T003 SRD-v2 §5.15: FR-76 to FR-85, and the note on why the numbering starts at 71.
-- [x] T004 ADR-0038: *a consumer may synthesise its inputs; it may never synthesise
+- [x] T004 ADR-0039: *a consumer may synthesise its inputs; it may never synthesise
       drogna's*. Owed before any synthesised lane is built, because Constitution VII
       forbids fixture data and the next reader must find the argument rather than infer
       it.
@@ -138,14 +138,35 @@ not by a failing test.
       **The proof existed and was not run before pushing**, which is the whole of the
       fault: `pnpm check` does not run the captures, and CI does.
 
-- [x] T040 Feature 115 landed while this was being built — the tabs beyond Operator,
-      renumbered from 114 on its way in — and took FR-68 to FR-75, ADR-0036 and ADR-0037.
-      This beat is therefore **116**, its ADR is **0038**, its SRD section is **§5.16** and
-      its requirements are **FR-76 to FR-85**; the feature directory, the ADR, the SRD, the
-      panels' own comments, the schema's descriptions, the blog entry and the tests were
-      all rewritten in the merge. Main also withdrew the System tab and added
-      `check-view-ids`, which the merged configuration and registry satisfy: nine views,
-      six of drogna's own and three consumers.
+- [x] T040 Renumbered twice, by two different features landing while this was being built.
+
+      First: feature 115 arrived — the tabs beyond Operator, itself renumbered from 114 on
+      its way in — taking FR-68 to FR-75, ADR-0036 and ADR-0037. That moved this beat from
+      115 to 116. Main also withdrew the System tab and added `check-view-ids`, which the
+      merged configuration and registry satisfy: nine views, six of drogna's own and three
+      consumers.
+
+      Then feature **116** arrived — the analysis step — taking the number this beat had
+      just moved to, and ADR-0038 with it. So this beat is **117**, its ADR is **0039**,
+      and its requirements are **FR-76 to FR-85**, which no other feature has claimed. Its
+      SRD section stays **§5.16**: section numbers and feature numbers stopped tracking
+      each other long ago (§5.13 is feature 110, §5.10 is feature 111), so the document
+      keeps its sequence and the parenthetical carries the link. Each renumbering rewrote
+      the feature directory, the ADR, the SRD, the panels' comments, the schema's
+      descriptions, the blog entry and the tests.
+
+      **Raised rather than fixed here:** main's §5.15 was relabelled "(feature 116)" by
+      the analysis step's own renumbering merge, but its body is FR-68 to FR-75 — the
+      *engaging tabs* requirements, which are feature 115 and still live under
+      `specs/115-engaging-tabs`. The analysis step, meanwhile, has no SRD section on main
+      at all; §5.16 was free for this beat to take because feature 116's own section is
+      missing. This merge restores §5.15's label to 115, since a conflict on that line had
+      to be resolved one way or the other and only one value agrees with the tree. The
+      absent §5.16 for the analysis step is that feature's to write, not this one's.
+
+      The lesson, twice paid: CI typechecks the *merge* with main, not the branch head, so
+      a tree that passes `pnpm check` locally can still be red. Merge main before
+      validating, not after pushing.
 
 - [x] T041 Five faults raised from the running planning tab, all of them things a test
       could not see. **The wheel scrolled the page instead of zooming the map** — the map

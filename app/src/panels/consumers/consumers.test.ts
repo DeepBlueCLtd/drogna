@@ -1,5 +1,5 @@
 /**
- * The consumer tabs' reasoning, held to what the requirements actually say (feature 116).
+ * The consumer tabs' reasoning, held to what the requirements actually say (feature 117).
  *
  * These are the properties a passing render would not catch: that the budget changes the
  * route's *shape*, that a drop is never anywhere the vessel does not go, that a

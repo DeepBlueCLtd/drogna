@@ -19,7 +19,7 @@
  *      because a ghost is the same answer from a moment ago and recolouring it would say
  *      it was a different kind of thing. What tells them apart is the dashes, and a check
  *      demanding a colour step would have forced a worse drawing to satisfy the test.
- *   3. **The provenance chips.** Synthesised and seam-derived are the claim ADR-0038
+ *   3. **The provenance chips.** Synthesised and seam-derived are the claim ADR-0039
  *      rests on, so they may not depend on colour alone either.
  *
  * The values come off the stylesheet and out of the ramp function, never out of this file:
@@ -146,7 +146,7 @@ describe('the marks on the map are told apart without colour (FR-78, FR-85)', ()
   });
 });
 
-describe('provenance is legible without colour (ADR-0038)', () => {
+describe('provenance is legible without colour (ADR-0039)', () => {
   it('separates a synthesised value from a seam-derived one', () => {
     const synthesised = mark(".consumer-source[data-provenance='synthesised']", 'background');
     const body = rule('.consumer-body');

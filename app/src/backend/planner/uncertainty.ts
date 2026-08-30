@@ -10,8 +10,9 @@
  * manifest at the instant asked about, never cached, with no fallback constant
  * anywhere in this package.
  */
-import { cellToLatLng, gridDisk, gridDistance } from 'h3-js';
-import type { ConfigPlanner, CoverageHolding } from '../../generated/types.js';
+import { cellToLatLng, getHexagonEdgeLengthAvg, gridDisk } from 'h3-js';
+import type { ConfigAnalyst, ConfigPlanner, ConfigSensors, CoverageHolding } from '../../generated/types.js';
+import { gaspariCohn } from '../analyst/kernel.js';
 import { tauAt, type TimescaleParameters, type WorldParameters } from '../env-generator/analytic.js';
 import { sampleHolding, timeAxisPosixOrigin } from '../query/field-sampler.js';
 
@@ -56,15 +57,30 @@ export interface UncertaintyModel {
 
 export function createUncertaintyModel(
   config: ConfigPlanner,
-  spreadHolding: { descriptor: CoverageHolding; bytes: Uint8Array },
+  analyst: ConfigAnalyst,
+  sensors: ConfigSensors,
+  errorHolding: { descriptor: CoverageHolding; bytes: Uint8Array },
   world: WorldParameters,
   timescale: TimescaleParameters,
   cover: readonly PlanningCell[],
 ): UncertaintyModel {
-  const manifest = spreadHolding.descriptor.manifest;
+  const manifest = errorHolding.descriptor.manifest;
   const origin = timeAxisPosixOrigin(manifest);
-  const spreadVariableIndex = manifest.variables.findIndex((v) => v.name === 'temperature_spread');
-  if (spreadVariableIndex < 0) throw new Error('the supplied holding carries no temperature_spread variable');
+  const errorVariableIndex = manifest.variables.findIndex((v) => v.name === 'temperature_error');
+  if (errorVariableIndex < 0) throw new Error('the supplied holding carries no temperature_error variable');
+
+  /**
+   * The observation error a visit would bring: the smallest declared among the
+   * instruments that measure temperature, because a visit brings all of them and the
+   * best is what sets how much the analysis can learn. Read from the instruments that
+   * declare it, never restated — the analyst reads the same numbers for the same
+   * reason.
+   */
+  const observationErrorStd = Math.min(
+    ...sensors.instruments
+      .filter((instrument) => instrument.observed_property === 'temperature')
+      .map((instrument) => instrument.noise_std),
+  );
 
   // Both u_sat and τ are memoised per (cell, time step): the spread is only ever
   // sampled at its axis steps, and τ at the step quantum loses nothing a walk of
@@ -79,15 +95,15 @@ export function createUncertaintyModel(
     const step = stepIndexFor(posixSeconds);
     const key = `${cellKey(cell.h3, cell.band)}:${step}`;
     if (satCache.has(key)) return satCache.get(key);
-    const sampled = sampleHolding(spreadHolding, {
+    const sampled = sampleHolding(errorHolding, {
       longitude: cell.longitude,
       latitude: cell.latitude,
       depthM: cell.depthM,
-      // The spread is defined over the run's validity; beyond it the last step
+      // The error field is defined over the run's validity; beyond it the last step
       // stands (the field does not vanish, it ages — the deficit term handles age).
       posixSeconds: clampToAxis(posixSeconds, manifest, origin),
     });
-    const value = sampled.ok ? sampled.value.values[spreadVariableIndex] : undefined;
+    const value = sampled.ok ? sampled.value.values[errorVariableIndex] : undefined;
     satCache.set(key, value);
     return value;
   };
@@ -98,15 +114,39 @@ export function createUncertaintyModel(
     return Math.hypot(dLat, dLon);
   };
 
+  /**
+   * How far a visit reaches, and how much it collapses — both taken from the analysis
+   * rather than declared here.
+   *
+   * Until feature 116 this was a `footprint` block in the planner's own configuration:
+   * a peak of 0.85, two exponential e-foldings and two hard ring cutoffs, hand-authored
+   * before there was an analysis to imitate. Every one of those numbers was a second
+   * declaration of something the analysis now actually does, and they disagreed with it
+   * — the real collapse at an observed cell is σ²ᵦ/(σ²ᵦ+σ²ₒ), which for the declared
+   * deviations is 0.997, not 0.85. A planner scoring a collapse of uncertainty at one
+   * scale while the analysis applies it at another is scoring a system that does not
+   * exist, so the block is gone and the reach is read from the analyst's covariance.
+   */
   const footprintWeight = (visited: PlanningCell, cell: PlanningCell): number => {
-    if (gridDistance(visited.h3, cell.h3) > config.footprint.rings) return 0;
-    if (Math.abs(visited.band - cell.band) > config.footprint.band_reach) return 0;
-    return (
-      config.footprint.peak *
-      Math.exp(-horizontalDistanceM(visited, cell) / config.footprint.horizontal_efolding_m) *
-      Math.exp(-Math.abs(cell.depthM - visited.depthM) / config.footprint.vertical_efolding_m)
+    const horizontalKm = horizontalDistanceM(visited, cell) / 1000;
+    const verticalM = Math.abs(cell.depthM - visited.depthM);
+    return gaspariCohn(
+      Math.sqrt(
+        (horizontalKm * horizontalKm) / (analyst.correlation.horizontal_km * analyst.correlation.horizontal_km) +
+          (verticalM * verticalM) / (analyst.correlation.vertical_m * analyst.correlation.vertical_m),
+      ),
     );
   };
+
+  /**
+   * The rings the search must enumerate to cover the taper's support. Derived from the
+   * declared half-width and the resolution's own hexagon size, so a wider correlation
+   * widens the search by itself and no ring count is carried anywhere.
+   */
+  const supportRings = Math.max(
+    1,
+    Math.ceil((2 * analyst.correlation.horizontal_km) / getHexagonEdgeLengthAvg(config.h3_resolution, 'km')),
+  );
 
   const tauCache = new Map<string, number>();
   const tau = (cell: PlanningCell, posixSeconds: number): number => {
@@ -144,7 +184,7 @@ export function createUncertaintyModel(
     let entries = footprints.get(key);
     if (!entries) {
       entries = [];
-      for (const h3 of gridDisk(visited.h3, config.footprint.rings)) {
+      for (const h3 of gridDisk(visited.h3, supportRings)) {
         for (const cell of coverByH3.get(h3) ?? []) {
           const weight = footprintWeight(visited, cell);
           if (weight > 0) entries.push({ cell, weight });
@@ -168,11 +208,16 @@ export function createUncertaintyModel(
         const uSat = saturation(cell, posixSeconds);
         const before = uncertainty(cell, posixSeconds, state);
         if (uSat === undefined || before === undefined) continue;
-        // Multiplicative collapse: u⁺ = u⁻ · (1 − w).
+        // What the analysis would actually leave, from its own closed form:
+        //   σ²ᵃ = σ²ᵇ − σ⁴ᵇρ² / (σ²ᵇ + σ²ₒ)
+        // so the collapse is not a declared peak times a declared decay — it is the
+        // arithmetic the analyst will perform when the platform gets there.
+        const variance = before * before;
+        const explained = (variance * variance * weight * weight) / (variance + observationErrorStd * observationErrorStd);
         state.set(cellKey(cell.h3, cell.band), {
           t0Seconds: posixSeconds,
           uSatAtVisit: uSat,
-          uAfterVisit: before * (1 - weight),
+          uAfterVisit: Math.sqrt(Math.max(variance - explained, 0)),
         });
       }
     },

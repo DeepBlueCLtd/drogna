@@ -24,7 +24,7 @@
  *
  * Every draw comes from the seeded stream (Constitution II), so a replayed run produces
  * the same cloud. The banks are synthesised — drogna models no bathymetry — and the view
- * says so on the roster (ADR-0038).
+ * says so on the roster (ADR-0039).
  */
 import { hexAt } from '../hexes.js';
 import type { Domain } from '../domain.js';

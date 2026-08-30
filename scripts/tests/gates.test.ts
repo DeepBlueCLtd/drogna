@@ -28,12 +28,27 @@ import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
+import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
+import { runGate as blogLength } from '../gates/check-blog-length.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
 const clean = join(fixtures, 'clean');
 
 describe('each gate catches its planted violation and passes a clean tree', () => {
+  it('truth-initialisation: a component reaching for the true field fails; the real tree passes', () => {
+    // The leak this feature closed: for nine features the model runner initialised
+    // from a now-cast evaluated from the true ocean, so nothing the platform measured
+    // ever changed a field value. Planted here as a component outside the permitted
+    // four calling the accessor that hands back those bytes.
+    const found = truthInitialisation(violations);
+    expect(found.map((f) => f.message)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/may not read the truth-derived now-cast/)]),
+    );
+    expect(found.some((f) => f.file.includes('model-runner'))).toBe(true);
+    expect(truthInitialisation(clean)).toEqual([]);
+  });
+
   it('wallclock', () => {
     const found = wallclock(violations);
     expect(found.map((f) => f.message)).toEqual(
@@ -132,6 +147,23 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(oneBreakpoint(clean)).toEqual([]);
     // And the tree it is actually for.
     expect(oneBreakpoint(REPO_ROOT)).toEqual([]);
+  });
+
+  it('blog-length: a long entry and a long description both fail; a short one passes', () => {
+    const messages = blogLength(violations).map((f) => f.message).join('\n');
+    expect(messages).toMatch(/runs to 90 words of prose; the budget is 40/);
+    expect(messages).toMatch(/description runs to 30 words; the index card takes 12/);
+    // The clean fixture's alt text alone is longer than that tree's whole budget, so a
+    // pass there is what says the exemption for alt text and URLs is real rather than
+    // merely intended — and what would catch a counter that stopped exempting them.
+    expect(blogLength(clean)).toEqual([]);
+    // And the tree it is actually for: every published entry is inside the budget.
+    expect(blogLength(REPO_ROOT)).toEqual([]);
+  });
+
+  it('blog-length: reports rather than passes when the note states no budget', () => {
+    // The outcome that proves nothing must not look like a pass (run-gates.ts).
+    expect(() => blogLength(join(fixtures, 'stale-generated'))).toThrow(/word budget/);
   });
 
   it('one-breakpoint: reports rather than passes when the declaration is missing', () => {

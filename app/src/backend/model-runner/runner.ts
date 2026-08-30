@@ -7,11 +7,11 @@
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
+  AnalysisPublished,
   ConfigModelRunner,
   CoverageHolding,
   Manifest,
   RunPublished,
-  RunRequest,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
@@ -79,8 +79,13 @@ export class ModelRunner {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
     });
-    this.client.subscribe(this.config.topics.run_request, (message) => {
-      this.run(message.payload as RunRequest);
+    // Feature 116: the runner waits for the analysis, not for the request. Until then
+    // it subscribed to the request directly and initialised from a now-cast the
+    // environment generator evaluated from the true ocean, so nothing the platform
+    // measured ever reached a forecast. The ordering between analysing and forecasting
+    // is now a message rather than the order two components happened to subscribe in.
+    this.client.subscribe(this.config.topics.analysis_published, (message) => {
+      this.run(message.payload as AnalysisPublished);
     });
     this.heartbeat.start();
   }
@@ -89,10 +94,18 @@ export class ModelRunner {
     this.heartbeat.stop();
   }
 
-  private run(request: RunRequest): void {
-    const nowcast = this.store.currentNowcast();
-    if (!nowcast) throw new Error('a run was requested before any now-cast exists to initialise from');
-    const baseManifest = nowcast.descriptor.manifest;
+  private run(request: AnalysisPublished): void {
+    const analysis = this.store.holding(request.collections.analysis);
+    if (!analysis) {
+      throw new Error(
+        `the analysis '${request.collections.analysis}' this run initialises from is not in the store; a run never falls back to the true field`,
+      );
+    }
+    const errorHolding = this.store.holding(request.collections.error);
+    if (!errorHolding) {
+      throw new Error(`the analysis error '${request.collections.error}' is not in the store; the ensemble has nothing to be perturbed by`);
+    }
+    const baseManifest = analysis.descriptor.manifest;
     const grid = baseManifest.grid;
     const cellsPerStep = grid.depth.count * grid.latitude.count * grid.longitude.count;
 
@@ -102,27 +115,28 @@ export class ModelRunner {
       sim_time: this.simTime.value,
       tick: this.simTime.tick,
       run_id: request.run_id,
-      divergence_id: request.divergence?.divergence_id ?? null,
+      divergence_id: null,
       member_count: request.ensemble_size,
       kernel: this.kernel.name,
       initialisation_sim_time: request.initialisation_sim_time,
     });
 
-    // Initial state: the now-cast's first time step, through the store interface.
-    const nowcastView = new Float32Array(nowcast.bytes.buffer, nowcast.bytes.byteOffset, nowcast.bytes.byteLength / 4);
-    const nowcastCells = grid.time.count * cellsPerStep;
+    // Initial state: the analysis, through the store interface. It carries one instant,
+    // so a variable's field is one stride of cells rather than a slice out of a series.
+    const analysisView = new Float32Array(analysis.bytes.buffer, analysis.bytes.byteOffset, analysis.bytes.byteLength / 4);
+    const errorView = new Float32Array(errorHolding.bytes.buffer, errorHolding.bytes.byteOffset, errorHolding.bytes.byteLength / 4);
     const midLatitude = (grid.latitude.minimum + grid.latitude.maximum) / 2;
-    const initial = {
-      grid: {
-        lonCount: grid.longitude.count,
-        latCount: grid.latitude.count,
-        depthCount: grid.depth.count,
-        cellKmEast: grid.longitude.spacing * KM_PER_DEGREE_LATITUDE * Math.cos((midLatitude * Math.PI) / 180),
-        cellKmNorth: grid.latitude.spacing * KM_PER_DEGREE_LATITUDE,
-      },
-      temperature: nowcastView.slice(0, cellsPerStep),
-      salinity: nowcastView.slice(nowcastCells, nowcastCells + cellsPerStep),
+    const kernelGrid = {
+      lonCount: grid.longitude.count,
+      latCount: grid.latitude.count,
+      depthCount: grid.depth.count,
+      cellKmEast: grid.longitude.spacing * KM_PER_DEGREE_LATITUDE * Math.cos((midLatitude * Math.PI) / 180),
+      cellKmNorth: grid.latitude.spacing * KM_PER_DEGREE_LATITUDE,
     };
+    const analysedTemperature = analysisView.slice(0, cellsPerStep);
+    const analysedSalinity = analysisView.slice(cellsPerStep, 2 * cellsPerStep);
+    const errorTemperature = errorView.slice(0, cellsPerStep);
+    const errorSalinity = errorView.slice(cellsPerStep, 2 * cellsPerStep);
     const parameters = {
       steps: this.config.steps,
       stepSeconds: this.config.step_seconds,
@@ -138,7 +152,21 @@ export class ModelRunner {
     const members = Array.from({ length: request.ensemble_size }, (_, member) => {
       const streamName = `${this.config.stream}:${request.run_id}:m${member}`;
       drawOrder.push(streamName);
-      return this.kernel.memberField(initial, parameters, new Rng(this.rootSeed, streamName));
+      const rng = new Rng(this.rootSeed, streamName);
+      // Each member starts from the analysis plus a draw scaled by the error the
+      // analysis left. Before feature 116 every member began from the identical state,
+      // so the ensemble's only divergence was the kernel's own noise and the published
+      // spread was a function of lead time with no spatial structure whatever — the
+      // planner needed an observation-age field to supply the structure the spread
+      // lacked. Perturbing from Pᵃ is what makes the spread mean 'how well is this
+      // state known', and what lets a measurement's effect survive into the next cycle.
+      const temperature = new Float32Array(cellsPerStep);
+      const salinity = new Float32Array(cellsPerStep);
+      for (let cell = 0; cell < cellsPerStep; cell++) {
+        temperature[cell] = analysedTemperature[cell] + rng.normal(0, errorTemperature[cell]);
+        salinity[cell] = analysedSalinity[cell] + rng.normal(0, errorSalinity[cell]);
+      }
+      return this.kernel.memberField({ grid: kernelGrid, temperature, salinity }, parameters, rng);
     });
 
     // Ensemble mean and spread, per variable per cell.
@@ -192,7 +220,7 @@ export class ModelRunner {
 
   private publishInstance(
     holdingId: string,
-    request: RunRequest,
+    request: AnalysisPublished,
     baseManifest: Manifest,
     temperature: Float32Array,
     salinity: Float32Array,
@@ -254,9 +282,9 @@ export class ModelRunner {
       })),
       composition: {
         rule: isSpread ? 'ensemble-spread' : 'ensemble-mean',
-        description: `${this.kernel.name} members from the now-cast initial state; ${
+        description: `${this.kernel.name} members from the analysis, each perturbed by the error the analysis left; ${
           isSpread ? 'per-cell sample standard deviation across members' : 'per-cell mean across members'
-        }. The advection velocity is a modelling assumption, deliberately not the true drift.`,
+        }. The advection velocity is a modelling assumption, deliberately not the true drift. Before feature 116 every member began from an identical now-cast the generator evaluated from the true field, so the spread carried no spatial structure and no measurement reached a forecast.`,
       },
       sound_speed: {
         ...baseManifest.sound_speed,

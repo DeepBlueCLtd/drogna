@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.analyst.schema.json",
+  "title": "drogna analyst configuration (V2-C19)",
+  "description": "The analyst (SRD-v2 FR-30, amended by feature 116): on a run request, takes the current forecast as background and the observations since its last cycle, and publishes an analysis — the field corrected by what was measured, the error that correction left, and where every cell's value came from. Until feature 116 the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so no measurement ever changed a field value and the loop converged because truth leaked in on a timer. This document configures the step that replaced that.",
+  "type": "object",
+  "required": [
+    "id",
+    "stream",
+    "topics",
+    "heartbeat",
+    "correlation",
+    "excluded_datastreams",
+    "shares"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
+    },
+    "stream": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The RNG stream the analyst draws from, for the perturbations the model runner's ensemble is initialised with."
+    },
+    "topics": {
+      "type": "object",
+      "required": [
+        "clock",
+        "observations",
+        "run_request",
+        "run_published",
+        "analysis_published"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "observations": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter"
+        },
+        "run_request": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "run_published": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "analysis_published": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        }
+      }
+    },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
+    "correlation": {
+      "type": "object",
+      "required": [
+        "horizontal_km",
+        "vertical_m"
+      ],
+      "additionalProperties": false,
+      "description": "The background error correlation: Gaspari–Cohn half-widths, so the taper reaches exactly zero at twice each value and a cell beyond that owes a measurement nothing at all — a fact rather than a small number. This is the harness's ONE declaration of how far a measurement's influence reaches: the planner reads it from here rather than restating it, because a planner that scores a collapse of uncertainty at one scale while the analysis applies it at another is scoring a system that does not exist. It is a modelling assumption and is meant to be: the analyst may not read the world's own feature scales, since that document describes the truth. specs/116 argues the values.",
+      "properties": {
+        "horizontal_km": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "vertical_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "excluded_datastreams": {
+      "type": "array",
+      "description": "Datastreams that measure the platform rather than the sea, excluded by name as the monitor and planner exclude them. An ownship course is not a sample of the ocean and cannot inform a field.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+      }
+    },
+    "shares": {
+      "type": "object",
+      "required": [
+        "archive",
+        "departure",
+        "measurement",
+        "model"
+      ],
+      "additionalProperties": false,
+      "description": "The provenance vocabulary, in the order the shares are stored and drawn. Four, and each is a different kind of claim: what was known before the scenario began; what the state held when the platform left; what the instruments have since measured; and the error successive forecasts have added, which belongs to no observation. The departure share's content is archive — the model propagates information without creating any — so that bar is a convention kept for the operator's benefit, and specs/116 requires the explainer to say so.",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "minLength": 1
+        },
+        "departure": {
+          "type": "string",
+          "minLength": 1
+        },
+        "measurement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

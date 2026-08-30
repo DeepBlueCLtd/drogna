@@ -25,7 +25,14 @@ import { useGhostOnRunChange } from '../freshness.js';
 import { useConsumerBasis } from '../basis.js';
 import { consumerStream } from '../rng.js';
 import { domainRing, type Domain } from '../domain.js';
-import { aggregateOntoHexes, coverExtent, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import {
+  aggregateOntoHexes,
+  coverExtent,
+  hexesArePointable,
+  isRefusal,
+  projector,
+  uncertaintyColour,
+} from '../hexes.js';
 import { useMapView } from '../view.js';
 import { concealmentFromField, seedCloud, type ClassHypothesis } from './participants.js';
 import { buildCandidates, rank, type ScoredCandidate } from './candidates.js';
@@ -109,7 +116,14 @@ export function CoursesPanel({ params }: PanelProps) {
     [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],
   );
   const refusedResolution = cover && isRefusal(cover) ? cover.refused : undefined;
+  // The generation of the hex layer, and it is the *resolution* rather than the view
+  // (T041). A resolution change replaces every H3 index at once, so nothing can be reused
+  // and the layer is best rebuilt; a pan or a zoom keeps most of the cells it had, and
+  // React updating those in place beats throwing them away. Keying on the view as well was
+  // measured and was worse everywhere, which is the argument for the narrower key.
+  const hexLayerKey = `resolution-${resolution}`;
   const cells = cover && !isRefusal(cover) ? cover.cells : [];
+  const pointable = hexesArePointable(cells.length, MAP_WIDTH, MAP_HEIGHT);
 
   /** The fetched field, resampled onto the reader's hexes, and the concealment from it. */
   const concealment = useMemo(() => {
@@ -343,22 +357,28 @@ export function CoursesPanel({ params }: PanelProps) {
           ref={view.ref}
           data-panning={view.panning}
         >
-          {cells.map((cell) => {
-            const density = cloud.highest > 0 ? (cloud.density.get(cell.index) ?? 0) / cloud.highest : 0;
-            return (
-              <polygon
-                key={cell.index}
-                className="consumer-hex consumer-cloud"
-                points={plot.ring(cell.boundary)}
-                fill={uncertaintyColour(density)}
-                opacity={0.25 + 0.75 * density}
-              >
-                <title>
-                  {cell.index}: {(cloud.density.get(cell.index) ?? 0).toFixed(0)} hypothesis-steps
-                </title>
-              </polygon>
-            );
-          })}
+          {/* Keyed on the cover, and tooltips only where a hex can be pointed at — the
+              same two costs as Sampling, for the same reason (T041). */}
+          <g key={hexLayerKey}>
+            {cells.map((cell) => {
+              const density = cloud.highest > 0 ? (cloud.density.get(cell.index) ?? 0) / cloud.highest : 0;
+              return (
+                <polygon
+                  key={cell.index}
+                  className="consumer-hex consumer-cloud"
+                  points={plot.ring(cell.boundary)}
+                  fill={uncertaintyColour(density)}
+                  opacity={0.25 + 0.75 * density}
+                >
+                  {pointable && (
+                    <title>
+                      {cell.index}: {(cloud.density.get(cell.index) ?? 0).toFixed(0)} hypothesis-steps
+                    </title>
+                  )}
+                </polygon>
+              );
+            })}
+          </g>
           {ghostLeader && (
             <polyline
               className="consumer-ghost"

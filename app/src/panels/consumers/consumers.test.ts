@@ -228,12 +228,25 @@ describe('the sampling plan (FR-83)', () => {
     expect(dropsFor(3, 6)).toBe(0);
   });
 
-  it('refuses a resolution too fine for the view, without enumerating it first', () => {
-    // The finest resolution on offer does not fit the whole domain, by design: zooming in
-    // is what makes it affordable. It must be *refused cheaply* — asking h3 to enumerate
-    // and then counting is the obvious order and it is the one that runs out of memory
-    // before the ceiling is ever consulted, which is what happened here.
-    const refused = coverExtent(domain, consumers.hexes.maximum_resolution, consumers.hexes.cell_ceiling);
+  /*
+   * The scale ends where the domain stops being affordable, which is the point of the
+   * maximum being 7 rather than 8 (T041). Eight needs about 278,000 hexes over this
+   * domain — no ceiling worth having admits that — so offering it only ever produced a
+   * refusal, and a control whose top setting never works is a control with a broken end.
+   */
+  it('offers a scale whose finest setting covers the whole domain', () => {
+    const cover = coverExtent(domain, consumers.hexes.maximum_resolution, consumers.hexes.cell_ceiling);
+    expect(isRefusal(cover)).toBe(false);
+    if (!isRefusal(cover)) {
+      expect(cover.cells.length).toBeGreaterThan(0);
+      expect(cover.cells.length).toBeLessThanOrEqual(consumers.hexes.cell_ceiling);
+    }
+  });
+
+  it('refuses a resolution too fine for the view, naming both remedies', () => {
+    // One finer than the scale offers, over the whole domain. Held a step beyond the
+    // maximum rather than at it, so that moving the maximum cannot quietly retire this.
+    const refused = coverExtent(domain, consumers.hexes.maximum_resolution + 1, consumers.hexes.cell_ceiling);
     expect(isRefusal(refused)).toBe(true);
     if (isRefusal(refused)) {
       expect(refused.refused).toContain(String(consumers.hexes.cell_ceiling));
@@ -241,6 +254,26 @@ describe('the sampling plan (FR-83)', () => {
       expect(refused.refused).toContain('zoom in');
       expect(refused.refused).toContain('coarser');
     }
+  });
+
+  /*
+   * And refuses it *without enumerating it first*, which is the fault that was actually
+   * hit: asking h3 for the cells and then counting them is the obvious order, and at a
+   * fine resolution over a wide view the enumeration is what dies — "Memory allocation
+   * failed", from inside the library, with the ceiling check sitting unreached on the next
+   * line.
+   *
+   * A time bound rather than a count, because cheapness is the property and nothing else
+   * distinguishes the two orders. The margin is what makes it honest rather than flaky:
+   * with the estimate in place this returns in under a millisecond, and enumerating the
+   * same request measures 6.9 s in node and dies outright in a browser. Anything under
+   * half a second cannot have enumerated.
+   */
+  it('refuses it without enumerating it first', () => {
+    const started = performance.now();
+    const refused = coverExtent(domain, consumers.hexes.maximum_resolution + 2, consumers.hexes.cell_ceiling);
+    expect(isRefusal(refused)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(500);
   });
 
   it('affords the finest resolution once the view is close enough', () => {

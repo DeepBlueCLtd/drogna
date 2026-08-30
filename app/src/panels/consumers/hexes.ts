@@ -103,6 +103,27 @@ export function coverExtent(
   return { resolution, cells: cells.sort((a, b) => (a.index < b.index ? -1 : 1)) };
 }
 
+/**
+ * The smallest a hex can be drawn and still be worth pointing at, in the drawing's own
+ * square units. Below this a per-hex tooltip is a promise the picture cannot keep: the
+ * target is smaller than the cursor, and every one of them costs a DOM node.
+ */
+const POINTABLE_AREA = 100;
+
+/**
+ * Whether this many hexes, spread over this drawing, are big enough to carry a tooltip
+ * each (T041).
+ *
+ * The threshold is derived from the map's own size rather than typed, because the map's
+ * size is the thing that decides it: 720 x 480 gives about 3,456 hexes before the average
+ * cell is under ten units across. It is a real cost as well as a courtesy — every polygon
+ * carries a <title> child, so a fine resolution over a wide view was building two DOM
+ * nodes per hex, 74,800 of them at resolution 7, for tooltips on targets two pixels wide.
+ */
+export function hexesArePointable(count: number, width: number, height: number): boolean {
+  return count > 0 && count * POINTABLE_AREA <= width * height;
+}
+
 /** Which hex a position falls in, at this resolution. */
 export function hexAt(longitude: number, latitude: number, resolution: number): string {
   return latLngToCell(latitude, longitude, resolution);

@@ -200,6 +200,50 @@ not by a failing test.
       "Memory allocation failed" before it could refuse; it now estimates from h3's own
       average hex area first, and a test holds both the refusal and its two remedies.
 
+- [x] T042 The resolution-7 render, and the hex scale's top end. Raising the ceiling made
+      resolutions 6 and 7 reachable at full extent and resolution 7 took **5.3 seconds** a
+      slider move, against FR-79's *instant*. Profiled rather than guessed, and the guess
+      would have been wrong: h3 is 345 ms of it, the projection 157 ms, and the browser
+      builds the same 37,400 polygons by hand in **247 ms**. Ninety-five per cent was in
+      React DOM's `getHostSibling` — the commit-phase walk that finds the node to insert
+      before, which rescans the following siblings for every insertion and so runs
+      quadratic when *every* child is new. A resolution change replaces every H3 index at
+      once, which is exactly that case.
+
+      Two changes, both measured against the alternative rather than assumed:
+
+      - The hex layer is a `<g>` keyed on the **resolution**. Children of a newly mounted
+        parent are appended into a detached node with no sibling walk at all. Keying on the
+        view as well was tried and was worse on every case — a pan keeps most of its cells,
+        and letting React update those in place beats rebuilding them (pan at resolution 6:
+        103 ms keyed on resolution, 134 ms keyed on resolution and view).
+      - The per-hex `<title>` is dropped where a hex is too small to point at. Every polygon
+        carried one, so the real node count was 74,800; the threshold comes from the map's
+        own 720 × 480 rather than a number typed here.
+
+      | | before | after |
+      |---|---|---|
+      | resolution 5 → 7, whole domain | 5,333 ms | 1,297 ms |
+      | resolution 6 → 7, whole domain | 6,563 ms | 1,190 ms |
+      | zoom out one step at resolution 7 | 1,901 ms | 1,082 ms |
+      | pan one step at resolution 6 | 84 ms | 105 ms |
+
+      **The maximum resolution drops from 8 to 7.** Eight needs about 278,000 hexes over
+      this domain and no ceiling worth having admits that, so the top of the scale only ever
+      produced a refusal — a control whose last setting never works. Seven covers the whole
+      domain with 37,400, so the ceiling is 45,000: the smallest that offers every setting
+      on the scale at full extent, with room for the estimate to differ from the real count.
+
+      **A test had to change, and one of its claims turned out to be untested.** The old
+      test asserted the *maximum* resolution is refused over the whole domain, which was
+      true only while the maximum was unaffordable; it is now split into the scale being
+      affordable end to end, and a refusal one step beyond it. The refusal's second claim —
+      *without enumerating it first* — was then planted against and **passed anyway**: h3
+      enumerates 261,815 cells in 999 ms without complaint, so the ceiling check caught it
+      on the real count and the estimate was never needed. The claim is now a time bound at
+      two steps beyond the scale, where enumerating measures 6.9 s in node and dies outright
+      in a browser; watched failing at 6,202 ms against a 500 ms bound.
+
 ## Proof, and showing the work
 
 - [x] T031 Panel tests against a genuine backend, in the shape `panels.test.tsx` already

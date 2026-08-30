@@ -34,7 +34,7 @@ import {
   type DepthZone,
   type Domain,
 } from '../domain.js';
-import { coverExtent, hexAt, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import { coverExtent, hexAt, hexesArePointable, isRefusal, projector, uncertaintyColour } from '../hexes.js';
 import { useMapView } from '../view.js';
 import type { ServedObservation } from '../../map/map-data.js';
 import {
@@ -235,7 +235,14 @@ export function SamplingPanel({ params }: PanelProps) {
     [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],
   );
   const refusedResolution = cover && isRefusal(cover) ? cover.refused : undefined;
+  // The generation of the hex layer, and it is the *resolution* rather than the view
+  // (T041). A resolution change replaces every H3 index at once, so nothing can be reused
+  // and the layer is best rebuilt; a pan or a zoom keeps most of the cells it had, and
+  // React updating those in place beats throwing them away. Keying on the view as well was
+  // measured and was worse everywhere, which is the argument for the narrower key.
+  const hexLayerKey = `resolution-${resolution}`;
   const cells = cover && !isRefusal(cover) ? cover.cells : [];
+  const pointable = hexesArePointable(cells.length, MAP_WIDTH, MAP_HEIGHT);
 
   const field: ZoneUncertainty[] = useMemo(() => {
     if (cells.length === 0 || !simTime) return [];
@@ -473,20 +480,34 @@ export function SamplingPanel({ params }: PanelProps) {
           ref={view.ref}
           data-panning={view.panning}
         >
-          {cells.map((cell) => (
-            <polygon
-              key={cell.index}
-              className="consumer-hex"
-              data-unheard={(heardOf.get(cell.index) ?? 0) === 0}
-              points={plot.ring(cell.boundary)}
-              fill={uncertaintyColour(shade(byHexValue.get(cell.index) ?? 0))}
-            >
-              <title>
-                {cell.index}: {(byHexValue.get(cell.index) ?? 0).toFixed(2)} at zone {zone + 1},{' '}
-                {heardOf.get(cell.index) ?? 0} observation(s) heard
-              </title>
-            </polygon>
-          ))}
+          {/*
+            * Why this group has a key at all (T041). React's commit phase finds the node to
+            * insert before by walking the siblings that follow; when every sibling is
+            * itself new — and a resolution change replaces every H3 index at once, so they
+            * all are — that walk runs the length of the list for each of tens of thousands
+            * of nodes. Measured at resolution 7: over five seconds of it, against 247 ms to
+            * build the same drawing by hand. A key that changes with the resolution makes
+            * React mount a fresh container instead, and children of a new parent are
+            * appended into a detached node with no walk at all.
+            */}
+          <g key={hexLayerKey}>
+            {cells.map((cell) => (
+              <polygon
+                key={cell.index}
+                className="consumer-hex"
+                data-unheard={(heardOf.get(cell.index) ?? 0) === 0}
+                points={plot.ring(cell.boundary)}
+                fill={uncertaintyColour(shade(byHexValue.get(cell.index) ?? 0))}
+              >
+                {pointable && (
+                  <title>
+                    {cell.index}: {(byHexValue.get(cell.index) ?? 0).toFixed(2)} at zone {zone + 1},{' '}
+                    {heardOf.get(cell.index) ?? 0} observation(s) heard
+                  </title>
+                )}
+              </polygon>
+            ))}
+          </g>
           {ghost && ghost.value && ghost.value.vertices.length > 0 && (
             <polyline
               className="consumer-ghost"

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0040: a run arrives by having run — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0040-a-run-arrives-by-having-run">ADR-0040: a run arrives by having run</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 30 August 2026
+<strong>Feature:</strong> 120 (start conditions, chosen on a welcome page)
+<strong>Requirements:</strong> SRD-v2 FR-11 (provisioning runs the components' own code paths); FR-09
+(the clock's step); FR-36 (stop and start); FR-65 (prompted events); FR-10 and AT-04
+(replay from the manifest)
+<strong>Engages:</strong> ADR-0030 (the composition root); ADR-0032 (addressability goes below the
+panel); ADR-0029 (the HTTP seam is a fetch shim)</p>
+<h2 id="context">Context</h2>
+<p>Every visit began at the epoch. The archive and one now-cast existed because provisioning
+authors them on the clock's first sample; everything else — a track, an assimilation, a
+staged package, a word from shore — existed only if the reader left the page running.
+Feature 120 offers four situations to begin in instead, and each of them is a claim about
+what the run holds.</p>
+<p>There are two ways to make such a claim true, and the whole of this decision is which.</p>
+<p>The cheap one is a fixture: write observations into the observation store, forecast fields
+into the coverage store, and open the console over them. It is fast, it is exact, and
+SRD-v2 FR-11 has forbidden it since the beginning — seed data is authored by the same
+components and seams that author it during a run, so the guards a run enforces (validation
+against the masters, digest checks at publication, publication atomicity) are the guards
+the seed data passed through. V1 paid for the other answer once and wrote the rule down.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>A start condition is a script of operator actions, and the run arrives in that situation
+by having actually run there.</strong> The composition root pins the clock, then drives the run
+forward through the operator plane's own HTTP endpoints — stop a component, publish a
+demand, prompt an event, step the clock — and mounts the shell when the script is spent.</p>
+<p>Every one of those is a control a reader can work by hand in the Operator tab. Every
+request crosses the release gate. Every message the run produces on the way is on the
+broker, where the Messages tab can read it back. Nothing writes to a store, and the
+pre-roll driver does not know what a holding is.</p>
+<h3 id="the-script-is-configuration-not-code">The script is configuration, not code</h3>
+<p>A condition names the platform's initial vector and an ordered list of legs, in
+<code>run.json</code>, against <code>config.start-conditions.schema.json</code>. Three things follow that would
+not follow from a script in TypeScript.</p>
+<p>It is <strong>reviewable as a claim</strong>: the card's prose and the leg list sit in one document, and
+a test holds the first to what the second actually leaves behind.</p>
+<p>It is <strong>replayable</strong>. AT-04 puts operator commands outside its claim, and says a demanded
+run replays identically only when the same demands are issued at the same ticks. A
+condition's demands and prompts are issued at ticks the configuration fixes, so that
+proviso is met by construction and the pre-roll is back inside the claim — which is why
+the manifest carries the condition, and why the run id does.</p>
+<p>It is <strong>extensible without touching the driver</strong>. A fifth situation is a fifth entry.</p>
+<h3 id="the-choice-travels-in-the-query-string">The choice travels in the query string</h3>
+<p><code>?start=&lt;id&gt;</code>, beside the hash rather than inside it. ADR-0032 made the hash a view
+address with an opaque remainder belonging to the panel; a condition is neither. Putting it
+there would have meant a second grammar in <code>views.ts</code> or a link that opens the wrong tab.
+In the query string the two compose without either knowing about the other, and
+<code>?start=loitering#/view/map</code> is a link to the map of a run on station — which is what D16
+wanted addressable views for.</p>
+<h3 id="an-address-that-names-a-view-is-not-interrupted">An address that names a view is not interrupted</h3>
+<p>Views have been addressable since feature 101 so a pull request or a blog entry can point
+a reader at the thing being discussed. A welcome page in front of such a link puts the work
+of finding it back on the reader, which is the work the link was supposed to save. So an
+address naming a view boots the default condition and goes straight there. Only a bare
+visit is asked.</p>
+<h3 id="the-planner-is-held-back-and-it-is-the-only-one">The planner is held back, and it is the only one</h3>
+<p>Measured leg by leg, a tick inside the work area cost about 3 ms with the planner running
+and one pre-roll reached 25 seconds; with the planner alone stopped and the whole loop
+live, the four conditions cost 1.1 to 5.2 seconds. The planner's route search is the
+dearest thing in a tick and it runs every 600.</p>
+<p>It is also the right one to hold back, and not only because it is dear: <strong>it recommends</strong>.
+It publishes a plan and changes nothing else, so no card's promise depends on it, and it
+replans within 600 ticks of the console opening — live, where a reader can watch it, which
+is where that work belongs. Everything else runs through every pre-roll, which is what
+makes each condition a run rather than an arrangement.</p>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>A card is a falsifiable claim. <code>preroll.test.ts</code> drives each condition exactly as the
+composition root does and reads the stores; the table of promises is checked for
+completeness against the configuration, so a fifth condition fails the suite until
+somebody says what it promises.</li>
+<li>The run id becomes scenario, condition and seed. Two visits that chose differently are
+two runs — necessary, because a run id is stamped into every holding id and every
+observation id.</li>
+<li><code>run-manifest.schema.json</code> gains a <strong>required</strong> <code>start_condition</code>. A manifest without one
+cannot replay its run: every seeded draw would be correct and the platform would be
+somewhere else entirely, silently, under the same run id.</li>
+<li>The console opens seconds after the address is entered rather than immediately, and the
+page says which leg it is on while it waits. That is the price, and it is paid once.</li>
+<li>Two faults in the scheduler were found by the first script and are <strong>not</strong> fixed here:
+stopping the analyst underneath it strands its one in-flight request for the rest of the
+run, and restarting it resets the sequence its run identifiers are built from, so
+holdings from an earlier cycle are silently replaced. Both are reachable today from the
+Operator tab's own restart control. The script never stops the scheduler; the faults are
+recorded in <code>specs/120-start-conditions/spec.md</code> for the feature that fixes them.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -186,7 +186,7 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
   **Intro, Background, Holdings, Operator, Map, Messages** at first run,
-  user-rearrangeable by drag and drop. **Amended by feature 116:** the list read
+  user-rearrangeable by drag and drop. **Amended by feature 115:** the list read
   *Intro, Background, System, Holdings, Operator, Map, Messages* until FR-68 withdrew
   the System tab, its obligation discharged by the Operator flow chart. Six tabs, and
   nothing replaces the seventh. Background is specified by §5.10 and built by
@@ -218,7 +218,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   driven solely by heartbeats received over the broker within each component's declared
   liveness window. No configuration flag, no fixture, no override *(v1 FR-45, FR-52;
   Constitution VII)*. The clock's heartbeat is the first liveness signal and the
-  pattern every component follows. **Amended by feature 116:** this obligation is
+  pattern every component follows. **Amended by feature 115:** this obligation is
   discharged by the **Operator flow chart** (FR-57), which draws every declared
   component greyed until a heartbeat from it arrives — it is not deleted with the System
   tab that used to carry it. The two facts System carried alone, each component's
@@ -262,7 +262,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   store announces a publication on its declared topic; it shall not poll. Where the
   inventory is refused or fails its master, the tab shall state the refusal rather than
   render an empty store, an empty table being a claim the shell is not entitled to make
-  *(Constitution VII)*. **Amended by feature 116:** the inventory is presented as a
+  *(Constitution VII)*. **Amended by feature 115:** the inventory is presented as a
   timeline in simulation time rather than a list in arrival order (FR-69), and a derived
   comparison of a forecast instance against the truth published for the same instant
   joins the manifest view (FR-70). The refusal rule and the no-polling rule above are
@@ -290,7 +290,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   kept beside the traffic display rather than replaced.
 - **FR-24** The topic tree draws the declared topology lit by live traffic: structure
   from the derived topology artefact and nothing else, illumination from genuinely
-  received messages and nothing else, the two never mixing; **amended by feature 116**,
+  received messages and nothing else, the two never mixing; **amended by feature 115**,
   which promotes it out of its disclosure to a primary region of the panel and makes
   selecting a node filter the traffic display and the list (FR-72), changing where it is
   and nothing about what it draws; consumer roles as a
@@ -421,7 +421,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   holding's own depth axis, each from a genuine area query, and shall say how many
   levels answered — EDR's `cube` query type remains outside the served subset, and
   the composer says so by name *(v1 FR-49's cube, restored client-side)*.
-  **Amended by feature 116:** the platform's historic track and demanded course are
+  **Amended by feature 115:** the platform's historic track and demanded course are
   required in *every* projection the panel offers, the depth volume included, where the
   track is drawn at the depths the platform reported (FR-74). That is parity, not a new
   layer. The time
@@ -445,9 +445,16 @@ directed → the machinery is interrogated → advice travels light → it is se
   typed; what the canvas draws for the composed query — the position, and an area
   query's ring — is built by the same function that writes the URL, so the drawn
   query and the fetched query cannot differ.
-- **FR-42** The Intro tab narrates the arc, growing one section per landed beat, and
-  by feature 109 constitutes the demo walkthrough script, deep-linking into each
-  beat's view (FR-15).
+- **FR-42** The Intro tab is the demo walkthrough script, and deep-links into each
+  view it names (FR-15).
+
+  *Amended by feature 116. Until then this paragraph read "narrates the arc, growing one
+  section per landed beat", and the tab was nine numbered sections. That answered the
+  question "what has been built" for a reader who already knew the answer, and it had to
+  be extended by hand for every beat — a record kept separately from the tree, which is
+  the shape of every stale document this repository has paid for. §5.16 replaces the arc
+  with the architecture drawn. The walkthrough obligation is unchanged and now discharged
+  per step rather than per beat.*
 
 ### 5.10 Background (feature 111)
 
@@ -609,7 +616,7 @@ left the slot named but unclaimed. It is spent. The specification is
   declared component list and presented in the order the Operator flow chart draws
   them, so a component with no step — or a step for something that is not a component —
   is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
-  covering a component would read as a complete tour. **Amended by feature 116
+  covering a component would read as a complete tour. **Amended by feature 115
   (FR-75, ADR-0037):** the control is carried by the panel it explains rather than by the
   shell header, and so no longer opens a view before running; and the completeness rule
   generalises from the declared component list to a per-surface list on disk, one for
@@ -620,7 +627,7 @@ left the slot named but unclaimed. It is spent. The specification is
   precedent) — and the reason that stays true is the rule above, not the intention. The
   control shall be parameterised by the tour it starts and shall open that tour's view
   before running, so a tour for another view is a tour and not a second control.
-  **Amended by feature 116:** it is parameterised by its tour still, and is carried by
+  **Amended by feature 115:** it is parameterised by its tour still, and is carried by
   the panel; the view-opening clause retires with the header placement.
 
 ### 5.14 The operator's controls (feature 114)
@@ -688,7 +695,7 @@ designed, the Map is an instrument, Intro is prose doing its job — and System,
 and Messages were tables, each showing the least interesting projection of the most
 interesting thing it had. This beat changes no simulation, adds no component, moves no
 data and needs no new master: everything it draws was already crossing the seam. The
-specification is `specs/116-engaging-tabs/`.
+specification is `specs/115-engaging-tabs/`.
 
 A tab earns its place against three yardsticks, all three: **something is moving**, **the
 reader can poke it**, **the instrument is bespoke to the thing**. A surface that would
@@ -846,6 +853,68 @@ corrected rather than the collision left to be discovered.
   reach of what drogna actually knows is on the timeline rather than hidden in the axis.
   It is a triage aid and says so: the honest output is what you are giving up, not a
   schedule.
+
+### 5.17 The shape of the system, drawn and moving (feature 119)
+
+The Intro tab was a numbered list of landed features. A reader arriving at it wants to
+know what the thing is made of and how the parts fit together, and a changelog ordered by
+when the work landed answers that only for somebody who already knows. This beat changes
+no simulation, adds no component, moves no data and needs no new master: it is entirely
+about what the first tab shows of what already runs. The specification is
+`specs/119-intro-architecture/`.
+
+*The design was settled over five reviewed wireframes and reversed once, and the reversal
+is the reason FR-87 reads as it does. The first four passes drew the **declared
+components** and were held to the declaration by a gate — which earned itself, stopping
+the build on the day it was written when a merge landed the analyst and left the picture
+silently short of it. The author then asked for something more abstract still, naming no
+component at all. That trades a checkable claim for one that cannot be falsified: an
+abstract picture cannot fall behind the tree because it never claimed to be the tree. The
+gate retires with the storyboard it checked, and `specs/118-intro-architecture/spec.md`
+records what it caught before it went.*
+
+- **FR-86** The Intro tab shall carry a **drawing of the shape of the system** that is
+  built up **one part at a time under the reader's own control** — arrow keys, and
+  controls that do the same thing — with a short passage of prose beside each step naming
+  what has just appeared and what it does. The *growth* shall not advance on a timer: the
+  drawing opens at its first part and grows only when the reader grows it. Each step shall
+  be addressable by its own name rather than its number (FR-15), so that an address
+  survives a step being inserted before it, and shall link to the live view where that part
+  of the system can be watched working.
+- **FR-87** The drawing shall be **abstract: it shall name no component**. Its parts are
+  roles — what is measured, what tests it against belief, what re-forecasts, what is
+  believed, who is told, who asks — and the standards that carry the traffic between them
+  are named on the channels that carry it. A picture that names no component cannot go
+  stale when a component lands, which is what this buys in place of the derivation and the
+  gate that the earlier passes used; the cost, accepted, is that the drawing is no longer a
+  map of the component list and a reader wanting that is sent to the Operator flow chart
+  (FR-57), which draws every declared component and is held to the declaration.
+- **FR-88** The space between two parts shall be a **channel with room in it**, not a line:
+  wide enough that what crosses is drawn at a size a reader can aim at, and **every message
+  crossing one shall open** — the observation, the divergence event, the announcement, and
+  the query request paired with its response — showing the shape of that document with its
+  fields named. A line says only that two things are connected; the point of this drawing
+  is what travels.
+- **FR-89** The tab shall be **inert** in Background's sense (FR-44): it reads no run
+  state, subscribes to nothing and crosses the seam for nothing, and states only the run
+  identity the shell already handed it, which FR-01 requires it to state. Nothing in the
+  drawing shall be lit, carry a component's state, or otherwise read as a report of the
+  run; a reader wanting to know what is alive is sent to Operator, where every component's
+  own account of itself lives.
+- **FR-90** The motion shall be a **fixed cycle, independent of the running system**, and
+  the tab shall **say so where a reader meets it**. This is a deliberate exception to
+  FR-71, which holds the Messages traffic display to motion that comes from received
+  traffic and nothing else, and the reason is that the two surfaces answer different
+  questions: Messages reports this run, and a display that moved while the broker was
+  silent would be asserting traffic that does not exist; Intro explains the shape of the
+  system, and must read the same on a stopped clock, in a screenshot and on a printed page.
+  The exception is paid for in three places rather than assumed: the frame above the
+  drawing states that the movement is an illustration on a fixed cycle, every sample the
+  inspector opens carries its own statement that it is a shape and not a value this run
+  produced, and the Messages tab is linked as the place the real traffic is. The motion
+  shall be expressed without reading the host clock — CSS animation, not a timer — so that
+  Constitution I is not engaged and no wall-clock exemption is spent on decoration, and
+  shall hold still under `prefers-reduced-motion` with the drawing still legible.
 
 ---
 

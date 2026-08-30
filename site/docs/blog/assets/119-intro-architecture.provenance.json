@@ -1,0 +1,28 @@
+{
+  "image": "119-intro-architecture.gif",
+  "run_id": "loiter-a5lu98",
+  "view": "intro/told",
+  "sim_time": "2026-01-01T00:00:00Z",
+  "clock_pinned": "rate 0",
+  "motion": {
+    "acted_on": ".intro-controls button:nth-of-type(2)",
+    "frames": 34,
+    "frame_interval_ms": 220,
+    "held_frames": 8
+  },
+  "clip": {
+    "x": 0,
+    "y": 0,
+    "width": 952,
+    "height": 642
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The Intro walkthrough growing its final step while messages cross the channels, with the simulation clock pinned at rate 0 throughout."
+}

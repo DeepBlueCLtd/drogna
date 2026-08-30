@@ -122,9 +122,9 @@ describe('the timeline announces what the master declares (T022, SC-03)', () => 
   });
 });
 
-describe('every era the master declares has a lane to be drawn on (feature 118)', () => {
+describe('every era the master declares has a lane to be drawn on (feature 120)', () => {
   /**
-   * The fault this was written for, found by feature 118 and real before it: the lane
+   * The fault this was written for, found by feature 120 and real before it: the lane
    * list was three literals, feature 116 added the `analysis` era, and the line did not
    * follow — so an analysis holding was drawn on no lane at all and nothing said so.
    *

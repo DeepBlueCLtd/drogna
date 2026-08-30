@@ -150,7 +150,7 @@ export class Analyst {
     const backgroundEra = background.descriptor.era;
     if (backgroundEra !== 'instance' && backgroundEra !== 'nowcast') {
       // The two eras an analysis can stand on: the forecast that stands, or the
-      // now-cast at cold start. Feature 118 added a third truth-derived era — the
+      // now-cast at cold start. Feature 120 added a third truth-derived era — the
       // departure brief, truth held constant from the origin — and a background
       // reaching here from it would be the leak feature 116 closed, arriving by a
       // different door. Refused by name rather than published as a background.

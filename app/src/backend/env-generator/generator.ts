@@ -201,7 +201,7 @@ export class EnvGenerator {
   }
 
   /**
-   * The forecast the vessel was issued at the quay-side (feature 118, FR-18): authored
+   * The forecast the vessel was issued at the quay-side (feature 120, FR-18): authored
    * once here, valid forward from the scenario origin, and never touched again.
    *
    * It is a **persistence** forecast, and the reason is the trap this component sits

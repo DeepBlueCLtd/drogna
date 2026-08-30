@@ -1,5 +1,5 @@
 /**
- * The Data tab's addressing (feature 118, FR-03, SC-004).
+ * The Data tab's addressing (feature 120, FR-03, SC-004).
  */
 import { describe, expect, it } from 'vitest';
 import { restForSelection, selectionFromRest } from './address.js';

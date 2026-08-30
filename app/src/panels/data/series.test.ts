@@ -1,5 +1,5 @@
 /**
- * The chart's geometry (feature 118, FR-08, FR-09, SC-006).
+ * The chart's geometry (feature 120, FR-08, FR-09, SC-006).
  */
 import { describe, expect, it } from 'vitest';
 import { instantToMillis, path, series, valueTicks } from './series.js';

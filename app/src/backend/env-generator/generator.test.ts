@@ -118,7 +118,7 @@ describe('the synthetic ocean (feature 102)', () => {
     expect(second).not.toBe(first);
     // The archive and the departure brief stay; the old now-cast was replaced, not
     // accumulated. The brief being here after a cadence turn is the point of it: it is
-    // issued once and never refreshed (feature 118).
+    // issued once and never refreshed (feature 120).
     expect(runtime.store.holdings().map((holding) => holding.era).sort()).toEqual([
       'archive',
       'departure',

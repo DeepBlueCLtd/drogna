@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Data tab against a live backend (feature 118): the tree, the address, the liveness
+ * The Data tab against a live backend (feature 120): the tree, the address, the liveness
  * rule, the measurement chart and the shore canvas.
  *
  * Nothing here is mocked below the seam. The three stores are the real ones, the three
@@ -56,7 +56,7 @@ async function arrive(until: () => boolean, rounds = 200): Promise<void> {
   }
 }
 
-describe('the Data tab (feature 118)', { timeout: 180_000 }, () => {
+describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
   let asked: string[];

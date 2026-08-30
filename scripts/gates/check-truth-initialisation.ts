@@ -24,7 +24,7 @@ import { walk, readLines, isTestFile, type Finding, REPO_ROOT } from './lib.js';
 /**
  * The accessors that hand back a truth-derived field with its bytes.
  *
- * `departureHolding` joined the list with feature 118. The departure brief is the true
+ * `departureHolding` joined the list with feature 120. The departure brief is the true
  * field held constant from the scenario origin, which makes it exactly as tempting and
  * exactly as poisonous to initialise from as the now-cast: a run that started from it
  * would be a run no measurement had changed, and the loop would converge on truth that

@@ -26,7 +26,7 @@ import { timeScaleFor } from './scale.js';
 /**
  * The lanes, read from the `coverage-holding` master rather than typed here.
  *
- * This list used to be three literals, and it was already wrong when feature 118 found
+ * This list used to be three literals, and it was already wrong when feature 120 found
  * it: feature 116 added the `analysis` era and this line did not follow, so an analysis
  * holding was drawn on no lane at all. The parity check did not catch it because the
  * fixtures it runs against hold no analysis — a store has none until a cycle turns —

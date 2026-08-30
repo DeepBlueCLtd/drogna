@@ -183,9 +183,10 @@ describe('the query seam (feature 104)', () => {
 
     const nested = await get("/api/st/v1.1/Datastreams('platform-a/temperature-050m')/Observations");
     const nestedPage = nested.body as { '@iot.count': number };
-    // Sixty ticks, sampling every thirty, minus the tick-0 sample the sensors skip for
-    // want of a position (FR-55): ticks 30 and 60.
-    expect(nestedPage['@iot.count']).toBe(2);
+    // Sixty ticks at the declared cadence, minus the tick-0 sample the sensors skip for
+    // want of a position (FR-55). Read from the configuration rather than written out:
+    // this line said `2` while the cadence was thirty, and the cadence is a dial.
+    expect(nestedPage['@iot.count']).toBe(Math.floor(60 / config.sensors.sample_interval_ticks));
 
     // The ownship datastreams are served by the same resource and no other: the track
     // the Map draws is this read, which is what makes it a query rather than a wire.
@@ -194,7 +195,14 @@ describe('the query seam (feature 104)', () => {
       '@iot.count': number;
       value: { phenomenonTime: string }[];
     };
-    expect(ownshipPage['@iot.count']).toBe(3);
+    // The platform reports from tick 0, so it loses no cold-start tick the way the
+    // sensors do — hence the `+ 1`. Read from its declared interval for the same reason
+    // as above: this line said `3` while that interval was thirty.
+    // Absent means every tick, which is the master's word and the platform's own
+    // fallback (`?? 1`); the test reads it the same way rather than assuming it is set.
+    expect(ownshipPage['@iot.count']).toBe(
+      Math.floor(60 / (config.platform.report_interval_ticks ?? 1)) + 1,
+    );
     expect(validator.validate('sensorthings-subset#observations_response', ownship.body).refusals).toEqual([]);
 
     // HistoricalLocations stays refused by name: the track has one representation, and

@@ -1,5 +1,5 @@
 /**
- * The shore-updates canvas's pure half (feature 118, FR-15, FR-16).
+ * The shore-updates canvas's pure half (feature 120, FR-15, FR-16).
  *
  * Advisories arrive as OGC API-Features items: the geometry is the advised region and
  * the properties are the advisory document minus that region. This module turns them

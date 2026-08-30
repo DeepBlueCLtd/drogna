@@ -1,207 +1,244 @@
 /**
- * The Intro tab (FR-42): narrates the arc, one section per landed beat, and by
- * feature 109 constitutes the walkthrough script. It grows; it never previews. A
- * beat that has not landed is named as not landed — the narration makes no claim the
- * running system cannot back.
+ * The Intro tab (SRD-v2 FR-42 as amended, FR-86 to FR-90; feature 119): the shape of the
+ * system, grown one part at a time, with the links between the parts in motion and every
+ * message crossing one open to inspection.
+ *
+ * Three decisions are worth knowing before reading the code.
+ *
+ * **It names no component.** Six roles, and not one component id among them. The five
+ * earlier passes drew the declared components and needed a gate to stop the picture
+ * quietly falling behind the tree as components landed — which it did, catching the
+ * analyst on the day it was written. This one makes no claim a merge can falsify, so
+ * there is nothing left for that gate to check and it retires with the storyboard it
+ * checked (`specs/119-intro-architecture/spec.md` records why).
+ *
+ * **The motion is a fixed cycle, not received traffic** (FR-90, and the author's
+ * decision). Feature 115's FR-71 holds the Messages tab to the opposite rule, and this
+ * tab is deliberately outside it: the Intro tab reads the same whether the clock is
+ * running, stopped, or absent, which is what a first page should do. The cost is that a
+ * reader must not mistake it for a readout, so the panel says what it is in the frame
+ * above the drawing, every sample in the inspector carries its own caveat, and Messages
+ * is one link away for the traffic that is real.
+ *
+ * **Nothing here reads a clock.** The animation is entirely CSS on one shared cycle
+ * (`intro.css`), so Constitution I is not engaged and no `harness:allow-wallclock`
+ * exemption is spent on decoration. React renders which parts exist; the browser animates
+ * what crosses between them. That is also what makes the whole thing hold still under
+ * `prefers-reduced-motion` without a second code path.
  */
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import { hashForView } from '../../shell/views.js';
+import { useArrowKeys } from '../../shell/arrow-keys.js';
+import { BEATS, CHANNELS, ROLES, shownAt, type Channel, type Sample } from './roles.js';
+import { clampStep, restForStep, stepFromRest } from './address.js';
+import './intro.css';
 
-export function IntroPanel({ params }: PanelProps) {
-  const { manifest } = params;
+export function IntroPanel({ params }: PanelProps): ReactNode {
+  const { manifest, address } = params;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [step, setStep] = useState<number>(() => stepFromRest(BEATS, address.current()));
+  const [open, setOpen] = useState<{ channel: string; sample: Sample } | undefined>();
+
+  // The address is the one place a position lives, and nothing is persisted: where a
+  // reader has got to is presentation, discarded like any other per-viewer convenience.
+  useEffect(() => address.onChange((rest) => setStep(stepFromRest(BEATS, rest))), [address]);
+  // Braced, deliberately. An arrow body hands React whatever `write` returns as the
+  // effect's cleanup function, and an address implementation that returns anything at all
+  // then fails the next unmount with "destroy is not a function". The live implementation
+  // returns void so it never bit in the browser; it bit in ten tests at once.
+  useEffect(() => {
+    address.write(restForStep(BEATS, step));
+  }, [address, step]);
+
+  const go = useCallback((next: number) => setStep(clampStep(BEATS, next)), []);
+  useArrowKeys({
+    root: rootRef,
+    address,
+    onStep: useCallback((delta: 1 | -1) => setStep((now) => clampStep(BEATS, now + delta)), []),
+  });
+
+  const total = BEATS.length;
+  const beat = BEATS[clampStep(BEATS, step) - 1];
+  const { roles, channels } = shownAt(step);
+
+  const inspect = useCallback((channel: Channel) => {
+    setOpen({ channel: channel.id, sample: channel.sample });
+  }, []);
+
+  const role = (id: string): ReactNode => {
+    const found = ROLES.find((candidate) => candidate.id === id);
+    if (!found || !roles.has(id)) return null;
+    return (
+      <div
+        className={`intro-role${beat.roles.includes(id) ? ' is-new' : ''}`}
+        data-intro-role={id}
+        aria-current={beat.roles.includes(id) ? 'step' : undefined}
+      >
+        <span className="intro-role-name">{found.name}</span>
+        <span className="intro-role-gloss">{found.gloss}</span>
+      </div>
+    );
+  };
+
+  const channel = (id: string): ReactNode => {
+    const found = CHANNELS[id];
+    if (!found || !channels.has(id)) return null;
+    return (
+      <div
+        className={`intro-chan${found.reverse ? ' is-back' : ''}`}
+        data-intro-channel={id}
+        data-marks={found.marks}
+      >
+        <span className="intro-chan-proto">{found.protocol}</span>
+        <div className="intro-chan-track">
+          {Array.from({ length: found.marks }, (_, index) => (
+            <button
+              key={index}
+              type="button"
+              className={`intro-mark is-${id}`}
+              style={{ ['--mark' as string]: String(index) }}
+              data-intro-mark={id}
+              onClick={() => inspect(found)}
+            >
+              <span className="intro-sr">
+                {found.protocol}: open a sample of what crosses here
+              </span>
+            </button>
+          ))}
+        </div>
+        <span className="intro-chan-note">{found.note}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="panel panel-prose">
-      <h1>drogna</h1>
-      <p className="disclaimer">
-        This is a demonstration harness and nothing else. Its numerics are deliberately
-        fake, its data synthetic, and it holds no third-party entities of any kind —
-        {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
-        no tracked entity, no contact, no detection — and never will. Nothing here is a
-        candidate system.
-      </p>
-      <p>
-        A synthetic ocean, sensors that sample it, a forecast loop that assimilates
-        what they report, and a query layer that serves the result through OGC API-EDR
-        and SensorThings — all of it genuine programs running in this browser page,
-        behind a wire-protocol seam a real backend can replace by swapping a base URL.
-      </p>
-      <h2>The arc so far</h2>
-      <section>
-        <h3>101 — the stage is lit</h3>
-        <p>
-          What you are looking at is already the system, not a picture of one. The
-          clock beating in the header is a component publishing over the broker; the{' '}
-          <a href={hashForView('operator')}>Operator</a> tab lights each component only
-          because a heartbeat from it genuinely arrived, and draws the rest of the
-          arc greyed out until each lands; the{' '}
-          <a href={hashForView('messages')}>Messages</a> tab shows the traffic itself,
-          validated against the committed masters as it arrives. This run was seeded
-          fresh when you opened the page — run <code>{manifest.run_id}</code>, root
-          seed <code>{manifest.root_seed}</code> — and the manifest that replays it
-          byte-for-byte is exportable from the header.
+    <div
+      className="panel intro-panel"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        // The arrows are answered on the document by `useArrowKeys`, so they work for a
+        // viewer who has clicked nothing. Home and End stay bound to the panel: a
+        // document-level Home would take the key from every scrollable region on the
+        // page, and unlike the arrows nobody arrives expecting to press it.
+        if (event.key === 'Home') go(1);
+        else if (event.key === 'End') go(BEATS.length);
+        else return;
+        event.preventDefault();
+      }}
+    >
+      <header className="intro-head">
+        <h1>drogna</h1>
+        <p className="intro-frame">
+          The shape of it, one part at a time. Measurements are tested against what is
+          believed; sustained difference warrants a run; the new forecast is announced, and
+          whoever cares comes back and asks for it.{' '}
+          <strong>The movement below is an illustration on a fixed cycle</strong> — it runs
+          whether or not anything is running, so it says nothing about this run. The traffic
+          that is real is in <a href={hashForView('messages')}>Messages</a>.
         </p>
-      </section>
-      <section>
-        <h3>102 — a world exists</h3>
-        <p>
-          The environment generator authored a synthetic ocean when this page opened:
-          four-dimensional temperature and salinity, a warm-core eddy, a front, a
-          thermocline and a drifting feature, each with jittered parameters drawn from
-          this run&rsquo;s seed and recorded — with the exact draw order — in a
-          ground-truth manifest. Twenty years of monthly history, the forecast the
-          vessel sailed with, and a rolling now-cast were published through the
-          coverage store&rsquo;s own digest-checked seam, and all three are
-          inspectable, manifest and all, in{' '}
-          <a href={hashForView('data')}>Data</a>. The manifest is sufficient:
-          anyone holding it can reconstruct the field at any point and score a
-          recovery against it.
-        </p>
-      </section>
-      <section>
-        <h3>103 — it is sampled</h3>
-        <p>
-          A simulated platform loiters over the eddy, and its instruments sample the
-          true field on a fixed cadence, publishing observations in SensorThings
-          vocabulary over the broker — where the role rules confine them to the
-          observation namespace. The ingestion seam validates every message against
-          its master and is the observation store&rsquo;s only way in; refusals are
-          counted where you can see them. The{' '}
-          <a href={hashForView('messages')}>Messages</a> tab now draws the topic
-          tree: structure from the derived topology artefact, light from received
-          traffic, and the two never mixing.
-        </p>
-      </section>
-      <section>
-        <h3>104 — it is served</h3>
-        <p>
-          The holdings and the observations are now answered through standard
-          interfaces: OGC API-EDR (CoverageJSON, position and trajectory with
-          per-vertex time) over the coverage store, and read-only SensorThings over
-          the observation store — each a stated, honest subset whose served account
-          is held equal to the documented one by a test, and where everything not
-          implemented is refused with its own name. Every request passes the release
-          gate: default deny, with the data prefixes released one at a time. Try{' '}
-          <code>/api/edr/collections</code> in the address bar — it is a genuine GET.
-        </p>
-      </section>
-      <section>
-        <h3>105 — it is assimilated</h3>
-        <p>
-          The loop turns. The monitor pairs co-located samples, derives sound speed
-          by the one implementation, and scores residuals against the current
-          forecast — raising a divergence only on sustained persistence, never a
-          single spike. The scheduler decides: a breach inside the minimum interval
-          is declined by policy, observably, and the cadence floor means the loop
-          can never be permanently becalmed — a run warranted on schedule alone is
-          labelled <em>scheduled</em>, distinct from <em>divergence-triggered</em>,
-          wherever runs appear. The model runner advects an ensemble behind the
-          kernel port and publishes the mean with its spread through the same
-          digest-checked seam as everything else; instances accumulate in{' '}
-          <a href={hashForView('data')}>Data</a> and are served through EDR
-          by convention. Watch what each component says about itself in{' '}
-          <a href={hashForView('operator')}>Operator</a>: the loop's quiet always says
-          which quiet it is.
-        </p>
-      </section>
-      <section>
-        <h3>106 — doubt is measured, and directed</h3>
-        <p>
-          The planner reads only what publication released — the ensemble spread,
-          the ground-truth manifest&rsquo;s tau, the read-only region geometry — and
-          maintains an observation-age deficit that regrows at the local timescale:
-          water never sampled sits at the spread, water just sampled is worth
-          nothing to sample again, and fast water invites revisit without anybody
-          scheduling it. Candidate routes are <em>walked</em>, each stop scored
-          against the field as it will stand at arrival, and one route is committed
-          under a time budget by prize-collecting orienteering with seeded restarts
-          — published as a recommendation and nothing else, with the naive figure
-          beside the honest one so the size of the avoided error is a number you
-          can see, and projections of when each region&rsquo;s confidence lapses.
-          Watch <code>ctl/plan</code> in{' '}
-          <a href={hashForView('messages')}>Messages</a>.
-        </p>
-      </section>
-      <section>
-        <h3>107 — the machinery is interrogated</h3>
-        <p>
-          The <a href={hashForView('operator')}>Operator</a> tab reads what the
-          components say about themselves — a component never heard from is reported
-          <em> unheard</em>, not absent — and dispatches genuine commands through the
-          seam: step the clock, stop, start or restart a component. A stopped
-          component goes dark in the flow chart because its heartbeats genuinely cease,
-          never because a response claimed success;
-          a refused command names the bound or rule. Telemetry aggregates the
-          monitor&rsquo;s residual samples into running statistics and a forecast
-          skill figure against persistence, in its own sentence — the display says
-          plainly when the model is not earning its compute. Commands are ephemeral
-          and outside the replay claim: an exported manifest replays the run, not
-          your interventions — and since feature 113 a demand issued to the
-          platform is a command of exactly that kind.
-        </p>
-      </section>
-      <section>
-        <h3>108 — the world outside speaks, and the boundary holds</h3>
-        <p>
-          Shore advisories arrive on their own topic and pass through a genuine
-          ingestion seam: the append-only advisory store validates each against a
-          master in which <em>no field can carry free text</em> — every string is an
-          enum or a bounded pattern, so an advisory is structurally incapable of
-          naming anything the harness did not place — and refuses anything over the
-          size ceiling with the limit named. Advice travels light, and that is
-          measured, not asserted: the largest advisory is smaller than the smallest
-          gridded update. The offload packager stages a bundle beside each published
-          run, with the run-manifest sibling carrying the measurement geometry{' '}
-          <em>beside the bundle and never inside it</em> — announcement-only until a
-          real backend exists to receive it. Advisories and the reference geometry
-          are served as OGC API-Features collections through the same release gate;
-          the advisories collection answers <em>empty</em> before the first advisory
-          exists, because an empty collection is an answer, not an error. Watch{' '}
-          <code>adv/advisories</code> and <code>ctl/offload</code> in{' '}
-          <a href={hashForView('messages')}>Messages</a>.
-        </p>
-      </section>
-      <section>
-        <h3>109 — it is seen</h3>
-        <p>
-          The <a href={hashForView('map')}>Map</a> draws only documents that crossed
-          the seam: the field from a genuine EDR <em>area</em> query (the subset grew
-          one capability for it, stated in the conformance statement like every
-          other), the planner&rsquo;s doubt as H3 cells that refresh with each plan
-          and shade by how far each region has regrown toward saturation, the
-          committed route as a four-dimensional curve — slide the time control and
-          the platform moves along it; click a stop for the conditions at the moment
-          of arrival, fetched at that place and that instant — and advisories drawn
-          only while valid at the displayed time, undrawn outside validity yet still
-          listed and queryable. The <em>EDR composer</em> is a mode of the map: a
-          guided sequence with the literal request URL always visible, assembling
-          live and copyable, offering only what the server&rsquo;s own metadata
-          states it serves; the response renders where it was asked for, with null,
-          declined and absent kept as three different facts. Where WebGL is
-          unavailable the canvas says so instead of pretending.
-        </p>
-      </section>
-      <section>
-        <h3>The walkthrough, whole</h3>
-        <p>
-          Every beat above is live in this page, and this tab is the demo script:
-          start at <a href={hashForView('operator')}>Operator</a> to watch the machinery
-          light, read what the run holds in{' '}
-          <a href={hashForView('data')}>Data</a>, watch the traffic argue
-          with its masters in <a href={hashForView('messages')}>Messages</a>,
-          interrogate and interrupt the components there too, and end at the{' '}
-          <a href={hashForView('map')}>Map</a>, where the whole loop is visible at
-          once. Export the manifest from the header to replay this run
-          byte-identically; your interventions are ephemeral and deliberately
-          outside that claim. Everything is synthetic, and says so.
+      </header>
+
+      <div className="intro-stage">
+        <div className="intro-flow" data-testid="intro-flow" data-step={step}>
+          <section className="intro-lane" aria-label="the loop: measure, test, re-forecast">
+            {role('measured')}
+            {channel('obs')}
+            {role('tested')}
+            {channel('div')}
+            {role('ran')}
+            {channel('pub')}
+            {role('believed')}
+          </section>
+          {channels.has('ann') ? <div className="intro-drop">{channel('ann')}</div> : null}
+          {roles.has('told') ? (
+            <section className="intro-lane" aria-label="downstream: hear, then ask">
+              {role('told')}
+              <div className="intro-pair">
+                {channel('req')}
+                {channel('res')}
+              </div>
+              {role('answered')}
+            </section>
+          ) : null}
+        </div>
+
+        <div className="intro-narration">
+          <p className="intro-position">
+            <span data-testid="intro-position">
+              step {step} of {total}
+            </span>
+            <span className="intro-keyhint">← → to grow it</span>
+          </p>
+          <div aria-live="polite">
+            <h2>{beat.title}</h2>
+            {beat.prose.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+            {beat.liveView ? (
+              <p className="intro-live">
+                <a href={hashForView(beat.liveView.view)}>{beat.liveView.label} →</a>
+              </p>
+            ) : null}
+          </div>
+
+          <div className="intro-inspector" data-testid="intro-inspector">
+            {open ? (
+              <>
+                <p className="intro-insp-head">{open.sample.head}</p>
+                <dl>
+                  {open.sample.fields.map(([name, value]) => (
+                    <div key={name}>
+                      <dt>{name}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="intro-insp-caveat">{open.sample.caveat}</p>
+              </>
+            ) : (
+              <p className="intro-insp-empty">
+                Click anything crossing a channel to read a sample of it.
+              </p>
+            )}
+          </div>
+
+          <nav className="intro-controls" aria-label="the walkthrough">
+            <button type="button" onClick={() => go(step - 1)} disabled={step <= 1}>
+              ← previous
+            </button>
+            <button type="button" onClick={() => go(step + 1)} disabled={step >= total}>
+              next →
+            </button>
+            <button type="button" onClick={() => go(1)} disabled={step === 1}>
+              start again
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <footer className="intro-foot">
+        <p className="disclaimer">
+          This is a demonstration harness and nothing else. Its numerics are deliberately
+          fake, its data synthetic, and it holds no third-party entities of any kind —{' '}
+          {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
+          no tracked entity, no contact, no detection — and never will. Nothing here is a
+          candidate system. Behind this drawing are genuine programs running in this browser
+          page, behind a wire-protocol seam a real backend can replace by swapping a base
+          URL. This run was seeded fresh when you opened the page: run{' '}
+          <code>{manifest.run_id}</code>, root seed <code>{manifest.root_seed}</code>.
         </p>
         <p>
-          For why any of this is standards-based rather than bespoke,{' '}
-          <a href={hashForView('background')}>Background</a> is a course of ten short
-          illustrated explainers — SensorThings, OGC API-EDR, NetCDF, MQTT and what it
-          takes to use them honestly. It reads nothing from the running system, so it
-          reads the same whether the machinery above is turning or stopped.
+          The drawing is a schematic; the system is the rest of the shell. Watch the
+          machinery light and interrupt it in <a href={hashForView('operator')}>Operator</a>,
+          read what the run holds in <a href={hashForView('data')}>Data</a>, watch
+          the traffic argue with its masters in{' '}
+          <a href={hashForView('messages')}>Messages</a>, and see the whole loop at once on
+          the <a href={hashForView('map')}>Map</a>. For why any of this is standards-based
+          rather than bespoke, <a href={hashForView('background')}>Background</a> is a course
+          of ten short illustrated explainers.
         </p>
-      </section>
+      </footer>
     </div>
   );
 }

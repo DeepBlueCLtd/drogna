@@ -1,5 +1,5 @@
 /**
- * A coverage branch of the Data tab (feature 118, FR-10 to FR-14) — the Holdings tab as
+ * A coverage branch of the Data tab (feature 120, FR-10 to FR-14) — the Holdings tab as
  * it was, absorbed.
  *
  * Everything FR-46, FR-69 and FR-70 required of Holdings is carried here unchanged: the

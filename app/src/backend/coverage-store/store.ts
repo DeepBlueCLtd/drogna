@@ -116,7 +116,7 @@ export class CoverageStore {
       this.eraPointers.set('nowcast', descriptor.holding_id);
     }
     if (descriptor.era === 'departure') {
-      // Authored once at provisioning and never replaced (feature 118). The pointer
+      // Authored once at provisioning and never replaced (feature 120). The pointer
       // exists so a reader can ask for the brief by era, as it asks for the now-cast.
       this.eraPointers.set('departure', descriptor.holding_id);
     }
@@ -151,7 +151,7 @@ export class CoverageStore {
 
   /**
    * The departure forecast: the brief the vessel sailed with, held constant across its
-   * validity window and never refreshed (feature 118).
+   * validity window and never refreshed (feature 120).
    *
    * Truth-derived, like the now-cast, and so guarded like it: the truth-initialisation
    * gate names this accessor beside `currentNowcast()`. A forecast initialised from a

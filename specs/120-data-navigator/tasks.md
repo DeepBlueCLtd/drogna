@@ -1,4 +1,4 @@
-# Feature 118 — tasks
+# Feature 120 — tasks
 
 One feature, one pull request, on the author's decision recorded in `spec.md`. Ticked as
 they were done, with the reasons written at the moment they were taken (CLAUDE.md,
@@ -113,7 +113,7 @@ lesson 1).
 ## The record
 
 - [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,
-      FR-70 and FR-75 re-homed, and §5.16 appended as FR-84 to FR-94.
+      FR-70 and FR-75 re-homed, and §5.18 appended as FR-91 to FR-101.
 - [x] T035 The view-id gate named the links a search by hand would have missed: three in
       the Intro tab, one Background explainer, the demo index and a published blog entry.
       All updated.
@@ -123,7 +123,7 @@ lesson 1).
 
 - **No cross-tab wiring.** No "show this on the map", no filtering of the Messages traffic
   from a selected datastream. Both were offered in the interview and declined: the address
-  of FR-89 is the linkage this feature builds, and anything more is a second feature's
+  of FR-96 is the linkage this feature builds, and anything more is a second feature's
   worth of coupling between four panels.
 - **The chart shows one datastream, not a residual.** Drawing a measurement against the
   forecast it was scored on needs an EDR position query per observation, and the monitor
@@ -135,4 +135,4 @@ lesson 1).
   contrast more sharply with the now-cast, and nothing in the tree computes a mean across
   archive months. Persistence costs nothing new and is already a named reference here.
 - **The tree does not name the standard that answers each branch.** The cost of a
-  kind-first spine, taken deliberately and recorded in `spec.md` and in FR-84.
+  kind-first spine, taken deliberately and recorded in `spec.md` and in FR-91.

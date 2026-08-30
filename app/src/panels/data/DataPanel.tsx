@@ -1,5 +1,5 @@
 /**
- * The Data tab (feature 118): everything the system holds, in one place.
+ * The Data tab (feature 120): everything the system holds, in one place.
  *
  * Three stores, three standard interfaces, one tree. The spine is **by data kind** —
  * measurements, the coverage eras in the order the store fills them, then what shore has

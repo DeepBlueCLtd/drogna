@@ -1,5 +1,5 @@
 /**
- * The coverage volume's pure half (feature 118, FR-13, FR-14).
+ * The coverage volume's pure half (feature 120, FR-13, FR-14).
  *
  * Three of its axes are the Map's cube — longitude, latitude and depth, one genuine EDR
  * area query per level of the holding's own depth axis — and this module adds the

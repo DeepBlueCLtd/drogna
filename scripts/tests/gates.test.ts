@@ -46,7 +46,7 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.arrayContaining([expect.stringMatching(/may not read the truth-derived now-cast/)]),
     );
     expect(found.some((f) => f.file.includes('model-runner'))).toBe(true);
-    // Feature 118 added a second truth-derived accessor. One guarded and the other
+    // Feature 120 added a second truth-derived accessor. One guarded and the other
     // open would have left this gate reporting clean on the same fault, so the brief
     // is planted too and the message is required to name which holding leaked.
     expect(found.map((f) => f.message)).toEqual(

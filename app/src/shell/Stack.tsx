@@ -66,6 +66,12 @@ export function Stack({ config, active, onSelect, paramsFor }: StackProps): Reac
   return (
     <div className="stack" data-presentation="stack">
       <div className="stack-tabs" role="tablist" aria-label="views" ref={stripRef}>
+        {/*
+          A consumer view's tab is drawn in its own chrome at both widths (feature 116,
+          FR-76), so the declared kind travels into both presentations rather than into
+          whichever was easier: a screenshot taken at a phone's width carries exactly the
+          same claim as one taken at a desk.
+        */}
         {config.views.map((view) => (
           <button
             key={view.id}
@@ -73,6 +79,7 @@ export function Stack({ config, active, onSelect, paramsFor }: StackProps): Reac
             role="tab"
             id={`stack-tab-${view.id}`}
             data-view={view.id}
+            data-kind={view.kind ?? 'harness'}
             aria-selected={view.id === active}
             aria-controls={`stack-view-${view.id}`}
             className={view.id === active ? 'stack-tab stack-tab-active' : 'stack-tab'}

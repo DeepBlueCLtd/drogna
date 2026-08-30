@@ -175,7 +175,7 @@ for a tidier moment.
 - **FR-21 (eras)** — a fifth era, with the persistence derivation stated.
 - **FR-46, FR-69, FR-70** — re-homed under the Data tab, obligations unchanged, with the
   comparison's URL requirement noted as the tab's stated exception.
-- **New requirements** for the navigator itself, numbered from FR-84 onward — the SRD's
+- **New requirements** for the navigator itself, numbered from FR-91 onward — the SRD's
   numbers are cited across `specs/` and the ADRs, so they are appended, never inserted.
 
 ## What is deliberately not done

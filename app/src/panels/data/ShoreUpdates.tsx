@@ -1,5 +1,5 @@
 /**
- * The shore-updates branch (feature 118, FR-15, FR-16): advice from shore, drawn.
+ * The shore-updates branch (feature 120, FR-15, FR-16): advice from shore, drawn.
  *
  * Advisories have had a store, a publisher and a Features collection since feature 108
  * and have never been drawn anywhere. What they have instead of a picture is a document

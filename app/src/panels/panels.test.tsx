@@ -165,14 +165,14 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         for (let round = 0; round < 200; round++) await Promise.resolve();
       });
       // Bound to what the store actually holds rather than to a number typed here: the
-      // count changed when feature 118 added the departure brief to provisioning, and a
+      // count changed when feature 120 added the departure brief to provisioning, and a
       // literal would have had to be found and edited to say so.
       expect(screen.getByTestId('data-counts').textContent).toMatch(
         new RegExp(`^${runtime.store.holdings().length} holding\\(s\\)`),
       );
       // The inventory table retired at feature 115 (FR-69); the timeline carries the
       // holdings now, and a bar is the thing a reader selects. The archive is its own
-      // branch since feature 118, so the branch is opened first.
+      // branch since feature 120, so the branch is opened first.
       await act(async () => {
         (document.querySelector('[data-branch="archive"]') as HTMLElement).click();
         for (let round = 0; round < 200; round++) await Promise.resolve();

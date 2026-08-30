@@ -1,0 +1,434 @@
+/*
+ * The consumer family's one stylesheet (feature 118).
+ *
+ * **The yellow is a banner, not a wallpaper.** The first version painted the whole panel
+ * #ffd400, which made the boundary unmissable and everything inside it hard to read: a
+ * page of tables, sliders and a map on a saturated ground is a page nobody wants to look
+ * at for long, and the colour stopped carrying meaning the moment it was everywhere. So
+ * the yellow is now the tab and one banner across the top of the panel, and the body
+ * below it is the shell's own dark surface, like every other panel. The claim is made
+ * once, prominently, where a cropped screenshot still catches it — which was always the
+ * requirement (FR-76), and never required the whole panel.
+ *
+ * The contrast is the point rather than the palette: #ffd400 on #101010 is about 13:1,
+ * well clear of AA, and the pair separates in greyscale too.
+ *
+ * One breakpoint, and it is the shell's: the gate reads NARROW_WIDTH out of
+ * app/src/shell/viewport.ts and fails any width in a media condition that is not it.
+ */
+
+.consumer-panel {
+  --consumer-yellow: #ffd400;
+  --consumer-ink: #101010;
+  --consumer-line: #2c3742;
+  --consumer-deep: #0d1a26;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+/*
+ * The banner: the strip and the freshness controls, in the family's colours, held out of
+ * the scrolling body so it cannot leave the screen (FR-76).
+ */
+.consumer-banner {
+  flex: 0 0 auto;
+  background: var(--consumer-yellow);
+  color: var(--consumer-ink);
+  border-bottom: 2px solid var(--consumer-ink);
+}
+
+.consumer-strip {
+  margin: 0;
+  padding: 0.35em 0.9em 0;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78em;
+}
+
+.consumer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8em;
+  flex-wrap: wrap;
+  padding: 0.15em 0.9em 0.45em;
+}
+
+.consumer-summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.consumer-provenance {
+  font-family: monospace;
+  font-size: 0.82em;
+  opacity: 0.8;
+}
+
+/* The halo of FR-78: it has to read from across a room, and it has to be a button. */
+.consumer-banner .consumer-update {
+  background: var(--consumer-ink);
+  color: var(--consumer-yellow);
+  border: 2px solid var(--consumer-ink);
+  border-radius: 3px;
+  padding: 0.2em 0.7em;
+  font-weight: 700;
+  font-size: 0.95em;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(16, 16, 16, 0.3);
+}
+
+.consumer-banner button {
+  background: transparent;
+  color: var(--consumer-ink);
+  border: 1px solid var(--consumer-ink);
+  border-radius: 3px;
+  padding: 0.1em 0.55em;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+/* Below the banner it is an ordinary panel of the shell, and reads like one. */
+.consumer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.7em 0.9em 1.4em;
+  background: var(--shell-bg);
+  color: var(--shell-fg);
+}
+
+.consumer-body *,
+.consumer-body {
+  box-sizing: border-box;
+}
+
+.consumer-body h3 {
+  margin: 1em 0 0.4em;
+  font-size: 1em;
+  color: var(--shell-fg);
+}
+
+.consumer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em 1.2em;
+  align-items: center;
+  margin-bottom: 0.7em;
+}
+
+.consumer-control {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.9em;
+}
+
+.consumer-control > span:first-child {
+  color: var(--shell-dim);
+}
+
+.consumer-body button,
+.consumer-body select {
+  background: #1a2229;
+  color: var(--shell-fg);
+  border: 1px solid var(--consumer-line);
+  border-radius: 3px;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.consumer-note {
+  font-size: 0.85em;
+  max-width: 60em;
+  line-height: 1.55;
+  color: var(--shell-dim);
+}
+
+.consumer-note strong {
+  color: var(--shell-fg);
+}
+
+.consumer-refusal {
+  border-left: 3px solid var(--shell-refused);
+  padding-left: 0.6em;
+  color: var(--shell-refused);
+  font-size: 0.9em;
+}
+
+/* Where a value came from, worn by the value (ADR-0039). */
+.consumer-source {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--consumer-line);
+  border-radius: 2px;
+  padding: 0 0.3em;
+  white-space: nowrap;
+  color: var(--shell-dim);
+}
+
+.consumer-source[data-provenance='synthesised'] {
+  background: var(--consumer-yellow);
+  color: var(--consumer-ink);
+  border-color: var(--consumer-yellow);
+}
+
+.consumer-source[data-provenance='seam'] {
+  color: var(--shell-lit);
+  border-color: var(--shell-lit);
+}
+
+/* A table is the one thing that will not fold, so it scrolls inside its own container
+   and the page does not (`.table-scroll`, shell.css). `min-width: max-content` keeps the
+   columns at their own width inside that container rather than crushing them. */
+.consumer-table {
+  border-collapse: collapse;
+  font-size: 0.88em;
+  width: 100%;
+  min-width: max-content;
+}
+
+.consumer-table caption {
+  text-align: left;
+  color: var(--shell-dim);
+  font-size: 0.95em;
+  padding-bottom: 0.3em;
+}
+
+.consumer-table th {
+  color: var(--shell-dim);
+  font-weight: 600;
+}
+
+.consumer-table th,
+.consumer-table td {
+  border-bottom: 1px solid var(--consumer-line);
+  padding: 0.25em 0.5em;
+  text-align: left;
+}
+
+.consumer-table tr[aria-selected='true'] {
+  background: #1c2733;
+}
+
+/*
+ * The map surfaces: plain SVG, no renderer. Nothing here needs a GPU.
+ *
+ * `border-box` is load-bearing rather than tidy: with the default box model the map's own
+ * 1px border put two pixels of content outside a 373px phone, and the narrow
+ * presentation's proof failed on exactly that — a page that scrolls sideways by two
+ * pixels is still a page that scrolls sideways (FR-017).
+ *
+ * `touch-action: none` is what lets a drag pan the map on a touch screen instead of
+ * scrolling the panel under it; the wheel is held back in `view.ts`, which needs a
+ * non-passive listener React will not give it.
+ */
+.consumer-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  background: var(--consumer-deep);
+  border: 1px solid var(--consumer-line);
+  touch-action: none;
+  cursor: grab;
+}
+
+.consumer-map[data-panning='true'] {
+  cursor: grabbing;
+}
+
+/*
+ * The keyboard's own affordances (T035).
+ *
+ * The map is the one surface in the family that is not a native control, so it is the one
+ * that has to be given focus, a ring, and keys by hand: `tabIndex` and `aria-keyshortcuts`
+ * in the panels, arrows and +/- in `view.ts`, and this ring. A focus ring is not decoration
+ * on a surface a viewer can only pan by keyboard — without it the map takes the arrow keys
+ * with nothing on screen saying why.
+ *
+ * The ring is drawn for every focus, not only `:focus-visible`: the pointer path gives the
+ * map focus too, and a viewer who then reaches for an arrow key deserves to have been told
+ * the map is listening.
+ */
+.consumer-map:focus {
+  outline: 3px solid var(--consumer-yellow);
+  outline-offset: 2px;
+}
+
+/* Everything else in the family is a native control, and needs only a ring that carries
+   over the shell's dark ground. */
+.consumer-body :is(button, select, input, a):focus-visible {
+  outline: 2px solid var(--consumer-yellow);
+  outline-offset: 1px;
+}
+
+.consumer-banner :is(button, a):focus-visible {
+  outline: 2px solid var(--consumer-ink);
+  outline-offset: 1px;
+}
+
+.consumer-keys {
+  color: var(--shell-dim);
+  font-size: 0.82em;
+}
+
+.consumer-hex {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.6;
+}
+
+.consumer-route {
+  fill: none;
+  stroke: var(--consumer-yellow);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+}
+
+/* The ghost of FR-78: the previous answer, still legible, unmistakably previous. */
+.consumer-ghost {
+  fill: none;
+  stroke: var(--consumer-yellow);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  opacity: 0.45;
+}
+
+.consumer-comparison {
+  fill: none;
+  stroke: #9fb4c9;
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
+}
+
+.consumer-drop {
+  fill: var(--consumer-deep);
+  stroke: var(--consumer-yellow);
+  stroke-width: 1.8;
+}
+
+.consumer-vessel {
+  fill: #ffffff;
+  stroke: var(--consumer-ink);
+  stroke-width: 1;
+}
+
+.consumer-cloud {
+  stroke: none;
+}
+
+.consumer-legend {
+  display: flex;
+  gap: 1em;
+  flex-wrap: wrap;
+  font-size: 0.8em;
+  margin: 0.4em 0;
+  align-items: center;
+  color: var(--shell-dim);
+}
+
+/* The Gantt: lanes below, the derived band above, time running across. */
+.lane-row {
+  display: grid;
+  grid-template-columns: 15em 1fr;
+  gap: 0.5em;
+  align-items: center;
+  border-bottom: 1px solid var(--consumer-line);
+  padding: 0.2em 0;
+}
+
+.lane-name {
+  display: flex;
+  gap: 0.35em;
+  align-items: center;
+  font-size: 0.85em;
+  flex-wrap: wrap;
+}
+
+.lane-plot {
+  height: 2.2em;
+  width: 100%;
+  display: block;
+  background: var(--consumer-deep);
+  border: 1px solid var(--consumer-line);
+}
+
+.lane-plot[data-confidence='medium'] {
+  opacity: 0.8;
+}
+
+.lane-plot[data-confidence='low'] {
+  opacity: 0.58;
+}
+
+.lane-plot[data-confidence='off'] {
+  opacity: 0.28;
+}
+
+.lane-bar {
+  fill: var(--shell-accent);
+}
+
+.lane-trace {
+  fill: none;
+  stroke: var(--shell-accent);
+  stroke-width: 1.5;
+}
+
+.lane-threshold {
+  stroke: var(--shell-refused);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
+  cursor: ns-resize;
+}
+
+.lane-window {
+  fill: rgba(255, 212, 0, 0.28);
+}
+
+.task-excluded {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.consumer-set {
+  border: 1px solid var(--consumer-line);
+  border-radius: 3px;
+  padding: 0.45em 0.6em;
+  margin-bottom: 0.5em;
+  font-size: 0.9em;
+}
+
+.consumer-set[data-rank='0'] {
+  border-color: var(--consumer-yellow);
+}
+
+@media (max-width: 720px) {
+  .lane-row {
+    grid-template-columns: 1fr;
+  }
+
+  .consumer-controls {
+    gap: 0.5em 0.8em;
+  }
+}
+
+/*
+ * A hex nothing has been heard from is an outline, not a fill.
+ *
+ * The distinction is the tab's whole subject: water that has never been sampled and water
+ * that was sampled and has gone stale carry the same number at saturation, and drawing
+ * them identically made a field of a hundred and seventy-six identical hexes — watched in
+ * the running page, and the reason this rule exists.
+ */
+.consumer-hex[data-unheard='true'] {
+  fill-opacity: 0.14;
+  stroke: rgba(255, 212, 0, 0.5);
+  stroke-dasharray: 2 2;
+}

@@ -1,0 +1,400 @@
+<title>Intro, Grown and Moving</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=Public+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#EDF0F1; --surface:#FFFFFF; --sunk:#E4E9EB; --sunker:#D8E0E3;
+  --ink:#0E171C; --body:#2A3B43; --muted:#5E727B; --line:#C2CDD2;
+  --accent:#B4530F; --accent-ink:#7A3908; --wash:#F8EFE6;
+  --meas:#15676B; --fore:#6B4C9A; --warn:#B23A2A;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B1317; --surface:#121D23; --sunk:#0F1A20; --sunker:#16232A;
+    --ink:#E3EDF0; --body:#BDCDD3; --muted:#8399A2; --line:#26363D;
+    --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1E222A;
+    --meas:#5FB8AC; --fore:#A996D8; --warn:#E08A76;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B1317; --surface:#121D23; --sunk:#0F1A20; --sunker:#16232A;
+  --ink:#E3EDF0; --body:#BDCDD3; --muted:#8399A2; --line:#26363D;
+  --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1E222A;
+  --meas:#5FB8AC; --fore:#A996D8; --warn:#E08A76;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--body);margin:0;
+  font-family:'Public Sans',system-ui,sans-serif;font-size:16px;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 110px}
+h1,h2{font-family:Spectral,Georgia,serif;color:var(--ink);margin:0;text-wrap:balance}
+h1{font-size:clamp(2rem,4.2vw,2.7rem);font-weight:600;line-height:1.1}
+h2{font-size:clamp(1.2rem,2.2vw,1.6rem);font-weight:600}
+p{margin:0}
+.prose{max-width:64ch}
+code,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted)}
+a{color:var(--accent-ink)}
+header.top{border-bottom:1px solid var(--line);padding:52px 0 26px;display:flex;
+  flex-direction:column;gap:13px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 26px;font-family:'IBM Plex Mono',monospace;
+  font-size:.76rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+section{padding:34px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+.note{border-left:3px solid var(--accent);background:var(--sunk);padding:12px 16px;font-size:.94rem}
+.warnnote{border-left:3px solid var(--warn);background:var(--sunk);padding:12px 16px;font-size:.94rem}
+
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:2px}
+.frame-bar{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
+  padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted)}
+.frame-bar .tabs{display:flex;gap:14px}
+.frame-bar .tabs span[aria-current]{color:var(--ink);border-bottom:2px solid var(--accent);padding-bottom:2px}
+.panel{padding:16px 18px 14px}
+.mast{font-size:1.4rem}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start;margin-top:10px}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+.stagewrap{overflow-x:auto}
+svg.stage{display:block;width:100%;height:auto}
+
+.lane-bg{fill:var(--sunk);stroke:none}
+.lane-cap{fill:var(--muted);font-size:9px;letter-spacing:.15em;font-family:'IBM Plex Mono',monospace}
+.box{fill:var(--surface);stroke:var(--line);stroke-width:1.4}
+.box.hot{stroke:var(--accent);stroke-width:2.4}
+.box-t{fill:var(--ink);font-size:11.5px;font-weight:600;font-family:'Public Sans',sans-serif}
+.box-s{fill:var(--muted);font-size:8.5px;font-family:'IBM Plex Mono',monospace}
+/* A channel is a place, not a line: wide enough to hold what is crossing it. */
+.chan{fill:var(--sunker);stroke:none}
+.chan-line{fill:none;stroke:var(--line);stroke-width:1.2;stroke-dasharray:3 5}
+.chan-t{fill:var(--muted);font-size:9px;font-family:'IBM Plex Mono',monospace}
+.chan-t.proto{fill:var(--accent-ink)}
+.mark{fill:var(--meas);cursor:pointer}
+.mark.sel{stroke:var(--ink);stroke-width:1.6}
+.mark.ann{fill:var(--accent)}
+.mark.req{fill:var(--fore)}
+.mark.res{fill:var(--fore);opacity:.55}
+.gauge-bg{fill:none;stroke:var(--line);stroke-width:6;stroke-linecap:round}
+.gauge{fill:none;stroke:var(--meas);stroke-width:6;stroke-linecap:round}
+.gauge.over{stroke:var(--warn)}
+.cell{stroke:var(--surface);stroke-width:.6}
+.traj{fill:none;stroke:var(--fore);stroke-width:1.8}
+.trajpt{fill:var(--fore)}
+.badge{fill:var(--wash);stroke:var(--accent);stroke-width:1}
+.badge-t{fill:var(--accent-ink);font-size:9px;font-family:'IBM Plex Mono',monospace}
+.ghost{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:2 4;opacity:.5}
+
+.side{border-left:2px solid var(--line);padding-left:16px;display:flex;flex-direction:column;gap:8px;
+  min-height:330px}
+.side .step{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted)}
+.side .step .hint{margin-left:.8em;text-transform:none;letter-spacing:.02em}
+.side h3{font-family:Spectral,serif;color:var(--ink);font-size:1.05rem;margin:0}
+.side p{font-size:.87rem;line-height:1.5}
+.insp{background:var(--sunk);border:1px solid var(--line);border-radius:3px;padding:9px 11px;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--body);white-space:pre-wrap;
+  line-height:1.45;min-height:104px}
+.insp b{color:var(--accent-ink);font-weight:500}
+.insp .empty{color:var(--muted)}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+.ctl button{font:inherit;font-size:.8rem;font-family:'IBM Plex Mono',monospace;
+  background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:3px 10px;
+  color:var(--ink);cursor:pointer}
+.ctl button:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
+.ctl button:disabled{color:var(--muted);cursor:default;opacity:.5}
+.ctl button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.readout{font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--muted);margin-top:8px}
+ol.q{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:11px}
+ol.q b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">drogna &middot; feature 119 &middot; wireframe, fifth pass</p>
+  <h1>It grows, it moves, and you can open what is crossing</h1>
+  <p class="prose">Six elements introduced one at a time under the arrow keys — and once an
+  element is in, its links are live. The gaps between elements are the point: each is a channel
+  wide enough to see what is travelling it, and every message on one can be clicked and read,
+  including the query requests and what came back.</p>
+  <div class="meta">
+    <span>date <b>30 August 2026</b></span>
+    <span>status <b>wireframe — not built</b></span>
+    <span>steps <b>6</b></span>
+    <span>channels <b>6, all inspectable</b></span>
+  </div>
+</header>
+
+<section>
+  <h2>Press the right arrow, then click something crossing a channel</h2>
+  <div class="frame">
+    <div class="frame-bar">
+      <span class="mono">drogna</span>
+      <span class="tabs"><span aria-current="page">Intro</span><span>Background</span>
+        <span>Holdings</span><span>Operator</span><span>Map</span><span>Messages</span></span>
+      <span style="margin-left:auto">synthetic throughout &mdash; holds no third-party entities</span>
+    </div>
+    <div class="panel">
+      <h2 class="mast">drogna</h2>
+      <div class="layout">
+        <div>
+          <div class="stagewrap"><svg class="stage" id="stage" viewBox="0 0 1000 470" preserveAspectRatio="xMidYMin meet" role="img"
+            aria-label="Measurements cross a channel to a divergence test; divergence triggers a model run, which publishes a new forecast; the forecast is announced over MQTT to a client, which asks over OGC API-EDR for a slice and a trajectory."></svg></div>
+          <p class="readout" id="readout"></p>
+        </div>
+        <div class="side">
+          <p class="step"><span id="pos"></span><span class="hint">← → to grow it</span></p>
+          <h3 id="title"></h3>
+          <p id="prose"></p>
+          <div class="insp" id="insp"><span class="empty">Click any message crossing a channel to read it.</span></div>
+          <div class="ctl">
+            <button id="prev">&larr; previous</button>
+            <button id="next">next &rarr;</button>
+            <button id="pause">pause</button>
+            <button id="nudge">push it off course</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>What the channels are for</h2>
+  <div class="two">
+    <p>In the earlier passes the links were lines: an arrow said <em>A talks to B</em> and stopped
+    there. Here the gap between two elements is a lane with room in it, and what crosses is drawn
+    at a size you can aim at. A reader who wants to know what SensorThings actually looks like on
+    the wire clicks a green dot and reads one.</p>
+    <p>Requests and results share a lane in opposite directions, which is the whole shape of a
+    query interface: the client sends a URL, the answer comes back as CoverageJSON. Both are
+    clickable, so the tab can show a real EDR round trip without a reader ever leaving it — and
+    the composer on the Map is one link away when they want to write one themselves.</p>
+  </div>
+  <p class="note">Nothing in the drawing names a component. Six roles: what is measured, what
+  tests it against belief, what re-forecasts, what is believed, who is told, and who asks. The
+  three standards sit on the channels that carry them.</p>
+</section>
+
+<section>
+  <h2>The question this still raises</h2>
+  <div class="warnnote"><b>Feature 115, FR-71:</b> motion comes from received traffic and nothing
+  else — “no animation may run when no message is arriving, a display that keeps moving while the
+  broker is silent being an assertion of traffic that does not exist.” The marks above are on a
+  timer. Under the real system they would be the observations that genuinely arrived, the gauge
+  would be the monitor's own streak, and the EDR pair would be a request this page really made and
+  the CoverageJSON that really came back — which is also the only way the inspector can show a
+  payload worth reading.</div>
+  <p class="prose"><b>The recommendation is unchanged: drive it from the running system.</b> The
+  inspector makes the case sharper than the animation did — an invented payload in an inspector is
+  a lie with a monospace font on it, where a real one is the most convincing thing on the page.</p>
+</section>
+
+<section style="border-bottom:0">
+  <h2>Still to settle</h2>
+  <ol class="q">
+    <li><b>Timer or real traffic.</b> Everything else follows from it, and the inspector raises the
+    stakes.</li>
+    <li><b>What a step reveals.</b> Here a step brings in one element and the channel that reaches
+    it, so the picture and the story arrive together.</li>
+    <li><b>Whether the channels stay horizontal.</b> Six lanes read cleanly left to right, but the
+    loop is then a returning arrow along the top rather than a ring. The ring was clearer; the
+    lanes hold more.</li>
+    <li><b>How much payload the inspector shows.</b> Above it is three or four fields. The full
+    document, rendered against its master, is what the Messages tab already does well.</li>
+  </ol>
+</section>
+</div>
+
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('stage');
+  const el=(n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const add=(p,n,a)=>{const e=el(n,a);p.appendChild(e);return e;};
+  const layer=n=>add(svg,'g',{'data-layer':n});
+  const lanesL=layer('lanes'), chanL=layer('chan'), boxL=layer('box'), markL=layer('mark');
+
+  const BW=126, BH=58;
+  // Boxes are small and the gaps are large: the channel is where the interesting thing is.
+  const B={
+    meas :{x:16, y:96,  t:'Measurements', s:'what was found'},
+    test :{x:326,y:96,  t:'Divergence',   s:'measured vs believed'},
+    run  :{x:636,y:96,  t:'Model run',    s:'assimilate, re-forecast'},
+    fore :{x:858,y:96,  t:'The forecast', s:'what is believed'},
+    down :{x:16, y:330, t:'A client',     s:'this page, or anything'},
+    res  :{x:636,y:330, t:'What came back', s:'slice + trajectory'},
+  };
+  const cy=k=>B[k].y+BH/2, rx=k=>B[k].x+BW, lx=k=>B[k].x, cx=k=>B[k].x+BW/2;
+
+  add(lanesL,'rect',{class:'lane-bg',x:6,y:56,width:988,height:180,rx:8});
+  add(lanesL,'rect',{class:'lane-bg',x:6,y:290,width:988,height:166,rx:8});
+  const cap=(x,y,s)=>{const t=add(lanesL,'text',{class:'lane-cap',x,y});t.textContent=s;};
+  cap(20,74,'THE LOOP — MEASURE, TEST, RE-FORECAST');
+  cap(20,308,'DOWNSTREAM — HEAR, THEN ASK');
+
+  // ---- channels: a rectangle you can see into, not a line ------------------
+  const CH={};
+  function channel(id,x,y,w,proto,note,h=34){
+    const g=add(chanL,'g',{});
+    add(g,'rect',{class:'chan',x,y:y-h/2,width:w,height:h,rx:5});
+    add(g,'path',{class:'chan-line',d:`M ${x+6} ${y} L ${x+w-6} ${y}`});
+    const p=add(g,'text',{class:'chan-t proto',x:x+8,y:y-h/2-6}); p.textContent=proto;
+    const n=add(g,'text',{class:'chan-t',x:x+w-8,y:y+h/2+11,'text-anchor':'end'}); n.textContent=note;
+    CH[id]={g,x,y,w};
+    g.setAttribute('opacity','0');
+    return CH[id];
+  }
+  channel('obs',  rx('meas')+6, cy('meas'), lx('test')-rx('meas')-12, 'SensorThings', 'result · time · location');
+  channel('div',  rx('test')+6, cy('test'), lx('run')-rx('test')-12,  'MQTT  ctl/divergence', 'sustained, not a spike');
+  channel('pub',  rx('run')+6,  cy('run'),  lx('fore')-rx('run')-12,  'writes', 'a new version');
+  channel('ann',  16,           268,        978,                      'MQTT  ctl/run/published', 'nothing polls', 30);
+  channel('req',  rx('down')+6, cy('down')-16, lx('res')-rx('down')-12,'OGC API-EDR  request', 'a URL you could paste', 26);
+  channel('res',  rx('down')+6, cy('down')+22, lx('res')-rx('down')-12,'CoverageJSON  response', 'what came back', 26);
+
+  // ---- boxes ---------------------------------------------------------------
+  const N={};
+  for(const k in B){
+    const b=B[k], g=add(boxL,'g',{opacity:0});
+    N[k]={g,box:add(g,'rect',{class:'box',x:b.x,y:b.y,width:BW,height:BH,rx:4})};
+    const t=add(g,'text',{class:'box-t',x:b.x+10,y:b.y+23}); t.textContent=b.t;
+    const s=add(g,'text',{class:'box-s',x:b.x+10,y:b.y+38}); s.textContent=b.s;
+  }
+  const badge=add(N.fore.g,'rect',{class:'badge',x:B.fore.x+82,y:B.fore.y+40,width:38,height:14,rx:3});
+  const badgeT=add(N.fore.g,'text',{class:'badge-t',x:B.fore.x+87,y:B.fore.y+50});
+  let version=7; badgeT.textContent='v'+version;
+
+  const gx=B.test.x+10, gy=B.test.y+48, gw=106;
+  const gaugeBg=add(N.test.g,'line',{class:'gauge-bg',x1:gx,y1:gy,x2:gx+gw,y2:gy});
+  const gauge=add(N.test.g,'line',{class:'gauge',x1:gx,y1:gy,x2:gx,y2:gy});
+
+  // results drawn inside the lower-right box's area
+  const sliceG=add(boxL,'g',{opacity:0}), cells=[];
+  for(let r=0;r<4;r++) for(let c=0;c<6;c++)
+    cells.push(add(sliceG,'rect',{class:'cell',x:790+c*18,y:318+r*15,width:18,height:15,fill:'transparent'}));
+  const sc=add(sliceG,'text',{class:'box-s',x:790,y:314}); sc.textContent='slice · 50 m, one instant';
+  const trajPts=Array.from({length:9},(_,i)=>[790+i*13,404+Math.sin(i*1.1)*9]);
+  const trajPath=add(sliceG,'path',{class:'traj',d:'',opacity:0});
+  const trajDots=trajPts.map(p=>add(sliceG,'circle',{class:'trajpt',cx:p[0],cy:p[1],r:2.4,opacity:0}));
+  const tc=add(sliceG,'text',{class:'box-s',x:790,y:428}); tc.textContent='trajectory · along the path ahead';
+
+  // ---- the storyboard ------------------------------------------------------
+  const STEPS=[
+    {id:'meas', shows:['meas'], chans:[], title:'Something is measured',
+     prose:'A platform reports what it finds and where it found it. Each reading is a SensorThings observation: a result, the time it was taken, and the location it came from.'},
+    {id:'test', shows:['test'], chans:['obs'], title:'It is tested against what is believed',
+     prose:'The channel between them is the interesting part. Click a mark crossing it and read the observation. Each one is compared against what the current forecast says should be there; the bar fills as the difference persists.'},
+    {id:'run',  shows:['run'],  chans:['div'], title:'Sustained difference warrants a run',
+     prose:'One spike is weather in the numbers. Sustained divergence is published as an event, and that is what triggers a model run — not a timer.'},
+    {id:'fore', shows:['fore'], chans:['pub'], title:'A new forecast is what comes out',
+     prose:'The run assimilates what was measured and writes a new version of the field. The version chip is how you know the loop closed.'},
+    {id:'down', shows:['down'], chans:['ann'], title:'Downstream is told, and does not poll',
+     prose:'The new forecast is announced over MQTT. Anything that cares is listening; nothing is polling. Click the announcement as it crosses.'},
+    {id:'res',  shows:['res'],  chans:['req','res'], title:'And then asks, over OGC API-EDR',
+     prose:'The client asks for exactly what it needs: a two-dimensional slice at a depth and an instant, and a trajectory — the forecast along the path ahead, which is what the next round of measurements is tested against. Click the request to see the URL, and the response to see what came back.'},
+  ];
+  let step=1;
+  const shown=()=>new Set(STEPS.slice(0,step).flatMap(s=>s.shows));
+  const chans=()=>new Set(STEPS.slice(0,step).flatMap(s=>s.chans));
+
+  // ---- messages you can open ----------------------------------------------
+  const SAMPLE={
+    obs:()=>({head:'obs/platform-a/temperature-050m',body:
+      `phenomenonTime  2026-01-01T00:0${Math.floor(Math.random()*9)}:00Z\nresult          ${(11.4+Math.random()*1.8).toFixed(2)} degC\ndatastream      temperature-050m\nlocation        ${(48.3+Math.random()*0.2).toFixed(4)}, ${(-8.1+Math.random()*0.2).toFixed(4)}\ndepth           50 m`}),
+    div:()=>({head:'ctl/divergence',body:
+      `kind            sustained\nstreak          6 samples\nmean_residual   0.84 degC\nscope           region-3\nnot             a single spike`}),
+    pub:()=>({head:'writes the holding',body:
+      `era             instance\nversion         v${version+1}\ndigest          checked before it is servable\nvariables       temperature, salinity`}),
+    ann:()=>({head:'ctl/run/published',body:
+      `run_id          run-${1000+version}\nvalid_from      2026-01-01T00:00:00Z\ncause           divergence-triggered\nensemble        8 members\n(consumers subscribe; nothing polls)`}),
+    req:()=>({head:'GET /api/edr/collections/…/position',body:
+      `coords          POINT(-8.02 48.41)\ndatetime        2026-01-01T00:00:00Z\nparameter-name  temperature\nz               50\nf               CoverageJSON`}),
+    res:()=>({head:'200  CoverageJSON',body:
+      `domain          Grid  6 x 4\nranges          temperature\nunit            degC\nvalues          ${Array.from({length:4},()=>(11+Math.random()*2).toFixed(1)).join(', ')}, …`}),
+  };
+  const insp=document.getElementById('insp');
+  let selected=null;
+  function open(kind,node){
+    if(selected) selected.classList.remove('sel');
+    selected=node; node&&node.classList.add('sel');
+    const m=SAMPLE[kind]();
+    insp.innerHTML='<b>'+m.head+'</b>\n'+m.body;
+  }
+
+  // ---- motion --------------------------------------------------------------
+  let marks=[], spawned=[], streak=0, running=true, last=0, emit=0, phase='measuring', at=0;
+  const readout=document.getElementById('readout');
+  function travel(kind,ch,dur,cls,onArrive){
+    const c=add(markL,'circle',{class:'mark '+cls,cx:ch.x,cy:ch.y,r:4.4});
+    c.addEventListener('click',()=>open(kind,c));
+    spawned.push({e:c,ch,t:0,dur,onArrive,kind});
+  }
+  function tick(ts){
+    if(!last) last=ts; const dt=Math.min(64,ts-last); last=ts;
+    const S=shown(), C=chans();
+    for(const k in N) N[k].g.setAttribute('opacity',S.has(k)?'1':'0');
+    for(const k in CH) CH[k].g.setAttribute('opacity',C.has(k)?'1':'0');
+    sliceG.setAttribute('opacity',S.has('res')?'1':'0');
+
+    if(running){
+      if(C.has('obs')){ emit+=dt; if(emit>340){ emit=0; travel('obs',CH.obs,1600,''); } }
+      marks=marks.filter(m=>{
+        m.t+=dt/m.dur;
+        if(m.t>=1){ if(m.e===selected){selected=null;} m.e.remove(); m.onArrive&&m.onArrive(); return false; }
+        m.e.setAttribute('cx',m.ch.x+m.ch.w*m.t);
+        m.e.setAttribute('cy',m.ch.y+(m.kind==='obs'?Math.sin(m.t*6)*5:0));
+        return true;
+      });
+      if(spawned.length){ marks=marks.concat(spawned.splice(0)); }
+
+      if(C.has('obs')&&phase==='measuring'){ streak=Math.min(1,streak+dt/9000); }
+      gauge.setAttribute('x2',String(gx+gw*streak));
+      gauge.classList.toggle('over',streak>0.7);
+
+      if(phase==='measuring'&&streak>=1&&C.has('div')){ phase='diverging';
+        travel('div',CH.div,1100,'ann',()=>{ phase='running'; at=ts; N.run.box.classList.add('hot'); }); }
+      else if(phase==='running'&&ts-at>1400){ phase='publishing'; N.run.box.classList.remove('hot');
+        if(C.has('pub')) travel('pub',CH.pub,900,'ann',()=>{ version++; badgeT.textContent='v'+version;
+          streak=0; N.fore.box.classList.add('hot');
+          if(C.has('ann')) travel('ann',CH.ann,1500,'ann',()=>{ N.fore.box.classList.remove('hot');
+            if(C.has('req')) askEDR(); else phase='measuring'; });
+          else { N.fore.box.classList.remove('hot'); phase='measuring'; } });
+        else { streak=0; phase='measuring'; } }
+    }
+    readout.textContent = running
+      ? `divergence ${(streak*100).toFixed(0)}%  ·  forecast v${version}  ·  ${marks.length} message(s) in flight`
+      : 'paused — nothing is arriving, so nothing moves';
+    requestAnimationFrame(tick);
+  }
+  function askEDR(){
+    travel('req',CH.req,1000,'req',()=>{
+      cells.forEach((c,i)=>setTimeout(()=>c.setAttribute('fill',
+        `color-mix(in srgb, var(--fore) ${20+Math.random()*60}%, transparent)`),i*18));
+      trajPath.setAttribute('d','M '+trajPts.map(p=>p.join(' ')).join(' L '));
+      trajPath.setAttribute('opacity','1');
+      trajDots.forEach((d,i)=>setTimeout(()=>d.setAttribute('opacity','1'),i*70));
+      travel('res',CH.res,1000,'res',()=>{ phase='measuring'; });
+    });
+  }
+
+  // ---- the step machine ----------------------------------------------------
+  function render(){
+    const s=STEPS[step-1];
+    document.getElementById('pos').textContent=`step ${step} of ${STEPS.length}`;
+    document.getElementById('title').textContent=s.title;
+    document.getElementById('prose').textContent=s.prose;
+    document.getElementById('prev').disabled=step===1;
+    document.getElementById('next').disabled=step===STEPS.length;
+  }
+  const go=n=>{ step=Math.min(Math.max(n,1),STEPS.length); render(); };
+  document.getElementById('prev').addEventListener('click',()=>go(step-1));
+  document.getElementById('next').addEventListener('click',()=>go(step+1));
+  document.getElementById('pause').addEventListener('click',e=>{
+    running=!running; e.target.textContent=running?'pause':'resume'; });
+  document.getElementById('nudge').addEventListener('click',()=>{
+    if(phase==='measuring') streak=Math.min(1,streak+0.5); });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight') go(step+1); else if(e.key==='ArrowLeft') go(step-1);
+    else if(e.key==='Home') go(1); else if(e.key==='End') go(STEPS.length); else return;
+    e.preventDefault(); });
+  render(); requestAnimationFrame(tick);
+})();
+</script>

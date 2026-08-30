@@ -1122,7 +1122,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "step_seconds"
         ],
         "additionalProperties": false,
-        "description": "The forecast the vessel was issued at the quay-side (feature 118): authored once at provisioning, valid forward from the scenario origin, and never refreshed. It is a persistence forecast — the true field at the origin held constant across every step — because this component evaluates the true ocean, and a brief evaluated from truth at each step would be right about the future, which no forecast is. Its error grows on its own as the world moves away from it.",
+        "description": "The forecast the vessel was issued at the quay-side (feature 120): authored once at provisioning, valid forward from the scenario origin, and never refreshed. It is a persistence forecast — the true field at the origin held constant across every step — because this component evaluates the true ocean, and a brief evaluated from truth at each step would be right about the future, which no forecast is. Its error grows on its own as the world moves away from it.",
         "properties": {
           "grid": {
             "$ref": "#/$defs/grid_counts"
@@ -2993,7 +2993,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "endpoints",
       "flow",
       "liveness",
-      "messages"
+      "messages",
+      "consumers"
     ],
     "additionalProperties": false,
     "properties": {
@@ -3021,6 +3022,14 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             },
             "label": {
               "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "harness",
+                "consumer"
+              ],
+              "description": "What the view is a face of (feature 116, FR-76). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which — a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
             }
           }
         }
@@ -3228,7 +3237,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "suppressed_filters",
           "ports",
-          "series_samples"
+          "series_samples",
+          "pulse"
         ],
         "additionalProperties": false,
         "description": "What the Operator flow chart needs that the topology master cannot supply (FR-052 to FR-054). Edges themselves are NOT here: topic edges are derived from contracts/topology.json, so the picture cannot disagree with the wiring, and a gate fails the build when a declared component is undrawn or a topology edge is neither drawn nor suppressed.",
@@ -3269,6 +3279,486 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "integer",
             "exclusiveMinimum": 0,
             "description": "How many samples each face's rolling series holds. In memory, discarded on reload, never persisted and never served: a window that outlived the page would be a second store. The bound is here rather than in the panel so it is not a number typed into a component (Constitution IV)."
+          },
+          "pulse": {
+            "type": "object",
+            "required": [
+              "fade_ms",
+              "hold_above_rate"
+            ],
+            "additionalProperties": false,
+            "description": "How a wire says traffic crossed it. Both numbers are here rather than in the panel for the reason series_samples is (Constitution IV), and both are host milliseconds and a clock rate respectively: a fade is a fact about the render path, not about simulated time, so it does not accelerate with the clock (ADR-0007).",
+            "properties": {
+              "fade_ms": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How long a wire stays lit after a message crosses it, in host milliseconds. Ports are excluded by kind: a coupling carries no broker traffic and can never pulse."
+              },
+              "hold_above_rate": {
+                "type": "number",
+                "minimum": 0,
+                "description": "The clock rate above which a lit wire is held lit while traffic continues rather than re-lit per message. Above real time a message crosses a wire dozens of times a second, and a highlight restarted that often is a flicker that says less than a steady light does. The rate is the clock's own reported figure, so the picture changes when the clock does and not when anything here decides."
+              }
+            }
+          }
+        }
+      },
+      "consumers": {
+        "type": "object",
+        "title": "The downstream consumer views (feature 116)",
+        "description": "Everything the three consumer views are bounded and populated by. It is here, and not in the views themselves, for the ordinary reason (Constitution IV) and for one specific to this feature: a consumer synthesises inputs drogna does not model (ADR-0038), and a synthesised quantity written into a component would be a fixture nobody could find. Written into a configuration document it is a declaration a reader can read, change and disagree with.",
+        "required": [
+          "notice",
+          "hexes",
+          "sampling",
+          "courses",
+          "feasibility"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "notice": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-76). Here rather than in the frame so the sentence exists once."
+          },
+          "hexes": {
+            "type": "object",
+            "required": [
+              "minimum_resolution",
+              "maximum_resolution",
+              "default_resolution",
+              "cell_ceiling"
+            ],
+            "additionalProperties": false,
+            "description": "The hex grid the map-bearing consumers resample onto. Resolutions are H3's, the same index the planner already publishes in (SRD FR-35).",
+            "properties": {
+              "minimum_resolution": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              },
+              "maximum_resolution": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15,
+                "description": "The finest grid the control offers. 7 covers this domain with 37,400 hexes and is the finest that is affordable over the whole of it; 8 needs 278,000, which no ceiling worth having would admit, so offering it only ever produced a refusal."
+              },
+              "default_resolution": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              },
+              "cell_ceiling": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How many hexes a consumer will cover the *view* with before it refuses the resolution and says why. Recomputation is synchronous and on the interaction path (FR-79); a ceiling here is what stops a resolution control freezing the page. The finest resolutions on offer exceed it over the whole domain on purpose: zooming in is what makes them affordable, and the refusal names both remedies. Measured over this scenario's domain (about 205,000 km2): resolution 5 covers it with 761 hexes, resolution 6 with 5,345, and resolution 7 with 37,400 — so 45,000 is the smallest ceiling that offers every resolution on the scale at full extent, with room for the estimate to differ from the real count. Resolution 7 at full extent settles in about 1.3 s, which is the honest cost of the finest grid over the widest view; every other combination is well under 700 ms. It was 5.3 s before the hex layer was keyed on its resolution and the per-hex tooltip dropped where a hex is too small to point at."
+              }
+            }
+          },
+          "sampling": {
+            "type": "object",
+            "required": [
+              "time_budget_hours",
+              "default_time_budget_hours",
+              "expendable_interval_hours",
+              "default_expendable_interval_hours",
+              "depth_zones",
+              "uncertainty",
+              "nominal_speed_m_per_s",
+              "observation_backfill"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "time_budget_hours": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "description": "The budgets offered. More than one, because the requirement is that the plan changes shape between them (FR-83)."
+              },
+              "default_time_budget_hours": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "expendable_interval_hours": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "description": "Expendables are offered as a rate — one per this many hours — never as a stock, so the drop count is the budget divided by the interval and changes when either does."
+              },
+              "default_expendable_interval_hours": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "depth_zones": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-77)."
+              },
+              "observation_backfill": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "How many recently served observations the view reads from the SensorThings service when it opens, before it starts hearing them over the broker. A consumer that only counted what arrived after it opened would draw an empty ocean for its first hour and call it uncertainty; reading the served history is the ordinary thing a downstream client does, and it is a genuine paged GET rather than a store read. The bound is here because the page is parsed on the way in."
+              },
+              "nominal_speed_m_per_s": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "The transit speed used until the platform has reported one of its own, which it does on its state topic. The view says which of the two it is using; it never presents this as the platform's speed."
+              },
+              "uncertainty": {
+                "type": "object",
+                "required": [
+                  "saturation",
+                  "recency_timescale_seconds",
+                  "density_halving_count"
+                ],
+                "additionalProperties": false,
+                "description": "The coverage proxy of FR-80: observation-driven uncertainty, never forecast uncertainty and never ensemble spread.",
+                "properties": {
+                  "saturation": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "The value an unobserved cell sits at, and the ceiling growth approaches. A cell nothing has been heard from is at saturation rather than at zero: an absent observation is the opposite of a confident one."
+                  },
+                  "recency_timescale_seconds": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "The e-folding time of regrowth in seconds of simulation time. Growth is monotonic in time since the last observation and asymptotic to saturation."
+                  },
+                  "density_halving_count": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "How many observations in a cell halve the uncertainty a single one leaves. Density and recency are separate ingredients and are named separately on screen."
+                  }
+                }
+              }
+            }
+          },
+          "courses": {
+            "type": "object",
+            "required": [
+              "classes",
+              "objectives",
+              "default_objective",
+              "candidate_count",
+              "steps",
+              "step_seconds",
+              "samples_per_likelihood",
+              "default_exposure_weight",
+              "bank_count"
+            ],
+            "additionalProperties": false,
+            "description": "The comparative-courses view. It holds no third party: what is configured here is a set of vessel *classes* and how a hypothesis about each of them moves, seeded across the whole domain from a likelihood the reader sets (Constitution V, and the spec's §3.1).",
+            "properties": {
+              "classes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label",
+                    "motion",
+                    "default_likelihood",
+                    "included",
+                    "speed_m_per_s"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "config.common.schema.json#/$defs/component_id"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "motion": {
+                      "type": "string",
+                      "enum": [
+                        "corridor",
+                        "loiter",
+                        "evasive"
+                      ],
+                      "description": "How a hypothesis of this class moves. Behaviour drives motion rather than a score multiplier: a roster that only weighted a score would produce three identical clouds and be cosmetic (the source SRD's §4.3, kept as a requirement)."
+                    },
+                    "default_likelihood": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "included": {
+                      "type": "boolean",
+                      "description": "Whether the class starts in the roster. A class may be excluded entirely."
+                    },
+                    "speed_m_per_s": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  }
+                }
+              },
+              "objectives": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "config.common.schema.json#/$defs/component_id"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "default_objective": {
+                "$ref": "config.common.schema.json#/$defs/component_id",
+                "description": "Which objective the view opens on. It is not simply the first in the list: under some objectives the two component scores move together — evading and staying clear of the density are the same thing — and no weighting reorders the candidates. The view says so when it happens, and opens on an objective where the trade is real."
+              },
+              "candidate_count": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 4,
+                "description": "Three or four, never one: a single black-box answer invites disagreement with the whole idea rather than with the weighting, which is the argument worth having."
+              },
+              "steps": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How many steps each hypothesis is marched. A bound on the interaction path (FR-79)."
+              },
+              "step_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "samples_per_likelihood": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "Hypotheses seeded per point of likelihood. Likelihood 9 is nine times the seeding density of likelihood 1, which is what makes the roster's contrast visible."
+              },
+              "default_exposure_weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "bank_count": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How many shallow banks the loitering class is drawn to. Synthesised by the view and labelled as such: drogna models no bathymetry (ADR-0038)."
+              }
+            }
+          },
+          "feasibility": {
+            "type": "object",
+            "required": [
+              "horizon_hours",
+              "step_minutes",
+              "set_count",
+              "confidence_weights",
+              "veto_weight",
+              "forecast_samples",
+              "lanes",
+              "tasks"
+            ],
+            "additionalProperties": false,
+            "description": "The temporal-feasibility view. Its horizon is not here: it is the published forecast's own validity span, so the tab reasons over exactly the window drogna claims to know about.",
+            "properties": {
+              "horizon_hours": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "How far ahead the tab reasons, from the published forecast's own validity start. It is longer than the forecast is valid for, deliberately and visibly: the served lane stops where the forecast stops, and a task that needs it cannot be scheduled past that point. A horizon cut to the forecast's validity would have hidden that, and the whole subject of this tab is what you are giving up."
+              },
+              "step_minutes": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "The resolution the lanes are evaluated at."
+              },
+              "forecast_samples": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "description": "How many genuine position queries the served lane is built from, spread across the forecast's validity span. A bound on the interaction path (FR-79): the lane is a real time series of real queries, and this says how many."
+              },
+              "set_count": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 3,
+                "description": "How many maximal feasible sets are shown. Two or three, never one: one set hides the trade it exists to reveal."
+              },
+              "confidence_weights": {
+                "type": "object",
+                "required": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "additionalProperties": false,
+                "description": "What each confidence setting is worth. Off is not here because Off is not a weight: it removes the source from the computation entirely.",
+                "properties": {
+                  "high": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "medium": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "low": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              },
+              "veto_weight": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1,
+                "description": "The weight of unmet requirements that closes a window. Above the medium weight and at or below the high one, so that a high-confidence source can close a window on its own and a lower-confidence one cannot — which is the whole of 'a low-confidence source may not veto a task'."
+              },
+              "lanes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label",
+                    "kind",
+                    "provenance",
+                    "default_confidence"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "config.common.schema.json#/$defs/component_id"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "boolean",
+                        "continuous"
+                      ],
+                      "description": "A plain bar implies a boolean yes/no, which is wrong for a tide. Boolean lanes are bars; continuous lanes are traces carrying each task's own threshold."
+                    },
+                    "provenance": {
+                      "type": "string",
+                      "enum": [
+                        "seam",
+                        "seam-derived",
+                        "synthesised"
+                      ],
+                      "description": "Where the lane's values come from, stated on the lane itself (ADR-0038): served over the seam, computed by the view from something that was, or synthesised by the view because drogna does not model it."
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "default_confidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low",
+                        "off"
+                      ]
+                    },
+                    "period_minutes": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "For a synthesised lane: the cycle it repeats on."
+                    },
+                    "on_minutes": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "For a synthesised boolean lane: how much of each cycle it is present for."
+                    },
+                    "minimum": {
+                      "type": "number",
+                      "description": "For a continuous lane: the bottom of its range."
+                    },
+                    "maximum": {
+                      "type": "number",
+                      "description": "For a continuous lane: the top of its range."
+                    }
+                  }
+                }
+              },
+              "tasks": {
+                "type": "array",
+                "minItems": 2,
+                "description": "A fixed list with editable thresholds — the cheaper of the two options the source SRD left open, and the one that keeps the demonstration reproducible.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label",
+                    "duration_minutes",
+                    "requirements"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "config.common.schema.json#/$defs/component_id"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "duration_minutes": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "requirements": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "lane",
+                          "sense"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "lane": {
+                            "$ref": "config.common.schema.json#/$defs/component_id"
+                          },
+                          "sense": {
+                            "type": "string",
+                            "enum": [
+                              "present",
+                              "absent",
+                              "at-least",
+                              "at-most"
+                            ],
+                            "description": "present/absent for a boolean lane; at-least/at-most for a continuous one, against this task's own threshold."
+                          },
+                          "threshold": {
+                            "type": "number",
+                            "description": "The task's starting threshold on a continuous lane. It is draggable in the view: two tasks may hold different thresholds against one lane and both be right."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -3408,7 +3898,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
     "title": "drogna coverage holding",
-    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. The eras (SRD-v2 FR-21): the historic archive authored at provisioning; the departure forecast issued at the scenario origin and never refreshed — authored as persistence, because a forecast evaluated from the true field at each of its steps would be a perfect forecast and so not a forecast at all (feature 118); the now-cast replaced on its cadence; the analysis an assimilation cycle publishes; and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. The eras (SRD-v2 FR-21): the historic archive authored at provisioning; the departure forecast issued at the scenario origin and never refreshed — authored as persistence, because a forecast evaluated from the true field at each of its steps would be a perfect forecast and so not a forecast at all (feature 120); the now-cast replaced on its cadence; the analysis an assimilation cycle publishes; and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
     "type": "object",
     "required": [
       "schema_version",

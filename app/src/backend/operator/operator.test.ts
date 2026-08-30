@@ -410,7 +410,13 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
         const payload = message.payload as { kind?: string; breach?: { threshold_m_per_s: number } };
         if (payload.kind === 'residual-sample') breachThreshold ??= payload.breach?.threshold_m_per_s;
       });
-      for (let i = 0; i < 8000 && breachThreshold === undefined; i++) runtime.clock.tickOnce();
+      // The monitor scores against a forecast, and the first one is otherwise 1800
+      // ticks away at the cadence floor. Asking for it is what this feature is for,
+      // and it turns thousands of synchronous ticks into tens — which matters: the
+      // ticks are a tight loop that blocks the worker's event loop while it runs,
+      // and CI failed on a task-update timeout with every assertion passing.
+      await post(runtime, `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`);
+      for (let i = 0; i < 400 && breachThreshold === undefined; i++) runtime.clock.tickOnce();
       expect(breachThreshold).toBe(tuned);
       runtime.stop();
     });
@@ -666,13 +672,21 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       // nothing too, and the broker would swallow it.
       expect(runtime.broker.deliveryFaults).toBe(0);
 
-      // Drive until the loop has published a run, then ask again.
-      for (let i = 0; i < 8000 && plans.length === 0; i++) runtime.clock.tickOnce();
-      const before = plans.length;
-      expect(before).toBeGreaterThan(0);
+      // Ask for a forecast rather than waiting out the cadence floor for one — 1800
+      // ticks of tight synchronous loop, four times over in this file, which is what
+      // tipped CI into a worker task-update timeout with every assertion passing.
+      // The prompt this feature adds gets there in one call.
+      await post(runtime, `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`);
+      expect(runtime.store.holdings().length).toBeGreaterThan(2);
+      // A field is not enough on its own: the planner also plans from where the
+      // platform is, and the platform reports on its own interval. Enough ticks for
+      // one report, and no more — the interval between replans is 600, so what makes
+      // a plan appear here is still the ask and not the clock.
+      for (let i = 0; i < 35; i++) runtime.clock.tickOnce();
+      expect(plans.length).toBe(0);
       await post(runtime, prompt);
-      expect(plans.length).toBe(before + 1);
-      expect(validator.validate('plan', plans[plans.length - 1]).refusals).toEqual([]);
+      expect(plans.length).toBe(1);
+      expect(validator.validate('plan', plans[0]).refusals).toEqual([]);
       runtime.stop();
     });
 
@@ -687,8 +701,12 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       expect(runtime.offload.staged().length).toBe(0);
       expect(runtime.offload.declined.at(-1)).toMatch(/nothing has been released yet/);
 
-      // Drive until a run has been published and staged on its own.
-      for (let i = 0; i < 8000 && runtime.offload.staged().length === 0; i++) runtime.clock.tickOnce();
+      // Let some measurements happen, then ask for a forecast — which is what the
+      // packager stages over — rather than waiting out the cadence floor for one.
+      // Measurements first, because a bundle nobody can score is not staged, and at
+      // tick zero there is nothing in the interval to score it against.
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      await post(runtime, `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`);
       const staged = runtime.offload.staged().length;
       expect(staged).toBeGreaterThan(0);
 
@@ -706,7 +724,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
 
       // Let measurements accumulate, and the same ask stages a genuine window whose
       // geometry covers the interval since the last one.
-      for (let i = 0; i < 200; i++) runtime.clock.tickOnce();
+      for (let i = 0; i < 120; i++) runtime.clock.tickOnce();
       await post(runtime, prompt);
       expect(runtime.offload.staged().length).toBe(staged + 1);
       const bundle = runtime.offload.staged().at(-1);
@@ -816,7 +834,12 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       shell.subscribe(config.shell.topics.plan, (message) =>
         plans.push(message.payload as { projection: { usable_threshold: number } }),
       );
-      for (let i = 0; i < 8000 && plans.length === 0; i++) runtime.clock.tickOnce();
+      // A forecast on request, a platform report, then a plan on request: what the
+      // planner needs and the recompute that uses it, without grinding out the 1800
+      // ticks to the cadence floor.
+      await post(runtime, `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`);
+      for (let i = 0; i < 35; i++) runtime.clock.tickOnce();
+      await post(runtime, `${config.operator.http.event_prefix}/${config.planner.prompt_event}`);
       expect(plans.length).toBeGreaterThan(0);
       expect(plans[0].projection.usable_threshold).toBe(config.planner.usable_threshold);
 

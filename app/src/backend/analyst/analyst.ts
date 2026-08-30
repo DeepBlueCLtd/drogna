@@ -148,6 +148,16 @@ export class Analyst {
       throw new Error('an analysis was requested before any field exists to correct');
     }
     const backgroundEra = background.descriptor.era;
+    if (backgroundEra !== 'instance' && backgroundEra !== 'nowcast') {
+      // The two eras an analysis can stand on: the forecast that stands, or the
+      // now-cast at cold start. Feature 118 added a third truth-derived era — the
+      // departure brief, truth held constant from the origin — and a background
+      // reaching here from it would be the leak feature 116 closed, arriving by a
+      // different door. Refused by name rather than published as a background.
+      throw new Error(
+        `an analysis cannot be built on a '${backgroundEra}' holding: the background is the standing forecast, or the now-cast at cold start`,
+      );
+    }
     const manifest = background.descriptor.manifest;
     const grid = manifest.grid;
     const cellsPerStep = grid.depth.count * grid.latitude.count * grid.longitude.count;

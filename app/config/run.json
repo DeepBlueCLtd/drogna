@@ -324,6 +324,11 @@
       "time_steps": 4,
       "step_seconds": 3600
     },
+    "departure": {
+      "grid": { "longitude": 48, "latitude": 40, "depth": 6 },
+      "time_steps": 12,
+      "step_seconds": 3600
+    },
     "archive": {
       "grid": {
         "longitude": 12,

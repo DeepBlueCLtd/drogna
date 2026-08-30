@@ -164,7 +164,12 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       await act(async () => {
         await Promise.resolve();
       });
-      expect(screen.getByTestId('holdings-count').textContent).toMatch(/^2 holding\(s\)/);
+      // Bound to what the store actually holds rather than to a number typed here: the
+      // count changed when feature 118 added the departure brief to provisioning, and a
+      // literal would have had to be found and edited to say so.
+      expect(screen.getByTestId('holdings-count').textContent).toMatch(
+        new RegExp(`^${runtime.store.holdings().length} holding\\(s\\)`),
+      );
       // The inventory table retired at feature 115 (FR-69); the timeline carries the
       // holdings now, and a bar is the thing a reader selects.
       const archiveBar = document.querySelector('[data-holding][data-era="archive"]');

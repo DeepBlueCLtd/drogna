@@ -25,6 +25,7 @@ import { describe, expect, it } from 'vitest';
 import { schemaDocuments } from '../../generated/schema-documents.js';
 import type { CoverageHolding } from '../../generated/types.js';
 import { announceHolding, announcementLabel, NOT_ANNOUNCED } from './announce.js';
+import { ERA_CAPTION, ERAS } from './HoldingsTimeline.js';
 
 const master = schemaDocuments['coverage-holding'] as {
   properties: Record<string, unknown>;
@@ -118,5 +119,29 @@ describe('the timeline announces what the master declares (T022, SC-03)', () => 
     const covers = announceHolding(broken).find((entry) => entry.property === 'manifest');
     expect(covers?.text).toContain('could not be read');
     expect(covers?.text).toContain('24×24×8×7');
+  });
+});
+
+describe('every era the master declares has a lane to be drawn on (feature 118)', () => {
+  /**
+   * The fault this was written for, found by feature 118 and real before it: the lane
+   * list was three literals, feature 116 added the `analysis` era, and the line did not
+   * follow — so an analysis holding was drawn on no lane at all and nothing said so.
+   *
+   * The parity check above did not catch it, and could not: it is bounded by the
+   * master's *properties*, and a store with no analysis in it draws the same picture
+   * either way. This is the era half of the same idea, and it is held to the same
+   * authority — the master, on disk, not a list typed alongside the display.
+   */
+  const declared = (master.properties.era as { enum: string[] }).enum;
+
+  it('draws a lane for each, in the order the master declares them', () => {
+    expect([...ERAS]).toEqual(declared);
+  });
+
+  it('names every lane it draws, so no era arrives captioned by its own id alone', () => {
+    for (const era of declared) {
+      expect(ERA_CAPTION[era], `no caption for the '${era}' era`).toBeTruthy();
+    }
   });
 });

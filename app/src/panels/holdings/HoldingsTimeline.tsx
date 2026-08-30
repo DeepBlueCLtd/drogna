@@ -18,16 +18,30 @@
  * which mapping it is using rather than letting a reader infer it from tick spacing.
  */
 import type { CoverageHolding } from '../../generated/types.js';
+import { schemaDocuments } from '../../generated/schema-documents.js';
 import { announcementLabel } from './announce.js';
 import { coverageInterval, type CoverageInterval } from './interval.js';
 import { timeScaleFor } from './scale.js';
 
-/** The eras, in the order the store fills them: what is known, what is, what may be. */
-const ERAS = ['archive', 'nowcast', 'instance'] as const;
+/**
+ * The lanes, read from the `coverage-holding` master rather than typed here.
+ *
+ * This list used to be three literals, and it was already wrong when feature 118 found
+ * it: feature 116 added the `analysis` era and this line did not follow, so an analysis
+ * holding was drawn on no lane at all. The parity check did not catch it because the
+ * fixtures it runs against hold no analysis — a store has none until a cycle turns —
+ * which is precisely the case a hand-maintained list survives and a derived one cannot.
+ * A new era now arrives on the timeline by being added to the master, which is the only
+ * place it was ever declared.
+ */
+export const ERAS = ((schemaDocuments['coverage-holding'] as { properties: { era: { enum: string[] } } }).properties.era
+  .enum) as readonly string[];
 
-const ERA_CAPTION: Record<string, string> = {
+export const ERA_CAPTION: Record<string, string> = {
   archive: 'the historic archive, authored at provisioning',
+  departure: 'the brief the vessel sailed with: persistence from the origin, never refreshed',
   nowcast: 'the now-cast, replaced on its cadence',
+  analysis: 'the analysis an assimilation cycle published, with its error and provenance',
   instance: 'forecast instances, one per run the loop turned',
 };
 

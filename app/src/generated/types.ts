@@ -242,6 +242,11 @@ export type ConfigEnvGenerator = {
     "time_steps": number;
     "step_seconds": number;
   };
+  "departure": {
+    "grid": ConfigEnvGeneratorGridCounts;
+    "time_steps": number;
+    "step_seconds": number;
+  };
   "archive": {
     "grid": ConfigEnvGeneratorGridCounts;
     "months": number;
@@ -740,7 +745,7 @@ export type ConfigTelemetry = {
 export type CoverageHolding = {
   "schema_version": 1;
   "holding_id": string;
-  "era": "archive" | "nowcast" | "analysis" | "instance";
+  "era": "archive" | "departure" | "nowcast" | "analysis" | "instance";
   "run_id": string;
   "published_at": {
     "sim_time": string;

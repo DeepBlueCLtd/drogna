@@ -1,5 +1,5 @@
 /**
- * The Intro tab's architecture walkthrough (SRD-v2 FR-76 to FR-79, feature 117): what
+ * The Intro tab's architecture walkthrough (SRD-v2 FR-76 to FR-79, feature 118): what
  * is revealed, in what order, what is said about it, and where it sits.
  *
  * **This is a curated picture, and it says which parts it leaves out.** Twenty-one

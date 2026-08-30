@@ -111,7 +111,9 @@ was written: of 61 pull requests, two linked a hosted instance, and
 passed each time — which is why the habit is written down here rather than left to be
 noticed.
 
-- **A pull request with anything visible in it links its own instance.** CI has already
+- **A pull request with anything visible in it links its own instance**, and a *moving*
+  change carries a capture of the movement besides — a reviewer can click a link, and
+  cannot see an animation described in a paragraph. CI has already
   built one by the time the pull request opens, at
   `https://deepbluecltd.github.io/drogna/instances/<branch-with-slashes-as-hyphens>/`,
   and the Instances run writes the exact URL into its job summary so it need not be
@@ -126,12 +128,23 @@ noticed.
   Not one per feature — one per new face in the shell or piece of backend simulation
   worth watching work (D17). Copy `site/authoring/blog-entry-template.md` to
   `site/docs/blog/posts/<slug>.md` and write the four parts D19 fixes: the background,
-  the requirement, the options considered, the demo. It is terse by design; the running
-  thing carries the weight the prose used to. `site/authoring/README.md` is the
+  the requirement, the options considered, the demo. **Three to six tweets in total** —
+  300 words of prose, roughly 70 a part, enforced by `check-blog-length`, which reads
+  that number from the table in `site/authoring/README.md`. The first ten entries ran
+  576 to 2,088 words against a running instance one click away, which is what the budget
+  is a correction to: an entry is an invitation to the demo, and the demo carries the
+  weight the prose was carrying instead. An entry that will not fit is two entries, or
+  an entry whose middle belongs in an ADR; there is no exemption marker. Alt text and
+  URLs are not counted, because a screenshot's description is required to be long — and
+  because **the entry carries a capture**: a change that moves is captured moving
+  (`pnpm capture:motion`), one that does not is captured still (`pnpm capture:glance`).
+  The instance link is for a reviewer, who will click it; an entry's reader will not, and
+  is reading after that instance has been replaced. `site/authoring/README.md` is the
   authoring note, and the coverage table on the blog index counts entries against the
-  feature directories under `specs/`, so a beat with no entry is published as a gap
-  rather than quietly missing. **Link it from the pull request as a full URL on the
-  branch** — `https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md`
+  feature directories under `specs/` and says of each whether it is *shown* or *told
+  only*, so both gaps are published rather than quietly missing. **Link it from the pull
+  request as a full URL on the branch** —
+  `https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md`
   — because GitHub does not resolve a repository-relative path in a pull request body
   to the file: the browser resolves it against the page the body is read on, which is
   how five of the six entries linked so far pointed at a 404 under `/compare/`. The

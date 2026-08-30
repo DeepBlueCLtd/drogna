@@ -1,6 +1,6 @@
 /**
  * The Intro tab's drawing: the architecture, grown one step at a time
- * (SRD-v2 FR-76 to FR-78, feature 117).
+ * (SRD-v2 FR-76 to FR-78, feature 118).
  *
  * The composition follows the Operator flow chart's arrangement for the same reason it
  * does there: wires in one SVG layer, nodes as absolutely-positioned real DOM on top.

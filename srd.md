@@ -772,14 +772,14 @@ pass only one of the three is not finished.
   regions their panels declare — so that a surface gaining a feature and not a step is
   reported by name. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
-### 5.16 The architecture, drawn (feature 117)
+### 5.16 The architecture, drawn (feature 118)
 
 The Intro tab was a numbered list of landed features. A reader arriving at it wants to
 know what the thing is made of and how the parts fit together, and a changelog ordered by
 when the work landed answers that only for somebody who already knows. This beat changes
 no simulation, adds no component, moves no data and needs no new master: it is entirely
 about what the first tab shows of what already runs. The specification is
-`specs/117-intro-architecture/`.
+`specs/118-intro-architecture/`.
 
 - **FR-76** The Intro tab shall carry a **drawing of the system architecture** that is
   built up **one step at a time under the reader's own control** — arrow keys, and

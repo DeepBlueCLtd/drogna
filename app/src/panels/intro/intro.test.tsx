@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Intro walkthrough (feature 117, FR-76 to FR-79).
+ * The Intro walkthrough (feature 118, FR-76 to FR-79).
  *
  * Three things are held here, and each is watched failing rather than trusted:
  *

@@ -48,7 +48,7 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
   // without going back to the rail ten times.
   //
   // Where the listener sits and what it guards against moved to `shell/arrow-keys.ts`
-  // when the Intro walkthrough needed the same three guards (feature 117). The reasoning
+  // when the Intro walkthrough needed the same three guards (feature 118). The reasoning
   // that was written out here is written out there.
   //
   // At the two ends of the course there is nowhere to go and the key does nothing.

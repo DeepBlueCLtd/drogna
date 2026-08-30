@@ -29,6 +29,7 @@ import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
 import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
+import { runGate as blogLength } from '../gates/check-blog-length.js';
 import { runGate as introStoryboard } from '../gates/check-intro-storyboard.js';
 import {
   NOT_DRAWN,
@@ -153,6 +154,23 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(oneBreakpoint(clean)).toEqual([]);
     // And the tree it is actually for.
     expect(oneBreakpoint(REPO_ROOT)).toEqual([]);
+  });
+
+  it('blog-length: a long entry and a long description both fail; a short one passes', () => {
+    const messages = blogLength(violations).map((f) => f.message).join('\n');
+    expect(messages).toMatch(/runs to 90 words of prose; the budget is 40/);
+    expect(messages).toMatch(/description runs to 30 words; the index card takes 12/);
+    // The clean fixture's alt text alone is longer than that tree's whole budget, so a
+    // pass there is what says the exemption for alt text and URLs is real rather than
+    // merely intended — and what would catch a counter that stopped exempting them.
+    expect(blogLength(clean)).toEqual([]);
+    // And the tree it is actually for: every published entry is inside the budget.
+    expect(blogLength(REPO_ROOT)).toEqual([]);
+  });
+
+  it('blog-length: reports rather than passes when the note states no budget', () => {
+    // The outcome that proves nothing must not look like a pass (run-gates.ts).
+    expect(() => blogLength(join(fixtures, 'stale-generated'))).toThrow(/word budget/);
   });
 
   it('one-breakpoint: reports rather than passes when the declaration is missing', () => {

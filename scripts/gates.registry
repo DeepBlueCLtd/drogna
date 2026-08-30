@@ -17,4 +17,5 @@ gates/check-schema-masters.ts
 gates/check-flow-completeness.ts
 gates/check-view-ids.ts
 gates/check-truth-initialisation.ts
+gates/check-blog-length.ts
 gates/check-intro-storyboard.ts

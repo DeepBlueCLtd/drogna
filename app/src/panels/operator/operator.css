@@ -8,6 +8,14 @@
   --flow-fld: #5fb8ac;
   --flow-own: #63bede;
   --flow-ctl: #9c8fd1;
+  /* The advisory channel. Three rules have asked for this since feature 113 — the
+     broker face's `adv` lane and both ends of `.face-pill` — and nothing defined it, so
+     the lane drew a bar with no fill and the pill took whatever colour it inherited.
+     An undefined custom property is not an error anywhere: `var(--flow-cy)` with no
+     fallback makes the declaration invalid at computed-value time, and the rule quietly
+     does nothing. Found while measuring the contrast of the pill in the screenshot that
+     reported it. */
+  --flow-cy: #5fd0d8;
 }
 
 .operator-controls {
@@ -35,6 +43,17 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+/* The dimming that answers "what does this one talk to?" fades over the same fifth of a
+   second the chart takes to rearrange itself, so the two readings arrive together
+   rather than one snapping while the other moves. The geometry is *not* transitioned
+   here — the wires are computed from where the nodes are, and only the frame loop in
+   FlowCanvas can move both together. */
+.flow-wires-layer path {
+  transition:
+    opacity 200ms ease,
+    stroke-width 200ms ease;
 }
 
 .flow-band-caption-text {
@@ -138,6 +157,56 @@
   font-family: monospace;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* ---- the open node (feature 117) ----
+   A resting card is a glance; an open one is the account. It takes the space of two
+   columns and three rows, the chart moves aside for it (layout.ts), and it sits above
+   the wires so its own edges do not cross its text. */
+.flow-node-slot[data-expanded='true'] {
+  z-index: 3;
+}
+
+.flow-node-open {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--shell-accent);
+  border-radius: 4px;
+  background: #141a21;
+  box-shadow:
+    0 0 0 1px var(--shell-accent),
+    0 10px 28px #00000080;
+  /* The card is scrolled, so the reader must be able to see there is more of it. */
+  scrollbar-width: thin;
+}
+
+.flow-node-open:focus-visible {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: 2px;
+}
+
+/* Inside the node the account brings no border of its own: the node is the border. */
+.flow-drawer-in-place {
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 0.5em 0.7em 0.7em;
+}
+
+.flow-drawer-in-place .flow-drawer-head h3 {
+  font-size: 0.95rem;
+}
+
+/* The whole point of opening it: the instrument at a size a figure can be read off. */
+.flow-drawer-in-place .flow-drawer-face {
+  font-size: 0.85rem;
+}
+
+/* A wide table inside a card that is 450 pixels wide scrolls within the card rather
+   than stretching it: the geometry is the layout's to decide, not the content's. */
+.flow-drawer-in-place .operator-regions {
+  overflow-x: auto;
 }
 
 /* ---- the faces ---- */
@@ -493,6 +562,32 @@
 
 .flow-drawer-head h3 {
   margin: 0;
+  margin-right: auto;
+}
+
+/* Forward and back through the components, in the order the chart draws them (feature
+   117). Beside the title rather than at the foot of the card: it is a way of reading the
+   chart, not one of the things this component can be told to do, and the controls that
+   act on the component are further down under its instrument where they belong. */
+.flow-drawer-walk {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-right: 0.6em;
+}
+
+.flow-drawer-walk button {
+  min-width: 1.9em;
+  line-height: 1.2;
+}
+
+/* Where the reader is in the twenty. Without it the arrows can be pressed forever with
+   no sense of extent, and the wrap at either end would read as the chart being stuck. */
+.flow-drawer-place {
+  font-size: 0.72rem;
+  color: var(--flow-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .flow-drawer-state,
@@ -742,7 +837,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .flow-node,
-  .flow-tape-fill {
+  .flow-tape-fill,
+  .flow-wires-layer path {
     transition: none;
   }
 }

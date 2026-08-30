@@ -1,0 +1,23 @@
+{
+  "image": "118-data-tab.gif",
+  "run_id": "loiter-bojgdy",
+  "view": "data",
+  "sim_time": "2026-01-01T00:30:01Z",
+  "clock_pinned": "rate 0",
+  "motion": {
+    "acted_on": "[data-datastream]",
+    "frames": 26,
+    "frame_interval_ms": 60,
+    "held_frames": 8
+  },
+  "clip": "the whole viewport",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": ""
+}

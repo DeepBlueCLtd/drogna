@@ -15,7 +15,7 @@
  * for it, which would be a picture of an instant the store was never asked about. The
  * panel names the steps it holds so a half-loaded volume does not read as a whole one.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import { COORDINATE_SYSTEM, OrbitView } from '@deck.gl/core';
 import { PathLayer, SolidPolygonLayer } from '@deck.gl/layers';
@@ -84,17 +84,36 @@ export function Volume({
     [collectionId, edrPrefix, manifest.grid, validator],
   );
 
+  /**
+   * What is in flight, by key.
+   *
+   * A ref rather than a dependency, and the difference is not cosmetic: the first cut
+   * listed `cache` in the effect's dependencies, so writing `loading` into the cache
+   * changed the cache, which re-ran the effect, which ran its own cleanup and set
+   * `abandoned` on the fetch still in progress. The result stored nothing and the volume
+   * sat on "fetching 4 level(s)" for as long as anybody watched it. Found by driving the
+   * built page in a browser, not by a test — which is why there is now a test.
+   */
+  const inFlight = useRef(new Set<string>());
+
   useEffect(() => {
     if (instant === undefined) return;
-    if (cache.get(collectionId, instant).status !== 'absent') return;
+    const key = `${collectionId} ${instant}`;
+    if (inFlight.current.has(key)) return;
     let abandoned = false;
+    let started = false;
     setCache((current) => {
+      if (current.get(collectionId, instant).status !== 'absent') return current;
+      started = true;
+      inFlight.current.add(key);
       const next = current.clone();
       next.set(collectionId, instant, { status: 'loading' });
       return next;
     });
+    if (!started) return;
     void (async () => {
       const result = await fetchStep(instant);
+      inFlight.current.delete(key);
       if (abandoned) return;
       setCache((current) => {
         const next = current.clone();
@@ -105,7 +124,7 @@ export function Volume({
     return () => {
       abandoned = true;
     };
-  }, [cache, collectionId, fetchStep, instant]);
+  }, [collectionId, fetchStep, instant]);
 
   const frame = useMemo(() => {
     const { longitude, latitude, depth } = manifest.grid;

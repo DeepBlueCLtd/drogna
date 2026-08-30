@@ -86,7 +86,12 @@ export function Measurements({
                           aria-pressed={stream.id === selected}
                           onClick={() => onSelect(stream.id === selected ? undefined : stream.id)}
                         >
-                          {stream.observedProperty}
+                          {/* The datastream's own id, not its observed property. A
+                              platform carries the same property at more than one depth —
+                              temperature at 50 m and at 200 m — and labelling by property
+                              drew two buttons a reader could not tell apart, which the
+                              first capture of this branch showed. */}
+                          {stream.id.split('/')[1] ?? stream.id}
                           <span className="stream-unit"> ({stream.unit.symbol})</span>
                         </button>
                       </li>

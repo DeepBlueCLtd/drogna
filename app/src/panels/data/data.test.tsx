@@ -266,6 +266,46 @@ describe('the Data tab (feature 118)', { timeout: 180_000 }, () => {
     expect(screen.getByTestId('advisory-json').textContent).toMatch(/"guidance"/);
   });
 
+  it('SC-010: the volume loads the step it is on, and says which steps it holds', async () => {
+    // Written after driving the built page in a browser found the volume stuck on
+    // "fetching 4 level(s)" forever: the effect listed the cache in its dependencies, so
+    // writing `loading` into the cache re-ran the effect, whose cleanup abandoned the
+    // fetch that would have replaced it. Every unit test passed throughout — none of them
+    // drove the fetch — which is what this test is for.
+    await import('./Volume.js');
+    await mounted();
+    await openBranch('archive');
+    await act(async () => {
+      await settle(() => document.querySelector('[data-holding]') !== null);
+    });
+    const bar = document.querySelector<HTMLElement>('[data-holding]');
+    if (!bar) throw new Error('the store published no archive holding');
+    await act(async () => {
+      fireEvent.click(bar);
+      await arrive(() => screen.queryByTestId('volume-loading') !== null);
+    });
+
+    // It reaches 'loaded' rather than sitting on 'loading'. Asserted as the absence of
+    // the loading state *and* the presence of the summary, because a volume that fell
+    // over would show neither.
+    await act(async () => {
+      await arrive(
+        () => (screen.queryByTestId('volume-loading')?.textContent ?? '').includes('1 of'),
+        400,
+      );
+    });
+    expect(screen.getByTestId('volume-loading').textContent).toMatch(/^1 of \d+ step\(s\) fetched/);
+    // And it asked for the levels the manifest declares, one area query each.
+    const areaQueries = asked.filter((path) => path.includes('/area?'));
+    const holdingId = bar.getAttribute('data-holding');
+    const levels = runtime.store.holding(holdingId ?? '')?.descriptor.manifest.grid.depth.count ?? 0;
+    expect(levels).toBeGreaterThan(0);
+    expect(areaQueries).toHaveLength(levels);
+    // Every one named the same instant: a step is one instant across all its levels.
+    const instants = new Set(areaQueries.map((path) => new URLSearchParams(path.split('?')[1]).get('datetime')));
+    expect(instants.size).toBe(1);
+  });
+
   it('SC-008 through the shell: every holding’s volume asks for a collection the server serves', async () => {
     // `Volume.tsx` derives the EDR collection id from the same convention the query
     // component uses, on the other side of the seam where it cannot import it. This is

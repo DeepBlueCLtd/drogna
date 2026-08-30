@@ -61,10 +61,14 @@ export interface AnalysisState {
 }
 
 export interface AnalysisParameters {
-  /** Horizontal correlation length in kilometres. Zero means no horizontal correlation. */
-  readonly correlationKmHorizontal: number;
-  /** Vertical correlation length in metres. Zero means no vertical correlation. */
-  readonly correlationMetresVertical: number;
+  /**
+   * The Gaspari–Cohn half-width in kilometres. The taper reaches exactly zero at
+   * twice this, so 2 × `horizontalKm` is the distance beyond which a measurement
+   * informs nothing at all — a fact about the model, not a small number.
+   */
+  readonly horizontalKm: number;
+  /** The Gaspari–Cohn half-width in metres, down. Support ends at twice this. */
+  readonly verticalM: number;
   /** Which share the observations credit. Every other share is scaled by what is left. */
   readonly measurementShareIndex: number;
 }
@@ -74,6 +78,21 @@ export interface AnalysedObservation {
   readonly cellIndex: number;
   /** y − Hxᵇ: what the instrument said, less what the background expected there. */
   readonly innovation: number;
+  /**
+   * How far the observation was moved to reach the cell it was attributed to. Every
+   * observation is moved a little — H is nearest-neighbour, so half a cell is normal
+   * and unremarkable. What matters is the second field.
+   */
+  readonly displacementKm: number;
+  /**
+   * True when the observation fell outside the grid and was clamped to its edge. It
+   * is still assimilated: the domain edge is where the harness stopped authoring a
+   * field, not where the ocean stops, so throwing the measurement away would discard
+   * a real reading over a bookkeeping boundary. But a reading relocated tens of
+   * kilometres is a thing the lineage has to carry, so the analyst records the count
+   * and the worst displacement in the manifest rather than letting it pass silently.
+   */
+  readonly clamped: boolean;
 }
 
 export interface AnalysisField {
@@ -101,18 +120,50 @@ export interface AnalysisKernel {
   ): AnalysisField;
 }
 
-/** The cell an observation is attributed to: the nearest, clamped to the domain. */
-function nearestIndex(axis: AnalysisAxis, value: number): number {
-  if (axis.count <= 1 || axis.spacing === 0) return 0;
+/**
+ * The cell an observation is attributed to: the nearest, clamped to the domain, and
+ * saying whether the clamp did any work.
+ */
+function nearestIndex(axis: AnalysisAxis, value: number): { index: number; clamped: boolean } {
+  if (axis.count <= 1 || axis.spacing === 0) return { index: 0, clamped: false };
   const raw = Math.round((value - axis.minimum) / axis.spacing);
-  return Math.min(Math.max(raw, 0), axis.count - 1);
+  const index = Math.min(Math.max(raw, 0), axis.count - 1);
+  return { index, clamped: index !== raw };
 }
 
 /**
- * ρ between two cells: Gaussian in the horizontal separation and in the vertical,
- * multiplied. A zero correlation length is not a degenerate case to be guarded
- * against but a statable model — no correlation along that axis — so it is the
- * Kronecker delta rather than a division by zero.
+ * The Gaspari–Cohn taper (Gaspari & Cohn 1999, eq. 4.10): the fifth-order piecewise
+ * polynomial that approximates a Gaussian, reaches exactly zero at twice its
+ * half-width, and — the property the whole choice rests on — stays positive definite
+ * while doing so.
+ *
+ * Why not simply cut a Gaussian off at a radius: a truncated covariance is not
+ * positive definite, so the system the analysis solves would stop being one any
+ * covariance could produce, and the factorisation would either refuse or return
+ * something meaningless. Gaspari–Cohn is the standard answer to exactly that.
+ *
+ * Compact support here is therefore a claim about physics — beyond this distance a
+ * measurement informs nothing — and never a computational shortcut. At this
+ * observation count a cutoff buys no speed whatsoever; what it buys is the ability
+ * to say a cell owes a measurement nothing, as a fact rather than a small number.
+ */
+export function gaspariCohn(normalisedDistance: number): number {
+  const z = Math.abs(normalisedDistance);
+  if (z >= 2) return 0;
+  if (z <= 1) {
+    return ((((-0.25 * z + 0.5) * z + 0.625) * z - 5 / 3) * z * z) + 1;
+  }
+  return ((((z / 12 - 0.5) * z + 0.625) * z + 5 / 3) * z - 5) * z + 4 - 2 / (3 * z);
+}
+
+/**
+ * ρ between two cells: Gaspari–Cohn of the separation, each axis normalised by its
+ * own half-width and combined in that scaled space, which keeps the taper compactly
+ * supported in every direction.
+ *
+ * A zero half-width is not a degenerate case to guard against but a statable model —
+ * no correlation along that axis — so it is the Kronecker delta rather than a
+ * division by zero.
  */
 function correlation(
   grid: AnalysisGrid,
@@ -127,20 +178,18 @@ function correlation(
   const east = (aLon - bLon) * grid.cellKmEast;
   const north = (aLat - bLat) * grid.cellKmNorth;
   const down = (aDepth - bDepth) * grid.depth.spacing;
-  let exponent = 0;
-  if (parameters.correlationKmHorizontal > 0) {
-    const length = parameters.correlationKmHorizontal;
-    exponent += (east * east + north * north) / (length * length);
+  let scaled = 0;
+  if (parameters.horizontalKm > 0) {
+    scaled += (east * east + north * north) / (parameters.horizontalKm * parameters.horizontalKm);
   } else if (east !== 0 || north !== 0) {
     return 0;
   }
-  if (parameters.correlationMetresVertical > 0) {
-    const length = parameters.correlationMetresVertical;
-    exponent += (down * down) / (length * length);
+  if (parameters.verticalM > 0) {
+    scaled += (down * down) / (parameters.verticalM * parameters.verticalM);
   } else if (down !== 0) {
     return 0;
   }
-  return Math.exp(-0.5 * exponent);
+  return gaspariCohn(Math.sqrt(scaled));
 }
 
 /**
@@ -192,11 +241,26 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     }
 
     const located = observations.map((observation) => {
-      const depthIndex = nearestIndex(depth, observation.depthM);
-      const latIndex = nearestIndex(latitude, observation.latitude);
-      const lonIndex = nearestIndex(longitude, observation.longitude);
+      const depthAt = nearestIndex(depth, observation.depthM);
+      const latAt = nearestIndex(latitude, observation.latitude);
+      const lonAt = nearestIndex(longitude, observation.longitude);
+      const depthIndex = depthAt.index;
+      const latIndex = latAt.index;
+      const lonIndex = lonAt.index;
       const cellIndex = (depthIndex * latitude.count + latIndex) * longitude.count + lonIndex;
-      return { observation, depthIndex, latIndex, lonIndex, cellIndex };
+      // The horizontal distance from where the instrument was to the cell centre it
+      // was attributed to, in the same kilometres the covariance is measured in.
+      const eastKm = ((longitude.minimum + lonIndex * longitude.spacing - observation.longitude) / (longitude.spacing || 1)) * grid.cellKmEast;
+      const northKm = ((latitude.minimum + latIndex * latitude.spacing - observation.latitude) / (latitude.spacing || 1)) * grid.cellKmNorth;
+      return {
+        observation,
+        depthIndex,
+        latIndex,
+        lonIndex,
+        cellIndex,
+        displacementKm: Math.hypot(eastKm, northKm),
+        clamped: depthAt.clamped || latAt.clamped || lonAt.clamped,
+      };
     });
 
     const order = located.length;
@@ -271,7 +335,56 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       errorStd,
       shares,
       observationWeight,
-      observations: located.map((entry, index) => ({ cellIndex: entry.cellIndex, innovation: innovation[index] })),
+      observations: located.map((entry, index) => ({
+        cellIndex: entry.cellIndex,
+        innovation: innovation[index],
+        displacementKm: entry.displacementKm,
+        clamped: entry.clamped,
+      })),
     };
   },
 };
+
+/**
+ * The step between analyses: what the forecast does to the provenance.
+ *
+ * A forecast propagates the state and adds error of its own. That added variance came
+ * from the model, not from any observation and not from the archive, so crediting it
+ * to a *model* share is not bookkeeping tidiness — it is the only entry that makes the
+ * shares continue to mean what they claim. Every prior share is scaled by the fraction
+ * of the forecast variance it is responsible for, σ²ₐ/σ²_f, and the remainder is the
+ * model's.
+ *
+ * The consequence is the one the provenance figure needs: a measurement's share decays
+ * as its forecast ages. A cell sampled an hour ago is mostly measurement; the same cell
+ * a week later, advected and re-forecast a dozen times with nothing new measured in it,
+ * has drifted back to being mostly model. Without this step a cell measured once stays
+ * measurement-coloured for ever, however stale, and the provenance saturates — which is
+ * what it did, measurably, before this existed.
+ *
+ * This is deliberately not part of `analyse`. The analysis and the forecast are
+ * different steps run by different components, and folding the second into the first
+ * would let a caller apply one without the other.
+ */
+export function propagateShares(
+  shares: readonly Float32Array[],
+  analysisErrorStd: Float32Array,
+  forecastErrorStd: Float32Array,
+  modelShareIndex: number,
+): Float32Array[] {
+  if (!shares[modelShareIndex]) {
+    throw new Error(`share ${modelShareIndex} is to carry model error, and the state declares no such share`);
+  }
+  const propagated = shares.map((share) => Float32Array.from(share));
+  for (let cell = 0; cell < analysisErrorStd.length; cell++) {
+    const analysed = analysisErrorStd[cell] * analysisErrorStd[cell];
+    const forecast = forecastErrorStd[cell] * forecastErrorStd[cell];
+    // A forecast that claims less error than the analysis it grew from is not a
+    // dilution to be applied backwards — it is a caller fault, and inherited is
+    // capped at one rather than amplifying a share above what it was.
+    const inherited = forecast > 0 ? Math.min(analysed / forecast, 1) : 1;
+    for (let s = 0; s < propagated.length; s++) propagated[s][cell] *= inherited;
+    propagated[modelShareIndex][cell] += 1 - inherited;
+  }
+  return propagated;
+}

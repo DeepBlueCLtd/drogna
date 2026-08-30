@@ -86,17 +86,38 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
       expect(forecast?.descriptor.era).toBe('instance');
     }
 
-    // Instances accumulate as holdings: archive + nowcast + 2 per run (FR-30).
-    expect(runtime.store.holdings().length).toBe(2 + 2 * record.published.length);
+    // Instances accumulate as holdings: archive + nowcast + 5 per run — the runner's
+    // forecast and uncertainty, and the analyst's analysis, error and provenance
+    // (FR-30, as feature 115 amends it). Every one is a holding you can query, which
+    // is the whole reason the analysis is a component rather than a private stage.
+    expect(runtime.store.holdings().length).toBe(2 + 5 * record.published.length);
 
     runtime.stop();
   });
 
   it('declines inside the minimum interval, and the decline is legible (FR-32)', () => {
+    // Driven rather than hoped for. This test used to run the whole scenario and trust
+    // that the ocean would breach twice inside the minimum interval; feature 115 made
+    // it stop doing so, because a loop that assimilates what the platform measures
+    // breaches less often — over six thousand ticks the divergence count fell from
+    // several to one. That is the feature working, so the test now exercises the
+    // requirement directly: two divergences inside the interval, and the second
+    // declined. What FR-32 asks about is the scheduler's policy, not the sea's mood.
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    drive(runtime, config, 6000);
-    expect(runtime.scheduler.declinedByPolicy).toBeGreaterThanOrEqual(1);
+    const shell = runtime.transport.connect('decline-probe', 'monitor');
+    const record = drive(runtime, config, 6000);
+    expect(record.divergences.length).toBeGreaterThanOrEqual(1);
+    const genuine = record.divergences[0];
+    const declinedBefore = runtime.scheduler.declinedByPolicy;
+    // A genuine divergence the loop raised, re-published twice on consecutive ticks.
+    // Whatever the scheduler's history, the second is inside the minimum interval of
+    // the request the first warranted — the decline is forced rather than awaited.
+    shell.publish(config.monitor.topics.divergence, { ...genuine, divergence_id: `${genuine.divergence_id}-a` });
+    runtime.clock.tickOnce();
+    shell.publish(config.monitor.topics.divergence, { ...genuine, divergence_id: `${genuine.divergence_id}-b` });
+    runtime.clock.tickOnce();
+    expect(runtime.scheduler.declinedByPolicy).toBeGreaterThan(declinedBefore);
     runtime.stop();
   });
 

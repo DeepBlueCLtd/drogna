@@ -26,6 +26,36 @@ export type Advisory = {
   };
 };
 
+/** drogna analysis published — from analysis-published.schema.json */
+export type AnalysisPublished = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "run_id": string;
+  "initialisation_sim_time": string;
+  "ensemble_size": number;
+  "background": {
+    "holding_id": string;
+    "era": "archive" | "nowcast" | "analysis" | "instance";
+  };
+  "collections": {
+    "analysis": string;
+    "error": string;
+    "provenance": string;
+  };
+  "digests": {
+    "analysis": string;
+    "error": string;
+    "provenance": string;
+  };
+  "observations": {
+    "assimilated": number;
+    "clamped": number;
+    "worst_displacement_km": number;
+  };
+};
+
 /** drogna boundary denial — from boundary-denial.schema.json */
 export type BoundaryDenial = {
   "component": string;
@@ -90,6 +120,31 @@ export type ConfigAdvisoryStore = {
   };
   "heartbeat": ConfigCommonHeartbeat;
   "size_ceiling_bytes": number;
+};
+
+/** drogna analyst configuration (V2-C19) — from config.analyst.schema.json */
+export type ConfigAnalyst = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "observations": ConfigCommonTopicFilter;
+    "run_request": ConfigCommonTopic;
+    "run_published": ConfigCommonTopic;
+    "analysis_published": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "correlation": {
+    "horizontal_km": number;
+    "vertical_m": number;
+  };
+  "excluded_datastreams": string[];
+  "shares": {
+    "archive": string;
+    "departure": string;
+    "measurement": string;
+    "model": string;
+  };
 };
 
 /** drogna release-gate configuration (V2-C10) — from config.boundary.schema.json */
@@ -320,6 +375,7 @@ export type ConfigModelRunner = {
   "topics": {
     "clock": ConfigCommonTopic;
     "run_request": ConfigCommonTopic;
+    "analysis_published": ConfigCommonTopic;
     "run_started": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
   };
@@ -427,13 +483,6 @@ export type ConfigPlanner = {
     "horizontal_m_per_s": number;
     "vertical_m_per_s": number;
   };
-  "footprint": {
-    "peak": number;
-    "horizontal_efolding_m": number;
-    "vertical_efolding_m": number;
-    "rings": number;
-    "band_reach": number;
-  };
   "usable_threshold": number;
   "restarts": number;
   "shortlist": number;
@@ -519,6 +568,7 @@ export type ConfigRun = {
   "monitor": ConfigMonitor;
   "scheduler": ConfigScheduler;
   "model_runner": ConfigModelRunner;
+  "analyst": ConfigAnalyst;
   "planner": ConfigPlanner;
   "telemetry": ConfigTelemetry;
   "operator": ConfigOperator;
@@ -663,7 +713,7 @@ export type ConfigTelemetry = {
 export type CoverageHolding = {
   "schema_version": 1;
   "holding_id": string;
-  "era": "archive" | "nowcast" | "instance";
+  "era": "archive" | "nowcast" | "analysis" | "instance";
   "run_id": string;
   "published_at": {
     "sim_time": string;
@@ -898,7 +948,7 @@ export type Heartbeat = {
 export type HoldingPublished = {
   "component": string;
   "holding_id": string;
-  "era": "archive" | "nowcast" | "instance";
+  "era": "archive" | "nowcast" | "analysis" | "instance";
   "run_id": string;
   "sim_time": string;
   "tick": number;
@@ -1294,7 +1344,7 @@ export type PlanHorizon = {
 /** plan.schema.json #/$defs/uncertainty_field */
 export type PlanUncertaintyField = {
   "run_id": string;
-  "variable": "temperature_spread" | "salinity_spread";
+  "variable": "temperature_spread" | "salinity_spread" | "temperature_error" | "salinity_error";
   "digest": string | null;
 };
 

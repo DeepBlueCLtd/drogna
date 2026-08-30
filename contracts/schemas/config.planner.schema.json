@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.planner.schema.json",
   "title": "drogna planner configuration (V2-C14)",
-  "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code.",
+  "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code. Feature 115 removed this document's footprint block: how far a measurement's influence reaches is the analysis's covariance, declared once in config.analyst.schema.json, and the planner reads it from there. Two declarations of one physical claim, only one of them ever applied, is the fault this repository keeps paying for.",
   "type": "object",
   "required": [
     "id",
@@ -15,7 +15,6 @@
     "depth_bands",
     "budget_seconds",
     "speeds",
-    "footprint",
     "usable_threshold",
     "restarts",
     "shortlist",
@@ -60,8 +59,11 @@
     },
     "excluded_datastreams": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
-      "description": "Datastreams on the observation namespace that the planner must not treat as measurements of the ocean \u2014 the platform's own ownship series (FR-56). The planner informs its observation-age field from whatever arrives, so what it must ignore has to be named; counting an ownship row would refresh confidence everywhere the platform went without a single sounding being taken. Named rather than pattern-matched, because a rule that guesses which datastreams are about the sea will one day guess wrong. The monitor needs no such list: its pairs name the thing and datastreams it scores outright, which is an allowlist and stronger. A test fails when a name here is removed."
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+      },
+      "description": "Datastreams on the observation namespace that the planner must not treat as measurements of the ocean — the platform's own ownship series (FR-56). The planner informs its observation-age field from whatever arrives, so what it must ignore has to be named; counting an ownship row would refresh confidence everywhere the platform went without a single sounding being taken. Named rather than pattern-matched, because a rule that guesses which datastreams are about the sea will one day guess wrong. The monitor needs no such list: its pairs name the thing and datastreams it scores outright, which is an allowlist and stronger. A test fails when a name here is removed."
     },
     "replan_interval_ticks": {
       "type": "integer",
@@ -124,41 +126,6 @@
         "vertical_m_per_s": {
           "type": "number",
           "exclusiveMinimum": 0
-        }
-      }
-    },
-    "footprint": {
-      "type": "object",
-      "required": [
-        "peak",
-        "horizontal_efolding_m",
-        "vertical_efolding_m",
-        "rings",
-        "band_reach"
-      ],
-      "additionalProperties": false,
-      "description": "The explicit sensing model: a product of two decays about the visited cell, evaluated over the stated rings and bands rather than a tolerance nobody wrote down.",
-      "properties": {
-        "peak": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 1
-        },
-        "horizontal_efolding_m": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "vertical_efolding_m": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "rings": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "band_reach": {
-          "type": "integer",
-          "minimum": 0
         }
       }
     },

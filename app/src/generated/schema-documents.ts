@@ -125,6 +125,142 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "analysis-published": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/analysis-published.schema.json",
+    "title": "drogna analysis published",
+    "description": "The message the analyst publishes when a cycle has landed, and the only route by which a model run begins (feature 115). Until this message existed the model runner subscribed to the run request directly and initialised from a now-cast the environment generator had evaluated from the true ocean, so no measurement ever changed a field value. The runner now waits for this instead: the analysis is a transition you can watch, and the ordering between analysing and forecasting is stated by a message rather than left to the order two components happened to subscribe in. The request's own fields are carried forward whole so the runner needs nothing else to proceed.",
+    "type": "object",
+    "required": [
+      "component",
+      "scenario_run_id",
+      "sim_time",
+      "tick",
+      "run_id",
+      "initialisation_sim_time",
+      "ensemble_size",
+      "background",
+      "collections",
+      "digests",
+      "observations"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "component": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "The analyst that published it, matching config /component/id."
+      },
+      "scenario_run_id": {
+        "type": "string"
+      },
+      "sim_time": {
+        "type": "string"
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "run_id": {
+        "type": "string",
+        "description": "The run this analysis initialises, carried from the request it answered."
+      },
+      "initialisation_sim_time": {
+        "type": "string"
+      },
+      "ensemble_size": {
+        "type": "integer",
+        "minimum": 2
+      },
+      "background": {
+        "type": "object",
+        "required": [
+          "holding_id",
+          "era"
+        ],
+        "additionalProperties": false,
+        "description": "What was corrected. The era is carried because the first cycle of a scenario has no forecast to use and initialises from the now-cast instead — one deliberate reading of the true field, at the instant the platform leaves, made legible here and in the manifest rather than hidden.",
+        "properties": {
+          "holding_id": {
+            "type": "string"
+          },
+          "era": {
+            "type": "string",
+            "enum": [
+              "archive",
+              "nowcast",
+              "analysis",
+              "instance"
+            ]
+          }
+        }
+      },
+      "collections": {
+        "type": "object",
+        "required": [
+          "analysis",
+          "error",
+          "provenance"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "string"
+          }
+        }
+      },
+      "digests": {
+        "type": "object",
+        "required": [
+          "analysis",
+          "error",
+          "provenance"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "string"
+          }
+        }
+      },
+      "observations": {
+        "type": "object",
+        "required": [
+          "assimilated",
+          "clamped",
+          "worst_displacement_km"
+        ],
+        "additionalProperties": false,
+        "description": "What the cycle was given. An observation outside the grid is clamped to the edge and still assimilated — the domain boundary is where the harness stopped authoring a field, not where the ocean stops — so the count and the worst distance travelled are carried rather than left silent.",
+        "properties": {
+          "assimilated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "clamped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "worst_displacement_km": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
   "boundary-denial": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/boundary-denial.schema.json",
@@ -461,6 +597,120 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "integer",
         "exclusiveMinimum": 0,
         "description": "The wire-bytes ceiling. Advice travels light: the ceiling is held far below the smallest gridded update, and a test measures the two rather than trusting this sentence."
+      }
+    }
+  },
+  "config.analyst": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.analyst.schema.json",
+    "title": "drogna analyst configuration (V2-C19)",
+    "description": "The analyst (SRD-v2 FR-30, amended by feature 115): on a run request, takes the current forecast as background and the observations since its last cycle, and publishes an analysis — the field corrected by what was measured, the error that correction left, and where every cell's value came from. Until feature 115 the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so no measurement ever changed a field value and the loop converged because truth leaked in on a timer. This document configures the step that replaced that.",
+    "type": "object",
+    "required": [
+      "id",
+      "stream",
+      "topics",
+      "heartbeat",
+      "correlation",
+      "excluded_datastreams",
+      "shares"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "stream": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The RNG stream the analyst draws from, for the perturbations the model runner's ensemble is initialised with."
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock",
+          "observations",
+          "run_request",
+          "run_published",
+          "analysis_published"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "observations": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "run_request": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "analysis_published": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "correlation": {
+        "type": "object",
+        "required": [
+          "horizontal_km",
+          "vertical_m"
+        ],
+        "additionalProperties": false,
+        "description": "The background error correlation: Gaspari–Cohn half-widths, so the taper reaches exactly zero at twice each value and a cell beyond that owes a measurement nothing at all — a fact rather than a small number. This is the harness's ONE declaration of how far a measurement's influence reaches: the planner reads it from here rather than restating it, because a planner that scores a collapse of uncertainty at one scale while the analysis applies it at another is scoring a system that does not exist. It is a modelling assumption and is meant to be: the analyst may not read the world's own feature scales, since that document describes the truth. specs/115 argues the values.",
+        "properties": {
+          "horizontal_km": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "excluded_datastreams": {
+        "type": "array",
+        "description": "Datastreams that measure the platform rather than the sea, excluded by name as the monitor and planner exclude them. An ownship course is not a sample of the ocean and cannot inform a field.",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        }
+      },
+      "shares": {
+        "type": "object",
+        "required": [
+          "archive",
+          "departure",
+          "measurement",
+          "model"
+        ],
+        "additionalProperties": false,
+        "description": "The provenance vocabulary, in the order the shares are stored and drawn. Four, and each is a different kind of claim: what was known before the scenario began; what the state held when the platform left; what the instruments have since measured; and the error successive forecasts have added, which belongs to no observation. The departure share's content is archive — the model propagates information without creating any — so that bar is a convention kept for the operator's benefit, and specs/115 requires the explainer to say so.",
+        "properties": {
+          "archive": {
+            "type": "string",
+            "minLength": 1
+          },
+          "departure": {
+            "type": "string",
+            "minLength": 1
+          },
+          "measurement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     }
   },
@@ -1453,6 +1703,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "run_request",
+          "analysis_published",
           "run_started",
           "run_published"
         ],
@@ -1463,6 +1714,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "run_request": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "analysis_published": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the analyst announces a cycle. The runner initialises from what this message names and from nothing else: feature 115 replaced a subscription to the run request, under which the runner initialised from a field evaluated from the true ocean."
           },
           "run_started": {
             "$ref": "config.common.schema.json#/$defs/topic"
@@ -1807,7 +2062,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.planner.schema.json",
     "title": "drogna planner configuration (V2-C14)",
-    "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code.",
+    "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code. Feature 115 removed this document's footprint block: how far a measurement's influence reaches is the analysis's covariance, declared once in config.analyst.schema.json, and the planner reads it from there. Two declarations of one physical claim, only one of them ever applied, is the fault this repository keeps paying for.",
     "type": "object",
     "required": [
       "id",
@@ -1820,7 +2075,6 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "depth_bands",
       "budget_seconds",
       "speeds",
-      "footprint",
       "usable_threshold",
       "restarts",
       "shortlist",
@@ -1932,41 +2186,6 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "vertical_m_per_s": {
             "type": "number",
             "exclusiveMinimum": 0
-          }
-        }
-      },
-      "footprint": {
-        "type": "object",
-        "required": [
-          "peak",
-          "horizontal_efolding_m",
-          "vertical_efolding_m",
-          "rings",
-          "band_reach"
-        ],
-        "additionalProperties": false,
-        "description": "The explicit sensing model: a product of two decays about the visited cell, evaluated over the stated rings and bands rather than a tolerance nobody wrote down.",
-        "properties": {
-          "peak": {
-            "type": "number",
-            "exclusiveMinimum": 0,
-            "maximum": 1
-          },
-          "horizontal_efolding_m": {
-            "type": "number",
-            "exclusiveMinimum": 0
-          },
-          "vertical_efolding_m": {
-            "type": "number",
-            "exclusiveMinimum": 0
-          },
-          "rings": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "band_reach": {
-            "type": "integer",
-            "minimum": 0
           }
         }
       },
@@ -2306,6 +2525,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "monitor",
       "scheduler",
       "model_runner",
+      "analyst",
       "planner",
       "telemetry",
       "operator",
@@ -2363,6 +2583,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "model_runner": {
         "$ref": "config.model-runner.schema.json"
+      },
+      "analyst": {
+        "$ref": "config.analyst.schema.json"
       },
       "planner": {
         "$ref": "config.planner.schema.json"
@@ -2675,7 +2898,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "beat": {
               "type": "integer",
               "minimum": 101,
-              "maximum": 112,
+              "maximum": 115,
               "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
             },
             "band": {
@@ -3041,6 +3264,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "enum": [
           "archive",
           "nowcast",
+          "analysis",
           "instance"
         ]
       },
@@ -4149,6 +4373,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "enum": [
           "archive",
           "nowcast",
+          "analysis",
           "instance"
         ]
       },
@@ -4572,7 +4797,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               },
               "count": {
                 "type": "integer",
-                "minimum": 2
+                "minimum": 1,
+                "description": "How many steps the axis carries. One is a real axis and not a degenerate one: an analysis is a correction at a single instant, and feature 115 lowered this bound from an unargued 2 to admit that. A one-step axis still declares its step_seconds, because the step says what the next instant would have been and a consumer snapping a query to the axis needs it either way."
               },
               "units": {
                 "type": "string",
@@ -6088,7 +6314,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "enum": [
               "temperature_spread",
-              "salinity_spread"
+              "salinity_spread",
+              "temperature_error",
+              "salinity_error"
             ],
             "description": "Which published spread variable the planner scored. One scalar field is scored, not both: combining degrees Celsius with practical salinity units needs a weighting between them that nothing in the requirements supplies, so none is invented here."
           },
@@ -6489,7 +6717,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         },
         "uncertainty_field": {
           "run_id": "run-000017-3c1aead663b1",
-          "variable": "temperature_spread",
+          "variable": "temperature_error",
           "digest": "sha256:0f4c1e5b6a2d8397f0c1b2a3948576e5d4c3b2a1908172635445362718293a0b"
         },
         "indexing": {

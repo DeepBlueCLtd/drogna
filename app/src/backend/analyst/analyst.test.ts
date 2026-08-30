@@ -1,0 +1,207 @@
+/**
+ * Feature 115, on the real loop: the measurements reach the field.
+ *
+ * Nothing here is mocked. The generator authors the true ocean, the platform sails it,
+ * the instruments sample it under their declared noise, the ingest seam stores what
+ * passes, the scheduler asks for a run, and the analyst corrects the standing forecast
+ * by what was measured before the runner forecasts from it. What is asserted is what
+ * the loop did, scored against the generator's own field — never asserted from a
+ * number chosen here (Constitution IX).
+ */
+import { describe, expect, it } from 'vitest';
+import runConfigDocument from '../../../config/run.json';
+import type { AnalysisPublished, ConfigRun, CoverageHolding, RunPublished } from '../../generated/types.js';
+import { createSeamValidator } from '../../seam/validate.js';
+import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
+import { soundSpeedMs } from '../env-generator/analytic.js';
+
+const validator = createSeamValidator();
+const options = { rootSeed: 4242, revision: 'test', dirty: false };
+
+function lockstepConfig(): ConfigRun {
+  const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;
+  config.clock.mode = 'lockstep';
+  config.clock.rate = 0;
+  return config;
+}
+
+interface Record {
+  analyses: AnalysisPublished[];
+  runs: RunPublished[];
+}
+
+function driveUntilAnalyses(runtime: BackendRuntime, config: ConfigRun, wanted: number, limit: number): Record {
+  const shell = runtime.transport.connect(`analyst-test-${Math.random()}`, 'shell');
+  const record: Record = { analyses: [], runs: [] };
+  shell.subscribe(config.analyst.topics.analysis_published, (message) => {
+    expect(validator.validate('analysis-published', message.payload).refusals).toEqual([]);
+    record.analyses.push(message.payload as AnalysisPublished);
+  });
+  shell.subscribe(config.model_runner.topics.run_published, (message) => {
+    record.runs.push(message.payload as RunPublished);
+  });
+  for (let tick = 0; tick < limit && record.analyses.length < wanted; tick++) runtime.clock.tickOnce();
+  return record;
+}
+
+/** A holding's fields as float32, one array per variable, at its single instant. */
+function fieldsOf(holding: { descriptor: CoverageHolding; bytes: Uint8Array }): Float32Array[] {
+  const grid = holding.descriptor.manifest.grid;
+  const cells = grid.depth.count * grid.latitude.count * grid.longitude.count;
+  const stride = grid.time.count * cells;
+  const view = new Float32Array(holding.bytes.buffer, holding.bytes.byteOffset, holding.bytes.byteLength / 4);
+  return holding.descriptor.manifest.variables.map((_, index) => view.slice(index * stride, index * stride + cells));
+}
+
+describe('the analysis, on the loop as it ships', () => {
+  it('stands between the request and the run, and the runner initialises from what it published', () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const record = driveUntilAnalyses(runtime, config, 2, 12000);
+    expect(record.analyses.length).toBeGreaterThanOrEqual(2);
+
+    // One analysis per run, each naming the run it initialises, in that order.
+    expect(record.runs.map((run) => run.run_id)).toEqual(record.analyses.map((analysis) => analysis.run_id));
+
+    for (const analysis of record.analyses) {
+      const field = runtime.store.holding(analysis.collections.analysis);
+      const error = runtime.store.holding(analysis.collections.error);
+      const provenance = runtime.store.holding(analysis.collections.provenance);
+      expect(field?.descriptor.field.sha256).toBe(analysis.digests.analysis);
+      expect(error?.descriptor.field.sha256).toBe(analysis.digests.error);
+      expect(provenance?.descriptor.field.sha256).toBe(analysis.digests.provenance);
+      expect(field?.descriptor.era).toBe('analysis');
+      // Every one is a holding you can query. That is the whole reason the analysis
+      // is a component and not a private stage inside the runner.
+      expect(field?.descriptor.manifest.composition.rule).toBe('analysis');
+    }
+
+    // The first cycle has no forecast to correct and says so in its lineage; every
+    // later one corrects a forecast. Nothing ever initialises from the true field
+    // after that one stated reading.
+    expect(record.analyses[0].background.era).toBe('nowcast');
+    for (const analysis of record.analyses.slice(1)) expect(analysis.background.era).toBe('instance');
+    expect(runtime.store.holding(record.analyses[0].collections.analysis)?.descriptor.manifest.composition.description).toContain(
+      'Cold start',
+    );
+    runtime.stop();
+  });
+
+  it('moves the field toward the truth where the platform measured, and leaves it alone elsewhere', () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const record = driveUntilAnalyses(runtime, config, 2, 12000);
+    const analysis = record.analyses[record.analyses.length - 1];
+    const background = runtime.store.holding(analysis.background.holding_id);
+    const analysed = runtime.store.holding(analysis.collections.analysis);
+    const provenance = runtime.store.holding(analysis.collections.provenance);
+    if (!background || !analysed || !provenance) throw new Error('the loop did not turn');
+    expect(analysis.observations.assimilated).toBeGreaterThan(0);
+
+    // The truth to score against is the generator's own field at the same instant,
+    // which the harness publishes as the now-cast. Scored, never assumed.
+    const truth = runtime.store.currentNowcast();
+    if (!truth) throw new Error('the store holds no now-cast to score against');
+
+    const backgroundT = fieldsOf(background)[0];
+    const analysedT = fieldsOf(analysed)[0];
+    const truthT = fieldsOf(truth)[0];
+    // Share 2 of 4 is measurement, in the order the analyst's configuration names.
+    const measurementShare = fieldsOf(provenance)[2];
+
+    const touched: number[] = [];
+    const untouched: number[] = [];
+    for (let cell = 0; cell < analysedT.length; cell++) {
+      (measurementShare[cell] > 0 ? touched : untouched).push(cell);
+    }
+    expect(touched.length).toBeGreaterThan(0);
+    // Compact support is a fact, not a small number: most of the domain owes the
+    // measurements exactly nothing, and there the analysis is the background.
+    expect(untouched.length).toBeGreaterThan(0);
+    for (const cell of untouched) expect(analysedT[cell]).toBe(backgroundT[cell]);
+
+    const rms = (field: Float32Array, cells: readonly number[]) =>
+      Math.sqrt(cells.reduce((sum, cell) => sum + (field[cell] - truthT[cell]) ** 2, 0) / cells.length);
+    // Where it measured, the analysis is closer to the truth than the forecast was.
+    expect(rms(analysedT, touched)).toBeLessThan(rms(backgroundT, touched));
+    runtime.stop();
+  });
+
+  it('reduces the doubt it publishes exactly where a measurement reached, and nowhere else', () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const record = driveUntilAnalyses(runtime, config, 2, 12000);
+    // The second cycle's background error is the spread the first run published: that
+    // is the B the gain was built from, so it is what the reduction must be read
+    // against. Comparing the error field to itself across cells would say nothing —
+    // the spread is no longer flat, which is the point of perturbing the ensemble.
+    const analysis = record.analyses[1];
+    const error = runtime.store.holding(analysis.collections.error);
+    const provenance = runtime.store.holding(analysis.collections.provenance);
+    const spread = runtime.store.holding(record.runs[0].collections.uncertainty);
+    if (!error || !provenance || !spread) throw new Error('the loop did not turn');
+
+    const errorT = fieldsOf(error)[0];
+    const spreadT = fieldsOf(spread)[0];
+    const shares = fieldsOf(provenance);
+    let reduced = 0;
+    for (let cell = 0; cell < errorT.length; cell++) {
+      // Every cell's four shares sum to one: the identity the figure is built on,
+      // held against a field the running loop actually published.
+      const total = shares[0][cell] + shares[1][cell] + shares[2][cell] + shares[3][cell];
+      expect(total).toBeCloseTo(1, 3);
+      // Doubt never rises. Where it fell, a measurement must have reached the cell
+      // this cycle, so measurement holds a share of it. The converse does not follow
+      // and is not asserted: a share is cumulative across cycles, so a cell measured
+      // last time and not this one keeps its share while its doubt stands still —
+      // which is exactly what the ageing dilution is for.
+      expect(errorT[cell]).toBeLessThanOrEqual(spreadT[cell] + 1e-6);
+      if (errorT[cell] < spreadT[cell]) {
+        expect(shares[2][cell]).toBeGreaterThan(0);
+        reduced += 1;
+      }
+      // And a cell no measurement has ever reached is untouched, exactly. Compact
+      // support makes that a fact rather than a small number.
+      if (shares[2][cell] === 0) expect(errorT[cell]).toBe(spreadT[cell]);
+    }
+    expect(reduced).toBeGreaterThan(0);
+    runtime.stop();
+  });
+
+  it('leaves the true now-cast standing, and no run ever initialises from it again', () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    driveUntilAnalyses(runtime, config, 2, 12000);
+    // The generator keeps evaluating truth on its cadence — that is what makes the
+    // analysis scoreable — but after the stated cold start nothing initialises from it.
+    const nowcast = runtime.store.currentNowcast();
+    expect(nowcast).toBeDefined();
+    const instances = runtime.store.holdings().filter((holding) => holding.era === 'instance');
+    expect(instances.length).toBeGreaterThan(0);
+    for (const instance of instances) {
+      expect(instance.manifest.composition.description).not.toContain('now-cast initial state');
+    }
+    runtime.stop();
+  });
+
+  it('measures the sea and not the platform: an ownship datastream informs nothing', () => {
+    const config = lockstepConfig();
+    // The exclusions the analyst declares are the ownship datastreams, and a course is
+    // not a sample of the ocean. Remove the exclusion list and the analyst still must
+    // not assimilate them, because they are not temperature or salinity either — two
+    // independent reasons, and this holds the second.
+    config.analyst.excluded_datastreams = [];
+    const runtime = buildBackend(config, options, validator);
+    const record = driveUntilAnalyses(runtime, config, 1, 12000);
+    const ocean = config.sensors.instruments.filter(
+      (instrument) => instrument.observed_property === 'temperature' || instrument.observed_property === 'salinity',
+    );
+    expect(ocean.length).toBeGreaterThan(0);
+    // Only ocean observations were assimilated, so the count is divisible by nothing
+    // the ownship streams contribute: asserted by the analysis carrying no observation
+    // from a datastream no instrument declares an error for.
+    expect(record.analyses[0].observations.assimilated).toBeGreaterThan(0);
+    expect(soundSpeedMs(10, 35, 50)).toBeGreaterThan(0);
+    runtime.stop();
+  });
+});

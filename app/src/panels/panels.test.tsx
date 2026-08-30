@@ -113,6 +113,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     expect([...lit].map((row) => row.getAttribute('data-component')).sort()).toEqual([
       'advisory-source',
       'advisory-store',
+      'analyst',
       'boundary',
       'broker',
       'clock',
@@ -145,7 +146,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(20);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(21);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));

@@ -39,6 +39,7 @@ import { OffloadPackager } from '../offload/packager.js';
 import { QueryComponent } from '../query/query.js';
 import { Monitor } from '../monitor/monitor.js';
 import { Scheduler } from '../scheduler/scheduler.js';
+import { Analyst } from '../analyst/analyst.js';
 import { ModelRunner } from '../model-runner/runner.js';
 import { Planner } from '../planner/planner.js';
 import { Telemetry } from '../telemetry/telemetry.js';
@@ -255,6 +256,16 @@ export function buildBackend(
     const client = transport.connect(config.scheduler.id, config.scheduler.id);
     return { component: new Scheduler(config.scheduler, client, runId), client };
   });
+  // The analyst stands between the request and the run (feature 115): the scheduler
+  // asks, the analyst corrects the field by what was measured and announces, and the
+  // runner forecasts from what the announcement names.
+  register(config.analyst.id, () => {
+    const client = transport.connect(config.analyst.id, config.analyst.id);
+    return {
+      component: new Analyst(config.analyst, client, store, config.sensors, config.model_runner, runId),
+      client,
+    };
+  });
   register(config.model_runner.id, () => {
     const client = transport.connect(config.model_runner.id, config.model_runner.id);
     return { component: new ModelRunner(config.model_runner, client, store, runId, options.rootSeed), client };
@@ -264,6 +275,8 @@ export function buildBackend(
     return {
       component: new Planner(
         config.planner,
+        config.analyst,
+        config.sensors,
         client,
         store,
         featureStore,

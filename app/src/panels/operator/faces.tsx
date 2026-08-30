@@ -527,6 +527,30 @@ function RunnerFace(c: FaceContext) {
   );
 }
 
+/**
+ * The analyst's face: what the last cycle took in, and what is still waiting for the
+ * next one. Both are reported figures — the component counts them itself — because a
+ * display that counted observations off the wire would be asserting something nothing
+ * published (Constitution VII).
+ */
+function AnalystFace(c: FaceContext) {
+  const cycles = figure(c, 'cycles');
+  if (!cycles) return <Quiet>the analyst has reported no figures yet</Quiet>;
+  const assimilated = figure(c, 'assimilated');
+  return (
+    <div className="face">
+      <div className="face-row">
+        <Reported figure={cycles} />
+        <Reported figure={assimilated} />
+      </div>
+      <div className="face-row">
+        <Reported figure={figure(c, 'waiting')} />
+      </div>
+      {cycles.value === 0 ? <Quiet>no run has been requested yet, so nothing has been assimilated</Quiet> : null}
+    </div>
+  );
+}
+
 function PlannerFace(c: FaceContext) {
   const plans = figure(c, 'plans_emitted');
   if (!plans) return <Quiet>the planner has reported no figures yet</Quiet>;
@@ -649,6 +673,7 @@ export const FACES: Record<string, (context: FaceContext) => ReactNode> = {
   'coverage-store': CoverageStoreFace,
   monitor: MonitorFace,
   scheduler: SchedulerFace,
+  analyst: AnalystFace,
   'model-runner': RunnerFace,
   planner: PlannerFace,
   telemetry: TelemetryFace,

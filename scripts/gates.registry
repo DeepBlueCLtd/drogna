@@ -15,3 +15,4 @@ gates/check-background-marks.ts
 gates/check-one-breakpoint.ts
 gates/check-schema-masters.ts
 gates/check-flow-completeness.ts
+gates/check-truth-initialisation.ts

@@ -118,7 +118,11 @@
             "origin_sim_time": { "type": "string", "minLength": 1 },
             "start_offset_seconds": { "type": "number" },
             "step_seconds": { "type": "number", "exclusiveMinimum": 0 },
-            "count": { "type": "integer", "minimum": 2 },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "How many steps the axis carries. One is a real axis and not a degenerate one: an analysis is a correction at a single instant, and feature 115 lowered this bound from an unargued 2 to admit that. A one-step axis still declares its step_seconds, because the step says what the next instant would have been and a consumer snapping a query to the axis needs it either way."
+            },
             "units": { "type": "string", "minLength": 1 }
           }
         }

@@ -4,48 +4,105 @@
   "title": "drogna model runner configuration (V2-C13)",
   "description": "The model runner (SRD-v2 FR-30): initialises from the current now-cast through the store interface, advects analytically with seeded noise behind the kernel port, runs a small ensemble, and publishes the ensemble mean as the forecast with the spread as the uncertainty field — both through the coverage store's digest-checked seam, announced on the control namespace.",
   "type": "object",
-  "required": ["id", "stream", "topics", "heartbeat", "kernel", "steps", "step_seconds", "advection", "noise_std"],
+  "required": [
+    "id",
+    "stream",
+    "topics",
+    "heartbeat",
+    "kernel",
+    "steps",
+    "step_seconds",
+    "advection",
+    "noise_std"
+  ],
   "additionalProperties": false,
   "properties": {
-    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
-    "stream": { "type": "string", "minLength": 1 },
+    "id": {
+      "$ref": "config.common.schema.json#/$defs/component_id"
+    },
+    "stream": {
+      "type": "string",
+      "minLength": 1
+    },
     "topics": {
       "type": "object",
-      "required": ["clock", "run_request", "run_started", "run_published"],
+      "required": [
+        "clock",
+        "run_request",
+        "analysis_published",
+        "run_started",
+        "run_published"
+      ],
       "additionalProperties": false,
       "properties": {
-        "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "run_request": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "run_started": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "run_published": { "$ref": "config.common.schema.json#/$defs/topic" }
+        "clock": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "run_request": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "analysis_published": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where the analyst announces a cycle. The runner initialises from what this message names and from nothing else: feature 115 replaced a subscription to the run request, under which the runner initialised from a field evaluated from the true ocean."
+        },
+        "run_started": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "run_published": {
+          "$ref": "config.common.schema.json#/$defs/topic"
+        }
       }
     },
-    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "heartbeat": {
+      "$ref": "config.common.schema.json#/$defs/heartbeat"
+    },
     "kernel": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_-]*$",
       "description": "The kernel implementation selected behind the port (Constitution VI); named in every run-started message."
     },
-    "steps": { "type": "integer", "minimum": 2 },
-    "step_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "steps": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "step_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
     "advection": {
       "type": "object",
-      "required": ["east_km_per_day", "north_km_per_day"],
+      "required": [
+        "east_km_per_day",
+        "north_km_per_day"
+      ],
       "additionalProperties": false,
       "description": "The kernel's advection velocity: a modelling assumption, deliberately not the true drift — forecast error is supposed to grow.",
       "properties": {
-        "east_km_per_day": { "type": "number" },
-        "north_km_per_day": { "type": "number" }
+        "east_km_per_day": {
+          "type": "number"
+        },
+        "north_km_per_day": {
+          "type": "number"
+        }
       }
     },
     "noise_std": {
       "type": "object",
-      "required": ["temperature", "salinity"],
+      "required": [
+        "temperature",
+        "salinity"
+      ],
       "additionalProperties": false,
       "description": "Per-member, per-step noise standard deviations, drawn from this component's stream.",
       "properties": {
-        "temperature": { "type": "number", "minimum": 0 },
-        "salinity": { "type": "number", "minimum": 0 }
+        "temperature": {
+          "type": "number",
+          "minimum": 0
+        },
+        "salinity": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     }
   }

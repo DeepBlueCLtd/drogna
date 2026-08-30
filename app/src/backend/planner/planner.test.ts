@@ -64,10 +64,11 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     expect(plan.selection.visited_cell_count).toBe(plan.route.vertices.length);
     expect(plan.selection.candidate_cell_count).toBeGreaterThanOrEqual(plan.route.vertices.length);
     expect(plan.projection.region_count).toBeGreaterThan(0);
-    expect(plan.uncertainty_field.variable).toBe('temperature_spread');
-    // The digest names the exact bytes the recommendation was computed from.
-    const spread = runtime.store.holding(`${plan.uncertainty_field.run_id}-spread`);
-    expect(plan.uncertainty_field.digest).toBe(spread?.descriptor.field.sha256);
+    expect(plan.uncertainty_field.variable).toBe('temperature_error');
+    // The digest names the exact bytes the recommendation was computed from — now the
+    // analysis error rather than the ensemble spread (feature 115).
+    const errorField = runtime.store.holding(`analysis.${plan.uncertainty_field.run_id}-error`);
+    expect(plan.uncertainty_field.digest).toBe(errorField?.descriptor.field.sha256);
     runtime.stop();
   });
 
@@ -76,9 +77,11 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     const runtime = buildBackend(config, options, validator);
     turnLoop(runtime, 2000);
     const plan = runtime.planner.lastPlan;
-    const spread = runtime.store.holding(`${plan?.uncertainty_field.run_id}-spread`);
+    // The field the plan was scored against is named by the plan itself, so the test
+    // reads what the planner actually used rather than reconstructing an identifier.
+    const errorField = runtime.store.holding(`analysis.${plan?.uncertainty_field.run_id}-error`);
     const nowcast = runtime.store.currentNowcast();
-    if (!spread || !nowcast || !plan) throw new Error('the loop did not turn');
+    if (!errorField || !nowcast || !plan) throw new Error('the loop did not turn');
     const centre: PlanningCell = {
       h3: latLngToCell(46.1, -11.2, config.planner.h3_resolution),
       band: 0,
@@ -88,7 +91,9 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     };
     const model = createUncertaintyModel(
       config.planner,
-      spread,
+      config.analyst,
+      config.sensors,
+      errorField,
       worldFromManifest(nowcast.descriptor.manifest),
       timescaleFromManifest(nowcast.descriptor.manifest),
       [centre],
@@ -101,10 +106,30 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     const fresh = new Map();
     expect(model.uncertainty(centre, t0, fresh)).toBe(uSat);
 
-    // 2. A cell just informed is worth nothing to inform again.
+    // 2. A cell just informed is worth nothing to inform again. What it is worth is
+    // no longer a declared peak: it is what the analysis would actually leave, from
+    // the analysis's own closed form at zero separation, with the instrument error the
+    // sensors declare. Feature 115 removed the planner's footprint block precisely
+    // because its 0.85 disagreed with the arithmetic the analyst performs.
     model.collapse(centre, t0, fresh);
     const justInformed = model.uncertainty(centre, t0, fresh);
-    expect(justInformed).toBeCloseTo(uSat * (1 - config.planner.footprint.peak), 9);
+    const observationErrorStd = Math.min(
+      ...config.sensors.instruments
+        .filter((instrument) => instrument.observed_property === 'temperature')
+        .map((instrument) => instrument.noise_std),
+    );
+    const variance = uSat * uSat;
+    const expected = Math.sqrt(variance - (variance * variance) / (variance + observationErrorStd * observationErrorStd));
+    expect(justInformed).toBeCloseTo(expected, 9);
+    // It strictly reduces, and here only slightly — this cell has been sampled many
+    // times over, so the analysis already knows it better than one more instrument
+    // reading can improve. That is the diminishing return the planner exists to
+    // exploit, and it is a consequence the declared 0.85 peak could never express:
+    // a constant collapse says every visit is worth the same, which is the opposite
+    // of true.
+    if (justInformed === undefined) throw new Error('the visit left no uncertainty to read');
+    expect(justInformed).toBeLessThan(uSat);
+    expect(justInformed).toBeGreaterThan(0);
 
     // 3/4. The deficit decays at the local tau toward the saturation at the visit.
     const tau = model.tau(centre, t0);

@@ -13,7 +13,7 @@
  * drogna records ground truth in a manifest and scores recovery against it
  * (Constitution IX), and an explainer must not teach otherwise.
  *
- * There is deliberately no shared scene. Eleven arguments want eleven framings; what
+ * There is deliberately no shared scene. Ten arguments want ten framings; what
  * carries between them is this vocabulary, so the eddy drawn here is the eddy a
  * viewer met in the Map.
  */
@@ -86,7 +86,7 @@ export const INK = {
 /**
  * The dashed outline every region that responds to the viewer carries (FR-025).
  * Static, so nothing animates on arrival (FR-019); learned once, so free play is
- * discoverable across all eleven explainers; and it survives greyscale like any
+ * discoverable across all ten explainers; and it survives greyscale like any
  * other mark.
  */
 export const POKE_OUTLINE: SVGProps<SVGRectElement> = {

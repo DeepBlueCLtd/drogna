@@ -297,7 +297,7 @@ reads rather than what it contains. Found by the author looking at the deployed 
 
 ## The two ways it is served (US3, P3)
 
-- [x] T053 Explainer 11, what is allowed to leave (interactive): default deny with
+- [x] T053 ~~Explainer 11, what is allowed to leave (interactive)~~ **dropped 30 August 2026** at the author's request; the explainer module was deleted and the course now ends on the control loop. Built as: default deny with
       indistinguishable refusals so the boundary cannot be probed; withholding by absence
       rather than by filtering; the published denial; and step 5, the beat — leakage scored
       per released variable with the worst one deciding, because an average over four

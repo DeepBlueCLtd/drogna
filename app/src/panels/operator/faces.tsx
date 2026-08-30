@@ -223,6 +223,13 @@ function PlatformFace(c: FaceContext) {
           {shortfall.statement}
         </p>
       ) : null}
+      {/* Reported, and only once it has happened: the platform reported an impossible
+          depth because it was asked to, and did not dive to one. */}
+      {figure(c, 'faults') === undefined ? null : (
+        <p className="face-binding" data-testid="platform-faults">
+          {format(value(c, 'faults') ?? 0)} deliberately faulty depth reading(s) published on request
+        </p>
+      )}
     </div>
   );
 }
@@ -308,6 +315,11 @@ function Tape({
 function SensorsFace(c: FaceContext) {
   const published = value(c, 'published');
   const age = figure(c, 'position_age_ticks');
+  // Reported figures, drawn only where the component reported them: the cadence in
+  // force, and — once it has happened — how often sampling was starved of a position.
+  const cadence = figure(c, 'sample_interval');
+  const skipped = figure(c, 'skipped');
+  const sensorFaults = figure(c, 'faults');
   // The instruments are whichever ocean datastreams have genuinely been heard — not a
   // list typed in here, which is how the pressure instrument came to be drawn as
   // silent when it had been publishing all along.
@@ -334,7 +346,20 @@ function SensorsFace(c: FaceContext) {
       ) : (
         <Quiet>no observation heard here yet</Quiet>
       )}
-      {published === undefined ? null : <p className="face-note">{format(published)} published</p>}
+      {published === undefined ? null : (
+        <p className="face-note">
+          {format(published)} published
+          {cadence === undefined ? '' : `, every ${format(cadence.value)} ticks`}
+          {skipped === undefined ? '' : `; ${format(skipped.value)} skipped for want of a position`}
+        </p>
+      )}
+      {/* A fault a reader asked for, drawn as a fault a reader asked for. Absent
+          until one has been, because 'no faults' is not a measurement. */}
+      {sensorFaults === undefined ? null : (
+        <p className="face-binding" data-testid="sensors-faults">
+          {format(sensorFaults.value)} deliberately faulty sample(s) published on request
+        </p>
+      )}
       {/* The sensors sample where ownship last reported, and a position older than one
           sampling interval is not where the platform is now (FR-55). Which of those
           holds is the single most useful thing this face can say. */}
@@ -536,6 +561,8 @@ function PlannerFace(c: FaceContext) {
         <Reported figure={plans} />
         <Reported figure={figure(c, 'route_stops')} />
         <Reported figure={figure(c, 'soundings')} />
+        <Reported figure={figure(c, 'usable_threshold')} />
+        <Reported figure={figure(c, 'prompted')} />
       </div>
       <p className="face-note">recommendations only — this commands nothing</p>
     </div>
@@ -580,6 +607,8 @@ function OperatorFace(c: FaceContext) {
         <Reported figure={dispatched} />
         <Reported figure={figure(c, 'refused')} />
         <Reported figure={figure(c, 'demands')} />
+        <Reported figure={figure(c, 'tunings')} />
+        <Reported figure={figure(c, 'events')} />
       </div>
       <p className="face-note">this is the surface you are looking through</p>
     </div>
@@ -594,6 +623,11 @@ function AdvisorySourceFace(c: FaceContext) {
       <div className="face-row">
         <Reported figure={authored} />
         <Reported figure={figure(c, 'cadence_ticks')} />
+        {/* How many were authored because a reader asked. Found missing by driving
+            the built page: the source was counting prompts and its face was not
+            drawing them, so pressing the button changed nothing a reader could see
+            until the next advisory landed on the map. */}
+        <Reported figure={figure(c, 'prompted')} />
       </div>
       <p className="face-note">deterministically authored from the seeded stream</p>
     </div>
@@ -623,6 +657,8 @@ function OffloadFace(c: FaceContext) {
     <div className="face">
       <div className="face-row">
         <Reported figure={bundles} />
+        <Reported figure={figure(c, 'prompted')} />
+        <Reported figure={figure(c, 'declined')} />
       </div>
       <span className="face-label">staged against the declared bound</span>
       <Toward figure={staged} hue="var(--flow-fld)" />

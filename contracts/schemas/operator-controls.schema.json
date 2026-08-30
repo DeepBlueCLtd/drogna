@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/operator-controls.schema.json",
+  "title": "drogna operator controls statement",
+  "description": "What the operator plane offers a reader, stated by the plane itself: how far the clock may be stepped in one ask, which settings may be tuned and between which bounds, and which events may be prompted. The shell renders what it is told here and offers nothing else — a control the surface would refuse is a control that should never have been drawn, and a bound typed into a panel is a second copy of a rule (Constitution IV). Declared configuration only: no value in force appears here, because the value in force is the target component's own answer and arrives in its heartbeat (Constitution VII).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "step",
+    "demand",
+    "tunables",
+    "events"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "step": {
+      "$ref": "#/$defs/step"
+    },
+    "demand": {
+      "$ref": "#/$defs/demand"
+    },
+    "tunables": {
+      "type": "array",
+      "description": "The settings a reader may change while the run is going, each with the bound the surface will refuse outside.",
+      "items": {
+        "$ref": "#/$defs/tunable"
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "The things a reader may ask a component to do now. Each names its target, and the target decides.",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": [
+        "maximum_ticks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "maximum_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The most ticks one step command may advance the clock. A bound rather than no bound: a burst is a loop over the clock's own step, and an unbounded one would block the page it is drawing."
+        }
+      },
+      "title": "Clock step bound"
+    },
+    "demand": {
+      "title": "Demand target",
+      "description": "Which component a platform demand is published to. Declared rather than assumed by the panel: the demand control belongs on that component's node, and a front-end that knew which one by name would be a front-end holding a copy of the wiring.",
+      "type": "object",
+      "required": [
+        "target"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        }
+      }
+    },
+    "tunable": {
+      "type": "object",
+      "required": [
+        "id",
+        "target",
+        "setting",
+        "label",
+        "minimum",
+        "maximum",
+        "step",
+        "integer",
+        "figure",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "setting": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "integer": {
+          "type": "boolean",
+          "description": "Whether the setting counts things. A count of 2.5 samples is not a stricter setting, it is a nonsense, and the surface refuses it by name."
+        },
+        "figure": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "The heartbeat figure key the target reports the value in force under (heartbeat.schema.json 'figures'). The shell reads the value in force from there and never from what was typed."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "title": "Tunable setting"
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "target",
+        "label",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the component will consider, in terms that admit a decline: an event that reads as a guarantee is a display promising on a component's behalf."
+        }
+      },
+      "title": "Promptable event"
+    }
+  }
+}

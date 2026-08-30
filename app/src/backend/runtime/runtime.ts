@@ -52,6 +52,13 @@ import { buildRunManifest, deriveRunId } from './manifest.js';
 
 export interface BackendRuntime {
   readonly transport: SeamTransport;
+  /**
+   * The broker itself, for the one thing only it knows: how many deliveries threw.
+   * A component that answers a command by throwing publishes nothing, exactly as a
+   * component that declined by rule publishes nothing — and a test that cannot tell
+   * those apart passes against machinery that is falling over quietly.
+   */
+  readonly broker: Broker;
   readonly httpBackend: SeamHttpBackend;
   readonly manifest: RunManifest;
   readonly runId: string;
@@ -378,6 +385,7 @@ export function buildBackend(
 
   return {
     transport,
+    broker,
     httpBackend: gate,
     manifest,
     runId,

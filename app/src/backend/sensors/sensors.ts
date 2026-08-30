@@ -27,9 +27,22 @@
  * publish nothing. The bound is the sensors' own declared cadence rather than a number
  * typed in here: stop the platform and the sensors go quiet by themselves, one
  * sampling interval later.
+ *
+ * The cadence is tunable from the operator plane (FR-64), and because the staleness
+ * bound IS the cadence, tuning one tunes both — which is a property of the rule above
+ * rather than a coincidence, and the reason both read it from one accessor.
+ *
+ * These instruments will also, if asked, publish ONE deliberately malformed sample
+ * (FR-67). The fault belongs here rather than in the control plane: a faulty
+ * instrument is a thing that happens, a control plane publishing into the observation
+ * namespace is not, and only the first of those leaves the ingestion seam answering
+ * the question a reader actually asked. What they publish is a genuine bad message —
+ * the seam refuses it against the committed master and names the fault — and the count
+ * of what was asked for is reported, so a fault a reader ordered is never mistaken for
+ * an instrument that has started lying on its own account.
  */
 import type { SeamClient } from '../../seam/transport.js';
-import type { ConfigSensors, Observation } from '../../generated/types.js';
+import type { ConfigSensors, Observation, OperatorCommand } from '../../generated/types.js';
 import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { fnv1a32 } from '../lib/rng.js';
@@ -73,6 +86,10 @@ export class Sensors {
   private heardPosition: { latitude: number; longitude: number; tick: number } | undefined;
   /** Ticks on which sampling was skipped for want of a position. Counted, not hidden. */
   private skippedForNoPosition = 0;
+  /** The sampling cadence in force, where the operator plane has changed it. */
+  private tunedInterval: number | undefined;
+  /** Deliberately faulty samples published on request. Counted and reported. */
+  private faultsPublished = 0;
 
   constructor(
     private readonly config: ConfigSensors,
@@ -94,12 +111,25 @@ export class Sensors {
         figures: [
           { key: 'published', value: this.publishedCount, label: 'published' },
           { key: 'instruments', value: this.config.instruments.length, label: 'instruments' },
+          { key: 'sample_interval', value: this.sampleInterval(), unit: 'ticks', label: 'cadence' },
+          // The skipped count as a figure, not only as prose in the sentence above.
+          // A reader shortening the cadence past the platform's reporting interval
+          // starves these instruments, and 'how often did that happen' is a number
+          // they know — so it is published as one rather than left to be parsed.
+          ...(this.skippedForNoPosition === 0
+            ? []
+            : [{ key: 'skipped', value: this.skippedForNoPosition, label: 'skipped for position' }]),
+          // Absent until one has been asked for: a face may not draw a zero where
+          // nothing has happened, and 'no faults' is not a measurement (FR-58).
+          ...(this.faultsPublished === 0
+            ? []
+            : [{ key: 'faults', value: this.faultsPublished, label: 'faults on request' }]),
           ...(this.heardPosition
             ? [
                 {
                   key: 'position_age_ticks',
                   value: Math.max(0, this.simTime.tick - this.heardPosition.tick),
-                  of: this.config.sample_interval_ticks,
+                  of: this.sampleInterval(),
                   unit: 'ticks',
                   label: 'position age',
                 },
@@ -110,6 +140,16 @@ export class Sensors {
       runId,
       configDigest(config),
     );
+  }
+
+  /**
+   * The sampling cadence in force: what the operator plane last set, or what
+   * configuration says. One reader, because this number is two rules at once — how
+   * often a sample is taken, and how long a heard position stays fresh — and they may
+   * not be allowed to drift apart.
+   */
+  sampleInterval(): number {
+    return this.tunedInterval ?? this.config.sample_interval_ticks;
   }
 
   /**
@@ -128,11 +168,15 @@ export class Sensors {
       this.skippedForNoPosition > 0
         ? `; ${this.skippedForNoPosition} sampling tick(s) skipped for want of a fresh position`
         : '';
+    const faults =
+      this.faultsPublished === 0
+        ? ''
+        : `; ${this.faultsPublished} deliberately faulty sample(s) published on request, each refused at the ingestion seam`;
     const age = this.simTime.tick - this.heardPosition.tick;
-    if (age > this.config.sample_interval_ticks) {
-      return `${published}; quiet: the last ownship position is ${age} ticks old, beyond the ${this.config.sample_interval_ticks}-tick sampling interval — where the platform is now is not something anything has reported${skipped}`;
+    if (age > this.sampleInterval()) {
+      return `${published}; quiet: the last ownship position is ${age} ticks old, beyond the ${this.sampleInterval()}-tick sampling interval — where the platform is now is not something anything has reported${skipped}${faults}`;
     }
-    return `${published}; sampling where ownship reported at tick ${this.heardPosition.tick}${skipped}`;
+    return `${published}; sampling where ownship reported at tick ${this.heardPosition.tick}${skipped}${faults}`;
   }
 
   /** The last ownship position heard, for the tests and the runtime to read. */
@@ -158,10 +202,13 @@ export class Sensors {
       // A rate-change acknowledgement repeats the tick in force (clock.schema.json);
       // sampling keys to the tick, not to the count of samples heard, so a repeat
       // draws nothing and publishes nothing.
-      if (sample.tick % this.config.sample_interval_ticks === 0 && sample.tick !== this.lastSampledTick) {
+      if (sample.tick % this.sampleInterval() === 0 && sample.tick !== this.lastSampledTick) {
         this.lastSampledTick = sample.tick;
         this.sampleAll(sample.tick, sample.sim_time);
       }
+    });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      this.obey(message.payload as OperatorCommand);
     });
     this.heartbeat.start();
   }
@@ -176,7 +223,7 @@ export class Sensors {
     // one a sampling tick can hold was reported an interval ago, because the platform's
     // report for this tick is still queued behind the clock sample being handled. Older
     // than that and the platform has stopped saying where it is.
-    if (!position || tick - position.tick > this.config.sample_interval_ticks) {
+    if (!position || tick - position.tick > this.sampleInterval()) {
       this.skippedForNoPosition += 1;
       return;
     }
@@ -194,6 +241,48 @@ export class Sensors {
       );
       this.publishedCount += 1;
     }
+  }
+
+  /**
+   * An operator command addressed to these sensors: the cadence, or the fault they
+   * declare they will produce on request.
+   */
+  private obey(command: OperatorCommand): void {
+    if (command.target !== this.config.id) return;
+    if (command.kind === 'tuning') {
+      if (command.setting === 'sample_interval_ticks') this.tunedInterval = command.value;
+      return;
+    }
+    if (command.event !== this.config.fault_event) return;
+    this.publishFaultySample();
+  }
+
+  /**
+   * One deliberately malformed observation (FR-67), built from the sampling path so
+   * that everything about it is a real sample except the one thing spoiled: the
+   * result, published as text where the master requires a number.
+   *
+   * It is published on the ordinary topic, by the component that would really produce
+   * it, and nothing here softens it — the ingestion seam refuses it against the
+   * committed master and names the fault, which is the whole point of asking. The
+   * shell's own client-side validator counts it refused too, on the Messages tab,
+   * because a bad message is bad wherever it is read.
+   *
+   * With no position heard there is nothing to spoil: a fault needs a sample to be a
+   * fault of, and inventing a place to have taken it would be a worse untruth than the
+   * one being demonstrated.
+   */
+  private publishFaultySample(): void {
+    const position = this.heardPosition;
+    const instrument = this.config.instruments[0];
+    if (!position || this.simTime.value === '') return;
+    const sound = this.observation(instrument, this.simTime.tick, this.simTime.value, position, 0);
+    const faulty = { ...sound, result: 'deliberately not a number' } as unknown as Observation;
+    this.client.publish(
+      `${this.config.topics.observation_prefix}/${this.config.platform.thing_id}/${instrument.datastream_id}`,
+      faulty,
+    );
+    this.faultsPublished += 1;
   }
 
   private observation(

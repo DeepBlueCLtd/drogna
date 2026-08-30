@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/operator-command.schema.json",
+  "title": "drogna operator command",
+  "description": "What the operator surface says on the broker when a reader asks the machinery to do something beyond stop and start: tune a setting a component scores against, or prompt a component to act now. One topic and one master rather than a topic per command, so the flow chart draws the operator reaching the components it can reach rather than a fan of near-identical wires, and every command is one entry in the Messages tab. The surface publishes and counts; it applies nothing and lights nothing (Constitution VII). What the command did is the target component's own answer, and it arrives in that component's heartbeat and telemetry like everything else it says about itself. Commands are ephemeral and outside AT-04's replay claim, on the same rule as stop and start: a restarted component is rebuilt from its configuration document, so a tuning it was carrying is gone and the component says so by reporting the configured value again.",
+  "oneOf": [
+    { "$ref": "#/$defs/tuning_command" },
+    { "$ref": "#/$defs/event_command" }
+  ],
+  "$defs": {
+    "component_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "tuning_command": {
+      "title": "Tuning command",
+      "description": "Set one named numeric setting on one component, within the bound the operator surface declares for it. The value here is what was asked for; the value in force is what the target reports.",
+      "type": "object",
+      "required": ["component", "scenario_run_id", "sim_time", "tick", "kind", "target", "setting", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "$ref": "#/$defs/component_id",
+          "description": "The operator surface that published this, matching config /operator/id."
+        },
+        "scenario_run_id": { "type": "string", "minLength": 1 },
+        "sim_time": {
+          "type": "string",
+          "description": "Simulation time at which the command was published, ISO-8601 UTC with microsecond precision."
+        },
+        "tick": { "type": "integer", "minimum": 0 },
+        "kind": { "const": "tuning" },
+        "target": {
+          "$ref": "#/$defs/component_id",
+          "description": "The component the setting belongs to. A component ignores a command addressed to another: the topic is one, the address is here."
+        },
+        "setting": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "The setting's name, matching the key in that component's configuration document. Named rather than positional so a component can refuse a setting it does not hold."
+        },
+        "value": { "type": "number" }
+      }
+    },
+    "event_command": {
+      "title": "Event command",
+      "description": "Ask a component to do now what it would otherwise do on its own schedule. The component decides: a prompted forecast run goes through the scheduler's ordinary policy and can be declined by it, which is the point of routing the prompt through the component rather than publishing a run request from here.",
+      "type": "object",
+      "required": ["component", "scenario_run_id", "sim_time", "tick", "kind", "target", "event"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "$ref": "#/$defs/component_id",
+          "description": "The operator surface that published this, matching config /operator/id."
+        },
+        "scenario_run_id": { "type": "string", "minLength": 1 },
+        "sim_time": {
+          "type": "string",
+          "description": "Simulation time at which the command was published, ISO-8601 UTC with microsecond precision."
+        },
+        "tick": { "type": "integer", "minimum": 0 },
+        "kind": { "const": "event" },
+        "target": {
+          "$ref": "#/$defs/component_id",
+          "description": "The component asked to act."
+        },
+        "event": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Which of the events the operator surface declares this is."
+        }
+      }
+    }
+  }
+}

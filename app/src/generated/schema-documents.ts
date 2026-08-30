@@ -357,7 +357,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.advisory-source.schema.json",
     "title": "drogna shore advisory source configuration (V2-C16)",
-    "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here.",
+    "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here. It may also be prompted from the operator plane to author the next advisory now; prompted or on cadence, the advisory is the same deterministic next one in its sequence.",
     "type": "object",
     "required": [
       "id",
@@ -368,7 +368,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "valid_seconds",
       "region_feature",
       "depth_span_m",
-      "sound_speed_half_width_m_per_s"
+      "sound_speed_half_width_m_per_s",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -383,7 +384,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "object",
         "required": [
           "clock",
-          "advisory"
+          "advisory",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -392,6 +394,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "advisory": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The source acts on an event addressed to it and ignores everything else on the topic."
           }
         }
       },
@@ -418,6 +424,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "sound_speed_half_width_m_per_s": {
         "type": "number",
         "exclusiveMinimum": 0
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id this source answers to (operator-command.schema.json). Named on both sides, as a topic is."
       }
     }
   },
@@ -766,7 +777,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "archive",
       "background",
       "features",
-      "timescale"
+      "timescale",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -781,14 +793,24 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "topics": {
         "type": "object",
         "required": [
-          "clock"
+          "clock",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
           "clock": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). This component acts on a command addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this generator to author its next now-cast now rather than on its cadence. The prompt moves when a now-cast is authored and never what it says: the field is the same deterministic function of simulation time either way. Named on both sides — here and in the operator surface's declared events — as a topic is."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -1530,7 +1552,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.monitor.schema.json",
     "title": "drogna monitor configuration (V2-C11)",
-    "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried.",
+    "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried. The threshold and the persistence count are tunable from the operator plane while the run is going (operator-command.schema.json): the values here are what the monitor starts with and returns to when it is restarted, and the values in force are reported in its own heartbeat figures and on every residual sample.",
     "type": "object",
     "required": [
       "id",
@@ -1552,7 +1574,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "observations",
           "divergence",
-          "telemetry"
+          "telemetry",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1567,6 +1590,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands. The monitor acts on a tuning addressed to it and ignores the rest."
           }
         }
       },
@@ -1681,7 +1708,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "identification_radius_m",
       "format_version",
-      "staging_bound_bytes"
+      "staging_bound_bytes",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1693,7 +1721,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "run_published",
-          "offload"
+          "offload",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1705,8 +1734,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "offload": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The packager acts on a prompt addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this packager to stage a window now, over the release it last heard, rather than waiting for the next one. It stages under exactly the rules it already has: declined at the staging bound, and declined where the interval holds no measurements, because a bundle nobody can score is not staged — prompted or not. Named on both sides, as a topic is."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -1730,14 +1768,18 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.operator.schema.json",
     "title": "drogna operator surface configuration (V2-C18)",
-    "description": "The operator surface (SRD-v2 FR-36): aggregates what components report about themselves — a component never heard from is reported unheard, not absent — and dispatches commands: clock step, and stop/start/restart of in-browser components. A refused command names the bound or rule; a stopped component goes dark because its heartbeats cease, never because this surface says so. Commands are ephemeral and outside AT-04's replay claim.",
+    "description": "The operator surface (SRD-v2 FR-36): aggregates what components report about themselves — a component never heard from is reported unheard, not absent — and dispatches commands: clock step, and stop/start/restart of in-browser components. A refused command names the bound or rule; a stopped component goes dark because its heartbeats cease, never because this surface says so. Commands are ephemeral and outside AT-04's replay claim. Beyond stop and start it declares what else the plane offers: how far one step command may advance the clock, the settings a reader may tune and the bound each is refused outside, and the events a component may be prompted to consider now. Those declarations are served verbatim as the controls statement (operator-controls.schema.json), so the shell offers exactly what the surface would accept; the commands themselves go on one broker topic (operator-command.schema.json) addressed to a target, and the surface publishes and counts while the target decides and reports.",
     "type": "object",
     "required": [
       "id",
       "topics",
       "http",
       "heartbeat",
-      "protected"
+      "protected",
+      "step",
+      "demand",
+      "tunables",
+      "events"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1749,7 +1791,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "heartbeat",
-          "platform_demand"
+          "platform_demand",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1762,6 +1805,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "platform_demand": {
             "$ref": "config.common.schema.json#/$defs/topic",
             "description": "Where a demand is published. The operator surface is the only publisher today; the broker's rules are written so an adaptive sampler could be a second without a change here."
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where tuning and event commands are published (operator-command.schema.json). One topic for both, addressed by the command's target: a topic per command would draw the same reach as a fan of near-identical wires, and bury the ones carrying meaning."
           }
         }
       },
@@ -1771,7 +1818,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "components_path",
           "step_path",
           "command_prefix",
-          "platform_demand_path"
+          "platform_demand_path",
+          "controls_path",
+          "tuning_path",
+          "event_prefix"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1779,7 +1829,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "$ref": "config.common.schema.json#/$defs/relative_path"
           },
           "step_path": {
-            "$ref": "config.common.schema.json#/$defs/relative_path"
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "POST to advance the clock. An optional { ticks } body asks for a burst, bounded by /step/maximum_ticks; an absent body is one tick, which is what this endpoint has always meant."
           },
           "command_prefix": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
@@ -1788,6 +1839,18 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "platform_demand_path": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
             "description": "POST a demanded course, speed and depth (platform-demand.schema.json). The surface publishes it on the demand topic; it does not apply it, and the response says only what was dispatched. Whether the platform can reach the demand is the platform's own answer, and it arrives on the state topic like everything else a component says about itself (FR-048)."
+          },
+          "controls_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "GET the controls statement: the step bound, the tunables and the events, exactly as declared below. The shell draws its console from that statement and holds no list of its own, so a control it offers is one this surface would accept."
+          },
+          "tuning_path": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "POST { target, setting, value }. Refused by name outside the declared bound, and refused for a setting no tunable declares — a bound stated in a panel and enforced nowhere is not a bound."
+          },
+          "event_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "POST <prefix>/<event-id>. The surface publishes the prompt and says what it published; whether the component acts is that component's answer, on that component's own topics."
           }
         }
       },
@@ -1800,6 +1863,26 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "$ref": "config.common.schema.json#/$defs/component_id"
         },
         "description": "Components a stop command is refused for, by the rule this list is: stopping the clock stops time itself, stopping the broker silences every heartbeat including the evidence of the stopping, and the boundary and this surface must outlive their own commands."
+      },
+      "step": {
+        "$ref": "operator-controls.schema.json#/$defs/step"
+      },
+      "demand": {
+        "$ref": "operator-controls.schema.json#/$defs/demand"
+      },
+      "tunables": {
+        "type": "array",
+        "description": "The settings this plane will accept a change to, each naming the component that holds it, the bound outside which a change is refused, and the heartbeat figure that component reports the value in force under. Declared here so the rule has one home: this surface enforces it, the controls statement publishes it, and the panel draws it.",
+        "items": {
+          "$ref": "operator-controls.schema.json#/$defs/tunable"
+        }
+      },
+      "events": {
+        "type": "array",
+        "description": "The events a component may be prompted to consider now. The prompt is published; the component decides, and a decline is as ordinary an outcome as an acceptance.",
+        "items": {
+          "$ref": "operator-controls.schema.json#/$defs/event"
+        }
       }
     }
   },
@@ -1824,7 +1907,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "usable_threshold",
       "restarts",
       "shortlist",
-      "projection"
+      "projection",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1842,7 +1926,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "observations",
           "run_published",
-          "plan"
+          "plan",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1857,8 +1942,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "plan": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The planner acts on a tuning or a prompt addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the planner to recompute now rather than at its replan interval. It recommends either way: a prompt changes when a recommendation is made, never what it is worth, and never turns one into an order (Constitution VIII)."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -2017,7 +2111,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "initial",
       "limits",
       "instruments",
-      "thing"
+      "thing",
+      "fault_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2035,7 +2130,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "demand",
           "state",
-          "observation_prefix"
+          "observation_prefix",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2054,8 +2150,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "pattern": "^[a-z0-9]+$",
             "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-54)."
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The platform acts on a fault prompt addressed to it and ignores everything else on the topic; a demand still arrives on the demand topic, because a demand is a domain message and not a command."
           }
         }
+      },
+      "fault_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the platform to publish ONE deliberately faulty message (SRD-v2 FR-67): a depth reading beyond the maximum this document declares. The fault originates here, in the component a real instrument fault would come from, rather than being published into the ownship namespace by a control plane that does not own it — which is also what makes the ingestion seam's answer the genuine one, since it range-checks against these very limits. The platform counts what it was asked to produce and reports the count, so a faulty reading is never mistaken for a platform that has started lying on its own account."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -2394,7 +2499,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
     "title": "drogna scheduler configuration (V2-C12)",
-    "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name.",
+    "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
     "type": "object",
     "required": [
       "id",
@@ -2402,7 +2507,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "min_interval_ticks",
       "max_interval_ticks",
-      "ensemble_size"
+      "ensemble_size",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2416,7 +2522,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "divergence",
           "run_request",
           "run_published",
-          "telemetry"
+          "telemetry",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2434,6 +2541,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "telemetry": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands: tuning of the two intervals, and a prompt to consider a run now."
           }
         }
       },
@@ -2453,6 +2564,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "ensemble_size": {
         "type": "integer",
         "minimum": 2
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id this scheduler answers to (operator-command.schema.json). Named on both sides — here and in the operator surface's declared events — as a topic is, rather than compiled into either component."
       }
     }
   },
@@ -2469,7 +2585,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "platform",
       "sample_interval_ticks",
-      "instruments"
+      "instruments",
+      "fault_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2486,7 +2603,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "observation_prefix",
-          "ownship"
+          "ownship",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2501,6 +2619,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "pattern": "^[a-z0-9]+$",
             "description": "The namespace observations are published under; the topic is <prefix>/<thing_id>/<datastream_id>."
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The sensors act on a tuning or a fault prompt addressed to them and ignore everything else on the topic."
           }
         }
       },
@@ -2530,6 +2652,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "minLength": 1
           }
         }
+      },
+      "fault_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this component to publish ONE deliberately faulty message (SRD-v2 FR-67). The fault originates here, in the component a real one would come from, rather than being published into this namespace by a control plane that does not own it: what a reader then watches refuse it is the genuine seam doing its genuine work. The component counts what it was asked to produce and reports the count, so a faulty message is never mistaken for a component that has started lying on its own account. The fault here is a sample that fails the observation master, so the ingestion seam refuses it and names the fault."
       },
       "sample_interval_ticks": {
         "type": "integer",
@@ -2784,7 +2911,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "sensorthings",
           "edr",
           "features",
-          "query_subsets"
+          "query_subsets",
+          "operator_controls",
+          "operator_tuning",
+          "operator_event"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -2826,6 +2956,18 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "query_subsets": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
             "description": "Where the subset statement is served; the composer offers only what it states."
+          },
+          "operator_controls": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Where the operator surface states what its plane offers (operator-controls.schema.json): the step bound, the tunables with their bounds, and the promptable events. The console is drawn from that statement, so the shell offers no control the surface would refuse and holds no bound of its own."
+          },
+          "operator_tuning": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Where the shell POSTs a tuning change. What comes back is what was dispatched; the value in force arrives in the target component's own heartbeat, never from this response."
+          },
+          "operator_event": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "The prefix a prompted event is POSTed under: <prefix>/<event-id>. The component prompted decides, and may decline."
           }
         }
       },
@@ -5861,6 +6003,120 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     ]
   },
+  "operator-command": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/operator-command.schema.json",
+    "title": "drogna operator command",
+    "description": "What the operator surface says on the broker when a reader asks the machinery to do something beyond stop and start: tune a setting a component scores against, or prompt a component to act now. One topic and one master rather than a topic per command, so the flow chart draws the operator reaching the components it can reach rather than a fan of near-identical wires, and every command is one entry in the Messages tab. The surface publishes and counts; it applies nothing and lights nothing (Constitution VII). What the command did is the target component's own answer, and it arrives in that component's heartbeat and telemetry like everything else it says about itself. Commands are ephemeral and outside AT-04's replay claim, on the same rule as stop and start: a restarted component is rebuilt from its configuration document, so a tuning it was carrying is gone and the component says so by reporting the configured value again.",
+    "oneOf": [
+      {
+        "$ref": "#/$defs/tuning_command"
+      },
+      {
+        "$ref": "#/$defs/event_command"
+      }
+    ],
+    "$defs": {
+      "component_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "tuning_command": {
+        "title": "Tuning command",
+        "description": "Set one named numeric setting on one component, within the bound the operator surface declares for it. The value here is what was asked for; the value in force is what the target reports.",
+        "type": "object",
+        "required": [
+          "component",
+          "scenario_run_id",
+          "sim_time",
+          "tick",
+          "kind",
+          "target",
+          "setting",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "$ref": "#/$defs/component_id",
+            "description": "The operator surface that published this, matching config /operator/id."
+          },
+          "scenario_run_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sim_time": {
+            "type": "string",
+            "description": "Simulation time at which the command was published, ISO-8601 UTC with microsecond precision."
+          },
+          "tick": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "const": "tuning"
+          },
+          "target": {
+            "$ref": "#/$defs/component_id",
+            "description": "The component the setting belongs to. A component ignores a command addressed to another: the topic is one, the address is here."
+          },
+          "setting": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "The setting's name, matching the key in that component's configuration document. Named rather than positional so a component can refuse a setting it does not hold."
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      },
+      "event_command": {
+        "title": "Event command",
+        "description": "Ask a component to do now what it would otherwise do on its own schedule. The component decides: a prompted forecast run goes through the scheduler's ordinary policy and can be declined by it, which is the point of routing the prompt through the component rather than publishing a run request from here.",
+        "type": "object",
+        "required": [
+          "component",
+          "scenario_run_id",
+          "sim_time",
+          "tick",
+          "kind",
+          "target",
+          "event"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "$ref": "#/$defs/component_id",
+            "description": "The operator surface that published this, matching config /operator/id."
+          },
+          "scenario_run_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sim_time": {
+            "type": "string",
+            "description": "Simulation time at which the command was published, ISO-8601 UTC with microsecond precision."
+          },
+          "tick": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "const": "event"
+          },
+          "target": {
+            "$ref": "#/$defs/component_id",
+            "description": "The component asked to act."
+          },
+          "event": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Which of the events the operator surface declares this is."
+          }
+        }
+      }
+    }
+  },
   "operator-components": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/operator-components.schema.json",
@@ -5917,6 +6173,170 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             }
           }
         }
+      }
+    }
+  },
+  "operator-controls": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/operator-controls.schema.json",
+    "title": "drogna operator controls statement",
+    "description": "What the operator plane offers a reader, stated by the plane itself: how far the clock may be stepped in one ask, which settings may be tuned and between which bounds, and which events may be prompted. The shell renders what it is told here and offers nothing else — a control the surface would refuse is a control that should never have been drawn, and a bound typed into a panel is a second copy of a rule (Constitution IV). Declared configuration only: no value in force appears here, because the value in force is the target component's own answer and arrives in its heartbeat (Constitution VII).",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "step",
+      "demand",
+      "tunables",
+      "events"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "step": {
+        "$ref": "#/$defs/step"
+      },
+      "demand": {
+        "$ref": "#/$defs/demand"
+      },
+      "tunables": {
+        "type": "array",
+        "description": "The settings a reader may change while the run is going, each with the bound the surface will refuse outside.",
+        "items": {
+          "$ref": "#/$defs/tunable"
+        }
+      },
+      "events": {
+        "type": "array",
+        "description": "The things a reader may ask a component to do now. Each names its target, and the target decides.",
+        "items": {
+          "$ref": "#/$defs/event"
+        }
+      }
+    },
+    "$defs": {
+      "step": {
+        "type": "object",
+        "required": [
+          "maximum_ticks"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "maximum_ticks": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most ticks one step command may advance the clock. A bound rather than no bound: a burst is a loop over the clock's own step, and an unbounded one would block the page it is drawing."
+          }
+        },
+        "title": "Clock step bound"
+      },
+      "demand": {
+        "title": "Demand target",
+        "description": "Which component a platform demand is published to. Declared rather than assumed by the panel: the demand control belongs on that component's node, and a front-end that knew which one by name would be a front-end holding a copy of the wiring.",
+        "type": "object",
+        "required": [
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          }
+        }
+      },
+      "tunable": {
+        "type": "object",
+        "required": [
+          "id",
+          "target",
+          "setting",
+          "label",
+          "minimum",
+          "maximum",
+          "step",
+          "integer",
+          "figure",
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "setting": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unit": {
+            "type": "string"
+          },
+          "minimum": {
+            "type": "number"
+          },
+          "maximum": {
+            "type": "number"
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "integer": {
+            "type": "boolean",
+            "description": "Whether the setting counts things. A count of 2.5 samples is not a stricter setting, it is a nonsense, and the surface refuses it by name."
+          },
+          "figure": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "The heartbeat figure key the target reports the value in force under (heartbeat.schema.json 'figures'). The shell reads the value in force from there and never from what was typed."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "title": "Tunable setting"
+      },
+      "event": {
+        "type": "object",
+        "required": [
+          "id",
+          "target",
+          "label",
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the component will consider, in terms that admit a decline: an event that reads as a guarantee is a display promising on a component's behalf."
+          }
+        },
+        "title": "Promptable event"
       }
     }
   },
@@ -7510,9 +7930,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "string",
         "enum": [
           "divergence",
-          "scheduled"
+          "scheduled",
+          "operator"
         ],
-        "description": "Why this run is warranted: a sustained divergence, or the cadence floor alone (FR-31). Labelled wherever runs are shown."
+        "description": "Why this run is warranted: a sustained divergence, the cadence floor alone (FR-31), or an operator prompt considered under the same policy as a divergence. Labelled wherever runs are shown, so a run a reader asked for is never mistaken for one the world asked for. A prompted request carries divergence and region null, as a scheduled one does."
       }
     }
   },
@@ -8290,7 +8711,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "scheduler_decision": {
         "title": "Scheduler decision record",
-        "description": "The accepted-or-declined outcome the scheduler (C-12) records for every divergence, so that a declined divergence is visible rather than merely absent.",
+        "description": "The accepted-or-declined outcome the scheduler (C-12) records for every divergence, so that a declined divergence is visible rather than merely absent. An operator prompt is recorded the same way and decided under the same policy, which is why divergence_id is nullable: a prompt has no divergence, and naming one would be an invention.",
         "type": "object",
         "required": [
           "component",
@@ -8321,9 +8742,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "const": "scheduler-decision"
           },
           "divergence_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "The divergence this decision was about."
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The divergence this decision was about, or null where the scheduler was deciding on an operator prompt rather than on a divergence."
           },
           "decision": {
             "type": "string",

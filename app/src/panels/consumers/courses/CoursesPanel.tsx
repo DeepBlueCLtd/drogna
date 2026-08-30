@@ -266,6 +266,8 @@ export function CoursesPanel({ params }: PanelProps) {
         </label>
       </div>
 
+      {/* Its own scrolling container, so the page never scrolls sideways (FR-017). */}
+      <div className="table-scroll">
       <table className="consumer-table" data-testid="courses-roster">
         <caption>Roster — which classes may be present, and how likely each is</caption>
         <thead>
@@ -311,6 +313,7 @@ export function CoursesPanel({ params }: PanelProps) {
           ))}
         </tbody>
       </table>
+      </div>
 
       {refusedResolution && <p className="consumer-refusal">{refusedResolution}</p>}
 
@@ -371,6 +374,7 @@ export function CoursesPanel({ params }: PanelProps) {
         </p>
       )}
 
+      <div className="table-scroll">
       <table className="consumer-table" data-testid="courses-candidates">
         <caption>
           Candidates — component scores kept apart, so the weighting is what you argue with
@@ -401,6 +405,7 @@ export function CoursesPanel({ params }: PanelProps) {
           ))}
         </tbody>
       </table>
+      </div>
 
       {leader && (
         <p className="consumer-note" data-testid="courses-leader">

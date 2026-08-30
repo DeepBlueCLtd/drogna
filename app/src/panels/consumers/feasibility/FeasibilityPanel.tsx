@@ -250,6 +250,8 @@ export function FeasibilityPanel({ params }: PanelProps) {
           </div>
 
           <h3>Tasks</h3>
+          {/* Its own scrolling container, so the page never scrolls sideways (FR-017). */}
+          <div className="table-scroll">
           <table className="consumer-table" data-testid="feasibility-tasks">
             <thead>
               <tr>
@@ -305,6 +307,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
               })}
             </tbody>
           </table>
+          </div>
 
           <h3>Sources</h3>
           <p className="consumer-note">

@@ -549,6 +549,7 @@ export function SamplingPanel({ params }: PanelProps) {
       )}
 
       {planned && planned.withDrops.drops.length > 0 && (
+        <div className="table-scroll">
         <table className="consumer-table">
           <caption>Expendables — each on the route, because a sensor cannot be dropped where the vessel does not go</caption>
           <thead>
@@ -579,6 +580,7 @@ export function SamplingPanel({ params }: PanelProps) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </ConsumerFrame>
   );

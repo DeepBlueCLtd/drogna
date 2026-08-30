@@ -127,6 +127,17 @@ not by a failing test.
       **says when there is no trade at this objective**, opens on one where the trade is
       real, and the test names its objective rather than relying on the default.
 
+- [x] T039 CI's narrow-presentation proof (`pnpm capture:mobile`) failed on the first
+      push: all three tabs scrolled the page sideways at a phone's width. Two causes, both
+      mine. The maps' 1px border sat outside a `width: 100%` box, putting two pixels past
+      a 373px screen — a page that scrolls sideways by two pixels is still a page that
+      scrolls sideways (FR-017) — so the consumer body measures borders inside its widths.
+      And the tables were laid at their own minimum against the page rather than inside a
+      container built to scroll; they now sit in `.table-scroll`, which is the idiom the
+      System and Map panels already use and the one the proof's allow-list already names.
+      **The proof existed and was not run before pushing**, which is the whole of the
+      fault: `pnpm check` does not run the captures, and CI does.
+
 ## Proof, and showing the work
 
 - [x] T031 Panel tests against a genuine backend, in the shape `panels.test.tsx` already
@@ -137,7 +148,9 @@ not by a failing test.
       by CI once the pull request opens; the links go into the pull request body.
 - [x] T034 Blog entry: three new faces in the shell is the case D17 names. Background,
       requirement, options considered, demo.
-- [ ] T035 **Declined for this pull request, with the reason recorded now.**
+- [ ] T035 **Declined for this pull request, with the reason recorded now.** (The narrow
+      *geometry* of all three tabs is proved by `capture:mobile`, which does cover them —
+      what is owed is the greyscale and keyboard pass.)
       `scripts/capture/background.ts` is built around Background's slides — its keyboard
       proof drives a rail that only that panel has, and its greyscale pass measures that
       panel's own marks. Extending it to a consumer tab is a rewrite of the capture rather

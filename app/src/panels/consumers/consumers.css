@@ -147,10 +147,14 @@
   color: var(--consumer-ground);
 }
 
+/* A table is the one thing that will not fold, so it scrolls inside its own container
+   and the page does not (`.table-scroll`, shell.css). `min-width: max-content` keeps the
+   columns at their own width inside that container rather than crushing them. */
 .consumer-table {
   border-collapse: collapse;
   font-size: 0.88em;
   width: 100%;
+  min-width: max-content;
 }
 
 .consumer-table th,
@@ -164,13 +168,25 @@
   background: var(--consumer-faint);
 }
 
-/* The map surfaces: plain SVG, no renderer. Nothing here needs a GPU. */
+/* The map surfaces: plain SVG, no renderer. Nothing here needs a GPU.
+   `border-box` is load-bearing rather than tidy: with the default box model the map's
+   own 1px border put two pixels of content outside a 373px phone, and the narrow
+   presentation's proof failed on exactly that — a page that scrolls sideways by two
+   pixels is still a page that scrolls sideways (FR-017). */
 .consumer-map {
   display: block;
   width: 100%;
   height: auto;
+  box-sizing: border-box;
   background: #fff8c4;
   border: 1px solid var(--consumer-line);
+}
+
+/* Everything in a consumer body measures its border and padding inside its width, for
+   the same reason. */
+.consumer-body *,
+.consumer-body {
+  box-sizing: border-box;
 }
 
 .consumer-hex {

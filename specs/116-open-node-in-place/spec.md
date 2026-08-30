@@ -98,10 +98,10 @@ something.
   place: on a phone the card ended up half off the screen, and on a desktop, where
   nothing needed to move at all, the whole chart was dragged sideways.
 
-## Two defects found in the surface this feature opened
+## Defects found in the surfaces this work touched
 
-Neither is about where a node opens; both were reported or found by looking at the card
-this feature built, and both are fixed here rather than left for a tidier moment.
+None is about where a node opens; each was reported or found by looking at what this
+work drew, and each is fixed here rather than left for a tidier moment.
 
 - **FR-16** The muted text colour fails the contrast ordinary text needs. `#6b7785` is
   the one colour every quiet sentence in the application is drawn in — captions,
@@ -118,6 +118,20 @@ this feature built, and both are fixed here rather than left for a tidier moment
   took whatever colour it inherited — visible in the same screenshot that reported the
   contrast. The token is defined, and a test now fails on any rule that asks for a token
   nothing declares.
+
+- **FR-18** The map's stylesheet was written for light paper and the shell is dark. Four
+  of its rules paint a pale surface and set no colour, so the text on them inherits the
+  shell's near-white and reads at about 1.2:1 — the EDR composer's URL box, which is the
+  one thing in the composer a reader must be able to read, was reported as white on
+  white. `.map-status` is the same fault upside down: `#444` on the shell's own
+  background. All five take the shell's palette, as `.composer-pick` already did.
+- **FR-19** The holdings timeline's bar carried a copy of the old muted grey as its fill,
+  giving its own label 4.16:1 against it. It moves with the palette.
+- **FR-20** The contrast check reads **every stylesheet**, not two, and asks the general
+  question: for every rule that paints an opaque surface, is the text that will land on
+  it legible against it — the rule's own colour, the colour another rule gives the same
+  element, or the colour it inherits. A colour written as a literal is held to the same
+  rule as one in the palette, since nothing else holds it to anything.
 
 ## What is deliberately not done
 
@@ -189,3 +203,8 @@ this feature built, and both are fixed here rather than left for a tidier moment
   4.5:1 against every surface either stylesheet declares, with the palette and the
   surfaces read from the stylesheets rather than restated in the check.
 - **SC-014** No rule asks for a custom property that nothing defines.
+- **SC-015** Every opaque surface any stylesheet paints is legible against the text that
+  will land on it, and every literal text colour is legible on every declared surface.
+- **SC-016** Measured in the browser as well as on disk: at 1440 by 900, every view has
+  no text under 4.5:1 against what is actually rendered behind it, disabled controls
+  excepted (WCAG 1.4.3 exempts them).

@@ -194,6 +194,49 @@ at a phone's width.
       the test's own file list is what needs extending, and it fails loudly rather than
       passing over what it cannot see.
 
+## The map's paper (added on the author's fifth report)
+
+*The EDR query box isn't readable, it's white on white.*
+
+- [x] T047 `map.css` was written for light paper — `#f4f2ec`, `#dcd8cc`, `color: #444` —
+      and the shell is dark. Five rules were the rest of that inheritance:
+      `.composer-url` (the one reported), `.map-arrival`, `.map-advisory-detail`, the
+      selected advisory row, and `.map-status`, which is the same fault upside down. The
+      note beside `.map-compose` had already recorded this exact bug being fixed once,
+      for `.composer-pick`, at about 1.1:1 — so the fix's shape was already decided and
+      only the rest of the file had been missed.
+- [x] T048 The map's own canvas keeps its pale paper. It is what the globe is drawn on,
+      deck.gl paints over it and the shell writes nothing on it: a surface, not a page.
+- [x] T049 The holdings timeline's bar fill was a copy of the old muted grey, leaving its
+      own label at 4.16:1. Moved with the palette, to 6.38:1.
+- [x] T050 Extend `contrast.test.ts` from two stylesheets to **every** stylesheet, and
+      from the palette question to the general one: for every rule painting an opaque
+      surface, is the text landing on it legible. The previous round's test could not
+      have found this — it read two files and the fault was in a third, which is the same
+      as not having a check.
+- [x] T051 Teach it the bit of cascade this needs: a rule that overrides only the
+      background leaves the colour set by another rule on the same element. Without that
+      it reported two faults in the holdings timeline that were not there, and a check
+      that cries wolf gets its exclusions widened until it sees nothing.
+- [x] T052 Hold a literal text colour to the same rule as a palette colour. `#444` on
+      nothing it paints itself has no pair for a surface check to measure, and the first
+      version of the extension went straight past it.
+- [x] T053 **`#444` went past it a second time**, and that is the finding worth keeping:
+      the pattern matched six hex digits and the reported colour was written in three.
+      A colour one shade away in six-digit form was caught while the actual fault was
+      not. Both forms are the same colour to a browser; the check now expands the short
+      one before measuring anything.
+- [x] T054 Plant each fault. Five planted, five caught, all reverted: the reported box put
+      back (1.23:1, named); `#444` put back (1.65:1 on the darkest surface); a literal
+      that fails only on the lightest surface; the timeline fill put back; and a
+      text-free excuse whose rule had been renamed.
+- [x] T055 Measure the **rendered** page as well as the stylesheets, since the cascade is
+      the truth and a static check reads only what it can see. At 1440 by 900, walking
+      every text node in every view and resolving the real backdrop: nothing under
+      4.5:1 anywhere, once disabled controls are excluded — WCAG 1.4.3 exempts them, and
+      the two that turned up were the composer's own GET and copy buttons before a
+      collection is chosen.
+
 ## Holding it
 
 - [x] T011 Plant each fault the new checks exist to catch, and see it caught. Four

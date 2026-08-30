@@ -220,6 +220,44 @@ of them sitting in the very screenshot that reported the contrast, and neither o
 noticed, because a missing colour looks like a design decision. The test now fails on any
 rule that asks for a colour nobody defined.
 
+## The check that could not see the next one
+
+The colour fix went in with a test, and a day later the same reader found the query
+builder on the map screen: *white on white*. The box that shows the request URL — the one
+thing in a query builder you have to be able to read before you send it — was pale paper
+with no text colour of its own, so it took the shell's near-white and rendered at about
+1.2:1.
+
+The test written the round before could not have caught it. It read two stylesheets and
+this was in a third, which is the same as not having a test. Worse, the file itself had
+already recorded this exact bug being fixed once: a comment a few lines away says another
+box in the same panel had read at "about 1.1:1 the first time it was drawn in a browser.
+Measured, not eyeballed." The screen had been written for light paper before the
+application went dark, one rule had been brought over, and the rest were still waiting.
+Five of them, including the reported one, and one the other way up — dark grey text
+sitting on the dark panel.
+
+So the check now reads every stylesheet and asks the general question instead of the
+palette one: for every rule that paints a surface, is the text that will land on it
+legible against it? That is the rule's own colour if it sets one, the colour another rule
+gives the same element if it does not — the holdings timeline is written that way, a bar
+with a label colour and a fill per era overriding the fill alone — and otherwise the
+colour it inherits.
+
+Then the reported fault was planted back to watch it caught, and **it was not**. The
+colour was written `#444`; the pattern matched six hex digits. A colour one shade away in
+six-digit form was caught perfectly while the actual reported fault sailed through — the
+precise failure this project's second rule exists for, found only because planting a fault
+back is a habit rather than a formality. Both forms are the same colour to a browser, and
+the check expands the short one now.
+
+The last step was to stop trusting the stylesheets at all and measure the rendered page:
+walk every piece of text in every screen, resolve what is actually painted behind it
+through however many transparent layers, and compute the ratio. Nothing under the
+threshold anywhere — except the query builder's own *send* and *copy* buttons while they
+are disabled, which the standard exempts, and which is the right answer rather than a
+failure to fix.
+
 ## The demo
 
 Open the operator view and click any box with a **▸** on it — the mark means that piece

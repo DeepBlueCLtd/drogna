@@ -87,7 +87,11 @@
   text-align: left;
   overflow: hidden;
   cursor: pointer;
-  background: #6b7785;
+  /* The same grey the palettes carried, copied here as a fill. It gave the bar's own
+     label 4.16:1 against it — a bar a reader is meant to read an identifier off. Moved
+     with the palettes, to 6.38:1. The era lanes below override this fill and keep this
+     label colour, which is why they are measured against it too. */
+  background: #8a97a6;
 }
 
 /* The label is clamped to the bar, and clamping is not clipping: `overflow: hidden`

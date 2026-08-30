@@ -19,16 +19,23 @@
   width: 180px;
 }
 
+/* This file was written for light paper and the shell is dark (see the note by
+   `.map-compose`). These four rules are the rest of that inheritance, found when the
+   composer's URL box was reported as white on white: a pale surface with no colour set
+   takes `--shell-fg` and reads at about 1.1:1, and `#444` on the shell's own background
+   is the same fault the other way up. Every pair here is measured by
+   `shell/contrast.test.ts`, which now reads every stylesheet rather than two. */
 .map-status {
   font-size: 0.8rem;
-  color: #444;
+  color: var(--shell-dim);
   margin: 0.2rem 0;
 }
 
 .map-arrival {
   font-size: 0.8rem;
   font-family: monospace;
-  background: #f4f2ec;
+  background: #18202a;
+  color: var(--shell-fg);
   padding: 0.3rem 0.5rem;
   margin: 0.2rem 0;
 }
@@ -78,8 +85,13 @@
   margin-right: 0.8rem;
 }
 
+/* The request as it will be sent, which is the whole point of the composer: a reader
+   checks the URL against what they asked for before pressing GET. It was drawn on pale
+   paper with no colour of its own, so it inherited the shell's near-white text and the
+   URL could not be read at all. Reported from the running page. */
 .composer-url {
-  background: #f4f2ec;
+  background: #18202a;
+  color: var(--shell-fg);
   padding: 0.35rem 0.5rem;
   word-break: break-all;
   font-size: 0.78rem;
@@ -122,12 +134,16 @@
 }
 
 .map-advisories tr.selected td {
-  background: #efeadb;
+  /* The accent at low alpha, as `.composer-pick` already uses to mark a selection: it
+     reads as chosen against the dark panel without becoming a second surface. */
+  background: rgba(76, 194, 255, 0.12);
+  color: var(--shell-fg);
 }
 
 .map-advisory-detail {
   font-size: 0.72rem;
-  background: #f4f2ec;
+  background: #18202a;
+  color: var(--shell-fg);
   padding: 0.4rem;
   max-height: 12rem;
   overflow: auto;

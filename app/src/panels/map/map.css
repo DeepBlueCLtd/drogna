@@ -217,4 +217,30 @@
   color: var(--shell-bg);
   /* Inert to the pointer: the prompt must never swallow the click it asks for. */
   pointer-events: none;
+/*
+ * The provenance legend (feature 116). A tint with no legend is a picture: four
+ * swatches and the count of cells each owns, so the reader can tell "the boat has been
+ * here" from "nobody has" without guessing at a hue.
+ */
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-legend-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid currentColor;
 }

@@ -13,7 +13,7 @@
  * drogna records ground truth in a manifest and scores recovery against it
  * (Constitution IX), and an explainer must not teach otherwise.
  *
- * There is deliberately no shared scene. Eleven arguments want eleven framings; what
+ * There is deliberately no shared scene. Ten arguments want ten framings; what
  * carries between them is this vocabulary, so the eddy drawn here is the eddy a
  * viewer met in the Map.
  */
@@ -88,12 +88,21 @@ export const INK = {
  * Static, so nothing animates on arrival (FR-019); learned once, so free play is
  * discoverable across all eleven explainers; and it survives greyscale like any
  * other mark.
+ *
+ * `pointerEvents: 'all'` is what makes the outlined area a target rather than a
+ * picture of one. An unfilled SVG shape hit-tests on its stroke alone, so before this
+ * the only clickable pixels in a poke region were the dashes of its own 1px outline —
+ * twenty-five of the course's forty-six regions could not be hit at their centre at
+ * all, and the twenty-one that could worked by accident, because a mark drawn inside
+ * them happened to lie under the pointer. The keyboard route was unaffected, which is
+ * why the walk that proves FR-014 passed throughout.
  */
 export const POKE_OUTLINE: SVGProps<SVGRectElement> = {
   stroke: INK.quiet,
   strokeDasharray: '3 3',
   strokeWidth: 1,
   fill: 'none',
+  pointerEvents: 'all',
 };
 
 /**
@@ -205,7 +214,9 @@ export function CategoryKey(): ReactNode {
  *
  * Free play is a second route to states the spine already reaches, so nothing here
  * is the only way to anything. The outline is static: it is the only signal that a
- * diagram responds, because nothing animates on arrival (FR-019).
+ * diagram responds, because nothing animates on arrival (FR-019). What the outline
+ * does under the pointer or under keyboard focus is not arrival behaviour and is not
+ * a second affordance — it is the region confirming that the first one meant it.
  */
 export function PokeRegion({
   x,
@@ -228,11 +239,11 @@ export function PokeRegion({
 }): ReactNode {
   return (
     <g
+      className="bg-poke"
       role="button"
       tabIndex={0}
       aria-label={label}
       aria-pressed={active}
-      style={{ cursor: 'pointer' }}
       onClick={onPoke}
       onKeyDown={(event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;

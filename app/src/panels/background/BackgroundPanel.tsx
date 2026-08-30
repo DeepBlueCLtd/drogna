@@ -1,6 +1,6 @@
 /**
  * The Background tab (SRD-v2 FR-43 to FR-45, feature 111): a linear course of
- * eleven self-contained explainers about the standards this harness serves, and
+ * ten self-contained explainers about the standards this harness serves, and
  * about what it takes to use them honestly.
  *
  * The one claim this panel makes about itself: **it is inert**. No explainer reads

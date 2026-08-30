@@ -16,7 +16,7 @@ export type ExplainerForm = 'slides' | 'interactive';
 /**
  * The three axes of the closing Consequences panel, in the order every explainer
  * shows them (FR-008). The order lives here so that "same position, same order" is
- * a property of the machinery rather than of eleven separate authoring decisions.
+ * a property of the machinery rather than of ten separate authoring decisions.
  */
 export const VALUE_AXES = [
   'through-life cost',

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/analysis-published.schema.json",
+  "title": "drogna analysis published",
+  "description": "The message the analyst publishes when a cycle has landed, and the only route by which a model run begins (feature 116). Until this message existed the model runner subscribed to the run request directly and initialised from a now-cast the environment generator had evaluated from the true ocean, so no measurement ever changed a field value. The runner now waits for this instead: the analysis is a transition you can watch, and the ordering between analysing and forecasting is stated by a message rather than left to the order two components happened to subscribe in. The request's own fields are carried forward whole so the runner needs nothing else to proceed.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "run_id",
+    "initialisation_sim_time",
+    "ensemble_size",
+    "background",
+    "collections",
+    "digests",
+    "observations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The analyst that published it, matching config /component/id."
+    },
+    "scenario_run_id": { "type": "string" },
+    "sim_time": { "type": "string" },
+    "tick": { "type": "integer", "minimum": 0 },
+    "run_id": {
+      "type": "string",
+      "description": "The run this analysis initialises, carried from the request it answered."
+    },
+    "initialisation_sim_time": { "type": "string" },
+    "ensemble_size": { "type": "integer", "minimum": 2 },
+    "background": {
+      "type": "object",
+      "required": ["holding_id", "era"],
+      "additionalProperties": false,
+      "description": "What was corrected. The era is carried because the first cycle of a scenario has no forecast to use and initialises from the now-cast instead — one deliberate reading of the true field, at the instant the platform leaves, made legible here and in the manifest rather than hidden.",
+      "properties": {
+        "holding_id": { "type": "string" },
+        "era": { "type": "string", "enum": ["archive", "nowcast", "analysis", "instance"] }
+      }
+    },
+    "collections": {
+      "type": "object",
+      "required": ["analysis", "error", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "analysis": { "type": "string" },
+        "error": { "type": "string" },
+        "provenance": { "type": "string" }
+      }
+    },
+    "digests": {
+      "type": "object",
+      "required": ["analysis", "error", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "analysis": { "type": "string" },
+        "error": { "type": "string" },
+        "provenance": { "type": "string" }
+      }
+    },
+    "observations": {
+      "type": "object",
+      "required": ["assimilated", "clamped", "worst_displacement_km"],
+      "additionalProperties": false,
+      "description": "What the cycle was given. An observation outside the grid is clamped to the edge and still assimilated — the domain boundary is where the harness stopped authoring a field, not where the ocean stops — so the count and the worst distance travelled are carried rather than left silent.",
+      "properties": {
+        "assimilated": { "type": "integer", "minimum": 0 },
+        "clamped": { "type": "integer", "minimum": 0 },
+        "worst_displacement_km": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

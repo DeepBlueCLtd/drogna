@@ -41,6 +41,11 @@ interface Activity {
 
 const WIDE_BRANCH = 8;
 
+/* A silent topic is drawn behind a busy one and is still a name the reader has to read.
+   The floor was 0.45, which let the panel background through until the label was under
+   WCAG AA against it; 0.6 clears AA and leaves the ramp its whole upper half. */
+const QUIET_OPACITY = 0.6;
+
 function buildTree(): TreeNode {
   const root: TreeNode = { segment: '', path: '', children: new Map(), declared: true, schema: null, subscribers: [], publishers: [] };
   for (const entry of topology.topics) {
@@ -147,7 +152,7 @@ export function TopicTree({
               <button
                 type="button"
                 className={`topic-node${pulse ? ' topic-pulse' : ''}${child.declared ? '' : ' topic-undeclared'}${chosen ? ' topic-chosen' : ''}`}
-                style={{ opacity: 0.45 + 0.55 * intensity }}
+                style={{ opacity: QUIET_OPACITY + (1 - QUIET_OPACITY) * intensity }}
                 data-topic-path={child.path}
                 data-lit={heard !== undefined}
                 data-chosen={chosen || undefined}

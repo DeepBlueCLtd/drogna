@@ -3,7 +3,7 @@
  * in the same position, with the same three axes in the same order.
  *
  * The order and the headings come from VALUE_AXES, not from the explainer, so
- * "same position, same order" is a property of this component rather than of eleven
+ * "same position, same order" is a property of this component rather than of ten
  * authoring decisions that could each drift. An axis carrying little weight is
  * omitted **with its reason rendered** — an empty box is never padded and never
  * blank. It reports consequences, so an axis is free to record a cost.

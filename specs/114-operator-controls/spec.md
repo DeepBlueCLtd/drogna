@@ -104,6 +104,84 @@ published decisions, stored advisories, the clock's own tick — never about wha
 surface said it dispatched. A test that read the surface's answer as evidence would pass
 against a surface wired to nothing.
 
+## The second round, and what an interview changed
+
+The first round landed, and the request that opened it — "control demanded platform
+state, trigger events, and maybe tune thresholds" — was answered narrowly: two events,
+four tunables. Asked what to build next, the author took nearly all of it. What follows
+is the same rules applied to five more components, and it is worth recording that the
+interview changed the shape rather than the size: two of the four questions had a
+correct answer that only the tree could give, and asking produced better work than
+guessing would have.
+
+**Three more prompted events.** The environment generator authors its next now-cast on
+demand — superseding the one before it, since there is one now-cast at a time. The
+planner recomputes on demand, and says `no-field` rather than publishing a hollow plan
+when it has nothing to plan from. The packager stages a window on demand over the
+release it last heard, and is declined by the rules it already had: nothing released
+yet, at the staging bound, or no measurements in the interval.
+
+**A correction that mattered.** The recommendation put to the author said a prompted
+now-cast would "make the residual answer and the loop turn". It does not: the sensors
+read the ocean through the world-sampler port, which is an analytic function of
+simulation time, and the monitor scores against the *forecast* holding rather than the
+generator's now-cast. What a prompted now-cast moves is when a snapshot is published.
+The correction went back before the work was done, and the event's own description says
+what it does.
+
+**Two more tunables, and a trap the tests found.** The sensors' sampling cadence is the
+loop's master dial — and it is two rules at once, because a heard position is fresh for
+exactly one sampling interval. Shortening the cadence below the platform's reporting
+interval therefore *starves* the sensors rather than speeding them up: they go quiet,
+say why, and count the skipped ticks. A test asserting "six times the cadence is six
+times the samples" failed, which is how the coupling was found. The answer was not to
+hide it: the platform's reporting interval became the seventh tunable, the two
+descriptions name each other, and the walkthrough says so. The planner's usable-doubt
+threshold is the sixth, and the plan it publishes carries the threshold in force rather
+than the configured one.
+
+**Fault injection, from the component that would really fail (FR-67).** The author's
+ruling was the narrow one, and it is the right one: the sensors publish one deliberately
+malformed sample and the platform reports one impossible depth, each on the ordinary
+topic, each answered by the ordinary seam — a refusal against the committed master, and
+a flag against the platform's *own* declared limits, which the ingest reads rather than
+copying. The alternative on the table was publishing the bad message from the operator
+surface, which is three lines shorter and makes the control plane a second sensor
+publishing into a namespace it does not own. What a reader then sees refuse it would
+have been a different, weaker fact. Each component counts what it was asked to produce
+and reports the count, so a fault a reader ordered never reads as a component that has
+started lying by itself — and the platform's own state is untouched, because an
+instrument misreporting a depth is not a vehicle at that depth.
+
+## What the running page found that the tests had not
+
+Three defects, all pre-existing, all found by driving the built page rather than by any
+test:
+
+- **The first deliberately malformed sample took the whole flow chart down.** The panel
+  drew from raw broker traffic without validating it: a string where a result belonged,
+  `toFixed` on a string, and every node vanished. The Messages tab has validated every
+  crossing against its master since feature 104's E4; this panel never did. It does now,
+  and it states how many messages it refused rather than discarding them silently — a
+  picture of the machinery that cannot survive the machinery being wrong is not much of
+  a picture.
+- **The coverage store's stack had never drawn a bar.** It read a byte length off the
+  holdings announcement, which has never carried one — the announcement is light by
+  design and the size lives in the inventory the store serves — and optional chaining
+  turned the mistake into silence while the caption promised "length is bytes on the
+  wire". Found because a prompted now-cast published a holding and the face did not
+  move. The sizes now come from the inventory, still the store's own figures.
+- **The packager's declines were published nowhere.** They accumulated in memory, so a
+  reader who asked it to stage and was refused saw nothing change and had no way to
+  learn why. The most recent decline is now in its heartbeat detail, on FR-32's rule
+  that a component doing nothing says why.
+
+Three redundant lines were also deleted rather than kept: a cadence-restart in the
+generator that `publishNowcast` already did, an empty-instant guard in the planner that
+`replan` already enforced, and an assertion in a test that an exception would have
+satisfied. Each was found by planting against it and watching nothing fail — which is
+the same discipline pointed at code rather than at checks.
+
 ## Deliberately not in this feature
 
 - **A prompted offload.** The packager stages on a published run, and "stage the current

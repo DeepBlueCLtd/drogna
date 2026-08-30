@@ -121,6 +121,56 @@ did — what they published, what they stored, where the clock got to — and ne
 control surface said it had dispatched, because a test that read the surface's own answer
 as evidence would pass just as happily against a surface wired to nothing.
 
+## What happened when the buttons were pressed
+
+A second round followed, and it is the more interesting half of the entry, because the
+useful controls turned out to be the ones that broke things.
+
+The system can now be asked to fail on purpose. Two components will, if asked, publish
+one deliberately bad message: the instruments will publish a malformed reading, and the
+vessel will report a depth deeper than it can physically reach. The obvious way to build
+that is to have the control panel publish the bad message itself, which is three lines
+and works. It is also wrong in a way worth naming: the control panel would be pretending
+to be an instrument, publishing into a channel it does not own, and what you would then
+watch reject the message would be answering a question nobody asked. So the fault comes
+from the component a real fault would come from. The seam rejects it against the same
+schema and the same declared limits it uses for everything else, and the component
+counts what it was asked to produce and says so on its own face — otherwise a fault you
+ordered would read as a component that had started lying by itself.
+
+Pressing that button for the first time took the entire screen down.
+
+The picture drew its numbers straight from the traffic, without checking the traffic was
+what it claimed to be. A string arrived where a number belonged, something called a
+number-formatting function on it, and every box on the diagram vanished. The screen had
+been correct for as long as nothing was ever wrong — which is a strange property for a
+screen whose whole purpose is showing you a system going wrong. It now draws only from
+messages that pass their schema, and it says how many it refused rather than discarding
+them quietly, because silently ignoring traffic is the other way to lie about it.
+
+Two more things surfaced the same way. A prompted snapshot of the ocean published a new
+field, and the panel that draws the store's contents did not move: it had been reading a
+size off an announcement that has never carried one, and optional-chaining had turned
+that mistake into silence for as long as the feature had existed. Its caption promised
+bars whose length was bytes; it had never drawn one. And the packager, asked to stage an
+export, refused — correctly, there was nothing new to stage — and told nobody. Its
+refusals were accumulating in memory and published nowhere, so the button appeared to do
+nothing at all. Both are now visible, and neither was findable from a test, because a
+test asserts what you thought to assert.
+
+There was a trap in the tuning, too, and a test found this one. The instruments'
+sampling rate looked like a simple speed dial: sample more often, see more. But how long
+a reported position stays usable is defined *as* that sampling interval — so speeding the
+instruments up past the rate at which the vessel reports its position starves them, and
+they go quiet and say why. The fix was not to hide the coupling but to expose the other
+half of it: the vessel's reporting rate is a dial too, the two descriptions name each
+other, and a test now asserts the starving as well as the speeding up.
+
+Three lines were deleted along the way. Each looked load-bearing, each had a comment
+explaining what it did, and each turned out to be doing nothing — found by breaking it
+deliberately and watching every test stay green. A line whose removal nothing notices is
+a line making a claim it cannot keep.
+
 ## The demo
 
 Open the operator view, find a box with a **▸** on it, and click the box. The vessel is
@@ -132,3 +182,10 @@ Three things worth doing in order: press **request a forecast run** in the sched
 drawer twice, and read the second answer. Drop the monitor's drift threshold and watch
 the streak beneath it start filling. Then open the vessel, press **all stop**, and watch
 the demanded mark drop to zero while the course mark stays exactly where it was.
+
+Then break something. In the instruments' drawer, press **publish a faulty sample**, and
+watch the refusal appear two boxes along in the ingestion seam — with the instruments
+themselves saying the fault was asked for. In the vessel's drawer, **report an impossible
+depth**, and watch it flagged against the vessel's own declared limit while the vessel
+stays exactly where it was. And press **stage a package** on the packager, which will
+almost certainly refuse you and, now, say why.

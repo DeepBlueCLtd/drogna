@@ -42,6 +42,7 @@ import { Disclosure } from '../../shell/Disclosure.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import type {
   Heartbeat,
+  HoldingsInventory,
   Observation,
   OperatorComponents,
   OperatorControls,
@@ -52,6 +53,7 @@ import type {
   TelemetrySchedulerDecision,
 } from '../../generated/types.js';
 import { topology } from '../../generated/topology.js';
+import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
 import { Series } from './series.js';
@@ -128,6 +130,49 @@ export function OperatorPanel({ params }: PanelProps) {
   );
   const rootRef = useRef<HTMLDivElement>(null);
   const narrow = useIsNarrow(rootRef);
+  /** Messages this panel refused against their master and did not draw from. */
+  const refusedRef = useRef(0);
+
+  /**
+   * Whether a received message may be drawn from at all.
+   *
+   * The Messages tab has validated every crossing against its declared master since
+   * E4; this panel drew from raw traffic, and a message that failed its master went
+   * straight into a face. The first deliberately malformed sample — published by the
+   * sensors on request, exactly as feature 114 asks them to — put a string where a
+   * result should be, and `toFixed` took the whole flow chart down with it. A picture
+   * of the machinery that cannot survive the machinery being wrong is not much of a
+   * picture, and only a running page could have said so.
+   *
+   * A refusal here is not silence: what was refused is counted and stated below the
+   * chart, because a display quietly discarding traffic is the other way to lie.
+   */
+  const drawable = useCallback(
+    (topic: string, payload: unknown): boolean => {
+      const mapping = config.message_schemas.find((entry) => topicMatchesFilter(entry.filter, topic));
+      const ok = mapping !== undefined && validator.validate(mapping.schema, payload).ok;
+      if (!ok) refusedRef.current += 1;
+      return ok;
+    },
+    [config.message_schemas, validator],
+  );
+
+  /**
+   * The sizes of what the coverage store holds, from the inventory it serves. Read on
+   * announcement rather than polled: the store says when something became visible, and
+   * this asks it how big the visible things are.
+   */
+  const refreshHoldings = useCallback(async () => {
+    const response = await fetch(config.endpoints.holdings);
+    if (!response.ok) return;
+    const body = (await response.json()) as unknown;
+    if (!validator.validate('holdings-inventory', body).ok) return;
+    const inventory = body as HoldingsInventory;
+    holdingSizesRef.current = [...inventory.holdings]
+      .sort((a, b) => b.published_at.tick - a.published_at.tick)
+      .map((holding) => holding.field.byte_length)
+      .slice(0, 12);
+  }, [config.endpoints.holdings, validator]);
 
   const refresh = useCallback(async () => {
     const [componentsResponse, reportResponse, controlsResponse] = await Promise.all([
@@ -158,6 +203,7 @@ export function OperatorPanel({ params }: PanelProps) {
 
   useEffect(() => {
     void refresh();
+    void refreshHoldings();
     const stop = [
       client.subscribe(config.topics.all, (message) => {
         // Counted here, and marked as counted here: nobody publishes a throughput.
@@ -166,6 +212,7 @@ export function OperatorPanel({ params }: PanelProps) {
         countedRef.current.set('all', (countedRef.current.get('all') ?? 0) + 1);
       }),
       client.subscribe(config.topics.heartbeat, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const heartbeat = message.payload as Heartbeat;
         const rows = heartbeat.figures?.find((entry) => entry.key === 'rows');
         if (heartbeat.component === 'observation-store' && rows && heartbeat.tick !== null && heartbeat.tick !== undefined) {
@@ -182,6 +229,7 @@ export function OperatorPanel({ params }: PanelProps) {
         void refresh();
       }),
       client.subscribe(config.topics.platform_state, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const state = message.payload as PlatformState;
         setPlatformState(state);
         series('platform:course').push(state.tick, state.current.course_degrees);
@@ -191,15 +239,21 @@ export function OperatorPanel({ params }: PanelProps) {
         const sample = message.payload as { tick: number; rate?: number };
         setClock({ tick: sample.tick, rate: sample.rate });
       }),
-      client.subscribe(config.topics.holdings, (message) => {
-        // The store announces; the face draws the sizes the announcement carries.
-        const published = message.payload as { holding?: { field?: { byte_length?: number } } };
-        const bytes = published.holding?.field?.byte_length;
-        if (typeof bytes === 'number') {
-          holdingSizesRef.current = [bytes, ...holdingSizesRef.current].slice(0, 12);
-        }
+      client.subscribe(config.topics.holdings, () => {
+        // The store announces that something became visible; it does NOT carry how
+        // big it is — the announcement is light on purpose (holding-published's own
+        // note), and the size lives in the inventory the store serves.
+        //
+        // This read the announcement for a `holding.field.byte_length` that has never
+        // been on it, through optional chaining that turned the mistake into silence:
+        // the stack drew nothing at all while its caption promised bars whose length
+        // was bytes on the wire. Found when a prompted now-cast published a holding
+        // and the face did not move. Now the sizes come from where the store actually
+        // publishes them, and they are still the store's own figures.
+        void refreshHoldings();
       }),
       client.subscribe(config.topics.telemetry, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const payload = message.payload as Telemetry;
         // The scheduler's own record of what it decided, kept for its drawer: a
         // prompted run and a declined one are the same kind of fact, and this is
@@ -215,6 +269,9 @@ export function OperatorPanel({ params }: PanelProps) {
         }
       }),
       client.subscribe(config.topics.observations, (message) => {
+        // Counted as traffic by the namespace counter above either way; drawn from
+        // only if it is what its master says it is.
+        if (!drawable(message.topic, message.payload)) return;
         const observation = message.payload as Observation;
         // Counted here, and marked as counted here: nobody publishes a throughput.
         countedRef.current.set(
@@ -241,7 +298,9 @@ export function OperatorPanel({ params }: PanelProps) {
     config.topics.observations,
     config.topics.platform_state,
     config.topics.telemetry,
+    drawable,
     refresh,
+    refreshHoldings,
     series,
   ]);
 
@@ -331,6 +390,9 @@ export function OperatorPanel({ params }: PanelProps) {
           {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
           {controls
             ? ` · ${controlled(controls).size} components take controls: open one to use them`
+            : ''}
+          {refusedRef.current > 0
+            ? ` · ${refusedRef.current} message(s) refused by their master and not drawn`
             : ''}
         </span>
       </Disclosure>

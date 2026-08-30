@@ -71,7 +71,11 @@ export class AdvisorySource {
       if (command.target !== this.config.id || command.kind !== 'event') return;
       if (command.event !== this.config.prompt_event) return;
       // Nothing is authored before simulation time exists: an advisory dated at the
-      // empty instant would be a record of a moment that has not happened.
+      // empty instant would be a record of a moment that has not happened. No test
+      // reaches this in the assembled runtime, and that is a fact about the assembly
+      // rather than about the rule — the clock's first sample is published while the
+      // runtime is being built, so every component has heard an instant before any
+      // command can be dispatched. Kept for the assembly that does not do that.
       if (this.simTime.value === '') return;
       this.prompted += 1;
       this.author();

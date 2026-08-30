@@ -20,11 +20,22 @@
  * stochastic thing here is the navigation instruments' noise, drawn from this
  * component's own named stream in a fixed order — tick-major, instrument-minor, the
  * same order the sensors use.
+ *
+ * It will also, if asked, report ONE depth beyond the maximum it declares it can reach
+ * (FR-67). The fault belongs here for the same reason the sensors' does: an instrument
+ * that misreports is a thing that happens, and a control plane publishing into the
+ * ownship namespace is not. It matters twice over here, because the ingestion seam
+ * range-checks ownship values against *these* declared limits — so the flag a reader
+ * then reads is the seam applying the platform's own rule to the platform's own
+ * message, which is not something an injected message from elsewhere could show. What
+ * was asked for is counted and reported: a faulty reading on request is never mistaken
+ * for a platform that has started lying on its own account.
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
   ConfigPlatform,
   Observation,
+  OperatorCommand,
   PlatformDemand,
   PlatformState,
 } from '../../generated/types.js';
@@ -67,6 +78,10 @@ export class Platform {
   private lastReportedTick = -1;
   publishedCount = 0;
   demandsHeard = 0;
+  /** Deliberately faulty readings published on request. Counted and reported. */
+  faultsPublished = 0;
+  /** The reporting interval in force, where the operator plane has changed it. */
+  private tunedReportInterval: number | undefined;
 
   constructor(
     private readonly config: ConfigPlatform,
@@ -92,18 +107,41 @@ export class Platform {
         tick: this.simTime.tick,
         status: 'ok',
         detail: this.detail(),
+        // Absent until one has been asked for: a face may not draw a zero where
+        // nothing has happened, and 'no faults' is not a measurement (FR-58).
+        figures: [
+          { key: 'report_interval', value: this.reportInterval(), unit: 'ticks', label: 'reports every' },
+          ...(this.faultsPublished === 0
+            ? []
+            : [{ key: 'faults', value: this.faultsPublished, label: 'faults on request' }]),
+        ],
       }),
       runId,
       configDigest(config),
     );
   }
 
+  /**
+   * How often ownship state is reported, in force. It is not only this component's
+   * business: the sensors sample where the platform last said it was and treat a
+   * position older than their own cadence as no position at all, so reporting less
+   * often than they sample makes them go quiet. That coupling is why this is tunable
+   * beside their cadence rather than fixed while theirs moves.
+   */
+  reportInterval(): number {
+    return this.tunedReportInterval ?? this.config.report_interval_ticks ?? 1;
+  }
+
   /** The heartbeat line says what the platform is doing and what is stopping it. */
   detail(): string {
     const where = `${this.current.course_degrees.toFixed(0)}° at ${this.current.speed_m_per_s.toFixed(1)} m/s, ${this.current.depth_m.toFixed(0)} m`;
-    if (!this.demanded) return `${where}; no demand heard, holding what it was configured with`;
-    if (this.binding === 'none') return `${where}; at the demanded course, speed and depth`;
-    return `${where}; ${this.binding.replace(/_/g, ' ')} is binding, working toward ${this.demanded.course_degrees.toFixed(0)}° at ${this.demanded.speed_m_per_s.toFixed(1)} m/s, ${this.demanded.depth_m.toFixed(0)} m`;
+    const faults =
+      this.faultsPublished === 0
+        ? ''
+        : `; ${this.faultsPublished} deliberately faulty depth reading(s) published on request, each flagged at the ingestion seam`;
+    if (!this.demanded) return `${where}; no demand heard, holding what it was configured with${faults}`;
+    if (this.binding === 'none') return `${where}; at the demanded course, speed and depth${faults}`;
+    return `${where}; ${this.binding.replace(/_/g, ' ')} is binding, working toward ${this.demanded.course_degrees.toFixed(0)}° at ${this.demanded.speed_m_per_s.toFixed(1)} m/s, ${this.demanded.depth_m.toFixed(0)} m${faults}`;
   }
 
   state(): PlatformState {
@@ -126,6 +164,16 @@ export class Platform {
     this.client.subscribe(this.config.topics.demand, (message) => {
       this.applyDemand(message.payload as PlatformDemand);
     });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== this.config.id) return;
+      if (command.kind === 'tuning') {
+        if (command.setting === 'report_interval_ticks') this.tunedReportInterval = command.value;
+        return;
+      }
+      if (command.event !== this.config.fault_event) return;
+      this.publishFaultyDepth();
+    });
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
@@ -137,7 +185,7 @@ export class Platform {
       this.lastSteppedTick = sample.tick;
       if (elapsed > 0) this.advance(elapsed * this.secondsPerTick);
       this.client.publish(this.config.topics.state, this.state());
-      const interval = this.config.report_interval_ticks ?? 1;
+      const interval = this.reportInterval();
       if (sample.tick % interval === 0 && sample.tick !== this.lastReportedTick) {
         this.lastReportedTick = sample.tick;
         this.report(sample.tick, sample.sim_time);
@@ -168,6 +216,30 @@ export class Platform {
     this.demandFrom = demand.component;
     this.demandNote = demand.note;
     this.demandsHeard += 1;
+  }
+
+  /**
+   * One depth reading beyond the declared maximum (FR-67), published on the ordinary
+   * topic through the ordinary path. Everything about it is a real report except the
+   * value, which is put past the limit this component's own configuration declares —
+   * so the seam's flag names that limit, and names it because it read it from the same
+   * document rather than from a number typed into the ingest.
+   *
+   * The platform's own state is untouched: it does not dive to an impossible depth, it
+   * reports one. A fault in an instrument is not a fault in the vehicle, and conflating
+   * them would make the demonstration teach the wrong thing.
+   */
+  private publishFaultyDepth(): void {
+    const instrument = this.config.instruments.find(
+      (candidate) => candidate.observed_property === 'platform_depth',
+    );
+    if (!instrument || this.simTime.value === '') return;
+    const beyond = this.config.limits.maximum_depth_m + 100;
+    this.client.publish(
+      `${this.config.topics.observation_prefix}/${this.config.thing.thing_id}/${instrument.datastream_id}`,
+      this.observation(instrument, this.simTime.tick, this.simTime.value, beyond),
+    );
+    this.faultsPublished += 1;
   }
 
   private advance(seconds: number): void {

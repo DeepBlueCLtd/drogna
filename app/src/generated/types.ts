@@ -172,7 +172,9 @@ export type ConfigEnvGenerator = {
   "stream": string;
   "topics": {
     "clock": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
+  "prompt_event": string;
   "heartbeat": ConfigCommonHeartbeat;
   "domain": {
     "latitude": ConfigEnvGeneratorExtent;
@@ -380,7 +382,9 @@ export type ConfigOffload = {
     "clock": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
     "offload": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
+  "prompt_event": string;
   "heartbeat": ConfigCommonHeartbeat;
   "identification_radius_m": number;
   "format_version": string;
@@ -422,7 +426,9 @@ export type ConfigPlanner = {
     "observations": ConfigCommonTopicFilter;
     "run_published": ConfigCommonTopic;
     "plan": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
+  "prompt_event": string;
   "heartbeat": ConfigCommonHeartbeat;
   "excluded_datastreams"?: string[];
   "replan_interval_ticks": number;
@@ -463,7 +469,9 @@ export type ConfigPlatform = {
     "demand": ConfigCommonTopic;
     "state": ConfigCommonTopic;
     "observation_prefix": string;
+    "command": ConfigCommonTopic;
   };
+  "fault_event": string;
   "heartbeat": ConfigCommonHeartbeat;
   "thing": {
     "thing_id": string;
@@ -566,6 +574,7 @@ export type ConfigSensors = {
     "clock": ConfigCommonTopic;
     "ownship": ConfigCommonTopicFilter;
     "observation_prefix": string;
+    "command": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "platform": {
@@ -573,6 +582,7 @@ export type ConfigSensors = {
     "name": string;
     "description": string;
   };
+  "fault_event": string;
   "sample_interval_ticks": number;
   "instruments": {
     "sensor_id": string;

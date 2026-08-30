@@ -68,22 +68,22 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   'env-generator': {
     title: 'The environment generator',
     what: 'The synthetic ocean: temperature and salinity fields with an eddy, a front, a thermocline and a moving feature, all drawn from seeded parameters recorded in a ground-truth manifest. Nothing here is real, and the manifest is what lets the harness score how well the truth is recovered.',
-    panel: 'A cadence bar counts down to the next now-cast, and the digest names the seeded truth the current field came from. It publishes nothing but heartbeats, which is why its arrows are dashed: it reaches the sensors through a port, not the broker.',
+    panel: 'A cadence bar counts down to the next now-cast, and the digest names the seeded truth the current field came from. You can ask for the next one now: it supersedes the one before it — there is one now-cast at a time — and it reaches the coverage store and the map. It does not reach the sensors, which sample the world through a port rather than reading a holding, which is also why its arrows here are dashed.',
   },
   platform: {
     title: 'The platform',
     what: 'The vehicle the instruments ride on. It holds a demanded course, speed and depth beside its current ones, and works from one toward the other under declared limits — a turn rate, an acceleration, a dive rate.',
-    panel: 'Open this node and the dial shows demanded as a hollow mark and current as the solid one, with the limit that is binding named beneath. Under it are the controls: sliders that run between zero and the limits the platform itself reported, and presets — reverse course, all stop, full ahead, surface — each demanding only what it names, so anything a demand leaves out stays standing. What you send is published, not applied; watch the hollow mark move, then the solid one chase it.',
+    panel: 'Open this node and the dial shows demanded as a hollow mark and current as the solid one, with the limit that is binding named beneath. Under it are the controls: sliders that run between zero and the limits the platform itself reported, and presets — reverse course, all stop, full ahead, surface — each demanding only what it names, so anything a demand leaves out stays standing. What you send is published, not applied; watch the hollow mark move, then the solid one chase it. How often it reports where it is is tunable here, and it will report one impossible depth on request — a fault in an instrument, not in the vehicle: it reports a depth it cannot reach and does not dive to one.',
   },
   sensors: {
     title: 'The sensors',
     what: 'Simulated instruments sampling the true field on a cadence and adding their declared noise. They sample where the platform last said it was — and when that position goes stale they publish nothing and say why, rather than sampling a place nobody has reported.',
-    panel: 'The face carries a line per instrument with its recent values. The sentence underneath is the sensors’ own: it names the tick they last heard a position at.',
+    panel: 'The face carries a line per instrument with its recent values, and the sentence underneath is the sensors’ own: the tick they last heard a position at. Their sampling cadence is tunable here, and it is two rules at once — how often they sample, and how long a heard position stays fresh — so shortening it below the platform’s reporting interval starves them, and they say so and count the skipped ticks. The platform’s reporting interval is the other half of that pair. You can also ask these instruments for one deliberately malformed sample: they publish it, the ingestion seam refuses it against the committed master and names the fault, and they report that you asked.',
   },
   ingest: {
     title: 'The ingestion seam',
     what: 'The observation store’s only writer. It validates every message against the committed master, refuses what fails with the fault named, absorbs redelivery, and range-checks the ownship values against the platform’s own declared limits.',
-    panel: 'Two lanes — accepted and flagged — and the flag reasons by name, because “six flagged” is a count and not a fault.',
+    panel: 'Two lanes — accepted and flagged — and the flag reasons by name, because “six flagged” is a count and not a fault. Ask the sensors for a malformed sample or the platform for an impossible depth, and watch the answer arrive here: a refusal against the master, or a flag against the platform’s own declared limits, which this seam reads rather than holding a second copy of.',
   },
   'observation-store': {
     title: 'The observation store',
@@ -123,7 +123,7 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   planner: {
     title: 'The planner',
     what: 'It combines ensemble spread with observation age to say where the harness is least sure, and recommends where sampling would reduce that most. It recommends and does nothing else: turning a recommendation into an order is a decision, and no component here makes it.',
-    panel: 'Doubt against the threshold that makes a region unusable, and the recommended route. Note that its arrow stops at its own topic — there is no line from here to the platform, and that absence is the point.',
+    panel: 'Doubt against the threshold that makes a region unusable, and the recommended route. You can move that threshold and ask it to recompute now; with no uncertainty field to work from it says so rather than publishing a hollow plan, and the plan it does publish carries the threshold that produced it. Note that its arrow stops at its own topic — there is no line from here to the platform, and that absence is the point. Nothing on this tab turns a recommendation into an order.',
   },
   telemetry: {
     title: 'Telemetry',
@@ -148,7 +148,7 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   offload: {
     title: 'The offload packager',
     what: 'It stages an export and announces its departure. Nothing actually leaves: the shape is real, the transfer waits for Version 3, and the face says so rather than letting a packager that transfers nothing read as one that does.',
-    panel: 'Packages announced and bytes staged against the declared bound.',
+    panel: 'Packages announced and bytes staged against the declared bound. You can ask it to stage a window now, over the release it last heard. It answers under the rules it already had: nothing released yet, at its staging bound, or no measurements in the interval — a bundle nobody can score is not staged, and being told so is half of what the button is for.',
   },
 };
 

@@ -777,7 +777,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "archive",
       "background",
       "features",
-      "timescale"
+      "timescale",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -792,14 +793,24 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "topics": {
         "type": "object",
         "required": [
-          "clock"
+          "clock",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
           "clock": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). This component acts on a command addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this generator to author its next now-cast now rather than on its cadence. The prompt moves when a now-cast is authored and never what it says: the field is the same deterministic function of simulation time either way. Named on both sides — here and in the operator surface's declared events — as a topic is."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -1697,7 +1708,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "identification_radius_m",
       "format_version",
-      "staging_bound_bytes"
+      "staging_bound_bytes",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1709,7 +1721,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "run_published",
-          "offload"
+          "offload",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1721,8 +1734,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "offload": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The packager acts on a prompt addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this packager to stage a window now, over the release it last heard, rather than waiting for the next one. It stages under exactly the rules it already has: declined at the staging bound, and declined where the interval holds no measurements, because a bundle nobody can score is not staged — prompted or not. Named on both sides, as a topic is."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -1885,7 +1907,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "usable_threshold",
       "restarts",
       "shortlist",
-      "projection"
+      "projection",
+      "prompt_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1903,7 +1926,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "observations",
           "run_published",
-          "plan"
+          "plan",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1918,8 +1942,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "plan": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The planner acts on a tuning or a prompt addressed to it and ignores everything else on the topic."
           }
         }
+      },
+      "prompt_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the planner to recompute now rather than at its replan interval. It recommends either way: a prompt changes when a recommendation is made, never what it is worth, and never turns one into an order (Constitution VIII)."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -2078,7 +2111,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "initial",
       "limits",
       "instruments",
-      "thing"
+      "thing",
+      "fault_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2096,7 +2130,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "demand",
           "state",
-          "observation_prefix"
+          "observation_prefix",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2115,8 +2150,17 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "pattern": "^[a-z0-9]+$",
             "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-54)."
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The platform acts on a fault prompt addressed to it and ignores everything else on the topic; a demand still arrives on the demand topic, because a demand is a domain message and not a command."
           }
         }
+      },
+      "fault_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the platform to publish ONE deliberately faulty message (SRD-v2 FR-67): a depth reading beyond the maximum this document declares. The fault originates here, in the component a real instrument fault would come from, rather than being published into the ownship namespace by a control plane that does not own it — which is also what makes the ingestion seam's answer the genuine one, since it range-checks against these very limits. The platform counts what it was asked to produce and reports the count, so a faulty reading is never mistaken for a platform that has started lying on its own account."
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
@@ -2541,7 +2585,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "platform",
       "sample_interval_ticks",
-      "instruments"
+      "instruments",
+      "fault_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2558,7 +2603,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "clock",
           "observation_prefix",
-          "ownship"
+          "ownship",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2573,6 +2619,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string",
             "pattern": "^[a-z0-9]+$",
             "description": "The namespace observations are published under; the topic is <prefix>/<thing_id>/<datastream_id>."
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The sensors act on a tuning or a fault prompt addressed to them and ignore everything else on the topic."
           }
         }
       },
@@ -2602,6 +2652,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "minLength": 1
           }
         }
+      },
+      "fault_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks this component to publish ONE deliberately faulty message (SRD-v2 FR-67). The fault originates here, in the component a real one would come from, rather than being published into this namespace by a control plane that does not own it: what a reader then watches refuse it is the genuine seam doing its genuine work. The component counts what it was asked to produce and reports the count, so a faulty message is never mistaken for a component that has started lying on its own account. The fault here is a sample that fails the observation master, so the ingestion seam refuses it and names the fault."
       },
       "sample_interval_ticks": {
         "type": "integer",

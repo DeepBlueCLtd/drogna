@@ -7,11 +7,20 @@
  * beside the bundle and never inside it (E11). It then announces the staged
  * departure on its declared topic. No real transfer and no verified-receipt
  * eviction until V3: the ledger states beyond 'staged' hold zero, honestly.
+ *
+ * A reader may ask for a window now (FR-65). The prompt stages over the release this
+ * packager last heard — it does not invent one, and with nothing released yet it says
+ * so — and it is answered under exactly the rules a released run is answered under:
+ * declined at the staging bound, declined where the interval holds no measurements.
+ * The only thing the prompt changes is where the measurement interval ends: at the
+ * current tick rather than at the release's. A bundle nobody can score is not staged,
+ * prompted or not, and that decline is half the reason this control is worth having.
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
   BundleManifest,
   ConfigOffload,
+  OperatorCommand,
   OffloadTelemetry,
   RunManifest,
   RunManifestMeasurement,
@@ -41,6 +50,10 @@ export class OffloadPackager {
   private simTime = { value: '', tick: 0 };
   private intervalStartTick = 0;
   private stagedBundles: StagedBundle[] = [];
+  /** The last release heard: what a prompted window is staged over. */
+  private lastPublished: RunPublished | undefined;
+  /** Windows staged because a reader asked, rather than on a release. */
+  private prompted = 0;
   private stagedBytes = 0;
   private producing = true;
   /** Windows declined and why: no measurements in the interval, or the bound. */
@@ -69,9 +82,20 @@ export class OffloadPackager {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `${this.stagedBundles.length} bundle(s) staged, ${this.stagedBytes} of ${this.config.staging_bound_bytes} byte(s); announcement-only until V3`,
+        // The most recent decline, in the packager's own words. Its ledger of
+        // declines was in memory and published nowhere, so a reader who asked it to
+        // stage and was refused saw nothing change and had no way to learn why —
+        // found by pressing the button on the running page. FR-32's rule: a
+        // component that does nothing says why it did nothing.
+        detail: `${this.stagedBundles.length} bundle(s) staged, ${this.stagedBytes} of ${this.config.staging_bound_bytes} byte(s); announcement-only until V3${
+          this.declined.length === 0 ? '' : `; last declined — ${this.declined[this.declined.length - 1]}`
+        }`,
         figures: [
           { key: 'bundles', value: this.stagedBundles.length, label: 'bundles' },
+          ...(this.prompted === 0 ? [] : [{ key: 'prompted', value: this.prompted, label: 'prompted' }]),
+          ...(this.declined.length === 0
+            ? []
+            : [{ key: 'declined', value: this.declined.length, label: 'declined' }]),
           {
             key: 'staged_bytes',
             value: this.stagedBytes,
@@ -92,7 +116,25 @@ export class OffloadPackager {
       this.simTime = { value: sample.sim_time, tick: sample.tick };
     });
     this.client.subscribe(this.config.topics.run_published, (message) => {
-      this.stage(message.payload as RunPublished);
+      const published = message.payload as RunPublished;
+      this.lastPublished = published;
+      this.stage(published, published.tick);
+    });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== this.config.id || command.kind !== 'event') return;
+      if (command.event !== this.config.prompt_event) return;
+      if (!this.lastPublished) {
+        // Nothing has been released, so there is nothing to stage a bundle OF. Said
+        // in the ledger rather than answered with an empty bundle.
+        this.declined.push(
+          `window ${this.stagedBundles.length + this.declined.length}: asked to stage, and nothing has been released yet to stage over`,
+        );
+        this.announce();
+        return;
+      }
+      this.prompted += 1;
+      this.stage(this.lastPublished, this.simTime.tick);
     });
     this.heartbeat.start();
   }
@@ -105,7 +147,13 @@ export class OffloadPackager {
     return [...this.stagedBundles];
   }
 
-  private stage(published: RunPublished): void {
+  /**
+   * Stage one window over a release. `uptoTick` ends the measurement interval: the
+   * release's own tick where the release triggered this, the current tick where a
+   * reader asked. Everything else — the bound, the missing holding, the empty
+   * interval — is decided by the rules that were already here.
+   */
+  private stage(published: RunPublished, uptoTick: number): void {
     const windowIndex = this.stagedBundles.length + this.declined.length;
     if (!this.producing || this.stagedBytes >= this.config.staging_bound_bytes) {
       // At the bound with nothing evictable — and in V2 nothing is ever
@@ -126,7 +174,7 @@ export class OffloadPackager {
     // The measurement geometry covers the interval between two successive
     // released products (run-manifest.schema.json): from the previous release —
     // or the run's epoch, for the first — up to this one.
-    const measurements = this.measurementsSince(this.intervalStartTick, published.tick);
+    const measurements = this.measurementsSince(this.intervalStartTick, uptoTick);
     if (measurements.length === 0) {
       // A geometry with no measurements is not a geometry: it buffers to no
       // cells and every comparison against it is inconclusive. No bundle at all
@@ -135,7 +183,7 @@ export class OffloadPackager {
       this.announce();
       return;
     }
-    const intervalSeconds = Math.max(1, Math.round((published.tick - this.intervalStartTick) * this.secondsPerTick));
+    const intervalSeconds = Math.max(1, Math.round((uptoTick - this.intervalStartTick) * this.secondsPerTick));
 
     const grid = holding.descriptor.manifest.grid;
     const bundleId = `b-${sha256Hex(`${this.runReference}:${windowIndex}:${this.config.format_version}`).slice(0, 16)}`;
@@ -173,7 +221,7 @@ export class OffloadPackager {
 
     this.stagedBundles.push({ manifest, sibling, fieldByteLength: holding.descriptor.field.byte_length });
     this.stagedBytes += holding.descriptor.field.byte_length;
-    this.intervalStartTick = published.tick;
+    this.intervalStartTick = uptoTick;
     if (this.stagedBytes >= this.config.staging_bound_bytes) this.producing = false;
     this.announce();
   }

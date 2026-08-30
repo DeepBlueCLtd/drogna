@@ -57,6 +57,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/clock"
         ]
       },
@@ -68,6 +69,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/platform/demand",
           "ctl/clock"
         ]
@@ -79,6 +81,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "obs/ownship/+",
           "ctl/clock"
         ]
@@ -154,6 +157,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "obs/#",
           "ctl/run/published",
           "ctl/clock"
@@ -209,6 +213,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/run/published",
           "ctl/clock"
         ]
@@ -274,7 +279,8 @@
     "id": "env-generator",
     "stream": "env-generator",
     "topics": {
-      "clock": "ctl/clock"
+      "clock": "ctl/clock",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -395,7 +401,8 @@
         "thermocline": 1209600,
         "moving": 86400
       }
-    }
+    },
+    "prompt_event": "nowcast-now"
   },
   "coverage_store": {
     "id": "coverage-store",
@@ -419,7 +426,8 @@
       "clock": "ctl/clock",
       "demand": "ctl/platform/demand",
       "state": "ctl/platform/state",
-      "observation_prefix": "obs"
+      "observation_prefix": "obs",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -480,7 +488,8 @@
           "definition": "m"
         }
       }
-    ]
+    ],
+    "fault_event": "fault-depth"
   },
   "sensors": {
     "id": "sensors",
@@ -488,7 +497,8 @@
     "topics": {
       "clock": "ctl/clock",
       "ownship": "obs/ownship/+",
-      "observation_prefix": "obs"
+      "observation_prefix": "obs",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -550,7 +560,8 @@
           "definition": "dbar"
         }
       }
-    ]
+    ],
+    "fault_event": "fault-sample"
   },
   "ingest": {
     "id": "ingest",
@@ -674,7 +685,8 @@
       "clock": "ctl/clock",
       "observations": "obs/#",
       "run_published": "ctl/run/published",
-      "plan": "ctl/plan"
+      "plan": "ctl/plan",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -719,7 +731,8 @@
     "projection": {
       "step_seconds": 1800,
       "horizon_seconds": 21600
-    }
+    },
+    "prompt_event": "replan-now"
   },
   "telemetry": {
     "id": "telemetry",
@@ -838,6 +851,44 @@
         "integer": true,
         "figure": "max_interval",
         "description": "The interval after which a run is warranted on schedule alone, once the current run's validity has lapsed."
+      },
+      {
+        "id": "sampling-cadence",
+        "target": "sensors",
+        "setting": "sample_interval_ticks",
+        "label": "sampling cadence",
+        "unit": "ticks",
+        "minimum": 5,
+        "maximum": 300,
+        "step": 5,
+        "integer": true,
+        "figure": "sample_interval",
+        "description": "How often the instruments sample the ocean. The loop’s master dial: shorten it and residuals, store growth and the monitor’s streak all quicken. It is also how long a heard position stays fresh, so shortening it below the platform’s reporting interval makes the sensors go quiet for want of a current position — they say so, and the dial below is the other half of the pair."
+      },
+      {
+        "id": "usable-doubt",
+        "target": "planner",
+        "setting": "usable_threshold",
+        "label": "usable doubt",
+        "minimum": 0.02,
+        "maximum": 0.9,
+        "step": 0.01,
+        "integer": false,
+        "figure": "usable_threshold",
+        "description": "The doubt above which the planner calls a region unusable. Raise it and fewer regions are worth visiting; the planner still recommends and commands nothing."
+      },
+      {
+        "id": "ownship-reporting",
+        "target": "platform",
+        "setting": "report_interval_ticks",
+        "label": "ownship reporting",
+        "unit": "ticks",
+        "minimum": 1,
+        "maximum": 300,
+        "step": 1,
+        "integer": true,
+        "figure": "report_interval",
+        "description": "How often the platform reports where it is. The sensors sample where it last said it was and treat a position older than their own cadence as no position at all, so this is the dial that keeps them supplied when their cadence is shortened."
       }
     ],
     "events": [
@@ -852,6 +903,36 @@
         "target": "advisory-source",
         "label": "author an advisory",
         "description": "Ask the shore source to author the next advisory in its sequence now rather than at its cadence. Prompted or not, it is the same deterministic next one."
+      },
+      {
+        "id": "nowcast-now",
+        "target": "env-generator",
+        "label": "publish a now-cast",
+        "description": "Ask the ocean generator to author and publish its next now-cast now rather than at its cadence. It supersedes the one before it — there is one now-cast at a time — and lands in the coverage store and on the map. It does not change what the sensors read: they sample the world through their own port, continuously."
+      },
+      {
+        "id": "replan-now",
+        "target": "planner",
+        "label": "recompute the plan",
+        "description": "Ask the planner to recompute now rather than at its replan interval. With no uncertainty field to work from it says so in its heartbeat and publishes no hollow plan. It recommends either way; nothing here turns a recommendation into an order."
+      },
+      {
+        "id": "offload-now",
+        "target": "offload",
+        "label": "stage a package",
+        "description": "Ask the packager to stage a window now over the release it last heard. It answers under the rules it already has: declined at its staging bound, and declined where the interval holds no measurements, because a bundle nobody can score is not staged."
+      },
+      {
+        "id": "fault-sample",
+        "target": "sensors",
+        "label": "publish a faulty sample",
+        "description": "Ask the instruments to publish one deliberately malformed observation. The ingestion seam refuses it against the committed master and names the fault; the sensors count what they were asked to produce and say so."
+      },
+      {
+        "id": "fault-depth",
+        "target": "platform",
+        "label": "report an impossible depth",
+        "description": "Ask the platform to report one depth beyond the maximum it declares it can reach. The ingestion seam flags it against the platform’s own limits and names the bound; the platform counts what it was asked to produce and says so."
       }
     ]
   },
@@ -893,7 +974,8 @@
     "topics": {
       "clock": "ctl/clock",
       "run_published": "ctl/run/published",
-      "offload": "ctl/offload"
+      "offload": "ctl/offload",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -902,7 +984,8 @@
     },
     "identification_radius_m": 60000,
     "format_version": "drogna-bundle-2.0",
-    "staging_bound_bytes": 8388608
+    "staging_bound_bytes": 8388608,
+    "prompt_event": "offload-now"
   },
   "feature_store": {
     "id": "feature-store",

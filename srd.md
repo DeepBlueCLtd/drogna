@@ -625,6 +625,17 @@ itself arrives.
   reported; its presets shall demand only what they name, since the platform leaves a
   standing demand alone for anything a demand does not carry. The list view of FR-59
   carries every control the flow chart carries, by opening the same drawer.
+- **FR-67** A component may be asked to publish **one deliberately faulty message**, and
+  the fault shall originate in the component a real one would come from — never
+  published into a namespace by a control plane that does not own it. What is published
+  is a genuine bad message: it is refused or flagged by the ordinary seam, against the
+  ordinary master and the ordinary declared limits, and nothing softens it on the way.
+  The component counts what it was asked to produce and reports that count, so a fault a
+  reader ordered is never mistaken for a component that has begun lying on its own
+  account; and where the component's own state is not what is faulty — an instrument
+  misreporting a depth the vehicle is not at — that state is untouched and the display
+  says which is which. Fault injection is declared in configuration, component by
+  component: a component that declares none cannot be asked.
 
 ---
 

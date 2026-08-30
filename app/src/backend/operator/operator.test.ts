@@ -362,9 +362,21 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
         expect(drawn.has(target)).toBe(true);
       }
       // And every event offered is one some component declares it answers to. Two
-      // sides naming the same event, as two components name the same topic.
-      const answered = new Set([config.scheduler.prompt_event, config.advisory_source.prompt_event]);
-      for (const event of controls.events) expect(answered.has(event.id)).toBe(true);
+      // sides naming the same event, as two components name the same topic — read
+      // out of the configuration document rather than listed here, so an event
+      // offered to nobody fails this however many there come to be.
+      const answered = new Set(
+        Object.values(config as unknown as Record<string, { prompt_event?: string; fault_event?: string }>)
+          .filter((component) => typeof component === 'object' && component !== null)
+          .flatMap((component) => [component.prompt_event, component.fault_event])
+          .filter((event): event is string => typeof event === 'string'),
+      );
+      expect(answered.size).toBeGreaterThan(0);
+      for (const event of controls.events) expect(answered.has(event.id), event.id).toBe(true);
+      // And the other way: a component that declares it answers to an event nobody
+      // offers is a component waiting for a prompt that can never arrive.
+      const offered = new Set(controls.events.map((event) => event.id));
+      for (const event of answered) expect(offered.has(event), event).toBe(true);
       runtime.stop();
     });
 
@@ -552,6 +564,13 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       shell.subscribe(config.shell.topics.advisories, (message) =>
         advisories.push(message.payload as Advisory),
       );
+      // There is no "before time exists" case to test here, and the reason is worth
+      // recording: the runtime publishes the clock's first sample while it is being
+      // built, so by the time any command can be dispatched every component has heard
+      // an instant. The source still guards against the empty one — a component
+      // assembled differently in V3 could be prompted before the clock speaks, and an
+      // advisory dated at nothing would be a record of a moment that never happened.
+      //
       // A handful of ticks, far short of the cadence: nothing is due.
       for (let i = 0; i < 5; i++) runtime.clock.tickOnce();
       expect(advisories.length).toBe(0);
@@ -575,7 +594,242 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       const answer = await post(runtime, `${config.operator.http.event_prefix}/make-it-so`);
       expect(answer.status).toBe(404);
       expect(answer.body.refused).toMatch(/'make-it-so' is not an event this plane offers/);
-      expect(answer.body.refused).toMatch(/advisory-now, run-now/);
+      // Every event it does offer, named in the refusal: a refusal that says only
+      // 'no' leaves a reader guessing what would have worked.
+      for (const event of config.operator.events) {
+        expect(answer.body.refused).toContain(event.id);
+      }
+      runtime.stop();
+    });
+
+    it('a prompted now-cast publishes a holding, and the cadence restarts from there', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('nowcast-watch', config.shell.role);
+      const announced: { holding_id: string }[] = [];
+      shell.subscribe(config.shell.topics.holdings, (message) => {
+        // The announcement is flat and light on purpose: it says what became
+        // visible, not how big it is (holding-published.schema.json).
+        announced.push(message.payload as { holding_id: string });
+      });
+      // A handful of ticks, far short of the now-cast cadence: nothing is due.
+      for (let i = 0; i < 5; i++) runtime.clock.tickOnce();
+      expect(announced.length).toBe(0);
+
+      const answer = await post(
+        runtime,
+        `${config.operator.http.event_prefix}/${config.env_generator.prompt_event}`,
+      );
+      expect(answer.status).toBe(200);
+      // A genuine holding, in the store, through the store's own publication seam.
+      expect(announced.length).toBe(1);
+      const held = runtime.store.holding(announced[0].holding_id);
+      expect(held).toBeDefined();
+      expect(validator.validate('coverage-holding', held?.descriptor).refusals).toEqual([]);
+
+      // And the countdown restarted: a cadence that carried on regardless would tell a
+      // reader a now-cast was due when one had just been published.
+      const heard = watchHeartbeats(runtime, config);
+      vi.advanceTimersByTime(2500);
+      const toNext = figureOf(heard, 'env-generator', 'ticks_to_nowcast');
+      expect(toNext).toBe(config.env_generator.nowcast.interval_ticks);
+      expect(figureOf(heard, 'env-generator', 'prompted')).toBe(1);
+      runtime.stop();
+    });
+
+    it('a prompted replan recomputes now, and says so when it has no field to plan from', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('plan-watch', config.shell.role);
+      const plans: unknown[] = [];
+      shell.subscribe(config.shell.topics.plan, (message) => plans.push(message.payload));
+      const prompt = `${config.operator.http.event_prefix}/${config.planner.prompt_event}`;
+
+      // Before the first clock sample there is no simulation instant to date a plan
+      // at, and before any forecast there is no uncertainty field to compute one
+      // from. Asked in both states, the planner publishes nothing rather than a
+      // hollow plan — and SAYS which state it is in, in its own heartbeat.
+      //
+      // "Nothing was published" is not enough on its own here: a handler that threw
+      // would satisfy it too, and the broker would swallow the throw. Planting
+      // against the guards is what showed that, so the assertion is the planner's own
+      // account of itself, which an exception cannot produce.
+      const heard = watchHeartbeats(runtime, config);
+      await post(runtime, prompt);
+      expect(plans.length).toBe(0);
+      runtime.clock.tickOnce();
+      await post(runtime, prompt);
+      expect(plans.length).toBe(0);
+      vi.advanceTimersByTime(2500);
+      expect(heard.get('planner')?.detail).toMatch(/state no-field/);
+      // And it declined rather than fell over: a handler that threw would publish
+      // nothing too, and the broker would swallow it.
+      expect(runtime.broker.deliveryFaults).toBe(0);
+
+      // Drive until the loop has published a run, then ask again.
+      for (let i = 0; i < 8000 && plans.length === 0; i++) runtime.clock.tickOnce();
+      const before = plans.length;
+      expect(before).toBeGreaterThan(0);
+      await post(runtime, prompt);
+      expect(plans.length).toBe(before + 1);
+      expect(validator.validate('plan', plans[plans.length - 1]).refusals).toEqual([]);
+      runtime.stop();
+    });
+
+    it('a prompted offload stages a window, and is declined by the rules it already had', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const prompt = `${config.operator.http.event_prefix}/${config.offload.prompt_event}`;
+
+      // Nothing released yet: the packager says so rather than staging an empty
+      // bundle over a release that does not exist.
+      await post(runtime, prompt);
+      expect(runtime.offload.staged().length).toBe(0);
+      expect(runtime.offload.declined.at(-1)).toMatch(/nothing has been released yet/);
+
+      // Drive until a run has been published and staged on its own.
+      for (let i = 0; i < 8000 && runtime.offload.staged().length === 0; i++) runtime.clock.tickOnce();
+      const staged = runtime.offload.staged().length;
+      expect(staged).toBeGreaterThan(0);
+
+      // Asked immediately, with no measurements since that staging, it declines by
+      // the rule it already had.
+      const heard = watchHeartbeats(runtime, config);
+      await post(runtime, prompt);
+      expect(runtime.offload.staged().length).toBe(staged);
+      expect(runtime.offload.declined.at(-1)).toMatch(/no measurements in the interval/);
+      // And the decline is legible where the asking happened. Its ledger of declines
+      // was in memory and published nowhere until pressing this button on the running
+      // page showed a reader being refused with no way to learn why.
+      vi.advanceTimersByTime(2500);
+      expect(heard.get('offload')?.detail).toMatch(/last declined — .*no measurements in the interval/);
+
+      // Let measurements accumulate, and the same ask stages a genuine window whose
+      // geometry covers the interval since the last one.
+      for (let i = 0; i < 200; i++) runtime.clock.tickOnce();
+      await post(runtime, prompt);
+      expect(runtime.offload.staged().length).toBe(staged + 1);
+      const bundle = runtime.offload.staged().at(-1);
+      expect(validator.validate('bundle-manifest', bundle?.manifest).refusals).toEqual([]);
+      expect(bundle?.sibling.measurement_geometry?.measurements.length ?? 0).toBeGreaterThan(0);
+      runtime.stop();
+    });
+
+    it('a prompted fault is refused at the seam, and the component says it was asked for it', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      // Far enough in that the sensors have a position and have sampled.
+      for (let i = 0; i < 90; i++) runtime.clock.tickOnce();
+      const refusedBefore = runtime.ingest.refused;
+      const storedBefore = runtime.observationStore.all().length;
+
+      await post(runtime, `${config.operator.http.event_prefix}/${config.sensors.fault_event}`);
+      // Refused against the committed master, by name, and nothing reached the store.
+      expect(runtime.ingest.refused).toBe(refusedBefore + 1);
+      expect(runtime.observationStore.all().length).toBe(storedBefore);
+      expect(runtime.ingest.recentRefusals.at(-1)).toMatch(/result/);
+      vi.advanceTimersByTime(2500);
+      // The sensors report what they were asked to produce: a fault a reader ordered
+      // is never left looking like an instrument that started lying by itself.
+      expect(figureOf(heard, 'sensors', 'faults')).toBe(1);
+      expect(runtime.sensors.detail()).toMatch(/deliberately faulty sample/);
+      runtime.stop();
+    });
+
+    it('a prompted impossible depth is flagged against the platform’s own declared limit', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      const flaggedBefore = runtime.ingest.flagged;
+      const depthBefore = runtime.platform.state().current.depth_m;
+
+      await post(runtime, `${config.operator.http.event_prefix}/${config.platform.fault_event}`);
+      expect(runtime.ingest.flagged).toBe(flaggedBefore + 1);
+      // The flag names the bound, and the bound is the platform's own — the ingest
+      // reads it rather than holding a second copy.
+      const reason = runtime.ingest.recentRefusals.at(-1) ?? '';
+      expect(reason).toMatch(/out-of-range: depth/);
+      expect(reason).toContain(String(config.platform.limits.maximum_depth_m));
+      // A faulty instrument is not a faulty vehicle: the platform reported an
+      // impossible depth and did not dive to one.
+      expect(runtime.platform.state().current.depth_m).toBe(depthBefore);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'platform', 'faults')).toBe(1);
+      runtime.stop();
+    });
+
+    it('the sampling cadence is one setting, and tuning it moves the staleness bound with it', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'sensors', 'sample_interval')).toBe(config.sensors.sample_interval_ticks);
+
+      const rows = () =>
+        runtime.observationStore.byDatastream(config.sensors.platform.thing_id, 'temperature-050m').length;
+      const beforeRows = rows();
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'sensors',
+        setting: 'sample_interval_ticks',
+        value: 5,
+      });
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'sensors', 'sample_interval')).toBe(5);
+
+      // The cadence alone is not enough, and the harness says so rather than
+      // pretending: the sensors treat a position older than their own cadence as no
+      // position at all, so at five ticks they starve on a platform reporting every
+      // thirty. Found by this test failing, which is the coupling being real.
+      const skippedBefore = figureOf(heard, 'sensors', 'skipped') ?? 0;
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      vi.advanceTimersByTime(2500);
+      expect(rows() - beforeRows).toBeLessThan(6);
+      // And the sensors report the starving as a figure of their own rather than
+      // leaving it to be inferred from a sentence.
+      expect(figureOf(heard, 'sensors', 'skipped') ?? 0).toBeGreaterThan(skippedBefore);
+
+      // The other half of the pair keeps them supplied, and now the shortened cadence
+      // does what a reader expected of it.
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'platform',
+        setting: 'report_interval_ticks',
+        value: 5,
+      });
+      const suppliedFrom = rows();
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      expect(rows() - suppliedFrom).toBeGreaterThan(6);
+      // And the staleness bound moved with the cadence, because it IS the cadence:
+      // the sensors' own age figure is measured against the tuned interval.
+      const age = heard.get('sensors')?.figures?.find((figure) => figure.key === 'position_age_ticks');
+      expect(age?.of).toBe(5);
+      runtime.stop();
+    });
+
+    it('the planner’s usable-doubt threshold is tunable, and the plan carries the one in force', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('threshold-watch', config.shell.role);
+      const plans: { projection: { usable_threshold: number } }[] = [];
+      shell.subscribe(config.shell.topics.plan, (message) =>
+        plans.push(message.payload as { projection: { usable_threshold: number } }),
+      );
+      for (let i = 0; i < 8000 && plans.length === 0; i++) runtime.clock.tickOnce();
+      expect(plans.length).toBeGreaterThan(0);
+      expect(plans[0].projection.usable_threshold).toBe(config.planner.usable_threshold);
+
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'planner',
+        setting: 'usable_threshold',
+        value: 0.5,
+      });
+      await post(runtime, `${config.operator.http.event_prefix}/${config.planner.prompt_event}`);
+      // The plan says which threshold produced it, rather than leaving a reader to
+      // assume the configured one.
+      expect(plans.at(-1)?.projection.usable_threshold).toBe(0.5);
+      expect(runtime.planner.usableThreshold()).toBe(0.5);
       runtime.stop();
     });
 

@@ -36,12 +36,33 @@
       catches, listed in the specification's acceptance evidence.
 - [x] T014 `srd.md` §5.14, FR-63 to FR-66, written from the feature as built.
 - [x] T015 Blog entry `site/docs/blog/posts/the-button-that-can-say-no.md`.
-- [ ] T016 A prompted offload — *deliberately not done: staging the current holding again
-      is a different act from staging on a published run, and offering it as the same
-      would claim an equivalence the packager does not hold.*
-- [ ] T017 Tuning the planner's usable-doubt threshold — *deliberately not done: it costs
-      one configuration entry now, and nobody asked for it. A control exists to be used,
-      not to show that controls can be added.*
+- [x] T019 Second round, from the author's interview: three more events (now-cast,
+      replan, stage a window), two more tunables (sampling cadence, usable doubt), and
+      fault injection from the components that would really fail.
+- [x] T020 `config.env-generator`, `config.planner`, `config.offload` gain the command
+      topic and the event they answer to; `config.sensors` and `config.platform` gain
+      the command topic and a `fault_event` that says plainly what it is.
+- [x] T021 The sampling-cadence trap, found by a failing test: shortening the cadence
+      below the platform's reporting interval starves the sensors. The platform's
+      reporting interval became the seventh tunable rather than the coupling being
+      hidden, and the sensors publish their skipped count as a figure.
+- [x] T022 srd.md FR-67: a component may be asked to publish one deliberately faulty
+      message, from the component a real fault would come from, counted and reported.
+- [x] T023 Panel: messages are validated against their master before anything is drawn
+      from them, and the count refused is stated. The first injected fault had taken
+      the whole flow chart down.
+- [x] T024 Panel: holding sizes read from the inventory the store serves, after the
+      announcement was found to carry none and the stack to have never drawn a bar.
+- [x] T025 The packager's most recent decline reaches its heartbeat, so a refused
+      prompt is legible at the node where it was asked for.
+- [x] T026 Tests for all of it, each watched failing against a planted defect — and
+      three planted defects that nothing caught, each resolved by deleting the line
+      that was doing no work rather than by adding a test for it.
+- [x] T016 A prompted offload — *done in the second round, and the reservation was
+      answered rather than overridden: it stages over the release it last heard, under
+      the rules it already had, and says so when there is nothing to stage over.*
+- [x] T017 Tuning the planner's usable-doubt threshold — *done in the second round: it
+      was asked for, which was the only thing it was waiting on.*
 - [ ] T018 A second publisher of platform demands — *deliberately not done, and not this
       feature's to do: FR-53 reserves that for an adaptive-sampling component, and
       Constitution VIII governs whether one may exist.*

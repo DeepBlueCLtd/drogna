@@ -459,6 +459,94 @@ describe('the Operator flow chart (feature 113)', () => {
       ).toMatch(/minimum-interval/);
     });
 
+    it('a prompted now-cast lands a holding, and the coverage stack draws it', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        for (let i = 0; i < 5; i++) runtime.clock.tickOnce();
+      });
+      const stack = () =>
+        document.querySelector('[data-flow-node="coverage-store"] [data-testid="holding-stack"]');
+      // Provisioning published an archive and a first now-cast, and the store serves
+      // their sizes: the stack drew nothing at all before this was fixed, because the
+      // panel was reading a byte length off an announcement that has never carried one.
+      const before = stack()?.children.length ?? 0;
+      expect(before).toBeGreaterThan(0);
+      const nowcastId = () =>
+        runtime.store.holdings().find((holding) => holding.era === 'nowcast')?.holding_id;
+      const idBefore = nowcastId();
+      expect(idBefore).toBeDefined();
+
+      const drawer = await drawerFor('env-generator');
+      await act(async () => {
+        fireEvent.click(
+          drawer.querySelector(`[data-event-send="${config.env_generator.prompt_event}"]`) as HTMLElement,
+        );
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // A genuine new now-cast, superseding the one before it rather than piling up
+      // beside it: there is one now-cast at a time, which is why the stack keeps its
+      // height and changes its content.
+      expect(nowcastId()).toBeDefined();
+      expect(nowcastId()).not.toBe(idBefore);
+      expect(stack()?.children.length ?? 0).toBe(before);
+
+      // A forecast instance DOES accumulate, so asking the scheduler for a run is
+      // what proves the stack follows the store after the page has loaded rather
+      // than only at load. Planting against the announcement path is what showed
+      // the now-cast alone could not prove it: one now-cast supersedes another, so
+      // the picture looked the same either way.
+      const scheduler = await drawerFor('scheduler');
+      await act(async () => {
+        fireEvent.click(
+          scheduler.querySelector(`[data-event-send="${config.scheduler.prompt_event}"]`) as HTMLElement,
+        );
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(runtime.store.holdings().length).toBeGreaterThan(before);
+      expect(stack()?.children.length ?? 0).toBeGreaterThan(before);
+    });
+
+    it('a prompted fault is drawn as a fault somebody asked for, at both ends of the seam', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        for (let i = 0; i < 90; i++) runtime.clock.tickOnce();
+      });
+      const drawer = await drawerFor('sensors');
+      const refusedBefore = runtime.ingest.refused;
+      await act(async () => {
+        fireEvent.click(
+          drawer.querySelector(`[data-event-send="${config.sensors.fault_event}"]`) as HTMLElement,
+        );
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // The seam refused it — that is the component's answer, not the button's.
+      expect(runtime.ingest.refused).toBe(refusedBefore + 1);
+      // The picture survived it. This is half the reason the fault control is worth
+      // having: the first malformed sample put a string where a result belonged, the
+      // sensors' spark called toFixed on it, and the flow chart went down — found by
+      // driving the built page, never by a test. Now the panel draws only from
+      // messages that pass their master, and says how many it refused.
+      expect(document.querySelectorAll('[data-flow-node]').length).toBe(
+        config.shell.components.length,
+      );
+      expect(screen.getByText(/message\(s\) refused by their master and not drawn/)).toBeTruthy();
+      // And the sensors' own face says the fault was asked for, so nobody reads it as
+      // an instrument that has started lying by itself.
+      expect(
+        document.querySelector('[data-flow-node="sensors"] [data-testid="sensors-faults"]')?.textContent,
+      ).toMatch(/published on request/);
+      // Two nodes along, the ingest's own figures moved.
+      expect(document.querySelector('[data-flow-node="ingest"]')?.textContent).toContain('refused');
+    });
+
     it('the burst step advances the clock by the number the surface declared', async () => {
       render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {

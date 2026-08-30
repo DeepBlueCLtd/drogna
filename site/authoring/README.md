@@ -17,6 +17,34 @@ takes the fixed shape D19 sets, and the fourth part is the one that carries the 
    reads the component through the seam and exercises it across its range; the wire
    shape is what makes such a page an ordinary consumer rather than a special build.
 
+## How long
+
+Three to six tweets. The entry is an invitation to the demo, and the demo is one click
+away carrying the weight the prose would otherwise carry — so the prose says what a
+reader needs in order to want to open it, and stops.
+
+| Part | Words |
+|---|---|
+| prose — everything after the front matter, code, alt text and URLs not counted | 300 |
+| description — the front matter line the index shows | 50 |
+
+`check-blog-length` reads those two numbers out of this table and holds every entry in
+`site/docs/blog/posts/` to them. It is a gate rather than a note because this note and
+the template have both said *terse* since before the first entry existed, and the first
+ten entries came in at 576 to 2,088 words anyway. A length that is only advice is advice
+read once the writing is done.
+
+There is no exemption marker. An entry that will not fit is two entries, or an entry
+whose middle is a decision record and belongs in `docs/adr/`.
+
+That budget is roughly 70 words a part, which is two or three sentences. What survives
+the cut is the finding — the thing that was not known before, and what the wrong turning
+looked like from the inside. What goes is the recap: the reader does not need the system
+explained before the problem, and every sentence explaining what the demo will show is a
+sentence spent instead of the demo.
+
+## The rest of the shape
+
 The entry is linked from that pull request by its full URL on the branch —
 `https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md` —
 not by its path in the tree, which GitHub resolves against the page the body is read on
@@ -30,9 +58,6 @@ simply passed each time and the reason it was worth writing about went with it. 
 pull request template asks for the entry or for the reason there is none, and the
 coverage table on the blog index counts what exists against the feature directories
 under `specs/`, so an unwritten entry is published as a gap rather than forgotten.
-
-Terse, in other words. The advice below on *how* to write is unchanged from V1 and still
-right; what has changed is how much of it there should be.
 
 ## Who you are writing for
 
@@ -48,23 +73,25 @@ could look it up. Say what the requirement asked for instead.
 
 ## Problem before solution
 
-Every entry that works here opens the same way: two or three paragraphs on the problem,
-in terms someone outside the project would recognise, before anything is built or fixed.
-"How much is an hour-old temperature measurement worth?" is a problem. "The generator
-needed a decorrelation timescale field" is a solution, and it means nothing to a reader
-who has not been told the first sentence.
+Every entry that works here opens the same way: the problem, in terms someone outside the
+project would recognise, before anything is built or fixed. "How much is an hour-old
+temperature measurement worth?" is a problem. "The generator needed a decorrelation
+timescale field" is a solution, and it means nothing to a reader who has not been told
+the first sentence. At this length that opening is a short paragraph, not three — say
+what was wrong and why the obvious answer does not work, and go on.
 
 The `description` in the front matter is what the index shows beside the entry, so it
 has to be the problem and not the preamble.
 
 ## State the learning plainly, including what did not work
 
-The last section of an entry says what is now known that was not known before, in one or
-two sentences, without decoration. The most useful entries here are the ones that report
-a wrong turning: a check that passed because it was examining nothing, a test that
-isolated nothing, a comparison that could not fail. If the first attempt was wrong, the
-entry says so and says what the wrongness looked like from the inside — that is the part
-a reader cannot reconstruct and the part they came for.
+The finding goes in the title and in the description, where a reader meets it before
+deciding to read on; the entry then earns it. The most useful entries here are the ones
+that report a wrong turning: a check that passed because it was examining nothing, a test
+that isolated nothing, a comparison that could not fail. If the first attempt was wrong,
+the entry says so and says what the wrongness looked like from the inside — that is the
+part a reader cannot reconstruct and the part they came for, and at 300 words it is what
+the budget is for rather than a paragraph competing for it.
 
 An entry that reports only success is a press release. If nothing went wrong, the
 feature was probably not worth an entry.
@@ -88,16 +115,16 @@ a mistyped feature shows up as a beat with no entry.
 
 ## Screenshots
 
-Every entry references at least one committed screenshot, which is the evidence that the
-feature works rather than the claim that it does. Images live in
-`site/docs/blog/assets/`, named `<feature-number>-<slug>.png`, and each carries a
-`.provenance.json` sidecar beside it recording the seed, the viewport, the browser and
-what the clock was doing. Images come only from the capture mechanism under `scripts/capture/`; a screenshot taken
-any other way is not reproducible and does not go on the site.
+Where a claim can be embedded and played, embed it: a picture of a running system is a
+claim about it, and an instance opened at the view is the system. A screenshot is the
+fallback, for something no URL reaches.
 
-A screenshot is the weaker evidence, though. Where the thing can be embedded and played,
-embed it: a picture of a running system is a claim about it, and an instance opened at
-the view is the system.
+Images live in `site/docs/blog/assets/`, named `<feature-number>-<slug>.png`, and each
+carries a `.provenance.json` sidecar beside it recording the seed, the viewport, the
+browser and what the clock was doing. Images come only from the capture mechanism under
+`scripts/capture/`; a screenshot taken any other way is not reproducible and does not go
+on the site.
 
-The alt text is a description of what is in the picture, long enough to stand in for it
-— read one of the existing entries for the length that means.
+The alt text is a description of what is in the picture, long enough to stand in for it.
+It does not count against the word budget, and it is the one place in an entry where
+length is a virtue: a reader who cannot see the picture should lose nothing.

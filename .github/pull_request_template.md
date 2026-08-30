@@ -36,6 +36,9 @@ worth watching work — arrives with its entry, in this pull request. Not one pe
 Copy site/authoring/blog-entry-template.md to site/docs/blog/posts/<slug>.md; the shape
 and the audience are in site/authoring/README.md.
 
+Three to six tweets: 300 words of prose, roughly 70 a part, and check-blog-length fails
+the build over it. The demo carries the rest — that is what the budget is for.
+
 Link the entry here as a full URL on this branch:
 https://github.com/DeepBlueCLtd/drogna/blob/<this-branch>/site/docs/blog/posts/<slug>.md
 

@@ -34,8 +34,14 @@ for. Link the first use of a term that needs it:
 
 ## The demo
 
-The running thing, which is the point of the entry. For visible work, an instance opened
-at the view:
+The running thing, which is the point of the entry — **captured**, so it is in the entry
+rather than one click away from it. A change that moves is captured moving
+(`pnpm capture:motion`); a change that does not is captured still (`pnpm capture:glance`,
+which takes `DROGNA_GLANCE_VIEWPORT=390x844` for a phone). The capture goes at the top of
+the entry where the subject is visual, not at the bottom.
+
+Link the instance as well, opened at the view — for the reader who does click, and
+because it is the system rather than a picture of it:
 
 [Open it at the map](../../instances/main/#/view/map)
 
@@ -44,7 +50,7 @@ at the view:
      refused it the first time this template was used. -->
 
 For headless work, the wrapper that reads the component through the seam and exercises
-it across its range. A screenshot is the fallback, not the deliverable:
+it across its range:
 
 ![A description of what is in the picture, long enough that a reader who cannot see it
 loses nothing: what is on the screen, what state it is in, and what in it is the point

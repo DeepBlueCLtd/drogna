@@ -237,6 +237,53 @@ at a phone's width.
       the two that turned up were the composer's own GET and copy buttons before a
       collection is chosen.
 
+## The entry, and why it was neither short nor shown (the author's sixth report)
+
+*The blog article is ten times too long, and I am very surprised it didn't include
+screenshots — an animated GIF of panels expanding would have seemed obvious.*
+
+- [x] T056 Cut the entry from 3,189 words to 567. It was three times the longest of its
+      ten siblings and three times the median. What was cut was almost all of one kind:
+      the wrong turnings, the planted faults, the second bug found while fixing the
+      first — interesting to whoever did the work, and belonging in these tasks and the
+      commit messages, which is where the next engineer looks.
+- [x] T057 `pnpm capture:motion`: a burst of frames across one interaction, written as a
+      GIF with the same provenance sidecar `capture:glance` writes. **This did not
+      exist**, which is most of the answer to why no animation was captured — prose is
+      always the cheaper path when the alternative has to be invented first.
+- [x] T058 `scripts/capture/gif.ts`: a GIF89a encoder and enough of a PNG decoder to feed
+      it, because this container has no ffmpeg, no ImageMagick and no imaging library.
+      Each frame after the first carries only the rectangle that changed, which took the
+      published animation from 1.1 MB to 228 KB — most of a captured interaction is a
+      still picture with one corner moving.
+- [x] T059 Verify the animation by playing it in a browser and photographing it, rather
+      than trusting the encoder: an interframe optimisation that leaves artefacts leaves
+      them only when something actually renders the file.
+- [x] T060 `DROGNA_GLANCE_VIEWPORT` on `capture:glance`, so a phone capture comes out of
+      the command with its sidecar rather than out of a copy of the script with a number
+      changed — which is how the phone pictures in this feature's pull request were made.
+- [x] T061 **The rule already existed.** `site/authoring/README.md`: *every entry
+      references at least one committed screenshot*. Seven of the eleven entries before
+      this one do not, so the rule has been broken more often than kept — lesson 2 of
+      CLAUDE.md, applied to a rule about evidence rather than to a test.
+- [x] T062 What made it skippable, in the documentation's own words: the paragraph after
+      that rule said *a screenshot is the weaker evidence* and pointed at the instance
+      link instead, and CLAUDE.md ranked instance above screenshot above prose. Read
+      together they say *link it and move on*, which is what was done. The wording now
+      separates the two readers: a pull request is read by a reviewer who will click, an
+      entry by somebody who will not and who is reading after that instance has been
+      replaced.
+- [x] T063 And what was missing entirely: nothing said a *moving* change needs a moving
+      capture. Both documents say it now, and name the command.
+- [x] T064 Publish the gap instead of only forbidding it. The coverage table on the blog
+      index says of each beat whether it is **shown** or **told only**, beside the column
+      that already says which beats have no entry — the project's own device for making
+      an unwritten thing visible, applied to an unshown one. Six told only, four shown,
+      at the time of writing.
+- [x] T065 A word budget in both documents: about 500 words, 1000 is long. "Terse by
+      design" was already written and carried no number, which is a preference rather
+      than a bound.
+
 ## Holding it
 
 - [x] T011 Plant each fault the new checks exist to catch, and see it caught. Four

@@ -111,7 +111,9 @@ was written: of 61 pull requests, two linked a hosted instance, and
 passed each time — which is why the habit is written down here rather than left to be
 noticed.
 
-- **A pull request with anything visible in it links its own instance.** CI has already
+- **A pull request with anything visible in it links its own instance**, and a *moving*
+  change carries a capture of the movement besides — a reviewer can click a link, and
+  cannot see an animation described in a paragraph. CI has already
   built one by the time the pull request opens, at
   `https://deepbluecltd.github.io/drogna/instances/<branch-with-slashes-as-hyphens>/`,
   and the Instances run writes the exact URL into its job summary so it need not be
@@ -126,11 +128,15 @@ noticed.
   Not one per feature — one per new face in the shell or piece of backend simulation
   worth watching work (D17). Copy `site/authoring/blog-entry-template.md` to
   `site/docs/blog/posts/<slug>.md` and write the four parts D19 fixes: the background,
-  the requirement, the options considered, the demo. It is terse by design; the running
-  thing carries the weight the prose used to. `site/authoring/README.md` is the
-  authoring note, and the coverage table on the blog index counts entries against the
-  feature directories under `specs/`, so a beat with no entry is published as a gap
-  rather than quietly missing.
+  the requirement, the options considered, the demo. About 500 words; 1000 is long. The
+  running thing carries the weight the prose used to — which means **the entry carries a
+  capture of it**, and a change that moves is captured moving: `pnpm capture:motion` for
+  an interaction, `pnpm capture:glance` for a moment. The instance link above is for a
+  reviewer, who will click it; an entry's reader will not, and is reading after that
+  instance has been replaced. `site/authoring/README.md` is the authoring note, and the
+  coverage table on the blog index counts entries against the feature directories under
+  `specs/` and says of each whether it is *shown* or *told only*, so both gaps are
+  published rather than quietly missing.
 
 Deciding a change needs neither is a fine answer and a common one — plumbing, a gate, a
 specification. Say so in the pull request, in the sentence it takes: the reason is the

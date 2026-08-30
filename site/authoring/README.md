@@ -80,18 +80,49 @@ in the coverage table's row for it, which is visible on the page: the table is c
 from the feature directories under `specs/` and from each entry's own front matter, so
 a mistyped feature shows up as a beat with no entry.
 
-## Screenshots
+## Show it
 
-Every entry references at least one committed screenshot, which is the evidence that the
-feature works rather than the claim that it does. Images live in
-`site/docs/blog/assets/`, named `<feature-number>-<slug>.png`, and each carries a
-`.provenance.json` sidecar beside it recording the seed, the viewport, the browser and
-what the clock was doing. Images come only from the capture mechanism under `scripts/capture/`; a screenshot taken
-any other way is not reproducible and does not go on the site.
+Every entry references at least one committed capture, which is the evidence that the
+feature works rather than the claim that it does. Captures live in
+`site/docs/blog/assets/`, named `<feature-number>-<slug>.png` or `.gif`, and each carries
+a `.provenance.json` sidecar beside it recording the run, the viewport, the browser and
+what the clock was doing. They come only from the capture mechanism under
+`scripts/capture/`; an image made any other way is not reproducible and does not go on
+the site.
 
-A screenshot is the weaker evidence, though. Where the thing can be embedded and played,
-embed it: a picture of a running system is a claim about it, and an instance opened at
-the view is the system.
+**A moving change is captured moving.** A card that grows, a chart that reflows, a lane
+that pulses: a still of the end state is a picture of something else, and no wording
+recovers what the reader did not see happen. `pnpm capture:motion` records a burst of
+frames across one interaction and writes a GIF and its sidecar; `pnpm capture:glance`
+does the same for one moment, and takes `DROGNA_GLANCE_VIEWPORT=390x844` for the narrow
+presentation. Both drive the committed build with the clock pinned, so what moves in the
+picture is the thing being shown and not the simulation underneath it.
+
+**The instance link does not discharge this**, and the reason is who is reading. A pull
+request is read by a reviewer with the branch in front of them, who will click a link to
+a running instance and should be given one. An entry is read by somebody who arrived from
+somewhere else, is not going to open a build of an application they do not use, and will
+be reading it after that instance has been replaced. For them, the capture *is* the
+evidence. Link the instance as well — it is the stronger thing for anyone who does click
+— but the entry has to work without it.
+
+This rule is older than the entries that keep it: seven of the first eleven have no
+capture at all, which is what a rule with nothing counting it is worth. The coverage
+table on the blog index now says of each beat whether it is **shown** or **told only**,
+for the same reason it says which beats have no entry.
 
 The alt text is a description of what is in the picture, long enough to stand in for it
 — read one of the existing entries for the length that means.
+
+## How long
+
+**About 500 words, and 1000 is long.** The running thing carries the weight the prose
+used to; every part below is one or two paragraphs, and the entry is finished when the
+four of them are said, not when the subject is exhausted.
+
+The failure this guards against is not padding. It is an entry written by somebody who
+has just done the work and finds all of it interesting: the wrong turnings, the tests
+that were planted, the second thing found while fixing the first. Almost none of that
+belongs here — it belongs in the tasks file and the commit message, which is where the
+next engineer looks for it. One wrong turning, chosen because a reader outside the
+project would recognise the mistake, is worth more than five they would not.

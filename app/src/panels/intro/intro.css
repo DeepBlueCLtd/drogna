@@ -1,19 +1,28 @@
 /*
- * The Intro drawing's chrome (feature 118).
+ * The Intro drawing's chrome and its motion (feature 118).
  *
- * Schematic, like Background and unlike the Map: flat surfaces, ruled lines, no glow,
- * so a diagram is never mistaken for a readout. Nothing in the drawing is lit, and
- * nothing in here may make it look as though something is: there is no colour in this
- * file that means alive, and the one animation is the growth the reader themself asked
- * for by pressing a key.
+ * **Every moving thing in this file is CSS, and that is a decision rather than a
+ * convenience.** Constitution I forbids reading the host clock in application code, and
+ * the gate enforces it; an animation driven from `requestAnimationFrame` would have to
+ * spend a `harness:allow-wallclock` exemption on decoration, which is exactly the kind of
+ * spending that makes a gate stop meaning anything. So the panel renders which parts
+ * exist and the browser animates what crosses between them. Nothing here reads a clock.
  *
- * Every distinction survives greyscale, because a distinction that exists only in hue is
- * one the repository has already watched rot (feature 111's mark vocabulary, and its
- * reason). A port is dashed as well as dimmer; the newest node is heavier as well as
- * brighter; the plane is a panel behind rather than a colour.
+ * One cycle, shared. Every animated element runs for `--cycle`, and its keyframes say
+ * where in that cycle it acts — so the observations streaming, the divergence crossing,
+ * the run, the announcement and the query round trip stay in step without anything
+ * co-ordinating them. Change `--cycle` and the whole story slows down together.
+ *
+ * Schematic, like Background and unlike the Map: flat surfaces, ruled lines, no glow. And
+ * every distinction survives greyscale, because a distinction that exists only in hue is
+ * one this repository has watched rot.
  */
 
 .intro-panel {
+  --cycle: 20s;
+  --meas: #5fb8ac;
+  --ann: #e39a44;
+  --fore: #a996d8;
   display: flex;
   flex-direction: column;
   gap: 1em;
@@ -22,77 +31,265 @@
   overflow: auto;
 }
 
-/*
- * The heading, and nothing else. Three paragraphs used to sit between it and the drawing
- * — the disclaimer, the pitch and an instruction — and on a laptop they pushed the plane
- * strip, the record of what is not drawn, and the links out below the fold. The drawing
- * is what a reader came for; FR-01's statement and the run identity moved under it, and
- * the shell header carries the permanent one-liner that may never be disclosed away.
- */
 .intro-head h1 {
-  margin-bottom: 0;
+  margin-bottom: 0.2em;
 }
 
-/* Said out loud, because a key that is never mentioned is a key nobody presses. */
-.intro-keyhint {
-  margin-left: 0.9em;
-  letter-spacing: 0.02em;
-  text-transform: none;
+.intro-frame {
+  max-width: 68em;
+  color: var(--shell-dim);
+  font-size: 0.94em;
 }
 
-/* ---- the stage: the drawing, and what is being said about it ---- */
+.intro-frame strong {
+  color: var(--shell-fg);
+  font-weight: 500;
+}
+
+.intro-frame a {
+  color: var(--shell-accent);
+}
+
+/* ---- the stage: the flow, and what is being said about it ---- */
 
 .intro-stage {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.4em;
+  gap: 1.6em;
   align-items: flex-start;
-  outline-offset: 4px;
+}
+
+.intro-flow {
+  flex: 1 1 34em;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
 }
 
 /*
- * Sized to the drawing, not to the space available, and the cap comes from the panel:
- * only it knows how wide the drawing is (`style={{ maxWidth }}`).
- *
- * Two wrong answers first. At `1 1 30em` the column grew to fill the panel and the
- * drawing sat left-aligned inside it, which on a wide window put four hundred empty
- * pixels between a box and the paragraph about it — the two things a reader is holding
- * together. At `0 1 auto` the basis became the column's max-content width, which is the
- * unwrapped width of the sentence under the drawing, so the column claimed the whole row
- * and the narration wrapped off the bottom of the panel. Both were visible only in the
- * built app.
+ * Centred, not stretched. The lower lane stacks two channels between its roles, and with
+ * `stretch` the roles grew to that height — two labels marooned in a box four times the
+ * size of the ones above them.
  */
-.intro-figure-column {
-  flex: 1 1 24em;
-  min-width: 0;
+.intro-lane {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  background: #141b22;
+  border-radius: 8px;
+  padding: 0.9em 0.8em;
 }
 
-.intro-figure-pan {
-  overflow-x: auto;
-  padding-bottom: 0.4em;
+.intro-pair {
+  flex: 1 1 12em;
+  min-width: 6em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
 }
 
-.intro-figure-scale {
-  transform-origin: top left;
+.intro-drop {
+  display: flex;
+  padding: 0 0.8em;
 }
 
-.intro-figure-note {
+.intro-drop .intro-chan {
+  flex: 1 1 auto;
+}
+
+/* ---- a role ---- */
+
+.intro-role {
+  flex: 0 0 9.5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2em;
+  background: #1a222b;
+  border: 1px solid #33404c;
+  border-radius: 5px;
+  padding: 0.55em 0.7em;
+  animation: intro-arrive 320ms ease-out;
+}
+
+.intro-role.is-new {
+  border-color: #cfd8e0;
+  border-width: 2px;
+  background: #222c37;
+}
+
+.intro-role-name {
+  color: var(--shell-fg);
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.intro-role-gloss {
   color: var(--shell-dim);
-  font-size: 0.86em;
-  margin: 0.5em 0 0;
+  font-size: 0.74em;
+  line-height: 1.3;
 }
+
+/*
+ * ---- a channel ----
+ *
+ * The gap between two roles, with room in it. This is the whole point of the redraw: a
+ * line says "A talks to B" and stops, where a channel holds what is crossing at a size a
+ * reader can aim at and open.
+ */
+
+.intro-chan {
+  flex: 1 1 9em;
+  min-width: 5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25em;
+  animation: intro-arrive 320ms ease-out;
+}
+
+.intro-chan-proto {
+  color: var(--shell-accent);
+  font-size: 0.7em;
+  letter-spacing: 0.03em;
+}
+
+.intro-chan-note {
+  color: var(--shell-dim);
+  font-size: 0.68em;
+  line-height: 1.25;
+}
+
+/*
+ * A containment context, so `100cqw` in the keyframes means the width of this track
+ * rather than of the viewport. Without it a mark's travel is computed against the window
+ * and it leaves the channel entirely — which is what happened first.
+ */
+.intro-chan-track {
+  container-type: inline-size;
+  position: relative;
+  height: 22px;
+  background: #101820;
+  border-radius: 11px;
+  border: 1px solid #202a35;
+}
+
+/* The direction of travel, said in the track rather than in a legend. */
+.intro-chan-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-top: 1px solid #55636f;
+  border-right: 1px solid #55636f;
+  transform: rotate(45deg);
+}
+
+.intro-chan.is-back .intro-chan-track::after {
+  right: auto;
+  left: 6px;
+  transform: rotate(-135deg);
+}
+
+/* ---- a message on a channel ---- */
+
+.intro-mark {
+  /* Declared here so the rule below has a token to find; the panel sets it per mark. */
+  --mark: 0;
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--meas);
+  cursor: pointer;
+  animation: intro-travel var(--cycle) linear infinite;
+  /* Marks on one channel are spread through the cycle rather than bunched. */
+  animation-delay: calc(var(--mark) * (var(--cycle) / 5) * -1);
+}
+
+.intro-mark:hover,
+.intro-mark:focus-visible {
+  outline: 2px solid var(--shell-fg);
+  outline-offset: 2px;
+}
+
+.intro-mark.is-div,
+.intro-mark.is-pub,
+.intro-mark.is-ann {
+  background: var(--ann);
+}
+
+.intro-mark.is-req,
+.intro-mark.is-res {
+  background: var(--fore);
+}
+
+/*
+ * The events happen once a cycle, at the point in the story where they belong, and are
+ * invisible either side of it. The observation stream is the exception: it runs the whole
+ * way round, because measurement does not stop while a run is happening.
+ */
+.intro-mark.is-div {
+  animation-name: intro-travel-div;
+  animation-delay: 0s;
+}
+
+.intro-mark.is-pub {
+  animation-name: intro-travel-pub;
+  animation-delay: 0s;
+}
+
+.intro-mark.is-ann {
+  animation-name: intro-travel-ann;
+  animation-delay: 0s;
+}
+
+.intro-mark.is-req {
+  animation-name: intro-travel-req;
+  animation-delay: 0s;
+}
+
+.intro-mark.is-res {
+  animation-name: intro-travel-res;
+  animation-delay: 0s;
+}
+
+.intro-chan.is-back .intro-mark {
+  left: auto;
+  right: 4px;
+}
+
+.intro-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- what is being said ---- */
 
 .intro-narration {
   flex: 1 1 20em;
   min-width: 16em;
-  max-width: 34em;
+  max-width: 32em;
   border-left: 2px solid #202a35;
   padding-left: 1.1em;
 }
 
 .intro-narration h2 {
-  margin: 0.1em 0 0.1em;
-  font-size: 1.15em;
+  margin: 0.1em 0;
+  font-size: 1.12em;
 }
 
 .intro-position {
@@ -100,18 +297,64 @@
   font-size: 0.8em;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin: 0;
+  margin: 0 0 0.4em;
 }
 
-.intro-component {
-  color: var(--shell-accent);
-  font-size: 0.86em;
-  letter-spacing: 0.06em;
-  margin: 0 0 0.6em;
+.intro-keyhint {
+  margin-left: 0.9em;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .intro-live a {
   color: var(--shell-accent);
+}
+
+.intro-inspector {
+  margin-top: 0.9em;
+  background: #141b22;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 0.6em 0.8em;
+  min-height: 8.5em;
+  font-size: 0.86em;
+}
+
+.intro-insp-head {
+  color: var(--shell-accent);
+  margin-bottom: 0.4em;
+}
+
+.intro-inspector dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1em 0.9em;
+  margin: 0;
+}
+
+.intro-inspector dl > div {
+  display: contents;
+}
+
+.intro-inspector dt {
+  color: var(--shell-dim);
+}
+
+.intro-inspector dd {
+  margin: 0;
+  color: var(--shell-fg);
+}
+
+/* Rendered with every sample, so a reader cannot come away thinking they read a value. */
+.intro-insp-caveat {
+  margin-top: 0.5em;
+  color: var(--shell-dim);
+  font-size: 0.86em;
+  font-style: italic;
+}
+
+.intro-insp-empty {
+  color: var(--shell-dim);
 }
 
 .intro-controls {
@@ -144,175 +387,10 @@
   cursor: default;
 }
 
-.intro-controls .intro-next {
-  border-color: #3d4d5c;
-}
-
-/* ---- the drawing ---- */
-
-.intro-canvas {
-  position: relative;
-}
-
-.intro-wires {
-  position: absolute;
-  inset: 0;
-}
-
-.intro-plane-band {
-  fill: #161d25;
-  stroke: #232c36;
-  stroke-width: 1;
-}
-
-.intro-loop-band {
-  fill: none;
-  stroke: #33404c;
-  stroke-width: 1;
-  stroke-dasharray: 3 3;
-}
-
-.intro-band-caption {
-  fill: var(--shell-dim);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-}
-
-/*
- * The wires are read, not glanced at, so they are drawn to be read.
- *
- * The first version of this file took the Operator flow chart's resting strength — a
- * third of full, on a hue two steps off the background — because that chart draws fifty
- * wires over twenty components and at full strength they are a scribble. This drawing
- * has fifteen. Carrying the number across carried the reasoning for it as well, and the
- * result was a picture whose wires disappeared into the ground at a normal viewing
- * distance: watched happening, in a screenshot of the running instance.
- *
- * So: enough contrast against the panel to survive a projector and a photograph, with
- * the emphasis on the step's own wires still carried by weight as well as by brightness,
- * because a distinction that exists only in hue is one this repository has watched rot.
- */
-.intro-wire {
-  fill: none;
-  stroke: #9aa9b4;
-  stroke-width: 1.5;
-  opacity: 0.9;
-}
-
-/* A port carries no broker traffic, and says so in the dash rather than by being faint:
-   the difference between a wire and a coupling should not cost the reader the wire. */
-.intro-wire.is-port {
-  stroke: #7d8d99;
-  stroke-dasharray: 6 4;
-  stroke-width: 1.4;
-  opacity: 0.78;
-}
-
-.intro-wire.is-outside {
-  stroke: #9aa9b4;
-  opacity: 0.9;
-}
-
-/* The wire that arrived with the step being read: brighter, and heavier, so the
-   emphasis is not carried by colour alone. */
-.intro-wire.is-new {
-  stroke: #f2f6fa;
-  stroke-width: 2.4;
-  opacity: 1;
-  animation: intro-wire-draw 380ms ease-out;
-}
-
-.intro-arrowhead {
-  fill: #9aa9b4;
-}
-
-.intro-arrowhead.is-port {
-  fill: #7d8d99;
-}
-
-.intro-node {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.25em;
-  text-align: left;
-  background: #1a222b;
-  border: 1px solid #33404c;
-  border-radius: 5px;
-  color: var(--shell-fg);
-  font: inherit;
-  font-size: 0.78em;
-  line-height: 1.25;
-  padding: 0.4em 0.6em;
-  cursor: pointer;
-}
-
-.intro-node:hover,
-.intro-node:focus-visible {
-  border-color: var(--shell-accent);
-}
-
-.intro-node.is-new {
-  border-color: #cfd8e0;
-  border-width: 2px;
-  background: #222c37;
-  animation: intro-node-grow 300ms ease-out;
-}
-
-.intro-node-label {
-  font-weight: 500;
-}
-
-.intro-eras {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25em;
-}
-
-.intro-era {
-  border: 1px solid #3b4855;
-  border-radius: 3px;
-  color: var(--shell-dim);
-  font-size: 0.82em;
-  padding: 0 0.3em;
-}
-
-/*
- * Not a component, and drawn so it cannot be read as one: dashed, unfilled, and
- * unclickable. Everything else in this picture is something the shell declares.
- */
-.intro-outside {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15em;
-  border: 1px dashed #55636f;
-  border-radius: 5px;
-  color: var(--shell-dim);
-  font-size: 0.72em;
-  line-height: 1.3;
-  padding: 0.4em 0.55em;
-}
-
-.intro-outside.is-new {
-  border-color: #cfd8e0;
-}
-
-.intro-outside-head {
-  color: var(--shell-fg);
-  font-size: 1.05em;
-}
-
-.intro-served code {
-  font-size: 0.95em;
-}
-
 .intro-foot {
   border-top: 1px solid #202a35;
   padding-top: 0.8em;
-  max-width: 62em;
+  max-width: 68em;
   color: var(--shell-dim);
 }
 
@@ -320,15 +398,12 @@
   color: var(--shell-accent);
 }
 
-/*
- * The growth. It runs on a key press and nothing else: there is no timer here, no
- * autoplay and no loop, so a reader who stops sees a finished drawing rather than
- * something still moving (Constitution I, and feature 111's rule about arrival).
- */
-@keyframes intro-node-grow {
+/* ---- the cycle ---- */
+
+@keyframes intro-arrive {
   from {
     opacity: 0;
-    transform: scale(0.88);
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
@@ -336,31 +411,147 @@
   }
 }
 
-/*
- * In user units, and deliberately not with `pathLength="1"`. Normalising the path made
- * the dash lengths mean something else: a port's `6 4` dash became a six-unit dash on a
- * one-unit path, so every port in the drawing rendered solid — the one distinction the
- * legend promises, silently gone. Found in a screenshot of the running instance, which
- * is the only place it was visible: the mockup drew its own wires and did not have it.
- *
- * The constant is larger than the longest wire in the drawing, so a wire draws from its
- * start rather than appearing part-way along.
- */
-@keyframes intro-wire-draw {
+/* The stream: continuous, because measuring does not stop for a model run. */
+@keyframes intro-travel {
   from {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 1200;
+    transform: translateX(0);
   }
   to {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 0;
+    transform: translateX(calc(100cqw - 20px));
   }
 }
 
+/*
+ * The events, each in its own slice of the cycle and invisible either side of it: the
+ * divergence crosses at 45%, the run's output at 55%, the announcement at 62%, the
+ * question at 72% and the answer at 82%. Reading those percentages in order is reading
+ * the story.
+ */
+@keyframes intro-travel-div {
+  0%,
+  44% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  52% {
+    opacity: 1;
+    transform: translateX(calc(100cqw - 20px));
+  }
+  53%,
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100cqw - 20px));
+  }
+}
+
+@keyframes intro-travel-pub {
+  0%,
+  54% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  61% {
+    opacity: 1;
+    transform: translateX(calc(100cqw - 20px));
+  }
+  62%,
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100cqw - 20px));
+  }
+}
+
+@keyframes intro-travel-ann {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  63% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(calc(100cqw - 20px));
+  }
+  71%,
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100cqw - 20px));
+  }
+}
+
+@keyframes intro-travel-req {
+  0%,
+  72% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  73% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  79% {
+    opacity: 1;
+    transform: translateX(calc(100cqw - 20px));
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100cqw - 20px));
+  }
+}
+
+/* The answer comes back, so it travels the other way. */
+@keyframes intro-travel-res {
+  0%,
+  82% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  83% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(calc(-100cqw + 20px));
+  }
+  91%,
+  100% {
+    opacity: 0;
+    transform: translateX(calc(-100cqw + 20px));
+  }
+}
+
+/*
+ * Held still, and still readable. Every mark stops where its stagger put it rather than
+ * piling at the start, so a viewer who has asked for no motion gets the same picture with
+ * the messages sitting on their channels instead of crossing them.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .intro-node.is-new,
-  .intro-wire.is-new,
-  .intro-outside.is-new {
+  .intro-mark {
+    animation: none;
+    opacity: 1;
+    left: calc(6px + var(--mark) * 16%);
+  }
+
+  .intro-chan.is-back .intro-mark {
+    left: auto;
+    right: calc(6px + var(--mark) * 16%);
+  }
+
+  .intro-role,
+  .intro-chan {
     animation: none;
   }
 }

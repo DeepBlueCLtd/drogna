@@ -772,7 +772,7 @@ pass only one of the three is not finished.
   regions their panels declare — so that a surface gaining a feature and not a step is
   reported by name. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
-### 5.16 The architecture, drawn (feature 118)
+### 5.16 The shape of the system, drawn and moving (feature 118)
 
 The Intro tab was a numbered list of landed features. A reader arriving at it wants to
 know what the thing is made of and how the parts fit together, and a changelog ordered by
@@ -781,40 +781,58 @@ no simulation, adds no component, moves no data and needs no new master: it is e
 about what the first tab shows of what already runs. The specification is
 `specs/118-intro-architecture/`.
 
-- **FR-76** The Intro tab shall carry a **drawing of the system architecture** that is
-  built up **one step at a time under the reader's own control** — arrow keys, and
+*The design was settled over five reviewed wireframes and reversed once, and the reversal
+is the reason FR-77 reads as it does. The first four passes drew the **declared
+components** and were held to the declaration by a gate — which earned itself, stopping
+the build on the day it was written when a merge landed the analyst and left the picture
+silently short of it. The author then asked for something more abstract still, naming no
+component at all. That trades a checkable claim for one that cannot be falsified: an
+abstract picture cannot fall behind the tree because it never claimed to be the tree. The
+gate retires with the storyboard it checked, and `specs/118-intro-architecture/spec.md`
+records what it caught before it went.*
+
+- **FR-76** The Intro tab shall carry a **drawing of the shape of the system** that is
+  built up **one part at a time under the reader's own control** — arrow keys, and
   controls that do the same thing — with a short passage of prose beside each step naming
-  what has just appeared and what it does. Nothing shall advance on a timer: the drawing
-  opens at its first step and moves only when the reader moves it (Constitution I). Each
-  step shall be addressable by its own name rather than its number (FR-15), so that an
-  address survives a step being inserted before it, and shall link to the live view where
-  that part of the system can be watched working.
-- **FR-77** The drawing shall be **derived from the declaration, not authored beside it**.
-  A node's text is its component's own declared label; the wires are the wiring, derived
-  from the topology master and the declared ports exactly as the Operator flow chart
-  derives them (FR-57), collapsed to one line per pair of components; the plane strip is
-  the components that declare that band; the eras drawn inside the coverage store are the
-  enum in the holding master; the interfaces on the arrow leaving the harness are the
-  shell's declared endpoints. What the storyboard authors is the order, the words, the
-  cell each node occupies, and which components are left out.
-- **FR-78** The drawing is a **deliberate subset** — the flows a reader arrives wanting,
-  not every component — and **every component it leaves out shall be recorded with its
-  reason**, on screen and in the storyboard. A gate shall fail the build when a declared
-  component is in neither list, so that a component which lands and is not decided about
-  is named by the build rather than quietly missing from a picture that claims to be the
-  architecture. The same gate holds the rest of the drawing's claims: a node for something
-  the configuration declares nothing for, two nodes in one cell, an omission with no
-  reason or one that is drawn anyway, a component in the plane strip that does not declare
-  the plane, and a component inside the loop band that is not part of the loop.
-- **FR-79** **Nothing in the drawing shall be lit.** It is a picture of the wiring, not a
-  report of the run: no heartbeat reaches it, no node carries a state, and the panel says
-  so in as many words and links to the Operator tab, where every component's own account
-  of itself lives. Constitution VII's rule is that structure comes from declaration and
-  illumination from heartbeats; the cheapest way to break it is a diagram that looks like
-  a readout. The tab remains inert in Background's sense (FR-44): it reads no run state,
-  subscribes to nothing and crosses the seam for nothing, and states only the run identity
-  the shell already handed it (FR-01). It carries no help control, because the walkthrough
-  is what the tab is (FR-75).
+  what has just appeared and what it does. The *growth* shall not advance on a timer: the
+  drawing opens at its first part and grows only when the reader grows it. Each step shall
+  be addressable by its own name rather than its number (FR-15), so that an address
+  survives a step being inserted before it, and shall link to the live view where that part
+  of the system can be watched working.
+- **FR-77** The drawing shall be **abstract: it shall name no component**. Its parts are
+  roles — what is measured, what tests it against belief, what re-forecasts, what is
+  believed, who is told, who asks — and the standards that carry the traffic between them
+  are named on the channels that carry it. A picture that names no component cannot go
+  stale when a component lands, which is what this buys in place of the derivation and the
+  gate that the earlier passes used; the cost, accepted, is that the drawing is no longer a
+  map of the component list and a reader wanting that is sent to the Operator flow chart
+  (FR-57), which draws every declared component and is held to the declaration.
+- **FR-78** The space between two parts shall be a **channel with room in it**, not a line:
+  wide enough that what crosses is drawn at a size a reader can aim at, and **every message
+  crossing one shall open** — the observation, the divergence event, the announcement, and
+  the query request paired with its response — showing the shape of that document with its
+  fields named. A line says only that two things are connected; the point of this drawing
+  is what travels.
+- **FR-79** The tab shall be **inert** in Background's sense (FR-44): it reads no run
+  state, subscribes to nothing and crosses the seam for nothing, and states only the run
+  identity the shell already handed it, which FR-01 requires it to state. Nothing in the
+  drawing shall be lit, carry a component's state, or otherwise read as a report of the
+  run; a reader wanting to know what is alive is sent to Operator, where every component's
+  own account of itself lives.
+- **FR-80** The motion shall be a **fixed cycle, independent of the running system**, and
+  the tab shall **say so where a reader meets it**. This is a deliberate exception to
+  FR-71, which holds the Messages traffic display to motion that comes from received
+  traffic and nothing else, and the reason is that the two surfaces answer different
+  questions: Messages reports this run, and a display that moved while the broker was
+  silent would be asserting traffic that does not exist; Intro explains the shape of the
+  system, and must read the same on a stopped clock, in a screenshot and on a printed page.
+  The exception is paid for in three places rather than assumed: the frame above the
+  drawing states that the movement is an illustration on a fixed cycle, every sample the
+  inspector opens carries its own statement that it is a shape and not a value this run
+  produced, and the Messages tab is linked as the place the real traffic is. The motion
+  shall be expressed without reading the host clock — CSS animation, not a timer — so that
+  Constitution I is not engaged and no wall-clock exemption is spent on decoration, and
+  shall hold still under `prefers-reduced-motion` with the drawing still legible.
 
 ---
 

@@ -1,65 +1,37 @@
 // @vitest-environment jsdom
 /**
- * The Intro walkthrough (feature 118, FR-76 to FR-79).
+ * The Intro walkthrough (feature 118, FR-76 to FR-80).
  *
- * Three things are held here, and each is watched failing rather than trusted:
+ * What is worth holding here changed with the redraw. The earlier passes drew declared
+ * components, so the tests held the picture to the declaration. This one draws six roles
+ * and names no component, so there is nothing to hold it to — and what has to be checked
+ * instead is that it stays *honest about being an illustration* and *inert*:
  *
- * - **the picture is held to the declaration**. `storyboardFindings` is run against the
- *   real configuration, and then against seven mutilated copies of it. The drawing is
- *   deliberately a *subset* — thirteen of twenty components — so the check that matters
- *   most is the one for a component that is in neither the drawing nor the recorded
- *   omissions: that is how the next component to land gets named rather than going
- *   quietly missing;
- * - **it grows, and only under the reader**. What is on the canvas is what the steps so
- *   far revealed, arrow keys move, and a wire is drawn only when both its ends are
- *   there;
- * - **it is inert, and claims nothing about the run**. The panel is rendered with a
- *   client whose every method throws and a fetch that throws. It draws the wiring.
+ * - **it says what it is.** The frame calls the motion an illustration on a fixed cycle,
+ *   every sample the inspector opens carries its own caveat, and Messages is linked as
+ *   the place the real traffic is. A schematic that reads as a readout is the fault this
+ *   whole design has to avoid, and it is the one a test can actually catch;
+ * - **it grows, and only under the reader.** Roles and channels appear as their steps
+ *   arrive, arrow keys move it, and a channel is never drawn before both its ends;
+ * - **it is inert, and reads no clock.** Rendered with a client whose every method throws
+ *   and a fetch that throws. No timer is set: the motion is CSS, which is what keeps
+ *   Constitution I out of it.
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, ConfigShell, RunManifest } from '../../generated/types.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { IntroPanel } from './IntroPanel.js';
-import {
-  LOOP_REGION,
-  NOT_DRAWN,
-  PLANE_ROW,
-  STORYBOARD,
-  nodesOf,
-  storyboardFindings,
-  type Beat,
-} from './storyboard.js';
-import { METRICS, collapse, place, region, route } from './geometry.js';
-import { buildFlow } from '../operator/graph.js';
-import { topology } from '../../generated/topology.js';
+import { BEATS, CHANNELS, ROLES, shownAt } from './roles.js';
 import { restForStep, stepFromRest } from './address.js';
 
 afterEach(cleanup);
 
-const config = runConfigDocument as unknown as ConfigRun;
-const shell: ConfigShell = config.shell;
+const shell: ConfigShell = (runConfigDocument as unknown as ConfigRun).shell;
+const manifest = { run_id: 'run-intro-test', root_seed: 7 } as unknown as RunManifest;
 
-const manifest = {
-  run_id: 'run-intro-test',
-  root_seed: 7,
-} as unknown as RunManifest;
-
-/** The storyboard with one node moved, for the planted-violation tests. */
-function moved(component: string, place: { col: number; row: number }): Beat[] {
-  return STORYBOARD.map((beat) => ({
-    ...beat,
-    reveals: beat.reveals.map((node) => (node.component === component ? { ...node, place } : node)),
-  }));
-}
-
-/**
- * The panel with nothing running. The configuration and the manifest are handed over
- * because the tab genuinely states what they declare (FR-01's run identity); everything
- * that would reach the *running system* throws instead.
- */
 function panelProps(rest?: string): {
   props: IDockviewPanelProps<PanelParams>;
   reached: string[];
@@ -93,402 +65,136 @@ function panelProps(rest?: string): {
   return { props: { params } as unknown as IDockviewPanelProps<PanelParams>, reached, written };
 }
 
-function nodes(): string[] {
-  return [...document.querySelectorAll('[data-intro-node]')].map(
-    (node) => node.getAttribute('data-intro-node') ?? '',
+const roles = () =>
+  [...document.querySelectorAll('[data-intro-role]')].map((n) => n.getAttribute('data-intro-role'));
+const chans = () =>
+  [...document.querySelectorAll('[data-intro-channel]')].map((n) =>
+    n.getAttribute('data-intro-channel'),
   );
-}
-
-function wires(): string[] {
-  return [...document.querySelectorAll('[data-intro-wire]')].map(
-    (wire) => wire.getAttribute('data-intro-wire') ?? '',
-  );
-}
-
-function stage(): HTMLElement {
-  const found = document.querySelector<HTMLElement>('.intro-stage');
-  if (!found) throw new Error('the panel rendered no stage');
+const stage = (): HTMLElement => {
+  const found = document.querySelector<HTMLElement>('.intro-panel');
+  if (!found) throw new Error('the panel rendered no root');
   return found;
-}
-
-function press(key: string, target: HTMLElement | Document = stage()): void {
+};
+const press = (key: string, target: HTMLElement | Document = stage()) =>
   act(() => {
     fireEvent.keyDown(target, { key });
   });
-}
 
-describe('the drawing is held to the declaration (FR-77)', () => {
-  it('draws a subset, records the rest, and accounts for every declared component', () => {
-    expect(storyboardFindings(shell)).toEqual([]);
-    const drawn = nodesOf().map((node) => node.component);
-    // The two lists partition the declaration: nothing counted twice, nothing missed.
-    expect(new Set(drawn).size).toBe(drawn.length);
-    expect(drawn.length + NOT_DRAWN.length).toBe(shell.components.length);
+describe('it says what it is (FR-80)', () => {
+  it('calls the motion an illustration, in the frame, before anyone reads it as a readout', () => {
+    // The whole risk of a schematic that moves: a reader takes it for a report of the
+    // run. The frame is where that is headed off, so the frame is what is asserted.
+    render(<IntroPanel {...panelProps().props} />);
+    const frame = document.querySelector('.intro-frame');
+    expect(frame?.textContent).toMatch(/illustration on a fixed cycle/i);
+    expect(frame?.textContent).toMatch(/whether or not anything is running/i);
+    // And it says where the real thing is, rather than leaving the reader with only this.
+    expect(frame?.querySelector('a')?.getAttribute('href')).toBe('#/view/messages');
   });
 
-  it('names a component that is neither drawn nor recorded as left out', () => {
-    // The fault the gate exists for: a component lands and nobody decides about it.
-    const short = STORYBOARD.filter((beat) => beat.id !== 'drift');
-    expect(storyboardFindings(shell, short).join('\n')).toMatch(
-      /component 'monitor' is declared but the Intro drawing neither draws it nor records why it is left out/,
-    );
-    // And recording it is enough — the point is the decision, not the drawing.
-    expect(
-      storyboardFindings(shell, short, [...NOT_DRAWN, { component: 'monitor', reason: 'because' }]),
-    ).toEqual([]);
-  });
-
-  it('names a node the configuration declares nothing for', () => {
-    // Constitution VII applied to the drawing: a picture may not invent a component.
-    const stranger: Beat[] = [
-      ...STORYBOARD,
-      {
-        id: 'planted',
-        title: 'x',
-        prose: [],
-        reveals: [{ component: 'adaptive-sampling', place: { col: 2, row: 3 } }],
-      },
-    ];
-    expect(storyboardFindings(shell, stranger).join('\n')).toMatch(
-      /node for 'adaptive-sampling', which the shell declares no component for/,
-    );
-  });
-
-  it('names an omission with no reason, and one that is drawn anyway', () => {
-    expect(storyboardFindings(shell, STORYBOARD, [...NOT_DRAWN, { component: 'monitor', reason: '' }]).join('\n')).toMatch(
-      /is both drawn in the Intro drawing and listed as deliberately not drawn/,
-    );
-    const silent = NOT_DRAWN.map((omission) =>
-      omission.component === 'offload' ? { ...omission, reason: '  ' } : omission,
-    );
-    expect(storyboardFindings(shell, STORYBOARD, silent).join('\n')).toMatch(
-      /omits 'offload' with no reason given/,
-    );
-  });
-
-  it('names two nodes claiming one cell', () => {
-    expect(storyboardFindings(shell, moved('monitor', { col: 0, row: 0 })).join('\n')).toMatch(
-      /both claim cell 0,0/,
-    );
-  });
-
-  it('names a plane component outside the strip, and a stranger inside it', () => {
-    // The strip is not decoration: it is where the components that declare themselves the
-    // plane are drawn, and the two have to agree or the strip means nothing.
-    expect(storyboardFindings(shell, moved('clock', { col: 2, row: 3 })).join('\n')).toMatch(
-      /'clock' declares itself the plane and is drawn outside/,
-    );
-    expect(
-      storyboardFindings(shell, moved('observation-store', { col: 0, row: PLANE_ROW })).join('\n'),
-    ).toMatch(/'observation-store' is drawn in the Intro drawing's plane strip but declares band 'path'/);
-  });
-
-  it('names a node inside the loop band that is not part of the loop', () => {
-    // The band claims the loop turns there. Everything inside it has to be the loop.
-    expect(storyboardFindings(shell, moved('ingest', LOOP_REGION.from)).join('\n')).toMatch(
-      /'ingest' is drawn inside the Intro drawing's loop band but declares band 'path'/,
-    );
-  });
-
-  it('draws the loop as a ring: the band closes, through every node in it', () => {
-    // Asserted as a property, not as a list of names. The first version of this test
-    // named the four members, and when feature 116 landed the analyst it failed for the
-    // right reason and had to be hand-edited to a new list — which is a check that has to
-    // be maintained rather than one that holds. What the band actually claims is that the
-    // loop turns there, so that is what is checked: everything inside it declares the loop
-    // band, and the derived wires carry a cycle that visits all of them.
-    const inLoop = nodesOf().filter(
-      (node) =>
-        node.place.col >= LOOP_REGION.from.col &&
-        node.place.col <= LOOP_REGION.to.col &&
-        node.place.row >= LOOP_REGION.from.row &&
-        node.place.row <= LOOP_REGION.to.row,
-    );
-    expect(inLoop.length).toBeGreaterThan(2);
-    // Each in its own cell: a ring with two boxes in one place would be a line.
-    expect(new Set(inLoop.map((node) => `${node.place.col},${node.place.row}`)).size).toBe(
-      inLoop.length,
-    );
-    const declared = new Map(shell.components.map((component) => [component.id, component.band]));
-    for (const node of inLoop) expect(declared.get(node.component)).toBe('loop');
-
-    // The wires, derived exactly as the drawing derives them, restricted to the band.
-    const members = new Set(inLoop.map((node) => node.component));
-    const out = new Map([...members].map((id) => [id, [] as string[]]));
-    for (const link of collapse(buildFlow(shell, topology).edges)) {
-      if (members.has(link.from) && members.has(link.to) && link.from !== link.to) {
-        out.get(link.from)?.push(link.to);
-      }
-    }
-    // A cycle through every member, found rather than assumed. Five nodes, so the search
-    // is trivial; what matters is that the claim on the band is the claim being tested.
-    const walk = (at: string, seen: string[]): boolean => {
-      if (seen.length === members.size) return (out.get(at) ?? []).includes(seen[0]);
-      for (const next of out.get(at) ?? []) {
-        if (seen.includes(next)) continue;
-        if (walk(next, [...seen, next])) return true;
-      }
-      return false;
-    };
-    const start = inLoop[0].component;
-    expect(walk(start, [start]), `no cycle visits every node in the loop band`).toBe(true);
-  });
-});
-
-describe('the geometry', () => {
-  it('bows a hop along a row over the node between, and one down a column into the gutter', () => {
-    const placed = place([
-      { id: 'left', cell: { col: 0, row: 1 } },
-      { id: 'middle', cell: { col: 1, row: 1 } },
-      { id: 'right', cell: { col: 2, row: 1 } },
-      { id: 'below', cell: { col: 0, row: 3 } },
-    ]);
-    const boxes = new Map(placed.boxes.map((box) => [box.id, box]));
-    const left = boxes.get('left');
-    const right = boxes.get('right');
-    const middle = boxes.get('middle');
-    const below = boxes.get('below');
-    if (!left || !right || !middle || !below) throw new Error('the fixture lost a box');
-
-    // Over the top: the corridor is above the row, so the wire cannot be read as
-    // touching the node it passes.
-    const along = route(left, right, { col: 0, row: 1 }, { col: 2, row: 1 });
-    const ys = [...along.d.matchAll(/[-\d.]+ ([-\d.]+)/g)].map((match) => Number(match[1]));
-    expect(Math.min(...ys)).toBeLessThan(middle.y);
-    expect(Math.min(...ys)).toBeGreaterThanOrEqual(0);
-
-    // Out to the left: the bow uses the gutter, and stays on the canvas.
-    const down = route(below, left, { col: 0, row: 3 }, { col: 0, row: 1 });
-    const xs = [...down.d.matchAll(/([-\d.]+) [-\d.]+/g)].map((match) => Number(match[1]));
-    expect(Math.min(...xs)).toBeLessThan(left.x);
-    expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
-  });
-
-  it('reserves the outside lane only for a node that declares it serves the outside', () => {
-    const without = place([{ id: 'a', cell: { col: 0, row: 0 } }]);
-    expect(without.outside).toBeUndefined();
-    const serving = place([{ id: 'a', cell: { col: 0, row: 0 }, servesOutside: true }]);
-    expect(serving.outside).toBeDefined();
-    expect(serving.width).toBeGreaterThan(without.width + METRICS.outsideWidth - 1);
-  });
-
-  it('draws a band that encloses the cells it claims', () => {
-    const band = region(LOOP_REGION.from, LOOP_REGION.to);
-    const placed = place(
-      nodesOf().map((node) => ({ id: node.component, cell: node.place })),
-    );
-    for (const node of nodesOf()) {
-      const inLoop =
-        node.place.col >= LOOP_REGION.from.col &&
-        node.place.col <= LOOP_REGION.to.col &&
-        node.place.row >= LOOP_REGION.from.row &&
-        node.place.row <= LOOP_REGION.to.row;
-      if (!inLoop) continue;
-      const box = placed.boxes.find((candidate) => candidate.id === node.component);
-      if (!box) throw new Error(`no box for ${node.component}`);
-      expect(box.x).toBeGreaterThanOrEqual(band.x);
-      expect(box.y).toBeGreaterThanOrEqual(band.y);
-      expect(box.x + box.width).toBeLessThanOrEqual(band.x + band.width);
-      expect(box.y + box.height).toBeLessThanOrEqual(band.y + band.height);
-    }
-  });
-
-  it('collapses parallel wires into one, keeping every label', () => {
-    const collapsed = collapse([
-      { from: 'sensors', to: 'ingest', kind: 'topic', label: 'a' },
-      { from: 'sensors', to: 'ingest', kind: 'topic', label: 'b' },
-      { from: 'sensors', to: 'ingest', kind: 'port', label: 'a port' },
-    ]);
-    expect(collapsed).toHaveLength(2);
-    expect(collapsed[0].labels).toEqual(['a', 'b']);
-  });
-});
-
-describe('the walkthrough grows, under the reader (FR-76, FR-78)', () => {
-  it('draws what the steps so far revealed, and nothing ahead of them', () => {
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    expect(nodes()).toEqual(STORYBOARD[0].reveals.map((node) => node.component));
-    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${STORYBOARD.length}`);
-
-    for (let step = 2; step <= STORYBOARD.length; step += 1) {
-      press('ArrowRight');
-      expect(nodes()).toEqual(
-        STORYBOARD.slice(0, step).flatMap((beat) => beat.reveals.map((node) => node.component)),
+  it('carries a caveat on every sample the inspector can open', () => {
+    // Not "on the one we remembered": every channel's sample, enumerated.
+    for (const channel of Object.values(CHANNELS)) {
+      expect(channel.sample.caveat, `${channel.id} opens with no caveat`).toMatch(
+        /not a value this run produced/i,
       );
-      expect(
-        document.querySelector('[data-testid="intro-diagram"]')?.getAttribute('data-step'),
-      ).toBe(String(step));
     }
-    // The end is the end: forward from the last step stays on the last step.
-    press('ArrowRight');
-    expect(nodes()).toHaveLength(nodesOf().length);
-  });
-
-  it('draws a wire only when both of its ends have been revealed', () => {
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    // The first step is one node and no wire: there is nothing yet for it to reach.
-    expect(wires()).toEqual([]);
-
-    press('ArrowRight');
-    // The sampler port is a genuine declared coupling and is now drawable.
-    expect(wires()).toContain('env-generator->sensors');
-    expect(
-      document
-        .querySelector('[data-intro-wire="env-generator->sensors"]')
-        ?.getAttribute('data-wire-kind'),
-    ).toBe('port');
-
+    render(<IntroPanel {...panelProps().props} />);
     press('End');
-    const shown = new Set(nodes());
-    for (const wire of wires()) {
-      const [from, to] = wire.split('->');
-      expect(shown.has(from) && shown.has(to)).toBe(true);
+    const mark = document.querySelector<HTMLElement>('[data-intro-mark]');
+    if (!mark) throw new Error('no message is crossing anything');
+    act(() => mark.click());
+    expect(screen.getByTestId('intro-inspector').textContent).toMatch(
+      /not a value this run produced/i,
+    );
+  });
+
+  it('names no component anywhere a reader can see', () => {
+    // The bargain of the redraw: an abstract picture cannot go stale when a component
+    // lands, and this is what that claim costs — no declared id or label may appear.
+    render(<IntroPanel {...panelProps().props} />);
+    press('End');
+    const drawn = document.querySelector('[data-testid="intro-flow"]')?.textContent ?? '';
+    for (const component of shell.components) {
+      expect(drawn, `the drawing names the component '${component.id}'`).not.toContain(
+        component.id,
+      );
+      expect(drawn, `the drawing names '${component.label}'`).not.toContain(component.label);
     }
-    // And nothing reaching a component this drawing does not draw at all.
-    const omitted = new Set(NOT_DRAWN.map((omission) => omission.component));
-    for (const wire of wires()) {
-      for (const end of wire.split('->')) expect(omitted.has(end)).toBe(false);
+  });
+});
+
+describe('it grows, under the reader (FR-76)', () => {
+  it('brings in each step’s roles and channels, and nothing ahead of them', () => {
+    render(<IntroPanel {...panelProps().props} />);
+    expect(roles()).toEqual(BEATS[0].roles);
+    expect(chans()).toEqual([]);
+
+    for (let step = 2; step <= BEATS.length; step += 1) {
+      press('ArrowRight');
+      const expected = shownAt(step);
+      expect(new Set(roles())).toEqual(expected.roles);
+      expect(new Set(chans())).toEqual(expected.channels);
+    }
+    // The end is the end.
+    press('ArrowRight');
+    expect(roles()).toHaveLength(ROLES.length);
+  });
+
+  it('never draws a channel before both the parts it runs between', () => {
+    // A channel with one end missing is a claim about something that is not there.
+    const ends: Record<string, readonly [string, string]> = {
+      obs: ['measured', 'tested'],
+      div: ['tested', 'ran'],
+      pub: ['ran', 'believed'],
+      ann: ['believed', 'told'],
+      req: ['told', 'answered'],
+      res: ['told', 'answered'],
+    };
+    for (let step = 1; step <= BEATS.length; step += 1) {
+      const at = shownAt(step);
+      for (const channel of at.channels) {
+        const [from, to] = ends[channel];
+        expect(at.roles.has(from), `${channel} drawn without ${from} at step ${step}`).toBe(true);
+        expect(at.roles.has(to), `${channel} drawn without ${to} at step ${step}`).toBe(true);
+      }
     }
   });
 
-  it('walks on the arrow keys having clicked nothing', () => {
-    // The fault this guards: a handler hung on the panel's own element never fires for a
-    // viewer who has just opened the tab, because nothing inside it holds the focus. That
-    // was the first version, and it made the arrow keys — the whole of what was asked for
-    // — do nothing until you thought to click the drawing. The listener is on the
-    // document, with the guards in `shell/arrow-keys.ts`.
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
+  it('walks on the arrow keys having clicked nothing, and goes back', () => {
+    render(<IntroPanel {...panelProps().props} />);
     expect(document.activeElement).toBe(document.body);
     press('ArrowRight', document.body);
-    expect(screen.getByTestId('intro-position').textContent).toBe(`step 2 of ${STORYBOARD.length}`);
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 2 of ${BEATS.length}`);
     press('ArrowLeft', document.body);
-    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${STORYBOARD.length}`);
-  });
-
-  it('leaves the arrow keys alone while the address names another view', () => {
-    // Every panel stays mounted when another is shown, so a hidden Intro must not walk
-    // itself while the viewer is on the Map.
-    const { props } = panelProps();
-    const params = props.params as unknown as { address: { names: () => boolean } };
-    params.address.names = () => false;
-    render(<IntroPanel {...props} />);
-    press('ArrowRight', document.body);
-    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${STORYBOARD.length}`);
-    // Focus inside this panel is still this panel's business, addressed or not.
-    press('ArrowRight');
-    expect(screen.getByTestId('intro-position').textContent).toBe(`step 2 of ${STORYBOARD.length}`);
-  });
-
-  it('leaves a port wire able to be dashed: no pathLength rescaling its dash', () => {
-    // The fault this guards: `pathLength="1"` normalises the path's length, and
-    // `stroke-dasharray` is then in that same space — so the port's `6 4` dash became a
-    // six-unit dash on a one-unit path and every port rendered solid. The legend promises
-    // that a dashed wire is a coupling carrying no traffic, and the drawing had quietly
-    // stopped keeping it. Found in a screenshot of the running instance; no test and no
-    // gate would have caught it, because the markup was correct and only its meaning was
-    // wrong.
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${BEATS.length}`);
     press('End');
-    const ports = [...document.querySelectorAll('[data-wire-kind="port"]')];
-    expect(ports.length).toBeGreaterThan(0);
-    for (const port of ports) {
-      expect(port.getAttribute('pathLength')).toBeNull();
-      expect(port.getAttribute('class')).toContain('is-port');
-    }
-    // And no wire at all carries it: the draw animation works in user units instead.
-    expect(document.querySelectorAll('[data-intro-wire][pathLength]')).toHaveLength(0);
-  });
-
-  it('bands the loop only once the ring closes', () => {
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    // A band around an incomplete ring would claim a loop that does not yet turn.
-    expect(screen.queryByTestId('intro-loop-band')).toBeNull();
-    press('End');
-    expect(screen.getByTestId('intro-loop-band')).toBeTruthy();
-  });
-
-  it('goes back, jumps to the ends, and jumps to a part that is clicked', () => {
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-
-    press('End');
-    expect(nodes()).toHaveLength(nodesOf().length);
-
-    press('ArrowLeft');
-    expect(nodes()).toHaveLength(nodesOf().length - STORYBOARD[STORYBOARD.length - 1].reveals.length);
-
-    // A node already drawn is a way back into its own step.
-    act(() => {
-      (document.querySelector('[data-intro-node="monitor"]') as HTMLElement).click();
-    });
-    const monitorStep = STORYBOARD.findIndex((beat) => beat.id === 'drift') + 1;
     expect(screen.getByTestId('intro-position').textContent).toBe(
-      `step ${monitorStep} of ${STORYBOARD.length}`,
+      `step ${BEATS.length} of ${BEATS.length}`,
     );
-
-    press('Home');
-    expect(nodes()).toEqual(STORYBOARD[0].reveals.map((node) => node.component));
   });
 
-  it('names the arrow out of the harness with the endpoints the shell declares', () => {
-    const { props } = panelProps('interrogated');
-    render(<IntroPanel {...props} />);
-    const outside = screen.getByTestId('intro-outside');
-    expect(outside.textContent).toContain(shell.endpoints.edr);
-    expect(outside.textContent).toContain(shell.endpoints.sensorthings);
-    expect(outside.textContent).toContain(shell.endpoints.features);
-    // It is not a component, and is not offered as one.
-    expect(outside.querySelector('button')).toBeNull();
-  });
-
-  it('records what it does not draw, with a reason for each', () => {
-    // A curated picture that did not say what it left out would be claiming to be the
-    // architecture. Every omission is on screen, and each carries its reason.
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    const omissions = screen.getByTestId('intro-omissions');
-    expect(omissions.querySelectorAll('li')).toHaveLength(NOT_DRAWN.length);
-    for (const omission of NOT_DRAWN) {
-      const label = shell.components.find((component) => component.id === omission.component)?.label;
-      expect(omissions.textContent).toContain(label);
-      expect(omissions.textContent).toContain(omission.reason);
-    }
-  });
-});
-
-describe('the address names a step, not a number (FR-79)', () => {
   it('opens where the address says, and writes the step name back', () => {
-    expect(stepFromRest(STORYBOARD, 'the-loop')).toBe(
-      STORYBOARD.findIndex((beat) => beat.id === 'the-loop') + 1,
+    expect(stepFromRest(BEATS, 'told')).toBe(
+      BEATS.findIndex((beat) => beat.id === 'told') + 1,
     );
-    // A component id names the step that reveals it, so clicking a node and pasting an
-    // address mean the same thing.
-    expect(stepFromRest(STORYBOARD, 'model-runner')).toBe(
-      STORYBOARD.findIndex((beat) => beat.id === 'the-loop') + 1,
+    // A role id names the step that brings it in.
+    expect(stepFromRest(BEATS, 'answered')).toBe(
+      BEATS.findIndex((beat) => beat.roles.includes('answered')) + 1,
     );
-    // A remainder naming something the storyboard no longer has is a convenience that
-    // failed, not a fault: the walkthrough opens at the beginning.
-    expect(stepFromRest(STORYBOARD, 'no-such-step')).toBe(1);
-    expect(stepFromRest(STORYBOARD, undefined)).toBe(1);
-    expect(restForStep(STORYBOARD, 2)).toBe(STORYBOARD[1].id);
+    expect(stepFromRest(BEATS, 'no-such-step')).toBe(1);
+    expect(restForStep(BEATS, 2)).toBe(BEATS[1].id);
 
-    const { props, written } = panelProps('drift');
+    const { props, written } = panelProps('ran');
     render(<IntroPanel {...props} />);
-    expect(nodes()).toContain('monitor');
-    expect(written.at(-1)).toBe('drift');
-
-    press('ArrowRight');
-    expect(written.at(-1)).toBe(STORYBOARD[STORYBOARD.findIndex((beat) => beat.id === 'drift') + 1].id);
+    expect(roles()).toContain('ran');
+    expect(written.at(-1)).toBe('ran');
   });
 });
 
-describe('the tab is inert, and says what it is (FR-01, FR-78)', () => {
-  it('draws the whole walkthrough with nothing running and nothing answering', () => {
+describe('it is inert, and reads no clock (FR-79)', () => {
+  it('draws every step with nothing running and nothing answering', () => {
     const realFetch = globalThis.fetch;
     const reachedFetch: string[] = [];
     globalThis.fetch = (() => {
@@ -498,9 +204,8 @@ describe('the tab is inert, and says what it is (FR-01, FR-78)', () => {
     try {
       const { props, reached } = panelProps();
       render(<IntroPanel {...props} />);
-      for (let step = 2; step <= STORYBOARD.length; step += 1) {
+      for (let step = 2; step <= BEATS.length; step += 1) {
         press('ArrowRight');
-        // Something is said at every step: never a blank.
         expect(
           document.querySelector('.intro-narration')?.textContent?.trim().length ?? 0,
         ).toBeGreaterThan(40);
@@ -512,25 +217,32 @@ describe('the tab is inert, and says what it is (FR-01, FR-78)', () => {
     }
   });
 
-  it('states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    expect(screen.getByText(/deliberately\s+fake/)).toBeTruthy();
-    expect(screen.getByText(manifest.run_id)).toBeTruthy();
+  it('sets no timer: the motion is CSS, so Constitution I is never engaged', () => {
+    // The fault this guards: reaching for setInterval or requestAnimationFrame to drive
+    // the animation, which would need a wallclock exemption spent on decoration. The gate
+    // catches that in source; this catches it in behaviour, including from a library.
+    vi.useFakeTimers();
+    const timer = vi.spyOn(globalThis, 'setInterval');
+    const timeout = vi.spyOn(globalThis, 'setTimeout');
+    const frame = vi.spyOn(globalThis, 'requestAnimationFrame');
+    try {
+      render(<IntroPanel {...panelProps().props} />);
+      press('End');
+      act(() => vi.advanceTimersByTime(5000));
+      expect(timer).not.toHaveBeenCalled();
+      expect(timeout).not.toHaveBeenCalled();
+      expect(frame).not.toHaveBeenCalled();
+    } finally {
+      timer.mockRestore();
+      timeout.mockRestore();
+      frame.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
-  it('makes no claim about liveness: no node reports a state', () => {
-    // The fault this guards against is a drawing that looks like a readout. Nothing in
-    // the drawing carries the operator surface's state vocabulary, and the panel says in
-    // as many words where the live answer is.
-    const { props } = panelProps();
-    render(<IntroPanel {...props} />);
-    press('End');
-    const drawing = document.querySelector('[data-testid="intro-diagram"]');
-    expect(drawing?.querySelectorAll('[data-component-state]')).toHaveLength(0);
-    expect(drawing?.textContent).not.toMatch(/\b(unheard|lit|live|running|stopped)\b/i);
-    expect(document.querySelector('.intro-foot')?.textContent).toMatch(
-      /it is the wiring,\s*not the run/,
-    );
+  it('states the synthetic-throughout disclaimer and the run identity (FR-01)', () => {
+    render(<IntroPanel {...panelProps().props} />);
+    expect(screen.getByText(/deliberately\s+fake/)).toBeTruthy();
+    expect(screen.getByText(manifest.run_id)).toBeTruthy();
   });
 });

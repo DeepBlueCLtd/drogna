@@ -1,195 +1,177 @@
 /**
- * The Intro tab (SRD-v2 FR-42 as amended, FR-76 to FR-79; feature 118): the system
- * architecture, drawn, and grown one component at a time under the reader's own arrow
- * keys.
+ * The Intro tab (SRD-v2 FR-42 as amended, FR-76 to FR-80; feature 118): the shape of the
+ * system, grown one part at a time, with the links between the parts in motion and every
+ * message crossing one open to inspection.
  *
- * What was here before was a numbered list of landed features. It was honest and it was
- * a poor answer to the question a reader actually arrives with, which is *what is this
- * thing made of and how do the parts fit together*. A list of beats answers that only
- * for somebody who already knows, and it had to be extended by hand for every beat — a
- * record maintained separately from the tree, which is the shape of every stale document
- * this repository has paid for.
+ * Three decisions are worth knowing before reading the code.
  *
- * So the tab now draws the architecture instead, and the drawing is derived from the
- * declaration (`Diagram.tsx`, `storyboard.ts`). A component that lands and is not
- * revealed fails a gate rather than going quietly missing.
+ * **It names no component.** Six roles, and not one component id among them. The five
+ * earlier passes drew the declared components and needed a gate to stop the picture
+ * quietly falling behind the tree as components landed — which it did, catching the
+ * analyst on the day it was written. This one makes no claim a merge can falsify, so
+ * there is nothing left for that gate to check and it retires with the storyboard it
+ * checked (`specs/118-intro-architecture/spec.md` records why).
  *
- * The tab is inert, like Background: it reads no run state, subscribes to nothing and
- * crosses the seam for nothing. The one live fact it carries is the run identity the
- * shell already handed it, which FR-01 requires it to state. That is deliberate — this
- * is a drawing of the wiring, and every question about whether the wiring is *running*
- * is one link away in Operator.
+ * **The motion is a fixed cycle, not received traffic** (FR-80, and the author's
+ * decision). Feature 115's FR-71 holds the Messages tab to the opposite rule, and this
+ * tab is deliberately outside it: the Intro tab reads the same whether the clock is
+ * running, stopped, or absent, which is what a first page should do. The cost is that a
+ * reader must not mistake it for a readout, so the panel says what it is in the frame
+ * above the drawing, every sample in the inspector carries its own caveat, and Messages
+ * is one link away for the traffic that is real.
+ *
+ * **Nothing here reads a clock.** The animation is entirely CSS on one shared cycle
+ * (`intro.css`), so Constitution I is not engaged and no `harness:allow-wallclock`
+ * exemption is spent on decoration. React renders which parts exist; the browser animates
+ * what crosses between them. That is also what makes the whole thing hold still under
+ * `prefers-reduced-motion` without a second code path.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import { hashForView } from '../../shell/views.js';
-import { buildFlow } from '../operator/graph.js';
-import { topology } from '../../generated/topology.js';
-import { useMeasuredWidth } from '../../shell/viewport.js';
 import { useArrowKeys } from '../../shell/arrow-keys.js';
-import { Diagram, diagramPlacement } from './Diagram.js';
-import { NOT_DRAWN, STORYBOARD } from './storyboard.js';
+import { BEATS, CHANNELS, ROLES, shownAt, type Channel, type Sample } from './roles.js';
 import { clampStep, restForStep, stepFromRest } from './address.js';
 import './intro.css';
 
-/**
- * How far the drawing may be scaled down to fit before it is panned at full size
- * instead. Feature 111's rule stands — never scaled past legibility, never rendered
- * having dropped its labels — and this is where the line is: a tenth off a label is
- * still a label, a third off it is a smudge. Below the floor the drawing is drawn at
- * full size in a frame that scrolls sideways, which is feature 112's answer for a
- * viewer with no width to widen into.
- */
-const SCALE_FLOOR = 0.8;
-
 export function IntroPanel({ params }: PanelProps): ReactNode {
-  const { manifest, config, address } = params;
-  const [step, setStep] = useState<number>(() =>
-    stepFromRest(STORYBOARD, address.current()),
-  );
+  const { manifest, address } = params;
   const rootRef = useRef<HTMLDivElement>(null);
-  const columnRef = useRef<HTMLDivElement>(null);
-  const measured = useMeasuredWidth(columnRef);
+  const [step, setStep] = useState<number>(() => stepFromRest(BEATS, address.current()));
+  const [open, setOpen] = useState<{ channel: string; sample: Sample } | undefined>();
 
   // The address is the one place a position lives, and nothing is persisted: where a
-  // reader has got to in a walkthrough is presentation, discarded like any other
-  // per-viewer convenience.
-  useEffect(() => address.onChange((rest) => setStep(stepFromRest(STORYBOARD, rest))), [address]);
-  // A block body, deliberately: an arrow returning `write`'s result hands React whatever
-  // that is as a cleanup function, and React calls it on the next change. A `write` that
-  // returns anything at all — a test double pushing to an array does — then fails on
-  // unmount with "destroy is not a function". Watched happening, in this panel's tests.
+  // reader has got to is presentation, discarded like any other per-viewer convenience.
+  useEffect(() => address.onChange((rest) => setStep(stepFromRest(BEATS, rest))), [address]);
+  // Braced, deliberately. An arrow body hands React whatever `write` returns as the
+  // effect's cleanup function, and an address implementation that returns anything at all
+  // then fails the next unmount with "destroy is not a function". The live implementation
+  // returns void so it never bit in the browser; it bit in ten tests at once.
   useEffect(() => {
-    address.write(restForStep(STORYBOARD, step));
+    address.write(restForStep(BEATS, step));
   }, [address, step]);
 
-  const flow = useMemo(() => buildFlow(config, topology), [config]);
-  const placement = useMemo(() => diagramPlacement(), []);
-
-  const total = STORYBOARD.length;
-  const beat = STORYBOARD[clampStep(STORYBOARD, step) - 1];
-  const labelOf = (id: string) =>
-    config.components.find((component) => component.id === id)?.label ?? id;
-  const arriving = beat.reveals.map((node) => labelOf(node.component)).join(' · ');
-
-  const go = useCallback((next: number) => setStep(clampStep(STORYBOARD, next)), []);
-  // FR-076: the walkthrough moves on the arrow keys. The listener is on the document,
-  // with the guards `shell/arrow-keys.ts` writes out — a viewer who has just opened the
-  // tab has clicked nothing, and a handler on this panel would never see the key.
+  const go = useCallback((next: number) => setStep(clampStep(BEATS, next)), []);
   useArrowKeys({
     root: rootRef,
     address,
-    onStep: useCallback(
-      (delta: 1 | -1) => setStep((current) => clampStep(STORYBOARD, current + delta)),
-      [],
-    ),
+    onStep: useCallback((delta: 1 | -1) => setStep((now) => clampStep(BEATS, now + delta)), []),
   });
-  const select = useCallback(
-    (component: string) => setStep(stepFromRest(STORYBOARD, component)),
-    [],
-  );
 
-  const width = measured;
-  const fits = width === undefined || width >= placement.width;
-  const scale = fits ? 1 : Math.max(width / placement.width, 0);
-  const panned = !fits && scale < SCALE_FLOOR;
-  const drawn = panned ? 1 : scale;
+  const total = BEATS.length;
+  const beat = BEATS[clampStep(BEATS, step) - 1];
+  const { roles, channels } = shownAt(step);
+
+  const inspect = useCallback((channel: Channel) => {
+    setOpen({ channel: channel.id, sample: channel.sample });
+  }, []);
+
+  const role = (id: string): ReactNode => {
+    const found = ROLES.find((candidate) => candidate.id === id);
+    if (!found || !roles.has(id)) return null;
+    return (
+      <div
+        className={`intro-role${beat.roles.includes(id) ? ' is-new' : ''}`}
+        data-intro-role={id}
+        aria-current={beat.roles.includes(id) ? 'step' : undefined}
+      >
+        <span className="intro-role-name">{found.name}</span>
+        <span className="intro-role-gloss">{found.gloss}</span>
+      </div>
+    );
+  };
+
+  const channel = (id: string): ReactNode => {
+    const found = CHANNELS[id];
+    if (!found || !channels.has(id)) return null;
+    return (
+      <div
+        className={`intro-chan${found.reverse ? ' is-back' : ''}`}
+        data-intro-channel={id}
+        data-marks={found.marks}
+      >
+        <span className="intro-chan-proto">{found.protocol}</span>
+        <div className="intro-chan-track">
+          {Array.from({ length: found.marks }, (_, index) => (
+            <button
+              key={index}
+              type="button"
+              className={`intro-mark is-${id}`}
+              style={{ ['--mark' as string]: String(index) }}
+              data-intro-mark={id}
+              onClick={() => inspect(found)}
+            >
+              <span className="intro-sr">
+                {found.protocol}: open a sample of what crosses here
+              </span>
+            </button>
+          ))}
+        </div>
+        <span className="intro-chan-note">{found.note}</span>
+      </div>
+    );
+  };
 
   return (
-    <div className="panel intro-panel" ref={rootRef}>
+    <div
+      className="panel intro-panel"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        // The arrows are answered on the document by `useArrowKeys`, so they work for a
+        // viewer who has clicked nothing. Home and End stay bound to the panel: a
+        // document-level Home would take the key from every scrollable region on the
+        // page, and unlike the arrows nobody arrives expecting to press it.
+        if (event.key === 'Home') go(1);
+        else if (event.key === 'End') go(BEATS.length);
+        else return;
+        event.preventDefault();
+      }}
+    >
       <header className="intro-head">
         <h1>drogna</h1>
+        <p className="intro-frame">
+          The shape of it, one part at a time. Measurements are tested against what is
+          believed; sustained difference warrants a run; the new forecast is announced, and
+          whoever cares comes back and asks for it.{' '}
+          <strong>The movement below is an illustration on a fixed cycle</strong> — it runs
+          whether or not anything is running, so it says nothing about this run. The traffic
+          that is real is in <a href={hashForView('messages')}>Messages</a>.
+        </p>
       </header>
 
-      <div
-        className="intro-stage"
-        tabIndex={0}
-        role="group"
-        aria-label={`The drogna architecture, step ${step} of ${total}: ${beat.title}`}
-        onKeyDown={(event) => {
-          // The arrow keys are answered on the document (above), so that they work for a
-          // viewer who has clicked nothing. Home and End stay here, bound to the stage: a
-          // document-level Home would take the key from every scrollable region on the
-          // page, and unlike the arrows nobody arrives expecting to press it.
-          if (event.key === 'Home') go(1);
-          else if (event.key === 'End') go(total);
-          else return;
-          event.preventDefault();
-        }}
-      >
-        {/*
-          The cap is the drawing's own width: the column may grow to hold the drawing and
-          no further, so the narration sits beside it rather than across a gulf. Panning
-          is unaffected — a max-width never forces a column wider than the room it has.
-        */}
-        <div
-          className="intro-figure-column"
-          ref={columnRef}
-          style={{ maxWidth: placement.width * drawn }}
-        >
-          <div className={panned ? 'intro-figure-pan' : 'intro-figure'} data-testid="intro-figure">
-            <div
-              className="intro-figure-scale"
-              style={{
-                width: placement.width * drawn,
-                height: placement.height * drawn,
-                transform: drawn === 1 ? undefined : `scale(${drawn})`,
-              }}
-            >
-              <Diagram shell={config} edges={flow.edges} step={step} onSelect={select} />
-            </div>
-          </div>
-          <p className="intro-figure-note">
-            {panned ? 'Wider than the screen — scroll the diagram sideways. ' : ''}
-            Wires are the wiring: solid where a message crosses the broker, dashed where
-            two parts are coupled by a port and nothing is published.{' '}
-            {flow.suppressed.length > 0 ? (
-              <>
-                The clock and heartbeat filters ({flow.suppressed.join(', ')}) are the
-                plane rather than wires, and are drawn as the strip at the foot.
-              </>
-            ) : null}
-          </p>
-          {/*
-            The curation, stated. Thirteen of the twenty components are drawn; a picture
-            that quietly left the other seven out would be claiming to be the
-            architecture. Each omission carries its reason, a gate fails on a component
-            that is in neither list, and the whole wiring is one link away.
-          */}
-          <details className="intro-omissions" data-testid="intro-omissions">
-            <summary>
-              Not drawn: {NOT_DRAWN.length} of the {config.components.length} components
-            </summary>
-            <ul>
-              {NOT_DRAWN.map((omission) => (
-                <li key={omission.component}>
-                  <b>{labelOf(omission.component)}</b> — {omission.reason}
-                </li>
-              ))}
-            </ul>
-            <p>
-              The complete flow chart, every component and every wire, is the{' '}
-              <a href={hashForView('operator')}>Operator</a> tab.
-            </p>
-          </details>
+      <div className="intro-stage">
+        <div className="intro-flow" data-testid="intro-flow" data-step={step}>
+          <section className="intro-lane" aria-label="the loop: measure, test, re-forecast">
+            {role('measured')}
+            {channel('obs')}
+            {role('tested')}
+            {channel('div')}
+            {role('ran')}
+            {channel('pub')}
+            {role('believed')}
+          </section>
+          {channels.has('ann') ? <div className="intro-drop">{channel('ann')}</div> : null}
+          {roles.has('told') ? (
+            <section className="intro-lane" aria-label="downstream: hear, then ask">
+              {role('told')}
+              <div className="intro-pair">
+                {channel('req')}
+                {channel('res')}
+              </div>
+              {role('answered')}
+            </section>
+          ) : null}
         </div>
 
         <div className="intro-narration">
-          {/*
-            The counter keeps its own element, so what a test reads is the count and not
-            the count plus whatever else the line carries. The hint sat inside it for one
-            run and four assertions went red on the hint's text — the right failure, and a
-            reason to fix the markup rather than loosen them.
-          */}
           <p className="intro-position">
             <span data-testid="intro-position">
               step {step} of {total}
             </span>
-            <span className="intro-keyhint">← → or click a part</span>
+            <span className="intro-keyhint">← → to grow it</span>
           </p>
           <div aria-live="polite">
             <h2>{beat.title}</h2>
-            <p className="intro-component">{arriving}</p>
             {beat.prose.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
@@ -199,19 +181,36 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
               </p>
             ) : null}
           </div>
+
+          <div className="intro-inspector" data-testid="intro-inspector">
+            {open ? (
+              <>
+                <p className="intro-insp-head">{open.sample.head}</p>
+                <dl>
+                  {open.sample.fields.map(([name, value]) => (
+                    <div key={name}>
+                      <dt>{name}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="intro-insp-caveat">{open.sample.caveat}</p>
+              </>
+            ) : (
+              <p className="intro-insp-empty">
+                Click anything crossing a channel to read a sample of it.
+              </p>
+            )}
+          </div>
+
           <nav className="intro-controls" aria-label="the walkthrough">
             <button type="button" onClick={() => go(step - 1)} disabled={step <= 1}>
               ← previous
             </button>
-            <button
-              type="button"
-              className="intro-next"
-              onClick={() => go(step + 1)}
-              disabled={step >= total}
-            >
+            <button type="button" onClick={() => go(step + 1)} disabled={step >= total}>
               next →
             </button>
-            <button type="button" className="intro-restart" onClick={() => go(1)} disabled={step === 1}>
+            <button type="button" onClick={() => go(1)} disabled={step === 1}>
               start again
             </button>
           </nav>
@@ -224,27 +223,20 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           fake, its data synthetic, and it holds no third-party entities of any kind —{' '}
           {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
           no tracked entity, no contact, no detection — and never will. Nothing here is a
-          candidate system. Everything drawn above is genuine programs running in this
-          browser page, behind a wire-protocol seam a real backend can replace by swapping
-          a base URL. This run was seeded fresh when you opened the page: run{' '}
+          candidate system. Behind this drawing are genuine programs running in this browser
+          page, behind a wire-protocol seam a real backend can replace by swapping a base
+          URL. This run was seeded fresh when you opened the page: run{' '}
           <code>{manifest.run_id}</code>, root seed <code>{manifest.root_seed}</code>.
         </p>
         <p>
-          Every part of that drawing is running in this page. Watch the machinery light
-          and interrupt it in <a href={hashForView('operator')}>Operator</a>, read the
-          store filling up in <a href={hashForView('holdings')}>Holdings</a>, watch the
-          traffic argue with its masters in <a href={hashForView('messages')}>Messages</a>,
-          and see the whole loop at once on the <a href={hashForView('map')}>Map</a>.
-          Export the manifest from the header to replay this run byte-identically; your
-          interventions are ephemeral and deliberately outside that claim.
-        </p>
-        <p>
-          The drawing above says nothing about what is <em>alive</em>: it is the wiring,
-          not the run, and every component's own account of itself is in Operator. For why
-          any of this is standards-based rather than bespoke,{' '}
-          <a href={hashForView('background')}>Background</a> is a course of ten short
-          illustrated explainers — SensorThings, OGC API-EDR, NetCDF, MQTT and what it
-          takes to use them honestly.
+          The drawing is a schematic; the system is the rest of the shell. Watch the
+          machinery light and interrupt it in <a href={hashForView('operator')}>Operator</a>,
+          read the store filling up in <a href={hashForView('holdings')}>Holdings</a>, watch
+          the traffic argue with its masters in{' '}
+          <a href={hashForView('messages')}>Messages</a>, and see the whole loop at once on
+          the <a href={hashForView('map')}>Map</a>. For why any of this is standards-based
+          rather than bespoke, <a href={hashForView('background')}>Background</a> is a course
+          of ten short illustrated explainers.
         </p>
       </footer>
     </div>

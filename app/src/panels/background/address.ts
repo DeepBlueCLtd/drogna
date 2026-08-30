@@ -35,3 +35,34 @@ export function positionFromRest(
 export function restForPosition(position: CoursePosition): string {
   return `${position.explainerId}/${position.step}`;
 }
+
+/**
+ * The position one step either side of `position`, or undefined at the two ends of the
+ * course.
+ *
+ * The unit here is the course, not the explainer. Stepping past an explainer's last
+ * step — its Consequences panel — opens the next explainer at its first step, and
+ * stepping back from a first step lands on the previous explainer's last, so the
+ * arrow keys are one walk through all sixty-nine steps rather than eleven separate
+ * ones (FR-014).
+ *
+ * The spine's own buttons stay bounded by the explainer they belong to. They are
+ * labelled "step N of M" and sit beside that count, and a control that silently
+ * leaves the thing it counts is a different control; the rail is how a pointer moves
+ * between explainers, and the arrow keys are how a keyboard does.
+ */
+export function advance(
+  course: readonly Explainer[],
+  position: CoursePosition,
+  delta: 1 | -1,
+): CoursePosition | undefined {
+  const index = course.findIndex((candidate) => candidate.id === position.explainerId);
+  if (index < 0) return undefined;
+  const step = position.step + delta;
+  if (step >= 1 && step <= stepCount(course[index])) {
+    return { explainerId: position.explainerId, step };
+  }
+  const neighbour = course[index + delta];
+  if (neighbour === undefined) return undefined;
+  return { explainerId: neighbour.id, step: delta === 1 ? 1 : stepCount(neighbour) };
+}

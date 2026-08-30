@@ -15,6 +15,12 @@
  *   - **Nothing animates on arrival** (FR-019). The stage opens finished. There is no
  *     autoplay, no timer, and no clock read of any kind (Constitution I).
  *
+ * The arrow keys are not answered here. They walk the *course* — past an explainer's
+ * last step into the next explainer — so they belong to the panel that holds a course
+ * position, and `BackgroundPanel` owns them. These buttons stay bounded by the
+ * explainer they count: they sit beside "step N of M", and a control that silently
+ * leaves the thing it counts is a different control.
+ *
  * The controls are pinned to the foot of the stage and the step's content scrolls
  * behind them. A tall step used to push Next off the bottom of the panel, so
  * advancing meant scrolling to find a button that had moved — which is a poor thing
@@ -57,12 +63,6 @@ export function Spine({ explainer, step, onStep, onView, legend }: SpineProps): 
       data-explainer={explainer.id}
       data-step={step}
       data-form={explainer.form}
-      onKeyDown={(event) => {
-        if (event.key === 'ArrowRight' && step < total) onStep(step + 1);
-        else if (event.key === 'ArrowLeft' && step > 1) onStep(step - 1);
-        else return;
-        event.preventDefault();
-      }}
     >
       <div className="bg-scroll">
         {content === undefined ? (
@@ -95,6 +95,8 @@ export function Spine({ explainer, step, onStep, onView, legend }: SpineProps): 
         <span className="bg-position" data-testid="spine-position">
           step {step} of {total}
         </span>
+        {/* Said out loud because a key that is never mentioned is a key nobody presses. */}
+        <span className="bg-keyhint">← → walk the whole course</span>
       </nav>
     </div>
   );

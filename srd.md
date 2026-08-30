@@ -451,10 +451,10 @@ directed → the machinery is interrogated → advice travels light → it is se
 
 ### 5.10 Background (feature 111)
 
-- **FR-43** The Background tab shall carry a linear course of eleven self-contained
+- **FR-43** The Background tab shall carry a linear course of ten self-contained
   explainers — why a standard at all; points and fields; NetCDF; what a holding is;
   SensorThings; OGC API-EDR; pygeoapi; MQTT; reads and writes are separate; the control
-  loop; what is allowed to leave — each a slide sequence or an interactive infographic
+  loop — each a slide sequence or an interactive infographic
   completable in 60 to 90 seconds, each addressable by anchor URL to the step (FR-15),
   and each closing on the same three value axes: through-life cost, interoperability,
   and what one does not have to build. An axis may record a **cost** rather than a

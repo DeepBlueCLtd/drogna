@@ -19,7 +19,15 @@
  * half. So every text node in every figure is measured against its viewBox as the
  * walk passes through, and an overflow fails the run naming the step and the words.
  *
- * A fourth rides along for the same reason. The spine controls are pinned to the foot
+ * A fourth asks the document what is under the middle of every poke region. FR-018
+ * says free play is available and FR-025 says every responsive region wears an
+ * outline; both are claims about a pointer, and the keyboard walk cannot test either,
+ * because it presses a region by focus. An unfilled SVG shape hit-tests on its stroke
+ * alone, so a region can carry the affordance, announce itself as a button, answer
+ * Enter, and still swallow every click aimed at its middle. It did, on twenty-five of
+ * the course's forty-six regions.
+ *
+ * A fifth rides along for the same reason. The spine controls are pinned to the foot
  * of the stage so that Next is in the same place on all sixty-nine steps; before that
  * they sat below the content and a tall step pushed Next off the bottom of the panel,
  * so the one control used on every step was the one that moved. The walk records where
@@ -168,6 +176,34 @@ async function clippedLabels(page: Page): Promise<string[]> {
 }
 
 /**
+ * Every poke region on this step that a pointer cannot actually reach.
+ *
+ * FR-018's free play and FR-025's affordance are both claims about a mouse, and
+ * nothing above this line could check either: the markup says `role="button"`, the
+ * keyboard walk presses it by focus, and a poke region that no click can land on
+ * passes every one of those. It is measured the only way it can be — by asking the
+ * document what is under the middle of the region — because an unfilled SVG shape
+ * hit-tests on its stroke alone and that fact is invisible to anything reading the
+ * source. Found by this measure: twenty-five of forty-six regions unreachable, the
+ * dashed outline drawn over nothing you could press.
+ */
+async function unreachableRegions(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('.bg-figure-frame [role="button"]')]
+      .filter((region) => {
+        const bounds = region.getBoundingClientRect();
+        if (bounds.width === 0 && bounds.height === 0) return false;
+        const under = document.elementFromPoint(
+          bounds.left + bounds.width / 2,
+          bounds.top + bounds.height / 2,
+        );
+        return under === null || under.closest('[role="button"]') !== region;
+      })
+      .map((region) => region.getAttribute('aria-label') ?? '(unlabelled)'),
+  );
+}
+
+/**
  * Where the Next button is, and whether it is reachable without scrolling. Rounded,
  * because sub-pixel layout differences are not what this is watching for.
  */
@@ -244,6 +280,11 @@ try {
       controlTops.set(`${explainer.id}/${step}`, control.top);
       for (const label of await clippedLabels(page)) {
         failures.push(`${explainer.id}/${step}: a label is drawn outside its viewBox — "${label}"`);
+      }
+      for (const label of await unreachableRegions(page)) {
+        failures.push(
+          `${explainer.id}/${step}: a poke region cannot be clicked at its centre — "${label}" (FR-018, FR-025)`,
+        );
       }
       // The floor is honest behaviour at a narrow width and a mistake at this one: a
       // 1440px viewport gives a figure roughly 420px of column, so a step that refuses

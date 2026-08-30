@@ -44,12 +44,19 @@ own; that debt is stated in FR-14 rather than left to be discovered again.
 | **Schematic and abstract** visuals, deliberately unlike the Map panel | A diagram is never mistaken for a readout. |
 | Cost claims stay **qualitative, and say so** | No invented figures. Consistent with the repo's habit of marking an unmeasured claim as unmeasured. |
 
-## The eleven explainers
+## The ten explainers
 
 Ordered as a course: why a standard at all → what shape the data is → how it is stored →
 what a holding actually contains → the two ways it is served → the server that serves
 both → how consumers hear about it → why the two paths never contend → the whole thing
-turning → what is allowed off the boat. **69 steps.**
+turning. **62 steps.**
+
+**Amended 30 August 2026.** Explainer 11, *what is allowed to leave*, was dropped from the
+course at the author's request and its module deleted. The course now ends on the control
+loop. The row below is kept struck through rather than deleted so the removal is visible
+rather than silent; the reasoning in the interview record and in the open questions below
+still describes eleven, and is left as written — it is the record of what was decided
+then, not a claim about the tree now.
 
 | # | Explainer | Form | Steps | The one idea |
 |---|---|---|---|---|
@@ -63,7 +70,7 @@ turning → what is allowed off the boat. **69 steps.**
 | 8 | MQTT | interactive | 7 | A new consumer is a subscription, not a producer change |
 | 9 | Reads and writes are separate | interactive | 6 | Two paths, one store; the loads never contend |
 | 10 | The control loop | interactive | 7 | Every transition is a message you can watch |
-| 11 | What is allowed to leave | interactive | 7 | Deny by default, withhold by absence, publish the refusal |
+| ~~11~~ | ~~What is allowed to leave~~ | ~~interactive~~ | ~~7~~ | *Dropped 30 August 2026 — no longer in the course* |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -71,7 +78,7 @@ turning → what is allowed off the boat. **69 steps.**
 
 An evaluator opens the Background tab and is met with a course, not a pile: a fixed
 order, a visible position within it, and one explainer that establishes the argument the
-other ten serve. They can leave after ninety seconds having understood why any of this
+other nine serve. They can leave after ninety seconds having understood why any of this
 is standards-based, and they can send a colleague a URL that opens exactly what they
 were looking at.
 
@@ -95,6 +102,8 @@ it in a fresh browser context, and arrive at that step.
    order as in every other explainer.
 4. **Given** the viewer is using a keyboard only, **When** they traverse the course,
    **Then** every step and every sub-tab is reachable without a pointer.
+5. **Given** the viewer is on the last step of an explainer, **When** they press the
+   right arrow key, **Then** the next explainer opens at its first step.
 
 ---
 
@@ -195,8 +204,9 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002** *(amended by feature 116, which adds a twelfth — *Where a number came
-  from* — fifth in the course, after *What a holding is*)*: Background MUST contain the eleven explainers named above, in the order
+- **FR-002** *(amended twice: explainer 11 dropped, see the amendment above; and feature
+  116 adds *Where a number came from* fifth in the course, after *What a holding is*)*:
+  Background MUST contain the eleven explainers named above, in the order
   given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
@@ -251,7 +261,15 @@ loop steps through a full cycle from the viewer's input alone.
   deployment, and MUST state plainly that V2 serves these interfaces in the browser
   rather than through pygeoapi, so no viewer concludes the running page is a pygeoapi
   instance.
-- **FR-014**: Every explainer MUST be fully traversable by keyboard alone.
+- **FR-014**: Every explainer MUST be fully traversable by keyboard alone. The left and
+  right arrow keys walk the **course**, not one explainer: they cross an explainer's
+  ends, so right from a Consequences panel opens the next explainer at its first step
+  and left from a first step returns to the previous explainer's last. They are
+  answered while the address names Background and no other panel holds the focus, so a
+  viewer who has just opened the tab and clicked nothing can start walking; a control
+  that spends the arrow keys itself — the collapsed rail's dropdown — keeps them. The
+  spine's own previous/next buttons stay bounded by the explainer they count, because
+  they sit beside "step N of M".
 - **FR-015**: Background MUST NOT hold state that belongs to the run manifest. Position
   in the course is presentation, and is discarded like any other per-viewer convenience
   (SRD FR-14, FR-15).

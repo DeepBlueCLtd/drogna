@@ -1,6 +1,6 @@
 /**
  * The Background tab (SRD-v2 FR-43 to FR-45, feature 111): a linear course of
- * eleven self-contained explainers about the standards this harness serves, and
+ * ten self-contained explainers about the standards this harness serves, and
  * about what it takes to use them honestly.
  *
  * The one claim this panel makes about itself: **it is inert**. No explainer reads
@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { PanelProps } from '../../shell/registry.js';
 import { hashForView } from '../../shell/views.js';
 import { COURSE } from './registry.js';
-import { positionFromRest, restForPosition, type CoursePosition } from './address.js';
+import { advance, positionFromRest, restForPosition, type CoursePosition } from './address.js';
 import { Rail } from './Rail.js';
 import { Spine } from './Spine.js';
 import { useMeasuredWidth } from './layout.js';
@@ -41,6 +41,41 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
   useEffect(() => address.onChange((rest) => setPosition(positionFromRest(COURSE, rest))), [address]);
   useEffect(() => address.write(restForPosition(position)), [address, position]);
 
+  // FR-014: the arrow keys walk the whole course. They cross an explainer's ends —
+  // right from a Consequences panel opens the next explainer, left from a first step
+  // returns to the previous one's last — so a keyboard reaches all sixty-nine steps
+  // without going back to the rail eleven times.
+  //
+  // The listener is on the document rather than on this element because a viewer who
+  // has just opened the tab has clicked nothing: no element inside the panel holds the
+  // focus, so a handler hung on the panel would never see the key. What that costs is
+  // that the panel now hears keys pressed anywhere, and the three guards below are
+  // what it pays with.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+      if (delta === 0) return;
+      const target = event.target as Element | null;
+      // A control that spends the arrow keys itself keeps them. The rail collapses to
+      // a <select> at a narrow width (Rail.tsx), and taking its arrows away would
+      // leave the one navigation surface a narrow viewer has unusable by keyboard.
+      if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      const owner = target?.closest?.('.panel') ?? null;
+      // Focus inside another panel is that panel's business — the dock can show two at
+      // once. Focus nowhere in particular is answered only while the address names
+      // this view, because every panel stays mounted when another is shown (Stack.tsx)
+      // and a hidden Background must not quietly walk itself while the viewer is
+      // on the Map.
+      if (owner === null ? !address.names() : owner !== rootRef.current) return;
+      // At the two ends of the course there is nowhere to go and the key does nothing.
+      setPosition((current) => advance(COURSE, current, delta) ?? current);
+      event.preventDefault();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [address]);
+
   const explainer = COURSE.find((candidate) => candidate.id === position.explainerId) ?? COURSE[0];
 
   const onSelect = useCallback((explainerId: string) => setPosition({ explainerId, step: 1 }), []);
@@ -59,7 +94,7 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
       <div className="bg-main">
         <header className="bg-head">
           <p className="bg-frame">
-            The standards, and what it takes to use them honestly. Twelve explainers, in
+            The standards, and what it takes to use them honestly. Eleven explainers, in
             order. Nothing here reads the running system: these are drawings about
             interfaces, and where a claim is about drogna it links to the view that shows
             it rather than depicting it.

@@ -249,7 +249,8 @@
       "required": [
         "suppressed_filters",
         "ports",
-        "series_samples"
+        "series_samples",
+        "pulse"
       ],
       "additionalProperties": false,
       "description": "What the Operator flow chart needs that the topology master cannot supply (FR-052 to FR-054). Edges themselves are NOT here: topic edges are derived from contracts/topology.json, so the picture cannot disagree with the wiring, and a gate fails the build when a declared component is undrawn or a topology edge is neither drawn nor suppressed.",
@@ -290,6 +291,27 @@
           "type": "integer",
           "exclusiveMinimum": 0,
           "description": "How many samples each face's rolling series holds. In memory, discarded on reload, never persisted and never served: a window that outlived the page would be a second store. The bound is here rather than in the panel so it is not a number typed into a component (Constitution IV)."
+        },
+        "pulse": {
+          "type": "object",
+          "required": [
+            "fade_ms",
+            "hold_above_rate"
+          ],
+          "additionalProperties": false,
+          "description": "How a wire says traffic crossed it. Both numbers are here rather than in the panel for the reason series_samples is (Constitution IV), and both are host milliseconds and a clock rate respectively: a fade is a fact about the render path, not about simulated time, so it does not accelerate with the clock (ADR-0007).",
+          "properties": {
+            "fade_ms": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "description": "How long a wire stays lit after a message crosses it, in host milliseconds. Ports are excluded by kind: a coupling carries no broker traffic and can never pulse."
+            },
+            "hold_above_rate": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The clock rate above which a lit wire is held lit while traffic continues rather than re-lit per message. Above real time a message crosses a wire dozens of times a second, and a highlight restarted that often is a flicker that says less than a steady light does. The rate is the clock's own reported figure, so the picture changes when the clock does and not when anything here decides."
+            }
+          }
         }
       }
     },

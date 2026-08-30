@@ -141,6 +141,21 @@ composition root (ADR-0030), the operator surface and the map all come from them
       the consequence chain of SC-001 asserted end to end.
 - [ ] T049 Watched turns, captured (Constitution IX): SC-001 stopping the platform, and
       SC-002 turning it.
+- [x] T050 `pulse.ts`: the wires light as traffic crosses them, which `graph.ts` has
+      promised since T040 — *"a topic edge carries traffic and can pulse; a port edge
+      never can"* — and nothing did. A light per message, fading over the declared
+      `flow.pulse.fade_ms`; above `flow.pulse.hold_above_rate` it is held on while
+      traffic continues, because at sixty times real time a light restarted per message
+      is a flicker that says less than a steady one. It goes out on the sweep that
+      already darkens a lapsed node, so nothing here keeps time of its own. Written to
+      the DOM rather than to React state: a light is half a second of one attribute, and
+      re-rendering twenty faces for it would have the display competing for the machine
+      with the system it draws. **Watched failing** five ways: the fade that never
+      restarts, the accelerated clock ignored, the sweep that clears a light nobody saw,
+      a port allowed to light, and the panel hearing traffic and lighting nothing.
+      What the lights cannot say is said on screen instead — the seam hands a subscriber
+      a topic and never a sender, so a topic with two publishers lights both their wires,
+      and the panel names those topics from the edge set rather than from a phrase.
 
 ## Not doing, and why
 

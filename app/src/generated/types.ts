@@ -704,6 +704,10 @@ export type ConfigShell = {
       "label": string;
     }[];
     "series_samples": number;
+    "pulse": {
+      "fade_ms": number;
+      "hold_above_rate": number;
+    };
   };
   "liveness": {
     "default_window_seconds": number;

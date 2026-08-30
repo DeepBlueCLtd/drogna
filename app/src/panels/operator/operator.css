@@ -8,6 +8,11 @@
   --flow-fld: #5fb8ac;
   --flow-own: #63bede;
   --flow-ctl: #9c8fd1;
+  /* Traffic. Near-white rather than a fifth hue: a wire that carries a message is not
+     another channel, it is the channels the picture already has, doing something. It
+     also survives greyscale, which the light needs to (FR-054) — and so does the
+     weight it gains, which is why the light is thicker as well as brighter. */
+  --flow-pulse: #eef4fa;
 }
 
 .operator-controls {
@@ -744,6 +749,72 @@
   .flow-node,
   .flow-tape-fill {
     transition: none;
+  }
+}
+
+/* ---- traffic on the wires (pulse.ts) ----
+   The light is its own path over the wire, so nothing here argues with the resting
+   opacity and width the canvas computes. It is dark until an attribute says otherwise,
+   and only PulseBoard writes that attribute — from a message that genuinely crossed
+   the broker, never from a render. */
+.flow-pulse {
+  opacity: 0;
+  stroke: var(--flow-pulse);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+/* An accelerated clock: the wire is simply on, for as long as traffic keeps arriving. */
+.flow-pulse[data-pulse='held'] {
+  opacity: 1;
+}
+
+/* Real time: one light per message, fading over the declared window. The duration is
+   the shell configuration's fade_ms, handed in as a custom property rather than typed
+   here — the fallback is what a stylesheet loaded without a canvas would use, and the
+   canvas always sets it. */
+.flow-pulse[data-pulse='fading'] {
+  animation-duration: var(--flow-pulse-fade, 500ms);
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* Two identical keyframe sets, alternated. A CSS animation restarts when its name
+   changes and not when the same value is written again, so this is how a wire that
+   carries two messages inside one fade lights twice instead of once. */
+.flow-pulse[data-pulse='fading'][data-pulse-turn='a'] {
+  animation-name: flow-pulse-a;
+}
+
+.flow-pulse[data-pulse='fading'][data-pulse-turn='b'] {
+  animation-name: flow-pulse-b;
+}
+
+@keyframes flow-pulse-a {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes flow-pulse-b {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* A reader who has asked for no motion gets the accelerated treatment at any rate: the
+   wire is lit while it carries traffic and goes out on the sweep that finds it quiet.
+   Less is said — a light no longer counts messages — but nothing said is untrue. */
+@media (prefers-reduced-motion: reduce) {
+  .flow-pulse[data-pulse='fading'] {
+    animation: none;
+    opacity: 1;
   }
 }
 

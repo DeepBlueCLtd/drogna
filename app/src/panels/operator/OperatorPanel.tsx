@@ -56,6 +56,7 @@ import { topology } from '../../generated/topology.js';
 import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
+import { PulseBoard, topicsWithSeveralSenders, type PulseKind } from './pulse.js';
 import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
@@ -106,6 +107,17 @@ export function OperatorPanel({ params }: PanelProps) {
     tick: null,
     rate: undefined,
   });
+  /**
+   * The wires' lights (pulse.ts). Built from the same derived edge set the canvas
+   * draws, and held across renders: it owns DOM the panel does not re-render.
+   */
+  const pulses = useMemo(() => new PulseBoard(flow.edges), [flow]);
+  /**
+   * Which kind of light traffic gets, as the broker subscription sees it. A ref rather
+   * than the state it follows, because the subscription is established once and a rate
+   * change must not tear every subscription down and build it again.
+   */
+  const pulseKindRef = useRef<PulseKind>('fading');
   const holdingSizesRef = useRef<number[]>([]);
   /**
    * Ocean datastreams the shell has genuinely heard, in arrival order. Kept rather
@@ -212,6 +224,11 @@ export function OperatorPanel({ params }: PanelProps) {
         const namespace = message.topic.split('/')[0];
         countedRef.current.set(namespace, (countedRef.current.get(namespace) ?? 0) + 1);
         countedRef.current.set('all', (countedRef.current.get('all') ?? 0) + 1);
+        // And the wires that carry this topic light. Deliberately here, on the same
+        // subscription as the counter above and under the same rule: this says traffic
+        // crossed, which is true of a message whichever way its master then judges it.
+        // A light is not a figure drawn from a payload, and nothing below reads one.
+        pulses.mark(message.topic, pulseKindRef.current);
       }),
       client.subscribe(config.topics.heartbeat, (message) => {
         if (!drawable(message.topic, message.payload)) return;
@@ -301,6 +318,7 @@ export function OperatorPanel({ params }: PanelProps) {
     config.topics.platform_state,
     config.topics.telemetry,
     drawable,
+    pulses,
     refresh,
     refreshHoldings,
     series,
@@ -308,9 +326,16 @@ export function OperatorPanel({ params }: PanelProps) {
 
   useEffect(() => {
     // harness:allow-wallclock liveness windows lapse in host time (ADR-0006)
-    const sweep = setInterval(() => setSweep((n) => n + 1), 1000);
+    const sweep = setInterval(() => {
+      // A wire that carried nothing since the last sweep goes out. Held here rather
+      // than on a timer of its own: one beat darkens a component whose window lapsed
+      // and a wire whose traffic stopped, and both are the same kind of statement —
+      // nothing arrived, and the picture stops saying something did.
+      pulses.settle();
+      setSweep((n) => n + 1);
+    }, 1000);
     return () => clearInterval(sweep);
-  }, []);
+  }, [pulses]);
 
   const command = async (path: string, method = 'POST', body?: unknown) => {
     const response = await fetch(path, {
@@ -321,6 +346,16 @@ export function OperatorPanel({ params }: PanelProps) {
     setRefusal(response.ok ? undefined : (answer.refused ?? `refused with status ${response.status}`));
     void refresh();
   };
+
+  /**
+   * Whether the clock is outrunning real time by enough that a wire should be held lit
+   * rather than re-lit per message. The rate is the clock's own reported figure and the
+   * bound is declared configuration; neither is a judgement made here (Constitution IV).
+   */
+  const holding = (clock.rate ?? 0) > config.flow.pulse.hold_above_rate;
+  useEffect(() => {
+    pulseKindRef.current = holding ? 'held' : 'fading';
+  }, [holding]);
 
   // harness:allow-wallclock liveness evaluation measures arrival in host time (ADR-0006)
   const nowMs = Date.now();
@@ -362,6 +397,8 @@ export function OperatorPanel({ params }: PanelProps) {
   });
 
   const selectedNode = flow.nodes.find((node) => node.id === selected);
+  /** Named rather than counted, and derived rather than listed (pulse.ts). */
+  const shared = useMemo(() => topicsWithSeveralSenders(flow.edges), [flow]);
 
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
@@ -426,6 +463,8 @@ export function OperatorPanel({ params }: PanelProps) {
         <FlowCanvas
           nodes={flow.nodes}
           edges={flow.edges}
+          pulses={pulses}
+          fadeMs={config.flow.pulse.fade_ms}
           bandOrder={BANDS}
           bandCaption={(band) => BAND_CAPTION[band as Band]}
           selected={selected}
@@ -476,6 +515,24 @@ export function OperatorPanel({ params }: PanelProps) {
             );
           }}
         />
+      )}
+
+      {/* What the lights mean, said where they are — and only where they are: the list
+          view has no wires, so it makes no claim about them. The sentence changes with
+          the clock because the behaviour does, and a reader who speeds the clock up and
+          watches the flicker become a steady light should be able to find out why
+          without reading the source. */}
+      {asList ? null : (
+        <p className="panel-footnote" data-testid="flow-pulse-note">
+          {holding
+            ? `A wire stays lit while traffic runs down it — the clock is at ${clock.rate}× real time, and a light restarted for every message at that rate is a flicker rather than a signal.`
+            : `A wire lights as a message crosses it, and fades over ${config.flow.pulse.fade_ms / 1000} s.`}{' '}
+          What lights is derived, like the wires themselves: the broker hands a subscriber
+          a topic and never a sender, so a topic more than one component publishes lights
+          all of their wires
+          {shared.length > 0 ? ` — ${shared.join(' and ')} today` : ''}. A port carries no
+          broker traffic and never lights at all.
+        </p>
       )}
 
       <Legend />

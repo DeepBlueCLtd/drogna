@@ -1457,7 +1457,11 @@
           "label": "reads advisories"
         }
       ],
-      "series_samples": 60
+      "series_samples": 60,
+      "pulse": {
+        "fade_ms": 500,
+        "hold_above_rate": 1
+      }
     },
     "liveness": {
       "default_window_seconds": 6

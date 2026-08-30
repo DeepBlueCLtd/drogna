@@ -767,7 +767,7 @@ pass only one of the three is not finished.
   the same place in both presentations (FR-50, ADR-0033).
 
 
-### 5.16 The downstream consumers (feature 117)
+### 5.16 The downstream consumers (feature 118)
 
 Every beat so far has shown the harness. This one shows what the harness is *for*: three
 tabs that are not part of drogna at all, but separate notional systems consuming its

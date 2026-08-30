@@ -38,8 +38,10 @@ they came for. Link the first use of a term that needs it:
 ## The demo
 
 The running thing, which is the point of the entry and the reason the prose can stop
-early. For visible work, an instance opened at the view, with a line saying what to do
-when it opens:
+early. For visible work, **a capture** — moving if the change moves (`pnpm capture:motion`),
+still if it does not (`pnpm capture:glance`, which takes `DROGNA_GLANCE_VIEWPORT=390x844`
+for a phone) — at the top of the entry where the subject is visual. Then an instance
+opened at the view, with a line saying what to do when it opens:
 
 [Open it at the map](../../instances/main/#/view/map)
 
@@ -48,8 +50,9 @@ when it opens:
      refused it the first time this template was used. -->
 
 For headless work, the wrapper that reads the component through the seam and exercises
-it across its range. A screenshot is the fallback, not the deliverable; its alt text is
-exempt from the word budget and should be long enough to stand in for the picture:
+it across its range. A screenshot is the fallback there, not the deliverable; its alt
+text is exempt from the word budget and should be long enough to stand in for the
+picture:
 
 ![A description of what is in the picture, long enough that a reader who cannot see it
 loses nothing: what is on the screen, what state it is in, and what in it is the point

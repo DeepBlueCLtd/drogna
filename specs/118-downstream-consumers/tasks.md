@@ -138,7 +138,15 @@ not by a failing test.
       **The proof existed and was not run before pushing**, which is the whole of the
       fault: `pnpm check` does not run the captures, and CI does.
 
-- [x] T040 Renumbered twice, by two different features landing while this was being built.
+- [x] T040 Renumbered three times, by three different features landing while this was
+      being built. Worth naming as a process fault rather than three accidents: every
+      branch picks *the next free number* when it is drafted, and the number is only
+      claimed when it merges, so any two features drafted in the same window collide and
+      the later one to merge pays. This beat paid three times — 115 to 116 to 117 to 118 —
+      and the cost is not the directory rename, it is that the number is written into the
+      ADR, the SRD, the panels' comments, the schema descriptions, the blog entry and the
+      tests. Claiming the number when the branch is created, or deriving it from the issue
+      rather than from a scan of `specs/`, would end it.
 
       First: feature 115 arrived — the tabs beyond Operator, itself renumbered from 114 on
       its way in — taking FR-68 to FR-75, ADR-0036 and ADR-0037. That moved this beat from
@@ -147,8 +155,9 @@ not by a failing test.
       consumers.
 
       Then feature **116** arrived — the analysis step — taking the number this beat had
-      just moved to, and ADR-0038 with it. So this beat is **117**, its ADR is **0039**,
-      and its requirements are **FR-76 to FR-85**, which no other feature has claimed. Its
+      just moved to, and ADR-0038 with it. Then feature **117**, opening a node in place,
+      took the number after that. So this beat is **118**, its ADR is **0039**, and its
+      requirements are **FR-76 to FR-85**, which no other feature has claimed. Its
       SRD section stays **§5.16**: section numbers and feature numbers stopped tracking
       each other long ago (§5.13 is feature 110, §5.10 is feature 111), so the document
       keeps its sequence and the parenthetical carries the link. Each renumbering rewrote

@@ -637,6 +637,82 @@ itself arrives.
   says which is which. Fault injection is declared in configuration, component by
   component: a component that declares none cannot be asked.
 
+
+### 5.15 The downstream consumers (feature 115)
+
+Every beat so far has shown the harness. This one shows what the harness is *for*: three
+tabs that are not part of drogna at all, but separate notional systems consuming its
+forecast to reach a decision. The specification is `specs/115-downstream-consumers/`, and
+the author's own requirements document is carried there unmodified beside it.
+
+The framing is load-bearing and the screen carries it: the consumer tabs are bright yellow
+with black text under a strip reading "Downstream consumer — not part of drogna", so a
+screenshot lifted out of context still says what it is. Constitution VIII draws the line
+these tabs stand on the far side of — the boundary it defends is *who recommends*, not
+*who renders*, and a downstream consumer is exactly what the principle presumes exists.
+
+The numbering starts at FR-71 because the unbuilt `114-engaging-tabs` draft has claimed
+FR-63 to FR-70, and two features numbering one requirement differently is the
+record-against-tree disagreement this repository has already paid for twice.
+
+- **FR-71** The shell shall host **downstream consumer views**, declared in configuration
+  as a view kind, rendered in bright yellow with black text in both presentations
+  (ADR-0033), each under a persistent, non-dismissible strip naming it as not part of
+  drogna. The shell holds no list of which views these are; it reads the declared kind.
+- **FR-72** A consumer view shall reach drogna **only through the seam** — configured
+  relative endpoints and configured broker topics — and shall import no backend module
+  (Constitution XI). It is a client of the same interfaces a Version 3 client would use,
+  and nothing in it may know whether the seam is answered in this page or over a network.
+- **FR-73** A consumer view shall be marked **stale by a published run becoming current**,
+  shall recompute **only** on an explicit reader action, and shall retain the superseded
+  answer as a **ghost** naming the run it was computed from. The ghost is the point: where
+  the recommendation barely moves, the new forecast was not decision-relevant, and where
+  it swings, the value of fresh environmental data has been demonstrated rather than
+  argued. A tab that faked its inputs would have nothing to be stale about.
+- **FR-74** Every control that is not the update action shall recompute **immediately**;
+  the ceremony of FR-73 belongs to newly arrived upstream data and to nothing else. Every
+  bound on those recomputations — sample counts, candidate counts, the cell ceiling —
+  comes from configuration, and a control whose setting would exceed one refuses and says
+  why rather than freezing the page.
+- **FR-75** A derived quantity shall be **named for what it is derived from**, and the
+  view shall state its ingredients. The coverage proxy of FR-77 is *observation-driven
+  uncertainty*, never forecast uncertainty and never ensemble spread — both of which
+  drogna genuinely publishes, and neither of which it is.
+- **FR-76** A consumer view **may synthesise inputs drogna does not model** — a tidal
+  window, a ferry timetable, a watch cycle — provided each is labelled on screen as
+  synthesised by that view, is drawn from a seeded stream derived from the run manifest
+  (Constitution II), and is never published back over the seam nor shown as a claim about
+  a drogna component. Constitution VII is untouched: no data path asserts the existence of
+  anything that is not running, because a consumer's own assumption is not a claim about
+  the harness (ADR-0036).
+- **FR-77** The **Sampling** view shall present the domain under a reader-adjustable hex
+  grid coloured by observation-driven uncertainty **per depth zone**, distinguishing the
+  zones the vessel can reach from those it cannot. Both the domain and the reach are read
+  from what crossed the seam — the collection's extent, and the planner's own published
+  depth bands — never from a constant in the view.
+- **FR-78** The Sampling view shall plan a route **by value per unit transit**, under a
+  reader-chosen time budget, ending where the budget expires rather than returning to its
+  start, with **expendable drops constrained to lie on the route**, each justified by the
+  depth zone and the uncertainty it addresses. The plan's **shape**, not merely its
+  length, shall change with the budget: a planner that always heads for the single worst
+  cell fails this requirement with every test green.
+- **FR-79** The **Courses** view shall seed hypothetical vessel classes across the domain
+  from reader-set likelihoods, shall give each class a **motion model** rather than a
+  score multiplier — a scored-only roster would be cosmetic — and shall present three or
+  four candidate courses with separately scored components under a reader-adjustable
+  weighting whose range can **reorder** them. It holds no track, no position anyone
+  inferred and no entity the harness did not place (Constitution V).
+- **FR-80** The **Feasibility** view shall present source lanes of two kinds — boolean,
+  and continuous with **per-task draggable thresholds** — each carrying a confidence
+  setting weighted from configuration, with an **Off** that excludes the source entirely,
+  and shall output the **top two or three maximal feasible sets** with what each gives up,
+  recomputing around any task the reader locks. Its horizon starts at the published
+  forecast's validity and runs past it: the lane the forecast serves stops where the
+  forecast stops, and a task depending on that lane cannot be scheduled beyond it, so the
+  reach of what drogna actually knows is on the timeline rather than hidden in the axis.
+  It is a triage aid and says so: the honest output is what you are giving up, not a
+  schedule.
+
 ---
 
 ## 6. Interfaces and shared types

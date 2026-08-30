@@ -681,3 +681,46 @@ body,
     margin: 0;
   }
 }
+
+/*
+ * Downstream consumer views (feature 115, FR-71).
+ *
+ * Three of the tabs are not drogna's own faces: they are notional systems consuming its
+ * forecast, and the boundary has to be legible at a glance, without explanation, and in a
+ * screenshot lifted out of context. Bright yellow with black text against a shell that is
+ * dark with light text does that; #ffd400 against #101010 is about 13:1, and the pair
+ * separates in greyscale as well as in colour.
+ *
+ * The rule is written against the view's *declared kind* rather than against a list of
+ * ids, in both presentations, so a fourth consumer is a line in a configuration document
+ * and not an edit here.
+ */
+.tab-kind {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.tab-kind[data-kind='consumer'] {
+  background: #ffd400;
+  color: #101010;
+  font-weight: 600;
+}
+
+/* dockview paints the tab itself, so the wrapper alone would leave the tab's own padding
+   dark around a yellow label. The tab carrying a consumer wrapper is painted too. */
+.dv-tab:has(.tab-kind[data-kind='consumer']) {
+  background: #ffd400;
+  color: #101010;
+}
+
+.stack-tab[data-kind='consumer'] {
+  background: #ffd400;
+  color: #101010;
+  font-weight: 600;
+}
+
+.stack-tab[data-kind='consumer'].stack-tab-active {
+  color: #101010;
+  border-bottom-color: #101010;
+}

@@ -1095,6 +1095,21 @@
       {
         "id": "messages",
         "label": "Messages"
+      },
+      {
+        "id": "sampling",
+        "label": "Sampling",
+        "kind": "consumer"
+      },
+      {
+        "id": "courses",
+        "label": "Courses",
+        "kind": "consumer"
+      },
+      {
+        "id": "feasibility",
+        "label": "Feasibility",
+        "kind": "consumer"
       }
     ],
     "components": [
@@ -1422,6 +1437,260 @@
     },
     "messages": {
       "buffer": 200
+    },
+    "consumers": {
+      "notice": "Downstream consumer \u2014 not part of drogna",
+      "hexes": {
+        "minimum_resolution": 2,
+        "maximum_resolution": 5,
+        "default_resolution": 4,
+        "cell_ceiling": 1200
+      },
+      "sampling": {
+        "time_budget_hours": [3, 6, 12, 24],
+        "default_time_budget_hours": 6,
+        "expendable_interval_hours": [1, 6, 12, 24],
+        "default_expendable_interval_hours": 6,
+        "depth_zones": 6,
+        "nominal_speed_m_per_s": 2.5,
+        "uncertainty": {
+          "saturation": 1,
+          "recency_timescale_seconds": 10800,
+          "density_halving_count": 4
+        }
+      },
+      "courses": {
+        "classes": [
+          {
+            "id": "ferry",
+            "label": "Ferry on timetable",
+            "motion": "corridor",
+            "default_likelihood": 5,
+            "included": true,
+            "speed_m_per_s": 9
+          },
+          {
+            "id": "fishing",
+            "label": "Fishing vessel",
+            "motion": "loiter",
+            "default_likelihood": 5,
+            "included": true,
+            "speed_m_per_s": 2
+          },
+          {
+            "id": "submarine",
+            "label": "Evasive submarine",
+            "motion": "evasive",
+            "default_likelihood": 3,
+            "included": true,
+            "speed_m_per_s": 4
+          }
+        ],
+        "objectives": [
+          { "id": "evasion", "label": "Evasion" },
+          { "id": "investigation", "label": "Investigation" },
+          { "id": "monitoring", "label": "Monitoring" },
+          { "id": "stealthy-reconnaissance", "label": "Stealthy reconnaissance" }
+        ],
+        "candidate_count": 4,
+        "steps": 18,
+        "step_seconds": 1800,
+        "samples_per_likelihood": 6,
+        "default_exposure_weight": 0.5,
+        "bank_count": 3
+      },
+      "feasibility": {
+        "horizon_hours": 24,
+        "step_minutes": 30,
+        "forecast_samples": 5,
+        "set_count": 3,
+        "confidence_weights": {
+          "high": 1,
+          "medium": 0.66,
+          "low": 0.33
+        },
+        "veto_weight": 0.7,
+        "lanes": [
+          {
+            "id": "tide",
+            "label": "Tidal state",
+            "kind": "continuous",
+            "provenance": "synthesised",
+            "unit": "m",
+            "default_confidence": "high",
+            "period_minutes": 745,
+            "minimum": 0,
+            "maximum": 4.6
+          },
+          {
+            "id": "daylight",
+            "label": "Daylight and twilight",
+            "kind": "boolean",
+            "provenance": "synthesised",
+            "default_confidence": "high",
+            "period_minutes": 1440,
+            "on_minutes": 870
+          },
+          {
+            "id": "moon",
+            "label": "Moon illumination",
+            "kind": "continuous",
+            "provenance": "synthesised",
+            "unit": "fraction",
+            "default_confidence": "medium",
+            "period_minutes": 42524,
+            "minimum": 0,
+            "maximum": 1
+          },
+          {
+            "id": "sea-state",
+            "label": "Sea state",
+            "kind": "continuous",
+            "provenance": "synthesised",
+            "unit": "Douglas",
+            "default_confidence": "medium",
+            "period_minutes": 960,
+            "minimum": 0,
+            "maximum": 6
+          },
+          {
+            "id": "ferry-timetable",
+            "label": "Ferry timetable",
+            "kind": "boolean",
+            "provenance": "synthesised",
+            "default_confidence": "high",
+            "period_minutes": 240,
+            "on_minutes": 50
+          },
+          {
+            "id": "satellite-overpass",
+            "label": "Satellite overpasses",
+            "kind": "boolean",
+            "provenance": "synthesised",
+            "default_confidence": "medium",
+            "period_minutes": 96,
+            "on_minutes": 11
+          },
+          {
+            "id": "endurance",
+            "label": "Fuel and endurance remaining",
+            "kind": "continuous",
+            "provenance": "seam-derived",
+            "unit": "%",
+            "default_confidence": "high",
+            "minimum": 0,
+            "maximum": 100
+          },
+          {
+            "id": "crew-rest",
+            "label": "Crew rest and watch cycles",
+            "kind": "boolean",
+            "provenance": "synthesised",
+            "default_confidence": "low",
+            "period_minutes": 480,
+            "on_minutes": 240
+          },
+          {
+            "id": "range-from-port",
+            "label": "Range from port or rendezvous",
+            "kind": "continuous",
+            "provenance": "seam-derived",
+            "unit": "km",
+            "default_confidence": "high",
+            "minimum": 0,
+            "maximum": 400
+          },
+          {
+            "id": "vector-forecast",
+            "label": "Downloaded vector forecast",
+            "kind": "continuous",
+            "provenance": "seam",
+            "unit": "\u00b0C",
+            "default_confidence": "high",
+            "minimum": 0,
+            "maximum": 25
+          }
+        ],
+        "tasks": [
+          {
+            "id": "shallow-survey",
+            "label": "Shallow survey line",
+            "duration_minutes": 180,
+            "requirements": [
+              { "lane": "sea-state", "sense": "at-most", "threshold": 3 },
+              { "lane": "daylight", "sense": "present" },
+              { "lane": "endurance", "sense": "at-least", "threshold": 30 }
+            ]
+          },
+          {
+            "id": "ferry-crossing",
+            "label": "Ferry lane crossing",
+            "duration_minutes": 60,
+            "requirements": [
+              { "lane": "ferry-timetable", "sense": "absent" },
+              { "lane": "sea-state", "sense": "at-most", "threshold": 4 }
+            ]
+          },
+          {
+            "id": "sensor-recovery",
+            "label": "Expendable recovery",
+            "duration_minutes": 120,
+            "requirements": [
+              { "lane": "sea-state", "sense": "at-most", "threshold": 2 },
+              { "lane": "tide", "sense": "at-least", "threshold": 2.4 },
+              { "lane": "daylight", "sense": "present" }
+            ]
+          },
+          {
+            "id": "satellite-uplink",
+            "label": "Satellite uplink",
+            "duration_minutes": 30,
+            "requirements": [
+              { "lane": "satellite-overpass", "sense": "present" },
+              { "lane": "endurance", "sense": "at-least", "threshold": 20 }
+            ]
+          },
+          {
+            "id": "night-transit",
+            "label": "Night transit",
+            "duration_minutes": 240,
+            "requirements": [
+              { "lane": "daylight", "sense": "absent" },
+              { "lane": "moon", "sense": "at-most", "threshold": 0.45 },
+              { "lane": "sea-state", "sense": "at-most", "threshold": 4 }
+            ]
+          },
+          {
+            "id": "deep-cast",
+            "label": "Deep cast",
+            "duration_minutes": 150,
+            "requirements": [
+              { "lane": "sea-state", "sense": "at-most", "threshold": 3 },
+              { "lane": "vector-forecast", "sense": "at-least", "threshold": 11 },
+              { "lane": "endurance", "sense": "at-least", "threshold": 40 }
+            ]
+          },
+          {
+            "id": "crew-handover",
+            "label": "Crew handover",
+            "duration_minutes": 90,
+            "requirements": [
+              { "lane": "crew-rest", "sense": "present" },
+              { "lane": "range-from-port", "sense": "at-most", "threshold": 120 }
+            ]
+          },
+          {
+            "id": "port-return",
+            "label": "Return to port",
+            "duration_minutes": 210,
+            "requirements": [
+              { "lane": "range-from-port", "sense": "at-most", "threshold": 90 },
+              { "lane": "endurance", "sense": "at-least", "threshold": 15 },
+              { "lane": "sea-state", "sense": "at-most", "threshold": 5 }
+            ]
+          }
+        ]
+      }
     }
   }
 }

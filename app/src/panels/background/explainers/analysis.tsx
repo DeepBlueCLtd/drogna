@@ -20,10 +20,12 @@ const points = categoryStyle('points');
 
 /** The four shares, in the order the analyst stores and the panel draws them. */
 const SHARES = [
-  { id: 'archive', label: 'archive', style: archive },
-  { id: 'departure', label: 'departure forecast', style: archive },
-  { id: 'measurement', label: 'measurement', style: points },
-  { id: 'model', label: 'model', style: fields },
+  { id: 'archive', label: 'archive', short: 'archive', style: archive },
+  // The legend gets the short form: four entries across 320 units leaves no room for
+  // 'departure forecast', and a legend whose labels collide is a legend nobody reads.
+  { id: 'departure', label: 'departure forecast', short: 'departure', style: archive },
+  { id: 'measurement', label: 'measurement', short: 'measurement', style: points },
+  { id: 'model', label: 'model', short: 'model', style: fields },
 ] as const;
 
 /**
@@ -44,13 +46,25 @@ const TIMELINE = [
 
 const BAR_WIDTH = 232;
 
-function StackedBar({ shares, y, height }: { shares: readonly number[]; y: number; height: number }) {
+function StackedBar({
+  shares,
+  y,
+  height,
+  x: origin = 60,
+  span = BAR_WIDTH,
+}: {
+  shares: readonly number[];
+  y: number;
+  height: number;
+  x?: number;
+  span?: number;
+}) {
   let offset = 0;
   return (
     <g>
       {shares.map((share, index) => {
-        const width = share * BAR_WIDTH;
-        const x = 60 + offset;
+        const width = share * span;
+        const x = origin + offset;
         offset += width;
         if (width <= 0) return null;
         const style = SHARES[index].style;
@@ -322,10 +336,13 @@ export const analysis: Explainer = {
                     active={row === index}
                     onPoke={() => onPoke(String(row))}
                   >
-                    <text x={10} y={25 + row * 24} fontSize="9" fill={row === index ? INK.strong : INK.quiet}>
+                    <text x={8} y={25 + row * 24} fontSize="8.5" fill={row === index ? INK.strong : INK.quiet}>
                       {entry.at}
                     </text>
-                    <StackedBar shares={entry.shares} y={12 + row * 24} height={18} />
+                    {/* The bars begin clear of the widest moment's label: at x=60 they
+                        ran under 'the boat passes', which the clipped-label check
+                        cannot see because nothing left the frame. */}
+                    <StackedBar shares={entry.shares} y={12 + row * 24} height={18} x={76} span={228} />
                   </PokeRegion>
                 ))}
                 <g>
@@ -342,7 +359,7 @@ export const analysis: Explainer = {
                         strokeDasharray={share.style.strokeDasharray}
                       />
                       <text x={24 + i * 78} y={191} fontSize="8" fill={INK.quiet}>
-                        {share.label}
+                        {share.short}
                       </text>
                     </g>
                   ))}
@@ -375,30 +392,33 @@ export const analysis: Explainer = {
         draw: () => (
           <svg viewBox="0 0 320 150" width="100%">
             <MarkDefs />
-            <path d="M60 30 V128" fill="none" stroke={INK.quiet} />
-            <path d="M292 30 V128" fill="none" stroke={INK.quiet} />
-            <text x={292} y={24} fontSize="9" textAnchor="end" fill={INK.quiet}>
+            <path d="M56 16 V108" fill="none" stroke={INK.line} />
+            <path d="M252 16 V108" fill="none" stroke={INK.quiet} strokeDasharray="3 3" />
+            <text x={56} y={12} fontSize="8.5" textAnchor="middle" fill={INK.quiet}>
+              0%
+            </text>
+            <text x={252} y={12} fontSize="8.5" textAnchor="middle" fill={INK.quiet}>
               100%
             </text>
-            <StackedBar shares={[0, 0.35, 0.65, 0]} y={40} height={26} />
-            <text x={54} y={57} fontSize="9" textAnchor="end" fill={INK.quiet}>
-              usual
+            <text x={60} y={30} fontSize="9" fill={INK.quiet}>
+              the usual case
             </text>
+            <StackedBar shares={[0, 0.35, 0.65, 0]} y={34} height={22} x={56} span={196} />
+            <text x={60} y={76} fontSize="9" fill={INK.quiet}>
+              where the analysis extrapolates
+            </text>
+            <rect x={32} y={80} width={24} height={22} fill={archive.fill} stroke={archive.stroke} strokeWidth={archive.strokeWidth} />
             <rect
-              x={60}
-              y={88}
-              width={BAR_WIDTH * 1.12}
-              height={26}
+              x={56}
+              y={80}
+              width={196 * 1.12}
+              height={22}
               fill={points.fill}
               stroke={points.stroke}
               strokeWidth={points.strokeWidth}
             />
-            <rect x={44} y={88} width={16} height={26} fill={archive.fill} stroke={archive.stroke} strokeWidth={archive.strokeWidth} />
-            <text x={38} y={105} fontSize="9" textAnchor="end" fill={INK.quiet}>
-              overshoot
-            </text>
-            <text x={20} y={140} fontSize="9" fill={INK.quiet}>
-              past 100% on measurement; the prior share pays for it, below zero
+            <text x={12} y={124} fontSize="8.5" fill={INK.quiet}>
+              measurement past 100%, and the prior share below zero to pay for it
             </text>
           </svg>
         ),

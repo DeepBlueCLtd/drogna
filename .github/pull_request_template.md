@@ -36,9 +36,19 @@ worth watching work — arrives with its entry, in this pull request. Not one pe
 Copy site/authoring/blog-entry-template.md to site/docs/blog/posts/<slug>.md; the shape
 and the audience are in site/authoring/README.md.
 
-Link the entry here, or say why this change does not earn one. "Plumbing, no entry yet"
-is a decision; silence is an oversight, and the coverage table on the blog index
-publishes the gap either way.
+Link the entry here as a full URL on this branch:
+https://github.com/DeepBlueCLtd/drogna/blob/<this-branch>/site/docs/blog/posts/<slug>.md
+
+A repository-relative path — `site/docs/blog/posts/<slug>.md` — is NOT resolved to the
+file by GitHub in a pull request body. The browser resolves it against whichever page
+the body is being read on, so it lands under /compare/ or /pull/ and returns 404. The
+entry itself is not published until this branch merges (site.yml publishes from main
+only), so the branch blob URL is the link that works while the pull request is open;
+https://deepbluecltd.github.io/drogna/blog/posts/<slug>/ is the one that works after.
+
+Or say why this change does not earn an entry. "Plumbing, no entry yet" is a decision;
+silence is an oversight, and the coverage table on the blog index publishes the gap
+either way.
 -->
 
 ## What was watched failing

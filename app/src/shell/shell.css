@@ -1,15 +1,18 @@
 @import 'dockview-react/dist/styles/dockview.css';
 
+/* --shell-dim is the console's secondary text: captions, units, section labels, the
+   reason an axis was omitted — most of the words on some panels. It was #6b7785, which
+   is 4.0:1 on --shell-bg and as little as 2.4:1 on the lighter chrome, under AA's 4.5:1
+   for body text and visibly so: at the sizes the panels use it (down to 0.62rem) the
+   text all but disappeared. It is now the same grey-blue a step lighter, 8.2:1 on
+   --shell-bg and never below 4.9:1 on any surface in the shell's chrome, and still an
+   obvious step below --shell-fg so the hierarchy the dim colour exists for survives.
+   `contrast.test.ts` holds the bound, reading the tokens from these files. */
 :root {
   color-scheme: dark;
   --shell-bg: #10151b;
   --shell-fg: #d5dde5;
-  /* Muted text. #6b7785 was 3.1:1 against the darkest surface it is drawn on and 4.0:1
-     against the lightest — below the 4.5:1 that ordinary text needs, at sizes down to
-     0.62rem where none of the large-text allowance applies. Reported from a phone, where
-     it is worst; measured rather than adjusted by eye, and held at 4.5:1 by
-     `contrast.test.ts` against every surface either stylesheet declares. */
-  --shell-dim: #8a97a6;
+  --shell-dim: #9fb0bd;
   --shell-accent: #4cc2ff;
   --shell-lit: #58d68d;
   --shell-refused: #ff7b6b;

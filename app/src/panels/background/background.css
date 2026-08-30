@@ -94,10 +94,13 @@
   flex: 1 1 auto;
 }
 
+/* The step count sits a shade behind its title and is still text: 0.65 put --shell-dim
+   back under AA once the panel background showed through it, which is the whole fault
+   the dim colour was raised to fix. */
 .bg-rail-length {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .bg-rail-foot {
@@ -230,6 +233,23 @@
   stroke-linejoin: round;
 }
 
+/*
+ * A poke region under the pointer, and under keyboard focus.
+ *
+ * FR-025's affordance is the dashed outline and it stays static: this is the region's
+ * answer to a viewer who has already reached it, not something that happens on
+ * arrival (FR-019). The dashes brighten to the same ink an active region wears, so
+ * nothing new has to be learned and nothing here is carried by hue alone (FR-011).
+ */
+.bg-poke {
+  cursor: pointer;
+}
+
+.bg-poke:hover > rect,
+.bg-poke:focus-visible > rect {
+  stroke: #d5dde5;
+}
+
 .bg-readout {
   color: var(--shell-fg);
   font-size: 0.88em;
@@ -318,6 +338,15 @@
 .bg-position {
   color: var(--shell-dim);
   font-family: monospace;
+}
+
+/* Smaller than the buttons on purpose: the row's height is a published proof
+   (scripts/capture/background.ts checks Next never moves), so a hint at the foot of
+   the stage must not be what grows it. */
+.bg-keyhint {
+  margin-left: auto;
+  color: var(--shell-dim);
+  font-size: 0.85em;
 }
 
 /* ---- the Consequences panel (FR-008) ---- */

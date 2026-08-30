@@ -255,7 +255,7 @@ describe('the chrome (FR-007)', () => {
   });
 
   it('FR-75: a view with no tour shows no control, and the absence is the answer', async () => {
-    // Intro is prose and Background is eleven explainers that are their own walkthrough.
+    // Intro is prose and Background is ten explainers that are their own walkthrough.
     // A button that was always present would say nothing by being present.
     for (const view of ['intro', 'background']) {
       const { done } = await shellAt(`#/view/${view}`, 390);

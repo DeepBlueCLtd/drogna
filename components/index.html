@@ -61,6 +61,12 @@ prose below is where that is said.</p>
 <td><code>adv/advisories</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
+<td><code>analyst</code></td>
+<td><code>app/src/backend/analyst</code></td>
+<td><code>ctl/analysis/published</code>, <code>ctl/heartbeat</code></td>
+<td><code>obs/#</code>, <code>ctl/run/request</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
 <td><code>boundary</code></td>
 <td><code>app/src/backend/boundary</code></td>
 <td><code>ctl/boundary/denial</code>, <code>ctl/heartbeat</code></td>
@@ -106,7 +112,7 @@ prose below is where that is said.</p>
 <td><code>model-runner</code></td>
 <td><code>app/src/backend/model-runner</code></td>
 <td><code>ctl/run/started</code>, <code>ctl/run/published</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/run/request</code>, <code>ctl/clock</code></td>
+<td><code>ctl/analysis/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>monitor</code></td>
@@ -136,7 +142,7 @@ prose below is where that is said.</p>
 <td><code>planner</code></td>
 <td><code>app/src/backend/planner</code></td>
 <td><code>ctl/plan</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/operator/command</code>, <code>obs/#</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>obs/#</code>, <code>ctl/analysis/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>platform</code></td>
@@ -241,6 +247,12 @@ would fail the drift gate before it reached this page.</p>
 <td><code>shell</code></td>
 </tr>
 <tr>
+<td><code>ctl/analysis/published</code></td>
+<td>—</td>
+<td><code>analyst</code></td>
+<td><code>model-runner</code>, <code>planner</code>, <code>shell</code></td>
+</tr>
+<tr>
 <td><code>ctl/boundary/denial</code></td>
 <td><code>boundary-denial.schema.json</code></td>
 <td><code>boundary</code></td>
@@ -250,7 +262,7 @@ would fail the drift gate before it reached this page.</p>
 <td><code>ctl/clock</code></td>
 <td><code>clock.schema.json</code></td>
 <td><code>clock</code></td>
-<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>analyst</code>, <code>boundary</code>, <code>broker</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>ctl/divergence</code></td>
@@ -261,7 +273,7 @@ would fail the drift gate before it reached this page.</p>
 <tr>
 <td><code>ctl/heartbeat</code></td>
 <td><code>heartbeat.schema.json</code></td>
-<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>clock</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>telemetry</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>analyst</code>, <code>boundary</code>, <code>broker</code>, <code>clock</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>telemetry</code></td>
 <td><code>operator</code>, <code>shell</code></td>
 </tr>
 <tr>
@@ -298,13 +310,13 @@ would fail the drift gate before it reached this page.</p>
 <td><code>ctl/run/published</code></td>
 <td><code>run-published.schema.json</code></td>
 <td><code>model-runner</code></td>
-<td><code>offload</code>, <code>planner</code>, <code>scheduler</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>offload</code>, <code>scheduler</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>ctl/run/request</code></td>
 <td><code>run-request.schema.json</code></td>
 <td><code>scheduler</code></td>
-<td><code>model-runner</code>, <code>shell</code></td>
+<td><code>analyst</code>, <code>shell</code></td>
 </tr>
 <tr>
 <td><code>ctl/run/started</code></td>
@@ -322,37 +334,37 @@ would fail the drift gate before it reached this page.</p>
 <td><code>obs/#</code></td>
 <td><code>observation.schema.json</code></td>
 <td>—</td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/ownship/+</code></td>
 <td><code>observation.schema.json</code></td>
 <td><code>platform</code>, <code>sensors</code></td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/platform-a/pressure-200m</code></td>
 <td><code>observation.schema.json</code></td>
 <td><code>sensors</code></td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/platform-a/salinity-050m</code></td>
 <td><code>observation.schema.json</code></td>
 <td><code>sensors</code></td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/platform-a/temperature-050m</code></td>
 <td><code>observation.schema.json</code></td>
 <td><code>sensors</code></td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/platform-a/temperature-200m</code></td>
 <td><code>observation.schema.json</code></td>
 <td><code>sensors</code></td>
-<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>analyst</code>, <code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 </tbody>
 </table>

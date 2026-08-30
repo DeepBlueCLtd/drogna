@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0038: measurements reach the field — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0038-measurements-reach-the-field">ADR-0038: measurements reach the field</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 30 August 2026
+<strong>Feature:</strong> 116 (the analysis step, and where a value came from)
+<strong>Requirements:</strong> SRD-v2 FR-21, FR-30, FR-33, all amended by this feature
+<strong>Engages:</strong> Constitution VI (honest ports); Constitution IX (ground truth is scored,
+not assumed); ADR-0002 (τ from the published manifest); ADR-0005 (sound speed derived
+at the point of use)</p>
+<h2 id="context">Context</h2>
+<p>For nine features drogna demonstrated a forecast loop that did not learn.</p>
+<p>The coverage store had two writers. The environment generator evaluated the historic
+archive and a rolling now-cast from the analytic true ocean. The model runner
+initialised from that now-cast, ran its ensemble, and published a forecast. Observations
+reached the observation store through the ingest seam and were served through the query
+layer, and from there they fed exactly two things: the monitor's sound-speed residuals,
+which decided <em>when</em> a run happened, and the planner's uncertainty field, which decided
+<em>where</em> the platform sampled next.</p>
+<p>No observation modified a field value anywhere. There was no innovation applied to a
+field, no gain, no increment, no analysis. The loop converged, and the residuals the
+monitor reported fell — but they fell because the now-cast was re-evaluated from truth
+every nine hundred ticks, not because anything had been learned. Truth leaked in on a
+timer.</p>
+<p>Nothing in the tree lied about this. Every component was individually honest: the
+generator said it evaluated an analytic world, the runner said it initialised from the
+now-cast, the manifests recorded their derivations exactly. The arrow was simply
+missing, and no document claimed it was there. It survived nine features because a
+missing arrow looks like nothing at all.</p>
+<p>It was found by asking a question about a display — <em>show the contribution of platform
+measurements to the now-cast</em> — and reading the loop to answer it.</p>
+<h2 id="decision">Decision</h2>
+<p>An <strong>analyst</strong> component stands between the scheduler's request and the runner's
+forecast. On a run request it takes the standing forecast as background and the
+observations taken since its last cycle, and computes</p>
+<pre><code>xᵃ = xᵇ + K(y − Hxᵇ)        K = BHᵀ(HBHᵀ + R)⁻¹
+</code></pre>
+<p>publishing three holdings through the coverage store's one write seam — the analysis,
+the diagonal of <code>Pᵃ = (I − KH)B</code>, and the provenance of every cell — and then announcing.
+The model runner subscribes to that announcement rather than to the run request.</p>
+<p>Four choices inside that are load-bearing, and each was made for a reason that is not
+accuracy.</p>
+<p><strong>Optimal interpolation, because the provenance is then exact.</strong> <code>H</code> is
+nearest-neighbour selection, so every row of <code>H</code> sums to one, so
+<code>xᵃ = (I − KH)xᵇ + Ky</code> exactly: each analysed value is a linear combination of its
+background and the observations whose weights sum to one. The provenance shares are read
+straight off the gain. A nudging scheme would have drawn the same stacked bar, but the
+bar would have been an illustration rather than the arithmetic. The figure is the reason
+for the method, not the other way round.</p>
+<p><strong>Gaspari–Cohn, because a truncated Gaussian is not a covariance.</strong> The correlation must
+have compact support, or a measurement's influence never quite reaches zero and the
+provenance saturates: measured over four cycles with an unlocalised Gaussian, measurement
+owned at least 0.449 of <em>every</em> cell in the domain, including a corner the platform never
+approached. But cutting a Gaussian off at a radius destroys positive definiteness, and
+the system the analysis solves would stop being one any covariance could produce.
+Gaspari–Cohn is compactly supported and positive definite, and a test builds both
+matrices and watches the truncated one fail Cholesky while the tapered one factorises.
+Compact support here is a claim about physics — beyond this distance a measurement
+informs nothing — and never a computational shortcut: at this observation count a cutoff
+buys no speed at all.</p>
+<p><strong>The correlation is declared once, and the planner reads it.</strong> The planner used to carry
+a <code>footprint</code> block: a peak of 0.85, two exponential e-foldings and two hard ring
+cutoffs. It was a hand-authored model of what an analysis does, written before there was
+an analysis, and it disagreed with the arithmetic — the real collapse at an observed cell
+is <code>σ²ᵦ/(σ²ᵦ+σ²ₒ)</code>, which for the declared deviations is 0.997. A planner scoring a
+collapse at one scale while the analysis applies it at another is scoring a system that
+does not exist. The block is gone; the planner reads the analyst's correlation and
+derives the collapse from the analysis's own closed form.</p>
+<p><strong>The ensemble is perturbed from the analysis error.</strong> Every member used to start from
+the identical initial state, so the ensemble's only divergence was the kernel's per-cell
+noise growing as √lead — the published spread was a function of lead time with no spatial
+structure whatever. The planner's observation-age field existed to supply the structure
+the spread lacked. Perturbing each member by the error the analysis left is what makes
+the spread mean <em>how well is this state known</em>, and it is what lets a measurement's
+effect survive into the next cycle's gain. The age proxy is retired with it.</p>
+<p>The generator keeps evaluating truth on its cadence. That is not a leak left behind but
+the point: it is the reference the monitor scores against and what makes <code>|analysis − truth|</code> computable and watchable. A gate holds that no component outside the permitted
+four reads it, and one deliberate reading remains — the cold start, where the first
+cycle of a scenario has no forecast to correct, recorded in the analysis manifest's
+lineage rather than hidden.</p>
+<h2 id="consequences">Consequences</h2>
+<p>The loop now learns, and it shows: over six thousand ticks the divergence count fell from
+several to one, because a forecast corrected by what was measured breaches its threshold
+far less often. Two tests had encoded the old behaviour — one waited for the sea to
+breach twice inside the scheduler's minimum interval, one read a second published run
+without asserting there was one — and both were rewritten to exercise what they were
+about rather than what the ocean used to do.</p>
+<p>Three masters were amended. <code>coverage-holding</code> and <code>holding-published</code> admit an
+<code>analysis</code> era; <code>manifest</code>'s time-axis count falls from an unargued minimum of 2 to 1,
+because an analysis is a correction at a single instant, and the bound now carries the
+reason it never had.</p>
+<p>Two things the maths does not let us claim, both stated rather than smoothed:</p>
+<p>The observation weight is not confined to [0, 1]. Where a cell's background error greatly
+exceeds the observed cell's, the gain extrapolates past the reading rather than averaging
+toward it, and the prior shares go below zero to pay for it. That is optimal interpolation
+behaving correctly, and perturbing the ensemble from <code>Pᵃ</code> makes it routine rather than
+exotic — σ is now small where the boat has been and large where it has not, which is
+exactly the configuration that produces it. It is reported unclamped and the Map states
+the count, because a share silently clamped is a display telling a story the maths did
+not.</p>
+<p>And the departure share is a bookkeeping convention. Everything it holds came from the
+archive — a forecast moves information without creating any — so it is credited by
+relabelling the archive share at the moment the platform sails, and it is kept separate
+because &quot;how much of this did we know before we sailed&quot; is worth answering, not because
+the two are different in kind. The Background explainer says so on the step that
+introduces it.</p>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<p><strong>Explain the maths without building it.</strong> The Background tab would have taught
+background, innovation, gain and analysis beside a shell that did none of them. Rejected:
+the tab's own frame is <em>the standards, and what it takes to use them honestly</em>, and an
+explainer describing a step the system does not perform is the exact dishonesty this
+harness exists to avoid.</p>
+<p><strong>A stage inside the model runner.</strong> Fewer moving parts, no new component, no new
+configuration document. Rejected because the analysis would never be a holding: EDR could
+not serve it, the Map could not draw it, Holdings could not list it, and the step the
+whole feature is about would be invisible at the seam.</p>
+<p><strong>Local analysis by observation selection</strong> — for each cell, solve using only the
+observations within its reach — which is guaranteed SPD as a principal submatrix and is
+what many operational systems do. Rejected in favour of Gaspari–Cohn as the standard
+answer to the localisation problem, keeping one global solve; at tens of observations
+neither is meaningfully cheaper than the other, so the choice was made on which is easier
+to argue rather than on cost.</p>
+<p><strong>Two provenance bars rather than four.</strong> Information-theoretically, everything traces to
+either prior knowledge or measurement, and model error is not a source of information at
+all. Rejected: the model share is what makes a measurement's share decay as its forecast
+ages, and without it a cell measured once stays measurement-coloured for ever, however
+stale. The departure bar was kept knowingly, with the admission above.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

@@ -74,7 +74,9 @@
 }
 
 .driver-popover.walkthrough-popover .driver-popover-progress-text {
-  color: #6b7785;
+  /* The token, not a copy of its value: this was the same #6b7785 as the palettes and
+     would have kept the contrast fault after they were fixed. */
+  color: var(--shell-dim);
 }
 
 .driver-popover.walkthrough-popover button {

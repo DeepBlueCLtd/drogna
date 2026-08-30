@@ -156,6 +156,44 @@ and backward through the system components.*
       component, so the second is a no-op. Harmless, and not a property to design around —
       the single listener stays, and the comment now says what was actually observed.
 
+## The palette (added on the author's fourth report)
+
+*Too little contrast on the dark gray text* — with a screenshot of the feature-store card
+at a phone's width.
+
+- [x] T040 Measure before changing anything. `#6b7785`, the muted colour in both palettes,
+      is 3.11:1 on `#222c36`, 3.53:1 on `#1a2229`, 3.60:1 on `#18202a`, 3.84:1 on the open
+      card and 4.02:1 on the shell's own background. Ordinary text needs 4.5:1 and the
+      text drawn in it runs down to 0.62rem, so no large-text allowance applies. Every
+      other colour in both palettes already passes, the nearest at 4.90:1 — one token was
+      the whole fault.
+- [x] T041 Raise it to `#8a97a6`, chosen for the worst surface rather than the average:
+      4.76:1 there, 6.16:1 at best, and still muted enough to stay a level below
+      `--flow-fg` at 10–13:1. Both palettes carry the same value, so both moved.
+- [x] T042 `walkthrough.css` held its own copy of `#6b7785` and would have kept the fault
+      after the palettes were fixed. It uses the token now — one number in one place, the
+      rule this repository already applies to its breakpoint.
+- [x] T043 Define `--flow-cy`. Three rules have asked for it since feature 113 and nothing
+      declared it, so the broker's advisory lane drew a bar with no fill and `.face-pill`
+      took the colour it inherited. Found while measuring the pill in the author's own
+      screenshot — and visible in the capture afterwards, where the pill has an outline
+      for the first time.
+- [x] T044 `app/src/shell/contrast.test.ts`: the palettes and the surfaces are **read off
+      the stylesheets**, so the check cannot pass while the application draws something
+      else. The only number typed into it is the 4.5:1 itself. A token must be classified
+      as text or not-text before the test will accept it, and the exclusions carry their
+      reasons — a border and a status dot are graphical objects and a text threshold would
+      push the whole picture towards white for nobody's benefit.
+- [x] T045 Plant each fault. Four planted, four caught, all reverted: (a) the reported
+      colour put back — the AA check failed, naming every surface and its ratio; (b)
+      `--flow-cy` undefined again — the asked-for-nothing check failed; (c) a new token
+      added and never classified — the AA check failed on it; (d) a token renamed out from
+      under its exclusion — three checks failed at once.
+- [x] T046 No gate for this. It is a property of two stylesheets, held by a test that
+      reads them; `scripts/gates.registry` stays as it is. Should a third palette appear,
+      the test's own file list is what needs extending, and it fails loudly rather than
+      passing over what it cannot see.
+
 ## Holding it
 
 - [x] T011 Plant each fault the new checks exist to catch, and see it caught. Four

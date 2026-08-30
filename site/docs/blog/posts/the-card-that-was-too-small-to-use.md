@@ -190,6 +190,36 @@ The arrows also keep the keyboard on themselves across a step — the card they 
 left the page by then, so the focus moves to the same arrow in the card that replaced it,
 and a reader can walk the whole system without touching the mouse.
 
+## One colour, in every quiet sentence in the application
+
+The last report on the card was about none of this: *too little contrast on the dark grey
+text*, with a screenshot from a phone.
+
+That kind of report is easy to answer badly, by nudging the colour until it looks better
+on the monitor in front of you — which is the monitor the original colour looked fine on.
+So it was measured instead. The muted grey used for every quiet sentence in the
+application — captions, units, footnotes, the list of a piece's connections, the name of a
+piece that has gone silent — came out at 3.1:1 against the darkest panel it is drawn on
+and 4.0:1 against the lightest. Ordinary text needs 4.5:1, and the text drawn in this
+colour runs down to about ten pixels, well under any large-text allowance. Every other
+colour in both palettes already passed, the nearest at 4.9:1. One value was the whole
+fault, and it had been there since the palette was written.
+
+It is now a lighter grey chosen against the *worst* surface rather than the average, and
+held there by a test that reads the palettes and the surfaces out of the stylesheets
+rather than keeping its own copy of them — a test with its own list of colours passes
+happily while the application draws something else. The only number typed into that test
+is the 4.5 itself.
+
+Measuring the report turned up a second fault beside it. One of the colours in the
+palette, the one for the advisory channel, was *asked for by three rules and defined by
+nothing*. In CSS that is not an error: a reference to an undefined custom property makes
+the whole declaration invalid, so the rule is silently dropped. The result had been a bar
+drawn with no fill and a small outlined label with neither an outline nor a colour — both
+of them sitting in the very screenshot that reported the contrast, and neither one
+noticed, because a missing colour looks like a design decision. The test now fails on any
+rule that asks for a colour nobody defined.
+
 ## The demo
 
 Open the operator view and click any box with a **▸** on it — the mark means that piece

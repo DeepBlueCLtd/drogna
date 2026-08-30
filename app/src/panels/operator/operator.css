@@ -3,11 +3,19 @@
 .operator-panel {
   --flow-line: #2b3742;
   --flow-fg: #d5dde5;
-  --flow-dim: #6b7785;
+  --flow-dim: #8a97a6;
   --flow-pts: #e0a458;
   --flow-fld: #5fb8ac;
   --flow-own: #63bede;
   --flow-ctl: #9c8fd1;
+  /* The advisory channel. Three rules have asked for this since feature 113 — the
+     broker face's `adv` lane and both ends of `.face-pill` — and nothing defined it, so
+     the lane drew a bar with no fill and the pill took whatever colour it inherited.
+     An undefined custom property is not an error anywhere: `var(--flow-cy)` with no
+     fallback makes the declaration invalid at computed-value time, and the rule quietly
+     does nothing. Found while measuring the contrast of the pill in the screenshot that
+     reported it. */
+  --flow-cy: #5fd0d8;
 }
 
 .operator-controls {

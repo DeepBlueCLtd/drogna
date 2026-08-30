@@ -98,6 +98,27 @@ something.
   place: on a phone the card ended up half off the screen, and on a desktop, where
   nothing needed to move at all, the whole chart was dragged sideways.
 
+## Two defects found in the surface this feature opened
+
+Neither is about where a node opens; both were reported or found by looking at the card
+this feature built, and both are fixed here rather than left for a tidier moment.
+
+- **FR-16** The muted text colour fails the contrast ordinary text needs. `#6b7785` is
+  the one colour every quiet sentence in the application is drawn in — captions,
+  footnotes, units, the wires list, a dark node's own name — and it measures 3.1:1
+  against the darkest surface it is used on and 4.0:1 against the lightest, where 4.5:1
+  is the requirement and none of these are large enough for the large-text allowance. It
+  is raised to a value that clears 4.5:1 on **every** surface either stylesheet declares,
+  and held there by a test that reads the palettes off disk. Reported from a phone, which
+  is where it is worst.
+- **FR-17** `--flow-cy` is asked for by three rules and defined by none. An undefined
+  custom property is not an error anywhere: `var(--flow-cy)` with no fallback makes the
+  declaration invalid at computed-value time, so the rule is dropped and nothing says so.
+  The advisory lane in the broker's face drew a bar with no fill, and the read-only pill
+  took whatever colour it inherited — visible in the same screenshot that reported the
+  contrast. The token is defined, and a test now fails on any rule that asks for a token
+  nothing declares.
+
 ## What is deliberately not done
 
 - **The card does not float over the chart.** A card that grew over its neighbours is a
@@ -164,3 +185,7 @@ something.
   not own those keys; from a range, number, text, select or editable target, and from any
   modified arrow, the card does not move.
 - **SC-012** Each arrow declares its key in a form assistive technology reads.
+- **SC-013** Every colour in either palette that text is drawn in measures at least
+  4.5:1 against every surface either stylesheet declares, with the palette and the
+  surfaces read from the stylesheets rather than restated in the check.
+- **SC-014** No rule asks for a custom property that nothing defines.

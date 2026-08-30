@@ -4,7 +4,12 @@
   color-scheme: dark;
   --shell-bg: #10151b;
   --shell-fg: #d5dde5;
-  --shell-dim: #6b7785;
+  /* Muted text. #6b7785 was 3.1:1 against the darkest surface it is drawn on and 4.0:1
+     against the lightest — below the 4.5:1 that ordinary text needs, at sizes down to
+     0.62rem where none of the large-text allowance applies. Reported from a phone, where
+     it is worst; measured rather than adjusted by eye, and held at 4.5:1 by
+     `contrast.test.ts` against every surface either stylesheet declares. */
+  --shell-dim: #8a97a6;
   --shell-accent: #4cc2ff;
   --shell-lit: #58d68d;
   --shell-refused: #ff7b6b;

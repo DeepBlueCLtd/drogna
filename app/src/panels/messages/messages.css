@@ -19,7 +19,11 @@
 
 .traffic-lanes {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  /* `minmax(0, 1fr)` rather than `1fr`: a `1fr` track's automatic minimum is its
+     content's min-content width, so a bordered lane refuses to shrink to the space left
+     and pushes the grid two pixels past the panel. Measured, not guessed — the
+     narrow-presentation proof reported 375px of content in 373px at every phone size. */
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 3px 0.7em;
   align-items: center;
 }
@@ -43,9 +47,15 @@
   color: var(--shell-refused);
 }
 
+/* `border-box`, and it is load-bearing rather than tidiness: the lane is the `1fr`
+   column of the grid above, and a content-box border puts two pixels of it past the
+   viewport. The narrow-presentation proof found exactly that — 375px of content in
+   373px, at all three phone sizes — and FR-017 does not care that two pixels is small. */
 .traffic-lane {
   position: relative;
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   height: 18px;
   background: #0b1016;
   border: 1px solid #232c36;
@@ -58,9 +68,12 @@
 }
 
 .traffic-mark {
+  /* Declared as a custom property because the inline `left` calc insets by it: the
+     placement and the width have to be the same number or a mark leaves the lane. */
+  --traffic-mark-width: 3px;
   position: absolute;
   top: 3px;
-  width: 3px;
+  width: var(--traffic-mark-width);
   height: 12px;
   display: block;
   background: var(--shell-accent);
@@ -68,9 +81,9 @@
 }
 
 .traffic-mark-refused {
+  --traffic-mark-width: 4px;
   top: 1px;
   height: 16px;
-  width: 4px;
   background: var(--shell-refused);
 }
 

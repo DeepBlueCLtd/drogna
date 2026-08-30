@@ -66,7 +66,14 @@ export function TrafficDisplay({
                 <i
                   key={mark.seq}
                   className={mark.refused ? 'traffic-mark traffic-mark-refused' : 'traffic-mark'}
-                  style={{ left: `${markOffset(mark, newestSeq, window) * 100}%` }}
+                  // The newest mark sits at offset 1, and `left: 100%` puts its left
+                  // edge on the lane's right edge — so the mark itself hung three pixels
+                  // past it, which the narrow-presentation proof reported as a lane that
+                  // scrolls sideways. Inset by the mark's own width, scaled by the
+                  // offset, so offset 0 is flush left and offset 1 is flush right.
+                  style={{
+                    left: `calc(${markOffset(mark, newestSeq, window)} * (100% - var(--traffic-mark-width)))`,
+                  }}
                   data-seq={mark.seq}
                   data-refused={mark.refused}
                   data-selected={mark.seq === selectedSeq ? true : undefined}

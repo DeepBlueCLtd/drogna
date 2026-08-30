@@ -153,6 +153,28 @@ export interface ObservationHistory {
  * so the display can hold itself to it rather than to the length of what it happened to
  * receive.
  */
+/**
+ * How many observations the store holds, all datastreams together.
+ *
+ * Asked for with `$top=0`, so the server answers with its count and no page: the tree
+ * needs the figure and not the observations, and fetching thousands of entities to call
+ * `.length` on them would be the shell doing the store's arithmetic at the store's
+ * expense. The count is the store's own — `@iot.count` — rather than a tally the shell
+ * keeps, which could only ever drift from it.
+ */
+export async function readObservationCount(
+  prefix: string,
+  validator: SeamValidator,
+): Promise<Read<number>> {
+  const answer = await read<{ '@iot.count': number }>(
+    `${prefix}/Observations?$top=0`,
+    'sensorthings-subset#observations_response',
+    'the observation count',
+    validator,
+  );
+  return answer.ok ? { ok: true, value: answer.value['@iot.count'] } : answer;
+}
+
 export async function readObservations(
   prefix: string,
   datastreamId: string,
@@ -179,6 +201,25 @@ export async function readObservations(
     }
   }
   return { ok: true, value: { points, count, truncated: true } };
+}
+
+/**
+ * The reference geometry: the domain and the loiter region, immutable for the run.
+ *
+ * Fetched so the advisory canvas has something to place a region *against*. Drawn on
+ * its own, an advised bbox is a rectangle in a void — it says a region was advised and
+ * nothing about where, which is half of what an advisory is.
+ */
+export async function readReference(
+  prefix: string,
+  validator: SeamValidator,
+): Promise<Read<FeaturesResponseFeatureCollection>> {
+  return read<FeaturesResponseFeatureCollection>(
+    `${prefix}/collections/reference/items`,
+    'features-response#feature_collection',
+    'the reference geometry',
+    validator,
+  );
 }
 
 export async function readAdvisories(

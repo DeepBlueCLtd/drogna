@@ -138,6 +138,35 @@ lesson 1).
       coverage branches move on their announcement, the measurements do not, and the two
       tests above cover the control.
 
+- [x] T043b **The measurements branch counted datastreams.** Reported: it should count
+      measurements. It now shows what the observation store reports it holds, asked for
+      with `$top=0` so the server answers with its count and no page — the shell should
+      not fetch thousands of entities to call `.length` on them, and the store's own
+      figure cannot drift from the store. **Watched failing**: with the count back to
+      datastreams it reported 7 where 17 were held.
+- [x] T044 **The shore canvas drew regions on nothing.** Reported: no vector data on a
+      map. The run's reference geometry — the domain as a surface, the loiter region
+      outlined — now goes beneath them, over a locally generated one-degree graticule,
+      with a caption naming each. Same Features service, one collection along, through the
+      seam like everything else.
+- [x] T045 The fit is `WebMercatorViewport.fitBounds` against the measured canvas. The
+      arithmetic it replaced got the horizontal roughly right and clipped the domain top
+      and bottom: four degrees of latitude at 46°N occupy about half as much again on a
+      Mercator as four degrees of longitude do. A projection's own viewport knows that; a
+      log2 does not.
+- [x] T046 The view is **controlled**. `initialViewState` is read once, before the canvas
+      has been measured, so the fit never reached the picture — and the second look found
+      the domain still at two fifths of the height, after the first fix had apparently
+      made it right.
+- [x] T047 The canvas is measured by a **callback ref**, not by an effect over
+      `ref.current`. The canvas is only in the document once an advisory exists, so a
+      mount-time effect observed nothing and never ran again. Three passes on one picture,
+      each of which looked right in code and was wrong on screen; only the screenshots
+      told them apart.
+- [x] T048 The loiter outline is drawn **above** the advisory fill. Beneath a translucent
+      fill a two-pixel outline is not context, it is a rumour of one — and the advisories
+      sit over that region more often than not, which is the whole reason to draw it.
+
 ## The record
 
 - [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,

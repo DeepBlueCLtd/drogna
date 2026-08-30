@@ -1025,7 +1025,12 @@ three browsable from one place.
   not hold shall **say which node was asked for**, and shall never open silently on
   something else: a link to a holding the store has since replaced is a question this tab
   knows the answer to.
-- **FR-97** The measurements branch shall walk **Thing → Datastream → chart**, SensorThings'
+- **FR-97** The measurements branch shall be counted in **measurements**, not in
+  datastreams: how many observations the store holds, as the store itself reports the
+  figure. Reported against the built tab, where the branch showed how many properties were
+  being measured — a fact about how the platform is instrumented, which does not move,
+  where the number the branch exists for is the one that does. The branch shall walk
+  **Thing → Datastream → chart**, SensorThings'
   own grouping and not a second one invented here. A datastream's account is a chart of
   **value against simulation time over its full history**, paged from the store until it
   is exhausted, with the observation table beside it. The axes shall be taken from the
@@ -1054,6 +1059,14 @@ three browsable from one place.
   instant and from no host clock. Before any advisory exists the branch shall say that the
   collection is present and states it holds nothing, which is what the collection itself
   says (FR-39).
+
+  The regions shall be drawn **on the run's own reference geometry** — the scenario domain
+  as a surface and the loiter region outlined, from the same Features service one
+  collection along — over a locally generated graticule, with a caption naming what each
+  is. This clause exists because the requirement without it was met by a canvas that drew
+  the regions on nothing, and the reader's report of that was exact: no vector data on a
+  map. An advised bbox alone states that a region was advised and nothing whatever about
+  where, which is half of what an advisory is.
 - **FR-101** The tab's two WebGL surfaces — the volume and the shore canvas — shall be
   **code-split from the tab**, as the map is code-split from the shell and for the same
   measured reason (`spikes/load-time`): the deck.gl stack is about a third of the bundle,

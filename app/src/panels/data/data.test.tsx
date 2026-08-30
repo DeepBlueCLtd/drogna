@@ -161,6 +161,28 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     expect(screen.getByTestId('count-departure').textContent).toBe('1');
   });
 
+  it('counts measurements in measurements, not in datastreams (reported)', async () => {
+    // Reported against the built tab: the branch showed how many *properties* were being
+    // measured, which is a fact about how the platform is instrumented and does not move.
+    // The figure the branch is there for is how much has been reported.
+    await mounted();
+    await act(async () => {
+      await driveUntil(runtime.clock, () => runtime.observationStore.all().length > 10, 2000);
+      await settle(() => false, 200);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('data-refresh'));
+      await settle(() => (screen.getByTestId('count-measurements').textContent ?? '0') !== '0');
+    });
+    const held = runtime.observationStore.all().length;
+    expect(held).toBeGreaterThan(10);
+    // The store's own figure, and distinguishable from the datastream count it replaced.
+    expect(screen.getByTestId('count-measurements').textContent).toBe(String(held));
+    expect(Number(screen.getByTestId('count-measurements').textContent)).toBeGreaterThan(
+      runtime.observationStore.datastreams().size,
+    );
+  });
+
   it('SC-005: refreshes on the announcement its store makes, and never on a timer', async () => {
     const inventoryRequests = () =>
       asked.filter((path) => path.includes(config.shell.endpoints.holdings)).length;
@@ -358,6 +380,15 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
       await settle(() => screen.queryByTestId('advisory-json') !== null);
     });
     expect(screen.getByTestId('advisory-json').textContent).toMatch(/"guidance"/);
+
+    // And the regions are drawn on something. Reported against the built tab: with no
+    // reference geometry beneath them an advised bbox is a rectangle in a void, which
+    // says a region was advised and nothing about where — half of what an advisory is.
+    // The legend is the assertable half of that; the drawing itself needs WebGL.
+    expect(screen.getByTestId('advisory-legend').textContent).toMatch(/scenario domain/);
+    expect(screen.getByTestId('advisory-legend').textContent).toMatch(/loiter region/);
+    // The reference is fetched through the seam like everything else in this tab.
+    expect(asked.some((path) => path.includes('/collections/reference/items'))).toBe(true);
   });
 
   it('SC-010: the volume loads the step it is on, and says which steps it holds', async () => {

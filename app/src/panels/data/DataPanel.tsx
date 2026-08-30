@@ -48,6 +48,8 @@ import {
   readAdvisories,
   readDatastreams,
   readHoldings,
+  readObservationCount,
+  readReference,
   readThings,
   type Datastream,
   type Thing,
@@ -81,8 +83,11 @@ export function DataPanel({ params }: PanelProps) {
   const [things, setThings] = useState<readonly Thing[]>([]);
   const [datastreams, setDatastreams] = useState<readonly Datastream[]>([]);
   const [measurementsRefusal, setMeasurementsRefusal] = useState<string | undefined>();
+  /** What the observation store says it holds: the figure the tree counts by. */
+  const [observationsHeld, setObservationsHeld] = useState(0);
   const [advisories, setAdvisories] = useState<FeaturesResponseFeatureCollection | undefined>();
   const [advisoriesRefusal, setAdvisoriesRefusal] = useState<string | undefined>();
+  const [reference, setReference] = useState<FeaturesResponseFeatureCollection | undefined>();
   const [telemetry, setTelemetry] = useState<TelemetryReport | undefined>();
   const [nowSimTime, setNowSimTime] = useState<string | undefined>();
   /**
@@ -147,9 +152,10 @@ export function DataPanel({ params }: PanelProps) {
     // would lose it silently. Erring the other way shows a reader one more waiting than
     // strictly is, which costs a press and no information.
     setReadAt(announcedRef.current);
-    const [platforms, streams] = await Promise.all([
+    const [platforms, streams, held] = await Promise.all([
       readThings(config.endpoints.sensorthings, validator),
       readDatastreams(config.endpoints.sensorthings, validator),
+      readObservationCount(config.endpoints.sensorthings, validator),
     ]);
     if (!platforms.ok) {
       setMeasurementsRefusal(platforms.refusal);
@@ -162,6 +168,7 @@ export function DataPanel({ params }: PanelProps) {
     setMeasurementsRefusal(undefined);
     setThings(platforms.value);
     setDatastreams(streams.value);
+    if (held.ok) setObservationsHeld(held.value);
   }, [config.endpoints.sensorthings, validator]);
 
   const refreshAdvisories = useCallback(async () => {
@@ -204,6 +211,16 @@ export function DataPanel({ params }: PanelProps) {
     });
   }, [client, config.topics.advisories, refreshAdvisories]);
 
+  // The reference geometry is immutable for the run, so it is read once and never
+  // announced on: subscribing to something that cannot change is a subscription that
+  // only ever costs.
+  useEffect(() => {
+    void (async () => {
+      const answer = await readReference(config.endpoints.features, validator);
+      if (answer.ok) setReference(answer.value);
+    })();
+  }, [config.endpoints.features, validator]);
+
   // Whether an advisory is in force, or an instance's validity has elapsed, are questions
   // about simulation time, and the clock component is the only thing that answers them.
   useEffect(() => {
@@ -216,11 +233,14 @@ export function DataPanel({ params }: PanelProps) {
     const perBranch = new Map<string, number>();
     for (const candidate of BRANCHES) {
       if (candidate.kind === 'coverage') perBranch.set(candidate.id, holdingsForBranch(candidate, holdings).length);
-      if (candidate.kind === 'measurements') perBranch.set(candidate.id, datastreams.length);
+      // Measurements are counted in *measurements*, not in datastreams. Seven datastreams
+      // is a fact about how the platform is instrumented; the branch is there to say how
+      // much has been reported, which is the number that moves.
+      if (candidate.kind === 'measurements') perBranch.set(candidate.id, observationsHeld);
       if (candidate.kind === 'shore') perBranch.set(candidate.id, advisories?.features.length ?? 0);
     }
     return perBranch;
-  }, [advisories, datastreams.length, holdings]);
+  }, [advisories, holdings, observationsHeld]);
 
   /**
    * Selecting is what writes the address, and mounting is not.
@@ -270,8 +290,8 @@ export function DataPanel({ params }: PanelProps) {
     <div className="panel data-panel" ref={rootRef} data-narrow={narrow}>
       <div className="panel-head">
         <p className="messages-counters" data-testid="data-counts">
-          {holdings.length} holding(s), {datastreams.length} datastream(s),{' '}
-          {advisories?.features.length ?? 0} advisory(ies)
+          {holdings.length} holding(s), {observationsHeld} measurement(s) on{' '}
+          {datastreams.length} datastream(s), {advisories?.features.length ?? 0} advisory(ies)
           {holdingsRefusal && <span className="shell-refusal"> · {holdingsRefusal}</span>}
         </p>
         <div className="data-head-controls">
@@ -356,6 +376,7 @@ export function DataPanel({ params }: PanelProps) {
           ) : (
             <ShoreUpdates
               advisories={advisories}
+              reference={reference}
               refusal={advisoriesRefusal}
               nowSimTime={nowSimTime}
               selected={selection.nodeId}

@@ -32,7 +32,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 606, revision: 'test', dirty: false };
+const options = { rootSeed: 606, startCondition: 'loitering', revision: 'test', dirty: false };
 
 async function get(runtime: BackendRuntime, path: string, method = 'GET') {
   const response = await runtime.httpBackend.handle({ method, path, body: '' });

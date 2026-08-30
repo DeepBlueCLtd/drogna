@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "run_id",
+    "start_condition",
     "root_seed",
     "seed_derivation",
     "clock",
@@ -26,6 +27,11 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_-]*$",
       "description": "Identity of the run. Deterministic: derived from seed and scenario, never from entropy or a host clock."
+    },
+    "start_condition": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which of the offered start conditions this run began in (config.start-conditions.schema.json). Required, and required for the same reason the root seed is: a condition scripts a pre-roll, so a manifest that did not name one would replay a different world under the same run id — silently, since everything downstream of the pre-roll would still be derived correctly from the seed. It also appears inside run_id, which is how two visits that chose differently are kept from sharing an identity; it is recorded here as a field as well because reading meaning out of an identifier is not reading a record."
     },
     "root_seed": {
       "type": "integer",

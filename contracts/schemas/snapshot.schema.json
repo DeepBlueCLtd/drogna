@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/snapshot.schema.json",
+  "title": "drogna seed-data snapshot header",
+  "description": "The header of a committed seed-data artefact: what it holds, what produced it, and what it is only valid against. A snapshot is not a fixture — it is the output of the same components the running system uses, driven at build time by the same pre-roll the browser drives, and a drift gate regenerates it and fails on any difference (Constitution, Data, as amended at 2.1.0). This document is what makes that checkable at load rather than only at build: the run it was made for, the seed it was made from, the digest of the configuration it was made under and the code revision that made it are all recorded here, so a page opening a stale artefact refuses it by name instead of opening a console over fields no component would have authored today. The field bytes follow the header in the order the holdings are listed, byte-plane shuffled and the whole file gzipped; shuffling is lossless and is worth its line because a float32 field's exponent plane is nearly constant while its low mantissa plane is noise, and a compressor that sees them apart does several times better on the smooth eras.",
+  "type": "object",
+  "required": ["format", "start_condition", "run_id", "root_seed", "config_digest", "code_revision", "holdings"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "drogna-snapshot-1",
+      "description": "The layout of the bytes after this header. A const rather than a version range: a reader that does not know a layout must refuse it, never guess at it."
+    },
+    "start_condition": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The start condition this artefact was built for (config.start-conditions.schema.json). A snapshot is specific to one: the pre-roll that produced it is that condition's script."
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "The run identity the holdings carry, stamped into every holding id inside them. Recorded so a page can refuse an artefact whose holdings name a different run than the one it is about to open."
+    },
+    "root_seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The seed the run was built from. A snapshot fixes it: the fields are a function of it, and a visit that drew a fresh one would sample an ocean the fields do not describe. This is the seed the condition declares, and the reason it declares one."
+    },
+    "config_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 of the environment generator's configuration document as the build read it. The one thing that decides what the fields contain besides the seed, so a page whose configuration has moved refuses the artefact rather than mixing an old ocean with new bounds."
+    },
+    "code_revision": {
+      "type": "string",
+      "description": "The commit the artefact was generated at, for the record. Not enforced at load: the drift gate is what holds the bytes to the code, and a revision comparison would refuse every artefact on every uncommitted working tree while proving nothing the gate does not prove better."
+    },
+    "holdings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The holdings this artefact carries, in publication order — the order the source republishes them in, which is the order the era pointers were moved in the run that produced them.",
+      "items": {
+        "type": "object",
+        "required": ["descriptor", "byte_length"],
+        "additionalProperties": false,
+        "properties": {
+          "descriptor": {
+            "$ref": "coverage-holding.schema.json",
+            "description": "The holding's descriptor, whole and unaltered — including the ground-truth manifest and the digest of its field. The digest is what the coverage store checks the bytes against when the source publishes them, which is how an artefact whose bytes were corrupted in transit is refused by the same check that refuses a corrupted live publication."
+          },
+          "byte_length": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Length of this holding's field bytes in the body, repeated here so the body can be cut into holdings before any descriptor is trusted."
+          }
+        }
+      }
+    }
+  }
+}

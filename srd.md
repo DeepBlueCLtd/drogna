@@ -373,7 +373,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   commands: clock rate within bounds, step, and stop/start/restart of in-browser
   components. A refused command names the bound or rule; refusals are surfaced, and a
   stopped component goes dark because its heartbeats cease, never because the surface
-  says so *(v1 FR-67, FR-71, FR-72, FR-76)*. Commands are ephemeral and outside
+  says so *(v1 FR-67, FR-71, FR-72, FR-91)*. Commands are ephemeral and outside
   AT-04's replay claim, stated wherever replay is claimed *(v1 FR-73)*. **Amended by feature
   113:** the surface's behaviour is unchanged, and its *presentation* moves to §5.12 —
   the tab becomes the flow chart of FR-57 to FR-59, of which the table specified here is
@@ -439,7 +439,7 @@ directed → the machinery is interrogated → advice travels light → it is se
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never
   stubbed; results rendered where they were asked for, with null, declined and absent
-  as three different facts *(v1 FR-77 to FR-83)*. The copied URL is a genuine GET —
+  as three different facts *(v1 FR-92 to FR-83)*. The copied URL is a genuine GET —
   which the wire-protocol seam is what makes true even in V2. The query's position
   may be placed by clicking the canvas in any projection the map offers, as well as
   typed; what the canvas draws for the composed query — the position, and an area
@@ -774,7 +774,7 @@ pass only one of the three is not finished.
   the same place in both presentations (FR-50, ADR-0033).
 
 
-### 5.16 The downstream consumers (feature 118)
+### 5.16 The downstream consumers (feature 120)
 
 Every beat so far has shown the harness. This one shows what the harness is *for*: three
 tabs that are not part of drogna at all, but separate notional systems consuming its
@@ -787,17 +787,17 @@ screenshot lifted out of context still says what it is. Constitution VIII draws 
 these tabs stand on the far side of — the boundary it defends is *who recommends*, not
 *who renders*, and a downstream consumer is exactly what the principle presumes exists.
 
-The numbering starts at FR-76 because feature 115 — the tabs beyond Operator, §5.15 —
+The numbering starts at FR-91 because feature 115 — the tabs beyond Operator, §5.15 —
 landed while this one was being built and took FR-68 to FR-75 with it. This beat was
 drafted as 115 against a tree where that feature was specified and unbuilt; the tree is
 the authority and the record is a claim about it, so this is 116 and the record was
 corrected rather than the collision left to be discovered.
 
-- **FR-76** The shell shall host **downstream consumer views**, declared in configuration
+- **FR-91** The shell shall host **downstream consumer views**, declared in configuration
   as a view kind, rendered in bright yellow with black text in both presentations
   (ADR-0033), each under a persistent, non-dismissible strip naming it as not part of
   drogna. The shell holds no list of which views these are; it reads the declared kind.
-- **FR-77** A consumer view shall reach drogna **only through the seam** — configured
+- **FR-92** A consumer view shall reach drogna **only through the seam** — configured
   relative endpoints and configured broker topics — and shall import no backend module
   (Constitution XI). It is a client of the same interfaces a Version 3 client would use,
   and nothing in it may know whether the seam is answered in this page or over a network.
@@ -915,6 +915,48 @@ records what it caught before it went.*
   shall be expressed without reading the host clock — CSS animation, not a timer — so that
   Constitution I is not engaged and no wall-clock exemption is spent on decoration, and
   shall hold still under `prefers-reduced-motion` with the drawing still legible.
+
+### 5.18 Start conditions, chosen on a welcome page (feature 120)
+
+Every visit began at the epoch, so the parts of the harness that mean something only once
+there is data to work on could be reached only by leaving the page running. A visit now
+begins in a situation the reader picks, and each situation is made true by the run having
+actually reached it.
+
+- **FR-91** A visit shall begin in a **start condition** chosen on a **welcome page** shown
+  before the shell (ADR-0040). The conditions are declared in configuration
+  (`config.start-conditions.schema.json`) and each names the platform's initial state and a
+  **pre-roll**: an ordered script of legs the composition root drives through the operator
+  plane's own endpoints — stop and start (FR-36), a platform demand (FR-53), a prompted
+  event (FR-65), and the clock's step (FR-09) — with the clock pinned to rate zero for the
+  duration and restored after it. Nothing shall be written into a store to arrange a
+  situation: what a condition promises is authored by the components that author it, which
+  is FR-11 applied to the whole pre-roll rather than to provisioning alone. Each condition's
+  card shall state what the run will hold, and shall be **held to that by test** against the
+  stores the pre-roll leaves behind. The choice shall travel in the address as `?start=<id>`
+  beside the view address rather than inside it (ADR-0032 unchanged), and an address naming
+  a view shall open the shell at that view without asking (D16). The condition shall enter
+  the run id and be recorded in the run manifest, so a manifest replays the condition it was
+  exported from; a condition's demands and prompts being configuration issued at fixed
+  ticks, the pre-roll is inside AT-04's claim rather than outside it with a reader's
+  commands. The four conditions are *leaving quay-side*, *arriving in the work area*
+  (the default), *loitering in the work area* and *returning to quay-side*.
+- **FR-92** A start condition's coverage eras may be **produced ahead of time and
+  committed** as a build artefact (ADR-0041; Constitution 2.1.0's amended Data
+  constraint), on three conditions that hold together. The artefact is produced by the
+  same components the running system uses, by constructing the backend and driving that
+  condition's pre-roll — never by writing a file. A **drift gate** regenerates it and
+  fails the build on any difference in descriptors or field bytes, which is what makes it
+  derived output rather than a fixture, on the discipline the generated types already
+  answer to. And it re-enters the run through the **coverage store's own publication
+  seam**, republished on the clock by a declared component (`snapshot-source`) at the
+  instant each descriptor records, so the digest check, the atomicity and the announcement
+  are the ones a live publication passes. Each condition declares which eras its artefact
+  carries and the **root seed** it is built from — a seed being declared rather than drawn
+  is what a committed field requires, and removes the last entry of entropy from the
+  application. A missing or unreadable artefact shall be a **slow run and not a broken
+  one**: the run authors the fields live and the source reports, degraded, which artefact
+  it could not use.
 
 ---
 

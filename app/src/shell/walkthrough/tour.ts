@@ -70,6 +70,11 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
     what: 'The synthetic ocean: temperature and salinity fields with an eddy, a front, a thermocline and a moving feature, all drawn from seeded parameters recorded in a ground-truth manifest. Nothing here is real, and the manifest is what lets the harness score how well the truth is recovered.',
     panel: 'A cadence bar counts down to the next now-cast, and the digest names the seeded truth the current field came from. You can ask for the next one now: it supersedes the one before it — there is one now-cast at a time — and it reaches the coverage store and the map. It does not reach the sensors, which sample the world through a port rather than reading a holding, which is also why its arrows here are dashed.',
   },
+  'snapshot-source': {
+    title: 'The snapshot source',
+    what: 'Where the ocean came from. For most situations the archive and the now-cast were authored ahead of time — by the generator above, from this situation’s own recorded seed — and committed as a build artefact, because evaluating them again on every visit cost several seconds and produced the same bytes. This component republishes them.',
+    panel: 'The face says how many holdings it replayed and how many the artefact held. What makes this a cache rather than a fixture is two things you can check: a gate rebuilds the artefact on every change and fails the build if one byte differs from what the generator would author now, and the holdings arrive through the coverage store’s one write path, digest-checked exactly as a live publication is — a corrupted artefact is refused in the same words. Where a situation has no artefact, or one could not be fetched, this node says so and the ocean was evaluated live instead.',
+  },
   platform: {
     title: 'The platform',
     what: 'The vehicle the instruments ride on. It holds a demanded course, speed and depth beside its current ones, and works from one toward the other under declared limits — a turn rate, an acceleration, a dive rate.',

@@ -25,7 +25,7 @@ describe('the EDR area query (feature 109)', () => {
     config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;
     config.clock.mode = 'lockstep';
     config.clock.rate = 0;
-    runtime = buildBackend(config, { rootSeed: 4242, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 4242, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     runtime.clock.tickOnce();
   });
 

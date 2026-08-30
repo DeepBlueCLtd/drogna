@@ -45,6 +45,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from 'playwright';
+import runConfigDocument from '../../app/config/run.json' with { type: 'json' };
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const distDir = join(repoRoot, 'app', 'dist');
@@ -80,6 +81,26 @@ await new Promise<void>((ready) => server.listen(0, '127.0.0.1', ready));
 const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
+
+/**
+ * Which situation these pictures are of (feature 120), and how long the shell may take to
+ * be there. Both arrived with start conditions and both are load-bearing here.
+ *
+ * The front door is the welcome page now, so this names the situation it wants rather
+ * than landing on a page of cards. And the shell is mounted only once that situation's
+ * pre-roll has finished — thousands of stepped ticks — so `.shell` is no longer proof
+ * that a run exists behind it: the welcome page is a `.shell` too, and this script pinned
+ * the clock against one, got 503 from a seam with no run provisioned, and failed. It
+ * waits for the clock strip instead, which nothing but a mounted shell draws.
+ */
+const startCondition = process.env.DROGNA_START ?? runConfigDocument.start_conditions.default;
+const SHELL_TIMEOUT = 60_000;
+
+/** Every navigation is a fresh page and so a fresh run; each one waits for its own. */
+async function openShell(page: Page, view?: string): Promise<void> {
+  await page.goto(`${base}?start=${startCondition}${view ? `#/view/${view}` : ''}`);
+  await page.getByTestId('sim-time').waitFor({ timeout: SHELL_TIMEOUT });
+}
 
 function revision(): string {
   try {
@@ -200,8 +221,7 @@ const failures: string[] = [];
 try {
   mkdirSync(outDir, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
-  await page.goto(base);
-  await page.locator('.shell').waitFor({ timeout: 10_000 });
+  await openShell(page);
 
   // A picture of a stopped system is never handed over as a live one (FR-19).
   const pinned = await page.evaluate(async () => {
@@ -214,11 +234,11 @@ try {
   if (views.length === 0) throw new Error('the shell showed no consumer views');
 
   for (const view of views) {
-    await page.goto(`${base}#/view/${view}`);
-    await page.locator('.consumer-panel').waitFor({ timeout: 15_000 });
+    await openShell(page, view);
+    await page.locator('.consumer-panel').waitFor({ timeout: SHELL_TIMEOUT });
     await page
       .locator('[data-testid="panel-arriving"]')
-      .waitFor({ state: 'detached', timeout: 15_000 });
+      .waitFor({ state: 'detached', timeout: SHELL_TIMEOUT });
 
     // The sweep. Tab from the top of the document and account for every control.
     const controls = await markControls(page);

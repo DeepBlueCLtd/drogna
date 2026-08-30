@@ -22,7 +22,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 4242, revision: 'test', dirty: false };
+const options = { rootSeed: 4242, startCondition: 'loitering', revision: 'test', dirty: false };
 
 interface LoopRecord {
   divergences: Divergence[];

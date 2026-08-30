@@ -183,6 +183,37 @@ function GeneratorFace(c: FaceContext) {
   );
 }
 
+/**
+ * Where the ocean came from (feature 120). Two states and they are genuinely different
+ * facts, so the face draws them differently rather than showing a bar at zero: an
+ * artefact was replayed and here is how much of it, or there was none and the generator
+ * above authored the field live. "No figures yet" is a third thing again and is what the
+ * quiet reading means — a face may not draw a zero where nothing has happened (FR-58).
+ */
+function SnapshotFace(c: FaceContext) {
+  const replayed = figure(c, 'replayed');
+  const refused = figure(c, 'refused');
+  // The component's own sentence, which is where "there was no artefact and the ocean
+  // was authored live" is said. Read from the heartbeat rather than reconstructed here:
+  // a face that composed its own explanation would be a second source for one fact.
+  if (!replayed) {
+    return <Quiet>{c.heartbeat?.detail ?? 'nothing heard from the snapshot source yet'}</Quiet>;
+  }
+  return (
+    <div className="face">
+      <span className="face-label">replayed from the committed artefact</span>
+      <Toward figure={replayed} hue="var(--flow-fld)" />
+      <div className="face-row">
+        <Reported figure={replayed} />
+        {refused ? <Reported figure={refused} /> : null}
+      </div>
+      <p className="face-note">
+        held to the generator by a drift gate; published through the store&rsquo;s own digest check
+      </p>
+    </div>
+  );
+}
+
 function PlatformFace(c: FaceContext) {
   const state = c.platformState;
   if (!state) return <Quiet>nothing heard from the platform yet</Quiet>;
@@ -700,6 +731,7 @@ export const FACES: Record<string, (context: FaceContext) => ReactNode> = {
   broker: BrokerFace,
   boundary: GateFace,
   'env-generator': GeneratorFace,
+  'snapshot-source': SnapshotFace,
   platform: PlatformFace,
   sensors: SensorsFace,
   ingest: IngestFace,

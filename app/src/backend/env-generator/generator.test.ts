@@ -24,7 +24,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 1234, revision: 'test', dirty: false };
+const options = { rootSeed: 1234, startCondition: 'loitering', revision: 'test', dirty: false };
 
 function worldFromManifest(manifest: Manifest): WorldParameters {
   const byId = Object.fromEntries(manifest.features.map((feature) => [feature.id, feature.parameters]));

@@ -1,0 +1,18 @@
+{
+  "image": "118-the-welcome-page.png",
+  "run_id": "none — no run is provisioned until a situation is chosen",
+  "view": "the welcome page, before the shell is mounted",
+  "sim_time": "none — simulation time does not exist yet",
+  "clock_pinned": "no clock exists yet on this page",
+  "lit_components": "none — no component has been constructed",
+  "controls": [],
+  "viewport": {
+    "width": 1280,
+    "height": 620
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The four start conditions as the welcome page offers them, with the default marked."
+}

@@ -54,7 +54,7 @@ describe('the Map’s ownship track (feature 113)', () => {
 
   beforeEach(() => {
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 23, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 23, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     globalThis.fetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
   });
 

@@ -91,7 +91,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
   beforeEach(() => {
     vi.useFakeTimers();
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 7, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 7, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
   });
 
   afterEach(async () => {

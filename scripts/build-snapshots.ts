@@ -1,5 +1,5 @@
 /**
- * Build the committed seed-data artefacts (feature 118, ADR-0040).
+ * Build the committed seed-data artefacts (feature 120, ADR-0041).
  *
  * This is the *whole* of what makes a snapshot legitimate, so it is worth being plain
  * about what it does and does not do. It does not write a file describing an ocean. It

@@ -274,7 +274,7 @@ plan proposing a new top-level directory must say why.
   is the same world every time it is opened. What is not given up is the guard — a
   fixture nobody can check is still forbidden, and a snapshot that has drifted from its
   generator fails the build rather than opening a console over data no component would
-  have produced. ADR-0040 carries the reasoning and SRD-v2 FR-77 the requirement.
+  have produced. ADR-0041 carries the reasoning and SRD-v2 FR-92 the requirement.
 - The feature store is read-only during a scenario run, provisioned at scenario start.
 
 ---
@@ -358,11 +358,11 @@ the simpler alternative and why it was rejected; an unrecorded violation is a de
 
 ### Version log
 
-- **2.1.0** (2026-08-30, feature 118) — the Data constraint is amended to admit
+- **2.1.0** (2026-08-30, feature 120) — the Data constraint is amended to admit
   ahead-of-time production of seed data under a drift gate and through the store's own
   publication seam. No principle is retired or weakened: II is strengthened, since a
   condition's root seed is now recorded in configuration rather than drawn from entropy
-  at each visit. ADR-0040.
+  at each visit. ADR-0041.
 - **2.0.0** (2026-08-29) — the V2 reversal. See the note at the head of this document;
   the 1.6.0 text is archived at `docs/v1/constitution-1.6.0.md`.
 

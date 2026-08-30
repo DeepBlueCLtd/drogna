@@ -8,7 +8,7 @@
  * alternative registry; DROGNA_GATES_ROOT at an alternative tree to scan.
  *
  * A gate may return its findings or a promise of them, and the result is awaited either
- * way. That is not a convenience: before feature 118 the call was not awaited, so a gate
+ * way. That is not a convenience: before feature 120 the call was not awaited, so a gate
  * that returned a promise had `.length` read off the promise, found undefined, compared
  * undefined > 0 false, and was reported **ok** — a gate that ran nothing and looked like
  * a pass, which is the one outcome the paragraph above says must not happen. The

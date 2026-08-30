@@ -1,8 +1,8 @@
-# ADR-0039: a run arrives by having run
+# ADR-0040: a run arrives by having run
 
 **Status:** Accepted
 **Date:** 30 August 2026
-**Feature:** 118 (start conditions, chosen on a welcome page)
+**Feature:** 120 (start conditions, chosen on a welcome page)
 **Requirements:** SRD-v2 FR-11 (provisioning runs the components' own code paths); FR-09
 (the clock's step); FR-36 (stop and start); FR-65 (prompted events); FR-10 and AT-04
 (replay from the manifest)
@@ -14,7 +14,7 @@ panel); ADR-0029 (the HTTP seam is a fetch shim)
 Every visit began at the epoch. The archive and one now-cast existed because provisioning
 authors them on the clock's first sample; everything else — a track, an assimilation, a
 staged package, a word from shore — existed only if the reader left the page running.
-Feature 118 offers four situations to begin in instead, and each of them is a claim about
+Feature 120 offers four situations to begin in instead, and each of them is a claim about
 what the run holds.
 
 There are two ways to make such a claim true, and the whole of this decision is which.
@@ -104,4 +104,4 @@ makes each condition a run rather than an arrangement.
   run, and restarting it resets the sequence its run identifiers are built from, so
   holdings from an earlier cycle are silently replaced. Both are reachable today from the
   Operator tab's own restart control. The script never stops the scheduler; the faults are
-  recorded in `specs/118-start-conditions/spec.md` for the feature that fixes them.
+  recorded in `specs/120-start-conditions/spec.md` for the feature that fixes them.

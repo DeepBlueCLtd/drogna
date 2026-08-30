@@ -184,7 +184,7 @@ function GeneratorFace(c: FaceContext) {
 }
 
 /**
- * Where the ocean came from (feature 118). Two states and they are genuinely different
+ * Where the ocean came from (feature 120). Two states and they are genuinely different
  * facts, so the face draws them differently rather than showing a bar at zero: an
  * artefact was replayed and here is how much of it, or there was none and the generator
  * above authored the field live. "No figures yet" is a third thing again and is what the

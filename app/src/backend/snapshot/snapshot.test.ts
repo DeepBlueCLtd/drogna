@@ -1,5 +1,5 @@
 /**
- * Feature 118, ADR-0040: the committed seed-data artefacts, and the source that
+ * Feature 120, ADR-0041: the committed seed-data artefacts, and the source that
  * republishes them.
  *
  * The claim this file has to hold up is narrow and load-bearing: a snapshot is not a
@@ -73,7 +73,7 @@ function freshStore(runId: string) {
   return { broker, transport, store };
 }
 
-describe('the committed seed-data artefacts (feature 118)', () => {
+describe('the committed seed-data artefacts (feature 120)', () => {
   it('every condition that declares eras has an artefact, and it validates against its master', async () => {
     expect(withArtefacts.length).toBeGreaterThan(0);
     for (const condition of withArtefacts) {

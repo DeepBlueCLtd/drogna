@@ -67,7 +67,7 @@ const base = `http://127.0.0.1:${address.port}/`;
  * How long a capture waits for the shell to be there.
  *
  * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
- * that is not going to. Feature 118 changed what that number is measuring: the shell is
+ * that is not going to. Feature 120 changed what that number is measuring: the shell is
  * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
  * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
  * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
@@ -76,7 +76,7 @@ const base = `http://127.0.0.1:${address.port}/`;
 const SHELL_TIMEOUT = 60_000;
 
 
-// Which situation the capture opens in (feature 118). The default comes from the
+// Which situation the capture opens in (feature 120). The default comes from the
 // configuration document rather than from a literal here, so a renamed condition moves
 // the captures with it.
 const startCondition = process.env.DROGNA_START ?? runConfigDocument.start_conditions.default;
@@ -93,7 +93,7 @@ try {
     throw new Error(`DROGNA_GLANCE_VIEWPORT should be like 390x844, not ${process.env.DROGNA_GLANCE_VIEWPORT}`);
   }
   const page = await browser.newPage({ viewport: { width, height } });
-  // The front door is the welcome page since feature 118, so a capture of the shell
+  // The front door is the welcome page since feature 120, so a capture of the shell
   // names the situation it wants in the query string. It is named even when a view is
   // deep-linked — a deep link opens the shell on its own, but a picture of "whichever
   // situation happens to be the default" is a picture whose contents nobody can account

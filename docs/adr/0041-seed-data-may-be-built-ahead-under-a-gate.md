@@ -1,15 +1,15 @@
-# ADR-0040: seed data may be built ahead of time, under a gate
+# ADR-0041: seed data may be built ahead of time, under a gate
 
 **Status:** Accepted
 **Date:** 30 August 2026
-**Feature:** 118 (start conditions, chosen on a welcome page)
-**Requirements:** SRD-v2 FR-77; amends FR-11's application; Constitution 2.1.0 (Data)
-**Engages:** ADR-0039 (a run arrives by having run); Constitution II (seeded randomness),
+**Feature:** 120 (start conditions, chosen on a welcome page)
+**Requirements:** SRD-v2 FR-92; amends FR-11's application; Constitution 2.1.0 (Data)
+**Engages:** ADR-0040 (a run arrives by having run); Constitution II (seeded randomness),
 III (the drift-check discipline), VII (liveness, not configuration)
 
 ## Context
 
-ADR-0039 made a start condition true by running it: the page builds the backend and
+ADR-0040 made a start condition true by running it: the page builds the backend and
 drives the condition's pre-roll through the operator plane before mounting the shell. It
 costs two to eight seconds in a browser, and the author asked whether some of that state
 could be pre-generated instead.
@@ -119,5 +119,5 @@ quietly loses holdings a minute after opening.
   authored a second twenty-year archive every time it was restarted from the operator
   plane; it now reads the store's inventory — descriptors, never the truth-derived field,
   which `check-truth-initialisation` holds it to — and resumes.
-- Two faults ADR-0039 recorded in the scheduler are still open, and one of them is now the
+- Two faults ADR-0040 recorded in the scheduler are still open, and one of them is now the
   thing standing between the shipped cut point and the rest of the saving.

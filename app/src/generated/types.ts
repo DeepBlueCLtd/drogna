@@ -657,6 +657,7 @@ export type ConfigShell = {
   "views": {
     "id": ConfigCommonComponentId;
     "label": string;
+    "kind"?: "harness" | "consumer";
   }[];
   "components": {
     "id": ConfigCommonComponentId;
@@ -706,6 +707,84 @@ export type ConfigShell = {
       "label": string;
     }[];
     "series_samples": number;
+  };
+  "consumers": {
+    "notice": string;
+    "hexes": {
+      "minimum_resolution": number;
+      "maximum_resolution": number;
+      "default_resolution": number;
+      "cell_ceiling": number;
+    };
+    "sampling": {
+      "time_budget_hours": number[];
+      "default_time_budget_hours": number;
+      "expendable_interval_hours": number[];
+      "default_expendable_interval_hours": number;
+      "depth_zones": number;
+      "observation_backfill": number;
+      "nominal_speed_m_per_s": number;
+      "uncertainty": {
+        "saturation": number;
+        "recency_timescale_seconds": number;
+        "density_halving_count": number;
+      };
+    };
+    "courses": {
+      "classes": {
+        "id": ConfigCommonComponentId;
+        "label": string;
+        "motion": "corridor" | "loiter" | "evasive";
+        "default_likelihood": number;
+        "included": boolean;
+        "speed_m_per_s": number;
+      }[];
+      "objectives": {
+        "id": ConfigCommonComponentId;
+        "label": string;
+      }[];
+      "default_objective": ConfigCommonComponentId;
+      "candidate_count": number;
+      "steps": number;
+      "step_seconds": number;
+      "samples_per_likelihood": number;
+      "default_exposure_weight": number;
+      "bank_count": number;
+    };
+    "feasibility": {
+      "horizon_hours": number;
+      "step_minutes": number;
+      "forecast_samples": number;
+      "set_count": number;
+      "confidence_weights": {
+        "high": number;
+        "medium": number;
+        "low": number;
+      };
+      "veto_weight": number;
+      "lanes": {
+        "id": ConfigCommonComponentId;
+        "label": string;
+        "kind": "boolean" | "continuous";
+        "provenance": "seam" | "seam-derived" | "synthesised";
+        "unit"?: string;
+        "default_confidence": "high" | "medium" | "low" | "off";
+        "period_minutes"?: number;
+        "on_minutes"?: number;
+        "minimum"?: number;
+        "maximum"?: number;
+      }[];
+      "tasks": {
+        "id": ConfigCommonComponentId;
+        "label": string;
+        "duration_minutes": number;
+        "requirements": {
+          "lane": ConfigCommonComponentId;
+          "sense": "present" | "absent" | "at-least" | "at-most";
+          "threshold"?: number;
+        }[];
+      }[];
+    };
   };
   "liveness": {
     "default_window_seconds": number;

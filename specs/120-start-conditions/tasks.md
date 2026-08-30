@@ -1,7 +1,11 @@
-# Feature 118 — tasks
+# Feature 120 — tasks
 
 Ticked as they were done, with the reasons written at the moment they were taken
 (CLAUDE.md, lesson 1).
+
+Built as 118 and renumbered to 120 when features 118 and 119 reached `main` first. The
+requirements moved with it (FR-76/77 to FR-91/92) and so did the decision records
+(ADR-0039/0040 to ADR-0040/0041); the work did not.
 
 Features 101 (addressable views), 113/114 (the operator plane's controls, and the events
 it declares) and 116 (the analysis step) are hard prerequisites: the pre-roll is nothing

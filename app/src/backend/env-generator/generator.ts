@@ -206,7 +206,7 @@ export class EnvGenerator {
    * singular, and the store's own rule is that there is one now-cast at a time; both are
    * consulted here rather than assumed, so a restart resumes rather than re-provisions.
    *
-   * Feature 118 made this reachable on every run rather than only on a reader's restart:
+   * Feature 120 made this reachable on every run rather than only on a reader's restart:
    * a condition backed by a committed artefact holds this component back while the
    * snapshot source republishes the ocean, and then starts it to take over the cadence.
    */

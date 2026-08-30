@@ -1,5 +1,5 @@
 /**
- * The pre-roll (feature 118): how a start condition's situation comes to be true.
+ * The pre-roll (feature 120): how a start condition's situation comes to be true.
  *
  * A reader who picks "loitering in the work area" is asking for a run that has already
  * been somewhere and already measured something. There are two ways to give them one.

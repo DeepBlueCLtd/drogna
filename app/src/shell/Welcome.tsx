@@ -1,5 +1,5 @@
 /**
- * The welcome page (feature 118, FR-76): the situation a visit begins in, chosen before
+ * The welcome page (feature 120, FR-91): the situation a visit begins in, chosen before
  * the shell is mounted.
  *
  * Until this landed every visit began in the same place — a cold run with the archive

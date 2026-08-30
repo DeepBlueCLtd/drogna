@@ -1,5 +1,5 @@
 /**
- * Feature 118: the four start conditions, driven exactly as the composition root drives
+ * Feature 120: the four start conditions, driven exactly as the composition root drives
  * them, and held to what their cards promise.
  *
  * Nothing is mocked and nothing is stubbed. Each case builds the whole backend from the
@@ -175,7 +175,7 @@ const EXPECTED: Record<string, (reading: Reading, condition: ConfigStartConditio
   },
 };
 
-describe('the start conditions (feature 118)', () => {
+describe('the start conditions (feature 120)', () => {
   it('every condition the configuration offers is held to a promise here', () => {
     expect(config.start_conditions.conditions.map((condition) => condition.id).sort()).toEqual(
       Object.keys(EXPECTED).sort(),

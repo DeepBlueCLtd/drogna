@@ -1,6 +1,6 @@
 /**
  * Choosing a start condition, and what choosing one does to the configuration
- * document (feature 118).
+ * document (feature 120).
  *
  * Two things happen when a reader picks a situation on the welcome page, and only two.
  * The platform's initial vector is replaced by the condition's, which is an edit to
@@ -112,7 +112,7 @@ export function preRollTicks(condition: ConfigStartConditionsCondition): number 
 }
 
 /**
- * The components a condition's committed artefact stands in for (ADR-0040): the authors
+ * The components a condition's committed artefact stands in for (ADR-0041): the authors
  * of the eras it carries, from the declaration in the snapshot source's configuration.
  * Empty where the condition declares no artefact, which is what makes "hold these back"
  * and "there is nothing to hold back" the same line of code at the call site.

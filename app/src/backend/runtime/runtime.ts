@@ -96,7 +96,7 @@ export interface BuildOptions {
   readonly startCondition: string;
   /**
    * The condition's committed seed-data artefact, already fetched and decoded, or
-   * undefined where it declares none (ADR-0040). Decoded outside because fetching is
+   * undefined where it declares none (ADR-0041). Decoded outside because fetching is
    * the composition root's business and this function is synchronous — and stays
    * synchronous, because the construction order is the behaviour and an await in the
    * middle of it would put the host's scheduler between two components.

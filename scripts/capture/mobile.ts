@@ -83,6 +83,13 @@ const MAY_SCROLL_SIDEWAYS = [
   // remove one, which is why the list view is not this canvas's small-screen
   // replacement. Every other view is still held to the rule.
   '.flow-canvas-scroll',
+  // The Intro architecture drawing (feature 119), and the third instance of the same
+  // case. It scales to fit where the shortfall is small and pans at full size below
+  // that floor; a phone is always below it, so a phone always pans. The alternative is
+  // a 618-pixel drawing rendered at 0.6, which is FR-024's own prohibition — scaled
+  // past legibility — and the labels are the component names, so losing them loses the
+  // picture. The panel's prose and its controls fold normally around it.
+  '.intro-figure-pan',
   '.messages-list-scroll',
   '.message-detail',
   'pre',
@@ -132,7 +139,7 @@ const base = `http://127.0.0.1:${address.port}/`;
  * How long a capture waits for the shell to be there.
  *
  * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
- * that is not going to. Feature 118 changed what that number is measuring: the shell is
+ * that is not going to. Feature 120 changed what that number is measuring: the shell is
  * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
  * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
  * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
@@ -140,7 +147,7 @@ const base = `http://127.0.0.1:${address.port}/`;
  */
 const SHELL_TIMEOUT = 60_000;
 
-// Which situation these pictures are of (feature 118), read from the configuration
+// Which situation these pictures are of (feature 120), read from the configuration
 // document rather than typed here, so a renamed condition moves the captures with it.
 const startCondition = process.env.DROGNA_START ?? runConfigDocument.start_conditions.default;
 
@@ -257,7 +264,7 @@ try {
 
   for (const size of SIZES) {
     const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
-    // The front door is the welcome page since feature 118; this capture is of the shell
+    // The front door is the welcome page since feature 120; this capture is of the shell
     // at a phone's width, so it names the situation it wants rather than the front door.
     await page.goto(`${base}?start=${startCondition}`);
     await page.locator('.stack-tabs').waitFor({ timeout: SHELL_TIMEOUT });

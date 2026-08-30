@@ -1,5 +1,5 @@
 /**
- * Feature 118: resolving a start condition, and what resolving one does to the
+ * Feature 120: resolving a start condition, and what resolving one does to the
  * configuration document.
  *
  * The three faults this exists to catch are all silent ones. An address naming a
@@ -26,7 +26,7 @@ import {
 const config = runConfigDocument as ConfigRun;
 const conditions = config.start_conditions;
 
-describe('choosing a start condition (feature 118)', () => {
+describe('choosing a start condition (feature 120)', () => {
   it('the shipped document offers the four situations, and defaults to arriving', () => {
     expect(conditions.conditions.map((condition) => condition.id)).toEqual([
       'leaving',
@@ -132,7 +132,7 @@ describe('choosing a start condition (feature 118)', () => {
   });
 });
 
-describe('the committed artefacts a condition declares (feature 118, ADR-0040)', () => {
+describe('the committed artefacts a condition declares (feature 120, ADR-0041)', () => {
   it('every condition declares its own seed, and no two share one', () => {
     // A snapshot is a function of the seed, so a condition without one could not have an
     // artefact, and two conditions sharing one would be two situations in one ocean.

@@ -1,5 +1,5 @@
 /**
- * The snapshot source (V2-C22, feature 118, ADR-0040): republishes a committed
+ * The snapshot source (V2-C22, feature 120, ADR-0041): republishes a committed
  * seed-data artefact into the coverage store, on the clock, through the store's one
  * write path.
  *

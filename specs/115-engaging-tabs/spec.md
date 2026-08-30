@@ -329,6 +329,16 @@ as a table.
 - **Intro.** It is prose, it grows one section per beat, and it is doing its job. Making
   it "engaging" would mean making it a demonstration, and every demonstration it would
   contain is one tab away and linked from the sentence that mentions it.
+
+  *Superseded by feature 119, 30 August 2026, and the reason is worth recording because
+  this bullet was wrong in a specific way. The objection it answers — "engaging" meaning
+  a second copy of a demonstration that lives one tab away — still stands, and 118 does
+  not do that. What this bullet missed is that the numbered list was never answering the
+  question a first-time reader arrives with, and that the tab had a subject of its own
+  available: the architecture, which no other tab draws for a reader who has not met the
+  system. The three yardsticks are met by that subject rather than by borrowing another
+  tab's: something moves (the drawing grows), the reader pokes it (arrow keys, and every
+  node is a way into its own step), and the instrument is bespoke to the thing.*
 - **Background.** Eleven explainers, a bespoke component and a rail, landed at 111. It
   is the most designed surface in the shell and needs nothing from this feature.
 - **New map layers.** The author's answer to "what would extend the map" was parity

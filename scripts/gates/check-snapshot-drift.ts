@@ -1,6 +1,6 @@
 /**
  * Gate: every committed seed-data artefact is what the components would author now
- * (the Constitution's Data constraint, as amended at 2.1.0; ADR-0040).
+ * (the Constitution's Data constraint, as amended at 2.1.0; ADR-0041).
  *
  * This gate is the reason the amendment could be written at all. Without it, a snapshot
  * is a fixture: bytes in the repository that a page opens a console over, answerable to

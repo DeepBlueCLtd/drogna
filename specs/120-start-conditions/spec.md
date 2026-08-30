@@ -35,7 +35,15 @@ wants to see any of it has to leave the page running, or raise the clock rate an
 That is the whole of the problem. The harness is not missing the behaviour — it is
 missing a way to arrive in the middle of it.
 
-**Feature number.** 118. Like 111 to 117 it sits outside the arc: it adds no component,
+**Feature number.** 120, and it was 118 while it was being built. Features 118 (the
+downstream consumers) and 119 (the shape of the system, drawn and moving) reached `main`
+first, and this branch renumbered when it merged them in — as 115 and 117 did before it,
+for the same reason: a number taken by whichever branch merges first is a fact about merge
+order and not about the work, and the branch still open is the one that moves. The
+requirements moved with it, FR-76 and FR-77 becoming FR-91 and FR-92, and the decision
+records with them, ADR-0039 and ADR-0040 becoming ADR-0040 and ADR-0041.
+
+Like 111 to 119 it sits outside the arc: it adds no component to the arc,
 authors no new kind of data, and asserts nothing new about the ocean. What it adds is a
 choice about *when* a visit begins, and the machinery to make that choice true.
 

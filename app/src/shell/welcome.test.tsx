@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Feature 118: the welcome page as a reader meets it.
+ * Feature 120: the welcome page as a reader meets it.
  *
  * The page is drawn from the configuration document and from nothing else, so these
  * assertions are written against the document rather than against a fixture: a situation
@@ -24,7 +24,7 @@ if (!fallback) throw new Error('the configured default names no condition');
 
 afterEach(cleanup);
 
-describe('the welcome page (feature 118)', () => {
+describe('the welcome page (feature 120)', () => {
   it('offers every configured situation, with what each run will hold', () => {
     render(<Welcome conditions={conditions} initial={fallback} onChoose={() => undefined} />);
     for (const condition of conditions.conditions) {

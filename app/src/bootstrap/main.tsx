@@ -58,7 +58,7 @@ function validatorForRun(): SeamValidator {
  * (Constitution II).
  */
 /**
- * A condition's committed seed-data artefact, or undefined with the reason (ADR-0040).
+ * A condition's committed seed-data artefact, or undefined with the reason (ADR-0041).
  *
  * A missing or unreadable artefact is a performance regression and not a correctness
  * one — the drift gate's whole claim is that an artefact only ever holds what the

@@ -1,7 +1,7 @@
 ---
 title: The expensive part of a tick was not the part doing the science
 date: 2026-08-30
-feature: specs/118-start-conditions
+feature: specs/120-start-conditions
 description: >-
   A demo that always opens at minute zero shows an empty console. Winding one forward
   before the reader arrives turned out to cost twenty-five seconds, for a reason that had
@@ -14,7 +14,7 @@ description: >-
 marked "default", Loitering in the work area, and Returning to quay-side. Each card gives a
 sentence about where the vessel is and a short list of what the run will hold, including
 "not one measurement inside the work area itself" and "a package staged for
-offload".](../assets/118-the-welcome-page.png)
+offload".](../assets/120-the-welcome-page.png)
 
 ## The background
 

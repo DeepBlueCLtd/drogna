@@ -137,13 +137,19 @@ export function FlowCanvas({
   const positionOf = new Map(placed.placed.map((node) => [node.id, node]));
   const touches = (edge: Routed) => edge.from === selected || edge.to === selected;
   /**
-   * Fifty wires over twenty components. Drawn at full strength all at once they are a
-   * scribble that says nothing, so the resting state is quiet enough to read the shape
-   * through, and selecting a node brings its own wires forward and pushes the rest
-   * back. The picture answers "what does this one talk to?" rather than shouting.
+   * Fifty-eight wires over twenty components. Drawn at full strength all at once they are
+   * a scribble that says nothing, so the resting state is quiet enough to read the shape
+   * through, and selecting a node brings its own wires forward and pushes the rest back.
+   * The picture answers "what does this one talk to?" rather than shouting.
+   *
+   * The resting figure was 0.32 and is now 0.45 (feature 116). At the old value the chart
+   * at rest was a haze rather than a diagram: you could see that connections existed and
+   * could not follow one, so the picture only became readable to a viewer who already
+   * knew to click something. The lift is deliberately modest — the gap between resting
+   * and selected is the mechanism, and closing it would cost the answer selection gives.
    */
   const strength = (edge: Routed) => {
-    if (selected === undefined) return { opacity: 0.32, width: 1.2 };
+    if (selected === undefined) return { opacity: 0.45, width: 1.3 };
     return touches(edge) ? { opacity: 1, width: 1.8 } : { opacity: 0.08, width: 1 };
   };
 
@@ -243,8 +249,8 @@ export function FlowCanvas({
                 viewBox="0 0 10 10"
                 refX="9"
                 refY="5"
-                markerWidth="5"
-                markerHeight="5"
+                markerWidth="6.5"
+                markerHeight="6.5"
                 orient="auto-start-reverse"
               >
                 <path d="M 0 1 L 9 5 L 0 9 z" fill={hue} />

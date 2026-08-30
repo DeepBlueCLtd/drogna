@@ -1,5 +1,5 @@
 /**
- * The seed-data snapshot format (feature 118, ADR-0040): how a run's coverage holdings
+ * The seed-data snapshot format (feature 120, ADR-0041): how a run's coverage holdings
  * are written to a build artefact and read back.
  *
  * One function each way, in one file, because an encoder and a decoder that live apart

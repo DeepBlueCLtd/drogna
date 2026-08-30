@@ -41,7 +41,7 @@ pnpm install
 pnpm check        # typecheck, lint, unit tests, gates — what CI runs
 pnpm gates        # the constitution gates alone (scripts/gates.registry)
 pnpm generate     # regenerate app/src/generated/ from contracts/ masters
-pnpm snapshots    # regenerate app/public/snapshots/ by running the components (ADR-0040)
+pnpm snapshots    # regenerate app/public/snapshots/ by running the components (ADR-0041)
 pnpm -C app dev   # the shell, live, at a local URL
 pnpm -C app build # the static site V2 delivers
 pnpm site:build   # the published site, into site/build/ (ADR-0031)
@@ -70,7 +70,7 @@ which is what lets a feature add one without touching the others.
   and fails on any difference. If a change moves the analytic form, the grid, a seed or a
   leg, the gate says so: run `pnpm snapshots` and read the diff before committing it.
   That gate is what the constitution's Data constraint was amended for at 2.1.0; without
-  it these files would be the fixture the rule forbids (ADR-0040).
+  it these files would be the fixture the rule forbids (ADR-0041).
 - **No import across the seam.** Front-end (`app/src/shell`, `app/src/panels`) and
   backend (`app/src/backend`) may share only `app/src/seam` and `app/src/generated`.
   The import-boundary gate enforces this; do not fight it, restructure instead.

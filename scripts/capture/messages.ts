@@ -67,7 +67,7 @@ const base = `http://127.0.0.1:${address.port}/`;
  * How long a capture waits for the shell to be there.
  *
  * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
- * that is not going to. Feature 118 changed what that number is measuring: the shell is
+ * that is not going to. Feature 120 changed what that number is measuring: the shell is
  * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
  * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
  * CI runner is slower than here. Ten seconds was no longer a bound on "not going to

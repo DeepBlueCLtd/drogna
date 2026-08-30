@@ -94,10 +94,13 @@
   flex: 1 1 auto;
 }
 
+/* The step count sits a shade behind its title and is still text: 0.65 put --shell-dim
+   back under AA once the panel background showed through it, which is the whole fault
+   the dim colour was raised to fix. */
 .bg-rail-length {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .bg-rail-foot {

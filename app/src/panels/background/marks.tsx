@@ -86,7 +86,7 @@ export const INK = {
 /**
  * The dashed outline every region that responds to the viewer carries (FR-025).
  * Static, so nothing animates on arrival (FR-019); learned once, so free play is
- * discoverable across all ten explainers; and it survives greyscale like any
+ * discoverable across all eleven explainers; and it survives greyscale like any
  * other mark.
  *
  * `pointerEvents: 'all'` is what makes the outlined area a target rather than a

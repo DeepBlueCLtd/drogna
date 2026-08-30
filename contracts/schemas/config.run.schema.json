@@ -21,6 +21,7 @@
     "monitor",
     "scheduler",
     "model_runner",
+    "analyst",
     "planner",
     "telemetry",
     "operator",
@@ -78,6 +79,9 @@
     },
     "model_runner": {
       "$ref": "config.model-runner.schema.json"
+    },
+    "analyst": {
+      "$ref": "config.analyst.schema.json"
     },
     "planner": {
       "$ref": "config.planner.schema.json"

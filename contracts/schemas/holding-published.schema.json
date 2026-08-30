@@ -9,7 +9,7 @@
   "properties": {
     "component": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
     "holding_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$" },
-    "era": { "type": "string", "enum": ["archive", "nowcast", "instance"] },
+    "era": { "type": "string", "enum": ["archive", "nowcast", "analysis", "instance"] },
     "run_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
     "sim_time": { "type": "string", "minLength": 1 },
     "tick": { "type": "integer", "minimum": 0 },

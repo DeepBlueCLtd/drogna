@@ -48,3 +48,26 @@ export async function driveTicks(clock: TickableClock, ticks: number): Promise<v
     if (tick % YIELD_EVERY === YIELD_EVERY - 1) await new Promise((resolve) => setImmediate(resolve));
   }
 }
+
+/**
+ * Advance the clock until `done`, or give up at `limit` ticks — releasing the event
+ * loop on the same cadence and for the same reason.
+ *
+ * Wanted because a tick count is the wrong thing for a test to state when what it needs
+ * is an event. Feature 116 put an analysis in front of the runner, and a forecast
+ * corrected by what the platform measured drifts into a breach far more slowly: the
+ * first divergence of a scenario moved from early to tick 6540, and every test that had
+ * encoded a tick count generous enough for the old loop found it was not generous
+ * enough for the new one. Waiting for the event says what the test is about, and stops
+ * saying how excitable the sea used to be.
+ */
+export async function driveUntil(
+  clock: TickableClock,
+  done: () => boolean,
+  limit: number,
+): Promise<void> {
+  for (let tick = 0; tick < limit && !done(); tick++) {
+    clock.tickOnce();
+    if (tick % YIELD_EVERY === YIELD_EVERY - 1) await new Promise((resolve) => setImmediate(resolve));
+  }
+}

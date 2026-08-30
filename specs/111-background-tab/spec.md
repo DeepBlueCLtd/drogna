@@ -204,8 +204,10 @@ loop steps through a full cycle from the viewer's input alone.
 - **FR-001**: Background MUST be a fifth top-level tab, positioned immediately after
   Intro, so a viewer is oriented before they meet the machinery. SRD-v2 FR-14 is amended
   accordingly.
-- **FR-002**: Background MUST contain the ten explainers named above (explainer 11 having
-  been dropped, see the amendment above), in the order given. The order is the course's argument and is not viewer-rearrangeable, although
+- **FR-002** *(amended twice: explainer 11 dropped, see the amendment above; and feature
+  116 adds *Where a number came from* fifth in the course, after *What a holding is*)*:
+  Background MUST contain the eleven explainers named above, in the order
+  given. The order is the course's argument and is not viewer-rearrangeable, although
   the containing panel remains dockable like any other (SRD FR-14).
 - **FR-003**: Each explainer, and each step within it, MUST be addressable by anchor URL
   per SRD FR-15, so a PR comment or blog post links to one step rather than to the tab.

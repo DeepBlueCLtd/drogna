@@ -297,7 +297,7 @@ reads rather than what it contains. Found by the author looking at the deployed 
 
 ## The two ways it is served (US3, P3)
 
-- [x] T053 Explainer 11, what is allowed to leave (interactive): default deny with
+- [x] T053 ~~Explainer 11, what is allowed to leave (interactive)~~ **dropped 30 August 2026** at the author's request; the explainer module was deleted and the course now ends on the control loop. Built as: default deny with
       indistinguishable refusals so the boundary cannot be probed; withholding by absence
       rather than by filtering; the published denial; and step 5, the beat — leakage scored
       per released variable with the worst one deciding, because an average over four
@@ -322,6 +322,24 @@ reads rather than what it contains. Found by the author looking at the deployed 
 - [x] T061 Explainer 10, the control loop (interactive): step sense → decide → act →
       publish, each transition naming the message that carries it; perturb and watch it
       re-plan rather than replay.
+
+## After the course was walked
+
+- [x] T080 The arrow keys walk the course, not one explainer (FR-014). `advance()` in
+      `address.ts` crosses an explainer's ends — right from a Consequences panel opens
+      the next explainer, left from a first step returns to the previous one's last —
+      and `BackgroundPanel` answers the keys on the document, so a viewer who has just
+      opened the tab and clicked nothing is not pressing keys at a handler that never
+      sees them. Three guards pay for the wider listener: an editable control keeps its
+      own arrows (the collapsed rail is a `<select>`), focus inside another panel
+      belongs to that panel, and focus nowhere in particular is answered only while the
+      address names this view — every panel stays mounted when another is shown, so an
+      unguarded Background would walk itself unseen. Each guard, and the crossing, was
+      watched failing against its own fault before the check was kept.
+
+      *The spine's buttons were deliberately left bounded by their explainer. They sit
+      beside "step N of M" and a control that silently leaves the thing it counts is a
+      different control; the rail is how a pointer moves between explainers.*
 
 ## Deliberately not done
 

@@ -195,7 +195,7 @@ export function IntroPanel({ params }: PanelProps) {
         </p>
         <p>
           For why any of this is standards-based rather than bespoke,{' '}
-          <a href={hashForView('background')}>Background</a> is a course of eleven short
+          <a href={hashForView('background')}>Background</a> is a course of ten short
           illustrated explainers — SensorThings, OGC API-EDR, NetCDF, MQTT and what it
           takes to use them honestly. It reads nothing from the running system, so it
           reads the same whether the machinery above is turning or stopped.

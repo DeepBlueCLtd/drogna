@@ -1,5 +1,5 @@
 /**
- * The numbered course rail (FR-021): all eleven explainers, their course positions
+ * The numbered course rail (FR-021): all ten explainers, their course positions
  * **and their lengths**, so a viewer knows what they are starting before they start
  * it. Course order is fixed (FR-002); the rail shows position in it, and never
  * offers to rearrange it.

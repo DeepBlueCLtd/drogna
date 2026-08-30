@@ -5,7 +5,7 @@
  * FR-004 says no explainer reads run state, subscribes to the broker, or issues a
  * request across the seam, and that the tab renders identically with every component
  * stopped. So this file starts nothing. It hands the panel a client whose every
- * method throws and a fetch that throws, walks all eleven explainers end to end, and
+ * method throws and a fetch that throws, walks all ten explainers end to end, and
  * reports anything either trap caught.
  *
  * Every absence asserted here is also watched being found. The planted faults live
@@ -17,12 +17,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
 import type { PanelParams } from '../../shell/Shell.js';
+import { createPanelAddress } from '../../shell/views.js';
 import { BackgroundPanel } from './BackgroundPanel.js';
 import { Rail, RAIL_WIDTH_THRESHOLD } from './Rail.js';
 import { Spine } from './Spine.js';
 import { Figure } from './layout.js';
 import { COURSE } from './registry.js';
-import { positionFromRest, restForPosition } from './address.js';
+import { advance, positionFromRest, restForPosition } from './address.js';
 import { VALUE_AXES, stepCount, type Explainer } from './model.js';
 import { axisWithoutReason, noValuePanel, WiredPanel } from './fixtures/planted.js';
 
@@ -61,7 +62,12 @@ function underNothingRunning(draw: (props: IDockviewPanelProps<PanelParams>) => 
       reached.push('params.manifest');
       throw new Error('Background read the run manifest');
     },
-    address: { current: () => undefined, write: () => {}, onChange: () => () => {} },
+    address: {
+      names: () => true,
+      current: () => undefined,
+      write: () => {},
+      onChange: () => () => {},
+    },
   };
   try {
     draw({ params } as unknown as IDockviewPanelProps<PanelParams>);
@@ -74,7 +80,7 @@ function underNothingRunning(draw: (props: IDockviewPanelProps<PanelParams>) => 
 }
 
 describe('Background is inert (FR-004, SC-001, SC-002)', () => {
-  it('renders and traverses all eleven explainers with every component stopped', () => {
+  it('renders and traverses all ten explainers with every component stopped', () => {
     const reached = underNothingRunning((props) => {
       render(<BackgroundPanel {...props} />);
       for (const explainer of COURSE) {
@@ -199,7 +205,7 @@ describe('every explainer closes on the same three axes (FR-008, FR-020, SC-007)
  * ------------------------------------------------------------------ */
 
 describe('the course', () => {
-  it('carries the eleven explainers in order, each with a distinct id (FR-002)', () => {
+  it('carries the ten explainers in order, each with a distinct id (FR-002)', () => {
     expect(COURSE.map((explainer) => explainer.id)).toEqual([
       'why-a-standard',
       'points-and-fields',
@@ -211,7 +217,6 @@ describe('the course', () => {
       'mqtt',
       'cqrs',
       'control-loop',
-      'boundary',
     ]);
   });
 
@@ -282,32 +287,162 @@ describe('the address (FR-003, SC-003)', () => {
   });
 });
 
+/* ------------------------------------------------------------------ *
+ * FR-014: the course walked by keyboard alone.                        *
+ * ------------------------------------------------------------------ */
+
+/** Mounts the panel on a real address, as the shell mounts it. */
+function mountCourse(hash: string): void {
+  window.location.hash = hash;
+  render(
+    <BackgroundPanel
+      params={{ address: createPanelAddress('background') } as unknown as PanelParams}
+    />,
+  );
+}
+
+/** Where the course is, read from the stage rather than from the component's state. */
+function at(): string {
+  const stage = document.querySelector('.bg-stage');
+  return `${stage?.getAttribute('data-explainer')}/${stage?.getAttribute('data-step')}`;
+}
+
+function press(key: string, from: Element = document.body): void {
+  act(() => {
+    from.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  });
+}
+
 describe('the course is traversable without a pointer (FR-014, SC-006)', () => {
-  it('advances and retreats on the arrow keys', () => {
+  it('steps within an explainer and across the join between two', () => {
+    const first = COURSE[0];
+    const second = COURSE[1];
+    const last = COURSE[COURSE.length - 1];
+    expect(advance(COURSE, { explainerId: first.id, step: 1 }, 1)).toEqual({
+      explainerId: first.id,
+      step: 2,
+    });
+    // Past the last step of an explainer — its Consequences panel — is the next
+    // explainer's first step, and back from a first step is the previous explainer's
+    // last. The bounds come from stepCount rather than from a number typed here, so a
+    // twelfth explainer or a new step needs no edit.
+    expect(advance(COURSE, { explainerId: first.id, step: stepCount(first) }, 1)).toEqual({
+      explainerId: second.id,
+      step: 1,
+    });
+    expect(advance(COURSE, { explainerId: second.id, step: 1 }, -1)).toEqual({
+      explainerId: first.id,
+      step: stepCount(first),
+    });
+    // The two ends of the course, where there is nowhere to go.
+    expect(advance(COURSE, { explainerId: first.id, step: 1 }, -1)).toBeUndefined();
+    expect(advance(COURSE, { explainerId: last.id, step: stepCount(last) }, 1)).toBeUndefined();
+  });
+
+  it('walks every step of the whole course on the arrow keys, having clicked nothing', () => {
+    // Nothing is focused and nothing has been clicked, which is the state a viewer who
+    // has just opened the tab is in — and the state in which a handler hung on the
+    // stage saw no keys at all.
+    mountCourse('#/view/background');
+    const visited: string[] = [at()];
+    const total = COURSE.reduce((sum, explainer) => sum + stepCount(explainer), 0);
+    for (let key = 1; key < total; key += 1) {
+      press('ArrowRight');
+      visited.push(at());
+    }
+    expect(visited).toEqual(
+      COURSE.flatMap((explainer) =>
+        Array.from({ length: stepCount(explainer) }, (_, index) => `${explainer.id}/${index + 1}`),
+      ),
+    );
+    // At the end of the course the key does nothing rather than wrapping or erroring.
+    press('ArrowRight');
+    expect(at()).toBe(`${COURSE[COURSE.length - 1].id}/${stepCount(COURSE[COURSE.length - 1])}`);
+    // And the walk is reversible, back across the same join.
+    press('ArrowLeft');
+    press('ArrowLeft');
+    expect(at()).toBe(`${COURSE[COURSE.length - 1].id}/${stepCount(COURSE[COURSE.length - 1]) - 2}`);
+  });
+
+  it('writes each position into the address, so any of them can be linked', () => {
+    mountCourse('#/view/background/mqtt/2');
+    expect(at()).toBe('mqtt/2');
+    press('ArrowLeft');
+    expect(window.location.hash).toBe('#/view/background/mqtt/1');
+    press('ArrowLeft');
+    // Across the join, the address names the previous explainer's Consequences panel.
+    const before = COURSE[COURSE.findIndex((explainer) => explainer.id === 'mqtt') - 1];
+    expect(window.location.hash).toBe(`#/view/background/${before.id}/${stepCount(before)}`);
+  });
+
+  it('leaves the arrow keys to a control that spends them itself', () => {
+    // The rail collapses to a <select> at a narrow width, and it is the only navigation
+    // surface a narrow viewer has. Taking its arrows would make it unusable by keyboard
+    // — so this is the real collapsed panel, measured narrow, not a stand-in element.
+    const realObserver = globalThis.ResizeObserver;
+    const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    class WidthObserver {
+      constructor(private readonly notify: () => void) {}
+      observe() {
+        this.notify();
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get: () => RAIL_WIDTH_THRESHOLD - 1,
+    });
+    globalThis.ResizeObserver = WidthObserver as unknown as typeof ResizeObserver;
+    try {
+      mountCourse('#/view/background/mqtt/2');
+      const select = document.querySelector('.bg-rail-collapsed select') as HTMLElement;
+      expect(select).not.toBeNull();
+      press('ArrowRight', select);
+      expect(at()).toBe('mqtt/2');
+      // The positive control, in the same panel and the same render: a key from
+      // anywhere that is not such a control does move the course. Without it this
+      // assertion would pass just as well against a panel that answers no keys at all.
+      press('ArrowRight', document.querySelector('.bg-next') as HTMLElement);
+      expect(at()).toBe('mqtt/3');
+    } finally {
+      globalThis.ResizeObserver = realObserver;
+      if (realWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', realWidth);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
+    }
+  });
+
+  it('does not walk itself while the address names another view', () => {
+    // Every panel stays mounted when another is shown, so a Background that answered
+    // keys unconditionally would step through the course unseen while the viewer was
+    // on the Map — and their place would have moved when they came back.
+    mountCourse('#/view/map');
+    expect(at()).toBe(`${COURSE[0].id}/1`);
+    press('ArrowRight');
+    expect(at()).toBe(`${COURSE[0].id}/1`);
+    // Focus inside another panel is that panel's business even when the address does
+    // name Background: the dock can show two panels at once.
+    window.location.hash = '#/view/background';
+    const elsewhere = document.body.appendChild(document.createElement('div'));
+    elsewhere.className = 'panel';
+    press('ArrowRight', elsewhere.appendChild(document.createElement('button')));
+    expect(at()).toBe(`${COURSE[0].id}/1`);
+    elsewhere.remove();
+    // The same key, once the guard has nothing to hold it back.
+    press('ArrowRight');
+    expect(at()).toBe(`${COURSE[0].id}/2`);
+  });
+
+  it('keeps the spine on buttons, so the platform supplies tab order and activation', () => {
     render(<Spine explainer={COURSE[0]} step={1} onStep={() => {}} onView={() => {}} />);
     const stage = document.querySelector('.bg-stage') as HTMLElement;
-    // The spine's controls are buttons, so tab order and activation come from the
-    // platform rather than from a keyboard handler that could disagree with the mouse.
     expect([...stage.querySelectorAll('button')].length).toBeGreaterThan(1);
-    cleanup();
-
-    let step = 1;
-    const { rerender } = render(
-      <Spine explainer={COURSE[0]} step={step} onStep={(next) => (step = next)} onView={() => {}} />,
+    // The buttons stay bounded by the explainer they count: "step N of M" sits beside
+    // them, and previous is refused at the first step. Crossing is the arrow keys' job.
+    expect((stage.querySelector('.bg-spine button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('spine-position').textContent).toBe(
+      `step 1 of ${stepCount(COURSE[0])}`,
     );
-    act(() => {
-      (document.querySelector('.bg-stage') as HTMLElement).dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
-      );
-    });
-    expect(step).toBe(2);
-    rerender(<Spine explainer={COURSE[0]} step={2} onStep={(next) => (step = next)} onView={() => {}} />);
-    act(() => {
-      (document.querySelector('.bg-stage') as HTMLElement).dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
-      );
-    });
-    expect(step).toBe(1);
   });
 });
 

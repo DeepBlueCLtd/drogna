@@ -74,7 +74,7 @@
 }
 
 .driver-popover.walkthrough-popover .driver-popover-progress-text {
-  color: #6b7785;
+  color: var(--shell-dim);
 }
 
 .driver-popover.walkthrough-popover button {

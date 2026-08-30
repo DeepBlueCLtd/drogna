@@ -54,6 +54,13 @@ export function hashOnActivation(hash: string, panelId: string): string | undefi
  * The panel supplies the vocabulary; the shell supplies only the seam to the URL.
  */
 export interface PanelAddress {
+  /**
+   * Whether the address names this panel at all. Distinct from `current()`, which
+   * answers undefined both for "the address names another panel" and for "it names
+   * this one, with no remainder" — a panel that has to decide whether a key nothing
+   * inside it received is addressed to it needs those two apart.
+   */
+  readonly names: () => boolean;
   /** The remainder the address currently names for this panel, if it names this panel. */
   readonly current: () => string | undefined;
   /** Rewrite this panel's remainder. A no-op while the address names another panel. */
@@ -75,6 +82,7 @@ export function createPanelAddress(viewId: string): PanelAddress {
     return address?.view === viewId ? address.rest : undefined;
   };
   return {
+    names: () => addressFromHash(window.location.hash)?.view === viewId,
     current: () => restFor(window.location.hash),
     write: (rest) => {
       if (addressFromHash(window.location.hash)?.view !== viewId) return;

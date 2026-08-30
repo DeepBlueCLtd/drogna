@@ -29,7 +29,8 @@
     "advisory_store",
     "offload",
     "shell",
-    "start_conditions"
+    "start_conditions",
+    "snapshot_source"
   ],
   "additionalProperties": false,
   "properties": {
@@ -110,6 +111,9 @@
     },
     "start_conditions": {
       "$ref": "config.start-conditions.schema.json"
+    },
+    "snapshot_source": {
+      "$ref": "config.snapshot-source.schema.json"
     }
   }
 }

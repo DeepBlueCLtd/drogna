@@ -16,6 +16,11 @@ limits), lots to view/review, ability to export NetCDF for shore exploitation. T
 allow different usages of the app to be considered. For now, let's make 'arriving in work
 area' the default."
 
+**Second input**, after the first was built and measured: "If it helps performance, it
+would be ok to pre-generate some of this state, to be loaded once the above choice has
+been made." Asked what it could cost, the author chose to pre-generate the fields
+themselves. That is ADR-0040 and FR-14 to FR-18 below.
+
 ## Context
 
 Every visit to drogna has begun in the same place since feature 101. The page opens, the
@@ -110,6 +115,29 @@ suite can fail rather than a description of a file somebody wrote.
 - **FR-12** The pre-roll **hands back a whole machine**: whatever it stopped is running again
   and the clock is at its configured rate. A condition describes how the run got here, not a
   console with pieces missing.
+- **FR-14** A condition's coverage eras may be **committed as a build artefact** and
+  republished instead of computed (ADR-0040, and the constitution's Data constraint as
+  amended at 2.1.0). Three things hold together or it is a fixture: the artefact is
+  produced by the same components, by constructing the backend and driving that
+  condition's pre-roll; a **drift gate** regenerates it and fails on any difference; and it
+  re-enters through the **coverage store's own publication seam**, republished on the clock
+  by a declared component at the instant each descriptor records — so the digest check, the
+  atomicity and the announcement are the ones a live publication passes.
+- **FR-15** Each condition declares its **root seed**. The fields are a function of it, so
+  a visit that drew a fresh one would sample an ocean the artefact does not describe.
+  `crypto.getRandomValues` leaves the application; two people following one link now see
+  the same ocean.
+- **FR-16** A missing or unreadable artefact is a **slow run, not a broken one**. The run
+  authors the fields live and the snapshot source reports, degraded, which artefact it
+  could not use — a deployment that had silently lost its assets would otherwise look like
+  one that never had them.
+- **FR-17** The artefact is **refused at construction** when its header does not describe
+  this run: another condition, another seed, another run id, another generator
+  configuration. Each is named.
+- **FR-18** Which eras are committed is **configuration**. The shipped value is the ocean —
+  archive and now-cast — and the forecast eras are guarded by a test rather than merely
+  unset, because extending to them is unsafe until a restarted scheduler stops reusing run
+  identifiers.
 - **FR-13** The scenario gains a **quay approaches** reference area, so "leaving quay-side"
   and "returning to quay-side" name a place on the map rather than a figure of speech. It is
   reference geometry like the domain and the loiter region, provisioned from configuration
@@ -160,6 +188,43 @@ reuses the first's identifier and silently replaces its holdings in the store. B
 reachable today from the Operator tab's own restart control. Neither is fixed here (see
 below); the script simply never stops the scheduler.
 
+## What pre-generation cost and bought
+
+Measured, because both obvious answers were wrong. Switching components off one at a time
+put 300 of a tick's 568 microseconds in the **environment generator** rather than in the
+assimilation: it re-evaluates a 96×80×6 grid over four time steps every 900 ticks and the
+coverage store keeps only the newest, so `returning` computed ten now-casts and discarded
+eight. Nothing reads the intermediate ones — the monitor scores against the forecast, the
+analyst falls back to a now-cast only on a cold start.
+
+Then the sizes, which are not alike across eras. Field bytes are float32 and compress
+badly, but the archive is a smooth analytic field on a coarse grid and the forecast
+instances carry per-cell ensemble noise:
+
+| era | raw | shuffled + gzipped |
+|---|---|---|
+| archive ×1 | 0.9 MB | **0.01 MB** (158:1) |
+| now-cast ×1 | 1.5 MB | **0.42 MB** (3.5:1) |
+| analysis ×12 | 5.9 MB | 2.54 MB (2.3:1) |
+| instance ×8 | 11.8 MB | 8.31 MB (1.4:1) |
+
+Pre-generating the ocean is 45% of the saving for 4% of the bytes; the forecast eras are
+the other 10.9 MB for the rest. End to end in a browser, address bar to a console with a
+clock in it, with the ocean committed:
+
+| | before | after |
+|---|---|---|
+| leaving | 2.06 s | **1.58 s** |
+| arriving | 5.25 s | **3.60 s** |
+| loitering | 4.14 s | **2.83 s** |
+| returning | 8.35 s | **4.93 s** |
+
+for 1.73 MB of artefacts across all four.
+
+**Byte-plane shuffling** earns its line in the codec: deinterleaving float32 into four
+planes before gzip takes the archive from 63:1 to 158:1 and the now-cast from 2.1:1 to
+3.5:1. It is a permutation, so the digest the store checks is untouched.
+
 ## Not done, and why
 
 - **NetCDF export is not implemented.** The input names it under "returning to quay-side",
@@ -171,10 +236,21 @@ below); the script simply never stops the scheduler.
   to be worth exercising. Writing the bytes as NetCDF is a change to FR-39's scope and
   belongs in its own feature, against the engine decision ADR-0031 defers to V3.
 - **The scheduler's stranded request and its repeating run identifiers are not fixed.**
-  Both are pre-existing, both are reachable from a control the Operator tab already offers,
-  and both are changes to a component's behaviour rather than to this feature's surface.
-  Recorded here, in the spec of the work that found them, rather than fixed quietly inside
-  it.
+  Both are pre-existing and both are reachable from a control the Operator tab already
+  offers. The second one is now load-bearing: it is what stands between the shipped cut
+  point and the remaining 2.1 seconds. Holding the loop back for a pre-roll means
+  restarting the scheduler after one, its run sequence resets to zero, and run identifiers
+  are the holding ids the analyst and the model runner publish under — so the first live
+  cycle would republish under the artefact's first cycle's ids and the store would replace
+  them, silently, since each holding is internally consistent. `snapshot_eras` is guarded
+  by a test that refuses the forecast eras with that explanation rather than letting the
+  one-line edit produce a run that quietly loses holdings a minute after opening. Fixing
+  the derivation is a change to the loop's identity scheme and belongs to its own feature.
+- **The forecast eras are not committed.** They are the other 10.9 MB and the other 2.1
+  seconds. Beyond the scheduler fault above, four conditions' worth would be about 44 MB
+  of binary in the repository, regenerated and re-committed whenever the analytic form,
+  the kernel or a leg changes. The cut point is one line of configuration and the numbers
+  to move it with are in the table above.
 - **No start condition simulates the passage between the quay and the work area whole.**
   It is 240 km, which is nineteen hours at the platform's maximum speed and something like
   three minutes of pre-roll. The conditions place the platform where it is at the moment

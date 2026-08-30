@@ -597,6 +597,7 @@ export type ConfigRun = {
   "feature_store": ConfigFeatureStore;
   "shell": ConfigShell;
   "start_conditions": ConfigStartConditions;
+  "snapshot_source": ConfigSnapshotSource;
 };
 
 /** drogna scheduler configuration (V2-C12) — from config.scheduler.schema.json */
@@ -714,6 +715,25 @@ export type ConfigShell = {
   };
 };
 
+/** drogna snapshot source configuration (V2-C22) — from config.snapshot-source.schema.json */
+export type ConfigSnapshotSource = {
+  "id": ConfigCommonComponentId;
+  "topics": {
+    "clock": ConfigCommonTopic;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "artefacts": {
+    "path_prefix": string;
+    "path_suffix": string;
+  };
+  "authors": {
+    "archive": ConfigCommonComponentId;
+    "nowcast": ConfigCommonComponentId;
+    "analysis": ConfigCommonComponentId;
+    "instance": ConfigCommonComponentId;
+  };
+};
+
 /** drogna start conditions — from config.start-conditions.schema.json */
 export type ConfigStartConditions = {
   "default": ConfigStartConditionsConditionId;
@@ -729,6 +749,8 @@ export type ConfigStartConditionsCondition = {
   "label": string;
   "situation": string;
   "holds": string[];
+  "root_seed": number;
+  "snapshot_eras"?: ("archive" | "nowcast" | "analysis" | "instance")[];
   "platform": {
     "latitude": number;
     "longitude": number;
@@ -1841,6 +1863,20 @@ export type SensorthingsSubsetObservationEntity = {
       "coordinates": number[];
     };
   };
+};
+
+/** drogna seed-data snapshot header — from snapshot.schema.json */
+export type Snapshot = {
+  "format": "drogna-snapshot-1";
+  "start_condition": string;
+  "run_id": string;
+  "root_seed": number;
+  "config_digest": string;
+  "code_revision": string;
+  "holdings": {
+    "descriptor": CoverageHolding;
+    "byte_length": number;
+  }[];
 };
 
 /** drogna telemetry report — from telemetry-report.schema.json */

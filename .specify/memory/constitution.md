@@ -253,9 +253,28 @@ plan proposing a new top-level directory must say why.
 
 ### Data
 
-- Seed data is produced through the components' own code paths at provisioning, never
-  accumulated and never written into a store directly (SRD FR-11). A fresh visit is
-  equivalent to a long-running one — in V2, literally.
+- Seed data is produced through the components' own code paths, never accumulated and
+  never written into a store directly (SRD FR-11). A fresh visit is equivalent to a
+  long-running one — in V2, literally.
+- **Amended 2.1.0.** Those code paths may be run **ahead of time** and their output
+  committed as a build artefact, on three conditions, all of which must hold together:
+
+  1. the artefact is **produced by the same components** the running system uses, from
+     the same configuration and the same recorded seed — a build that constructs the
+     backend and drives it, never a file somebody wrote;
+  2. a **drift gate regenerates it and fails on any difference**, so the committed bytes
+     are provably what a live run would have authored — the discipline the generated
+     types already answer to (Principle III), applied to data;
+  3. it re-enters the run **through the store's own publication seam**, published by a
+     component that says what it is, so the digest check, the atomicity and the
+     announcement are the same ones a live publication passes.
+
+  What is given up is stated rather than glossed: the values were not computed during
+  this visit, and the artefact fixes the run's root seed, so a condition backed by one
+  is the same world every time it is opened. What is not given up is the guard — a
+  fixture nobody can check is still forbidden, and a snapshot that has drifted from its
+  generator fails the build rather than opening a console over data no component would
+  have produced. ADR-0040 carries the reasoning and SRD-v2 FR-77 the requirement.
 - The feature store is read-only during a scenario run, provisioned at scenario start.
 
 ---
@@ -307,8 +326,11 @@ Every change must pass, in CI:
 5. The literal-path lint gate (Principle IV).
 6. The forbidden-vocabulary gate (Principle V).
 7. The seam import-boundary gate (Principle XI).
+8. The snapshot drift check (the Data constraint as amended at 2.1.0): every committed
+   seed-data artefact is regenerated and compared, so an artefact that no longer matches
+   what its components would author fails the build.
 
-Gates 2–7 are TypeScript scripts registered in a gates registry, one per line, run by
+Gates 2–8 are TypeScript scripts registered in a gates registry, one per line, run by
 a runner that names no gate — a feature adds a gate by appending a line, never by
 editing the runner. **A check that has never been seen to fail is worth nothing**:
 every gate is watched failing on a planted violation before it is trusted, and the
@@ -332,7 +354,17 @@ and a version bump here. Every plan carries a Constitution Check section. Violat
 that are genuinely necessary are recorded in the plan's Complexity Tracking table with
 the simpler alternative and why it was rejected; an unrecorded violation is a defect.
 
-**Version**: 2.0.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
+**Version**: 2.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-30
+
+### Version log
+
+- **2.1.0** (2026-08-30, feature 118) — the Data constraint is amended to admit
+  ahead-of-time production of seed data under a drift gate and through the store's own
+  publication seam. No principle is retired or weakened: II is strengthened, since a
+  condition's root seed is now recorded in configuration rather than drawn from entropy
+  at each visit. ADR-0040.
+- **2.0.0** (2026-08-29) — the V2 reversal. See the note at the head of this document;
+  the 1.6.0 text is archived at `docs/v1/constitution-1.6.0.md`.
 
 *2.0.0 — the Version 2 reversal (ADR-0027): pure
 client-side TypeScript SPA, in-browser backend components behind a wire-protocol seam,

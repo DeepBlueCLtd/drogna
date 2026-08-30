@@ -19,14 +19,18 @@ import { Shell } from '../shell/Shell.js';
 import { Welcome, type WelcomePreparation } from '../shell/Welcome.js';
 import { viewFromHash } from '../shell/views.js';
 import {
+  artefactPath,
+  authorsCoveredBySnapshot,
   conditionById,
   conditionFromSearch,
   configForCondition,
   defaultCondition,
+  holdingBack,
   searchNaming,
   START_PARAMETER,
 } from './start-condition.js';
 import { runPreRoll } from './preroll.js';
+import { decodeSnapshot, type SnapshotContents } from '../backend/snapshot/codec.js';
 
 declare const __DROGNA_REVISION__: string;
 declare const __DROGNA_DIRTY__: boolean;
@@ -53,11 +57,28 @@ function validatorForRun(): SeamValidator {
  * Recorded in the manifest immediately; everything downstream derives from it
  * (Constitution II).
  */
-function freshRootSeed(): number {
-  const buffer = new Uint32Array(1);
-  // harness:allow-entropy the root seed of a fresh run, recorded in the manifest
-  crypto.getRandomValues(buffer);
-  return buffer[0];
+/**
+ * A condition's committed seed-data artefact, or undefined with the reason (ADR-0040).
+ *
+ * A missing or unreadable artefact is a performance regression and not a correctness
+ * one — the drift gate's whole claim is that an artefact only ever holds what the
+ * components would author — so this never throws. It reports, the source says so in its
+ * heartbeat, and the run authors its own ocean, several seconds slower and every bit as
+ * true. A page that refused to open because a static asset had gone missing would be
+ * trading the thing that works for the thing that is fast.
+ */
+async function fetchArtefact(
+  condition: ConfigStartConditionsCondition,
+): Promise<{ contents?: SnapshotContents; unavailable?: string }> {
+  if ((condition.snapshot_eras ?? []).length === 0) return {};
+  const path = artefactPath(condition, config.snapshot_source);
+  try {
+    const response = await fetch(path);
+    if (!response.ok) return { unavailable: `${path} answered ${response.status}` };
+    return { contents: await decodeSnapshot(new Uint8Array(await response.arrayBuffer())) };
+  } catch (fault) {
+    return { unavailable: `${path}: ${fault instanceof Error ? fault.message : String(fault)}` };
+  }
 }
 
 let runtime: BackendRuntime | undefined;
@@ -153,17 +174,37 @@ async function boot(
   runtime?.stop();
   const validator = validatorForRun();
   const effective = configForCondition(config, condition);
+
+  const total = condition.legs.reduce((sum, leg) => sum + leg.ticks, 0);
+  render({
+    conditionId: condition.id,
+    note: 'fetching the ocean this situation was built with',
+    leg: 1,
+    legs: condition.legs.length,
+    ticksDone: 0,
+    ticksTotal: total,
+  });
+  const artefact = await fetchArtefact(condition);
+
   runtime = buildBackend(
     effective,
     {
       rootSeed,
       startCondition: condition.id,
+      snapshot: artefact.contents,
+      snapshotUnavailable: artefact.unavailable,
       revision: __DROGNA_REVISION__,
       dirty: __DROGNA_DIRTY__,
     },
     validator,
   );
   const built = runtime;
+
+  // Whoever the artefact speaks for is held back for the pre-roll; where there is none,
+  // this is the condition unchanged and everybody runs. One script, two crews.
+  const script = artefact.contents
+    ? holdingBack(condition, authorsCoveredBySnapshot(condition, effective.snapshot_source))
+    : condition;
 
   await runPreRoll(
     {
@@ -181,7 +222,7 @@ async function boot(
           ticksTotal: progress.ticksTotal,
         }),
     },
-    condition,
+    script,
   );
 
   const shellClient = built.transport.connect(effective.shell.id, effective.shell.role);
@@ -241,7 +282,7 @@ function start(condition: ConfigStartConditionsCondition, render: (p: WelcomePre
     '',
     `${window.location.pathname}${searchNaming(window.location.search, condition.id)}${window.location.hash}`,
   );
-  void boot(condition, freshRootSeed(), render).catch((fault: unknown) => {
+  void boot(condition, condition.root_seed, render).catch((fault: unknown) => {
     root.render(<Starting refusal={fault instanceof Error ? fault.message : String(fault)} />);
   });
 }

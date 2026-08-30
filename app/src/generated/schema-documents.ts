@@ -2638,7 +2638,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "advisory_store",
       "offload",
       "shell",
-      "start_conditions"
+      "start_conditions",
+      "snapshot_source"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2719,6 +2720,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "start_conditions": {
         "$ref": "config.start-conditions.schema.json"
+      },
+      "snapshot_source": {
+        "$ref": "config.snapshot-source.schema.json"
       }
     }
   },
@@ -3029,8 +3033,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "beat": {
               "type": "integer",
               "minimum": 101,
-              "maximum": 116,
-              "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
+              "maximum": 118,
+              "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching. Raised to 118 by the snapshot source, which is the first component to land outside the arc."
             },
             "band": {
               "type": "string",
@@ -3282,6 +3286,86 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "config.snapshot-source": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.snapshot-source.schema.json",
+    "title": "drogna snapshot source configuration (V2-C22)",
+    "description": "The component that republishes a committed seed-data artefact into the coverage store (feature 118, ADR-0040). It is a component and not a loader in the composition root on purpose: the holdings go in through the store's one write path, published by something that subscribes to the clock, heartbeats, appears in the Operator flow chart and can be stopped — so the digest check, the atomicity and the announcement are the same ones a live publication passes, and a reader can see that the ocean came from an artefact rather than having to be told. Where a start condition declares no artefact this component runs and says so, rather than being absent: a node missing from the picture reads as a beat that has not landed, and 'the ocean was authored live here' is information.",
+    "type": "object",
+    "required": [
+      "id",
+      "topics",
+      "heartbeat",
+      "artefacts",
+      "authors"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "$ref": "config.common.schema.json#/$defs/component_id"
+      },
+      "topics": {
+        "type": "object",
+        "required": [
+          "clock"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "clock": {
+            "$ref": "config.common.schema.json#/$defs/topic"
+          }
+        }
+      },
+      "heartbeat": {
+        "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "artefacts": {
+        "type": "object",
+        "required": [
+          "path_prefix",
+          "path_suffix"
+        ],
+        "additionalProperties": false,
+        "description": "Where a condition's artefact is fetched from: prefix, the condition id, suffix. A relative same-origin path like every other address the page uses (FR-04) — the estate serves an instance from an arbitrary path, so an absolute one would be portable to exactly one deployment.",
+        "properties": {
+          "path_prefix": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_./-]*$",
+            "description": "Relative to the page. Not the seam's api prefix: an artefact is a build asset the page loads, like its own script, and it does not cross the wire-protocol seam."
+          },
+          "path_suffix": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]*$"
+          }
+        }
+      },
+      "authors": {
+        "type": "object",
+        "required": [
+          "archive",
+          "nowcast",
+          "analysis",
+          "instance"
+        ],
+        "additionalProperties": false,
+        "description": "Which component authors each coverage era. Declared rather than inferred, and it earns its place twice: the build knows which component's output an artefact stands for, and the page knows which component to hold back while the artefact stands in for it. Getting this wrong in either direction is silent — a component left running beside its own artefact republishes what is already there, and one held back with no artefact behind it leaves an era missing — so it is written down once and read by both.",
+        "properties": {
+          "archive": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "nowcast": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "analysis": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          },
+          "instance": {
+            "$ref": "config.common.schema.json#/$defs/component_id"
+          }
+        }
+      }
+    }
+  },
   "config.start-conditions": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.start-conditions.schema.json",
@@ -3320,6 +3404,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "label",
           "situation",
           "holds",
+          "root_seed",
           "platform",
           "legs"
         ],
@@ -3346,6 +3431,24 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "items": {
               "type": "string",
               "minLength": 1
+            }
+          },
+          "root_seed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The seed this condition's run is built from, declared rather than drawn. Before feature 118's snapshots a fresh visit drew one from entropy and every visit got a different ocean; a committed artefact is a function of the seed, so a visit that drew its own would have the sensors sampling an ocean the artefact does not describe. Declaring it is also the stronger position under Constitution II — the one place entropy entered the harness is now no places — and it makes an instance link reproducible, which for a demonstration harness is most of the point: two people opening the same address see the same run."
+          },
+          "snapshot_eras": {
+            "type": "array",
+            "description": "Which coverage eras this condition's committed artefact carries. The components that would have authored them are held back for the pre-roll and the snapshot source republishes them instead. Absent or empty means no artefact: the condition is authored live, start to finish, and the source says so. Which eras are worth committing is a measured trade and is meant to be edited — the ocean eras compress to a fraction of a megabyte and buy about half the pre-roll, the forecast eras carry ensemble noise and cost megabytes for the rest (ADR-0040).",
+            "items": {
+              "type": "string",
+              "enum": [
+                "archive",
+                "nowcast",
+                "analysis",
+                "instance"
+              ]
             }
           },
           "platform": {
@@ -8706,6 +8809,78 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  },
+  "snapshot": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/snapshot.schema.json",
+    "title": "drogna seed-data snapshot header",
+    "description": "The header of a committed seed-data artefact: what it holds, what produced it, and what it is only valid against. A snapshot is not a fixture — it is the output of the same components the running system uses, driven at build time by the same pre-roll the browser drives, and a drift gate regenerates it and fails on any difference (Constitution, Data, as amended at 2.1.0). This document is what makes that checkable at load rather than only at build: the run it was made for, the seed it was made from, the digest of the configuration it was made under and the code revision that made it are all recorded here, so a page opening a stale artefact refuses it by name instead of opening a console over fields no component would have authored today. The field bytes follow the header in the order the holdings are listed, byte-plane shuffled and the whole file gzipped; shuffling is lossless and is worth its line because a float32 field's exponent plane is nearly constant while its low mantissa plane is noise, and a compressor that sees them apart does several times better on the smooth eras.",
+    "type": "object",
+    "required": [
+      "format",
+      "start_condition",
+      "run_id",
+      "root_seed",
+      "config_digest",
+      "code_revision",
+      "holdings"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "format": {
+        "type": "string",
+        "const": "drogna-snapshot-1",
+        "description": "The layout of the bytes after this header. A const rather than a version range: a reader that does not know a layout must refuse it, never guess at it."
+      },
+      "start_condition": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "The start condition this artefact was built for (config.start-conditions.schema.json). A snapshot is specific to one: the pre-roll that produced it is that condition's script."
+      },
+      "run_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$",
+        "description": "The run identity the holdings carry, stamped into every holding id inside them. Recorded so a page can refuse an artefact whose holdings name a different run than the one it is about to open."
+      },
+      "root_seed": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "The seed the run was built from. A snapshot fixes it: the fields are a function of it, and a visit that drew a fresh one would sample an ocean the fields do not describe. This is the seed the condition declares, and the reason it declares one."
+      },
+      "config_digest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "description": "SHA-256 of the environment generator's configuration document as the build read it. The one thing that decides what the fields contain besides the seed, so a page whose configuration has moved refuses the artefact rather than mixing an old ocean with new bounds."
+      },
+      "code_revision": {
+        "type": "string",
+        "description": "The commit the artefact was generated at, for the record. Not enforced at load: the drift gate is what holds the bytes to the code, and a revision comparison would refuse every artefact on every uncommitted working tree while proving nothing the gate does not prove better."
+      },
+      "holdings": {
+        "type": "array",
+        "minItems": 1,
+        "description": "The holdings this artefact carries, in publication order — the order the source republishes them in, which is the order the era pointers were moved in the run that produced them.",
+        "items": {
+          "type": "object",
+          "required": [
+            "descriptor",
+            "byte_length"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "descriptor": {
+              "$ref": "coverage-holding.schema.json",
+              "description": "The holding's descriptor, whole and unaltered — including the ground-truth manifest and the digest of its field. The digest is what the coverage store checks the bytes against when the source publishes them, which is how an artefact whose bytes were corrupted in transit is refused by the same check that refuses a corrupted live publication."
+            },
+            "byte_length": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Length of this holding's field bytes in the body, repeated here so the body can be cut into holdings before any descriptor is trusted."
             }
           }
         }

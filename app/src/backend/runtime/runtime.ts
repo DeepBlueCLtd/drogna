@@ -27,6 +27,8 @@ import { createInBrowserTransport } from '../broker/transport-adapter.js';
 import { Clock } from '../clock/clock.js';
 import { CoverageStore } from '../coverage-store/store.js';
 import { EnvGenerator } from '../env-generator/generator.js';
+import { SnapshotSource } from '../snapshot/source.js';
+import type { SnapshotContents } from '../snapshot/codec.js';
 import { salinityAt, temperatureAt } from '../env-generator/analytic.js';
 import { Platform } from '../platform/platform.js';
 import { Sensors, type WorldSampler } from '../sensors/sensors.js';
@@ -65,6 +67,7 @@ export interface BackendRuntime {
   readonly runId: string;
   readonly clock: Clock;
   readonly store: CoverageStore;
+  readonly snapshotSource: SnapshotSource;
   readonly observationStore: ObservationStore;
   readonly featureStore: FeatureStore;
   readonly advisoryStore: AdvisoryStore;
@@ -91,6 +94,16 @@ export interface BuildOptions {
    * applied.
    */
   readonly startCondition: string;
+  /**
+   * The condition's committed seed-data artefact, already fetched and decoded, or
+   * undefined where it declares none (ADR-0040). Decoded outside because fetching is
+   * the composition root's business and this function is synchronous — and stays
+   * synchronous, because the construction order is the behaviour and an await in the
+   * middle of it would put the host's scheduler between two components.
+   */
+  readonly snapshot?: SnapshotContents;
+  /** Why there is none, where one was expected. Reported by the source, never hidden. */
+  readonly snapshotUnavailable?: string;
   readonly revision: string;
   readonly dirty: boolean;
 }
@@ -139,6 +152,8 @@ export function buildBackend(
   validated(validator, 'config.advisory-store', config.advisory_store);
   validated(validator, 'config.offload', config.offload);
   validated(validator, 'config.shell', config.shell);
+  validated(validator, 'config.snapshot-source', config.snapshot_source);
+  if (options.snapshot) validated(validator, 'snapshot', options.snapshot.header);
 
   const runId = deriveRunId(config.scenario, options.startCondition, options.rootSeed);
   const manifest = buildRunManifest(config, options.startCondition, options.rootSeed, options.revision, options.dirty, [
@@ -198,6 +213,30 @@ export function buildBackend(
     },
     stepClock: () => clock.step(),
   };
+
+  // Registered before the generator, so on the clock's first sample the artefact's
+  // holdings are in the store before the generator decides what is left to author —
+  // which is what lets a snapshotted run skip a second archive and a duplicate now-cast
+  // rather than publish them and throw them away (`env-generator/generator.ts`).
+  const snapshotBox = register(config.snapshot_source.id, () => {
+    const client = transport.connect(config.snapshot_source.id, config.snapshot_source.id);
+    return {
+      component: new SnapshotSource(
+        config.snapshot_source,
+        client,
+        store,
+        {
+          runId,
+          rootSeed: options.rootSeed,
+          startCondition: options.startCondition,
+          generatorDigest: configDigest(config.env_generator),
+        },
+        options.snapshot,
+        options.snapshotUnavailable,
+      ),
+      client,
+    };
+  });
 
   const generatorBox = register(config.env_generator.id, () => {
     const client = transport.connect(config.env_generator.id, config.env_generator.id);
@@ -413,6 +452,7 @@ export function buildBackend(
     runId,
     clock,
     store,
+    snapshotSource: snapshotBox.component as SnapshotSource,
     observationStore,
     featureStore,
     advisoryStore,

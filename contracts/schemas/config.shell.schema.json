@@ -70,8 +70,8 @@
           "beat": {
             "type": "integer",
             "minimum": 101,
-            "maximum": 116,
-            "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
+            "maximum": 118,
+            "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching. Raised to 118 by the snapshot source, which is the first component to land outside the arc."
           },
           "band": {
             "type": "string",

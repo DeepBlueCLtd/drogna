@@ -18,7 +18,12 @@
  * the two compose without either knowing about the other: `?start=loitering#/view/map`
  * is a link to the map of a run on station.
  */
-import type { ConfigRun, ConfigStartConditions, ConfigStartConditionsCondition } from '../generated/types.js';
+import type {
+  ConfigRun,
+  ConfigSnapshotSource,
+  ConfigStartConditions,
+  ConfigStartConditionsCondition,
+} from '../generated/types.js';
 
 /** The query-string key the choice travels in. */
 export const START_PARAMETER = 'start';
@@ -104,4 +109,50 @@ export function configForCondition(
 /** How many ticks a condition's pre-roll advances in total, for a progress reading. */
 export function preRollTicks(condition: ConfigStartConditionsCondition): number {
   return condition.legs.reduce((total, leg) => total + leg.ticks, 0);
+}
+
+/**
+ * The components a condition's committed artefact stands in for (ADR-0040): the authors
+ * of the eras it carries, from the declaration in the snapshot source's configuration.
+ * Empty where the condition declares no artefact, which is what makes "hold these back"
+ * and "there is nothing to hold back" the same line of code at the call site.
+ */
+export function authorsCoveredBySnapshot(
+  condition: ConfigStartConditionsCondition,
+  source: ConfigSnapshotSource,
+): ReadonlySet<string> {
+  const covered = new Set<string>();
+  for (const era of condition.snapshot_eras ?? []) covered.add(source.authors[era]);
+  return covered;
+}
+
+/**
+ * The condition's pre-roll with a set of components held back throughout.
+ *
+ * This is the one difference between the run that *builds* an artefact and the run that
+ * *loads* one, and it is expressed here rather than as a second script in configuration
+ * on purpose: two scripts would be two things to keep in step, and the drift gate would
+ * be comparing an artefact against a pre-roll that is no longer the one the page drives.
+ * One script, and the page holds back whoever the artefact speaks for.
+ */
+export function holdingBack(
+  condition: ConfigStartConditionsCondition,
+  ids: ReadonlySet<string>,
+): ConfigStartConditionsCondition {
+  if (ids.size === 0) return condition;
+  return {
+    ...condition,
+    legs: condition.legs.map((leg) => ({
+      ...leg,
+      stopped: [...new Set([...(leg.stopped ?? []), ...ids])],
+    })),
+  };
+}
+
+/** Where a condition's artefact is fetched from. Relative, same-origin (FR-04). */
+export function artefactPath(
+  condition: ConfigStartConditionsCondition,
+  source: ConfigSnapshotSource,
+): string {
+  return `${source.artefacts.path_prefix}${condition.id}${source.artefacts.path_suffix}`;
 }

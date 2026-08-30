@@ -13,7 +13,9 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, ConfigStartConditions } from '../generated/types.js';
 import {
+  authorsCoveredBySnapshot,
   conditionById,
+  holdingBack,
   conditionFromSearch,
   configForCondition,
   defaultCondition,
@@ -126,6 +128,67 @@ describe('choosing a start condition (feature 118)', () => {
       expect(condition.platform.longitude).toBeLessThanOrEqual(longitude.maximum);
       expect(condition.platform.depth_m).toBeLessThanOrEqual(config.platform.limits.maximum_depth_m);
       expect(condition.platform.speed_m_per_s).toBeLessThanOrEqual(config.platform.limits.maximum_speed_m_per_s);
+    }
+  });
+});
+
+describe('the committed artefacts a condition declares (feature 118, ADR-0040)', () => {
+  it('every condition declares its own seed, and no two share one', () => {
+    // A snapshot is a function of the seed, so a condition without one could not have an
+    // artefact, and two conditions sharing one would be two situations in one ocean.
+    const seeds = conditions.conditions.map((condition) => condition.root_seed);
+    expect(seeds.every((seed) => Number.isInteger(seed) && seed >= 0)).toBe(true);
+    expect(new Set(seeds).size).toBe(seeds.length);
+  });
+
+  it('holds back exactly the components the declared eras name as their authors', () => {
+    for (const condition of conditions.conditions) {
+      const covered = authorsCoveredBySnapshot(condition, config.snapshot_source);
+      const expected = new Set(
+        (condition.snapshot_eras ?? []).map((era) => config.snapshot_source.authors[era]),
+      );
+      expect([...covered].sort()).toEqual([...expected].sort());
+      // And holding them back changes the script and nothing else about it.
+      const script = holdingBack(condition, covered);
+      expect(script.legs.length).toBe(condition.legs.length);
+      for (const [index, leg] of script.legs.entries()) {
+        expect(leg.ticks).toBe(condition.legs[index].ticks);
+        expect(leg.note).toBe(condition.legs[index].note);
+        for (const id of covered) expect(leg.stopped).toContain(id);
+      }
+    }
+  });
+
+  /**
+   * The cut point, guarded.
+   *
+   * Which eras are worth committing is meant to be a one-line edit, and for the ocean
+   * eras it is. Extending it to the forecast eras is NOT, and the reason is not size: it
+   * is that holding the loop back for a pre-roll means restarting the scheduler after
+   * one, and a restarted scheduler rebuilds from configuration with its run sequence at
+   * zero. Run identifiers are `<run>-run-<sequence>`, and they are the holding ids the
+   * analyst and the model runner publish under — so the first live cycle after the
+   * console opens would republish under the identifier the artefact's first cycle
+   * already used, and the store would replace it. Silently: the digests match, because
+   * each holding is internally consistent; the reader would simply find one fewer
+   * forecast than the timeline showed a moment earlier.
+   *
+   * So the edit is made safe rather than left as a trap. Flipping it fails here, with the
+   * reason, instead of producing a run that quietly loses holdings a minute after
+   * opening. What unblocks it is deriving a run identifier that survives a restart, which
+   * is a change to the scheduler and belongs to whichever feature makes it.
+   */
+  it('refuses to declare the forecast eras until a restarted scheduler stops reusing run ids', () => {
+    const authoredByTheLoop = new Set(['analysis', 'instance']);
+    for (const condition of conditions.conditions) {
+      const declared = (condition.snapshot_eras ?? []).filter((era) => authoredByTheLoop.has(era));
+      expect(
+        declared,
+        `'${condition.id}' declares ${declared.join(' and ')}. Holding the loop back for the ` +
+          `pre-roll restarts the scheduler, whose run sequence resets to zero, so the first ` +
+          `live cycle republishes under the artefact's first cycle's holding ids and replaces ` +
+          `them. Derive a run identifier that survives a restart first.`,
+      ).toEqual([]);
     }
   });
 });

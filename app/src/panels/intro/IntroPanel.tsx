@@ -35,10 +35,13 @@ export function IntroPanel({ params }: PanelProps) {
           because a heartbeat from it genuinely arrived, and draws the rest of the
           arc greyed out until each lands; the{' '}
           <a href={hashForView('messages')}>Messages</a> tab shows the traffic itself,
-          validated against the committed masters as it arrives. This run was seeded
-          fresh when you opened the page — run <code>{manifest.run_id}</code>, root
-          seed <code>{manifest.root_seed}</code> — and the manifest that replays it
-          byte-for-byte is exportable from the header.
+          validated against the committed masters as it arrives. This run is{' '}
+          <code>{manifest.run_id}</code>, from root seed{' '}
+          <code>{manifest.root_seed}</code>, and the manifest that replays it
+          byte-for-byte is exportable from the header. The seed is the situation&rsquo;s
+          own rather than one drawn when the page opened: two people following the same
+          link see the same ocean, which is what makes a link to a thing in it worth
+          sending.
         </p>
       </section>
       <section>
@@ -192,6 +195,17 @@ export function IntroPanel({ params }: PanelProps) {
           author it, and the whole pre-roll is in{' '}
           <a href={hashForView('messages')}>Messages</a> where you can read it back. The
           address bar carries the choice, so this exact situation is a link.
+        </p>
+        <p>
+          The ocean itself — the archive and the now-cast — was authored{' '}
+          <em>ahead of time</em>, by these same components from this same seed, and
+          arrives as a committed artefact the snapshot source republishes through the
+          coverage store&rsquo;s one digest-checked write path. That is what a build
+          artefact may be here and a fixture may not: a gate rebuilds it on every change
+          and fails the build if a single byte differs from what the generator would
+          author now. The <a href={hashForView('operator')}>Operator</a> tab&rsquo;s
+          snapshot source says how many holdings it replayed, and says so plainly when
+          there was no artefact and the ocean was evaluated live instead.
         </p>
       </section>
       <section>

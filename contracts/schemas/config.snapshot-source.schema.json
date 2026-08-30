@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.snapshot-source.schema.json",
+  "title": "drogna snapshot source configuration (V2-C22)",
+  "description": "The component that republishes a committed seed-data artefact into the coverage store (feature 118, ADR-0040). It is a component and not a loader in the composition root on purpose: the holdings go in through the store's one write path, published by something that subscribes to the clock, heartbeats, appears in the Operator flow chart and can be stopped — so the digest check, the atomicity and the announcement are the same ones a live publication passes, and a reader can see that the ocean came from an artefact rather than having to be told. Where a start condition declares no artefact this component runs and says so, rather than being absent: a node missing from the picture reads as a beat that has not landed, and 'the ocean was authored live here' is information.",
+  "type": "object",
+  "required": ["id", "topics", "heartbeat", "artefacts", "authors"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
+    "topics": {
+      "type": "object",
+      "required": ["clock"],
+      "additionalProperties": false,
+      "properties": { "clock": { "$ref": "config.common.schema.json#/$defs/topic" } }
+    },
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "artefacts": {
+      "type": "object",
+      "required": ["path_prefix", "path_suffix"],
+      "additionalProperties": false,
+      "description": "Where a condition's artefact is fetched from: prefix, the condition id, suffix. A relative same-origin path like every other address the page uses (FR-04) — the estate serves an instance from an arbitrary path, so an absolute one would be portable to exactly one deployment.",
+      "properties": {
+        "path_prefix": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_./-]*$",
+          "description": "Relative to the page. Not the seam's api prefix: an artefact is a build asset the page loads, like its own script, and it does not cross the wire-protocol seam."
+        },
+        "path_suffix": { "type": "string", "pattern": "^[A-Za-z0-9_.-]*$" }
+      }
+    },
+    "authors": {
+      "type": "object",
+      "required": ["archive", "nowcast", "analysis", "instance"],
+      "additionalProperties": false,
+      "description": "Which component authors each coverage era. Declared rather than inferred, and it earns its place twice: the build knows which component's output an artefact stands for, and the page knows which component to hold back while the artefact stands in for it. Getting this wrong in either direction is silent — a component left running beside its own artefact republishes what is already there, and one held back with no artefact behind it leaves an era missing — so it is written down once and read by both.",
+      "properties": {
+        "archive": { "$ref": "config.common.schema.json#/$defs/component_id" },
+        "nowcast": { "$ref": "config.common.schema.json#/$defs/component_id" },
+        "analysis": { "$ref": "config.common.schema.json#/$defs/component_id" },
+        "instance": { "$ref": "config.common.schema.json#/$defs/component_id" }
+      }
+    }
+  }
+}

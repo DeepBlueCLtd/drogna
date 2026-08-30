@@ -1,0 +1,123 @@
+# ADR-0040: seed data may be built ahead of time, under a gate
+
+**Status:** Accepted
+**Date:** 30 August 2026
+**Feature:** 118 (start conditions, chosen on a welcome page)
+**Requirements:** SRD-v2 FR-77; amends FR-11's application; Constitution 2.1.0 (Data)
+**Engages:** ADR-0039 (a run arrives by having run); Constitution II (seeded randomness),
+III (the drift-check discipline), VII (liveness, not configuration)
+
+## Context
+
+ADR-0039 made a start condition true by running it: the page builds the backend and
+drives the condition's pre-roll through the operator plane before mounting the shell. It
+costs two to eight seconds in a browser, and the author asked whether some of that state
+could be pre-generated instead.
+
+Measured first, because the obvious answer was wrong twice over. Switching components off
+one at a time put 300 of a tick's 568 microseconds in the **environment generator** — not
+in the assimilation, which looks expensive and is not — and the reason is that it
+re-evaluates a 96×80×6 grid over four time steps every 900 ticks while the coverage store
+keeps only the newest. `returning` computed ten now-casts and threw eight away. Nothing
+reads the intermediate ones: the monitor scores against the forecast, and the analyst
+falls back to a now-cast only on a cold start.
+
+Then the sizes, which decide the shape of any artefact. Field bytes are float32 and
+compress badly — the eras a whole pre-roll produces are 20.1 MB raw and still 11.3 MB
+after byte-plane shuffling and gzip. But they are not alike: the archive is a smooth
+analytic field on a coarse grid and comes to 0.01 MB, the now-cast to 0.42 MB, while the
+forecast instances carry per-cell ensemble noise and barely move at 1.4:1.
+
+| pre-generated | on the wire | `returning`'s pre-roll |
+|---|---|---|
+| nothing | — | 4.21 s |
+| the ocean: archive and now-cast | **0.43 MB** | 2.48 s |
+| everything | 11.3 MB | 0.40 s |
+
+The ocean is 45% of the saving for 4% of the bytes.
+
+## Decision
+
+**Seed data may be produced ahead of time and committed, when three things hold together:
+the same components produce it, a drift gate holds it to them, and it re-enters through
+the store's own publication seam.** The constitution's Data constraint is amended to say
+so at 2.1.0, rather than being quietly broken.
+
+The three are not a list of nice properties; each closes a specific way the cheap version
+goes wrong.
+
+**Produced by the same components.** `scripts/build-snapshots.ts` does not write a file
+describing an ocean. It constructs the backend from the shipped configuration — every
+document validated against its master — and drives the condition's pre-roll through the
+operator plane, exactly as the browser does. What comes out is what a run produced.
+
+**Held by a gate.** `check-snapshot-drift` runs that again on every build and fails on any
+difference in descriptors or field bytes. This is the whole load-bearing part, and it is
+the discipline Principle III already applies to generated types, applied to data. Without
+it, an artefact is a fixture: bytes answerable to nothing, drifting the moment the
+analytic form or the grid or a leg of a pre-roll changes — and drifting *silently*,
+because the store's digest check only proves the bytes match the descriptor that
+travelled with them, and a stale pair is perfectly consistent with itself.
+
+**Through the store's own seam.** A `store.publish` call in the composition root would
+have got the bytes in. It would not have got the digest check, the atomic landing, the
+announcement on the store's topic, or a component that can be stopped — and it would have
+put a write into a store from outside a component into the one module that imports both
+halves of the seam. So there is a component, `snapshot-source`, which subscribes to the
+clock, republishes each holding at the instant its descriptor records, appears in the
+Operator chart, and says in its heartbeat how many it replayed. A reader who wants to know
+where the ocean came from can look.
+
+### What is given up, stated rather than glossed
+
+**A condition's seed is now declared, not drawn.** The fields are a function of the seed,
+so a visit that drew a fresh one would have its sensors sampling an ocean the artefact
+does not describe. Each condition carries a `root_seed` in configuration and
+`crypto.getRandomValues` leaves the application entirely — which is *more* conformant with
+Principle II, not less, and has a second effect worth having: two people following one
+link now see the same ocean, which for a harness whose purpose is showing people things is
+most of the point.
+
+**The values were not computed during this visit.** That is the honest cost and there is
+no way to have both. It is bounded by the gate, and by the source saying so where a reader
+can read it.
+
+### A missing artefact is a slow run, not a broken one
+
+The page falls back to authoring live, and the source's heartbeat goes *degraded* and says
+which artefact could not be fetched. That follows from the gate's claim: an artefact only
+ever holds what the components would author, so losing one costs seconds and no
+correctness. Refusing to open over a missing static asset would trade the thing that works
+for the thing that is fast.
+
+### The cut point is configuration, and the far half is guarded
+
+`snapshot_eras` on each condition says which eras its artefact carries; the shipped value
+is `["archive", "nowcast"]`. Extending it to the forecast eras is a one-line edit and is
+*not* yet safe, for a reason that is not size. Holding the loop back for a pre-roll means
+restarting the scheduler after one, and a restarted scheduler rebuilds from configuration
+with its run sequence at zero. Run identifiers are `<run>-run-<sequence>` and they are the
+holding ids the analyst and the model runner publish under, so the first live cycle after
+the console opens would republish under the artefact's first cycle's ids and the store
+would replace them — silently, since each holding is internally consistent. A test refuses
+the declaration with that explanation rather than letting the edit produce a run that
+quietly loses holdings a minute after opening.
+
+## Consequences
+
+- Measured in a browser, address bar to a console with a clock in it: 2.1 → 1.6 s, 5.3 →
+  3.6 s, 4.1 → 2.8 s and 8.3 → 4.9 s, for 1.73 MB of committed artefacts across the four.
+- `pnpm snapshots` regenerates them; `check-snapshot-drift` is the twenty-first gate and
+  by an order of magnitude the dearest, because it rebuilds four runs. The cheaper check
+  that proves less was available and is the trade this repository has refused before.
+- The gates runner now awaits `runGate`. It did not, so a gate returning a promise had
+  `.length` read off the promise, found undefined, and was reported **ok** — a gate that
+  ran nothing and looked like a pass, which is the one outcome the runner's own docblock
+  forbids. The snapshot gate is the first that had to be asynchronous; the hazard predated
+  it.
+- The environment generator no longer re-provisions on restart. It consulted nothing and
+  authored a second twenty-year archive every time it was restarted from the operator
+  plane; it now reads the store's inventory — descriptors, never the truth-derived field,
+  which `check-truth-initialisation` holds it to — and resumes.
+- Two faults ADR-0039 recorded in the scheduler are still open, and one of them is now the
+  thing standing between the shipped cut point and the rest of the saving.

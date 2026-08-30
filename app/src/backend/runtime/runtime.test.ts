@@ -82,6 +82,7 @@ describe('the backend runtime', () => {
       'query',
       'scheduler',
       'sensors',
+      'snapshot-source',
       'telemetry',
     ]);
     expect(heard.get('broker')?.sim_time).toBe('2026-01-01T00:00:00.000000Z');

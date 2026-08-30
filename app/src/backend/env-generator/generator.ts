@@ -194,9 +194,42 @@ export class EnvGenerator {
     this.heartbeat.stop();
   }
 
+  /**
+   * Author what the run does not already hold.
+   *
+   * It used to author both unconditionally, which was right while this component was
+   * built once and never restarted. It is restartable from the operator plane (FR-36),
+   * and a restart is a fresh instance that has heard no clock sample, so its first
+   * sample looked like the first sample of the run and it provisioned again: a *second*
+   * twenty-year archive, at a different tick and so under a different holding id,
+   * accumulating beside the first. FR-21 says the archive is authored at provisioning,
+   * singular, and the store's own rule is that there is one now-cast at a time; both are
+   * consulted here rather than assumed, so a restart resumes rather than re-provisions.
+   *
+   * Feature 118 made this reachable on every run rather than only on a reader's restart:
+   * a condition backed by a committed artefact holds this component back while the
+   * snapshot source republishes the ocean, and then starts it to take over the cadence.
+   */
   private provision(): void {
-    this.publishArchive();
-    this.publishNowcast();
+    // The store's inventory, not its fields. `holdings()` hands back descriptors; the
+    // accessor that hands back a truth-derived field with its bytes is the one this
+    // component must not reach for, and `check-truth-initialisation` holds it to that.
+    // What is wanted here is a publication instant, which is a fact about the inventory.
+    const standing = this.store.holdings();
+    if (!standing.some((holding) => holding.era === 'archive')) this.publishArchive();
+    const nowcast = standing.find((holding) => holding.era === 'nowcast');
+    if (nowcast === undefined) {
+      this.publishNowcast();
+      return;
+    }
+    // A now-cast for this instant already stands, so the cadence resumes from it rather
+    // than restarting: the field is a deterministic function of simulation time, so
+    // authoring a second one for the same tick would spend a fifth of a second to
+    // publish the bytes that are already there, under the id they are already under.
+    this.lastNowcastTick = nowcast.published_at.tick;
+    if (this.simTime.tick - this.lastNowcastTick >= this.config.nowcast.interval_ticks) {
+      this.publishNowcast();
+    }
   }
 
   private publishArchive(): void {

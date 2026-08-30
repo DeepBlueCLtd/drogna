@@ -26,7 +26,7 @@
     "condition": {
       "title": "Start condition",
       "type": "object",
-      "required": ["id", "label", "situation", "holds", "platform", "legs"],
+      "required": ["id", "label", "situation", "holds", "root_seed", "platform", "legs"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -44,6 +44,16 @@
           "minItems": 1,
           "description": "What the run will hold when the shell opens, in the reader's terms — and what it will not. Drawn on the card and asserted by test against the stores the pre-roll actually leaves behind, so a card that promises measurements in the work area is a claim the suite can fail.",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "root_seed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The seed this condition's run is built from, declared rather than drawn. Before feature 118's snapshots a fresh visit drew one from entropy and every visit got a different ocean; a committed artefact is a function of the seed, so a visit that drew its own would have the sensors sampling an ocean the artefact does not describe. Declaring it is also the stronger position under Constitution II — the one place entropy entered the harness is now no places — and it makes an instance link reproducible, which for a demonstration harness is most of the point: two people opening the same address see the same run."
+        },
+        "snapshot_eras": {
+          "type": "array",
+          "description": "Which coverage eras this condition's committed artefact carries. The components that would have authored them are held back for the pre-roll and the snapshot source republishes them instead. Absent or empty means no artefact: the condition is authored live, start to finish, and the source says so. Which eras are worth committing is a measured trade and is meant to be edited — the ocean eras compress to a fraction of a megabyte and buy about half the pre-roll, the forecast eras carry ensemble noise and cost megabytes for the rest (ADR-0040).",
+          "items": { "type": "string", "enum": ["archive", "nowcast", "analysis", "instance"] }
         },
         "platform": {
           "type": "object",

@@ -18,32 +18,33 @@ offload".](../assets/118-the-welcome-page.png)
 
 ## The background
 
-This simulation opens the same way every time: an ocean, an archive, and a vessel that has
-been at sea for zero seconds. Everything worth looking at — the track, the assimilation,
-the package for shore — only exists once it has been running a while.
+This simulation opens the same way every time: a vessel that has been at sea for zero
+seconds. The track, the assimilation, the package for shore — none of it exists until it
+has been running a while.
 
-The obvious fix is to write plausible data into the stores at startup. We had already
-forbidden that: seeded data must come from the same code that produces it live, or the demo
-is a picture of a system rather than a system.
+The obvious fix is to write plausible data into the stores at startup. We had forbidden
+that: seeded data must come from the code that produces it live, or the demo is a picture
+of a system rather than a system.
 
 ## The requirement
 
 Offer a few situations to begin in — leaving the quay, arriving on task, working the area,
-heading home — and make each one true by actually having run.
+heading home — and make each true by actually having run.
 
 ## The options considered
 
 So the page picks a situation and then *plays the simulation forward* before showing you
 anything, through the same controls a user can press by hand.
 
-That worked and took twenty-five seconds. The obvious suspect was the data assimilation:
-big grids, matrix algebra, the part that looks expensive. Timing it leg by leg cleared it —
-about a second a cycle. The cost was the **route planner**, which searches for a good survey
-track every ten simulated minutes and takes two and a half seconds to do it.
+That took twenty-five seconds, and we guessed wrong twice about where it went. Not the
+assimilation — matrix algebra looks expensive and cost a second a cycle. It was the **route
+planner**, searching for a survey track every ten simulated minutes. Then, with that off,
+the **ocean generator**, rebuilding a field every fifteen and having all but the last one
+discarded.
 
-Which is fine: the planner only ever *recommends*. It is the one component we can
-leave switched off while winding forward and switch on when you arrive. The four situations
-now open in two to eight seconds.
+So the ocean is built once, at build time, and shipped — the thing we had forbidden, unless
+a check rebuilds it and fails if one byte differs from what the generator would produce now.
+It compresses to 0.43 MB, and the situations open in 1.5 to 5 seconds.
 
 ## The demo
 

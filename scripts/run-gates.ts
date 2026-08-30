@@ -6,6 +6,15 @@
  *
  * Overrides for the runner's own tests: DROGNA_GATES_REGISTRY points at an
  * alternative registry; DROGNA_GATES_ROOT at an alternative tree to scan.
+ *
+ * A gate may return its findings or a promise of them, and the result is awaited either
+ * way. That is not a convenience: before feature 118 the call was not awaited, so a gate
+ * that returned a promise had `.length` read off the promise, found undefined, compared
+ * undefined > 0 false, and was reported **ok** — a gate that ran nothing and looked like
+ * a pass, which is the one outcome the paragraph above says must not happen. The
+ * snapshot-drift gate is the first that has to be asynchronous (it rebuilds artefacts
+ * through the same async pre-roll the browser drives); the hazard was there for every
+ * gate before it existed.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -26,14 +35,21 @@ for (const entry of entries) {
   const gateName = entry.replace(/^gates\//, '').replace(/\.ts$/, '');
   try {
     const module = (await import(pathToFileURL(join(scriptsDir, entry)).href)) as {
-      runGate?: (root?: string) => Finding[];
+      runGate?: (root?: string) => Finding[] | Promise<Finding[]>;
     };
     if (typeof module.runGate !== 'function') {
       console.error(`${gateName}: could not run — the module exports no runGate`);
       failed += 1;
       continue;
     }
-    const findings = module.runGate(scanRoot);
+    const findings = await module.runGate(scanRoot);
+    if (!Array.isArray(findings)) {
+      // A gate that answered with something that is not a list of findings has not
+      // reported "clean"; it has failed to report at all.
+      console.error(`${gateName}: could not run — runGate answered with ${typeof findings}, not a list of findings`);
+      failed += 1;
+      continue;
+    }
     if (findings.length > 0) {
       printFindings(gateName, findings);
       console.error(`${gateName}: FAILED with ${findings.length} finding(s)`);

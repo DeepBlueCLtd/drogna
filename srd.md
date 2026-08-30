@@ -783,6 +783,22 @@ pass only one of the three is not finished.
   ticks, the pre-roll is inside AT-04's claim rather than outside it with a reader's
   commands. The four conditions are *leaving quay-side*, *arriving in the work area*
   (the default), *loitering in the work area* and *returning to quay-side*.
+- **FR-77** A start condition's coverage eras may be **produced ahead of time and
+  committed** as a build artefact (ADR-0040; Constitution 2.1.0's amended Data
+  constraint), on three conditions that hold together. The artefact is produced by the
+  same components the running system uses, by constructing the backend and driving that
+  condition's pre-roll — never by writing a file. A **drift gate** regenerates it and
+  fails the build on any difference in descriptors or field bytes, which is what makes it
+  derived output rather than a fixture, on the discipline the generated types already
+  answer to. And it re-enters the run through the **coverage store's own publication
+  seam**, republished on the clock by a declared component (`snapshot-source`) at the
+  instant each descriptor records, so the digest check, the atomicity and the announcement
+  are the ones a live publication passes. Each condition declares which eras its artefact
+  carries and the **root seed** it is built from — a seed being declared rather than drawn
+  is what a committed field requires, and removes the last entry of entropy from the
+  application. A missing or unreadable artefact shall be a **slow run and not a broken
+  one**: the run authors the fields live and the source reports, degraded, which artefact
+  it could not use.
 ---
 
 ## 6. Interfaces and shared types

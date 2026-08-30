@@ -122,8 +122,74 @@ but those controls, driven from a script.
 - [x] T026 `replay-proof.ts`'s preamble says the pre-roll is inside the claim, and why.
 - [x] T027 The blog entry, and a capture of the welcome page beside it.
 
+## Pre-generating the ocean (the second input, ADR-0040)
+
+- [x] T028 Measured before deciding, and both obvious answers were wrong. The cost was not
+      the assimilation but the environment generator — 300 of a tick's 568 microseconds —
+      re-evaluating a grid every 900 ticks and having eight of ten now-casts discarded by
+      the store. And the eras do not compress alike: the ocean is 0.43 MB, the forecast
+      eras 10.9 MB, for 45% and 55% of the saving respectively.
+- [x] T029 The constitution's Data constraint amended to 2.1.0 rather than broken:
+      ahead-of-time production is admitted on three conditions that hold together — same
+      components, a drift gate, and the store's own publication seam. Governance requires
+      an ADR and a version bump; both are here.
+- [x] T030 `snapshot.schema.json` and `config.snapshot-source.schema.json`; `snapshot_eras`
+      and a required `root_seed` on each condition; the eras' authors declared once and
+      read by both the build and the page.
+- [x] T031 `backend/snapshot/codec.ts`. Byte-plane shuffling before gzip: a permutation, so
+      the store's digest check is untouched, and worth its line at 63:1 → 158:1 on the
+      archive. `CompressionStream` so the build and the page run one implementation.
+- [x] T032 `backend/snapshot/source.ts`: a component, not a loader in the composition root.
+      It republishes on the clock at the instant each descriptor records, through
+      `store.publish`, and appears in the Operator chart with its own face and tour step.
+- [x] T033 `scripts/build-snapshots.ts` constructs the backend and drives the real pre-roll.
+      `pnpm snapshots`. One script, two crews: the build runs it as written, the page holds
+      back whoever the artefact speaks for (`holdingBack`).
+- [x] T034 `check-snapshot-drift`, the twenty-first gate. It rebuilds four runs and is the
+      dearest by an order of magnitude; the cheaper check proves less.
+- [x] T035 Seeds declared per condition. `crypto.getRandomValues` leaves the application —
+      stronger under Principle II, and it makes an instance link reproducible.
+- [x] T036 A missing artefact is a slow run: the page authors live and the source says,
+      degraded, which artefact it could not use.
+
+## Watching the second round's checks fail
+
+- [x] T037 A byte of a committed artefact flipped. **The gate failed with `could not run —`
+      and no message**, and the process died: `through()` drove the write side with a
+      floating promise, so a bad gzip stream became an *unhandled rejection*. In the browser
+      that would have escaped the fetch's own try/catch and left the page dead rather than
+      falling back. Two fixes: the write promise is handled and the read side reports the
+      fault in words; the gate reports an unreadable artefact as a finding about that file.
+      Re-planted: named, with `Z_DATA_ERROR`, against the file.
+- [x] T038 The eddy's strength moved by 0.1 °C in `run.json`. All four artefacts reported as
+      no longer what the components author, by name.
+- [x] T039 A header claiming another condition, seed, run or generator configuration:
+      refused at construction, each by name, before the source subscribes to anything.
+- [x] T040 One byte of a decoded field flipped: the coverage store refuses it by digest, the
+      source counts the refusal, and the holding never lands. The guard is the store's,
+      applied to an artefact exactly as to a generator — which is why the codec checks no
+      digests of its own.
+
+## Found on the way, and fixed
+
+- [x] T041 **The gates runner did not await `runGate`.** A gate returning a promise had
+      `.length` read off the promise, found undefined, compared false, and was reported
+      **ok** — a gate that ran nothing and looked like a pass, the one outcome the runner's
+      own docblock forbids. The snapshot gate is the first that had to be asynchronous; the
+      hazard predated it by twenty gates.
+- [x] T042 **The environment generator re-provisioned on restart**, authoring a second
+      twenty-year archive under a new id every time it was restarted from the operator
+      plane. It now reads the store's inventory — descriptors, never the truth-derived
+      field, which `check-truth-initialisation` holds it to — and resumes.
+
 ## Deliberately not done
 
+- [ ] **The forecast eras in the artefacts.** The other 10.9 MB and the other 2.1 seconds.
+      Blocked on the scheduler's run identifiers, which reset on restart: holding the loop
+      back for a pre-roll means restarting it, and the first live cycle would republish
+      under the artefact's first cycle's holding ids and silently replace them. A test
+      refuses the declaration with that explanation, so the one-line edit fails loudly
+      rather than producing a run that loses holdings a minute after opening.
 - [ ] NetCDF export. The input names it; SRD-v2 FR-39 holds offload to announcement-only in
       V2, and this feature makes that path reachable — `returning` arrives with a package
       staged and its measurement geometry beside it — rather than widening FR-39. Reasoned

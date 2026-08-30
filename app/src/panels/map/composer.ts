@@ -111,6 +111,27 @@ export function pickedPosition(
   return { longitude: round3(wrapped), latitude: round3(latitude) };
 }
 
+/**
+ * What the canvas says about picking while the composer is open (issue #53's
+ * affordance, amended). The click was implemented and invisible: the only cues were
+ * a crosshair the viewer had to hover to find and a clause at the tail of the status
+ * line. The instruction belongs where the gesture is, so the map draws this over the
+ * canvas — and it states what the click will *do*, which on the cube is one thing
+ * more than on the plan view.
+ *
+ * `note` is the map's own account of the placed position (its coordinates, and
+ * whether they fall inside the fetched domain); its absence means nothing is placed
+ * yet, which is the case the instruction is for.
+ */
+export function pickPrompt(projection: 'globe' | 'flat' | 'cube', note?: string): string {
+  if (note === undefined) {
+    return projection === 'cube'
+      ? 'click a slice to place the position and depth of the query'
+      : 'click the map to place the position of the query';
+  }
+  return `${note} · click again to move it`;
+}
+
 /** The three facts a response can be, kept distinct (FR-41). */
 export type ComposerResult =
   | { fact: 'value'; body: unknown }

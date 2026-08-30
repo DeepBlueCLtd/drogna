@@ -54,3 +54,21 @@
       `KNOWN_UNIMPLEMENTED`, the composer refuses it by name, and implementing it is
       a query-component change with its own master, subset statement and documented
       account — not a map change.*
+- [x] T812 The picked location, made findable (issue #53's affordance): T810 built the
+      click and left it invisible — it was looked for in the running shell and not
+      found. Three causes, all fixed here. The composer's toggle sat last in a row of
+      six selects inside the "view controls" disclosure, so at a narrow width the way
+      in was behind a summary named for something else; it is now the map's own
+      control against the canvas, named for the action ("compose an EDR query") and
+      saying while closed what it is for. The only cue that the canvas was armed was a
+      crosshair cursor, found by hovering something the viewer had no reason to hover;
+      the canvas now carries the instruction over it (`pickPrompt`, pure and tested,
+      stating on the cube that the click places depth as well) and is outlined while
+      armed. Step 4 read as prose among the other steps' controls; it is now the
+      step's own block, and states the position as a fact — "no position yet" rather
+      than silence. Where WebGL is absent none of it is claimed: no canvas prompt, and
+      the step says to type it, because an instruction naming a gesture that does
+      nothing is worse than no instruction. *Not done here: a keyboard route to
+      placing the position. The number boxes are that route and always were, which is
+      why this is a discovery fix and not an access one — but "click the map" is a
+      mouse instruction, and a picker driven from the keyboard is its own task.*

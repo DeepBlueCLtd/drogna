@@ -292,7 +292,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       expect(screen.getByText(/present and stating empty/)).toBeTruthy();
       // Open the composer: it enumerates from the served subset statement and
       // collections list, never a stub (FR-41).
-      act(() => screen.getByText('EDR composer').click());
+      act(() => screen.getByTestId('composer-toggle').click());
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -326,6 +326,44 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         fireEvent.change(numbers[0], { target: { value: '-25' } });
       });
       expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
+    }
+  });
+
+  it('offers the composer, and the click that places its position, where they can be found (issue #53)', async () => {
+    seam();
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // The toggle is the map's own control, not one of the view controls: inside that
+      // disclosure it is behind a summary named for something else at a narrow width,
+      // which is how a built feature goes unfound. 112's plan already said so — "the
+      // composer keeps its own toggle".
+      const toggle = screen.getByTestId('composer-toggle');
+      expect(toggle.closest('.map-controls-disclosure')).toBeNull();
+      // Closed, it names the action and what the action is for.
+      expect(toggle.textContent).toBe('compose an EDR query');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.getByText(/build a genuine OGC API-EDR request/)).toBeTruthy();
+      act(() => toggle.click());
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      // The step with a gesture behind it states the gesture, and states the position
+      // as a fact rather than falling silent when there is none.
+      expect(screen.getByTestId('composer-pick-note').textContent).toBe('no position yet');
+      // jsdom has no WebGL, so there is no canvas to click — and the step says to type
+      // it rather than naming a gesture that would do nothing here. The on-canvas
+      // prompt is not drawn for the same reason: the instruction is never a claim
+      // about a surface that is not there.
+      expect(screen.getByTestId('composer-pick').textContent).toContain('type it below');
+      expect(screen.getByTestId('composer-pick').textContent).toContain('no map to click');
+      expect(screen.queryByTestId('map-pick-prompt')).toBeNull();
+      expect(document.querySelector('.map-canvas')?.getAttribute('data-picking')).toBe('false');
     }
   });
 

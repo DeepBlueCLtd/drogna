@@ -644,6 +644,12 @@ body,
     width: auto;
   }
 
+  /* The composer's toggle is a primary control at this width — it is the way in to the
+     tab's one composed query — so it takes the touch floor the tabs take. */
+  .map-compose-toggle {
+    min-height: 44px;
+  }
+
   .composer input[type='number'],
   .composer input[type='text'] {
     width: 100%;

@@ -105,6 +105,55 @@ export function zoomFactor(rect: ViewRect, domain: Domain): number {
   return wholeWidth > 0 ? wholeWidth / (rect.east - rect.west) : 1;
 }
 
+/**
+ * The keyboard's steps, as proportions of what is in view rather than degrees. A fixed
+ * step is either a crawl when zoomed out or a leap when zoomed in, and the same key has
+ * to be usable at both ends.
+ */
+export const PAN_STEP = 0.2;
+export const ZOOM_STEP = 1.2;
+
+/**
+ * One press of a key, applied to the view.
+ *
+ * A pure function rather than a branch inside the listener, because the keyboard is the
+ * path the proof drives (T035): a gesture reachable only through a real DOM event is a
+ * gesture whose test mostly tests the DOM. Zoom is about the centre, since a keyboard has
+ * no cursor to keep the water under.
+ *
+ * `undefined` means the key is not one of the map's, which is a different answer from the
+ * rectangle coming back unchanged: an arrow pressed against the edge of the domain moves
+ * nothing and is still the map's key, and letting that one through would scroll the panel
+ * out from under a viewer who was only trying to look further west.
+ */
+export function viewAfterKey(rect: ViewRect, domain: Domain, key: string): ViewRect | undefined {
+  const width = rect.east - rect.west;
+  const height = rect.north - rect.south;
+  const centreLongitude = (rect.west + rect.east) / 2;
+  const centreLatitude = (rect.south + rect.north) / 2;
+  switch (key) {
+    case 'ArrowLeft':
+      return panBy(rect, domain, -width * PAN_STEP, 0);
+    case 'ArrowRight':
+      return panBy(rect, domain, width * PAN_STEP, 0);
+    // North is up, and up is where the latitude grows.
+    case 'ArrowUp':
+      return panBy(rect, domain, 0, height * PAN_STEP);
+    case 'ArrowDown':
+      return panBy(rect, domain, 0, -height * PAN_STEP);
+    case '+':
+    case '=':
+      return zoomAbout(rect, domain, 1 / ZOOM_STEP, centreLongitude, centreLatitude);
+    case '-':
+    case '_':
+      return zoomAbout(rect, domain, ZOOM_STEP, centreLongitude, centreLatitude);
+    case 'Home':
+      return wholeDomain(domain);
+    default:
+      return undefined;
+  }
+}
+
 export interface MapView {
   readonly rect: ViewRect;
   /** Attach to the SVG element: the wheel and drag listeners hang off it. */
@@ -192,12 +241,27 @@ export function useMapView(domain: Domain | undefined, boxWidth: number, boxHeig
       element.releasePointerCapture?.(event.pointerId);
     };
 
+    // The same gestures from the keyboard (T035). Without this the map is the one surface
+    // in the family reachable by pointer alone: every other control is a native range,
+    // select or button and was operable by keyboard the day it was written. The key is
+    // taken away from the page only when it moved the view, so Tab still leaves and an
+    // arrow the map does not use still scrolls the panel.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const next = viewAfterKey(rect ?? wholeDomain(domain), domain, event.key);
+      if (!next) return;
+      event.preventDefault();
+      setRect(next);
+    };
+
+    element.addEventListener('keydown', onKeyDown);
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('pointerdown', onPointerDown);
     element.addEventListener('pointermove', onPointerMove);
     element.addEventListener('pointerup', onPointerUp);
     element.addEventListener('pointercancel', onPointerUp);
     return () => {
+      element.removeEventListener('keydown', onKeyDown);
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('pointerdown', onPointerDown);
       element.removeEventListener('pointermove', onPointerMove);

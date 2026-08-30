@@ -16,7 +16,15 @@ import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { consumerStream } from './rng.js';
 import { coverExtent, isRefusal } from './hexes.js';
-import { panBy, wholeDomain, zoomAbout, zoomFactor } from './view.js';
+import {
+  PAN_STEP,
+  panBy,
+  viewAfterKey,
+  wholeDomain,
+  zoomAbout,
+  zoomFactor,
+  type ViewRect,
+} from './view.js';
 import { depthZones, domainFromRun, metresBetween, type Domain } from './domain.js';
 import {
   coverageAtResolution,
@@ -565,5 +573,65 @@ describe('the map view (the wheel zooms the map, not the page)', () => {
   it('reports how far in it is', () => {
     const closer = zoomAbout(whole, domain, 0.5, (domain.west + domain.east) / 2, (domain.south + domain.north) / 2);
     expect(zoomFactor(closer, domain)).toBeCloseTo(2, 6);
+  });
+});
+
+/**
+ * The same view, reached without a pointer (T035).
+ *
+ * Every other control in the family is a native range, select or button and was operable
+ * by keyboard the day it was written. The map was not: it had a wheel and a drag and
+ * nothing else, which made it the one place a viewer without a pointer could not go.
+ */
+describe('the map view by keyboard', () => {
+  const whole = wholeDomain(domain);
+  const middle = zoomAbout(whole, domain, 0.4, (domain.west + domain.east) / 2, (domain.south + domain.north) / 2);
+
+  /** The view after a key the map is expected to answer for. */
+  const after = (rect: ViewRect, key: string): ViewRect => {
+    const next = viewAfterKey(rect, domain, key);
+    expect(next, `'${key}' is one of the map's own keys`).toBeDefined();
+    return next as ViewRect;
+  };
+
+  it('pans by a share of what is in view, so one key works at every zoom', () => {
+    const nearer = zoomAbout(whole, domain, 0.1, (domain.west + domain.east) / 2, (domain.south + domain.north) / 2);
+    const wideStep = after(middle, 'ArrowRight').west - middle.west;
+    const closeStep = after(nearer, 'ArrowRight').west - nearer.west;
+    expect(wideStep).toBeCloseTo((middle.east - middle.west) * PAN_STEP, 6);
+    // Not the same distance: the point of a proportional step is that it is not.
+    expect(closeStep).toBeLessThan(wideStep);
+  });
+
+  it('sends north up', () => {
+    expect(after(middle, 'ArrowUp').north).toBeGreaterThan(middle.north);
+    expect(after(middle, 'ArrowDown').south).toBeLessThan(middle.south);
+  });
+
+  it('zooms in and out about the centre, leaving it where it was', () => {
+    const centre = (middle.west + middle.east) / 2;
+    const closer = after(middle, '+');
+    expect((closer.west + closer.east) / 2).toBeCloseTo(centre, 6);
+    expect(zoomFactor(closer, domain)).toBeGreaterThan(zoomFactor(middle, domain));
+    expect(zoomFactor(after(middle, '-'), domain)).toBeLessThan(zoomFactor(middle, domain));
+  });
+
+  it('goes back to the whole domain, and no further', () => {
+    expect(viewAfterKey(middle, domain, 'Home')).toEqual(whole);
+    expect(viewAfterKey(whole, domain, 'Home')).toEqual(whole);
+  });
+
+  /*
+   * The distinction the listener rests on. An arrow at the western edge moves nothing and
+   * is still the map's key; if this returned undefined there, the panel would scroll out
+   * from under a viewer who was only trying to look further west.
+   */
+  it('answers for a key of its own even where the view cannot move, and not for another', () => {
+    const atEdge = zoomAbout(whole, domain, 0.4, domain.west, domain.south);
+    const pushed = viewAfterKey(atEdge, domain, 'ArrowLeft');
+    expect(pushed).toBeDefined();
+    expect(pushed).toEqual(atEdge);
+    expect(viewAfterKey(middle, domain, 'Tab')).toBeUndefined();
+    expect(viewAfterKey(middle, domain, 'a')).toBeUndefined();
   });
 });

@@ -273,6 +273,11 @@ export function CoursesPanel({ params }: PanelProps) {
             whole domain
           </button>
         </span>
+        {/* The gestures, written down. A keyboard path nobody can find is a keyboard path
+            nobody has (T035); the map also carries them in `aria-keyshortcuts`. */}
+        <span className="consumer-control consumer-keys">
+          <span>map keys</span> arrows pan · +/− zoom · Home resets
+        </span>
       </div>
 
       {/* Its own scrolling container, so the page never scrolls sideways (FR-017). */}
@@ -331,7 +336,9 @@ export function CoursesPanel({ params }: PanelProps) {
           className="consumer-map"
           viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
           role="img"
-          aria-label={`${cloud.hypotheses} hypotheses over ${cells.length} hexes, and ${ranked.length} candidate courses`}
+          aria-label={`${cloud.hypotheses} hypotheses over ${cells.length} hexes, and ${ranked.length} candidate courses. Arrow keys pan, plus and minus zoom, Home shows the whole domain.`}
+          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight + - Home"
+          tabIndex={0}
           data-testid="courses-map"
           ref={view.ref}
           data-panning={view.panning}

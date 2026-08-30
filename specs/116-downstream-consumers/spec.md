@@ -170,9 +170,27 @@ muted yellow; the open one is the full colour, bold, over a black underline — 
 both surviving greyscale.
 
 Contrast is a requirement, not a preference: the yellow and the black on it must clear
-WCAG AA for normal text, and the tab must remain distinguishable in greyscale — the
-Background capture already proves greyscale legibility for that panel and the same proof
-is extended here (`pnpm capture:background` grows a consumer-tab frame).
+WCAG AA for normal text, and the tab must remain distinguishable in greyscale.
+
+This paragraph originally said the proof would be Background's, extended — `pnpm
+capture:background` growing a consumer-tab frame. That was written before either capture
+was read closely, and it was wrong in two ways worth recording rather than quietly
+correcting. Background's capture is built around a slide rail these panels do not have, so
+"extended" understated the change; and, more importantly, an image is the wrong instrument
+for this particular claim. Background's greyscale pass asks whether a *drawing* reads,
+which is a judgement and needs an eye. What the consumer tabs encode in colour is
+narrower and checkable: the order of the uncertainty ramp, three line marks that overlap
+on one map, and two provenance chips. A picture of those proves nothing on its own,
+because nobody compares last month's picture to this month's.
+
+So the claim is split by what kind of claim it is. The *bound* is held in
+`app/src/panels/consumers/greyscale.test.ts`, computed from the ramp function and the
+stylesheet, where a regression fails a run; the *pictures* are shot alongside the keyboard
+proof by `pnpm capture:consumers`, as illustration. The route and the ghost are the case
+that shaped the check: they are deliberately the same yellow, because a ghost is the same
+answer from a moment ago and recolouring it would claim it was a different kind of thing.
+What separates them is the dash pattern — so the check demands a luminance step *or* a
+pattern difference, and a stricter rule would have forced a worse drawing.
 
 ### 4.2 The provenance strip *(source §2.2)*
 

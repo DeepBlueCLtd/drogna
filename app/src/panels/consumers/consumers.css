@@ -243,6 +243,41 @@
   cursor: grabbing;
 }
 
+/*
+ * The keyboard's own affordances (T035).
+ *
+ * The map is the one surface in the family that is not a native control, so it is the one
+ * that has to be given focus, a ring, and keys by hand: `tabIndex` and `aria-keyshortcuts`
+ * in the panels, arrows and +/- in `view.ts`, and this ring. A focus ring is not decoration
+ * on a surface a viewer can only pan by keyboard — without it the map takes the arrow keys
+ * with nothing on screen saying why.
+ *
+ * The ring is drawn for every focus, not only `:focus-visible`: the pointer path gives the
+ * map focus too, and a viewer who then reaches for an arrow key deserves to have been told
+ * the map is listening.
+ */
+.consumer-map:focus {
+  outline: 3px solid var(--consumer-yellow);
+  outline-offset: 2px;
+}
+
+/* Everything else in the family is a native control, and needs only a ring that carries
+   over the shell's dark ground. */
+.consumer-body :is(button, select, input, a):focus-visible {
+  outline: 2px solid var(--consumer-yellow);
+  outline-offset: 1px;
+}
+
+.consumer-banner :is(button, a):focus-visible {
+  outline: 2px solid var(--consumer-ink);
+  outline-offset: 1px;
+}
+
+.consumer-keys {
+  color: var(--shell-dim);
+  font-size: 0.82em;
+}
+
 .consumer-hex {
   stroke: rgba(255, 255, 255, 0.22);
   stroke-width: 0.6;

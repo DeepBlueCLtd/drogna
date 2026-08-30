@@ -429,6 +429,11 @@ export function SamplingPanel({ params }: PanelProps) {
             whole domain
           </button>
         </span>
+        {/* The gestures, written down. A keyboard path nobody can find is a keyboard path
+            nobody has (T035); the map also carries them in `aria-keyshortcuts`. */}
+        <span className="consumer-control consumer-keys">
+          <span>map keys</span> arrows pan · +/− zoom · Home resets
+        </span>
       </div>
 
       <p className="consumer-note">
@@ -461,7 +466,9 @@ export function SamplingPanel({ params }: PanelProps) {
           className="consumer-map"
           viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
           role="img"
-          aria-label={`observation-driven uncertainty over ${cells.length} hexes at depth zone ${zone + 1}`}
+          aria-label={`observation-driven uncertainty over ${cells.length} hexes at depth zone ${zone + 1}. Arrow keys pan, plus and minus zoom, Home shows the whole domain.`}
+          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight + - Home"
+          tabIndex={0}
           data-testid="sampling-map"
           ref={view.ref}
           data-panning={view.panning}

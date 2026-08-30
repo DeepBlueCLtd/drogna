@@ -115,7 +115,11 @@ synthesised and says so.
 [Open the sampling planner](../../instances/main/#/view/sampling) — a hex grid over the
 domain, coloured by how stale the observation coverage is at a chosen depth, with a route
 planned by value per mile rather than by heading for the worst cell. The wheel zooms the
-map and a drag pans it, and the grid covers what is in view rather than the whole domain —
+map and a drag pans it — and so do the arrow keys, `+`, `-` and `Home`, which is a
+correction rather than a feature. Every other control in these three tabs is a native
+slider, menu or button and was usable from the keyboard the day it was written; the map
+was the one surface that answered only to a pointer, and nobody noticed until a proof went
+looking. The grid covers what is in view rather than the whole domain —
 which is what makes the finer resolutions affordable at all, and why asking for one while
 zoomed out is refused with both remedies named. Change the time
 budget from 3 hours to 24 and the route changes shape, not just length. The vessel reaches
@@ -133,6 +137,19 @@ clustered over banks, and the submarine's reads the forecast field for water tha
 and changes when the ocean does. Four candidate courses are scored on two axes kept apart,
 and dragging the weighting reorders them — which is the tool reasoning rather than
 reciting.
+
+A note on how those claims are checked, because the two halves are checked differently.
+Whether a *drawing* reads with colour removed is a judgement, so Background's explainers
+are photographed twice and compared by eye. What these tabs encode in colour is narrower —
+the order of the uncertainty ramp, three line marks that share one map, two provenance
+chips — and a picture of that proves nothing, because nobody compares last month's picture
+to this month's. So the bound is arithmetic on the ramp and the stylesheet, and a
+regression fails the build; the photographs are the illustration beside it. The route and
+its ghost are the case that shaped the rule. They are deliberately the same yellow — a
+ghost is the same answer from a moment ago, and recolouring it would claim it was a
+different kind of thing — so what separates them is the dashes, and the check asks for a
+step in brightness *or* a change of pattern. A stricter rule would have forced a worse
+drawing to satisfy a test, which is the wrong way round.
 
 [Open the feasibility timeline](../../instances/main/#/view/feasibility) — no map at all,
 deliberately, because environmental data settles questions that are not about *where*. Ten

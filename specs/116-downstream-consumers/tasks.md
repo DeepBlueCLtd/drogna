@@ -187,13 +187,42 @@ not by a failing test.
       request body (CLAUDE.md, *showing the work*).
 - [x] T034 Blog entry: three new faces in the shell is the case D17 names. Background,
       requirement, options considered, demo.
-- [ ] T035 **Declined for this pull request, with the reason recorded now.** (The narrow
-      *geometry* of all three tabs is proved by `capture:mobile`, which does cover them —
-      what is owed is the greyscale and keyboard pass.)
-      `scripts/capture/background.ts` is built around Background's slides — its keyboard
-      proof drives a rail that only that panel has, and its greyscale pass measures that
-      panel's own marks. Extending it to a consumer tab is a rewrite of the capture rather
-      than an addition to it, and doing it here would put a capture refactor inside the
-      feature that needed it. The palette was chosen against the same bar in the meantime
-      (about 13:1 on the yellow, separating in greyscale as well as in colour, recorded in
-      `consumers.css`), and the extension is owed as its own piece of work.
+- [x] T035 The greyscale and keyboard proofs, as `pnpm capture:consumers` and
+      `app/src/panels/consumers/greyscale.test.ts`. (The narrow *geometry* was already
+      proved by `capture:mobile`; this is the rest.)
+
+      Declined once, then done, and the reason for the reversal is the useful part. The
+      decline said extending `scripts/capture/background.ts` would be a rewrite rather
+      than an addition — that much was right, and this is a separate script for exactly
+      that reason. What the decline got wrong was assuming the proof had to take
+      Background's *form*. Background shoots pictures because whether a drawing reads is a
+      judgement. What these tabs encode in colour is checkable, so the bound belongs in a
+      test that fails a run, and the pictures are illustration.
+
+      **What the keyboard proof turned up is that the claim could not yet be made.** Every
+      control in the family is a native range, select or button and was keyboard-operable
+      the day it was written — but the map was not. It had a wheel and a drag and nothing
+      else, so a viewer without a pointer could not zoom or pan at all. `view.ts` now
+      carries `viewAfterKey`: arrows pan by a share of what is in view, `+`/`-` zoom about
+      the centre, `Home` returns to the whole domain, and the panels declare those keys in
+      `aria-keyshortcuts` and take focus. A key the map does not use is left to the page;
+      an arrow pressed against the edge of the domain is still the map's, which is the one
+      distinction the listener rests on and has its own test.
+
+      **Watched failing, in both directions.** Against the tests: a ramp changing hue at
+      constant lightness (16 non-rising steps and 1.97:1 at the ends), a ghost given the
+      route's dash pattern, an unheard hex drawn as a fill, a chip stripped of its ground,
+      an inverted north, a fixed pan step, and unknown keys claimed from the page — every
+      one reported. Against the capture: the keydown listener removed (the map stopped
+      zooming and panning, on both tabs), the focus ring removed (37 controls reported by
+      name), a button emptied of its label, and — the one that mattered — `tabIndex` taken
+      off the map. That last exposed a real blind spot: the sweep takes its expectations
+      from what the document already declares focusable, so removing focusability removed
+      the map from the expected set and the sweep went quiet (7 controls became 6). It is
+      caught from the other side now — an element declaring `aria-keyshortcuts` promises
+      keys and must be reachable, and every map must declare them — and the script's
+      header states the limit that remains, since a `div` with a click handler is still
+      invisible to it.
+
+      Shared with main's `contrast.test.ts` rather than copied: the WCAG arithmetic and
+      its two bounds moved to `app/src/shell/colour.ts` when the second caller appeared.

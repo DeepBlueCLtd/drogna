@@ -61,7 +61,11 @@ export type { PanelParams };
 function PermanentTab(props: IDockviewPanelHeaderProps<PanelParams>) {
   const kind = props.params?.config.views.find((view) => view.id === props.api.id)?.kind ?? 'harness';
   return (
-    <span className="tab-kind" data-kind={kind}>
+    // `data-view` alongside the kind so a capture can read the tab strip in this
+    // presentation too. The stack's tabs have carried both since feature 112; the dock's
+    // carried only the kind, which left the consumers' proof (T035) with no way to ask
+    // the page which views it was meant to sweep.
+    <span className="tab-kind" data-kind={kind} data-view={props.api.id}>
       <DockviewDefaultTab hideClose {...props} />
     </span>
   );

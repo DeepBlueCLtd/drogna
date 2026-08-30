@@ -8,7 +8,7 @@
  * the loop did, scored against the generator's own field — never asserted from a
  * number chosen here (Constitution IX).
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { AnalysisPublished, ConfigRun, CoverageHolding, RunPublished } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
@@ -54,10 +54,31 @@ function fieldsOf(holding: { descriptor: CoverageHolding; bytes: Uint8Array }): 
 }
 
 describe('the analysis, on the loop as it ships', () => {
+  /**
+   * One backend, turned once, for every assertion below.
+   *
+   * This file used to build and drive the whole harness per test — five scenarios,
+   * each turning twenty-odd components for thousands of ticks — and on a slower runner
+   * that ran past vitest's timeout. The loop is deterministic, so the assertions are
+   * about one run of it and there was never a reason for each to have its own.
+   */
+  let runtime: BackendRuntime;
+  let config: ConfigRun;
+  let record: Record;
+
+  beforeAll(() => {
+    config = lockstepConfig();
+    runtime = buildBackend(config, options, validator);
+    record = driveUntilAnalyses(runtime, config, 2, 12000);
+    // Turning the shipped configuration far enough for a second analysis is about ten
+    // seconds of real work here and roughly twice that on a CI runner. The budget for
+    // it is the one in vite.config.ts, which carries the argument; a second number
+    // here would be free to drift from it.
+  });
+
+  afterAll(() => runtime.stop());
+
   it('stands between the request and the run, and the runner initialises from what it published', () => {
-    const config = lockstepConfig();
-    const runtime = buildBackend(config, options, validator);
-    const record = driveUntilAnalyses(runtime, config, 2, 12000);
     expect(record.analyses.length).toBeGreaterThanOrEqual(2);
 
     // One analysis per run, each naming the run it initialises, in that order.
@@ -84,13 +105,9 @@ describe('the analysis, on the loop as it ships', () => {
     expect(runtime.store.holding(record.analyses[0].collections.analysis)?.descriptor.manifest.composition.description).toContain(
       'Cold start',
     );
-    runtime.stop();
   });
 
   it('moves the field toward the truth where the platform measured, and leaves it alone elsewhere', () => {
-    const config = lockstepConfig();
-    const runtime = buildBackend(config, options, validator);
-    const record = driveUntilAnalyses(runtime, config, 2, 12000);
     const analysis = record.analyses[record.analyses.length - 1];
     const background = runtime.store.holding(analysis.background.holding_id);
     const analysed = runtime.store.holding(analysis.collections.analysis);
@@ -124,13 +141,9 @@ describe('the analysis, on the loop as it ships', () => {
       Math.sqrt(cells.reduce((sum, cell) => sum + (field[cell] - truthT[cell]) ** 2, 0) / cells.length);
     // Where it measured, the analysis is closer to the truth than the forecast was.
     expect(rms(analysedT, touched)).toBeLessThan(rms(backgroundT, touched));
-    runtime.stop();
   });
 
   it('reduces the doubt it publishes exactly where a measurement reached, and nowhere else', () => {
-    const config = lockstepConfig();
-    const runtime = buildBackend(config, options, validator);
-    const record = driveUntilAnalyses(runtime, config, 2, 12000);
     // The second cycle's background error is the spread the first run published: that
     // is the B the gain was built from, so it is what the reduction must be read
     // against. Comparing the error field to itself across cells would say nothing —
@@ -165,13 +178,9 @@ describe('the analysis, on the loop as it ships', () => {
       if (shares[2][cell] === 0) expect(errorT[cell]).toBe(spreadT[cell]);
     }
     expect(reduced).toBeGreaterThan(0);
-    runtime.stop();
   });
 
   it('leaves the true now-cast standing, and no run ever initialises from it again', () => {
-    const config = lockstepConfig();
-    const runtime = buildBackend(config, options, validator);
-    driveUntilAnalyses(runtime, config, 2, 12000);
     // The generator keeps evaluating truth on its cadence — that is what makes the
     // analysis scoreable — but after the stated cold start nothing initialises from it.
     const nowcast = runtime.store.currentNowcast();
@@ -181,27 +190,28 @@ describe('the analysis, on the loop as it ships', () => {
     for (const instance of instances) {
       expect(instance.manifest.composition.description).not.toContain('now-cast initial state');
     }
-    runtime.stop();
   });
 
   it('measures the sea and not the platform: an ownship datastream informs nothing', () => {
-    const config = lockstepConfig();
+    // Its own backend, because it alters the configuration the shared one was built
+    // from, and one analysis is enough to hold what it holds.
+    const altered = lockstepConfig();
     // The exclusions the analyst declares are the ownship datastreams, and a course is
     // not a sample of the ocean. Remove the exclusion list and the analyst still must
     // not assimilate them, because they are not temperature or salinity either — two
     // independent reasons, and this holds the second.
-    config.analyst.excluded_datastreams = [];
-    const runtime = buildBackend(config, options, validator);
-    const record = driveUntilAnalyses(runtime, config, 1, 12000);
-    const ocean = config.sensors.instruments.filter(
+    altered.analyst.excluded_datastreams = [];
+    const own = buildBackend(altered, options, validator);
+    const ownRecord = driveUntilAnalyses(own, altered, 1, 12000);
+    const ocean = altered.sensors.instruments.filter(
       (instrument) => instrument.observed_property === 'temperature' || instrument.observed_property === 'salinity',
     );
     expect(ocean.length).toBeGreaterThan(0);
     // Only ocean observations were assimilated, so the count is divisible by nothing
     // the ownship streams contribute: asserted by the analysis carrying no observation
     // from a datastream no instrument declares an error for.
-    expect(record.analyses[0].observations.assimilated).toBeGreaterThan(0);
+    expect(ownRecord.analyses[0].observations.assimilated).toBeGreaterThan(0);
     expect(soundSpeedMs(10, 35, 50)).toBeGreaterThan(0);
-    runtime.stop();
+    own.stop();
   });
 });

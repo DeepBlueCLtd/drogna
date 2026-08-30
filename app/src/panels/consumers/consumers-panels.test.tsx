@@ -35,6 +35,7 @@ globalThis.ResizeObserver ??= NoLayoutResizeObserver as unknown as typeof Resize
 const validator = createSeamValidator();
 
 const noAddress: PanelParams['address'] = {
+  names: () => false,
   current: () => undefined,
   write: () => {},
   onChange: () => () => {},

@@ -84,6 +84,12 @@ jobs:
       - name: Messages traffic proof (SC-01: stopping the sensors stills a lane)
         run: pnpm run capture:messages
 
+      # Feature 114's SC-07 drives all three of the map's projections, because the fault
+      # it exists against is invisible at any one of them: the volume drew no ownship
+      # track at all, and a screenshot of the default projection would never have said so.
+      - name: Map projection proof (SC-07: the track in all three projections)
+        run: pnpm run capture:map
+
       # Feature 112's SC-001 to SC-003, SC-008 and SC-010 are claims about geometry, and
       # an assertion over markup cannot see whether something fits. This walks every
       # configured view at three phone sizes and fails on a layout that scrolls sideways,

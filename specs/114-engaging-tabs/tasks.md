@@ -281,20 +281,54 @@ the Operator flow chart all come from them.
 
 ## The map
 
-- [ ] T031 Draw the ownship track and demanded course in the cube, in the frame's own
+- [x] T031 Draw the ownship track and demanded course in the cube, in the frame's own
       cartesian space, at the depths the platform reported — not at the surface (FR-69).
-- [ ] T032 Extend the capture proof to all three projections — SC-07.
+      `ownshipInCube` in `cube.ts`, pure, so the claim worth checking — the track is at
+      the depths the platform *reported* — is one a test can assert without a WebGL
+      context. The demanded ray sits at the depth the platform is at rather than at the
+      surface: a demand carries a course and a speed and says nothing about descending,
+      and a ray on the surface would say the platform had been told to come up.
+- [x] T032 Extend the capture proof to all three projections — SC-07.
+      `scripts/capture/map.ts`, run in CI. It selects each projection through the panel's
+      own control and reads the layer ids the panel actually handed deck.gl off
+      `data-map-layers`, exiting non-zero when a projection drew no track. Measured: 4
+      layers in the plan view, 6 on the globe, 9 in the volume, with the ownship track in
+      all three. **What it deliberately does not claim**: that the volume's track sits at
+      reported depths. That cannot be read off a canvas, and is asserted over the frame's
+      own cartesian coordinates in `cube.test.ts` — a capture claiming to have verified it
+      by looking would be claiming more than it saw, and the provenance sidecar says so.
 
 ## The walkthrough
 
-- [ ] T033 Move the help control from the shell header into the panel, top right; a view
+- [x] T033 Move the help control from the shell header into the panel, top right; a view
       without a tour shows nothing. Check both presentations (FR-50, ADR-0033): the
       control must reach the same place narrow as wide.
-- [ ] T034 Tours for Map, Holdings and Messages; the component tour moved into Operator.
-- [ ] T035 Generalise the completeness rule: each tour held to a list on disk — the map's
+      `HelpButton` loses `onOpenView` and its two-phase start with the header placement:
+      a tour started from inside its own panel has the elements its steps highlight in the
+      document already. Checked at both widths in `narrow.test.tsx` — the control is in
+      the panel's own header row at 390px and at 1440px, never inside a disclosure, and
+      the header carries none. Intro and Background show none, and that absence is now the
+      answer rather than an omission.
+- [x] T034 Tours for Map, Holdings and Messages; the component tour moved into Operator.
+      Four tours: the component tour moved into Operator, and new ones for Map, Holdings
+      and Messages, each keyed to the subjects its surface declares.
+- [x] T035 Generalise the completeness rule: each tour held to a list on disk — the map's
       layer registry, the panels' declared regions. **Plant an unstepped layer, watch the
       check name it, revert, say so** — SC-08.
-- [ ] T036 Extend the teaches-and-does-not-report test to all four tours (FR-62, SC-09).
+      `uncoveredSubjects` is one check over a list on disk, and each surface names its own
+      authority: the map's is `panels/map/layers.ts`, and Holdings' and Messages' are the
+      `*_REGIONS` their panels export. The map needed **two** statements rather than one,
+      and the reason is recorded in that file: a tour step per raw layer id would be
+      twenty-three steps, most about the same thing seen twice, while holding only at the
+      subject level would let a new layer be added under an existing subject and never be
+      noticed. So layers are held to subjects and subjects are held to the tour, and a new
+      layer passes through both. **Planted**: a `bathymetry` PathLayer added to
+      `MapPanel`, and the check failed naming the layer and the projection that drew it.
+      Reverted.
+- [x] T036 Extend the teaches-and-does-not-report test to all four tours (FR-62, SC-09).
+      Enumerated from `allTours` rather than listed, so a fifth tour cannot be a tour no
+      rule covers. A second check rides along: every tour names a view the configuration
+      declares, which is the same fault the T019 gate catches from the other side.
 
 ## Showing the work
 

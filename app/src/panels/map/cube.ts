@@ -117,6 +117,43 @@ export function volumeEdges(frame: CubeFrame): [number, number, number][][] {
   return [face(0), face(deepest), ...uprights];
 }
 
+/**
+ * The platform in the volume (feature 114, FR-69): the track it reported and the course
+ * it was demanded, carried into the cube's cartesian space.
+ *
+ * Pure, and here rather than inline in the panel, because the claim worth checking is not
+ * that a layer exists but that **the track is at the depths the platform reported**. The
+ * plan view and the globe have nowhere to put a depth and flatten it of necessity; the
+ * volume's whole subject is depth, and a track drawn along its floor would be the panel
+ * discarding the one dimension that view exists for. A test can assert that here; it
+ * cannot assert it against a deck.gl layer in a headless browser with no WebGL.
+ */
+export interface OwnshipInCube {
+  /** The reported positions, at their reported depths, in cube space. */
+  readonly track: [number, number, number][];
+  /** The demanded course as a ray from where the platform is, at the depth it is. */
+  readonly demand?: [number, number, number][];
+}
+
+export function ownshipInCube(
+  frame: CubeFrame,
+  points: readonly { longitude: number; latitude: number; depthM: number }[],
+  ray: readonly (readonly [number, number])[] | undefined,
+  currentDepthM: number | undefined,
+): OwnshipInCube {
+  const track = points.map((point) =>
+    frame.toCartesian(point.longitude, point.latitude, point.depthM),
+  );
+  // A demand carries a course and a speed and says nothing about descending, so the ray
+  // is drawn at the depth the platform is *at* — reported, not demanded, and never zero
+  // by default: a ray on the surface would say the platform had been told to come up.
+  const demand =
+    ray && ray.length > 0 && currentDepthM !== undefined
+      ? ray.map(([longitude, latitude]) => frame.toCartesian(longitude, latitude, currentDepthM))
+      : undefined;
+  return { track, demand };
+}
+
 function round3(value: number): number {
   return Math.round(value * 1000) / 1000;
 }

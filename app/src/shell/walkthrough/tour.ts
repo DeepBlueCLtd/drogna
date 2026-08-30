@@ -330,3 +330,86 @@ export function holdingsTour(): Tour {
 
 /** The Holdings tour's steps, for the completeness check. */
 export const HOLDINGS_TOUR_STEPS: readonly SubjectStep[] = HOLDINGS_STEPS;
+
+const MAP_STEPS: SubjectStep[] = [
+  {
+    subject: 'projections',
+    element: '[data-testid="projection-select"]',
+    title: 'Three ways to look at one volume',
+    what: 'The ocean here is four-dimensional — longitude, latitude, depth and time — and no single projection shows all of it. A plan view is a slice at one depth; a globe puts that slice on a sphere you can turn; a depth volume draws every level of the holding\'s own depth axis at once, rotatable.',
+    panel: 'The volume is not a rendering trick: each level in it is a separate area query, and the panel says how many answered. The cube query type is outside the served subset of the standard, and the composer says so by name rather than offering it and failing.',
+  },
+  {
+    subject: 'field',
+    element: '.map-canvas',
+    title: 'The field',
+    what: 'Temperature or salinity over the domain, at the chosen depth and the displayed instant. It is a genuine area query against a holding the coverage store serves through OGC API-EDR — the same request any other client would make.',
+    panel: 'The status line names the holding it was served from and the depth and instant it answered for. Those are the served values, not the requested ones: the sampler is nearest-neighbour, so a level you can select may not be one the holding stores, and the difference belongs on screen.',
+  },
+  {
+    subject: 'doubt',
+    element: '[data-testid="doubt-select"]',
+    title: 'The doubt over it',
+    what: 'Two different things can be drawn as doubt and they are never mixed. The planner\'s projection cells are where it expects confidence to have lapsed by a given time; a run\'s spread is the ensemble\'s own disagreement, served as an ordinary coverage.',
+    panel: 'The spread is a second query rather than a second computation of doubt, which is why it can only be offered once a run has published one.',
+  },
+  {
+    subject: 'ownship',
+    element: '[data-testid="ownship-status"]',
+    title: 'Where the platform has been, and where it was told to go',
+    what: 'The track is the positions the platform reported, read back through the query layer as ordinary measurements — not a wire from the simulator. The demanded course is drawn as a ray from where it is, one hour long at the demanded speed.',
+    panel: 'Both appear in every projection. In the volume the track is drawn at the depths the platform reported, against the levels the volume already draws — flattening it to the surface would discard the one dimension that view exists for. Where nothing has been served the panel says so rather than drawing a stub.',
+  },
+  {
+    subject: 'route',
+    element: '.map-canvas',
+    title: 'The route the planner recommends',
+    what: 'A four-dimensional curve: each stop has a place, a depth and an arrival time. It is drawn as a curve because it is a plan, deliberately unlike the track, which is joined point to point because it is a record.',
+    panel: 'Click a stop and the panel asks what conditions will be there at the moment of arrival — a position query at that place, that depth and that instant. Nothing about the route is a command: the planner recommends and no component here turns a recommendation into an order.',
+  },
+  {
+    subject: 'advisories',
+    element: '.map-canvas',
+    title: 'Shore advisories',
+    what: 'Deterministically authored advice arriving from ashore, valid over a stated window. They are drawn only while they are valid at the displayed instant, and they stay queryable outside it.',
+    panel: 'They are visibly distinct and legible with colour removed, because an advisory a reader cannot pick out is an advisory that was not delivered.',
+  },
+  {
+    subject: 'domain',
+    element: '.map-canvas',
+    title: 'The domain, and the features that do not move',
+    what: 'The extent the generated field covers, and the read-only scenario geometry — the loiter region and its kin. The feature store holds them and never changes them for the life of a run.',
+    panel: 'Drawn as a frame rather than as data, because that is what they are: the edges of what any of the queries above can honestly answer for.',
+  },
+  {
+    subject: 'time',
+    element: '[data-testid="time-control"]',
+    title: 'The time control',
+    what: 'The displayed instant, from the clock\'s own samples out to the plan\'s horizon. It carries the field as well as the route: moving it asks the field for the step the instant falls on.',
+    panel: 'The field refetches at the holding\'s own step and no faster, because what throttles the scrubber is a number in the manifest rather than one typed into the shell.',
+  },
+  {
+    subject: 'composer',
+    element: '[data-testid="composer"]',
+    title: 'The EDR composer',
+    what: 'Build a query against the served subset of OGC API-EDR and see exactly what is asked and what comes back. Click the canvas with it open and the click places the query\'s position, in any projection.',
+    panel: 'It offers only what the query layer states it serves, and names what it does not. An offered-but-stubbed capability is the exact dishonesty this harness exists to avoid.',
+  },
+];
+
+/** The Map tour, held to the panel's own layer registry (`panels/map/layers.ts`). */
+export function mapTour(): Tour {
+  return surfaceTour('map', 'map', 'The Map, layer by layer', MAP_STEPS);
+}
+
+/** The Map tour's steps, for the completeness check. */
+export const MAP_TOUR_STEPS: readonly SubjectStep[] = MAP_STEPS;
+
+/**
+ * Every tour the shell offers, so the checks that apply to *all* of them (FR-62, SC-09)
+ * can enumerate rather than being told. A tour added without being listed here would be
+ * a tour no rule covered, which is the failure mode the list exists against.
+ */
+export function allTours(shell: ConfigShell): readonly Tour[] {
+  return [componentTour(shell), mapTour(), holdingsTour(), messagesTour()];
+}

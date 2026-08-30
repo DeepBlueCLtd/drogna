@@ -10,7 +10,8 @@
 import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
-import { componentTour, missingSteps } from './tour.js';
+import { MAP_TOUR_STEPS, allTours, componentTour, missingSteps, uncoveredSubjects } from './tour.js';
+import { MAP_SUBJECTS, subjectsWithoutLayers, unregisteredLayers } from '../../panels/map/layers.js';
 
 const config = runConfigDocument as unknown as ConfigRun;
 
@@ -55,9 +56,14 @@ describe('the walkthrough (feature 110)', () => {
     expect(tour.view).toBe('operator');
   });
 
-  it('teaches, and never asserts live state', () => {
-    const tour = componentTour(config.shell);
-    for (const step of tour.steps) {
+  it('teaches, and never asserts live state — in every tour, not only the first', () => {
+    // FR-62 is unchanged by feature 114 and now applies four times over. Enumerated
+    // from `allTours` rather than listed here: a fifth tour that this check did not
+    // cover would be a tour no rule applied to, which is the failure mode the
+    // enumeration exists against (SC-09).
+    const tours = allTours(config.shell);
+    expect(tours.map((tour) => tour.id).sort()).toEqual(['components', 'holdings', 'map', 'messages']);
+    for (const step of tours.flatMap((tour) => tour.steps)) {
       const prose = `${step.what} ${step.panel}`;
       // Constitution VII is not engaged by teaching (feature 111's precedent), and
       // stays that way only while the copy never claims a PARTICULAR component's live
@@ -72,5 +78,35 @@ describe('the walkthrough (feature 110)', () => {
       expect(step.what.length).toBeGreaterThan(60);
       expect(step.panel.length).toBeGreaterThan(40);
     }
+  });
+
+  it('every tour names the view it runs in, and that view is a declared one', () => {
+    const declared = config.shell.views.map((view) => view.id);
+    for (const tour of allTours(config.shell)) {
+      expect(declared, `the ${tour.id} tour runs in '${tour.view}'`).toContain(tour.view);
+    }
+  });
+
+  it('FR-70: the map tour is held to the map’s own layer registry', () => {
+    expect(uncoveredSubjects('map', MAP_SUBJECTS, MAP_TOUR_STEPS)).toEqual([]);
+    // And the registry itself is held to the panel: a subject nothing belongs to would
+    // be a step about something the map does not draw.
+    expect(subjectsWithoutLayers()).toEqual([]);
+  });
+
+  it('SC-08: an unstepped map layer is named, rather than passing unnoticed', () => {
+    // Both directions of the same fault, and both named rather than counted. The plant
+    // that proved this against the running panel is recorded in the commit message: a
+    // 'bathymetry' layer was added to `MapPanel`, and `unregisteredLayers` named it.
+    expect(unregisteredLayers(['field', 'ownship-track', 'cube-level-50'])).toEqual([]);
+    expect(unregisteredLayers(['field', 'bathymetry'])).toEqual(['bathymetry']);
+    const unstepped = [...MAP_SUBJECTS, { id: 'bathymetry', label: 'the sea floor', element: '.map-canvas' }];
+    expect(uncoveredSubjects('map', unstepped, MAP_TOUR_STEPS)).toEqual([
+      "the map tour has no step for 'bathymetry'",
+    ]);
+    const dropped = MAP_SUBJECTS.filter((subject) => subject.id !== 'route');
+    expect(uncoveredSubjects('map', dropped, MAP_TOUR_STEPS)).toEqual([
+      "the map tour explains 'route', which the surface does not offer",
+    ]);
   });
 });

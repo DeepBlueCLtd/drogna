@@ -13,6 +13,7 @@
     "capture:glance": "tsx scripts/capture/glance.ts",
     "capture:background": "tsx scripts/capture/background.ts",
     "capture:messages": "tsx scripts/capture/messages.ts",
+    "capture:map": "tsx scripts/capture/map.ts",
     "capture:mobile": "tsx scripts/capture/mobile.ts",
     "replay-proof": "tsx scripts/replay-proof.ts",
     "site:build": "tsx scripts/build-site.ts",

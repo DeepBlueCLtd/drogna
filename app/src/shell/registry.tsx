@@ -33,6 +33,9 @@ import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
 import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
+import { SamplingPanel } from '../panels/consumers/sampling/SamplingPanel.js';
+import { CoursesPanel } from '../panels/consumers/courses/CoursesPanel.js';
+import { FeasibilityPanel } from '../panels/consumers/feasibility/FeasibilityPanel.js';
 
 export interface PanelParams {
   config: ConfigShell;
@@ -94,4 +97,10 @@ export const panelComponents: Record<string, React.FunctionComponent<PanelProps>
   operator: OperatorPanel,
   map: MapPanel,
   messages: MessagesPanel,
+  // The three downstream consumers (feature 116). They are registered here like any other
+  // view because to the shell they *are* any other view: what marks them out is the kind
+  // their configuration declares, which the tab strip reads and this table does not.
+  sampling: SamplingPanel,
+  courses: CoursesPanel,
+  feasibility: FeasibilityPanel,
 };

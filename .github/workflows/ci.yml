@@ -98,6 +98,15 @@ jobs:
       - name: Narrow-presentation proofs (overflow, tap targets, chrome, the preview page)
         run: pnpm run capture:mobile
 
+      # Feature 116's T035. The consumer tabs are swept by keyboard alone: every control
+      # the panel declares has to be reachable, named and visibly focused, the map has to
+      # zoom, pan and reset from the keys it advertises, and each tab is shot in colour and
+      # in greyscale. The greyscale *bound* is a unit test (greyscale.test.ts) — a picture
+      # nobody compares this month is a claim, not a check — so what runs here is the
+      # keyboard proof, with the images as its illustration.
+      - name: 'Consumer-tab proofs (keyboard reach, the map''s own keys, greyscale pair)'
+        run: pnpm run capture:consumers
+
       - uses: actions/upload-artifact@v4
         with:
           name: glance

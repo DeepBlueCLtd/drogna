@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0037: the help control belongs to the panel — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0037-the-help-control-belongs-to-the-panel">ADR-0037: the help control belongs to the panel</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 30 August 2026
+<strong>Feature:</strong> 114 (the tabs beyond Operator)
+<strong>Requirements:</strong> SRD-v2 FR-75; amends FR-61 and the record of feature 110
+<strong>Engages:</strong> ADR-0033 (two presentations of one shell); FR-50 (the narrow presentation
+changes where a panel is, never whether it is)</p>
+<h2 id="context">Context</h2>
+<p>Feature 110 put a yellow help button in the shell header. It was parameterised by a tour
+rather than hard-wired to one, and the tour named the view it ran in, so the button opened
+that view before starting. The record said, in as many words, that adding a tour to
+another tab would be &quot;a tour and a line — not another button&quot;.</p>
+<p>That design has one button and many tours, which means it has to choose. With four tours
+the header would carry either a menu — a control that asks a reader to pick a tour for a
+tab they may not be on — or one button whose tour depends on the active view, which is a
+control whose meaning changes under the reader's hand without the control changing. Both
+are worse than what feature 110 had with a single tour, and the single tour was the only
+reason the header placement worked.</p>
+<p>There is a second thing the header cannot express. Intro is prose and has no tour, and
+should have none: a tour of a page of sentences is a tour of the thing it would be
+explaining. Background has eleven explainers and is its own walkthrough. A header button
+present on those tabs is a promise the tab does not keep; a header button that hides
+itself on those tabs is a control that appears and disappears in the chrome, which reads
+as a bug rather than as information.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>The help control is carried by the panel it explains, at that panel's top right. A view
+with a tour shows one; a view without shows nothing, and the absence is information: the
+button means <em>this tab explains itself</em>.</strong></p>
+<p>FR-61 is amended rather than replaced. The control is still parameterised by its tour and
+still visually distinct from the controls that operate the harness — that was the load-
+bearing half of feature 110's decision and it survives intact. What goes is the one thing
+the header placement forced: the button no longer needs to open a view before running,
+because it is already in it. The two-commit start (<code>HelpButton.tsx</code>: open, then arm) was
+there so the highlighted elements were in the document before driver.js looked for them;
+a tour started from inside its own panel has them already, so the phase machinery is what
+the move actually deletes.</p>
+<h3 id="no-fallback-in-the-header">No fallback in the header</h3>
+<p>The header button goes rather than staying as a fallback for tabs with no tour. A fallback
+would have to run <em>some</em> tour, and a control that runs a tour of a tab you are not looking
+at is the fault the two-commit machinery existed to paper over. Keeping it would also
+destroy the new information: if there is always a button, the absence of one says nothing.</p>
+<h3 id="the-completeness-rule-generalises">The completeness rule generalises</h3>
+<p>FR-61 held the component tour to the shell's declared component list, so a component with
+no step is reported by name. That rule was never about components; it was about holding a
+tour to something on disk rather than to a number typed into a test (CLAUDE.md, lesson 2).
+Each tour now names its own authority:</p>
+<table>
+<thead>
+<tr>
+<th>Tour</th>
+<th>Held to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Operator (components)</td>
+<td><code>config.shell.components</code> — unchanged</td>
+</tr>
+<tr>
+<td>Map</td>
+<td>the panel's own layer registry, <code>mapTourSubjects</code></td>
+</tr>
+<tr>
+<td>Holdings</td>
+<td>the regions the panel declares</td>
+</tr>
+<tr>
+<td>Messages</td>
+<td>the regions the panel declares</td>
+</tr>
+</tbody>
+</table>
+<p>A surface that gains a feature and not a step is named by the check, rather than passing
+unnoticed. The plant that proves it is an unstepped map layer (SC-08).</p>
+<p>FR-62 is untouched and now applies four times over: a tour teaches and does not report,
+and the test that held the component tour to that covers every tour.</p>
+<h3 id="both-presentations-one-place">Both presentations, one place</h3>
+<p>ADR-0033 folds header controls by presentation. Moving the control out of the header
+changes what that fold applies to, and FR-50 governs the result: the narrow presentation
+changes where a panel is, never whether it is. The control therefore sits inside the
+panel's own header row at both widths and is never folded into a disclosure — a help
+affordance behind a &quot;more&quot; label is one the people who need it will not find, which was
+feature 110's reason for keeping it out of the header's disclosure and is unchanged by
+the move.</p>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>Four tours, four buttons, no menu. A fifth tour is a fifth panel carrying one.</li>
+<li>The absence of a button becomes a claim, and therefore a thing that can be wrong. It is
+wrong exactly when a panel has a tour and does not render its button, which the
+per-panel test catches.</li>
+<li><code>HelpButton</code> loses <code>onOpenView</code> and its two-phase start. The comment recording why
+<code>requestAnimationFrame</code> was refused by the wallclock gate goes with it; the gate is
+unchanged and the reason is preserved here.</li>
+<li>Feature 110's record is amended, not replaced. Its decision — a control for the reader,
+parameterised by a tour, visually unlike the harness controls — is the part that
+survived contact with the second tour.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

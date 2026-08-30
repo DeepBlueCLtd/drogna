@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0036: the shell may derive, and says so — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0036-the-shell-may-derive-and-says-so">ADR-0036: the shell may derive, and says so</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 30 August 2026
+<strong>Feature:</strong> 114 (the tabs beyond Operator)
+<strong>Requirements:</strong> SRD-v2 FR-70; amends the figure vocabulary of FR-57
+<strong>Engages:</strong> Constitution VII (a display shows what it received); Constitution IX (no
+skill claim without a persistence reference); ADR-0035, whose three kinds of figure this
+adds a fourth to</p>
+<h2 id="context">Context</h2>
+<p>Feature 113 fixed a vocabulary for every number the shell draws. A figure is <strong>declared</strong>
+when configuration says it, <strong>reported</strong> when a component published it, or <strong>observed</strong>
+when the shell counted it out of traffic it received itself. The three are typographically
+distinct and a figure may not change kind between states. The point of the vocabulary is
+Constitution VII: a reader can tell, without reading the source, whether the shell is
+relaying something or asserting it.</p>
+<p>Feature 115's Holdings comparison does neither. It asks the query layer for three
+coverages at one instant and depth — a forecast instance, the now-cast that covers the
+same instant (the truth), and a persistence reference held constant from the instance's
+own initial step — and it subtracts them. The picture it draws is a difference field. No
+document contains that field. No component published it. The shell computed it.</p>
+<p>Under the three kinds, that figure has no name, and a figure with no name is exactly the
+thing the vocabulary exists to prevent: it would be drawn in one of the three treatments
+and would then be a lie in whichever one it borrowed.</p>
+<p>The tempting alternative was a component that serves differences. It was considered and
+declined in the specification, and the reason belongs here: a component built to save the
+shell an arithmetic it is entitled to do is a component that exists for the diagram rather
+than for the system. It would also have to be <em>fed</em> the same three documents, so the
+subtraction would still be a subtraction — merely one performed on the other side of the
+seam, where nobody could see it happen.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>The shell may transform documents that crossed the seam. It may not invent a figure no
+document contains. A figure produced by such a transformation is a fourth kind —
+<code>derived</code> — and is drawn distinctly from declared, reported and observed.</strong></p>
+<p>The boundary is not new. <code>app/src/panels/map/map-data.ts</code> has transformed served
+CoverageJSON into cells, ranges and interpolated route positions since feature 109, under
+exactly this rule; the map's colour ramp is a derived figure that has never been called
+one. What is new is the name and the treatment, and the obligation that comes with them.</p>
+<h3 id="what-makes-a-transformation-admissible">What makes a transformation admissible</h3>
+<p>Three conditions, all of them:</p>
+<ol>
+<li><strong>Every input crossed the seam.</strong> The comparison's three coverages arrive as ordinary
+EDR area queries through the release gate, validated like anything else. A transform
+whose input is a constant typed into the shell is an invention wearing a derivation's
+clothes.</li>
+<li><strong>The reader can re-derive it.</strong> The three request URLs are on screen and copyable.
+This is constitutive of the display, not a convenience: a derived figure a reader
+cannot get back to is an assertion with an arithmetic-shaped alibi. SC-04 checks that
+the three URLs, fetched, return the three documents the picture was drawn from.</li>
+<li><strong>The transformation is stated.</strong> The panel says what it did — a difference at one
+instant and one depth, on a shared scale — in the same place it draws the result.</li>
+</ol>
+<h3 id="what-is-inadmissible-and-stays-so">What is inadmissible, and stays so</h3>
+<p>A figure that requires an input the shell does not hold. The most tempting instance is
+right beside this one: <strong>forecast skill</strong>. Telemetry scores skill at the observations,
+over a run's whole validity, against a persistence reference, and publishes the number
+(<code>telemetry.schema.json</code>). The Holdings comparison draws a field-wide difference at one
+instant. These answer different questions, and a second implementation of skill in the
+shell would be free to disagree with the component that owns it — so the panel shows
+telemetry's reported figure beside the derived picture, unrecomputed, with a sentence
+saying which question each answers.</p>
+<h3 id="constitution-ix-travels-with-the-derivation">Constitution IX travels with the derivation</h3>
+<p>A picture of forecast error alone is a skill claim, and Constitution IX admits no skill
+claim without a persistence reference. So the comparison fetches three coverages and not
+two, draws both differences on one shared scale, and says which is closer in the
+principle's own words: where the model is not earning its compute, it says so.</p>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>A fourth typographic treatment joins the three. Every place the shell draws a figure
+now answers a four-way question rather than a three-way one, which is a cost paid once
+in the stylesheet and repaid at every reading.</li>
+<li>The request URLs become part of the display's contract. A change to how the comparison
+queries is a change a test will notice, because the test fetches what the panel shows.</li>
+<li>The seam boundary is unchanged. Nothing here lets a panel reach past the seam; it lets
+a panel do arithmetic on what the seam handed it, which it has been doing since 109.</li>
+<li>A future display that wants a figure with no served input has nowhere to put it. That
+is the intended outcome: the answer is to publish it from the component that owns it.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

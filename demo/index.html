@@ -49,14 +49,14 @@ discussed rather than at the front door. Append <code>#/view/&lt;id&gt;</code> t
 <td>What the harness is, and what its numbers are not</td>
 </tr>
 <tr>
-<td>System</td>
-<td><a href="../instances/main/#/view/system"><code>#/view/system</code></a></td>
-<td>The components, lit by the heartbeats they are actually sending</td>
+<td>Background</td>
+<td><a href="../instances/main/#/view/background"><code>#/view/background</code></a></td>
+<td>Eleven explainers of the standards the harness speaks, reading nothing from the run</td>
 </tr>
 <tr>
 <td>Holdings</td>
 <td><a href="../instances/main/#/view/holdings"><code>#/view/holdings</code></a></td>
-<td>The coverage holdings, and the eras they span</td>
+<td>The coverage store filling up, in simulation time, and how the forecast fared against the truth</td>
 </tr>
 <tr>
 <td>Map</td>
@@ -66,17 +66,22 @@ discussed rather than at the front door. Append <code>#/view/&lt;id&gt;</code> t
 <tr>
 <td>Messages</td>
 <td><a href="../instances/main/#/view/messages"><code>#/view/messages</code></a></td>
-<td>The traffic on the broker, as it crosses</td>
+<td>The traffic on the broker as it crosses, drawn as well as listed</td>
 </tr>
 <tr>
 <td>Operator</td>
 <td><a href="../instances/main/#/view/operator"><code>#/view/operator</code></a></td>
-<td>The machinery interrogated from the operator's side</td>
+<td>The machinery interrogated from the operator's side, drawn as the loop it is</td>
 </tr>
 </tbody>
 </table>
 <p>Activating a view writes the address back, so the address bar always names what is on
 screen and a link can be copied out of it.</p>
+<p>There was a seventh view, <code>System</code>, and it is gone rather than redirected — the Operator
+flow chart draws every declared component greyed until a heartbeat from it arrives, which
+was that tab's whole obligation. An address that resolves is a claim the thing still
+exists, so the address simply stops resolving, and a gate holds the tree to naming no view
+the configuration does not declare.</p>
 <h2 id="instances-under-review">Instances under review</h2>
 <p>Every branch that CI builds is published as its own instance and <strong>kept after its pull
 request completes</strong>. A review comment can therefore link a specific build at a specific

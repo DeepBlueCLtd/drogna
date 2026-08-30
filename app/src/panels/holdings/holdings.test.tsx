@@ -38,6 +38,7 @@ function lockstepConfig(): ConfigRun {
 }
 
 const noAddress: PanelParams['address'] = {
+  names: () => false,
   current: () => undefined,
   write: () => {},
   onChange: () => () => {},

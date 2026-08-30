@@ -323,6 +323,24 @@ reads rather than what it contains. Found by the author looking at the deployed 
       publish, each transition naming the message that carries it; perturb and watch it
       re-plan rather than replay.
 
+## After the course was walked
+
+- [x] T080 The arrow keys walk the course, not one explainer (FR-014). `advance()` in
+      `address.ts` crosses an explainer's ends — right from a Consequences panel opens
+      the next explainer, left from a first step returns to the previous one's last —
+      and `BackgroundPanel` answers the keys on the document, so a viewer who has just
+      opened the tab and clicked nothing is not pressing keys at a handler that never
+      sees them. Three guards pay for the wider listener: an editable control keeps its
+      own arrows (the collapsed rail is a `<select>`), focus inside another panel
+      belongs to that panel, and focus nowhere in particular is answered only while the
+      address names this view — every panel stays mounted when another is shown, so an
+      unguarded Background would walk itself unseen. Each guard, and the crossing, was
+      watched failing against its own fault before the check was kept.
+
+      *The spine's buttons were deliberately left bounded by their explainer. They sit
+      beside "step N of M" and a control that silently leaves the thing it counts is a
+      different control; the rail is how a pointer moves between explainers.*
+
 ## Deliberately not done
 
 These stay unticked on purpose. An unticked box under this heading is a decision with

@@ -148,6 +148,37 @@ screen, and on a desktop, where the card had never left the viewport at all, the
 diagram was dragged sideways for no reason. It is scrolled into view at the *end* of the
 movement now, by the least that makes it whole, which on a desktop is nothing.
 
+## Two orders that agreed, until they were asked to
+
+The last thing added was a pair of arrows in the open card: back and forward through the
+twenty pieces without returning to the diagram to find the next one.
+
+The arrows need an order, and the diagram already has one — down the rows of the arc, then
+left to right across each row. Writing that sort in the panel took one line and worked.
+It was also the third copy of it: the code that builds the diagram sorted its pieces that
+way, the code that places them sorted them that way, and now the arrows did too.
+
+Three copies of a rule are fine while they agree, and the interesting part is how that
+was found out. A deliberate fault was planted — the arrows walking the pieces in the
+order the configuration file happens to declare them — expecting the test to catch it.
+The test passed. It passed because the diagram-building code had already sorted them, so
+the "wrong" order was the right one by accident, and the check could not tell the two
+apart. The rule now lives in one place and the other two call it; the arrows have no
+opinion about order at all.
+
+The order test that replaced it uses a deliberately jumbled input rather than the real
+configuration, for the same reason. The pieces on disk are declared in an order that is
+not the drawn one — the clock is declared first and drawn last — so a check fed only the
+real file would have been reading the file back to itself.
+
+One thing the arrows deliberately do not do is answer the arrow keys. It is the obvious
+binding and it cannot be had: the card contains sliders, and a slider's own keys are the
+arrow keys. Binding them at the card would take fine adjustment away from every control
+in it in order to move the card, which trades a control for a shortcut. What the arrows do
+instead is keep the keyboard on themselves across a step — the card they were in has left
+the page by then, so the focus is moved to the same arrow in the card that replaced it,
+and a reader can hold down the tour without touching the mouse.
+
 ## The demo
 
 Open the operator view and click any box with a **▸** on it — the mark means that piece
@@ -160,6 +191,10 @@ slide along while the rows below move down — watch the wires stay on the box t
 way, which is the part a CSS transition could not have done. Both of its dials are on screen without scrolling,
 and the residual line above them is at a size where you can read the number. Close it and
 everything returns to where it was.
+
+Then walk: the arrows in the card's header step through all twenty pieces in the order the
+diagram draws them, and each one names where it is about to take you. It comes round at
+both ends, because the arc it is walking does.
 
 Then click the **platform**, bottom left, and use the presets: *all stop* drops the
 demanded speed mark to zero while the course mark stays exactly where it was. That is the

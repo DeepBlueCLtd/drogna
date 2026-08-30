@@ -124,6 +124,22 @@ export interface Layout {
  * tallest thing in it, and the nodes after it are pushed along by exactly what it
  * gained. Nothing is placed over anything else, which is the property the test holds.
  */
+/**
+ * The order the chart reads in: band by band down the arc, rank by rank across each
+ * one. Exported because it is not only where the nodes are drawn — it is also the order
+ * a reader steps through them in (feature 116's arrows), and those two must be the same
+ * order or the arrows walk a sequence the picture does not show. One rule, in one place,
+ * rather than a sort in the panel that agrees with this one today.
+ */
+export function inReadingOrder<T extends LayoutInput>(
+  nodes: readonly T[],
+  bandOrder: readonly string[],
+): T[] {
+  return bandOrder.flatMap((band) =>
+    nodes.filter((node) => node.band === band).sort((a, b) => a.rank - b.rank),
+  );
+}
+
 export function layout(
   nodes: readonly LayoutInput[],
   bandOrder: readonly string[],
@@ -136,7 +152,7 @@ export function layout(
   let widest = 0;
 
   for (const band of bandOrder) {
-    const inBand = nodes.filter((node) => node.band === band).sort((a, b) => a.rank - b.rank);
+    const inBand = inReadingOrder(nodes, [band]);
     if (inBand.length === 0) continue;
     const top = y + metrics.captionHeight;
     let x = metrics.padding;

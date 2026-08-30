@@ -89,6 +89,44 @@ reversal rather than a quiet deletion.
       consecutive frames is 208 → 211 → 221 → 262 → 292 → 366 → 450, and the wire leaving
       it starts at 708 → 950 — its right edge on every one of those frames.
 
+## The walk (added on the author's second report)
+
+*Also provide left and right arrows in each opened view of elements — these move forward
+and backward through the system components.*
+
+- [x] T027 `inReadingOrder()` in `layout.ts`: band by band down the arc, rank by rank
+      across each. **`buildFlow` and `layout` both use it now** — the rule was written
+      three times, once in each of those and once more in the panel's first draft of this
+      walk, and three copies of an order agree until one of them does not.
+- [x] T028 The arrows walk `flow.nodes`, which is already that order. The panel holds no
+      sort of its own: a second opinion about the order would agree with the picture today
+      and be free to drift from it later.
+- [x] T029 The walk is a round trip, and each arrow names the component it will open, so
+      the wrap is stated rather than sprung. The card says where the reader is in the
+      whole — without it the arrows can be pressed forever with no sense of extent, and
+      the wrap reads as the chart being stuck.
+- [x] T030 Stepping keeps the keyboard on the arrow. The card the arrow was in is gone by
+      the time the new one is in the document, so `FlowCanvas` is told how the reader
+      arrived and focuses the same arrow in the card that replaced it.
+- [x] T031 The arrow **keys** are not bound, and the reason is written into the code where
+      the temptation is: the card holds range inputs, whose own keys are the arrow keys.
+      Binding them would take fine adjustment away from every tuning control to move the
+      card.
+- [x] T032 Plant each fault these checks exist to catch. Five planted, five caught, all
+      reverted: (a) `buildFlow` no longer putting the nodes in the drawn order — the
+      order check failed; (b) a walk that stops dead at the ends rather than coming round
+      — the round-trip check failed; (c) the keyboard left on the card — the stepping
+      check failed; (d) arrows labelled with a direction rather than a destination — the
+      naming check failed; (e) a reading order that ignores rank — the order unit test
+      failed.
+- [x] T033 A first attempt at (a) did not fail, and the reason is worth keeping: the plant
+      was *the panel sorting `flow.nodes` itself*, which passed because `buildFlow`
+      already sorted — two implementations of one rule, agreeing. That is what sent the
+      rule into `inReadingOrder` and left the panel with none. The unit test uses a
+      deliberately jumbled input, because the components on disk are declared in an order
+      that is not the drawn one (the clock is declared first and drawn last) and a check
+      fed only the real configuration would be reading the file back to itself.
+
 ## Holding it
 
 - [x] T011 Plant each fault the new checks exist to catch, and see it caught. Four

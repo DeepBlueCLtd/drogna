@@ -24,6 +24,7 @@
  * what makes "derived" a fact rather than an intention.
  */
 import type { ConfigShell, Topology } from '../../generated/types.js';
+import { inReadingOrder } from './layout.js';
 
 export type Band = 'plane' | 'loop' | 'path' | 'downstream';
 
@@ -68,15 +69,20 @@ export const BANDS: readonly Band[] = ['loop', 'path', 'downstream', 'plane'];
 
 export function buildFlow(shell: ConfigShell, topology: Topology): Flow {
   const declared = new Map(shell.components.map((component) => [component.id, component]));
-  const nodes: FlowNode[] = shell.components
-    .map((component) => ({
+  // Band by band down the arc, rank by rank across each: the order the chart is drawn
+  // in, and — since feature 116's arrows — the order a reader steps through it in. The
+  // rule lives with the geometry that places by it, so the three uses cannot drift into
+  // three orders that agree today.
+  const nodes: FlowNode[] = inReadingOrder(
+    shell.components.map((component) => ({
       id: component.id,
       label: component.label,
       beat: component.beat,
       band: component.band as Band,
       rank: component.rank,
-    }))
-    .sort((a, b) => BANDS.indexOf(a.band) - BANDS.indexOf(b.band) || a.rank - b.rank);
+    })),
+    BANDS,
+  );
 
   const suppressed = shell.flow.suppressed_filters;
   const edges: FlowEdge[] = [];

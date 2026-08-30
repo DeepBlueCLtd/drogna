@@ -19,7 +19,8 @@ import { createSeamFetch } from '../../seam/http.js';
 import { topology } from '../../generated/topology.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { OperatorPanel } from './OperatorPanel.js';
-import { buildFlow } from './graph.js';
+import { BANDS, buildFlow } from './graph.js';
+import { inReadingOrder } from './layout.js';
 import { componentsWithoutFaces } from './faces.js';
 
 const validator = createSeamValidator();
@@ -557,6 +558,102 @@ describe('the Operator flow chart (feature 113)', () => {
         expect(asked).toHaveBeenCalled();
       } finally {
         asked.mockRestore();
+      }
+    });
+
+    it('walks forward and back through the components, in the order the chart draws them', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // The order the arrows walk is the order the chart is drawn in. Asserted as the
+      // same rule rather than as a list typed here: a second opinion about the order
+      // would agree today and drift later, and the reader would then be following a
+      // sequence the picture does not show.
+      //
+      // The configuration on disk declares its components in a different order from
+      // this one — the clock is declared first and drawn last — so this is a real
+      // constraint on the traversal and not a restatement of the file.
+      const drawn = buildFlow(config.shell, topology).nodes;
+      expect(drawn.map((node) => node.id)).toEqual(inReadingOrder(drawn, BANDS).map((n) => n.id));
+      expect(drawn.map((node) => node.id)).not.toEqual(config.shell.components.map((c) => c.id));
+      const openAt = (index: number) => drawn[((index % drawn.length) + drawn.length) % drawn.length];
+      const start = 3;
+      await open(drawn[start].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[start].id);
+      expect(drawer().querySelector('[data-walk-place]')?.getAttribute('data-walk-place')).toBe(
+        `${start + 1}/${drawn.length}`,
+      );
+
+      const press = async (which: 'next' | 'previous') => {
+        await act(async () => {
+          fireEvent.click(drawer().querySelector(`[data-step="${which}"]`) as HTMLElement);
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+      };
+
+      await press('next');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start + 1).id);
+      await press('next');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start + 2).id);
+      await press('previous');
+      await press('previous');
+      await press('previous');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start - 1).id);
+      // Exactly one component is open at a time: stepping moves the account, it does not
+      // leave a trail of open cards behind it.
+      expect(document.querySelectorAll('[data-testid="flow-drawer"]').length).toBe(1);
+      expect(document.querySelectorAll('[data-expanded="true"]').length).toBe(1);
+    });
+
+    it('names the component each arrow will open, so the round trip is stated not sprung', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      // The first component in the chart's order: its back arrow wraps to the last one,
+      // and says so. An arrow that named nothing would make the wrap look like a fault.
+      await open(drawn[0].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      expect(drawer().querySelector('[data-step="previous"]')?.getAttribute('aria-label')).toBe(
+        `back to ${drawn[drawn.length - 1].label}`,
+      );
+      expect(drawer().querySelector('[data-step="next"]')?.getAttribute('aria-label')).toBe(
+        `on to ${drawn[1].label}`,
+      );
+      await act(async () => {
+        fireEvent.click(drawer().querySelector('[data-step="previous"]') as HTMLElement);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[drawn.length - 1].id);
+    });
+
+    it('leaves the keyboard on the arrow, so a reader can keep stepping', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await open(drawn[2].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      // The card the arrow was in has left the document; the arrow in the card that
+      // replaced it is what the next press needs to land on. Without this, stepping
+      // twice from the keyboard is impossible.
+      for (const which of ['next', 'next', 'previous'] as const) {
+        await act(async () => {
+          fireEvent.click(drawer().querySelector(`[data-step="${which}"]`) as HTMLElement);
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+        expect(document.activeElement?.getAttribute('data-step')).toBe(which);
+        expect(drawer().contains(document.activeElement)).toBe(true);
       }
     });
 

@@ -72,6 +72,19 @@ something.
   is put to the platform rather than assumed, and where it is answered *reduce* the new
   placement is committed on the frame the selection changed — the picture this tab drew
   before the animation existed (feature 113, FR-016).
+- **FR-11** An open card carries a **back and a forward arrow**, which open the previous
+  and the next component without the reader returning to the chart to find them. The
+  order they walk is the order the chart is drawn in — band by band down the arc, rank by
+  rank across each — and it is the layout's own rule rather than a second sort, so the
+  sequence a reader follows is the sequence the picture shows.
+- **FR-12** The walk is a **round trip**: there is no first or last component, because
+  the arc the chart draws has none. Each arrow **names the component it will open**, so
+  the wrap is stated rather than sprung, and the card says where the reader is in the
+  whole — a control that can be pressed forever with no sense of extent is a control that
+  has stopped saying anything.
+- **FR-13** Stepping leaves the keyboard **on the arrow**, not on the card: the card the
+  arrow was in has left the document, and a reader stepping through must be able to keep
+  pressing. The arrow *keys* are deliberately not bound — see below.
 - **FR-10** The open card is brought into view **once it has stopped moving**, by the
   least that makes it whole. Scrolling to a box that is still growing aims at the wrong
   place: on a phone the card ended up half off the screen, and on a desktop, where
@@ -102,6 +115,18 @@ something.
   placements the layout produced. Nothing derived from it reaches a figure, a message, a
   query or a test assertion — the movement belongs to the render path and stays there,
   under the wall-clock marker ADR-0007 established for exactly that.
+- **The arrow keys are not bound to the walk.** The obvious keyboard binding for a back
+  and forward arrow is ← and →, and it cannot be had here: the card holds range inputs,
+  and a range input's own keys *are* the arrow keys. Binding them at the card would take
+  fine adjustment away from every tuning control in order to move the card, which trades
+  a control for a shortcut. The arrows are ordinary buttons in the tab order, and FR-13
+  keeps the keyboard on them across a step, which is the same convenience by a route
+  that costs nothing.
+- **The walk does not skip to what is interesting.** It steps one component at a time
+  through every one of them, including the components that take no controls and the ones
+  that have never been heard from. A walk that skipped the silent ones would be a walk
+  whose length changed with the state of the system, and a reader who pressed forward
+  twice would not know what they had passed.
 - **The account was not rewritten.** Its content, figures and refusals are feature 113's
   and 114's, unchanged; what changed is where it opens and how much room it has.
 
@@ -120,3 +145,8 @@ something.
   that node's box *as it is drawn at that moment*.
 - **SC-007** With reduced motion asked for, the placement after the click is already the
   final one and does not change as frames pass.
+- **SC-008** From any open component, forward then back returns to it; the arrows walk
+  the same order the chart is drawn in; and exactly one component is open at any time.
+- **SC-009** Each arrow's accessible name is the label of the component it will open.
+- **SC-010** After a step, the focused element is the same arrow in the newly opened
+  card.

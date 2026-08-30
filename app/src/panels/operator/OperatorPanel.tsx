@@ -365,6 +365,32 @@ export function OperatorPanel({ params }: PanelProps) {
   const selectedNode = flow.nodes.find((node) => node.id === selected);
 
   /**
+   * The components in the order the arrows walk them, which is `flow.nodes` itself and
+   * nothing this file decides: the graph is built in the order the chart is drawn in —
+   * band by band down the arc, rank by rank across each — by the same rule the layout
+   * places by (`inReadingOrder`). A sort of its own here would be a second opinion about
+   * the order, agreeing with the picture today and free to drift from it later, and a
+   * reader following a sequence the picture does not show is worse off than one with no
+   * arrows at all.
+   */
+  const order = flow.nodes;
+  /**
+   * How the open card was arrived at, for the keyboard. Stepping with an arrow must
+   * leave the focus on the arrow — the card it was in is gone and a new one is in the
+   * document, so without this the second press has nothing to press.
+   */
+  const arrivedBy = useRef<'card' | 'step-previous' | 'step-next'>('card');
+  const step = (direction: -1 | 1) => {
+    const at = order.findIndex((node) => node.id === selected);
+    if (at < 0) return;
+    // Round, because the chart is: the arc has no first or last component, and an arrow
+    // that stopped would be answering a question about the list rather than the system.
+    // Where it goes is named on the control itself, so the wrap is never a surprise.
+    arrivedBy.current = direction === 1 ? 'step-next' : 'step-previous';
+    setSelected(order[(at + direction + order.length) % order.length].id);
+  };
+
+  /**
    * A component's full account: its state, its instrument at full size, the controls it
    * takes and the wires it is on. One component, rendered in the one place the reader
    * asked for it — inside the node in the chart, below the table in the list.
@@ -373,6 +399,13 @@ export function OperatorPanel({ params }: PanelProps) {
     <Drawer
       node={node}
       where={where}
+      walk={{
+        at: order.findIndex((entry) => entry.id === node.id) + 1,
+        of: order.length,
+        previous: order[(order.findIndex((entry) => entry.id === node.id) + order.length - 1) % order.length],
+        next: order[(order.findIndex((entry) => entry.id === node.id) + 1) % order.length],
+      }}
+      onStep={step}
       state={stateOf(node.id)}
       flow={flow}
       config={config}
@@ -456,11 +489,15 @@ export function OperatorPanel({ params }: PanelProps) {
           selected={selected}
           // A phone's space is vertical, so the open card is a different shape there.
           metrics={narrow ? NARROW_METRICS : METRICS}
+          openFocus={arrivedBy.current}
           stateOf={(id) => {
             const { lit, word } = stateOf(id);
             return { lit, word };
           }}
-          onSelect={(id) => setSelected(id === selected ? undefined : id)}
+          onSelect={(id) => {
+            arrivedBy.current = 'card';
+            setSelected(id === selected ? undefined : id);
+          }}
           // The open node *is* the account: the reader stays where they clicked, and
           // the instrument they came to read is at a size they can read it at.
           renderExpanded={(node) => account(node, 'in-place')}
@@ -709,6 +746,8 @@ function ListView({
 function Drawer({
   node,
   where,
+  walk,
+  onStep,
   state,
   flow,
   config,
@@ -725,6 +764,9 @@ function Drawer({
   node: FlowNode;
   /** In the node it belongs to, or below the list that has no room for it. */
   where: 'in-place' | 'below';
+  /** Where this component sits in the order the chart reads, and its two neighbours. */
+  walk: { at: number; of: number; previous: FlowNode; next: FlowNode };
+  onStep: (direction: -1 | 1) => void;
   state: StateOf;
   flow: ReturnType<typeof buildFlow>;
   config: PanelParams['config'];
@@ -752,6 +794,35 @@ function Drawer({
     >
       <div className="flow-drawer-head">
         <h3>{node.label}</h3>
+        {/* Forward and back through the components, in the order the chart draws them.
+            Each arrow names the component it will open, so the reader knows what they
+            are about to get and the wrap at either end is stated rather than sprung —
+            and so a screen reader announces a destination rather than a glyph.
+
+            The arrow keys themselves are deliberately not bound. This card holds range
+            inputs, and a range input's own keys are the arrow keys: binding them here
+            would take the tuning controls' fine adjustment away to move the card. */}
+        <span className="flow-drawer-walk">
+          <button
+            data-step="previous"
+            onClick={() => onStep(-1)}
+            aria-label={`back to ${walk.previous.label}`}
+            title={`back to ${walk.previous.label}`}
+          >
+            ←
+          </button>
+          <span className="flow-drawer-place" data-walk-place={`${walk.at}/${walk.of}`}>
+            {walk.at} of {walk.of}
+          </span>
+          <button
+            data-step="next"
+            onClick={() => onStep(1)}
+            aria-label={`on to ${walk.next.label}`}
+            title={`on to ${walk.next.label}`}
+          >
+            →
+          </button>
+        </span>
         <button onClick={onClose} aria-label={`close ${node.label}`} data-testid="drawer-close">
           ×
         </button>

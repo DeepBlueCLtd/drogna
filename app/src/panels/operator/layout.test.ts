@@ -3,7 +3,16 @@
  * because "the arrows look about right" is not a check.
  */
 import { describe, expect, it } from 'vitest';
-import { METRICS, NARROW_METRICS, layout, route, routeAll, tween, type Placed } from './layout.js';
+import {
+  METRICS,
+  NARROW_METRICS,
+  inReadingOrder,
+  layout,
+  route,
+  routeAll,
+  tween,
+  type Placed,
+} from './layout.js';
 
 const NODES = [
   { id: 'a', band: 'loop', rank: 0 },
@@ -230,5 +239,51 @@ describe('one frame between two placements (feature 116)', () => {
     const fewer = layout(NODES.slice(0, 2), BANDS);
     const arrival = at(tween(fewer, resting, 0.5), 'c');
     expect([arrival.x, arrival.y]).toEqual([at(resting, 'c').x, at(resting, 'c').y]);
+  });
+});
+
+/**
+ * The order the chart reads in, which is also the order feature 116's arrows walk. Held
+ * against a deliberately jumbled input, because the configuration on disk happens to
+ * declare its components in an order that is *not* this one — and it is `buildFlow`
+ * putting them in it that makes the two agree, which is the thing worth being sure of.
+ */
+describe('the order the chart reads in (feature 116)', () => {
+  const jumbled = [
+    { id: 'plane-1', band: 'plane', rank: 1 },
+    { id: 'path-1', band: 'path', rank: 1 },
+    { id: 'loop-1', band: 'loop', rank: 1 },
+    { id: 'loop-0', band: 'loop', rank: 0 },
+    { id: 'plane-0', band: 'plane', rank: 0 },
+    { id: 'path-0', band: 'path', rank: 0 },
+  ];
+
+  it('is band by band down the arc, then rank by rank across each', () => {
+    expect(inReadingOrder(jumbled, BANDS).map((node) => node.id)).toEqual([
+      'loop-0',
+      'loop-1',
+      'path-0',
+      'path-1',
+      'plane-0',
+      'plane-1',
+    ]);
+  });
+
+  it('drops nothing and invents nothing: every declared node, once', () => {
+    const walked = inReadingOrder(jumbled, BANDS).map((node) => node.id);
+    expect([...walked].sort()).toEqual(jumbled.map((node) => node.id).sort());
+  });
+
+  it('leaves out a node whose band is not one the chart draws, rather than placing it', () => {
+    // A band nobody declared has no position in the arc, so a node in one has nowhere to
+    // be walked to. Silently appending it would put a component in the reader's sequence
+    // that is nowhere in the picture.
+    const stray = [...jumbled, { id: 'nowhere', band: 'invented', rank: 0 }];
+    expect(inReadingOrder(stray, BANDS).map((node) => node.id)).not.toContain('nowhere');
+  });
+
+  it('is the order the layout places in, which is what makes the arrows follow the picture', () => {
+    const placed = layout(jumbled, BANDS).placed.map((node) => node.id);
+    expect(placed).toEqual(inReadingOrder(jumbled, BANDS).map((node) => node.id));
   });
 });

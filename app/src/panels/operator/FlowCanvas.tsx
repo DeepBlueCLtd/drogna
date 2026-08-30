@@ -98,6 +98,14 @@ export interface FlowCanvasProps {
   readonly stateOf: (id: string) => { lit: boolean; word: string };
   /** The geometry to place against; a phone is given a different expanded box. */
   readonly metrics?: LayoutMetrics;
+  /**
+   * How the reader arrived at the open card, which decides where the keyboard goes.
+   * Arriving by clicking a node puts it on the card; arriving by an arrow inside the
+   * previous card puts it on the same arrow in this one, because the card that arrow was
+   * in has left the document and a reader stepping through should be able to keep
+   * pressing.
+   */
+  readonly openFocus?: 'card' | 'step-previous' | 'step-next';
 }
 
 export function FlowCanvas({
@@ -111,6 +119,7 @@ export function FlowCanvas({
   renderExpanded,
   stateOf,
   metrics = METRICS,
+  openFocus = 'card',
 }: FlowCanvasProps) {
   // Where the chart is going. Recomputed only when something that decides geometry
   // changes, so the frame loop below has a stable thing to walk towards.
@@ -193,16 +202,22 @@ export function FlowCanvas({
     previous.current = selected;
     if (was === selected) return;
     if (selected !== undefined) {
-      // Without `preventScroll` the browser brings the card into view *now*, while it
-      // is still the size of a resting node, and then it grows back off the edge of a
-      // phone. Bringing it in is worth doing and is done once it has stopped moving,
+      const arrow =
+        openFocus === 'card'
+          ? null
+          : openRef.current?.querySelector<HTMLElement>(
+              `[data-step="${openFocus === 'step-next' ? 'next' : 'previous'}"]`,
+            );
+      // Without `preventScroll` the browser brings the target into view *now*, while the
+      // card is still the size of a resting node, and it then grows back off the edge of
+      // a phone. Bringing it in is worth doing and is done once it has stopped moving,
       // at the end of the rearrangement below.
-      openRef.current?.focus({ preventScroll: true });
+      (arrow ?? openRef.current)?.focus({ preventScroll: true });
       return;
     }
     // Closed: back to the node it was, not to nowhere.
     rootRef.current?.querySelector<HTMLElement>(`button[data-flow-node="${was}"]`)?.focus();
-  }, [selected]);
+  }, [selected, openFocus]);
 
   return (
     <div className="flow-canvas-scroll" ref={rootRef}>

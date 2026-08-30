@@ -554,6 +554,32 @@
 
 .flow-drawer-head h3 {
   margin: 0;
+  margin-right: auto;
+}
+
+/* Forward and back through the components, in the order the chart draws them (feature
+   116). Beside the title rather than at the foot of the card: it is a way of reading the
+   chart, not one of the things this component can be told to do, and the controls that
+   act on the component are further down under its instrument where they belong. */
+.flow-drawer-walk {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-right: 0.6em;
+}
+
+.flow-drawer-walk button {
+  min-width: 1.9em;
+  line-height: 1.2;
+}
+
+/* Where the reader is in the twenty. Without it the arrows can be pressed forever with
+   no sense of extent, and the wrap at either end would read as the chart being stuck. */
+.flow-drawer-place {
+  font-size: 0.72rem;
+  color: var(--flow-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .flow-drawer-state,

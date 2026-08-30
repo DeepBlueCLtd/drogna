@@ -466,7 +466,7 @@
       "acceleration_m_per_s2": 0.05,
       "dive_rate_m_per_s": 0.5
     },
-    "report_interval_ticks": 30,
+    "report_interval_ticks": 5,
     "instruments": [
       {
         "sensor_id": "nav-compass",
@@ -523,7 +523,7 @@
       "name": "sampling platform A",
       "description": "A simulated sampling platform. A coordinate and a sampler."
     },
-    "sample_interval_ticks": 30,
+    "sample_interval_ticks": 5,
     "instruments": [
       {
         "sensor_id": "ctd-temp-050",

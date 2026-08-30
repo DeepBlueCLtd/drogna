@@ -1222,8 +1222,18 @@ describe('the Operator flow chart (feature 113)', () => {
       await act(async () => {
         sampleOnce();
       });
+      expect(Number.isNaN(ticksAgo())).toBe(false);
+
+      // Nothing may reach a drawn wire while the gap is being measured, so the two
+      // components that put anything on one are stopped first. Without this the test
+      // was measuring growth across a sampling tick: it passed while the cadence was
+      // thirty and every tick it added stayed inside one interval, and failed the
+      // moment the cadence became five — the figure under test reset halfway through.
+      await act(async () => {
+        await fetch(`${config.operator.http.command_prefix}/sensors/stop`, { method: 'POST' });
+        await fetch(`${config.operator.http.command_prefix}/platform/stop`, { method: 'POST' });
+      });
       const settled = ticksAgo();
-      expect(Number.isNaN(settled)).toBe(false);
       await act(async () => {
         for (let tick = 0; tick < 7; tick++) runtime.clock.tickOnce();
       });

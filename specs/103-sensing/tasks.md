@@ -16,6 +16,16 @@
       finding
 - [x] T207 Tests: cadence counts, confinement, refusal, redelivery, determinism,
       read-only feature store, tree illumination
+- [x] T209 Sampling cadence 30 ticks to 5, and the platform's ownship reporting with it.
+      The pair moves together or not at all: the sensors treat a position older than
+      their own cadence as no position, so shortening theirs alone starves them — seen
+      on the running page, where the sensors went quiet and skipped 49 sampling ticks.
+      The reason is the flow chart: at real time the instruments were the only thing
+      putting traffic on a drawn wire, so the picture was dark twenty-seven seconds in
+      every thirty and a reader could not tell it from a display that had stopped. The
+      cost is stated rather than hidden — five tests across features 103, 104, 107 and
+      113 were written against the old cadence and are now derived from it, which is
+      what should have been true of them anyway.
 - [ ] T208 Message-rate ripple tuning against real accelerated-rate traffic —
       *declined for now: the smoothing constants are display-only and best judged
       against 107's rate controls; revisit at the operator's-view beat.*

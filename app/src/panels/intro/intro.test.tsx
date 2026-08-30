@@ -325,6 +325,27 @@ describe('the walkthrough grows, under the reader (FR-76, FR-78)', () => {
     }
   });
 
+  it('leaves a port wire able to be dashed: no pathLength rescaling its dash', () => {
+    // The fault this guards: `pathLength="1"` normalises the path's length, and
+    // `stroke-dasharray` is then in that same space — so the port's `6 4` dash became a
+    // six-unit dash on a one-unit path and every port rendered solid. The legend promises
+    // that a dashed wire is a coupling carrying no traffic, and the drawing had quietly
+    // stopped keeping it. Found in a screenshot of the running instance; no test and no
+    // gate would have caught it, because the markup was correct and only its meaning was
+    // wrong.
+    const { props } = panelProps();
+    render(<IntroPanel {...props} />);
+    press('End');
+    const ports = [...document.querySelectorAll('[data-wire-kind="port"]')];
+    expect(ports.length).toBeGreaterThan(0);
+    for (const port of ports) {
+      expect(port.getAttribute('pathLength')).toBeNull();
+      expect(port.getAttribute('class')).toContain('is-port');
+    }
+    // And no wire at all carries it: the draw animation works in user units instead.
+    expect(document.querySelectorAll('[data-intro-wire][pathLength]')).toHaveLength(0);
+  });
+
   it('bands the loop only once the ring closes', () => {
     const { props } = panelProps();
     render(<IntroPanel {...props} />);

@@ -169,38 +169,56 @@
   letter-spacing: 0.16em;
 }
 
+/*
+ * The wires are read, not glanced at, so they are drawn to be read.
+ *
+ * The first version of this file took the Operator flow chart's resting strength — a
+ * third of full, on a hue two steps off the background — because that chart draws fifty
+ * wires over twenty components and at full strength they are a scribble. This drawing
+ * has fifteen. Carrying the number across carried the reasoning for it as well, and the
+ * result was a picture whose wires disappeared into the ground at a normal viewing
+ * distance: watched happening, in a screenshot of the running instance.
+ *
+ * So: enough contrast against the panel to survive a projector and a photograph, with
+ * the emphasis on the step's own wires still carried by weight as well as by brightness,
+ * because a distinction that exists only in hue is one this repository has watched rot.
+ */
 .intro-wire {
   fill: none;
-  stroke: #55636f;
-  stroke-width: 1.1;
-  opacity: 0.34;
+  stroke: #9aa9b4;
+  stroke-width: 1.5;
+  opacity: 0.9;
 }
 
+/* A port carries no broker traffic, and says so in the dash rather than by being faint:
+   the difference between a wire and a coupling should not cost the reader the wire. */
 .intro-wire.is-port {
-  stroke-dasharray: 5 4;
-  stroke-width: 1;
+  stroke: #7d8d99;
+  stroke-dasharray: 6 4;
+  stroke-width: 1.4;
+  opacity: 0.78;
 }
 
 .intro-wire.is-outside {
-  stroke: #8b9aa5;
-  opacity: 0.7;
+  stroke: #9aa9b4;
+  opacity: 0.9;
 }
 
 /* The wire that arrived with the step being read: brighter, and heavier, so the
    emphasis is not carried by colour alone. */
 .intro-wire.is-new {
-  stroke: #cfd8e0;
-  stroke-width: 2;
+  stroke: #f2f6fa;
+  stroke-width: 2.4;
   opacity: 1;
   animation: intro-wire-draw 380ms ease-out;
 }
 
 .intro-arrowhead {
-  fill: #55636f;
+  fill: #9aa9b4;
 }
 
 .intro-arrowhead.is-port {
-  fill: #3f4b56;
+  fill: #7d8d99;
 }
 
 .intro-node {
@@ -309,13 +327,23 @@
   }
 }
 
+/*
+ * In user units, and deliberately not with `pathLength="1"`. Normalising the path made
+ * the dash lengths mean something else: a port's `6 4` dash became a six-unit dash on a
+ * one-unit path, so every port in the drawing rendered solid — the one distinction the
+ * legend promises, silently gone. Found in a screenshot of the running instance, which
+ * is the only place it was visible: the mockup drew its own wires and did not have it.
+ *
+ * The constant is larger than the longest wire in the drawing, so a wire draws from its
+ * start rather than appearing part-way along.
+ */
 @keyframes intro-wire-draw {
   from {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
   }
   to {
-    stroke-dasharray: 1;
+    stroke-dasharray: 1200;
     stroke-dashoffset: 0;
   }
 }

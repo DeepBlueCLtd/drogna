@@ -166,8 +166,8 @@ export function Diagram({
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
-              markerWidth="5"
-              markerHeight="5"
+              markerWidth="6"
+              markerHeight="6"
               orient="auto-start-reverse"
             >
               <path d="M 0 1 L 9 5 L 0 9 z" className={`intro-arrowhead is-${kind}`} />
@@ -214,7 +214,6 @@ export function Diagram({
             key={`${wire.link.from}-${wire.link.to}-${wire.link.kind}`}
             d={wire.d}
             className={`intro-wire is-${wire.link.kind}${wire.touchesNewest ? ' is-new' : ''}`}
-            pathLength={1}
             markerEnd={`url(#intro-arrow-${wire.link.kind})`}
             data-intro-wire={`${wire.link.from}->${wire.link.to}`}
             data-wire-kind={wire.link.kind}
@@ -228,7 +227,6 @@ export function Diagram({
         {outside ? (
           <path
             className={`intro-wire is-outside${outside.isNew ? ' is-new' : ''}`}
-            pathLength={1}
             d={`M ${outside.from.x + outside.from.width} ${outside.from.y + outside.from.height / 2} L ${outside.box.x} ${outside.box.y + outside.box.height / 2}`}
             markerEnd="url(#intro-arrow-topic)"
           />

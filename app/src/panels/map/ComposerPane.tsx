@@ -5,7 +5,10 @@
  * parameters from the served subset statement — never stubbed. The result renders
  * where it was asked for, with null, declined and absent kept as three facts. The
  * position may be typed here or clicked on the canvas: the choices live in the map
- * panel, so the click and the two number boxes write to one place (issue #53).
+ * panel, so the click and the two number boxes write to one place (issue #53). The
+ * step that carries the click says so as a step rather than as prose, and where there
+ * is no canvas to click it says to type it instead of naming a gesture that does
+ * nothing.
  */
 import { useEffect, useState } from 'react';
 import type { ConfigShell, QuerySubsets } from '../../generated/types.js';
@@ -26,6 +29,7 @@ export function ComposerPane({
   choices,
   onChoices,
   positionNote,
+  canPick,
 }: {
   config: ConfigShell;
   validator: SeamValidator;
@@ -35,6 +39,9 @@ export function ComposerPane({
   onChoices: (patch: Partial<ComposerChoices>) => void;
   /** What the map can say about the chosen position, or undefined if none is set. */
   positionNote?: string;
+  /** Whether there is a drawing canvas to click. Where WebGL is absent there is not,
+      and the step says to type it rather than naming a gesture that does nothing. */
+  canPick: boolean;
 }) {
   const [offering, setOffering] = useState<ComposerOffering | undefined>();
   const [result, setResult] = useState<ComposerResult | undefined>();
@@ -134,10 +141,24 @@ export function ComposerPane({
           </label>
         ))}
       </fieldset>
-      <p className="composer-pick">
-        4 · position — click the canvas to place it, or type it. The marker, and an
-        area query's box, are drawn where the URL says.
-      </p>
+      {/* Step 4 is the one step with a gesture behind it, and it read as prose among
+          the other steps' controls — so the gesture went unfound (issue #53's
+          affordance, amended). It is now the step's own block, stating what to do and
+          what has been placed. */}
+      <div className="composer-pick" data-testid="composer-pick">
+        <p className="composer-pick-lead">
+          4 · position —{' '}
+          {canPick ? (
+            <strong>click the map to place it</strong>
+          ) : (
+            <strong>type it below</strong>
+          )}
+          {canPick ? ', or type it below' : ': the canvas draws nothing here, so there is no map to click'}.
+        </p>
+        <p className="composer-pick-drawn">
+          The marker, and an area query's box, are drawn where the URL says.
+        </p>
+      </div>
       <label>
         longitude{' '}
         <input
@@ -160,7 +181,9 @@ export function ComposerPane({
           }
         />
       </label>
-      {positionNote && <p className="composer-pick-note">{positionNote}</p>}
+      <p className="composer-pick-note" data-testid="composer-pick-note">
+        {positionNote ?? 'no position yet'}
+      </p>
       <label>
         5 · depth (m){' '}
         <input

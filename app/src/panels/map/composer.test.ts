@@ -4,7 +4,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { QuerySubsets } from '../../generated/types.js';
-import { areaRing, classifyResponse, composeUrl, offeringFrom, pickedPosition } from './composer.js';
+import {
+  areaRing,
+  classifyResponse,
+  composeUrl,
+  offeringFrom,
+  pickPrompt,
+  pickedPosition,
+} from './composer.js';
 
 const subsets: QuerySubsets = {
   schema_version: 1,
@@ -100,6 +107,23 @@ describe('the EDR composer (feature 109)', () => {
     expect(pickedPosition([-11.2])).toBeUndefined();
     expect(pickedPosition([-11.2, 96])).toBeUndefined();
     expect(pickedPosition([Number.NaN, 46])).toBeUndefined();
+  });
+
+  it('says on the canvas what the click will do, and what it has done (issue #53)', () => {
+    // Nothing placed yet: the instruction, and on the cube the extra thing a click
+    // there does — the slice carries the depth as well.
+    expect(pickPrompt('flat')).toBe('click the map to place the position of the query');
+    expect(pickPrompt('globe')).toBe('click the map to place the position of the query');
+    expect(pickPrompt('cube')).toBe('click a slice to place the position and depth of the query');
+    // Placed: the map's own account of it, and the fact that it is not final.
+    expect(pickPrompt('flat', 'position -11.235, 46.512 — inside the domain')).toBe(
+      'position -11.235, 46.512 — inside the domain · click again to move it',
+    );
+    // The note is the map's, verbatim: a warning about the domain is never softened
+    // here, because the server's own refusal is the authority (Constitution VII).
+    expect(pickPrompt('cube', 'position -25, 46.512 — outside the domain')).toContain(
+      'outside the domain',
+    );
   });
 
   it('declines to guide a trajectory, saying why, rather than guessing per-vertex times', () => {

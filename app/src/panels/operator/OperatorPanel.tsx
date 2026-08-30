@@ -56,6 +56,7 @@ import { topology } from '../../generated/topology.js';
 import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
+import { METRICS, NARROW_METRICS } from './layout.js';
 import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
@@ -363,6 +364,30 @@ export function OperatorPanel({ params }: PanelProps) {
 
   const selectedNode = flow.nodes.find((node) => node.id === selected);
 
+  /**
+   * A component's full account: its state, its instrument at full size, the controls it
+   * takes and the wires it is on. One component, rendered in the one place the reader
+   * asked for it — inside the node in the chart, below the table in the list.
+   */
+  const account = (node: FlowNode, where: 'in-place' | 'below') => (
+    <Drawer
+      node={node}
+      where={where}
+      state={stateOf(node.id)}
+      flow={flow}
+      config={config}
+      faceContext={faceContext}
+      report={report}
+      controls={controls}
+      platformState={platformState}
+      decision={decision}
+      counted={(key) => countedRef.current.get(key) ?? 0}
+      command={command}
+      onRefusal={setRefusal}
+      onClose={() => setSelected(undefined)}
+    />
+  );
+
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
       {/* The tab carries its own help control (FR-70, ADR-0037). This is the tour that
@@ -429,11 +454,16 @@ export function OperatorPanel({ params }: PanelProps) {
           bandOrder={BANDS}
           bandCaption={(band) => BAND_CAPTION[band as Band]}
           selected={selected}
+          // A phone's space is vertical, so the open card is a different shape there.
+          metrics={narrow ? NARROW_METRICS : METRICS}
           stateOf={(id) => {
             const { lit, word } = stateOf(id);
             return { lit, word };
           }}
           onSelect={(id) => setSelected(id === selected ? undefined : id)}
+          // The open node *is* the account: the reader stays where they clicked, and
+          // the instrument they came to read is at a size they can read it at.
+          renderExpanded={(node) => account(node, 'in-place')}
           renderNode={(node) => {
             const { lit, word, entry, record } = stateOf(node.id);
             const face = FACES[node.id];
@@ -480,27 +510,18 @@ export function OperatorPanel({ params }: PanelProps) {
 
       <Legend />
 
-      {selectedNode ? (
-        <Drawer
-          node={selectedNode}
-          state={stateOf(selectedNode.id)}
-          flow={flow}
-          config={config}
-          faceContext={faceContext}
-          report={report}
-          controls={controls}
-          platformState={platformState}
-          decision={decision}
-          counted={(key) => countedRef.current.get(key) ?? 0}
-          command={command}
-          onRefusal={setRefusal}
-          onClose={() => setSelected(undefined)}
-        />
-      ) : (
+      {/* The list is a column of rows and has no room to open one of them in place, so
+          there the account still opens below the table. It is the same account, from the
+          same component, with the same controls and the same refusals (FR-015). */}
+      {asList && selectedNode ? account(selectedNode, 'below') : null}
+
+      {selectedNode ? null : (
         <p className="panel-footnote">
-          Select a component to open its account. Structure above is declared configuration; a node
-          is lit only because a heartbeat from it arrived within its declared window, and every
-          figure says whether it was declared, reported by the component, or counted here.
+          Select a component to open it: the node expands where it stands, carrying its
+          instrument at a readable size and the controls that act on it, and the rest of the
+          chart moves aside for it. Structure above is declared configuration; a node is lit only
+          because a heartbeat from it arrived within its declared window, and every figure says
+          whether it was declared, reported by the component, or counted here.
         </p>
       )}
     </div>
@@ -675,8 +696,19 @@ function ListView({
   );
 }
 
+/**
+ * A component's account. Since feature 116 this is drawn inside the node itself in the
+ * chart — the reason the panel was sent back was that a 208-pixel card could be glanced
+ * at and not read, and an account that opened somewhere else made the reader carry the
+ * node's name across the page to find it. In the list view, where a row has nowhere to
+ * expand into, it still opens below the table.
+ *
+ * The content does not change between the two: same figures, same controls, same
+ * refusals. Only the chrome does.
+ */
 function Drawer({
   node,
+  where,
   state,
   flow,
   config,
@@ -691,6 +723,8 @@ function Drawer({
   onClose,
 }: {
   node: FlowNode;
+  /** In the node it belongs to, or below the list that has no room for it. */
+  where: 'in-place' | 'below';
   state: StateOf;
   flow: ReturnType<typeof buildFlow>;
   config: PanelParams['config'];
@@ -710,10 +744,15 @@ function Drawer({
   const inbound = flow.edges.filter((edge) => edge.to === node.id);
   const outbound = flow.edges.filter((edge) => edge.from === node.id);
   return (
-    <aside className="flow-drawer" data-testid="flow-drawer" data-drawer-component={node.id}>
+    <div
+      className={where === 'in-place' ? 'flow-drawer flow-drawer-in-place' : 'flow-drawer'}
+      data-testid="flow-drawer"
+      data-drawer-component={node.id}
+      data-drawer-where={where}
+    >
       <div className="flow-drawer-head">
         <h3>{node.label}</h3>
-        <button onClick={onClose} aria-label="close">
+        <button onClick={onClose} aria-label={`close ${node.label}`} data-testid="drawer-close">
           ×
         </button>
       </div>
@@ -867,6 +906,6 @@ function Drawer({
           stopping with it.
         </p>
       )}
-    </aside>
+    </div>
   );
 }

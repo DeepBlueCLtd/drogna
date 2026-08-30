@@ -140,6 +140,56 @@
   letter-spacing: 0;
 }
 
+/* ---- the open node (feature 116) ----
+   A resting card is a glance; an open one is the account. It takes the space of two
+   columns and three rows, the chart moves aside for it (layout.ts), and it sits above
+   the wires so its own edges do not cross its text. */
+.flow-node-slot[data-expanded='true'] {
+  z-index: 3;
+}
+
+.flow-node-open {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--shell-accent);
+  border-radius: 4px;
+  background: #141a21;
+  box-shadow:
+    0 0 0 1px var(--shell-accent),
+    0 10px 28px #00000080;
+  /* The card is scrolled, so the reader must be able to see there is more of it. */
+  scrollbar-width: thin;
+}
+
+.flow-node-open:focus-visible {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: 2px;
+}
+
+/* Inside the node the account brings no border of its own: the node is the border. */
+.flow-drawer-in-place {
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 0.5em 0.7em 0.7em;
+}
+
+.flow-drawer-in-place .flow-drawer-head h3 {
+  font-size: 0.95rem;
+}
+
+/* The whole point of opening it: the instrument at a size a figure can be read off. */
+.flow-drawer-in-place .flow-drawer-face {
+  font-size: 0.85rem;
+}
+
+/* A wide table inside a card that is 450 pixels wide scrolls within the card rather
+   than stretching it: the geometry is the layout's to decide, not the content's. */
+.flow-drawer-in-place .operator-regions {
+  overflow-x: auto;
+}
+
 /* ---- the faces ---- */
 .face {
   display: flex;

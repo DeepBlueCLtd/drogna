@@ -361,6 +361,130 @@ describe('the Operator flow chart (feature 113)', () => {
   });
 
   /**
+   * Feature 116: the node opens where it stands. The tab was sent back because a
+   * 208×116 card could be glanced at and not read — the instrument was legible only as
+   * a shape, and a slider in it was not usable at all. What is held here is the
+   * behaviour that answers it, and specifically the part a stylesheet could not have
+   * done: the account is *in the node*, and the chart moves aside rather than covering
+   * what the reader was looking at.
+   */
+  describe('opening a node where it stands (feature 116)', () => {
+    /** The absolutely-positioned slot the canvas places a node in. */
+    const slotOf = (id: string) =>
+      document.querySelector(`[data-flow-node="${id}"]`)?.closest('.flow-node-slot') as HTMLElement;
+    const boxOf = (id: string) => ({
+      width: Number.parseFloat(slotOf(id).style.width),
+      height: Number.parseFloat(slotOf(id).style.height),
+      left: Number.parseFloat(slotOf(id).style.left),
+      top: Number.parseFloat(slotOf(id).style.top),
+    });
+    const open = async (id: string) => {
+      await act(async () => {
+        fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+    };
+
+    it('opens the account inside the node itself, not somewhere the reader has to go and find', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(screen.queryByTestId('flow-drawer')).toBeNull();
+      await open('monitor');
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.getAttribute('data-drawer-where')).toBe('in-place');
+      // Inside the node it belongs to — the assertion the old drawer could not have
+      // passed, since it hung below the whole chart.
+      expect(document.querySelector('[data-flow-node="monitor"]')?.contains(drawer)).toBe(true);
+      // And its controls came with it: this is the reason the node stopped being a
+      // button, because a button may not contain one.
+      expect(drawer.querySelector('[data-tunable="drift-threshold"]')).toBeTruthy();
+    });
+
+    it('gives the open node room, and the rest of the picture moves out of its way', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const flow = buildFlow(config.shell, topology);
+      const opened = 'monitor';
+      const band = flow.nodes.find((node) => node.id === opened)?.band;
+      // A node after it in the same band, and one in a band below: the two directions
+      // the reflow has to work in.
+      const rank = flow.nodes.find((node) => node.id === opened)?.rank ?? 0;
+      const along = flow.nodes.find((node) => node.band === band && node.rank > rank);
+      const below = flow.nodes.find((node) => node.band !== band && node.rank === 0);
+      if (!along || !below) throw new Error('the chart has no neighbour to be moved aside');
+
+      const restingOpen = boxOf(opened);
+      const restingAlong = boxOf(along.id);
+      const restingBelow = boxOf(below.id);
+      const canvas = () => document.querySelector('[data-testid="flow-chart"]') as HTMLElement;
+      // Height, not width: the band a node opens in may not be the widest band, but
+      // every band below it moves down, so the canvas always gets taller.
+      const restingCanvas = Number.parseFloat(canvas().style.height);
+
+      await open(opened);
+      expect(boxOf(opened).width).toBeGreaterThan(restingOpen.width);
+      expect(boxOf(opened).height).toBeGreaterThan(restingOpen.height);
+      // Moved along, not covered: the neighbour's left edge is past the open node's
+      // right edge, and it is still the same size it was.
+      expect(boxOf(along.id).left).toBeGreaterThanOrEqual(boxOf(opened).left + boxOf(opened).width);
+      expect(boxOf(along.id).width).toBe(restingAlong.width);
+      expect(boxOf(along.id).left).toBeGreaterThan(restingAlong.left);
+      // And the canvas grew to hold it rather than clipping it.
+      expect(Number.parseFloat(canvas().style.height)).toBeGreaterThan(restingCanvas);
+      expect(boxOf(below.id).top).toBeGreaterThan(restingBelow.top);
+      expect(boxOf(below.id).left).toBe(restingBelow.left);
+
+      // Closing puts everything back where the reader learned it was.
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('drawer-close'));
+      });
+      expect(boxOf(opened)).toEqual(restingOpen);
+      expect(boxOf(along.id)).toEqual(restingAlong);
+      expect(boxOf(below.id)).toEqual(restingBelow);
+      expect(screen.queryByTestId('flow-drawer')).toBeNull();
+    });
+
+    it('leaves the keyboard on the node it opened, and back on it when it closes', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('scheduler');
+      // The button that was focused no longer exists; without this the focus ring falls
+      // to the document and a keyboard reader is returned to the top of the tab.
+      expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('drawer-close'));
+      });
+      expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
+      expect(document.activeElement?.tagName).toBe('BUTTON');
+    });
+
+    it('opens it below the table in the list view, which has nowhere to expand into', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('view-toggle'));
+      });
+      await act(async () => {
+        fireEvent.click(
+          document.querySelector('[data-operator-component="monitor"] .link-button') as HTMLElement,
+        );
+      });
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.getAttribute('data-drawer-where')).toBe('below');
+      // Same account, same controls: the list carries everything the chart does (FR-015).
+      expect(drawer.getAttribute('data-drawer-component')).toBe('monitor');
+      expect(drawer.querySelector('[data-tunable="drift-threshold"]')).toBeTruthy();
+    });
+  });
+
+  /**
    * Feature 114: the controls. Nothing below asserts what a control *said* it did —
    * every assertion is either about a component's own reported state or about the
    * refusal the surface published, because a panel that could be believed on its own

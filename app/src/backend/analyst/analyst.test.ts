@@ -14,6 +14,7 @@ import type { AnalysisPublished, ConfigRun, CoverageHolding, RunPublished } from
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { soundSpeedMs } from '../env-generator/analytic.js';
+import { driveUntil } from '../test-support/drive.js';
 
 const validator = createSeamValidator();
 const options = { rootSeed: 4242, revision: 'test', dirty: false };
@@ -30,7 +31,12 @@ interface Record {
   runs: RunPublished[];
 }
 
-function driveUntilAnalyses(runtime: BackendRuntime, config: ConfigRun, wanted: number, limit: number): Record {
+async function driveUntilAnalyses(
+  runtime: BackendRuntime,
+  config: ConfigRun,
+  wanted: number,
+  limit: number,
+): Promise<Record> {
   const shell = runtime.transport.connect(`analyst-test-${Math.random()}`, 'shell');
   const record: Record = { analyses: [], runs: [] };
   shell.subscribe(config.analyst.topics.analysis_published, (message) => {
@@ -40,7 +46,7 @@ function driveUntilAnalyses(runtime: BackendRuntime, config: ConfigRun, wanted: 
   shell.subscribe(config.model_runner.topics.run_published, (message) => {
     record.runs.push(message.payload as RunPublished);
   });
-  for (let tick = 0; tick < limit && record.analyses.length < wanted; tick++) runtime.clock.tickOnce();
+  await driveUntil(runtime.clock, () => record.analyses.length >= wanted, limit);
   return record;
 }
 
@@ -66,10 +72,10 @@ describe('the analysis, on the loop as it ships', () => {
   let config: ConfigRun;
   let record: Record;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     config = lockstepConfig();
     runtime = buildBackend(config, options, validator);
-    record = driveUntilAnalyses(runtime, config, 2, 12000);
+    record = await driveUntilAnalyses(runtime, config, 2, 12000);
     // Turning the shipped configuration far enough for a second analysis is about ten
     // seconds of real work here and roughly twice that on a CI runner. The budget for
     // it is the one in vite.config.ts, which carries the argument; a second number
@@ -192,7 +198,7 @@ describe('the analysis, on the loop as it ships', () => {
     }
   });
 
-  it('measures the sea and not the platform: an ownship datastream informs nothing', () => {
+  it('measures the sea and not the platform: an ownship datastream informs nothing', async () => {
     // Its own backend, because it alters the configuration the shared one was built
     // from, and one analysis is enough to hold what it holds.
     const altered = lockstepConfig();
@@ -202,7 +208,7 @@ describe('the analysis, on the loop as it ships', () => {
     // independent reasons, and this holds the second.
     altered.analyst.excluded_datastreams = [];
     const own = buildBackend(altered, options, validator);
-    const ownRecord = driveUntilAnalyses(own, altered, 1, 12000);
+    const ownRecord = await driveUntilAnalyses(own, altered, 1, 12000);
     const ocean = altered.sensors.instruments.filter(
       (instrument) => instrument.observed_property === 'temperature' || instrument.observed_property === 'salinity',
     );

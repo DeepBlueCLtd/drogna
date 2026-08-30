@@ -16,7 +16,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
-import { driveTicks } from '../test-support/drive.js';
+import { driveTicks, driveUntil } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import {
   measurementSpanMetres,
@@ -98,10 +98,7 @@ async function driveUntilRuns(
   shell.subscribe(config.offload.topics.offload, (message) => {
     record.offloadReports.push(message.payload as OffloadTelemetry);
   });
-  for (let tick = 0; tick < limit && record.published.length < wanted; tick++) {
-    runtime.clock.tickOnce();
-    if (tick % 250 === 249) await new Promise((resolve) => setImmediate(resolve));
-  }
+  await driveUntil(runtime.clock, () => record.published.length >= wanted, limit);
   return record;
 }
 

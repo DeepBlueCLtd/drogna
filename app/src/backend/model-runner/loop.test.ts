@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, Divergence, RunPublished, RunRequest } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
-import { driveTicks } from '../test-support/drive.js';
+import { driveTicks, driveUntil } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { SOUND_SPEED } from '../env-generator/analytic.js';
 
@@ -54,7 +54,7 @@ async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number):
  * Turn the loop until it has done something, or give up at `limit` ticks. Says what the
  * test needs rather than how long the sea used to take to provide it.
  */
-async function driveUntil(
+async function recordUntil(
   runtime: BackendRuntime,
   config: ConfigRun,
   done: (record: LoopRecord) => boolean,
@@ -74,10 +74,7 @@ async function driveUntil(
     expect(validator.validate('run-published', message.payload).refusals).toEqual([]);
     record.published.push(message.payload as RunPublished);
   });
-  for (let tick = 0; tick < limit && !done(record); tick++) {
-    runtime.clock.tickOnce();
-    if (tick % 250 === 249) await new Promise((resolve) => setImmediate(resolve));
-  }
+  await driveUntil(runtime.clock, () => done(record), limit);
   return record;
 }
 
@@ -92,7 +89,7 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     // tick count that happened to cover them. Feature 116 pushed the first divergence of
     // a scenario out to tick 6540 — a forecast corrected by what was measured takes far
     // longer to drift into a breach — and 6000 had been just enough before it.
-    const record = await driveUntil(
+    const record = await recordUntil(
       runtime,
       config,
       (seen) => seen.requests.some((request) => request.cause === 'divergence'),

@@ -430,9 +430,16 @@ directed → the machinery is interrogated → advice travels light → it is se
   typed; what the canvas draws for the composed query — the position, and an area
   query's ring — is built by the same function that writes the URL, so the drawn
   query and the fetched query cannot differ.
-- **FR-42** The Intro tab narrates the arc, growing one section per landed beat, and
-  by feature 109 constitutes the demo walkthrough script, deep-linking into each
-  beat's view (FR-15).
+- **FR-42** The Intro tab is the demo walkthrough script, and deep-links into each
+  view it names (FR-15).
+
+  *Amended by feature 116. Until then this paragraph read "narrates the arc, growing one
+  section per landed beat", and the tab was nine numbered sections. That answered the
+  question "what has been built" for a reader who already knew the answer, and it had to
+  be extended by hand for every beat — a record kept separately from the tree, which is
+  the shape of every stale document this repository has paid for. §5.16 replaces the arc
+  with the architecture drawn. The walkthrough obligation is unchanged and now discharged
+  per step rather than per beat.*
 
 ### 5.10 Background (feature 111)
 
@@ -750,6 +757,50 @@ pass only one of the three is not finished.
   regions their panels declare — so that a surface gaining a feature and not a step is
   reported by name. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
+### 5.16 The architecture, drawn (feature 116)
+
+The Intro tab was a numbered list of landed features. A reader arriving at it wants to
+know what the thing is made of and how the parts fit together, and a changelog ordered by
+when the work landed answers that only for somebody who already knows. This beat changes
+no simulation, adds no component, moves no data and needs no new master: it is entirely
+about what the first tab shows of what already runs. The specification is
+`specs/116-intro-architecture/`.
+
+- **FR-76** The Intro tab shall carry a **drawing of the system architecture** that is
+  built up **one step at a time under the reader's own control** — arrow keys, and
+  controls that do the same thing — with a short passage of prose beside each step naming
+  what has just appeared and what it does. Nothing shall advance on a timer: the drawing
+  opens at its first step and moves only when the reader moves it (Constitution I). Each
+  step shall be addressable by its own name rather than its number (FR-15), so that an
+  address survives a step being inserted before it, and shall link to the live view where
+  that part of the system can be watched working.
+- **FR-77** The drawing shall be **derived from the declaration, not authored beside it**.
+  A node's text is its component's own declared label; the wires are the wiring, derived
+  from the topology master and the declared ports exactly as the Operator flow chart
+  derives them (FR-57), collapsed to one line per pair of components; the plane strip is
+  the components that declare that band; the eras drawn inside the coverage store are the
+  enum in the holding master; the interfaces on the arrow leaving the harness are the
+  shell's declared endpoints. What the storyboard authors is the order, the words, the
+  cell each node occupies, and which components are left out.
+- **FR-78** The drawing is a **deliberate subset** — the flows a reader arrives wanting,
+  not every component — and **every component it leaves out shall be recorded with its
+  reason**, on screen and in the storyboard. A gate shall fail the build when a declared
+  component is in neither list, so that a component which lands and is not decided about
+  is named by the build rather than quietly missing from a picture that claims to be the
+  architecture. The same gate holds the rest of the drawing's claims: a node for something
+  the configuration declares nothing for, two nodes in one cell, an omission with no
+  reason or one that is drawn anyway, a component in the plane strip that does not declare
+  the plane, and a component inside the loop band that is not part of the loop.
+- **FR-79** **Nothing in the drawing shall be lit.** It is a picture of the wiring, not a
+  report of the run: no heartbeat reaches it, no node carries a state, and the panel says
+  so in as many words and links to the Operator tab, where every component's own account
+  of itself lives. Constitution VII's rule is that structure comes from declaration and
+  illumination from heartbeats; the cheapest way to break it is a diagram that looks like
+  a readout. The tab remains inert in Background's sense (FR-44): it reads no run state,
+  subscribes to nothing and crosses the seam for nothing, and states only the run identity
+  the shell already handed it (FR-01). It carries no help control, because the walkthrough
+  is what the tab is (FR-75).
+
 ---
 
 ## 6. Interfaces and shared types

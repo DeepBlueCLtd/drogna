@@ -28,6 +28,13 @@ import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
+import { runGate as introStoryboard } from '../gates/check-intro-storyboard.js';
+import {
+  NOT_DRAWN,
+  STORYBOARD,
+  storyboardFindings,
+  type Beat,
+} from '../../app/src/panels/intro/storyboard.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -218,6 +225,64 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(estateConcurrency(join(fixtures, 'workflows-distinct'))).toEqual([]);
     // And the tree this runs in, whose shared group cost the V2 site its publication.
     expect(estateConcurrency(REPO_ROOT)).toEqual([]);
+  });
+
+  it('intro-storyboard: an unaccounted component, a stranger and a silent omission all fail; the real tree passes', () => {
+    const config = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'app', 'config', 'run.json'), 'utf8'),
+    ) as ConfigRun;
+    // The tree as it stands accounts for every component: thirteen drawn, seven recorded.
+    expect(storyboardFindings(config.shell)).toEqual([]);
+    expect(introStoryboard(REPO_ROOT)).toEqual([]);
+
+    // The fault this gate exists for, and the only one the drawing cannot show you: a
+    // component lands, and it is in neither list. The subset is legitimate; the silence
+    // is not.
+    const dropped = STORYBOARD.filter((beat) => beat.id !== 'stored');
+    expect(storyboardFindings(config.shell, dropped).join('\n')).toMatch(
+      /component 'observation-store' is declared but the Intro drawing neither draws it nor records why it is left out/,
+    );
+
+    // A node for something that has never existed — Constitution VII, applied to the
+    // diagram. This is the shape the adaptive sampler was deliberately NOT given.
+    const stranger: Beat[] = [
+      ...STORYBOARD,
+      {
+        id: 'planted',
+        title: 'planted',
+        prose: [],
+        reveals: [{ component: 'adaptive-sampling', place: { col: 2, row: 3 } }],
+      },
+    ];
+    expect(storyboardFindings(config.shell, stranger).join('\n')).toMatch(
+      /node for 'adaptive-sampling', which the shell declares no component for/,
+    );
+
+    // An omission is a decision, and a decision with no reason recorded is the thing
+    // this repository keeps paying for.
+    const silent = NOT_DRAWN.map((omission) =>
+      omission.component === 'planner' ? { ...omission, reason: '' } : omission,
+    );
+    expect(storyboardFindings(config.shell, STORYBOARD, silent).join('\n')).toMatch(
+      /omits 'planner' with no reason given/,
+    );
+
+    // And the bands mean what they say: the plane strip holds the plane, the loop band
+    // holds the loop.
+    const lifted = STORYBOARD.map((beat) => ({
+      ...beat,
+      reveals: beat.reveals.map((node) =>
+        node.component === 'clock' ? { ...node, place: { col: 2, row: 3 } } : node,
+      ),
+    }));
+    expect(storyboardFindings(config.shell, lifted).join('\n')).toMatch(
+      /'clock' declares itself the plane and is drawn outside/,
+    );
+  });
+
+  it('intro-storyboard: a tree whose configuration declares no components is a failure, not a pass', () => {
+    // `run-gates.ts`'s rule: the outcome that proves nothing must not look like a pass.
+    expect(() => introStoryboard(join(fixtures, 'site-broken'))).toThrow(/which components exist/);
   });
 
   it('types-drift: a stale committed tree fails; the real one passes', () => {

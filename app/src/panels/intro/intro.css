@@ -1,0 +1,329 @@
+/*
+ * The Intro drawing's chrome (feature 116).
+ *
+ * Schematic, like Background and unlike the Map: flat surfaces, ruled lines, no glow,
+ * so a diagram is never mistaken for a readout. Nothing in the drawing is lit, and
+ * nothing in here may make it look as though something is: there is no colour in this
+ * file that means alive, and the one animation is the growth the reader themself asked
+ * for by pressing a key.
+ *
+ * Every distinction survives greyscale, because a distinction that exists only in hue is
+ * one the repository has already watched rot (feature 111's mark vocabulary, and its
+ * reason). A port is dashed as well as dimmer; the newest node is heavier as well as
+ * brighter; the plane is a panel behind rather than a colour.
+ */
+
+.intro-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  line-height: 1.55;
+  height: 100%;
+  overflow: auto;
+}
+
+.intro-head h1 {
+  margin-bottom: 0.2em;
+}
+
+.intro-lead {
+  max-width: 62em;
+}
+
+.intro-instruction {
+  color: var(--shell-dim);
+  max-width: 62em;
+}
+
+.intro-instruction kbd {
+  border: 1px solid #2c3946;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 0.35em;
+  font-size: 0.9em;
+}
+
+/* ---- the stage: the drawing, and what is being said about it ---- */
+
+.intro-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4em;
+  align-items: flex-start;
+  outline-offset: 4px;
+}
+
+.intro-figure-column {
+  flex: 1 1 30em;
+  min-width: 0;
+}
+
+.intro-figure-pan {
+  overflow-x: auto;
+  padding-bottom: 0.4em;
+}
+
+.intro-figure-scale {
+  transform-origin: top left;
+}
+
+.intro-figure-note {
+  color: var(--shell-dim);
+  font-size: 0.86em;
+  margin: 0.5em 0 0;
+}
+
+.intro-narration {
+  flex: 1 1 20em;
+  min-width: 16em;
+  max-width: 34em;
+  border-left: 2px solid #202a35;
+  padding-left: 1.1em;
+}
+
+.intro-narration h2 {
+  margin: 0.1em 0 0.1em;
+  font-size: 1.15em;
+}
+
+.intro-position {
+  color: var(--shell-dim);
+  font-size: 0.8em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.intro-component {
+  color: var(--shell-accent);
+  font-size: 0.86em;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.6em;
+}
+
+.intro-live a {
+  color: var(--shell-accent);
+}
+
+.intro-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 1em;
+}
+
+.intro-controls button {
+  background: none;
+  border: 1px solid #2c3946;
+  border-radius: 4px;
+  color: var(--shell-fg);
+  font: inherit;
+  font-size: 0.9em;
+  padding: 0.3em 0.9em;
+  cursor: pointer;
+}
+
+.intro-controls button:hover:not(:disabled),
+.intro-controls button:focus-visible {
+  border-color: var(--shell-accent);
+  color: var(--shell-accent);
+}
+
+.intro-controls button:disabled {
+  color: var(--shell-dim);
+  border-color: #1c242d;
+  cursor: default;
+}
+
+.intro-controls .intro-next {
+  border-color: #3d4d5c;
+}
+
+/* ---- the drawing ---- */
+
+.intro-canvas {
+  position: relative;
+}
+
+.intro-wires {
+  position: absolute;
+  inset: 0;
+}
+
+.intro-plane-band {
+  fill: #161d25;
+  stroke: #232c36;
+  stroke-width: 1;
+}
+
+.intro-loop-band {
+  fill: none;
+  stroke: #33404c;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.intro-band-caption {
+  fill: var(--shell-dim);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.intro-wire {
+  fill: none;
+  stroke: #55636f;
+  stroke-width: 1.1;
+  opacity: 0.34;
+}
+
+.intro-wire.is-port {
+  stroke-dasharray: 5 4;
+  stroke-width: 1;
+}
+
+.intro-wire.is-outside {
+  stroke: #8b9aa5;
+  opacity: 0.7;
+}
+
+/* The wire that arrived with the step being read: brighter, and heavier, so the
+   emphasis is not carried by colour alone. */
+.intro-wire.is-new {
+  stroke: #cfd8e0;
+  stroke-width: 2;
+  opacity: 1;
+  animation: intro-wire-draw 380ms ease-out;
+}
+
+.intro-arrowhead {
+  fill: #55636f;
+}
+
+.intro-arrowhead.is-port {
+  fill: #3f4b56;
+}
+
+.intro-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25em;
+  text-align: left;
+  background: #1a222b;
+  border: 1px solid #33404c;
+  border-radius: 5px;
+  color: var(--shell-fg);
+  font: inherit;
+  font-size: 0.78em;
+  line-height: 1.25;
+  padding: 0.4em 0.6em;
+  cursor: pointer;
+}
+
+.intro-node:hover,
+.intro-node:focus-visible {
+  border-color: var(--shell-accent);
+}
+
+.intro-node.is-new {
+  border-color: #cfd8e0;
+  border-width: 2px;
+  background: #222c37;
+  animation: intro-node-grow 300ms ease-out;
+}
+
+.intro-node-label {
+  font-weight: 500;
+}
+
+.intro-eras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+.intro-era {
+  border: 1px solid #3b4855;
+  border-radius: 3px;
+  color: var(--shell-dim);
+  font-size: 0.82em;
+  padding: 0 0.3em;
+}
+
+/*
+ * Not a component, and drawn so it cannot be read as one: dashed, unfilled, and
+ * unclickable. Everything else in this picture is something the shell declares.
+ */
+.intro-outside {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  border: 1px dashed #55636f;
+  border-radius: 5px;
+  color: var(--shell-dim);
+  font-size: 0.72em;
+  line-height: 1.3;
+  padding: 0.4em 0.55em;
+}
+
+.intro-outside.is-new {
+  border-color: #cfd8e0;
+}
+
+.intro-outside-head {
+  color: var(--shell-fg);
+  font-size: 1.05em;
+}
+
+.intro-served code {
+  font-size: 0.95em;
+}
+
+.intro-foot {
+  border-top: 1px solid #202a35;
+  padding-top: 0.8em;
+  max-width: 62em;
+  color: var(--shell-dim);
+}
+
+.intro-foot a {
+  color: var(--shell-accent);
+}
+
+/*
+ * The growth. It runs on a key press and nothing else: there is no timer here, no
+ * autoplay and no loop, so a reader who stops sees a finished drawing rather than
+ * something still moving (Constitution I, and feature 111's rule about arrival).
+ */
+@keyframes intro-node-grow {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes intro-wire-draw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-node.is-new,
+  .intro-wire.is-new,
+  .intro-outside.is-new {
+    animation: none;
+  }
+}

@@ -152,9 +152,16 @@ not by a failing test.
 - [x] T031 Panel tests against a genuine backend, in the shape `panels.test.tsx` already
       uses: nothing mocked below the seam.
 - [x] T032 `pnpm check` green, gates included.
-- [ ] T033 Watch AC-01 to AC-10 in the published instance and link each from the pull
-      request at the view it is in (CLAUDE.md, *showing the work*). The instance is built
-      by CI once the pull request opens; the links go into the pull request body.
+- [x] T033 AC-01 to AC-10 watched in Chromium against the built site, and reported in the
+      pull request with what each showed: the strip and the yellow tab in both
+      presentations, the tab computing from the moment it opens, 3 h against 24 h changing
+      the route's shape (4 points to 13), the drop count following budget and rate, the
+      ranking flipping `direct` to `wide`, a lane switched off changing the feasible sets,
+      and a locked task carried by every set. Said precisely, because the difference
+      matters: this was the same build the instance serves, served locally, rather than the
+      hosted URL — every visit seeds a fresh run, so a reviewer opening the instance sees
+      the same behaviours over a different ocean. The three per-view links are in the pull
+      request body (CLAUDE.md, *showing the work*).
 - [x] T034 Blog entry: three new faces in the shell is the case D17 names. Background,
       requirement, options considered, demo.
 - [ ] T035 **Declined for this pull request, with the reason recorded now.** (The narrow

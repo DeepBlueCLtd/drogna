@@ -1,5 +1,5 @@
 /**
- * The consumer tabs' reasoning, held to what the requirements actually say (feature 115).
+ * The consumer tabs' reasoning, held to what the requirements actually say (feature 116).
  *
  * These are the properties a passing render would not catch: that the budget changes the
  * route's *shape*, that a drop is never anywhere the vessel does not go, that a
@@ -52,7 +52,7 @@ function at(seconds: number): string {
   return `${new Date(Date.UTC(2026, 0, 1) + seconds * 1000).toISOString().slice(0, 23)}000Z`;
 }
 
-describe('observation-driven uncertainty (FR-75)', () => {
+describe('observation-driven uncertainty (FR-80)', () => {
   it('sits at saturation where nothing has been heard', () => {
     expect(uncertaintyOf(undefined, at(0), model)).toBe(model.saturation);
   });
@@ -131,7 +131,7 @@ function plannableField(): {
   return { cells, start, isolated: isolated.index };
 }
 
-describe('the sampling plan (FR-78)', () => {
+describe('the sampling plan (FR-83)', () => {
   const budgets = consumers.sampling.time_budget_hours;
   const shortest = Math.min(...budgets);
   const longest = Math.max(...budgets);
@@ -226,7 +226,7 @@ describe('the sampling plan (FR-78)', () => {
   });
 });
 
-describe('depth (FR-77)', () => {
+describe('depth (FR-82)', () => {
   it('divides the published column and marks only what the vessel reaches', () => {
     const zones = depthZones(domain, consumers.sampling.depth_zones, config.platform.limits.maximum_depth_m);
     expect(zones).toHaveLength(consumers.sampling.depth_zones);
@@ -267,7 +267,7 @@ function cloudFor(classes: ClassHypothesis[]) {
   });
 }
 
-describe('hypothetical classes (FR-79)', () => {
+describe('hypothetical classes (FR-84)', () => {
   it('gives each class a different cloud, because behaviour drives motion', () => {
     const only = (id: string) =>
       roster(Object.fromEntries(consumers.courses.classes.map((entry) => [entry.id, entry.id === id ? 5 : 0])));
@@ -300,7 +300,7 @@ describe('hypothetical classes (FR-79)', () => {
   });
 });
 
-describe('candidate courses (FR-79)', () => {
+describe('candidate courses (FR-84)', () => {
   const cover = coverDomain(domain, consumers.hexes.default_resolution, consumers.hexes.cell_ceiling);
   if (isRefusal(cover)) throw new Error(cover.refused);
   const cloud = cloudFor(roster());
@@ -375,7 +375,7 @@ function feasibilityRequest(overrides: Partial<FeasibilityRequest> = {}): Feasib
   };
 }
 
-describe('feasible sets (FR-80)', () => {
+describe('feasible sets (FR-85)', () => {
   it('builds every configured lane, and says where each one came from', () => {
     const request = feasibilityRequest();
     expect(request.lanes).toHaveLength(consumers.feasibility.lanes.length);

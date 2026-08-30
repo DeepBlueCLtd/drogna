@@ -1,5 +1,5 @@
 /**
- * What a consumer is reasoning against, and stale-then-refresh over it (FR-73).
+ * What a consumer is reasoning against, and stale-then-refresh over it (FR-78).
  *
  * **Why there are two kinds of basis.** The first version of this waited for a published
  * forecast and drew nothing until one arrived — which, at the scenario's own cadence, is
@@ -16,7 +16,7 @@
  *
  * **What does not raise a halo.** The now-cast is itself replaced on its own cadence, and
  * that replacement is announced. A consumer standing on a now-cast does not chase those:
- * FR-73's trigger is a published run becoming current, and a second staleness source would
+ * FR-78's trigger is a published run becoming current, and a second staleness source would
  * make the halo mean two things. The now-cast is the bootstrap, and the tab says so.
  */
 import { useCallback, useEffect, useState } from 'react';

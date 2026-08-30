@@ -1,8 +1,8 @@
 /**
- * The consumers' seeded streams (Constitution II, FR-76).
+ * The consumers' seeded streams (Constitution II, FR-81).
  *
  * A downstream consumer synthesises inputs drogna does not model — a tidal window, a
- * ferry timetable, a hypothesis about where a class of vessel might be — and ADR-0036
+ * ferry timetable, a hypothesis about where a class of vessel might be — and ADR-0038
  * admits that on four conditions, of which this file is one: every draw comes from a
  * stream derived from the run manifest's root seed and a stream name, so a replayed run
  * synthesises the same tide and the same cloud. Nothing here reads entropy, and the

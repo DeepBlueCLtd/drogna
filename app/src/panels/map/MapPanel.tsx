@@ -61,7 +61,9 @@ import {
 } from './map-data.js';
 import { whenInDocument } from './attach.js';
 import { areaRing, pickPrompt, pickedPosition, type ComposerChoices } from './composer.js';
-import { axisValues, cubeFrame, volumeEdges, type CubeFrame } from './cube.js';
+import { axisValues, cubeFrame, ownshipInCube, volumeEdges, type CubeFrame } from './cube.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { mapTour } from '../../shell/walkthrough/tour.js';
 import { ComposerPane } from './ComposerPane.js';
 import { displayInstant } from '../../shell/display.js';
 import { Disclosure } from '../../shell/Disclosure.js';
@@ -582,6 +584,13 @@ export function MapPanel({ params }: PanelProps) {
   const cubeMaximum = Math.max(...cubeValues);
   const frame = volume.frame;
 
+  // The platform in the volume (FR-69), in the frame's own cartesian space. Computed by a
+  // pure function so that the claim SC-07 makes — the track is at the depths the platform
+  // reported, not at the surface — is one a test can assert without a WebGL context.
+  const ownshipVolume = frame
+    ? ownshipInCube(frame, track.points, ray, platformState?.current.depth_m)
+    : { track: [], demand: undefined };
+
   const cubeLayers = frame
     ? [
         // One layer per level, coloured against the whole volume's range rather than
@@ -652,6 +661,51 @@ export function MapPanel({ params }: PanelProps) {
               getLineWidth: 2,
               lineWidthUnits: 'pixels',
               stroked: true,
+            })
+          : undefined,
+        // The platform, in the volume (feature 115, FR-74). The plan view and the globe
+        // have drawn the track and the demanded course since 113; the cube drew neither,
+        // because `cubeLayers` and `geographicLayers` are selected whole and the ownship
+        // layers lived only in the second. That absence was not a decision — it was where
+        // the seam between the two coordinate systems fell.
+        //
+        // The track is drawn at the depths the platform *reported*, against the levels
+        // the volume already draws. Ownship depth is a reported measurement (FR-54), and
+        // a track flattened to the surface in a display whose subject is depth would be
+        // the panel discarding the one dimension that view exists for.
+        ownshipVolume.track.length > 1
+          ? new PathLayer({
+              id: 'cube-ownship-track',
+              data: [ownshipVolume.track],
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPath: (path) => path,
+              getColor: [99, 190, 222, 220],
+              getWidth: 2,
+              widthUnits: 'pixels',
+            })
+          : undefined,
+        ownshipVolume.track.length > 0
+          ? new ScatterplotLayer({
+              id: 'cube-ownship-reports',
+              data: ownshipVolume.track,
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPosition: (position) => position,
+              getFillColor: [99, 190, 222, 200],
+              getRadius: 3,
+              radiusUnits: 'pixels',
+              billboard: true,
+            })
+          : undefined,
+        ownshipVolume.demand
+          ? new PathLayer({
+              id: 'cube-ownship-demand',
+              data: [ownshipVolume.demand],
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPath: (path) => path,
+              getColor: [99, 190, 222, 160],
+              getWidth: 1.5,
+              widthUnits: 'pixels',
+              getDashArray: [6, 4],
             })
           : undefined,
         composing && choices.longitude !== undefined && choices.latitude !== undefined
@@ -888,11 +942,38 @@ export function MapPanel({ params }: PanelProps) {
     .filter(Boolean);
 
   const layers = projection === 'cube' ? cubeLayers : geographicLayers;
+  /**
+   * The layer ids actually handed to deck.gl, published on the panel's own root (feature
+   * 114, FR-70). It is not decoration: it is what holds the layer registry honest, and
+   * what lets the capture proof read which layers a projection drew without a WebGL
+   * context to interrogate. Derived from the same array deck.gl is given, so the two
+   * cannot drift.
+   */
+  const drawnLayerIds = layers.flatMap((layer) => {
+    // `geographicLayers` carries falsy placeholders where a layer is not drawn, and one
+    // entry is an array of two; both are flattened here rather than upstream, because the
+    // shape deck.gl accepts is the shape that array is for.
+    const flat: unknown[] = Array.isArray(layer) ? layer : [layer];
+    return flat.flatMap((entry) =>
+      entry && typeof entry === 'object' && 'id' in entry ? [String((entry as { id: unknown }).id)] : [],
+    );
+  });
 
   const horizonSpan = plan?.horizon.span_seconds ?? 21600;
 
   return (
-    <div className="panel map-panel" ref={rootRef} data-narrow={narrow}>
+    <div
+      className="panel map-panel"
+      ref={rootRef}
+      data-narrow={narrow}
+      data-projection={projection}
+      data-map-layers={drawnLayerIds.join(' ')}
+    >
+      {/* The panel carries its own help control (FR-70, ADR-0037). */}
+      <div className="panel-head">
+        <span className="panel-head-title">the field, the doubt over it, and the route through it</span>
+        <HelpButton tour={mapTour()} />
+      </div>
       <Disclosure label="view controls" narrow={narrow} className="map-controls-disclosure">
       <div className="map-controls">
         <label>
@@ -926,7 +1007,7 @@ export function MapPanel({ params }: PanelProps) {
             ))}
           </select>
         </label>
-        <label className="map-time">
+        <label className="map-time" data-testid="time-control">
           displayed time {timeOffset === 0 ? '(live)' : `(${timeOffset > 0 ? '+' : ''}${timeOffset}s)`}{' '}
           <input
             type="range"
@@ -941,6 +1022,7 @@ export function MapPanel({ params }: PanelProps) {
           doubt{' '}
           <select
             value={doubt}
+            data-testid="doubt-select"
             disabled={projection === 'cube'}
             onChange={(event) => setDoubt(event.target.value as 'projection' | 'spread' | 'none')}
           >
@@ -955,6 +1037,7 @@ export function MapPanel({ params }: PanelProps) {
           view{' '}
           <select
             value={projection}
+            data-testid="projection-select"
             onChange={(event) => setProjection(event.target.value as 'globe' | 'flat' | 'cube')}
           >
             <option value="globe">globe (drag to rotate)</option>
@@ -973,6 +1056,13 @@ export function MapPanel({ params }: PanelProps) {
             : 'no ownship observations have been served: nothing is drawn for the track'
           : 'ownship track: not asked for yet'}
         {ray ? ` · demanded course drawn as one hour at the demanded speed` : ''}
+        {/* Parity, said (FR-69). The track and the demand are in every projection, and in
+            the volume the track is at the depths the platform reported — a track flattened
+            to the surface in a display whose subject is depth would discard the one
+            dimension that view exists for. */}
+        {projection === 'cube' && track.points.length > 0
+          ? ' · in the volume the track is drawn at the depths the platform reported, not at the surface'
+          : ''}
         {' · '}
         {displayedSimTime ? `displayed instant ${displayInstant(displayedSimTime)}` : 'no clock sample yet'}
         {projection === 'cube'

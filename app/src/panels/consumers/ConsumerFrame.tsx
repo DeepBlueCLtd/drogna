@@ -1,5 +1,5 @@
 /**
- * The chrome every downstream consumer view wears (FR-71, FR-73, ADR-0036).
+ * The chrome every downstream consumer view wears (FR-76, FR-78, ADR-0038).
  *
  * Three tabs in this shell are not part of drogna. They are notional systems consuming
  * its forecast to reach a decision, and the boundary is only defensible if it is visible
@@ -47,7 +47,7 @@ export function ConsumerFrame({
     <div className="panel consumer-panel" data-testid={testId} data-stale={pending !== undefined}>
       {/*
         Not dismissible, not scrollable, and outside the scrolling body on purpose: a
-        screenshot taken from anywhere in this tab carries the caveat (FR-71).
+        screenshot taken from anywhere in this tab carries the caveat (FR-76).
       */}
       <p className="consumer-strip" role="note">
         {config.consumers.notice}
@@ -89,7 +89,7 @@ export function ConsumerFrame({
 /**
  * A source's provenance, drawn on the source itself. Three values and three different
  * claims: served over the seam, computed by this view from something that was, or
- * synthesised here because drogna does not model it (ADR-0036).
+ * synthesised here because drogna does not model it (ADR-0038).
  */
 export function Provenance({ of }: { of: 'seam' | 'seam-derived' | 'synthesised' }) {
   const says = {

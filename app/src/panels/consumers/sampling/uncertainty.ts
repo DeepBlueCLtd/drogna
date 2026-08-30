@@ -1,5 +1,5 @@
 /**
- * Observation-driven uncertainty (FR-75, FR-77): the scalar the Sampling view colours its
+ * Observation-driven uncertainty (FR-80, FR-82): the scalar the Sampling view colours its
  * hexes by, and the one thing in this feature most likely to be mistaken for something
  * else.
  *
@@ -123,7 +123,7 @@ export function uncertaintyField(
 /**
  * Coverage binned at one resolution, read at a coarser one.
  *
- * The resolution control is local and recomputes instantly (FR-74), which would otherwise
+ * The resolution control is local and recomputes instantly (FR-79), which would otherwise
  * mean re-binning every observation the tab has ever heard each time it moves. It does
  * not, because H3 cells nest exactly: observations are binned once at the finest
  * resolution the configuration offers, and a coarser view is the containment tree summed

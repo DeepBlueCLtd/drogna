@@ -1,0 +1,8 @@
+{
+  "shell": {
+    "views": [
+      { "id": "intro", "label": "Intro" },
+      { "id": "holdings", "label": "Holdings" }
+    ]
+  }
+}

@@ -34,8 +34,6 @@ import { DEFERRED_VIEWS, panelComponents, type PanelParams } from './registry.js
 import { Disclosure } from './Disclosure.js';
 import { Stack } from './Stack.js';
 import { ClockStrip } from './ClockStrip.js';
-import { HelpButton } from './walkthrough/HelpButton.js';
-import { componentTour } from './walkthrough/tour.js';
 import { presentationFor, useMeasuredSize, viewportHeight, viewportWidth } from './viewport.js';
 import './shell.css';
 
@@ -53,11 +51,11 @@ export type { PanelParams };
 /**
  * The views are the harness's faces, not documents: rearrangeable, never closable.
  *
- * Three of them are not the harness's faces at all (feature 115): a downstream consumer
+ * Three of them are not the harness's faces at all (feature 116): a downstream consumer
  * view is drawn in its own chrome so the boundary is legible without explanation and
  * survives a screenshot. Which views those are is read from the view's declared kind, not
  * from a list here — the shell holds no such list, and a fourth consumer is a line in a
- * configuration document (FR-71). A view that declares no kind is the harness's own,
+ * configuration document (FR-76). A view that declares no kind is the harness's own,
  * which is every view that existed before the property did.
  */
 function PermanentTab(props: IDockviewPanelHeaderProps<PanelParams>) {
@@ -187,15 +185,6 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
     [config, params],
   );
 
-  /**
-   * Open a view by id, through the same path a link does. The walkthrough uses it to
-   * reach the tab its steps highlight: a step pointing at an element on a tab you are
-   * not looking at points at nothing.
-   */
-  const openView = useCallback((view: string) => {
-    apiRef.current?.getPanel(view)?.api.setActive();
-  }, []);
-
   useEffect(() => {
     const onHashChange = () => {
       const requested = viewFromHash(window.location.hash);
@@ -269,11 +258,13 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
           {importRefusal && <span className="shell-refusal">{importRefusal}</span>}
         </Disclosure>
         <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
-        {/* Last in the header, so it sits at the top right: the one control here that
-            is for the reader rather than for the harness (feature 110). It stays out of
-            the disclosure above — a help control folded behind a "more" label is one
-            the people who need it will not find. */}
-        <HelpButton tour={componentTour(config)} onOpenView={openView} />
+        {/* The help control used to sit here, last in the header and therefore at the top
+            right. Feature 115 moved it into the panel it explains (FR-75, ADR-0037): with
+            four tours the header would have had to carry a menu, or one button whose
+            meaning changed under the reader's hand as the active view changed. No
+            fallback stays behind, because a button that is always present says nothing by
+            being present — and its absence on Intro and Background is now the honest
+            answer that those tabs have no tour. */}
       </header>
       <div className="shell-body" ref={bodyRef}>
         {narrow ? (

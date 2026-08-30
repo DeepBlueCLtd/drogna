@@ -67,8 +67,8 @@ export function Stack({ config, active, onSelect, paramsFor }: StackProps): Reac
     <div className="stack" data-presentation="stack">
       <div className="stack-tabs" role="tablist" aria-label="views" ref={stripRef}>
         {/*
-          A consumer view's tab is drawn in its own chrome at both widths (feature 115,
-          FR-71), so the declared kind travels into both presentations rather than into
+          A consumer view's tab is drawn in its own chrome at both widths (feature 116,
+          FR-76), so the declared kind travels into both presentations rather than into
           whichever was easier: a screenshot taken at a phone's width carries exactly the
           same claim as one taken at a desk.
         */}

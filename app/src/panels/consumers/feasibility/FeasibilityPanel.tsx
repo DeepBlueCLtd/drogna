@@ -1,5 +1,5 @@
 /**
- * Tab 3 — **Feasibility** (FR-80): a downstream consumer that answers *it is 1800; which
+ * Tab 3 — **Feasibility** (FR-85): a downstream consumer that answers *it is 1800; which
  * of these eight things can I still do?*
  *
  * **No map**, deliberately. The other two consumers are about *where*; this one exists to
@@ -91,7 +91,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
   /**
    * The served lane: genuine position queries at instants spread across the forecast's
    * own validity span. It refetches when the reader takes a new forecast up, and not
-   * when one is merely published (FR-73).
+   * when one is merely published (FR-78).
    */
   useEffect(() => {
     if (!accepted) return;

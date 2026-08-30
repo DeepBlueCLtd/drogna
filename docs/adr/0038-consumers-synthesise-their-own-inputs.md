@@ -1,16 +1,16 @@
-# ADR-0036: a consumer may synthesise its own inputs; it may never synthesise drogna's
+# ADR-0038: a consumer may synthesise its own inputs; it may never synthesise drogna's
 
 **Status:** Accepted
 **Date:** 30 August 2026
 **Feature:** 115 (the downstream consumer tabs)
-**Requirements:** SRD-v2 FR-71 to FR-80
+**Requirements:** SRD-v2 FR-76 to FR-85
 **Engages:** Constitution VII (liveness, not configuration); Constitution V (no tracked
 entities); Constitution VIII (recommendations, not decisions); Constitution II (seeded
 randomness); ADR-0027, whose seam these tabs are clients of
 
 ## Context
 
-Feature 115 puts three tabs in the shell that are not part of drogna. They are notional
+Feature 116 puts three tabs in the shell that are not part of drogna. They are notional
 downstream systems — a sampling planner, a comparative course chooser, a temporal triage
 aid — consuming drogna's forecast to reach a decision, and they exist to answer the "so
 what" question the harness has never answered on screen.
@@ -28,7 +28,7 @@ assert the existence of something that is not running.** Fixture data, canned tr
 a "populate for the screenshot" mode are each named and each forbidden. The whole
 evidential value of drogna rests on that.
 
-Read carelessly, feature 115 is a fixture-data feature with a coat of paint. That reading
+Read carelessly, feature 116 is a fixture-data feature with a coat of paint. That reading
 has to be answered before a single synthesised lane is drawn, because if it is right the
 feature must not be built, and if it is wrong the next reader must be able to find the
 argument rather than reconstruct it.
@@ -99,7 +99,7 @@ remove it rather than to widen this ADR.
   published instance. Cleanest boundary available, and rejected: the demonstration value
   is in the *seam*, watched live — a new forecast is published in one tab and goes stale
   in another, in the same page, in front of the reader. A second application would have to
-  poll a static instance, which is exactly the polling FR-73 exists to avoid.
+  poll a static instance, which is exactly the polling FR-78 exists to avoid.
 - **Restrict the consumers to what drogna already models.** Honest, and it produces the
   sparse illustration the author's §1.1 specifically rejects. The feasibility tab would
   carry two lanes and demonstrate nothing about competing commitments.

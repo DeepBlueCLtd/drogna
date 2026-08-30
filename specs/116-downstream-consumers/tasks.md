@@ -1,4 +1,4 @@
-# Feature 115 — tasks
+# Feature 116 — tasks
 
 Ordered by build order: the record first, then the shared frame, then the three tabs in
 the source's own sequence — each is expected to reuse what its predecessor established, so
@@ -13,11 +13,11 @@ broker, the coverage store and its EDR service, the planner and the map surface.
 ## Specification and record
 
 - [x] T001 Write `spec.md` from the author's SRD: scope, the five open questions settled,
-      the tree-versus-record corrections, and FR-71 to FR-80.
+      the tree-versus-record corrections, and FR-76 to FR-85.
 - [x] T002 Carry the author's SRD into the feature directory unmodified as
       `source-srd.md`, so what was asked for sits beside what was decided.
-- [x] T003 SRD-v2 §5.15: FR-71 to FR-80, and the note on why the numbering starts at 71.
-- [x] T004 ADR-0036: *a consumer may synthesise its inputs; it may never synthesise
+- [x] T003 SRD-v2 §5.15: FR-76 to FR-85, and the note on why the numbering starts at 71.
+- [x] T004 ADR-0038: *a consumer may synthesise its inputs; it may never synthesise
       drogna's*. Owed before any synthesised lane is built, because Constitution VII
       forbids fixture data and the next reader must find the argument rather than infer
       it.
@@ -137,6 +137,15 @@ not by a failing test.
       System and Map panels already use and the one the proof's allow-list already names.
       **The proof existed and was not run before pushing**, which is the whole of the
       fault: `pnpm check` does not run the captures, and CI does.
+
+- [x] T040 Feature 115 landed while this was being built — the tabs beyond Operator,
+      renumbered from 114 on its way in — and took FR-68 to FR-75, ADR-0036 and ADR-0037.
+      This beat is therefore **116**, its ADR is **0038**, its SRD section is **§5.16** and
+      its requirements are **FR-76 to FR-85**; the feature directory, the ADR, the SRD, the
+      panels' own comments, the schema's descriptions, the blog entry and the tests were
+      all rewritten in the merge. Main also withdrew the System tab and added
+      `check-view-ids`, which the merged configuration and registry satisfy: nine views,
+      six of drogna's own and three consumers.
 
 ## Proof, and showing the work
 

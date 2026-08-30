@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The consumer tabs against a genuine backend (feature 115).
+ * The consumer tabs against a genuine backend (feature 116).
  *
  * Nothing below the seam is mocked: the runtime is provisioned exactly as the bootstrap
  * provisions it, the forecast these panels go stale against is one the model runner
@@ -124,7 +124,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     vi.useRealTimers();
   });
 
-  it('every consumer tab carries the provenance strip, and it is not dismissible (FR-71)', async () => {
+  it('every consumer tab carries the provenance strip, and it is not dismissible (FR-76)', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
     const strip = document.querySelector('.consumer-strip');
@@ -148,7 +148,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(screen.queryByTestId('sampling-waiting')).toBeNull();
   });
 
-  it('goes stale on a newly published forecast and recomputes only when asked (FR-73)', async () => {
+  it('goes stale on a newly published forecast and recomputes only when asked (FR-78)', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
     await act(async () => {
@@ -183,7 +183,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(screen.queryByTestId('sampling-update')).toBeNull();
   });
 
-  it('couples the drop count to the budget and the rate, and recomputes at once (FR-74, FR-78)', async () => {
+  it('couples the drop count to the budget and the rate, and recomputes at once (FR-79, FR-83)', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
     await act(async () => {
@@ -199,7 +199,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(drops()).toContain('24 in 24 h');
   });
 
-  it('Courses draws the roster, the cloud and three or four candidates (FR-79)', async () => {
+  it('Courses draws the roster, the cloud and three or four candidates (FR-84)', async () => {
     seam();
     render(<CoursesPanel {...panelProps()} />);
     await tickFor(40);
@@ -209,7 +209,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(screen.getByTestId('courses-roster')).toBeTruthy();
   });
 
-  it('Courses reorders its candidates when the weighting moves (FR-79)', async () => {
+  it('Courses reorders its candidates when the weighting moves (FR-84)', async () => {
     seam();
     render(<CoursesPanel {...panelProps()} />);
     await tickFor(40);
@@ -227,7 +227,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(screen.getByTestId('courses-trade').textContent).toContain('the order changes');
   });
 
-  it('Feasibility lanes say where they came from, and Off changes the answer (FR-76, FR-80)', async () => {
+  it('Feasibility lanes say where they came from, and Off changes the answer (FR-81, FR-85)', async () => {
     seam();
     render(<FeasibilityPanel {...panelProps()} />);
     await tickFor(40);
@@ -250,7 +250,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(screen.getByTestId('feasibility-sets').textContent).not.toBe(setsBefore);
   });
 
-  it('Feasibility recomputes around a locked task (FR-80)', async () => {
+  it('Feasibility recomputes around a locked task (FR-85)', async () => {
     seam();
     render(<FeasibilityPanel {...panelProps()} />);
     await tickFor(40);
@@ -270,14 +270,14 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
       fireEvent.click(screen.getByTestId(`feasibility-lock-${task.id}`));
       await Promise.resolve();
     });
-    // Every set now carries it: the sets recompute *around* the lock (FR-80).
+    // Every set now carries it: the sets recompute *around* the lock (FR-85).
     const sets = [...document.querySelectorAll('[data-testid^="feasibility-set-"]')];
     expect(sets.length).toBeGreaterThan(0);
     for (const set of sets) expect(set.textContent).toContain(task.label);
   });
 });
 
-describe('the consumer tabs are marked in both presentations (FR-71)', () => {
+describe('the consumer tabs are marked in both presentations (FR-76)', () => {
   const shellConfig = (JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun).shell;
   const consumerViews = shellConfig.views.filter((view) => view.kind === 'consumer');
 

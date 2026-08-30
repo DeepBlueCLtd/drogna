@@ -1,7 +1,7 @@
 ---
 title: The tabs that are not part of the system
 date: 2026-08-30
-feature: specs/115-downstream-consumers
+feature: specs/116-downstream-consumers
 description: >-
   A simulator that samples an ocean and forecasts it can show every part of itself
   working and still never answer "so what". Three yellow tabs answer it — and the

@@ -1,5 +1,5 @@
 /**
- * The Sampling consumer's own planner (FR-78).
+ * The Sampling consumer's own planner (FR-83).
  *
  * This is not drogna's planner and does not pretend to be: drogna's plans against the
  * published ensemble spread, over its own H3 resolution and its own depth bands, and
@@ -214,7 +214,7 @@ function emptyPlan(reason: string): ConsumerPlan {
   };
 }
 
-/** How many expendables a budget yields at a rate. A rate, never a stock (FR-78). */
+/** How many expendables a budget yields at a rate. A rate, never a stock (FR-83). */
 export function dropsFor(budgetHours: number, intervalHours: number): number {
   return Math.floor(budgetHours / intervalHours);
 }

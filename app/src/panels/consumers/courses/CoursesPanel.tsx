@@ -1,5 +1,5 @@
 /**
- * Tab 2 — **Courses** (FR-79): a downstream consumer that answers *of three or four ways
+ * Tab 2 — **Courses** (FR-84): a downstream consumer that answers *of three or four ways
  * to do this, which one, and what am I trading?*
  *
  * It is not part of drogna, and it stands closest of the three to the line Constitution V
@@ -68,7 +68,7 @@ export function CoursesPanel({ params }: PanelProps) {
 
   // The field, fetched once per accepted forecast. A newly published run does not refetch
   // it: the halo is raised, and this fires again only when the reader takes the run up,
-  // which is the whole of FR-73 as it applies to a fetch.
+  // which is the whole of FR-78 as it applies to a fetch.
   useEffect(() => {
     if (!domain || !collection) return;
     void (async () => {

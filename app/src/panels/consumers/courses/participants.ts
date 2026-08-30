@@ -1,5 +1,5 @@
 /**
- * Hypotheses about who else might be out there, and how each class would move (FR-79).
+ * Hypotheses about who else might be out there, and how each class would move (FR-84).
  *
  * **What this is not.** It is not a track, not a position anyone inferred, and not an
  * entity drogna did not place. Constitution V forbids the third party *whose position the
@@ -24,7 +24,7 @@
  *
  * Every draw comes from the seeded stream (Constitution II), so a replayed run produces
  * the same cloud. The banks are synthesised — drogna models no bathymetry — and the view
- * says so on the roster (ADR-0036).
+ * says so on the roster (ADR-0038).
  */
 import { hexAt } from '../hexes.js';
 import type { Domain } from '../domain.js';
@@ -86,7 +86,7 @@ function clampToDomain(walker: Walker, domain: Domain): void {
  * The cloud: every included class, marched, binned onto hexes.
  *
  * Bounded by configuration on both axes — hypotheses per point of likelihood, and steps
- * per hypothesis — because this runs synchronously on the interaction path (FR-74).
+ * per hypothesis — because this runs synchronously on the interaction path (FR-79).
  */
 export function seedCloud(request: CloudRequest): Cloud {
   const { domain, resolution, draw } = request;
@@ -240,7 +240,7 @@ function march(
  * It is a proxy and the view says so. The physical argument behind it is ordinary — a
  * strong gradient bends sound and makes shadow zones — but this is a plausible reading of
  * a synthetic ocean, not an acoustic model, and calling it one would be exactly the
- * dishonesty FR-75 exists to prevent.
+ * dishonesty FR-80 exists to prevent.
  */
 export function concealmentFromField(
   values: ReadonlyMap<string, number>,

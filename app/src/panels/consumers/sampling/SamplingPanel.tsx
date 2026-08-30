@@ -1,5 +1,5 @@
 /**
- * Tab 1 — **Sampling** (FR-77, FR-78): a downstream consumer that answers *where should
+ * Tab 1 — **Sampling** (FR-82, FR-83): a downstream consumer that answers *where should
  * the vessel go next, and where should it drop what it cannot carry back?*
  *
  * It is not part of drogna. Everything it knows arrives through the seam: the domain and
@@ -16,8 +16,8 @@
  * observation; a route recomputed continuously would jitter and no reader could tell a
  * new forecast from a new sample. So a plan is computed against the field *as it stood
  * when it was planned*, and stands. Local controls — resolution, budget, expendable rate
- * — replan instantly against a fresh reading (FR-74); a newly published forecast raises
- * the halo and changes nothing until the reader clicks (FR-73).
+ * — replan instantly against a fresh reading (FR-79); a newly published forecast raises
+ * the halo and changes nothing until the reader clicks (FR-78).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PanelProps } from '../../../shell/registry.js';
@@ -316,7 +316,7 @@ export function SamplingPanel({ params }: PanelProps) {
     setPlanned({
       withDrops: planRoute({ ...request, dropCount }),
       // The same plan with nothing to drop: the comparison that shows depth changed the
-      // route's shape rather than merely adding markers to it (FR-78).
+      // route's shape rather than merely adding markers to it (FR-83).
       withoutDrops: planRoute({ ...request, dropCount: 0 }),
       atSimTime: simTime,
     });

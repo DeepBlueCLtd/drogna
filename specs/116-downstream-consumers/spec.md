@@ -7,7 +7,7 @@
 **Status**: Draft for development
 
 **Input**: *Drogna — Downstream Consumer Tabs*, a Software Requirements Document supplied
-by the author, reproduced in full at `specs/115-downstream-consumers/source-srd.md`.
+by the author, reproduced in full at `specs/116-downstream-consumers/source-srd.md`.
 
 ## 1. What this feature delivers, visibly
 
@@ -36,15 +36,17 @@ the implementable form of it: it settles the five open questions in the source's
 resolves the places where the source's illustrative numbers disagree with the tree, and
 states the constitutional argument the source did not have to make.
 
-**Feature number.** 114 is the highest taken (twice: `114-operator-controls`, landed, and
-`114-engaging-tabs`, specified and unbuilt). This is **115**, and like 111–114 it sits
-outside the arc of `docs/v2/plan.md` §5: it adds no component, changes no simulation and
-moves no data across the seam that was not already crossing it.
+**Feature number, and why it moved.** This was drafted as **115** against a tree where
+`114-engaging-tabs` was specified and unbuilt. While it was being built that feature
+landed, renumbered itself to 115, and took FR-68 to FR-75, ADR-0036 and ADR-0037 with it.
+The tree is the authority and the record is a claim about it (CLAUDE.md, lesson 1), so
+this is **116**, its ADR is **0038**, and every reference was rewritten in the merge
+rather than left to be discovered. Like 111–115 it sits outside the arc of
+`docs/v2/plan.md` §5: it adds no component, changes no simulation and moves no data
+across the seam that was not already crossing it.
 
-**SRD-v2 change.** A new §5.15 carries **FR-71 to FR-80**. The numbering starts at 71
-rather than 68 because the unbuilt `114-engaging-tabs` draft has already claimed
-FR-63 to FR-70, and two features numbering the same requirement differently is exactly
-the disagreement between record and tree this repository has paid for twice.
+**SRD-v2 change.** A new §5.16 carries **FR-76 to FR-85**, beginning where the landed
+§5.15 ends.
 
 **Out of scope, and said so.** The source's §1.2 rules out every consumer that needs
 drift — search and rescue, spill trajectory, man overboard — because drogna models no
@@ -77,7 +79,7 @@ vocabulary gate holds it to that.
 
 The source's §1.1 permits synthesis freely, and Tab 3 needs it: drogna models no ferry
 timetable, no satellite overpass and no crew watch cycle. Constitution VII forbids fixture
-data. Both are right, and ADR-0036 records why they do not collide:
+data. Both are right, and ADR-0038 records why they do not collide:
 
 - A synthesised quantity is an input to a **consumer's own reasoning**, never a claim
   about a drogna component. Nothing synthesised is ever published back over the seam,
@@ -187,7 +189,7 @@ first minute, instead of after the first model run.
 
 What does **not** raise a halo: the now-cast is itself replaced on its own cadence and
 that replacement is announced. A consumer standing on a now-cast does not chase those.
-FR-73's trigger is a published run becoming current, and a second staleness source would
+FR-78's trigger is a published run becoming current, and a second staleness source would
 make the halo mean two things.
 
 ### 4.4 Stale-then-refresh *(source §2.3)*
@@ -447,7 +449,7 @@ synthesised by this tab (§3.2):
 listed as coming from the forecast field, and it cannot: drogna models temperature,
 salinity and pressure, and no reading of those is a sea state without an invented wave
 model in between. Deriving one and labelling it *from the forecast* would have been
-precisely the dishonesty FR-75 exists to prevent, so the lane is marked synthesised and the
+precisely the dishonesty FR-80 exists to prevent, so the lane is marked synthesised and the
 tab says so on its face.
 
 ### 7.3 Lane types and thresholds *(source §5.3)*
@@ -488,38 +490,38 @@ headline output is what you are giving up. The constraint set is heavy on purpos
 
 ## 8. Requirements as they enter SRD-v2 §5.15
 
-- **FR-71** The shell shall host **downstream consumer views**, declared in configuration
+- **FR-76** The shell shall host **downstream consumer views**, declared in configuration
   as a view kind, rendered in bright yellow with black text in both presentations, each
   under a persistent, non-dismissible strip naming it as not part of drogna. The shell
   holds no list of which views these are.
-- **FR-72** A consumer view shall reach drogna **only through the seam** — configured
+- **FR-77** A consumer view shall reach drogna **only through the seam** — configured
   relative endpoints and configured broker topics — and shall import no backend module.
-- **FR-73** A consumer view shall be marked **stale by a published run becoming
+- **FR-78** A consumer view shall be marked **stale by a published run becoming
   current**, shall recompute **only** on an explicit reader action, and shall retain the
   superseded answer as a **ghost** naming the run it was computed from.
-- **FR-74** Every control that is not the update action shall recompute **immediately**,
+- **FR-79** Every control that is not the update action shall recompute **immediately**,
   and every computation bound shall come from configuration.
-- **FR-75** A derived quantity shall be **named for what it is derived from**, and the
+- **FR-80** A derived quantity shall be **named for what it is derived from**, and the
   view shall state its ingredients. The coverage proxy is *observation-driven
   uncertainty*.
-- **FR-76** A consumer view **may synthesise inputs drogna does not model**, provided
+- **FR-81** A consumer view **may synthesise inputs drogna does not model**, provided
   each is labelled as synthesised, is drawn from a seeded stream derived from the run
   manifest, and is never published back over the seam nor shown as a claim about a drogna
   component.
-- **FR-77** The Sampling view shall present the domain under a **reader-adjustable hex
+- **FR-82** The Sampling view shall present the domain under a **reader-adjustable hex
   grid** coloured by observation-driven uncertainty **per depth zone**, distinguishing
   the zones the vessel can reach from those it cannot, reading both from what crossed the
   seam rather than from a constant.
-- **FR-78** The Sampling view shall plan a route **by value per unit transit**, under a
+- **FR-83** The Sampling view shall plan a route **by value per unit transit**, under a
   reader-chosen time budget, ending where the budget expires, with **expendable drops
   constrained to lie on the route**, each justified by the zone and the uncertainty it
   addresses. The plan's **shape**, not only its length, shall change with the budget.
-- **FR-79** The Courses view shall seed **hypothetical vessel classes** across the domain
+- **FR-84** The Courses view shall seed **hypothetical vessel classes** across the domain
   from reader-set likelihoods, shall give each class a **motion model** rather than a
   score multiplier, and shall present **three or four candidate courses** with separately
   scored components under a reader-adjustable weighting whose range can **reorder** them.
   It holds no third-party entity (Constitution V).
-- **FR-80** The Feasibility view shall present source lanes of two kinds — boolean and
+- **FR-85** The Feasibility view shall present source lanes of two kinds — boolean and
   continuous with **per-task draggable thresholds** — each carrying a **confidence**
   setting weighted from configuration with an **Off** that excludes it, and shall output
   the **top two or three maximal feasible sets** with what each gives up, recomputing

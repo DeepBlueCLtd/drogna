@@ -1,5 +1,5 @@
 /**
- * Feasible sets (FR-80): what you can actually do, and what it costs you to do it.
+ * Feasible sets (FR-85): what you can actually do, and what it costs you to do it.
  *
  * The output is deliberately **not** a schedule. It is the top two or three *maximal*
  * feasible sets, each with what it gives up — because *you can do A and B, or B and C,
@@ -227,7 +227,7 @@ export function feasibleSets(request: FeasibilityRequest): {
     const chosen = schedulable.filter((_, index) => (mask & (1 << index)) !== 0);
     if (chosen.length === 0) continue;
     // A locked task is mandatory: sets without it are not answers to the question the
-    // reader asked (FR-80).
+    // reader asked (FR-85).
     if ([...request.locked].some((id) => !chosen.some((entry) => entry.task.id === id))) continue;
     const placed = schedule(chosen, request.steps);
     if (!placed) continue;

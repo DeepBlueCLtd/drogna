@@ -15,6 +15,14 @@ export interface GridCoverage {
     axes: { x: { values: number[] }; y: { values: number[] }; z: { values: number[] }; t: { values: string[] } };
   };
   ranges: Record<string, { shape: number[]; values: number[] }>;
+  /**
+   * The parameters the coverage describes itself with. Optional here because the map
+   * has never needed them — it takes its labels from the composer's own list — and
+   * declared because feature 115's comparison does: a difference in degrees Celsius
+   * drawn with no unit is a number, and the unit is on the document the seam served
+   * rather than in a table the shell would otherwise have to keep.
+   */
+  parameters?: Record<string, { unit?: { symbol?: string }; description?: { en?: string } }>;
 }
 
 export interface GridCell {

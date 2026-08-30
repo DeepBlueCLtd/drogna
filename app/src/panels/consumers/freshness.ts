@@ -1,5 +1,5 @@
 /**
- * The ghost of stale-then-refresh (FR-73).
+ * The ghost of stale-then-refresh (FR-78).
  *
  * What a consumer is reasoning against, and how a newly published forecast is taken up,
  * lives in `basis.ts`; what stays behind when it is taken up lives here. The ghost is the
@@ -18,7 +18,7 @@ export interface Ghost<T> {
 /**
  * The previous answer, kept when — and only when — the run under it changed.
  *
- * A local control is not a reason to ghost (FR-74 recomputes it instantly and the reader
+ * A local control is not a reason to ghost (FR-79 recomputes it instantly and the reader
  * is not comparing forecasts), and equally a local control is not a reason to *clear* a
  * ghost: re-tuning while both answers are on screen is exactly the comparison the ghost
  * is for. So the ghost is replaced by the next accepted update, and otherwise stands

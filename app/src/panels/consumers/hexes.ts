@@ -1,5 +1,5 @@
 /**
- * The hex grid the map-bearing consumers resample the domain onto (FR-77).
+ * The hex grid the map-bearing consumers resample the domain onto (FR-82).
  *
  * A consumer is not locked to the storage grid, and this is where that stops being a
  * claim: the forecast is stored on a rectangular grid, the consumer asks a decision at
@@ -11,7 +11,7 @@
  * two indexes for one domain would be two things to reconcile.
  *
  * The ceiling is a refusal rather than a clamp. Recomputation is synchronous and on the
- * interaction path (FR-74), so a resolution that would cover the domain with more hexes
+ * interaction path (FR-79), so a resolution that would cover the domain with more hexes
  * than the configuration allows is declined by name — the reader is told the number and
  * the bound — instead of being silently rounded to something else, or accepted and left
  * to freeze the page.

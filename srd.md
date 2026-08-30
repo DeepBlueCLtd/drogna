@@ -185,8 +185,11 @@ directed → the machinery is interrogated → advice travels light → it is se
 ### 5.1 Foundations and shell (feature 101)
 
 - **FR-14** The shell shall be a dockable multi-panel layout with top-level tabs
-  **Intro, Background, System, Holdings, Operator, Map, Messages** at first run,
-  user-rearrangeable by drag and drop. Background is specified by §5.10 and built by
+  **Intro, Background, Holdings, Operator, Map, Messages** at first run,
+  user-rearrangeable by drag and drop. **Amended by feature 115:** the list read
+  *Intro, Background, System, Holdings, Operator, Map, Messages* until FR-68 withdrew
+  the System tab, its obligation discharged by the Operator flow chart. Six tabs, and
+  nothing replaces the seventh. Background is specified by §5.10 and built by
   feature 111; it is named here because a tab that arrives without a requirement behind
   it is exactly the divergence V2 exists to end. **Holdings** was named here with the debt
   admitted — it shipped with feature 102 and this list did not follow it — and §5.2
@@ -215,7 +218,12 @@ directed → the machinery is interrogated → advice travels light → it is se
   driven solely by heartbeats received over the broker within each component's declared
   liveness window. No configuration flag, no fixture, no override *(v1 FR-45, FR-52;
   Constitution VII)*. The clock's heartbeat is the first liveness signal and the
-  pattern every component follows.
+  pattern every component follows. **Amended by feature 115:** this obligation is
+  discharged by the **Operator flow chart** (FR-57), which draws every declared
+  component greyed until a heartbeat from it arrives — it is not deleted with the System
+  tab that used to carry it. The two facts System carried alone, each component's
+  declared beat and the liveness window it is judged against, are carried by the Operator
+  list view as declared figures (FR-68).
 - **FR-17** Each component receives exactly one configuration document at
   construction, validated against its schema before any other work; no literal path,
   URL or topic string appears in component source *(v1 NFR-04; Constitution IV)*.
@@ -250,7 +258,11 @@ directed → the machinery is interrogated → advice travels light → it is se
   store announces a publication on its declared topic; it shall not poll. Where the
   inventory is refused or fails its master, the tab shall state the refusal rather than
   render an empty store, an empty table being a claim the shell is not entitled to make
-  *(Constitution VII)*. Numbered after FR-45 rather than inserted in sequence: these
+  *(Constitution VII)*. **Amended by feature 115:** the inventory is presented as a
+  timeline in simulation time rather than a list in arrival order (FR-69), and a derived
+  comparison of a forecast instance against the truth published for the same instant
+  joins the manifest view (FR-70). The refusal rule and the no-polling rule above are
+  carried verbatim, and selecting a holding still opens its manifest whole. Numbered after FR-45 rather than inserted in sequence: these
   numbers are cited across `specs/` and the ADRs, so renumbering would break the
   citations to buy tidiness. (The `v1 FR-46` cited at FR-23 is V1's numbering, which
   §1 declares a separate space; this is V2's FR-46.)
@@ -267,10 +279,17 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-23** The Messages tab renders live broker traffic with inspection of the
   message that just passed, and the client validates every received message against
   its schema, showing a running refusal count — "0 refused by their schema" is itself
-  a claim the display makes and the tests check *(v1 FR-46; E4)*.
+  a claim the display makes and the tests check *(v1 FR-46; E4)*. **Amended by feature
+  115:** traffic is *drawn* as well as listed (FR-71) and the inspector renders a payload
+  against the master its topic declares (FR-68). The counting claim is unchanged and
+  keeps its full coverage, the message kinds suppressed from view included; the list is
+  kept beside the traffic display rather than replaced.
 - **FR-24** The topic tree draws the declared topology lit by live traffic: structure
   from the derived topology artefact and nothing else, illumination from genuinely
-  received messages and nothing else, the two never mixing; consumer roles as a
+  received messages and nothing else, the two never mixing; **amended by feature 115**,
+  which promotes it out of its disclosure to a primary region of the panel and makes
+  selecting a node filter the traffic display and the list (FR-72), changing where it is
+  and nothing about what it draws; consumer roles as a
   first-class column connected to the subtrees their declared filters cover; arrival
   as a pulse at the leaf and a ripple up the ancestors, crossing to sustained
   intensity as rates rise; wide branches collapsing to a summary node *(E12; v1
@@ -386,7 +405,11 @@ directed → the machinery is interrogated → advice travels light → it is se
   globe, and a rotatable depth volume; the volume shall draw every level of the
   holding's own depth axis, each from a genuine area query, and shall say how many
   levels answered — EDR's `cube` query type remains outside the served subset, and
-  the composer says so by name *(v1 FR-49's cube, restored client-side)*. The time
+  the composer says so by name *(v1 FR-49's cube, restored client-side)*.
+  **Amended by feature 115:** the platform's historic track and demanded course are
+  required in *every* projection the panel offers, the depth volume included, where the
+  track is drawn at the depths the platform reported (FR-74). That is parity, not a new
+  layer. The time
   control shall carry the field as well as the route: the field is asked for the step
   of its holding's own time axis that the displayed instant falls on, refetched when
   the displayed instant crosses into another step and no faster, and never cached —
@@ -571,13 +594,19 @@ left the slot named but unclaimed. It is spent. The specification is
   declared component list and presented in the order the Operator flow chart draws
   them, so a component with no step — or a step for something that is not a component —
   is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
-  covering a component would read as a complete tour.
+  covering a component would read as a complete tour. **Amended by feature 115
+  (FR-75, ADR-0037):** the control is carried by the panel it explains rather than by the
+  shell header, and so no longer opens a view before running; and the completeness rule
+  generalises from the declared component list to a per-surface list on disk, one for
+  each tour.
 - **FR-62** The walkthrough **teaches and does not report**: it shall not claim any
   particular component's live state, and a test shall hold it to that. It stands in for
   no component, which is why Constitution VII is not engaged by it (feature 111's
   precedent) — and the reason that stays true is the rule above, not the intention. The
   control shall be parameterised by the tour it starts and shall open that tour's view
   before running, so a tour for another view is a tour and not a second control.
+  **Amended by feature 115:** it is parameterised by its tour still, and is carried by
+  the panel; the view-opening clause retires with the header placement.
 
 ### 5.14 The operator's controls (feature 114)
 
@@ -638,11 +667,97 @@ itself arrives.
   component: a component that declares none cannot be asked.
 
 
-### 5.15 The downstream consumers (feature 115)
+### 5.15 The tabs beyond Operator (feature 115)
+
+Feature 113 set a bar and the rest of the shell divided sharply in two: Background is
+designed, the Map is an instrument, Intro is prose doing its job — and System, Holdings
+and Messages were tables, each showing the least interesting projection of the most
+interesting thing it had. This beat changes no simulation, adds no component, moves no
+data and needs no new master: everything it draws was already crossing the seam. The
+specification is `specs/115-engaging-tabs/`.
+
+A tab earns its place against three yardsticks, all three: **something is moving**, **the
+reader can poke it**, **the instrument is bespoke to the thing**. A surface that would
+pass only one of the three is not finished.
+
+- **FR-68** The **System** tab shall be withdrawn and its obligations discharged by the
+  Operator tab. Before withdrawal, the Operator list view shall carry the two facts System
+  carried alone — each component's **declared beat** and the **liveness window** it is
+  judged against — as declared figures, typographically distinct from reported and
+  observed per FR-57's vocabulary. The tab shall not be removed while either fact exists
+  in only one place. `#/view/system` becomes an unknown view, handled as the shell already
+  handles one: no redirect and no tombstone, an address that resolves being a claim that
+  the thing still exists. Every reference in the tree shall be rewritten in the same
+  change, and **a gate shall hold the shell to naming no view that `config.run`'s shell
+  document does not declare**, so the next withdrawal cannot leave a dangling link
+  unnoticed. The System panel's footnote — that a grey row cannot distinguish *never ran*
+  from *stopped*, only the silence — is a true statement and moves to the Operator flow
+  chart's legend.
+- **FR-69** The **Holdings** tab shall present the coverage store's inventory as a
+  **timeline in simulation time**, each holding drawn at the interval its own manifest
+  says it covers (`grid.time` gives an origin, a start offset, a step and a count) on a
+  lane for its era. The archive spans twenty years and an instance spans hours, so the
+  axis shall carry both without either becoming invisible and the panel shall state the
+  scale it is showing rather than leaving a reader to infer it from tick spacing.
+  Selecting a holding opens its embedded manifest whole (FR-46). The timeline **replaces**
+  the inventory table — the one place in this feature where a table is replaced — and must
+  therefore itself be a keyboard and screen-reader surface: holdings focusable in
+  publication order, each announcing what the `coverage-holding` master declares about it.
+  **The parity check is written before the display**, bounded by that master rather than
+  by the table's five columns, so that a holding gaining a field is named by the check. If
+  the check cannot be satisfied the table stays and the reason is recorded in `tasks.md`.
+- **FR-70** The tab shall offer, for a forecast **instance** whose validity has elapsed, a
+  **derived comparison** against the truth published for the same instant: three genuine
+  EDR area queries at the chosen instant and depth — the instance, the now-cast holding
+  covering that instant, and the **persistence reference** held constant from the
+  instance's own initial step — drawn as two difference fields on one shared scale, with
+  which is closer stated plainly and *the model is not earning its compute* said in those
+  terms when it is not (Constitution IX). The comparison is **derived by the shell and
+  labelled as derived**, a fourth kind of figure beside declared, reported and observed
+  (ADR-0036); the three request URLs shall be on screen and copyable, a derived figure a
+  reader cannot re-derive being an assertion. Telemetry's own reported skill figure shall
+  be shown beside it and shall not be recomputed, with a sentence saying which question
+  each answers. Where no now-cast holding covers the chosen instant — the common case for
+  an instance still inside its validity — the panel shall say so and offer nothing; it
+  shall never compare an instance against itself.
+- **FR-71** The **Messages** tab shall lead with a **traffic display**: received messages
+  drawn as marks on lanes, arriving as they arrive, lanes being the declared top-level
+  namespaces of the topology artefact and a received topic no entry declares drawn as an
+  undeclared lane — a finding, never a silence. A refused message is visibly refused in
+  the display and not only in the count. **Motion comes from received traffic and nothing
+  else**: no animation may run when no message is arriving, a display that keeps moving
+  while the broker is silent being an assertion of traffic that does not exist
+  (Constitution VII).
+- **FR-72** The **topic tree** shall be a primary region of the panel rather than a
+  disclosure, its structure and its light unchanged (FR-24, FR-25). Selecting a node
+  filters the traffic display and the list to that subtree.
+- **FR-73** The **inspector** shall render a selected payload **against the master its
+  topic declares**: fields named, units shown where the master declares them, and a
+  refusal marked on the field that caused it. Where no master is declared for a topic the
+  inspector says so by name and falls back to the raw document, which shall remain
+  reachable for any message — the wire form is the thing the seam actually carried.
+- **FR-74** The Map panel shall draw the platform's historic track and its demanded course
+  in **every projection it offers** — plan, globe and depth volume. In the volume the track
+  shall be drawn at the depths the platform reported, against the levels the volume already
+  draws: a track flattened to the surface in a display whose subject is depth would be the
+  panel discarding the one dimension that view exists for. Nothing else about the map
+  changes.
+- **FR-75** The help control shall be carried **by the panel it explains**, at that panel's
+  top right, and not by the shell header (ADR-0037). A view with a tour shows one; a view
+  without shows nothing, and the absence is information. Tours land for **Operator** (the
+  existing component tour, moved), **Map**, **Holdings** and **Messages**. Each tour shall
+  be held to something on disk in the way FR-61 holds the component tour to the declared
+  component list — the map's to its own layer registry, Holdings' and Messages' to the
+  regions their panels declare — so that a surface gaining a feature and not a step is
+  reported by name. FR-62 is unchanged and now applies four times. The control shall reach
+  the same place in both presentations (FR-50, ADR-0033).
+
+
+### 5.16 The downstream consumers (feature 116)
 
 Every beat so far has shown the harness. This one shows what the harness is *for*: three
 tabs that are not part of drogna at all, but separate notional systems consuming its
-forecast to reach a decision. The specification is `specs/115-downstream-consumers/`, and
+forecast to reach a decision. The specification is `specs/116-downstream-consumers/`, and
 the author's own requirements document is carried there unmodified beside it.
 
 The framing is load-bearing and the screen carries it: the consumer tabs are bright yellow
@@ -651,19 +766,21 @@ screenshot lifted out of context still says what it is. Constitution VIII draws 
 these tabs stand on the far side of — the boundary it defends is *who recommends*, not
 *who renders*, and a downstream consumer is exactly what the principle presumes exists.
 
-The numbering starts at FR-71 because the unbuilt `114-engaging-tabs` draft has claimed
-FR-63 to FR-70, and two features numbering one requirement differently is the
-record-against-tree disagreement this repository has already paid for twice.
+The numbering starts at FR-76 because feature 115 — the tabs beyond Operator, §5.15 —
+landed while this one was being built and took FR-68 to FR-75 with it. This beat was
+drafted as 115 against a tree where that feature was specified and unbuilt; the tree is
+the authority and the record is a claim about it, so this is 116 and the record was
+corrected rather than the collision left to be discovered.
 
-- **FR-71** The shell shall host **downstream consumer views**, declared in configuration
+- **FR-76** The shell shall host **downstream consumer views**, declared in configuration
   as a view kind, rendered in bright yellow with black text in both presentations
   (ADR-0033), each under a persistent, non-dismissible strip naming it as not part of
   drogna. The shell holds no list of which views these are; it reads the declared kind.
-- **FR-72** A consumer view shall reach drogna **only through the seam** — configured
+- **FR-77** A consumer view shall reach drogna **only through the seam** — configured
   relative endpoints and configured broker topics — and shall import no backend module
   (Constitution XI). It is a client of the same interfaces a Version 3 client would use,
   and nothing in it may know whether the seam is answered in this page or over a network.
-- **FR-73** A consumer view shall reason from **what is already served** — the now-cast
+- **FR-78** A consumer view shall reason from **what is already served** — the now-cast
   the coverage store holds — until a forecast arrives, and shall name which of the two it
   is standing on. It shall be marked **stale by a published run becoming current**, shall
   recompute **only** on an explicit reader action, and shall retain the superseded answer
@@ -672,40 +789,40 @@ record-against-tree disagreement this repository has already paid for twice.
   swings, the value of fresh environmental data has been demonstrated rather than argued.
   A tab that faked its inputs would have nothing to be stale about — and one that drew
   nothing until the first model run would demonstrate that only to whoever waited.
-- **FR-74** Every control that is not the update action shall recompute **immediately**;
-  the ceremony of FR-73 belongs to newly arrived upstream data and to nothing else. Every
+- **FR-79** Every control that is not the update action shall recompute **immediately**;
+  the ceremony of FR-78 belongs to newly arrived upstream data and to nothing else. Every
   bound on those recomputations — sample counts, candidate counts, the cell ceiling —
   comes from configuration, and a control whose setting would exceed one refuses and says
   why rather than freezing the page.
-- **FR-75** A derived quantity shall be **named for what it is derived from**, and the
-  view shall state its ingredients. The coverage proxy of FR-77 is *observation-driven
+- **FR-80** A derived quantity shall be **named for what it is derived from**, and the
+  view shall state its ingredients. The coverage proxy of FR-82 is *observation-driven
   uncertainty*, never forecast uncertainty and never ensemble spread — both of which
   drogna genuinely publishes, and neither of which it is.
-- **FR-76** A consumer view **may synthesise inputs drogna does not model** — a tidal
+- **FR-81** A consumer view **may synthesise inputs drogna does not model** — a tidal
   window, a ferry timetable, a watch cycle — provided each is labelled on screen as
   synthesised by that view, is drawn from a seeded stream derived from the run manifest
   (Constitution II), and is never published back over the seam nor shown as a claim about
   a drogna component. Constitution VII is untouched: no data path asserts the existence of
   anything that is not running, because a consumer's own assumption is not a claim about
   the harness (ADR-0036).
-- **FR-77** The **Sampling** view shall present the domain under a reader-adjustable hex
+- **FR-82** The **Sampling** view shall present the domain under a reader-adjustable hex
   grid coloured by observation-driven uncertainty **per depth zone**, distinguishing the
   zones the vessel can reach from those it cannot. Both the domain and the reach are read
   from what crossed the seam — the collection's extent, and the planner's own published
   depth bands — never from a constant in the view.
-- **FR-78** The Sampling view shall plan a route **by value per unit transit**, under a
+- **FR-83** The Sampling view shall plan a route **by value per unit transit**, under a
   reader-chosen time budget, ending where the budget expires rather than returning to its
   start, with **expendable drops constrained to lie on the route**, each justified by the
   depth zone and the uncertainty it addresses. The plan's **shape**, not merely its
   length, shall change with the budget: a planner that always heads for the single worst
   cell fails this requirement with every test green.
-- **FR-79** The **Courses** view shall seed hypothetical vessel classes across the domain
+- **FR-84** The **Courses** view shall seed hypothetical vessel classes across the domain
   from reader-set likelihoods, shall give each class a **motion model** rather than a
   score multiplier — a scored-only roster would be cosmetic — and shall present three or
   four candidate courses with separately scored components under a reader-adjustable
   weighting whose range can **reorder** them. It holds no track, no position anyone
   inferred and no entity the harness did not place (Constitution V).
-- **FR-80** The **Feasibility** view shall present source lanes of two kinds — boolean,
+- **FR-85** The **Feasibility** view shall present source lanes of two kinds — boolean,
   and continuous with **per-task draggable thresholds** — each carrying a confidence
   setting weighted from configuration, with an **Off** that excludes the source entirely,
   and shall output the **top two or three maximal feasible sets** with what each gives up,

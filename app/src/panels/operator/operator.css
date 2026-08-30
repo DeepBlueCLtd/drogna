@@ -747,6 +747,42 @@
   }
 }
 
+/* A figure the configuration does not declare. Said, rather than left blank: a blank
+   cell is a claim that there is nothing there, which is a different claim. */
+.flow-figure-absent {
+  color: var(--flow-dim);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* The legend (feature 115, FR-68). Six states named, and with them the sentence the
+   System tab's footnote carried alone. */
+.flow-legend {
+  margin: 0.8em 0 0;
+  border-top: 1px solid #232c36;
+  padding-top: 0.6em;
+}
+
+.flow-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1.4em;
+  margin: 0 0 0.4em;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.flow-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2em;
+}
+
+.flow-legend b {
+  font-weight: 600;
+}
+
 /* ---- the controls (feature 114) ----
    A node that takes a control says so on its own head, and the controls themselves
    live in that node's drawer directly under its face: the tab's rule is that

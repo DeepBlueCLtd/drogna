@@ -572,7 +572,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1263,
+          "line": 1259,
           "constant": "/shell/topics/advisories"
         }
       ]
@@ -597,7 +597,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1260,
+          "line": 1256,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -1003,7 +1003,7 @@ export const topology: Topology = {
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1265,
+          "line": 1261,
           "constant": "/shell/topics/platform_state"
         }
       ]

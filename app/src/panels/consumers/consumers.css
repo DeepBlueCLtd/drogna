@@ -1,5 +1,5 @@
 /*
- * The consumer family's one stylesheet (feature 115).
+ * The consumer family's one stylesheet (feature 116).
  *
  * Bright yellow with black text, against a shell that is dark with light text: the
  * boundary between drogna and a system consuming it is legible at a glance and without
@@ -59,7 +59,7 @@
   opacity: 0.75;
 }
 
-/* The halo of FR-73: it has to read from across a room, and it has to be a button. */
+/* The halo of FR-78: it has to read from across a room, and it has to be a button. */
 .consumer-update {
   background: var(--consumer-ink);
   color: var(--consumer-ground);
@@ -201,7 +201,7 @@
   stroke-linejoin: round;
 }
 
-/* The ghost of FR-73: the previous answer, still legible, unmistakably previous. */
+/* The ghost of FR-78: the previous answer, still legible, unmistakably previous. */
 .consumer-ghost {
   fill: none;
   stroke: var(--consumer-ink);

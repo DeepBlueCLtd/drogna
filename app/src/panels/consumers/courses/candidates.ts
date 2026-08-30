@@ -1,5 +1,5 @@
 /**
- * Candidate courses of action, scored in components (FR-79).
+ * Candidate courses of action, scored in components (FR-84).
  *
  * **Three or four, never one.** A single recommendation invites an operator to disagree
  * with the whole idea; candidates with separated scores invite them to disagree with the

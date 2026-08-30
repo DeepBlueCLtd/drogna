@@ -2782,7 +2782,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 "harness",
                 "consumer"
               ],
-              "description": "What the view is a face of (feature 115, FR-71). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which — a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
+              "description": "What the view is a face of (feature 116, FR-76). 'harness' is drogna's own; 'consumer' is a downstream system that is not part of drogna and is drawn in its own chrome, under a strip that says so. Declared here so the shell holds no list of which views are which — a fourth consumer is a line in this document. Absent means 'harness': every view that existed before this property did is one."
             }
           }
         }
@@ -3031,8 +3031,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "consumers": {
         "type": "object",
-        "title": "The downstream consumer views (feature 115)",
-        "description": "Everything the three consumer views are bounded and populated by. It is here, and not in the views themselves, for the ordinary reason (Constitution IV) and for one specific to this feature: a consumer synthesises inputs drogna does not model (ADR-0036), and a synthesised quantity written into a component would be a fixture nobody could find. Written into a configuration document it is a declaration a reader can read, change and disagree with.",
+        "title": "The downstream consumer views (feature 116)",
+        "description": "Everything the three consumer views are bounded and populated by. It is here, and not in the views themselves, for the ordinary reason (Constitution IV) and for one specific to this feature: a consumer synthesises inputs drogna does not model (ADR-0038), and a synthesised quantity written into a component would be a fixture nobody could find. Written into a configuration document it is a declaration a reader can read, change and disagree with.",
         "required": [
           "notice",
           "hexes",
@@ -3045,7 +3045,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "notice": {
             "type": "string",
             "minLength": 1,
-            "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-71). Here rather than in the frame so the sentence exists once."
+            "description": "The provenance strip's words, carried by every consumer view and never dismissible (FR-76). Here rather than in the frame so the sentence exists once."
           },
           "hexes": {
             "type": "object",
@@ -3076,7 +3076,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "cell_ceiling": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many hexes a consumer will cover the domain with before it refuses the resolution and says why. Recomputation is synchronous and on the interaction path (FR-74); a ceiling here is what stops a resolution control freezing the page."
+                "description": "How many hexes a consumer will cover the domain with before it refuses the resolution and says why. Recomputation is synchronous and on the interaction path (FR-79); a ceiling here is what stops a resolution control freezing the page."
               }
             }
           },
@@ -3101,7 +3101,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   "type": "number",
                   "exclusiveMinimum": 0
                 },
-                "description": "The budgets offered. More than one, because the requirement is that the plan changes shape between them (FR-78)."
+                "description": "The budgets offered. More than one, because the requirement is that the plan changes shape between them (FR-83)."
               },
               "default_time_budget_hours": {
                 "type": "number",
@@ -3143,7 +3143,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   "density_halving_count"
                 ],
                 "additionalProperties": false,
-                "description": "The coverage proxy of FR-75: observation-driven uncertainty, never forecast uncertainty and never ensemble spread.",
+                "description": "The coverage proxy of FR-80: observation-driven uncertainty, never forecast uncertainty and never ensemble spread.",
                 "properties": {
                   "saturation": {
                     "type": "number",
@@ -3261,7 +3261,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "steps": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many steps each hypothesis is marched. A bound on the interaction path (FR-74)."
+                "description": "How many steps each hypothesis is marched. A bound on the interaction path (FR-79)."
               },
               "step_seconds": {
                 "type": "number",
@@ -3280,7 +3280,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "bank_count": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many shallow banks the loitering class is drawn to. Synthesised by the view and labelled as such: drogna models no bathymetry (ADR-0036)."
+                "description": "How many shallow banks the loitering class is drawn to. Synthesised by the view and labelled as such: drogna models no bathymetry (ADR-0038)."
               }
             }
           },
@@ -3312,7 +3312,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "forecast_samples": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many genuine position queries the served lane is built from, spread across the forecast's validity span. A bound on the interaction path (FR-74): the lane is a real time series of real queries, and this says how many."
+                "description": "How many genuine position queries the served lane is built from, spread across the forecast's validity span. A bound on the interaction path (FR-79): the lane is a real time series of real queries, and this says how many."
               },
               "set_count": {
                 "type": "integer",
@@ -3389,7 +3389,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                         "seam-derived",
                         "synthesised"
                       ],
-                      "description": "Where the lane's values come from, stated on the lane itself (ADR-0036): served over the seam, computed by the view from something that was, or synthesised by the view because drogna does not model it."
+                      "description": "Where the lane's values come from, stated on the lane itself (ADR-0038): served over the seam, computed by the view from something that was, or synthesised by the view because drogna does not model it."
                     },
                     "unit": {
                       "type": "string"

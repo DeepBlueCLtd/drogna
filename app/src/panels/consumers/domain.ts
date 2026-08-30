@@ -1,6 +1,6 @@
 /**
  * What a consumer knows about the water it is reasoning over, and where it learned it
- * (FR-72, FR-77).
+ * (FR-77, FR-82).
  *
  * Every figure here arrives over the seam. The published run's own message carries the
  * domain on all three axes and the collections its fields are servable under, which is

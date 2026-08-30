@@ -12,7 +12,7 @@ describe('seam validation against the masters', () => {
       mode: 'realtime',
       rate: 1,
     });
-    expect(verdict).toEqual({ ok: true, refusals: [] });
+    expect(verdict).toEqual({ ok: true, refusals: [], faults: [] });
   });
 
   it('refuses a malformed message and names the fault', () => {

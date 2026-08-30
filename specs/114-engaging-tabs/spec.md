@@ -52,7 +52,7 @@ tree.
 | Decision | Consequence |
 |---|---|
 | Three yardsticks, all three: **something is moving**, **the reader can poke it**, **bespoke instruments** | A tab earns its place by showing the harness working, not by rendering its state. A tab that would pass only one of the three is not finished |
-| A table is **replaced** where the new display carries every fact — not kept beside it as 113 kept the list | The reversal is deliberate and costs something: each new display must itself be a keyboard and screen-reader surface, because there is no longer a table behind it to be one. Where a new display cannot carry a fact, the table stays and says why |
+| A table may be **replaced** where the new display carries every fact — not kept beside it as 113 kept the list | Licence, not policy, and it is exercised exactly once: Holdings' timeline. Messages keeps its list, and System's table is not replaced but deleted with its tab, its two unique facts moving into a list that already exists. Where a table does go, the display that replaces it must itself be a keyboard and screen-reader surface, because nothing stands behind it to be one |
 | **System folds away** | Six tabs become six again only because nothing replaces it: Operator's flow chart already draws every declared component greyed until heard, which is FR-16's whole obligation. Two facts System carried alone move to Operator's list first |
 | `#/view/system` is **just gone** | No redirect, no tombstone. The shell handles an unknown view as it already does, and every link in the tree that named it is rewritten. A redirect would have kept a name for a thing that no longer exists |
 | Holdings becomes **the store's timeline** and **truth against forecast** | Not a field preview and not a JSON anatomy: the two things a table cannot show are accumulation over time, and whether the forecast was any good |
@@ -60,6 +60,18 @@ tree.
 | Messages becomes **motion, tree, inspector** — in that order down the page | The traffic display is the headline, because it is what reads from across a room. The tree comes out of the disclosure. The inspector renders a payload against its master rather than as a blob |
 | The map gains **no new layer** | The author's answer was parity, not addition: the ownship track and demanded heading appear in every projection, including the cube, where they are currently absent |
 | The **yellow button moves into the tab**, and the header loses it | A tab with a walkthrough carries one at its top right; a tab without shows nothing. The absence becomes information: the button means *this tab explains itself* |
+
+### What the second round settled, 30 August 2026
+
+Two items were left open when the specification was first written. Both are now closed,
+and the evidence is recorded because it is the part that cannot be reconstructed later.
+
+| Question | Ruling | On what evidence |
+|---|---|---|
+| One feature, or split? | **One.** | The size argument is empty: 36 tasks against 113's 34 and 111's 43, each of which landed as the single long-lived PR PR-05 asks for. 113 also bundled two subjects — a flow chart and a new component with a motion simulator — less related than these four |
+| Is the table-replacement licence a reversal of 113's rule? | **No — one exception, in one panel.** | Read against the requirements: Messages keeps its list, System's table is deleted with its tab rather than replaced. Holdings is the only place a table goes. The first draft of this specification overstated it as a general reversal |
+| How is the Holdings parity decided? | **By a check written before the display**, bounded by the `coverage-holding` master | A verification written after the display is one the repository has already watched get squeezed |
+| What is built first? | **Messages.** | The traffic display is the yardstick made visible — stop the sensors, watch the lane go still — so the design language is proved before three more surfaces are built on it. SC-01 and SC-02 land with it |
 
 ## User scenarios
 
@@ -144,11 +156,21 @@ against the levels of the field it was sampling. Today the cube draws neither.
     manifest is the ground truth AT-01 and AT-03 score against and is not summarised.
   - Where the inventory is refused or fails its master, the panel states the refusal.
     An empty timeline is a claim the shell is not entitled to make (Constitution VII).
-  - The timeline replaces the inventory table. It must therefore be reachable and
-    readable without a pointer: holdings are focusable in publication order, each
-    announcing its era, identifier, publication instant, coverage interval and grid
-    shape — every column the table carried. **If that cannot be achieved, the table
-    stays and the reason is recorded here**, per the interview's condition.
+  - The timeline replaces the inventory table — the one place in this feature where a
+    table is replaced rather than kept or deleted with its tab. It must therefore be
+    reachable and readable without a pointer: holdings are focusable in publication
+    order, each announcing what the `coverage-holding` master declares about it.
+  - **The parity check is written before the timeline is built**, and its bound is that
+    master rather than the table's five columns: the master is the authority where the
+    columns were one author's choice, it is amended and never casually rewritten, and a
+    bound read from disk survives a holding gaining a field (CLAUDE.md, lesson 2). A
+    field added to the master that the timeline does not announce is named by the check.
+  - The field digest is announced as the twelve-character fingerprint the table already
+    shows (`field.sha256` from the seventh character), not as sixty-four characters read
+    aloud. Parity needs no argument because it is the same string.
+  - **If the check cannot be satisfied, the table stays and the reason is recorded in
+    `tasks.md`**, per the interview's condition. The check decides that, not a judgment
+    made at the end of the work.
 
 ### Holdings: truth against forecast
 

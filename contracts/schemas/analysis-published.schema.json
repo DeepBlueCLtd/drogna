@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/analysis-published.schema.json",
   "title": "drogna analysis published",
-  "description": "The message the analyst publishes when a cycle has landed, and the only route by which a model run begins (feature 115). Until this message existed the model runner subscribed to the run request directly and initialised from a now-cast the environment generator had evaluated from the true ocean, so no measurement ever changed a field value. The runner now waits for this instead: the analysis is a transition you can watch, and the ordering between analysing and forecasting is stated by a message rather than left to the order two components happened to subscribe in. The request's own fields are carried forward whole so the runner needs nothing else to proceed.",
+  "description": "The message the analyst publishes when a cycle has landed, and the only route by which a model run begins (feature 116). Until this message existed the model runner subscribed to the run request directly and initialised from a now-cast the environment generator had evaluated from the true ocean, so no measurement ever changed a field value. The runner now waits for this instead: the analysis is a transition you can watch, and the ordering between analysing and forecasting is stated by a message rather than left to the order two components happened to subscribe in. The request's own fields are carried forward whole so the runner needs nothing else to proceed.",
   "type": "object",
   "required": [
     "component",

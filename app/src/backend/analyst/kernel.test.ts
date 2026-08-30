@@ -1,5 +1,5 @@
 /**
- * Feature 115: the analysis maths, on its own.
+ * Feature 116: the analysis maths, on its own.
  *
  * Nothing here is mocked and nothing here is asserted from a number somebody chose.
  * The instrument error the observations declare is read from `config/run.json`, the
@@ -56,7 +56,7 @@ const MODEL = 3;
  * configuration describes the truth and reading it is exactly what this feature's
  * gate forbids. The values sit at the scale of the smallest feature the world is
  * built from, which is a property of a harness where the answer is known and is
- * argued in specs/115 rather than smuggled in here.
+ * argued in specs/116 rather than smuggled in here.
  */
 const PARAMETERS: AnalysisParameters = {
   horizontalKm: 30,

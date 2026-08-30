@@ -4,9 +4,14 @@
  * cadence, cycling the master's closed kinds, guidance derived from the background
  * sound speed plus seeded jitter. Nothing here can name anything: the master
  * admits no free text, and a test over the master holds that property.
+ *
+ * It can also be prompted from the operator plane to author now (FR-65). Prompted or
+ * on cadence, the advisory is the same deterministic next one in the sequence: the
+ * prompt moves when the next one is written, never what it says, so a prompted run and
+ * an unprompted one differ in timing and in nothing else.
  */
 import type { SeamClient } from '../../seam/transport.js';
-import type { Advisory, ConfigAdvisorySource } from '../../generated/types.js';
+import type { Advisory, ConfigAdvisorySource, OperatorCommand } from '../../generated/types.js';
 import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
@@ -21,6 +26,8 @@ export class AdvisorySource {
   private readonly heartbeat: HeartbeatEmitter;
   private simTime = { value: '', tick: 0 };
   private sequence = 0;
+  /** How many of them were authored because a reader asked, rather than on cadence. */
+  private prompted = 0;
 
   constructor(
     private readonly config: ConfigAdvisorySource,
@@ -39,10 +46,13 @@ export class AdvisorySource {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `${this.sequence} advisory(ies) authored, every ${this.config.cadence_ticks} tick(s)`,
+        detail: `${this.sequence} advisory(ies) authored, every ${this.config.cadence_ticks} tick(s)${
+          this.prompted === 0 ? '' : `, ${this.prompted} of them on an operator prompt`
+        }`,
         figures: [
           { key: 'authored', value: this.sequence, label: 'authored' },
           { key: 'cadence_ticks', value: this.config.cadence_ticks, unit: 'ticks', label: 'cadence' },
+          { key: 'prompted', value: this.prompted, label: 'prompted' },
         ],
       }),
       runId,
@@ -55,6 +65,20 @@ export class AdvisorySource {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
       if (sample.tick > 0 && sample.tick % this.config.cadence_ticks === 0) this.author();
+    });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== this.config.id || command.kind !== 'event') return;
+      if (command.event !== this.config.prompt_event) return;
+      // Nothing is authored before simulation time exists: an advisory dated at the
+      // empty instant would be a record of a moment that has not happened. No test
+      // reaches this in the assembled runtime, and that is a fact about the assembly
+      // rather than about the rule — the clock's first sample is published while the
+      // runtime is being built, so every component has heard an instant before any
+      // command can be dispatched. Kept for the assembly that does not do that.
+      if (this.simTime.value === '') return;
+      this.prompted += 1;
+      this.author();
     });
     this.heartbeat.start();
   }

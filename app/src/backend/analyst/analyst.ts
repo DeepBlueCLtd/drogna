@@ -1,5 +1,5 @@
 /**
- * The analyst (V2-C19, SRD-v2 FR-30 as feature 115 amends it): the step the forecast
+ * The analyst (V2-C19, SRD-v2 FR-30 as feature 116 amends it): the step the forecast
  * loop never had.
  *
  * Before this component the model runner initialised from a now-cast the environment
@@ -141,7 +141,7 @@ export class Analyst {
     // The background is the forecast that stands. Only the first cycle of a scenario
     // has none, and that one initialises from the now-cast — one deliberate reading
     // of the true field, at the instant the platform leaves, recorded in the message
-    // and in the manifest rather than hidden (specs/115, Open Question 3 resolved).
+    // and in the manifest rather than hidden (specs/116, Open Question 3 resolved).
     const instance = this.store.currentInstance();
     const background = instance ?? this.store.currentNowcast();
     if (!background) {
@@ -202,7 +202,7 @@ export class Analyst {
       // The platform has sailed: what the state knew beforehand is now what it left
       // the quay with. A relabelling and nothing more — the departure share's content
       // is archive, because a forecast propagates information without creating any,
-      // and specs/115 requires the explainer to say exactly that.
+      // and specs/116 requires the explainer to say exactly that.
       if (!this.departed) {
         for (let cell = 0; cell < cellsPerStep; cell++) {
           shares[DEPARTURE][cell] += shares[ARCHIVE][cell];

@@ -1,0 +1,528 @@
+<title>The tabs beyond Operator — feature 115</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Public+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F0F3F4; --surface:#FFFFFF; --sunk:#E4E9EA;
+  --ink:#0E1B22; --body:#26383F; --muted:#5C6E77; --line:#C9D4D7;
+  --pts:#B4650F; --fld:#1F6C63; --own:#1D6B86; --ctl:#54468C; --warn:#9C3320;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+    --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
+    --pts:#E39A44; --fld:#5FB8AC; --own:#63BEDE; --ctl:#A79AD8; --warn:#E08A76;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
+  --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
+  --pts:#E39A44; --fld:#5FB8AC; --own:#63BEDE; --ctl:#A79AD8; --warn:#E08A76;
+}
+/* The console keeps one palette in both document themes: these are pictures of a dark
+   application, and repainting them light would be a picture of nothing. */
+.console{
+  --c-bg:#10151b; --c-node:#18202a; --c-line:#2b3742; --c-fg:#d5dde5; --c-dim:#6b7785;
+  --c-lit:#58d68d; --c-cy:#4cc2ff; --c-ref:#ff7b6b; --c-pts:#e0a458; --c-fld:#5fb8ac;
+  --c-own:#63bede; --c-ctl:#9c8fd1; --c-der:#d9b3ff;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--body);margin:0;
+  font-family:'Public Sans',system-ui,sans-serif;font-size:16px;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 110px}
+h1,h2,h3,h4{font-family:Spectral,Georgia,serif;color:var(--ink);margin:0;text-wrap:balance}
+h1{font-size:clamp(2rem,4.4vw,3rem);font-weight:600;line-height:1.1}
+h2{font-size:clamp(1.4rem,2.6vw,1.9rem);font-weight:600}
+h3{font-size:1.1rem;font-weight:600}
+h4{font-size:.96rem;font-weight:600}
+p{margin:0}
+.prose{max-width:66ch}
+code,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted)}
+header.top{border-bottom:1px solid var(--line);padding:60px 0 34px;
+  display:flex;flex-direction:column;gap:16px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:'IBM Plex Mono',monospace;
+  font-size:.78rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+section.blk{padding:44px 0;border-bottom:1px solid var(--line)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.note{border-left:3px solid var(--pts);background:var(--sunk);padding:13px 17px;font-size:.94rem}
+.note.q{border-left-color:var(--warn)}
+.note.d{border-left-color:var(--ctl)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+table.spec{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:8px}
+table.spec th,table.spec td{border-bottom:1px solid var(--line);padding:7px 10px;
+  text-align:left;vertical-align:top}
+table.spec th{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+
+/* ---- the console: a picture of the running panel ---- */
+.console{background:var(--c-bg);color:var(--c-fg);border:1px solid var(--c-line);
+  border-radius:4px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+  line-height:1.45;overflow-x:auto}
+.console h5{margin:0 0 8px;font-family:inherit;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--c-dim);font-weight:500}
+.cap{font-size:.82rem;color:var(--muted);margin-top:8px;max-width:70ch}
+.console .dim{color:var(--c-dim)}
+.console .ref{color:var(--c-ref)}
+.console .lit{color:var(--c-lit)}
+
+/* the four kinds of figure, as the shell will draw them */
+.fig{display:inline-flex;align-items:baseline;gap:.35em;margin-right:.9em}
+.fig .lab{color:var(--c-dim);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+.fig.declared .val{border:1px solid var(--c-dim);padding:0 .3em}
+.fig.reported .val{border-left:3px solid var(--c-fld);padding-left:.35em}
+.fig.observed .val{border-bottom:1.5px dotted var(--c-pts)}
+.fig.derived .val{border:1px dashed var(--c-der);padding:0 .3em;color:var(--c-der)}
+
+/* traffic display */
+.lanes{display:grid;grid-template-columns:8em 1fr;gap:3px 10px;align-items:center}
+.lane-name{color:var(--c-dim);text-align:right;white-space:nowrap}
+.lane{position:relative;height:18px;background:#0b1016;border:1px solid var(--c-line)}
+.lane i{position:absolute;top:3px;width:3px;height:12px;display:block}
+.lane i.obs{background:var(--c-pts)}
+.lane i.ctl{background:var(--c-ctl)}
+.lane i.cov{background:var(--c-fld)}
+.lane i.adv{background:var(--c-own)}
+.lane i.und{background:var(--c-ref)}
+.lane i.r{background:var(--c-ref);height:16px;top:1px;width:4px}
+.lane.undeclared{border-color:var(--c-ref)}
+.lane-foot{grid-column:2;color:var(--c-dim);font-size:10px}
+
+/* holdings timeline */
+.tl{display:grid;grid-template-columns:6.5em 1fr;gap:4px 10px;align-items:center}
+.tl-lane{position:relative;height:22px;background:#0b1016;border:1px solid var(--c-line)}
+.tl-lane b{position:absolute;top:3px;height:14px;display:block;border-radius:2px;
+  font-weight:400;font-size:9px;color:#08111a;text-align:center;overflow:hidden}
+.tl-lane b.arc{background:var(--c-dim)}
+.tl-lane b.now{background:var(--c-fld)}
+.tl-lane b.ins{background:var(--c-ctl);color:#f0eaff}
+.tl-lane b.sel{outline:2px solid var(--c-cy);outline-offset:1px}
+.axis{grid-column:2;display:flex;justify-content:space-between;color:var(--c-dim);font-size:10px}
+
+/* difference field */
+.diff{display:grid;grid-template-columns:repeat(12,1fr);gap:1px;width:190px}
+.diff span{aspect-ratio:1;display:block}
+.ramp{display:flex;height:8px;width:190px;margin-top:4px}
+.ramp span{flex:1}
+.kbd{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;margin-top:6px}
+.kbd b{background:var(--c-node);border:1px solid var(--c-line);padding:1px 6px;
+  border-radius:3px;font-weight:400}
+.kbd b::before{content:"⇥ ";color:var(--c-dim)}
+.narrow{max-width:390px;border:1px solid var(--c-line)}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Feature 115 · design, before the build</span>
+  <h1>The tabs beyond Operator</h1>
+  <p class="prose" style="font-size:1.1rem">
+    Three displays that do not exist yet, drawn before they are built: the traffic
+    display, the holdings timeline, and the derived comparison of a forecast against the
+    truth. This is a mockup and not a screenshot — every figure in it is invented, which
+    is exactly what a mockup is for and exactly what the running shell may never do.
+  </p>
+  <div class="meta">
+    <span>Spec <b>specs/115-engaging-tabs/spec.md</b></span>
+    <span>SRD <b>§5.14, FR-68 to FR-75</b></span>
+    <span>Records <b>ADR-0036, ADR-0037</b></span>
+    <span>Drawn <b>30 August 2026</b></span>
+  </div>
+</header>
+
+<section class="blk stack">
+  <span class="eyebrow">The vocabulary</span>
+  <h2>Four kinds of figure</h2>
+  <p class="prose">Feature 113 fixed three and made them visually distinct. Feature 115
+  adds the fourth, for a number the shell computed from documents it was served
+  (ADR-0036). The treatments are the ones the stylesheet will carry.</p>
+  <div class="console">
+    <h5>the four treatments</h5>
+    <div>
+      <span class="fig declared"><span class="lab">declared</span><span class="val">6 s</span></span>
+      <span class="fig reported"><span class="lab">reported</span><span class="val">1 284 rows</span></span>
+      <span class="fig observed"><span class="lab">observed</span><span class="val">37 msg/s</span></span>
+      <span class="fig derived"><span class="lab">derived</span><span class="val">0.412 °C RMS</span></span>
+    </div>
+  </div>
+  <table class="spec">
+    <tr><th>kind</th><th>where the number came from</th><th>treatment</th></tr>
+    <tr><td>declared</td><td>the configuration document</td><td>boxed, thin outline</td></tr>
+    <tr><td>reported</td><td>a message the component published</td><td>solid left rule</td></tr>
+    <tr><td>observed</td><td>counted by the shell from traffic it received</td><td>dotted underline</td></tr>
+    <tr><td><b>derived</b></td><td>computed here from documents that crossed the seam</td><td>dashed box, own hue</td></tr>
+  </table>
+  <p class="note d"><b>The rule that admits the fourth.</b> The shell may transform
+  documents it was served; it may not invent a figure no document contains. Every input
+  crossed the seam, the reader can re-derive it from URLs on screen, and the panel says
+  what it did.</p>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">Messages · built first</span>
+  <h2>The traffic display</h2>
+  <p class="prose">Lanes are the declared top-level namespaces of the topology artefact.
+  A mark is one received message, placed by arrival. The display is the yardstick made
+  visible: stop the sensors from Operator and the observation lane goes still while the
+  clock lane beats on.</p>
+
+  <div class="console">
+    <h5>messages — traffic, live</h5>
+    <div class="lanes">
+      <span class="lane-name">obs</span>
+      <span class="lane"><i class="obs" style="left:4%"></i><i class="obs" style="left:11%"></i><i class="obs" style="left:17%"></i><i class="obs" style="left:24%"></i><i class="obs" style="left:31%"></i><i class="obs" style="left:38%"></i><i class="obs" style="left:44%"></i><i class="obs" style="left:51%"></i><i class="obs" style="left:58%"></i><i class="obs" style="left:65%"></i><i class="obs" style="left:71%"></i><i class="obs" style="left:78%"></i><i class="obs" style="left:85%"></i><i class="obs" style="left:92%"></i></span>
+      <span class="lane-name">ctl</span>
+      <span class="lane"><i class="ctl" style="left:6%"></i><i class="ctl" style="left:16%"></i><i class="ctl" style="left:26%"></i><i class="r" style="left:33%"></i><i class="ctl" style="left:46%"></i><i class="ctl" style="left:56%"></i><i class="ctl" style="left:66%"></i><i class="ctl" style="left:76%"></i><i class="ctl" style="left:86%"></i><i class="ctl" style="left:96%"></i></span>
+      <span class="lane-name">cov</span>
+      <span class="lane"><i class="cov" style="left:22%"></i><i class="cov" style="left:74%"></i></span>
+      <span class="lane-name">adv</span>
+      <span class="lane"><i class="adv" style="left:41%"></i></span>
+      <span class="lane-name ref">obsv</span>
+      <span class="lane undeclared"><i class="und" style="left:52%"></i></span>
+      <span class="lane-foot">newest at the right · <span class="ref">red</span> is refused by its master ·
+        the fifth lane is <span class="ref">undeclared</span>: a topic arrived that no topology entry names</span>
+    </div>
+    <p style="margin-top:10px">
+      <span class="fig observed"><span class="lab">observed</span><span class="val">2 148 received</span></span>
+      <span class="fig observed"><span class="lab">observed</span><span class="val">1 refused by their schema</span></span>
+      <span class="dim">counted and validated either way — the suppressed kinds included</span>
+    </p>
+  </div>
+  <p class="cap">Each lane's marks decay to nothing as they age out of the window; the
+  decay is the only thing that moves, and it stops when arrivals stop.</p>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="stack">
+      <h4>Silence is still — SC-02</h4>
+      <div class="console">
+        <h5>messages — broker silent</h5>
+        <div class="lanes">
+          <span class="lane-name">obs</span><span class="lane"></span>
+          <span class="lane-name">ctl</span><span class="lane"></span>
+          <span class="lane-name">cov</span><span class="lane"></span>
+          <span class="lane-foot dim">no message has arrived in the window — the lanes are
+            empty because the traffic is, not because the display reset</span>
+        </div>
+      </div>
+      <p class="cap">Planted and watched: a run with publication stopped must show a still
+      display, and the check fails if anything animates anyway. An idling animation is the
+      display asserting traffic that is not there.</p>
+    </div>
+    <div class="stack">
+      <h4>Nothing heard yet</h4>
+      <div class="console">
+        <h5>messages — first seconds</h5>
+        <div class="lanes">
+          <span class="lane-name">obs</span><span class="lane"></span>
+          <span class="lane-name">ctl</span><span class="lane"><i class="ctl" style="left:88%"></i></span>
+          <span class="lane-foot dim">lanes are the declared namespaces and are drawn from
+            the first frame, empty; a namespace is never absent because it has been quiet</span>
+        </div>
+      </div>
+      <p class="cap">Structure from the topology artefact, light from received traffic —
+      FR-24's rule, applied to a second display of the same traffic.</p>
+    </div>
+  </div>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">Messages</span>
+  <h2>Tree, then inspector</h2>
+  <p class="prose">The order down the page is motion, tree, inspector. The tree comes out
+  of its disclosure and becomes a primary region; selecting a node filters both the
+  traffic display and the list to that subtree.</p>
+  <div class="grid2">
+    <div class="console">
+      <h5>topic tree — <span class="lit">obs</span> selected</h5>
+      <div class="dim">structure: the derived topology artefact · light: received traffic</div>
+      <div style="margin-top:8px">
+        ▾ <b style="color:var(--c-cy)">obs</b> <span class="dim">1 902</span><br>
+        &nbsp;&nbsp;▾ ownship <span class="dim">318</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• ownship-course <span class="dim">106</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• ownship-depth <span class="dim">106</span><br>
+        &nbsp;&nbsp;▾ ocean <span class="dim">1 584</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• temperature <span class="dim">528</span><br>
+        ▸ ctl <span class="dim">238</span><br>
+        ▸ cov <span class="dim">6</span><br>
+        ▸ <span class="ref">obsv — undeclared</span> <span class="dim">1</span>
+      </div>
+      <div class="kbd"><b>tree</b><b>node</b><b>node</b><b>clear filter</b></div>
+    </div>
+    <div class="console">
+      <h5>inspector — <span class="ref">refused</span></h5>
+      <div class="dim">obs/ocean/temperature · master <b>observation</b></div>
+      <table style="width:100%;margin-top:8px;border-collapse:collapse">
+        <tr><td class="dim" style="width:11em">phenomenonTime</td><td>2026-01-01T04:12:00Z</td></tr>
+        <tr><td class="dim">result</td><td>11.482 <span class="dim">°C</span></td></tr>
+        <tr><td class="dim">datastream</td><td>ocean/temperature</td></tr>
+        <tr style="color:var(--c-ref)"><td>depth_m</td><td>"—" &nbsp;<span>✕ must be a number</span></td></tr>
+      </table>
+      <p style="margin-top:8px" class="ref">refused by its master: /depth_m must be number</p>
+      <div class="kbd"><b>raw wire document ▸</b></div>
+    </div>
+  </div>
+  <p class="note"><b>The refusal is marked on the field that caused it</b>, rather than
+  printed as a sentence above a blob of JSON. Where a topic declares no master, the
+  inspector says so by name and falls back to the raw document — which stays reachable
+  for every message, because the wire form is what the seam actually carried.</p>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">Holdings</span>
+  <h2>The store's timeline</h2>
+  <p class="prose">Not a list in arrival order: a timeline in simulation time, each
+  holding drawn at the interval its own manifest says it covers. Three lanes, one per era.
+  The archive spans twenty years and an instance spans hours, so the panel states the
+  scale it is showing rather than letting a reader infer it from tick spacing.</p>
+
+  <div class="console">
+    <h5>holdings — the coverage store, in simulation time</h5>
+    <div class="tl">
+      <span class="lane-name">archive</span>
+      <span class="tl-lane"><b class="arc" style="left:0;width:64%">2006 – 2026 · historic archive</b></span>
+      <span class="lane-name">nowcast</span>
+      <span class="tl-lane"><b class="now" style="left:60%;width:22%">now-cast</b><b class="now" style="left:83%;width:16%">now-cast</b></span>
+      <span class="lane-name">instance</span>
+      <span class="tl-lane"><b class="ins sel" style="left:66%;width:14%">run-004</b><b class="ins" style="left:86%;width:13%">run-005</b></span>
+      <span class="axis"><span>2006-01</span><span>2016-01</span><span>2026-01-01</span><span>+6 h</span></span>
+      <span class="lane-foot">scale: <b>log in elapsed simulation time</b> — twenty years and
+        six hours on one axis, stated rather than inferred</span>
+    </div>
+    <p style="margin-top:10px" class="dim">
+      5 holdings · selected <b style="color:var(--c-fg)">run-004</b> ·
+      <span class="fig reported"><span class="lab">reported</span><span class="val">sha256:9f3c1a0b74e2…</span></span>
+      <span class="fig reported"><span class="lab">reported</span><span class="val">24×24×8×7</span></span>
+    </p>
+    <div class="kbd"><b>archive-2006</b><b>nowcast-0003</b><b>nowcast-0004</b><b>run-004</b><b>run-005</b></div>
+  </div>
+  <p class="cap">Keyboard order is publication order, and each holding announces what the
+  <code>coverage-holding</code> master declares about it: era, identifier, publication
+  instant, grid shape, field digest — as the twelve-character fingerprint the table
+  showed, not sixty-four characters read aloud.</p>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="stack">
+      <h4>Refused</h4>
+      <div class="console">
+        <h5>holdings — inventory refused</h5>
+        <p class="ref">inventory refused by its master: /holdings/2 must have required
+        property 'field'</p>
+        <p class="dim" style="margin-top:6px">nothing is drawn: an empty timeline is a
+        claim the shell is not entitled to make</p>
+      </div>
+    </div>
+    <div class="stack">
+      <h4>Empty, and honestly so</h4>
+      <div class="console">
+        <h5>holdings — before the first publication</h5>
+        <p class="dim">the store has announced no holdings yet · the timeline grows when
+        it announces one on <code>cov/holdings</code>, and never polls</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">Holdings</span>
+  <h2>Truth against forecast — the derived comparison</h2>
+  <p class="prose">For an instance whose validity has elapsed: three genuine EDR area
+  queries at one instant and one depth, and the difference between what was forecast and
+  what turned out to be true — beside the difference a persistence reference would have
+  made. Constitution IX admits no skill claim without that reference, and a picture of
+  forecast error alone is such a claim.</p>
+
+  <div class="console">
+    <h5>run-004 — forecast against truth, valid 2026-01-01T06:00:00Z, 50 m</h5>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:6px">
+      <div>
+        <div class="dim" style="margin-bottom:4px">forecast − truth</div>
+        <div class="diff" id="d1"></div>
+        <div class="ramp" id="r1"></div>
+        <div class="dim" style="margin-top:3px">−1.2 °C &nbsp;→&nbsp; +1.2 °C · one shared scale</div>
+      </div>
+      <div>
+        <div class="dim" style="margin-bottom:4px">persistence − truth</div>
+        <div class="diff" id="d2"></div>
+        <div class="ramp" id="r2"></div>
+        <div class="dim" style="margin-top:3px">same scale, so the two are comparable by eye</div>
+      </div>
+      <div style="min-width:19em">
+        <p>
+          <span class="fig derived"><span class="lab">derived</span><span class="val">0.412 °C RMS</span></span><br>
+          <span class="dim">the instance against the truth</span>
+        </p>
+        <p style="margin-top:8px">
+          <span class="fig derived"><span class="lab">derived</span><span class="val">0.867 °C RMS</span></span><br>
+          <span class="dim">persistence against the truth</span>
+        </p>
+        <p style="margin-top:10px" class="lit">The forecast is closer than persistence
+        at this instant and depth.</p>
+        <p style="margin-top:10px">
+          <span class="fig reported"><span class="lab">reported</span><span class="val">skill 0.31</span></span><br>
+          <span class="dim">telemetry's own figure, scored at the observations over the
+          run's validity — a different question, not recomputed here</span>
+        </p>
+      </div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--c-line);padding-top:9px">
+      <div class="dim" style="margin-bottom:4px">the three requests, copyable — a derived
+        figure a reader cannot re-derive is an assertion</div>
+      <div>/api/edr/collections/<b>run-004</b>/area?coords=POLYGON(…)&amp;z=50&amp;datetime=2026-01-01T06:00:00Z <span class="dim">[copy]</span></div>
+      <div>/api/edr/collections/<b>nowcast-0004</b>/area?coords=POLYGON(…)&amp;z=50&amp;datetime=2026-01-01T06:00:00Z <span class="dim">[copy]</span></div>
+      <div>/api/edr/collections/<b>run-004</b>/area?coords=POLYGON(…)&amp;z=50&amp;datetime=<b>2026-01-01T00:00:00Z</b> <span class="dim">[copy — persistence: the instance's own initial step]</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="stack">
+      <h4>Not yet comparable — SC-05</h4>
+      <div class="console">
+        <h5>run-005 — still inside its validity</h5>
+        <p class="ref">no now-cast holding covers 2026-01-01T11:00:00Z: this instance
+        forecasts an instant the truth has not reached. Nothing to compare.</p>
+        <p class="dim" style="margin-top:6px">the panel offers nothing rather than
+        comparing an instance against itself</p>
+      </div>
+    </div>
+    <div class="stack">
+      <h4>Where the model is not earning its compute</h4>
+      <div class="console">
+        <h5>run-003 — forecast against truth</h5>
+        <p>
+          <span class="fig derived"><span class="lab">derived</span><span class="val">0.930 °C RMS</span></span>
+          <span class="fig derived"><span class="lab">derived</span><span class="val">0.604 °C RMS</span></span>
+        </p>
+        <p class="ref" style="margin-top:8px">Persistence is closer than the forecast at
+        this instant and depth: the model is not earning its compute.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">Both densities</span>
+  <h2>At a phone's width</h2>
+  <p class="prose">FR-50 governs: the narrow presentation changes where a region is, never
+  whether it is. The traffic display keeps its full lane set — it is the headline and it
+  is what reads from across a room — and the tree and inspector disclose beneath it. The
+  timeline keeps all three lanes and scrolls in its own container; the page never scrolls
+  sideways.</p>
+  <div class="grid2">
+    <div class="console narrow">
+      <h5>messages · 390 px</h5>
+      <div class="lanes" style="grid-template-columns:4em 1fr">
+        <span class="lane-name">obs</span>
+        <span class="lane"><i class="obs" style="left:12%"></i><i class="obs" style="left:34%"></i><i class="obs" style="left:56%"></i><i class="obs" style="left:78%"></i><i class="obs" style="left:93%"></i></span>
+        <span class="lane-name">ctl</span>
+        <span class="lane"><i class="ctl" style="left:20%"></i><i class="ctl" style="left:60%"></i><i class="ctl" style="left:90%"></i></span>
+        <span class="lane-name">cov</span><span class="lane"><i class="cov" style="left:70%"></i></span>
+        <span class="lane-name">adv</span><span class="lane"></span>
+      </div>
+      <div style="margin-top:9px">▸ <span class="dim">topic tree</span></div>
+      <div>▸ <span class="dim">the list</span></div>
+      <div style="margin-top:6px" class="dim">a selected message covers the list, with a
+        control that goes back</div>
+    </div>
+    <div class="console narrow">
+      <h5>holdings · 390 px</h5>
+      <div class="tl" style="grid-template-columns:4.6em 1fr">
+        <span class="lane-name">archive</span>
+        <span class="tl-lane"><b class="arc" style="left:0;width:64%"></b></span>
+        <span class="lane-name">nowcast</span>
+        <span class="tl-lane"><b class="now" style="left:60%;width:22%"></b><b class="now" style="left:83%;width:16%"></b></span>
+        <span class="lane-name">instance</span>
+        <span class="tl-lane"><b class="ins sel" style="left:66%;width:14%"></b><b class="ins" style="left:86%;width:13%"></b></span>
+        <span class="lane-foot">log scale · 20 y to 6 h</span>
+      </div>
+      <div style="margin-top:9px" class="dim">the manifest and the comparison are shown
+        <i>over</i> the timeline, with a control that goes back</div>
+    </div>
+  </div>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">The walkthrough</span>
+  <h2>The button moves into the tab</h2>
+  <p class="prose">A tab with a tour carries one at its top right; a tab without shows
+  nothing, and the absence is information — the button means <i>this tab explains
+  itself</i>.</p>
+  <table class="spec">
+    <tr><th>tab</th><th>button</th><th>the tour is held to</th></tr>
+    <tr><td>Operator</td><td>yes — the component tour, moved from the header</td><td><code>config.shell.components</code></td></tr>
+    <tr><td>Map</td><td>yes</td><td>the panel's own layer registry</td></tr>
+    <tr><td>Holdings</td><td>yes</td><td>the regions the panel declares</td></tr>
+    <tr><td>Messages</td><td>yes</td><td>the regions the panel declares</td></tr>
+    <tr><td>Intro</td><td><b>none</b>, and that is the honest answer</td><td>—</td></tr>
+    <tr><td>Background</td><td><b>none</b> — eleven explainers are its own walkthrough</td><td>—</td></tr>
+  </table>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">And one deletion</span>
+  <h2>System folds away</h2>
+  <p class="prose">Six tabs become six again only because nothing replaces the seventh.
+  The Operator flow chart has drawn every declared component greyed until heard since
+  113, which is FR-16's whole obligation. Two facts System carried alone move first:</p>
+  <div class="console">
+    <h5>operator — list view, with the two facts System carried</h5>
+    <table style="width:100%;border-collapse:collapse;margin-top:4px">
+      <tr class="dim" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase">
+        <td>component</td><td>beat</td><td>liveness window</td><td>state</td><td>last heard</td></tr>
+      <tr><td>Simulation clock</td>
+        <td><span class="fig declared"><span class="val">101</span></span></td>
+        <td><span class="fig declared"><span class="val">6 s</span></span></td>
+        <td class="lit">beating</td><td>2026-01-01T04:12:06Z</td></tr>
+      <tr><td>Model runner</td>
+        <td><span class="fig declared"><span class="val">105</span></span></td>
+        <td><span class="fig declared"><span class="val">6 s</span></span></td>
+        <td class="dim">not heard</td><td>—</td></tr>
+    </table>
+    <p class="dim" style="margin-top:9px">legend · a grey node is a component that has not
+    run yet, or has stopped — the display cannot tell you which, only the silence</p>
+  </div>
+  <p class="note q"><b><code>#/view/system</code> is just gone.</b> No redirect and no
+  tombstone: an address that resolves is a claim the thing still exists. A gate holds the
+  shell to naming no view the configuration does not declare, so the next withdrawal
+  cannot leave a dangling link unnoticed — planted, watched failing, reverted.</p>
+</section>
+
+<section class="blk stack">
+  <span class="eyebrow">What this drawing is not</span>
+  <h2>Every number here is invented</h2>
+  <p class="prose">That is what a mockup is for and what the running shell may never do.
+  In the shell each of these figures carries the treatment that says where it came from,
+  and a figure with no source has nowhere to be drawn. drogna is a demonstration harness:
+  its data is synthetic and its numerics are deliberately fake.</p>
+</section>
+</div>
+
+<script>
+// The two difference fields, drawn from a fixed pattern rather than from anything real:
+// a mockup that reached for a random number would be a picture that changed on reload.
+const ramp = v => {
+  const t = Math.max(-1, Math.min(1, v));
+  return t < 0
+    ? `rgb(${Math.round(40 + 90 * (1 + t))},${Math.round(90 + 120 * (1 + t))},${Math.round(170 + 60 * (1 + t))})`
+    : `rgb(${Math.round(210 - 20 * t)},${Math.round(150 - 90 * t)},${Math.round(120 - 90 * t)})`;
+};
+const draw = (id, amp, phase) => {
+  const host = document.getElementById(id);
+  for (let row = 0; row < 12; row++)
+    for (let col = 0; col < 12; col++) {
+      const v = amp * Math.sin((col + phase) / 2.4) * Math.cos((row - phase) / 3.1);
+      const cell = document.createElement('span');
+      cell.style.background = ramp(v);
+      host.append(cell);
+    }
+};
+draw('d1', 0.45, 0);
+draw('d2', 0.95, 2);
+for (const id of ['r1', 'r2']) {
+  const host = document.getElementById(id);
+  for (let i = 0; i < 24; i++) {
+    const cell = document.createElement('span');
+    cell.style.background = ramp(-1 + (2 * i) / 23);
+    host.append(cell);
+  }
+}
+</script>

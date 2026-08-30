@@ -38,11 +38,17 @@ shows a table of components that the Operator tab now draws better.
 
 **Feature number.** 113 is the highest built. `docs/v2/plan.md` §5 records that the
 110 slot was spent by the walkthrough and that 111, 112 and 113 sit outside the arc.
-This is **114** and sits outside the arc too: it changes no simulation, adds no
-component and moves no data. It is entirely about what the shell shows of what already
-runs.
+This sits outside the arc too: it changes no simulation, adds no component and moves no
+data. It is entirely about what the shell shows of what already runs.
 
-**SRD change.** New §5.14 carries **FR-63 to FR-70**. FR-14 (the tab list), FR-16 (the
+**It was specified as 114 and renumbered to 115** while the implementation was in
+flight, when the operator-controls work took 114 on `main` and landed its own §5.14 with
+FR-63 to FR-67. That is the same collision feature 113 met and it is settled the same
+way: the tree is the authority, so the work still in flight moves rather than argues.
+The requirements moved with it, from FR-63 to FR-70 into FR-68 to FR-75, and this
+document is written throughout in the numbers that survived.
+
+**SRD change.** New §5.15 carries **FR-68 to FR-75**. FR-14 (the tab list), FR-16 (the
 component layout), FR-40 (the map), FR-46 (Holdings), FR-23 and FR-24 (Messages) and
 FR-61 (the help control) are amended in place rather than left disagreeing with the
 tree.
@@ -121,7 +127,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### System folds away
 
-- **FR-63** The **System** tab shall be withdrawn, and its obligations discharged by the
+- **FR-68** The **System** tab shall be withdrawn, and its obligations discharged by the
   Operator tab. Before withdrawal, Operator's list view shall carry the two facts System
   carried alone: each component's **declared beat**, and the **liveness window** it is
   judged against — the second stated as declared configuration and distinguished
@@ -142,7 +148,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### Holdings: the store's timeline
 
-- **FR-64** The **Holdings** tab shall present the coverage store's inventory as a
+- **FR-69** The **Holdings** tab shall present the coverage store's inventory as a
   **timeline in simulation time**, not a list in arrival order. Each holding is drawn at
   the interval its own manifest says it covers — `grid.time` gives an origin, a start
   offset, a step and a count, so the interval is read from the holding rather than
@@ -174,7 +180,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### Holdings: truth against forecast
 
-- **FR-65** The tab shall offer, for a forecast **instance** whose validity has elapsed,
+- **FR-70** The tab shall offer, for a forecast **instance** whose validity has elapsed,
   a **derived comparison** against the truth published for the same instant.
   - Three coverages are fetched through the seam, by genuine EDR area queries at the
     chosen instant and depth: the **instance**, the **nowcast holding covering that
@@ -206,7 +212,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### Messages: motion, tree, inspector
 
-- **FR-66** The Messages tab shall lead with a **traffic display**: received messages
+- **FR-71** The Messages tab shall lead with a **traffic display**: received messages
   drawn as marks on lanes, arriving as they arrive. Lanes are the declared top-level
   namespaces from the topology artefact; a received topic no entry declares is drawn as
   an undeclared lane — a finding, never a silence (FR-24's rule, already honoured by the
@@ -218,11 +224,11 @@ against the levels of the field it was sampling. Today the cube draws neither.
   - The running counters and the "N refused by their schema" claim survive unchanged
     (FR-23), including for the message kinds suppressed from view: everything received
     is still validated and still counted.
-- **FR-67** The **topic tree** shall be a primary region of the panel rather than a
+- **FR-72** The **topic tree** shall be a primary region of the panel rather than a
   disclosure. Its structure remains the derived topology artefact and its light remains
   received traffic, the two never mixing (FR-24, FR-25, unchanged). Selecting a node
   filters the traffic display and the list to that subtree.
-- **FR-68** The **inspector** shall render a selected payload **against the master its
+- **FR-73** The **inspector** shall render a selected payload **against the master its
   topic declares**: fields named, units shown where the master declares them, and a
   refusal marked on the field that caused it. Where no master is declared for a topic,
   the inspector says so by name — the existing refusal — and falls back to the raw
@@ -231,7 +237,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### The map: the platform in every projection
 
-- **FR-69** The Map panel shall draw the platform's historic track and its demanded
+- **FR-74** The Map panel shall draw the platform's historic track and its demanded
   course in **every projection it offers** — plan, globe and depth volume. The volume
   currently draws neither: `MapPanel.tsx` selects `cubeLayers` or `geographicLayers`
   whole, and the ownship layers exist only in the second.
@@ -243,7 +249,7 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 ### The walkthrough, per tab
 
-- **FR-70** The help control shall be carried **by the panel it explains**, at that
+- **FR-75** The help control shall be carried **by the panel it explains**, at that
   panel's top right, and not by the shell header. A view with a tour shows one; a view
   without shows nothing. FR-61 is amended accordingly: the control is still parameterised
   by its tour and still visually distinct from the controls that operate the harness, but
@@ -268,11 +274,11 @@ against the levels of the field it was sampling. Today the cube draws neither.
 
 | Requirement | SRD | Amendment |
 |---|---|---|
-| FR-63 | FR-14, FR-16 | The tab list loses System; FR-16's obligation is named as discharged by the Operator flow chart, which already renders every declared component greyed until heard |
-| FR-64, FR-65 | FR-46 | Extended: the inventory is a timeline, and a derived comparison joins the manifest view. The refusal rule and the no-polling rule are carried verbatim |
-| FR-66 to FR-68 | FR-23, FR-24 | Extended: traffic is drawn as well as listed, the tree is promoted, the inspector is schema-aware. The refusal count claim is unchanged |
-| FR-69 | FR-40 | Amended: the track and demand are required in every projection, the volume included |
-| FR-70 | FR-61 | Amended: the control belongs to the panel, and the completeness rule generalises to every tour |
+| FR-68 | FR-14, FR-16 | The tab list loses System; FR-16's obligation is named as discharged by the Operator flow chart, which already renders every declared component greyed until heard |
+| FR-69, FR-70 | FR-46 | Extended: the inventory is a timeline, and a derived comparison joins the manifest view. The refusal rule and the no-polling rule are carried verbatim |
+| FR-71 to FR-73 | FR-23, FR-24 | Extended: traffic is drawn as well as listed, the tree is promoted, the inspector is schema-aware. The refusal count claim is unchanged |
+| FR-74 | FR-40 | Amended: the track and demand are required in every projection, the volume included |
+| FR-75 | FR-61 | Amended: the control belongs to the panel, and the completeness rule generalises to every tour |
 
 ## Key entities and masters
 

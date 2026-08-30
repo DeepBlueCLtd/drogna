@@ -79,7 +79,7 @@ export class ModelRunner {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
     });
-    // Feature 115: the runner waits for the analysis, not for the request. Until then
+    // Feature 116: the runner waits for the analysis, not for the request. Until then
     // it subscribed to the request directly and initialised from a now-cast the
     // environment generator evaluated from the true ocean, so nothing the platform
     // measured ever reached a forecast. The ordering between analysing and forecasting
@@ -154,7 +154,7 @@ export class ModelRunner {
       drawOrder.push(streamName);
       const rng = new Rng(this.rootSeed, streamName);
       // Each member starts from the analysis plus a draw scaled by the error the
-      // analysis left. Before feature 115 every member began from the identical state,
+      // analysis left. Before feature 116 every member began from the identical state,
       // so the ensemble's only divergence was the kernel's own noise and the published
       // spread was a function of lead time with no spatial structure whatever — the
       // planner needed an observation-age field to supply the structure the spread
@@ -284,7 +284,7 @@ export class ModelRunner {
         rule: isSpread ? 'ensemble-spread' : 'ensemble-mean',
         description: `${this.kernel.name} members from the analysis, each perturbed by the error the analysis left; ${
           isSpread ? 'per-cell sample standard deviation across members' : 'per-cell mean across members'
-        }. The advection velocity is a modelling assumption, deliberately not the true drift. Before feature 115 every member began from an identical now-cast the generator evaluated from the true field, so the spread carried no spatial structure and no measurement reached a forecast.`,
+        }. The advection velocity is a modelling assumption, deliberately not the true drift. Before feature 116 every member began from an identical now-cast the generator evaluated from the true field, so the spread carried no spatial structure and no measurement reached a forecast.`,
       },
       sound_speed: {
         ...baseManifest.sound_speed,

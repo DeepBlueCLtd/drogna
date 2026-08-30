@@ -1,5 +1,5 @@
 /**
- * Gate: nothing forecasts from the true field (feature 115).
+ * Gate: nothing forecasts from the true field (feature 116).
  *
  * The environment generator evaluates the archive and a rolling now-cast from the
  * analytic true ocean. That is legitimate and load-bearing — it is the reference the
@@ -47,7 +47,7 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
       findings.push({
         file: relative(root, file),
         line: index + 1,
-        message: `'${component}' may not read the truth-derived now-cast: a forecast initialises from the analysis, never from the true field (feature 115)`,
+        message: `'${component}' may not read the truth-derived now-cast: a forecast initialises from the analysis, never from the true field (feature 116)`,
       });
     });
   }

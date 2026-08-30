@@ -1,8 +1,8 @@
-# ADR-0036: measurements reach the field
+# ADR-0038: measurements reach the field
 
 **Status:** Accepted
 **Date:** 30 August 2026
-**Feature:** 115 (the analysis step, and where a value came from)
+**Feature:** 116 (the analysis step, and where a value came from)
 **Requirements:** SRD-v2 FR-21, FR-30, FR-33, all amended by this feature
 **Engages:** Constitution VI (honest ports); Constitution IX (ground truth is scored,
 not assumed); ADR-0002 (τ from the published manifest); ADR-0005 (sound speed derived

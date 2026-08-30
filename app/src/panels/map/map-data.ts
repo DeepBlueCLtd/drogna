@@ -15,6 +15,14 @@ export interface GridCoverage {
     axes: { x: { values: number[] }; y: { values: number[] }; z: { values: number[] }; t: { values: string[] } };
   };
   ranges: Record<string, { shape: number[]; values: number[] }>;
+  /**
+   * The parameters the coverage describes itself with. Optional here because the map
+   * has never needed them — it takes its labels from the composer's own list — and
+   * declared because feature 116's comparison does: a difference in degrees Celsius
+   * drawn with no unit is a number, and the unit is on the document the seam served
+   * rather than in a table the shell would otherwise have to keep.
+   */
+  parameters?: Record<string, { unit?: { symbol?: string }; description?: { en?: string } }>;
 }
 
 export interface GridCell {
@@ -319,7 +327,7 @@ const KM_PER_DEGREE_LATITUDE = 111.32;
 
 /**
  * The four provenance shares, in the order the analyst stores them, and the ink each
- * is drawn in (feature 115).
+ * is drawn in (feature 116).
  *
  * Lightness carries the distinction as well as hue, so the tint survives greyscale:
  * prior knowledge is dark, measurement is light, and the model sits between them.

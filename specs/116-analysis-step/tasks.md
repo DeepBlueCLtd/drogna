@@ -1,4 +1,4 @@
-# Feature 115 — tasks
+# Feature 116 — tasks
 
 Dependency-ordered, and complete. Tick as you go, and write the reason at the moment a
 task is declined — the reason is the part that cannot be reconstructed later (CLAUDE.md,
@@ -79,7 +79,7 @@ and the planner.
 
 ## The record
 
-- [x] T017 ADR-0036, *measurements reach the field*: why the truth-derived now-cast
+- [x] T017 ADR-0038, *measurements reach the field*: why the truth-derived now-cast
       stopped being the initial state, why optimal interpolation rather than a nudging
       scheme (the provenance identity is the argument, not the accuracy), why
       Gaspari–Cohn rather than a cutoff, and why the planner's footprint block is gone.

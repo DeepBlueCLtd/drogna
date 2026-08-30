@@ -164,15 +164,15 @@ describe('the stack keeps the tabs (FR-004, FR-005)', () => {
   it('writes the address when a tab is chosen', async () => {
     const { done } = await shellAt('#/view/intro', 390);
     try {
-      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="system"]');
+      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="holdings"]');
       await act(async () => {
         tab?.click();
         await Promise.resolve();
       });
-      expect(window.location.hash).toBe('#/view/system');
+      expect(window.location.hash).toBe('#/view/holdings');
       expect(
         document.querySelector('.stack-view:not([hidden])')?.getAttribute('data-view'),
-      ).toBe('system');
+      ).toBe('holdings');
     } finally {
       done();
     }
@@ -231,6 +231,40 @@ describe('the chrome (FR-007)', () => {
       expect([...(details?.querySelectorAll('button, label') ?? [])].length).toBeGreaterThanOrEqual(2);
     } finally {
       done();
+    }
+  });
+
+  it('FR-75: the help control is carried by the panel, and reaches the same place at both widths', async () => {
+    // Feature 115 moved it out of the header (ADR-0037). FR-50 governs the move: the
+    // narrow presentation changes *where* a panel is, never whether it is — so the
+    // control is in the panel's own header row at both widths, and is never folded into
+    // a disclosure. A help affordance behind a "more" label is one the people who need
+    // it will not find, which was feature 110's reason for keeping it out of the
+    // header's disclosure and is unchanged by the move.
+    for (const width of [390, 1440]) {
+      const { done } = await shellAt('#/view/messages', width);
+      try {
+        expect(document.querySelector('.shell-header .walkthrough-button')).toBeNull();
+        const button = document.querySelector('.messages-panel .panel-head .walkthrough-button');
+        expect(button, `no help control in the Messages panel at ${width}px`).not.toBeNull();
+        expect(button?.closest('details')).toBeNull();
+      } finally {
+        done();
+      }
+    }
+  });
+
+  it('FR-75: a view with no tour shows no control, and the absence is the answer', async () => {
+    // Intro is prose and Background is eleven explainers that are their own walkthrough.
+    // A button that was always present would say nothing by being present.
+    for (const view of ['intro', 'background']) {
+      const { done } = await shellAt(`#/view/${view}`, 390);
+      try {
+        const panel = document.querySelector(`.stack-view:not([hidden])[data-view="${view}"]`);
+        expect(panel?.querySelector('.walkthrough-button')).toBeNull();
+      } finally {
+        done();
+      }
     }
   });
 });

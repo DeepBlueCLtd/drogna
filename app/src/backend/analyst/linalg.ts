@@ -1,5 +1,5 @@
 /**
- * The one dense solve the analysis needs, and nothing more (feature 115).
+ * The one dense solve the analysis needs, and nothing more (feature 116).
  *
  * The system the analysis solves is HBHᵀ + R: one row per observation in the cycle,
  * and the platform carries four instruments on a thirty-tick cadence, so the order is

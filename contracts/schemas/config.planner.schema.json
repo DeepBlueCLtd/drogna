@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.planner.schema.json",
   "title": "drogna planner configuration (V2-C14)",
-  "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code. Feature 115 removed this document's footprint block: how far a measurement's influence reaches is the analysis's covariance, declared once in config.analyst.schema.json, and the planner reads it from there. Two declarations of one physical claim, only one of them ever applied, is the fault this repository keeps paying for.",
+  "description": "The planner (SRD-v2 FR-33, FR-34): combines the published ensemble spread with an observation-age deficit decaying at the local tau, prices candidate routes by walking them against the state as it stands at each arrival instant, selects by prize-collecting orienteering under a time budget with seeded restarts, and emits recommendations only. The formulation is docs/algorithms/informative-path-planning.md, carried whole from V1; every constant it names is configuration here, never a number in code. Feature 116 removed this document's footprint block: how far a measurement's influence reaches is the analysis's covariance, declared once in config.analyst.schema.json, and the planner reads it from there. Two declarations of one physical claim, only one of them ever applied, is the fault this repository keeps paying for.",
   "type": "object",
   "required": [
     "id",
@@ -18,7 +18,8 @@
     "usable_threshold",
     "restarts",
     "shortlist",
-    "projection"
+    "projection",
+    "prompt_event"
   ],
   "additionalProperties": false,
   "properties": {
@@ -36,7 +37,8 @@
         "clock",
         "observations",
         "run_published",
-        "plan"
+        "plan",
+        "command"
       ],
       "additionalProperties": false,
       "properties": {
@@ -51,8 +53,17 @@
         },
         "plan": {
           "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "command": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Operator commands (operator-command.schema.json). The planner acts on a tuning or a prompt addressed to it and ignores everything else on the topic."
         }
       }
+    },
+    "prompt_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks the planner to recompute now rather than at its replan interval. It recommends either way: a prompt changes when a recommendation is made, never what it is worth, and never turns one into an order (Constitution VIII)."
     },
     "heartbeat": {
       "$ref": "config.common.schema.json#/$defs/heartbeat"

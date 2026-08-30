@@ -746,3 +746,186 @@
     transition: none;
   }
 }
+
+/* A figure the configuration does not declare. Said, rather than left blank: a blank
+   cell is a claim that there is nothing there, which is a different claim. */
+.flow-figure-absent {
+  color: var(--flow-dim);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* The legend (feature 115, FR-68). Six states named, and with them the sentence the
+   System tab's footnote carried alone. */
+.flow-legend {
+  margin: 0.8em 0 0;
+  border-top: 1px solid #232c36;
+  padding-top: 0.6em;
+}
+
+.flow-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1.4em;
+  margin: 0 0 0.4em;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.flow-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2em;
+}
+
+.flow-legend b {
+  font-weight: 600;
+}
+
+/* ---- the controls (feature 114) ----
+   A node that takes a control says so on its own head, and the controls themselves
+   live in that node's drawer directly under its face: the tab's rule is that
+   consequence is visible where the cause was applied, and a console off to one side
+   would have broken it for every control at once. */
+.flow-node-controls {
+  margin-left: auto;
+  color: var(--flow-ctl);
+  font-size: 0.7rem;
+  line-height: 1;
+  flex: none;
+}
+
+/* A node carrying both marks needs them side by side, not fighting for the margin. */
+.flow-node-controls + .flow-node-lock {
+  margin-left: 0.3em;
+}
+
+.flow-demand-fields label {
+  min-width: 8.5em;
+}
+
+.flow-demand-label {
+  display: flex;
+  gap: 0.3em;
+  align-items: baseline;
+}
+
+.flow-demand-label i {
+  color: var(--flow-line);
+  font-style: normal;
+}
+
+.flow-demand-fields input[type='range'] {
+  width: 100%;
+  accent-color: var(--flow-own);
+}
+
+.flow-demand-current {
+  color: var(--flow-dim);
+  font-size: 0.68rem;
+}
+
+.flow-demand-presets {
+  display: flex;
+  gap: 0.4em;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.5em;
+}
+
+.flow-tuning,
+.flow-events {
+  margin-top: 0.7em;
+  border-top: 1px solid var(--flow-line);
+  padding-top: 0.6em;
+}
+
+.flow-tuning h4,
+.flow-events h4 {
+  margin: 0 0 0.4em;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--flow-dim);
+}
+
+.flow-tuner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3em 0.6em;
+  align-items: end;
+  margin-bottom: 0.7em;
+  /* Capped rather than filling the drawer: at full width the slider ran the length
+     of the page and put the send button a screen away from the value it sends.
+     Found by driving the built page, not by a test. */
+  max-width: 36em;
+}
+
+.flow-tuner label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  font-size: 0.72rem;
+  color: var(--flow-dim);
+}
+
+.flow-tuner input[type='range'] {
+  accent-color: var(--flow-ctl);
+}
+
+.flow-tuner-label {
+  display: flex;
+  gap: 0.35em;
+  align-items: baseline;
+}
+
+.flow-tuner-label i {
+  color: var(--flow-line);
+  font-style: normal;
+}
+
+.flow-tuner-entry {
+  width: 5em;
+  background: #10151b;
+  color: var(--flow-fg);
+  border: 1px solid var(--flow-line);
+  border-radius: 2px;
+  padding: 0.15em 0.4em;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+/* The value in force is the one fact on this control, so it is the one thing drawn in
+   the reading colour; the ask beside it is grey until the component reports it. */
+.flow-tuner-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--flow-fg);
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.flow-tuner-state i {
+  color: var(--flow-dim);
+  font-style: normal;
+  font-size: 0.7rem;
+}
+
+.flow-tuner-detail {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--flow-dim);
+}
+
+.flow-event {
+  margin-bottom: 0.5em;
+}
+
+.flow-event p {
+  margin: 0.2em 0 0;
+}

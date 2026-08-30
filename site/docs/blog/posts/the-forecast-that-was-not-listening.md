@@ -1,7 +1,7 @@
 ---
 title: The forecast was not listening, and nothing in the code said so
 date: 2026-08-30
-feature: specs/115-analysis-step
+feature: specs/116-analysis-step
 description: >-
   Every part of the loop was individually honest, and the whole was a demonstration of
   something that was not happening: the instruments changed when the model ran and

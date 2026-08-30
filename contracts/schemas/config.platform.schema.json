@@ -4,7 +4,7 @@
   "title": "drogna platform configuration (V2-C21)",
   "description": "The platform component's configuration document (SRD-v2 FR-52, FR-53): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 113 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
   "type": "object",
-  "required": ["id", "stream", "topics", "heartbeat", "initial", "limits", "instruments", "thing"],
+  "required": ["id", "stream", "topics", "heartbeat", "initial", "limits", "instruments", "thing", "fault_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
@@ -15,7 +15,7 @@
     },
     "topics": {
       "type": "object",
-      "required": ["clock", "demand", "state", "observation_prefix"],
+      "required": ["clock", "demand", "state", "observation_prefix", "command"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
@@ -31,8 +31,17 @@
           "type": "string",
           "pattern": "^[a-z0-9]+$",
           "description": "The namespace ownship observations are published under, matching the sensors' own: the topic is <prefix>/<thing_id>/<datastream_id>. The same namespace because these are ordinary measurements through the ordinary path (FR-54)."
+        },
+        "command": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Operator commands (operator-command.schema.json). The platform acts on a fault prompt addressed to it and ignores everything else on the topic; a demand still arrives on the demand topic, because a demand is a domain message and not a command."
         }
       }
+    },
+    "fault_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks the platform to publish ONE deliberately faulty message (SRD-v2 FR-67): a depth reading beyond the maximum this document declares. The fault originates here, in the component a real instrument fault would come from, rather than being published into the ownship namespace by a control plane that does not own it — which is also what makes the ingestion seam's answer the genuine one, since it range-checks against these very limits. The platform counts what it was asked to produce and reports the count, so a faulty reading is never mistaken for a platform that has started lying on its own account."
     },
     "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
     "thing": {

@@ -18,6 +18,17 @@
  * same controls and the same refusals. An SVG graph is not a keyboard surface and not
  * a screen-reader surface, and neither view is the other's fallback.
  *
+ * The tab is a control plane as well as a picture (feature 114). Everything a reader
+ * can do to the running system is done at the node it acts on: the platform's demand
+ * in the platform's drawer, the monitor's threshold beside the streak that fills
+ * against it, the prompt for a forecast run beside the scheduler's own record of what
+ * it decided about the last one. What is offered is not decided here — it is the
+ * operator surface's controls statement, fetched like everything else, so the panel
+ * cannot offer a control the surface would refuse or draw a bound the surface does not
+ * hold (Constitution IV). And every control says what it did rather than what
+ * happened: a tuning is published, a prompt may be declined, and the value in force is
+ * whatever the component reports about itself.
+ *
  * The telemetry the tab has always carried is not lost in the redraw: the skill
  * sentence, the residual statistics for the scenario and for each sampled region of
  * the configured grid, throughput per simulation second, and end-to-end latency in
@@ -31,20 +42,28 @@ import { Disclosure } from '../../shell/Disclosure.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import type {
   Heartbeat,
+  HoldingsInventory,
   Observation,
   OperatorComponents,
+  OperatorControls,
   PlatformState,
   Telemetry,
   TelemetryReport,
   TelemetryResidualSampleReport,
+  TelemetrySchedulerDecision,
 } from '../../generated/types.js';
 import { topology } from '../../generated/topology.js';
+import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
 import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { DemandControl } from './DemandControl.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { componentTour } from '../../shell/walkthrough/tour.js';
+import { TuningControl } from './TuningControl.js';
+import { EventControl } from './EventControl.js';
 import './operator.css';
 
 interface Heard {
@@ -75,6 +94,8 @@ export function OperatorPanel({ params }: PanelProps) {
   const flow = useMemo(() => buildFlow(config, topology), [config]);
   const [components, setComponents] = useState<OperatorComponents | undefined>();
   const [report, setReport] = useState<TelemetryReport | undefined>();
+  const [controls, setControls] = useState<OperatorControls | undefined>();
+  const [decision, setDecision] = useState<TelemetrySchedulerDecision | undefined>();
   const [platformState, setPlatformState] = useState<PlatformState | undefined>();
   const [breach, setBreach] = useState<TelemetryResidualSampleReport['breach']>();
   const [refusal, setRefusal] = useState<string | undefined>();
@@ -111,12 +132,62 @@ export function OperatorPanel({ params }: PanelProps) {
   );
   const rootRef = useRef<HTMLDivElement>(null);
   const narrow = useIsNarrow(rootRef);
+  /** Messages this panel refused against their master and did not draw from. */
+  const refusedRef = useRef(0);
+
+  /**
+   * Whether a received message may be drawn from at all.
+   *
+   * The Messages tab has validated every crossing against its declared master since
+   * E4; this panel drew from raw traffic, and a message that failed its master went
+   * straight into a face. The first deliberately malformed sample — published by the
+   * sensors on request, exactly as feature 114 asks them to — put a string where a
+   * result should be, and `toFixed` took the whole flow chart down with it. A picture
+   * of the machinery that cannot survive the machinery being wrong is not much of a
+   * picture, and only a running page could have said so.
+   *
+   * A refusal here is not silence: what was refused is counted and stated below the
+   * chart, because a display quietly discarding traffic is the other way to lie.
+   */
+  const drawable = useCallback(
+    (topic: string, payload: unknown): boolean => {
+      const mapping = config.message_schemas.find((entry) => topicMatchesFilter(entry.filter, topic));
+      const ok = mapping !== undefined && validator.validate(mapping.schema, payload).ok;
+      if (!ok) refusedRef.current += 1;
+      return ok;
+    },
+    [config.message_schemas, validator],
+  );
+
+  /**
+   * The sizes of what the coverage store holds, from the inventory it serves. Read on
+   * announcement rather than polled: the store says when something became visible, and
+   * this asks it how big the visible things are.
+   */
+  const refreshHoldings = useCallback(async () => {
+    const response = await fetch(config.endpoints.holdings);
+    if (!response.ok) return;
+    const body = (await response.json()) as unknown;
+    if (!validator.validate('holdings-inventory', body).ok) return;
+    const inventory = body as HoldingsInventory;
+    holdingSizesRef.current = [...inventory.holdings]
+      .sort((a, b) => b.published_at.tick - a.published_at.tick)
+      .map((holding) => holding.field.byte_length)
+      .slice(0, 12);
+  }, [config.endpoints.holdings, validator]);
 
   const refresh = useCallback(async () => {
-    const [componentsResponse, reportResponse] = await Promise.all([
+    const [componentsResponse, reportResponse, controlsResponse] = await Promise.all([
       fetch(config.endpoints.components),
       fetch(config.endpoints.telemetry),
+      // What the plane offers, stated by the plane: the panel holds no list of
+      // controls and no bound of its own (Constitution IV).
+      fetch(config.endpoints.operator_controls),
     ]);
+    if (controlsResponse.ok) {
+      const body = (await controlsResponse.json()) as unknown;
+      if (validator.validate('operator-controls', body).ok) setControls(body as OperatorControls);
+    }
     if (componentsResponse.ok) {
       const body = (await componentsResponse.json()) as unknown;
       if (validator.validate('operator-components', body).ok) setComponents(body as OperatorComponents);
@@ -125,10 +196,16 @@ export function OperatorPanel({ params }: PanelProps) {
       const body = (await reportResponse.json()) as unknown;
       if (validator.validate('telemetry-report', body).ok) setReport(body as TelemetryReport);
     }
-  }, [config.endpoints.components, config.endpoints.telemetry, validator]);
+  }, [
+    config.endpoints.components,
+    config.endpoints.operator_controls,
+    config.endpoints.telemetry,
+    validator,
+  ]);
 
   useEffect(() => {
     void refresh();
+    void refreshHoldings();
     const stop = [
       client.subscribe(config.topics.all, (message) => {
         // Counted here, and marked as counted here: nobody publishes a throughput.
@@ -137,6 +214,7 @@ export function OperatorPanel({ params }: PanelProps) {
         countedRef.current.set('all', (countedRef.current.get('all') ?? 0) + 1);
       }),
       client.subscribe(config.topics.heartbeat, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const heartbeat = message.payload as Heartbeat;
         const rows = heartbeat.figures?.find((entry) => entry.key === 'rows');
         if (heartbeat.component === 'observation-store' && rows && heartbeat.tick !== null && heartbeat.tick !== undefined) {
@@ -153,6 +231,7 @@ export function OperatorPanel({ params }: PanelProps) {
         void refresh();
       }),
       client.subscribe(config.topics.platform_state, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const state = message.payload as PlatformState;
         setPlatformState(state);
         series('platform:course').push(state.tick, state.current.course_degrees);
@@ -162,16 +241,26 @@ export function OperatorPanel({ params }: PanelProps) {
         const sample = message.payload as { tick: number; rate?: number };
         setClock({ tick: sample.tick, rate: sample.rate });
       }),
-      client.subscribe(config.topics.holdings, (message) => {
-        // The store announces; the face draws the sizes the announcement carries.
-        const published = message.payload as { holding?: { field?: { byte_length?: number } } };
-        const bytes = published.holding?.field?.byte_length;
-        if (typeof bytes === 'number') {
-          holdingSizesRef.current = [bytes, ...holdingSizesRef.current].slice(0, 12);
-        }
+      client.subscribe(config.topics.holdings, () => {
+        // The store announces that something became visible; it does NOT carry how
+        // big it is — the announcement is light on purpose (holding-published's own
+        // note), and the size lives in the inventory the store serves.
+        //
+        // This read the announcement for a `holding.field.byte_length` that has never
+        // been on it, through optional chaining that turned the mistake into silence:
+        // the stack drew nothing at all while its caption promised bars whose length
+        // was bytes on the wire. Found when a prompted now-cast published a holding
+        // and the face did not move. Now the sizes come from where the store actually
+        // publishes them, and they are still the store's own figures.
+        void refreshHoldings();
       }),
       client.subscribe(config.topics.telemetry, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
         const payload = message.payload as Telemetry;
+        // The scheduler's own record of what it decided, kept for its drawer: a
+        // prompted run and a declined one are the same kind of fact, and this is
+        // where the consequence of pressing the button becomes visible.
+        if ('kind' in payload && payload.kind === 'scheduler-decision') setDecision(payload);
         if (!('kind' in payload) || payload.kind !== 'residual-sample') return;
         // The monitor's own numbers, drawn as it reported them: the threshold it scores
         // against and how far its streak has got. Recomputing either here would be a
@@ -182,6 +271,9 @@ export function OperatorPanel({ params }: PanelProps) {
         }
       }),
       client.subscribe(config.topics.observations, (message) => {
+        // Counted as traffic by the namespace counter above either way; drawn from
+        // only if it is what its master says it is.
+        if (!drawable(message.topic, message.payload)) return;
         const observation = message.payload as Observation;
         // Counted here, and marked as counted here: nobody publishes a throughput.
         countedRef.current.set(
@@ -208,7 +300,9 @@ export function OperatorPanel({ params }: PanelProps) {
     config.topics.observations,
     config.topics.platform_state,
     config.topics.telemetry,
+    drawable,
     refresh,
+    refreshHoldings,
     series,
   ]);
 
@@ -218,10 +312,13 @@ export function OperatorPanel({ params }: PanelProps) {
     return () => clearInterval(sweep);
   }, []);
 
-  const command = async (path: string, method = 'POST') => {
-    const response = await fetch(path, { method });
-    const body = (await response.json()) as { refused?: string };
-    setRefusal(response.ok ? undefined : (body.refused ?? `refused with status ${response.status}`));
+  const command = async (path: string, method = 'POST', body?: unknown) => {
+    const response = await fetch(path, {
+      method,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const answer = (await response.json()) as { refused?: string };
+    setRefusal(response.ok ? undefined : (answer.refused ?? `refused with status ${response.status}`));
     void refresh();
   };
 
@@ -233,6 +330,9 @@ export function OperatorPanel({ params }: PanelProps) {
     const windowSeconds =
       entry?.heartbeat.liveness_window_seconds ?? config.liveness.default_window_seconds;
     const lit = entry !== undefined && nowMs - entry.heardAtHostMs <= windowSeconds * 1000;
+    // The window a component is *judged against* is configuration; a component may also
+    // report its own, and where it does the two are drawn as the two different kinds of
+    // figure they are (FR-58: a figure may not change kind between states).
     const word = lit
       ? entry.heartbeat.status
       : entry
@@ -265,6 +365,13 @@ export function OperatorPanel({ params }: PanelProps) {
 
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
+      {/* The tab carries its own help control (FR-70, ADR-0037). This is the tour that
+          used to live in the shell header: it explains the components, and the components
+          are what this tab draws. */}
+      <div className="panel-head">
+        <span className="panel-head-title">the harness, component by component</span>
+        <HelpButton tour={componentTour(config)} />
+      </div>
       <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
         <button
           onClick={() => setAsList((value) => !value)}
@@ -276,9 +383,29 @@ export function OperatorPanel({ params }: PanelProps) {
         <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
           step the clock one tick
         </button>
+        {/* A burst is the same command with a number on it, and the number the surface
+            will accept comes from the surface. Offered only once it has said so: a
+            button drawn against a bound nobody stated is a button that can be refused
+            for reasons the reader was never told. */}
+        {controls ? (
+          <button
+            onClick={() =>
+              void command(config.endpoints.clock_step, 'POST', { ticks: controls.step.maximum_ticks })
+            }
+            data-testid="step-burst-button"
+          >
+            step {controls.step.maximum_ticks} ticks
+          </button>
+        ) : null}
         <span className="panel-footnote">
           {flow.nodes.length} components · {flow.edges.length} edges derived from the topology ·{' '}
           {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
+          {controls
+            ? ` · ${controlled(controls).size} components take controls: open one to use them`
+            : ''}
+          {refusedRef.current > 0
+            ? ` · ${refusedRef.current} message(s) refused by their master and not drawn`
+            : ''}
         </span>
       </Disclosure>
       {refusal && (
@@ -315,6 +442,15 @@ export function OperatorPanel({ params }: PanelProps) {
                 <span className="flow-node-head">
                   <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
                   <span className="flow-node-name">{node.label}</span>
+                  {controls && controlled(controls).has(node.id) ? (
+                    // The affordance the first cut of this tab did not have: a reader
+                    // who cannot see that a node takes controls does not open it, and
+                    // the controls may as well not exist. Drawn from what the surface
+                    // said it offers, not from a list here.
+                    <span className="flow-node-controls" data-has-controls={node.id} aria-label="takes controls">
+                      ▸
+                    </span>
+                  ) : null}
                   {record && !record.stoppable ? (
                     <svg
                       className="flow-node-lock"
@@ -342,6 +478,8 @@ export function OperatorPanel({ params }: PanelProps) {
         />
       )}
 
+      <Legend />
+
       {selectedNode ? (
         <Drawer
           node={selectedNode}
@@ -350,8 +488,12 @@ export function OperatorPanel({ params }: PanelProps) {
           config={config}
           faceContext={faceContext}
           report={report}
+          controls={controls}
+          platformState={platformState}
+          decision={decision}
           counted={(key) => countedRef.current.get(key) ?? 0}
           command={command}
+          onRefusal={setRefusal}
           onClose={() => setSelected(undefined)}
         />
       ) : (
@@ -363,6 +505,78 @@ export function OperatorPanel({ params }: PanelProps) {
       )}
     </div>
   );
+}
+
+/**
+ * A figure that came from the configuration document (FR-57's first kind). Drawn with
+ * the treatment the stylesheet has carried since 113, which until feature 115 nothing
+ * used: the three kinds were named in CSS and the faces drew reported figures only.
+ */
+function Declared({ value, unit }: { value: number | string | undefined; unit?: string }) {
+  if (value === undefined) return <span className="flow-figure-absent">not declared</span>;
+  return (
+    <span className="flow-figure flow-figure-declared">
+      <span className="flow-figure-label">declared</span>
+      <span className="flow-figure-value">
+        {value}
+        {unit ? ` ${unit}` : ''}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The legend (feature 115, FR-68). Six states a node can be in, named — and with them
+ * the sentence the System tab's footnote carried and nothing else did: *a grey node is a
+ * component that has not run yet, or has stopped, and the display cannot tell you which,
+ * only the silence.* That is a true statement about what liveness-from-heartbeats can and
+ * cannot distinguish, and it had to survive the withdrawal of the tab that made it.
+ *
+ * It is not quite true of every grey node any more, and the legend says the finer thing
+ * too: where the operator plane has *told* the shell a component is stopped, the word is
+ * `stopped` rather than `silent`, because that is a fact the surface was given rather
+ * than one it inferred from silence.
+ */
+function Legend() {
+  const states: { status: string; word: string; meaning: string }[] = [
+    { status: 'ok', word: 'ok', meaning: 'heartbeats arriving inside the declared window, and the component says it is working' },
+    { status: 'starting', word: 'starting', meaning: 'alive and not yet working — the component’s own word for it' },
+    { status: 'degraded', word: 'degraded', meaning: 'alive and working badly, said rather than gone quiet' },
+    { status: 'stalled', word: 'stalled', meaning: 'alive and not working, said rather than gone quiet' },
+    { status: 'dark', word: 'silent', meaning: 'heard from once, and not inside its window since' },
+    { status: 'dark', word: 'unheard', meaning: 'no heartbeat from it has ever arrived' },
+  ];
+  return (
+    <div className="flow-legend" data-testid="flow-legend">
+      <ul>
+        {states.map((state) => (
+          <li key={state.word} data-legend-state={state.word}>
+            <span className={`status-dot status-${state.status}`} />
+            <b>{state.word}</b> — {state.meaning}
+          </li>
+        ))}
+      </ul>
+      <p className="panel-footnote">
+        A grey node is a component that has not run yet, or has stopped — the display
+        cannot tell you which, only the silence. The one exception is a component the
+        operator plane has reported stopped: that is a fact this surface was given, not one
+        it inferred, and it is drawn as <b>stopped</b> rather than as silence.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Which components the surface says take a control of any kind. Derived from the
+ * statement rather than listed here, so a tunable added to the operator's
+ * configuration shows up on its node without a line changing in this panel.
+ */
+function controlled(controls: OperatorControls): ReadonlySet<string> {
+  return new Set([
+    controls.demand.target,
+    ...controls.tunables.map((tunable) => tunable.target),
+    ...controls.events.map((event) => event.target),
+  ]);
 }
 
 /** What a node's chrome needs to know, shared by the graph, the list and the drawer. */
@@ -386,11 +600,17 @@ function ListView({
   command: (path: string, method?: string) => void | Promise<void>;
   config: PanelParams['config'];
 }) {
+  const declaredBeat = (id: string) => config.components.find((entry) => entry.id === id)?.beat;
   return (
     <table className="system-grid" data-testid="operator-components">
       <thead>
         <tr>
           <th>component</th>
+          {/* The two facts the System tab carried alone, moved here before that tab was
+              withdrawn (FR-68). Both are configuration and both are drawn as declared
+              figures, which is what makes withdrawing System a move rather than a loss. */}
+          <th>beat</th>
+          <th>liveness window</th>
           <th>state</th>
           <th>last heard (sim time)</th>
           <th>what it says about itself</th>
@@ -400,12 +620,29 @@ function ListView({
       <tbody>
         {flow.nodes.map((node) => {
           const { lit, word, entry, record } = stateOf(node.id);
+          const reportedWindow = entry?.heartbeat.liveness_window_seconds;
           return (
             <tr key={node.id} data-operator-component={node.id} data-lit={lit}>
               <td>
                 <button className="link-button" onClick={() => onSelect(node.id)}>
                   {node.label}
                 </button>
+              </td>
+              <td data-declared-beat={declaredBeat(node.id)}>
+                <Declared value={declaredBeat(node.id)} />
+              </td>
+              <td data-declared-window={config.liveness.default_window_seconds}>
+                <Declared value={config.liveness.default_window_seconds} unit="s" />
+                {/* A component may report its own window. It is a different figure from a
+                    different source, so it is drawn as one rather than quietly replacing
+                    the declared one in the same cell. */}
+                {reportedWindow !== undefined &&
+                  reportedWindow !== config.liveness.default_window_seconds && (
+                    <span className="flow-figure flow-figure-reported">
+                      <span className="flow-figure-label">reported</span>
+                      <span className="flow-figure-value">{reportedWindow} s</span>
+                    </span>
+                  )}
               </td>
               <td>{word}</td>
               <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>
@@ -445,8 +682,12 @@ function Drawer({
   config,
   faceContext,
   report,
+  controls,
+  platformState,
+  decision,
   counted,
   command,
+  onRefusal,
   onClose,
 }: {
   node: FlowNode;
@@ -455,8 +696,14 @@ function Drawer({
   config: PanelParams['config'];
   faceContext: (id: string, heartbeat: Heartbeat | undefined) => FaceContext;
   report: TelemetryReport | undefined;
+  /** What the operator surface says its plane offers; undefined until it has said. */
+  controls: OperatorControls | undefined;
+  platformState: PlatformState | undefined;
+  /** The scheduler's last published decision, drawn in the scheduler's own drawer. */
+  decision: TelemetrySchedulerDecision | undefined;
   counted: (key: string) => number;
-  command: (path: string, method?: string) => void | Promise<void>;
+  command: (path: string, method?: string, body?: unknown) => void | Promise<void>;
+  onRefusal: (refusal: string | undefined) => void;
   onClose: () => void;
 }) {
   const { entry, record } = state;
@@ -480,7 +727,36 @@ function Drawer({
       {/* The node's own instrument again at full size: the drawer is where a reader
           goes to read it rather than to glance at it. */}
       <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
-      {node.id === 'platform' ? <DemandControl config={config} onRefusal={() => undefined} /> : null}
+
+      {/* The controls this component takes, immediately under its own instrument, so
+          the thing a reader changes and the thing that changes are one glance apart.
+          Which controls those are is the surface's answer, not this file's. */}
+      {controls && controls.demand.target === node.id ? (
+        <DemandControl config={config} state={platformState} onRefusal={onRefusal} />
+      ) : null}
+      {controls ? (
+        <TuningControl
+          config={config}
+          tunables={controls.tunables.filter((tunable) => tunable.target === node.id)}
+          heartbeat={entry?.heartbeat}
+          onRefusal={onRefusal}
+        />
+      ) : null}
+      {controls ? (
+        <EventControl
+          config={config}
+          events={controls.events.filter((event) => event.target === node.id)}
+          onRefusal={onRefusal}
+        />
+      ) : null}
+      {/* What the scheduler decided about the last thing it was asked, in its own
+          words. The prompt button is a few lines above this: pressing it and being
+          declined is a complete, ordinary outcome, and this is where it is read. */}
+      {node.id === 'scheduler' && decision ? (
+        <p className="flow-drawer-detail" data-testid="scheduler-decision">
+          <strong>last decision:</strong> {decision.decision} — {decision.detail}
+        </p>
+      ) : null}
       {node.id === 'telemetry' && report ? (
         <div className="operator-telemetry">
           <p className="flow-drawer-detail" data-testid="skill-statement">

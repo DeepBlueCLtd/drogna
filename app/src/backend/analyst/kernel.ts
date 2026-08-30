@@ -7,14 +7,14 @@
  * below is one implementation, and a variational or ensemble scheme is another, both
  * of which produce exactly these three outputs from exactly these inputs. Nothing in
  * this file knows about the broker, the stores, the clock or a configuration
- * document: the component that will call it (feature 115's analyst) holds all of
+ * document: the component that will call it (feature 116's analyst) holds all of
  * that, and this is the maths alone so that the maths alone can be tested.
  *
  * Why the field must be corrected at all: until this feature the now-cast the model
  * runner initialised from was re-evaluated from the true ocean on a cadence, so no
  * measurement the platform took ever changed a field value. The loop still converged,
  * because truth leaked in on a timer. This is the step that makes the measurements
- * matter, and feature 115's spec records what was true before it.
+ * matter, and feature 116's spec records what was true before it.
  */
 import { choleskyFactor as choleskyFactorOf, choleskyInverse as inverseOf } from './linalg.js';
 
@@ -295,6 +295,8 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     }
 
     const covarianceRow = new Float64Array(order);
+    /** Indices of the observations that reach the cell being analysed, reused per cell. */
+    const reaching = new Int32Array(order);
     for (let cell = 0; cell < cells; cell++) {
       const lonIndex = cell % longitude.count;
       const latIndex = Math.floor(cell / longitude.count) % latitude.count;
@@ -302,11 +304,26 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       const cellStd = background.errorStd[cell];
       let increment = 0;
       let weight = 0;
+      // Which observations can reach this cell at all. The taper is compactly
+      // supported, so beyond it the covariance is exactly zero and every term it
+      // enters contributes exactly nothing — dropping them is an identity, not an
+      // approximation. It is also what makes the analysis affordable on a real grid:
+      // the error reduction below is quadratic in the observations considered, and at
+      // 46,080 cells against a cycle's ~180 observations that is 1.5 billion products
+      // per variable if the zeros are multiplied out, against a few million if they
+      // are not.
+      let reach = 0;
       for (let k = 0; k < order; k++) {
         const b = located[k];
         const rho = correlation(grid, parameters, depthIndex, latIndex, lonIndex, b.depthIndex, b.latIndex, b.lonIndex);
+        if (rho === 0) {
+          covarianceRow[k] = 0;
+          continue;
+        }
         const covariance = cellStd * background.errorStd[b.cellIndex] * rho;
         covarianceRow[k] = covariance;
+        reaching[reach] = k;
+        reach += 1;
         increment += covariance * weighted[k];
         weight += covariance * unitWeighted[k];
       }
@@ -317,9 +334,13 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       // it. Clamped at zero against float error only — the quadratic form cannot
       // exceed σ² in exact arithmetic.
       let explained = 0;
-      for (let k = 0; k < order; k++) {
+      for (let ki = 0; ki < reach; ki++) {
+        const k = reaching[ki];
         let row = 0;
-        for (let j = 0; j < order; j++) row += inverse[k * order + j] * covarianceRow[j];
+        for (let ji = 0; ji < reach; ji++) {
+          const j = reaching[ji];
+          row += inverse[k * order + j] * covarianceRow[j];
+        }
         explained += covarianceRow[k] * row;
       }
       errorStd[cell] = Math.sqrt(Math.max(cellStd * cellStd - explained, 0));

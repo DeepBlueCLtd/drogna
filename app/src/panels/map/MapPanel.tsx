@@ -5,7 +5,9 @@
  * curve with a time control, and advisories drawn only while valid at the
  * displayed instant yet queryable always. With the composer open the canvas also
  * takes the query's position by click, in any projection, and draws exactly what the
- * composed URL asks for (issue #53). The cube projection (issue #59) rotates the
+ * composed URL asks for (issue #53) — and says so where the gesture is, over the
+ * canvas, because the click was built and went unfound: a crosshair cursor is
+ * discovered by hovering something the viewer had no reason to hover. The cube projection (issue #59) rotates the
  * depth volume: one area query per level of the holding's own depth axis, stacked,
  * with the route running through it at the depths the plan states. Every pixel traces to a document that
  * crossed the seam; where WebGL is unavailable the canvas says so and the
@@ -14,8 +16,8 @@
  * Narrow (feature 112, FR-010 to FR-012, FR-017): the canvas is the primary surface —
  * the tab is the arc's closing scene, and a map is what it is for — so the control row
  * and the advisories table each disclose under a label that names them, and the composer
- * keeps the toggle it already had but takes the full width beneath the canvas instead of
- * 22rem beside it. The status line stays visible at both widths: it is what makes every
+ * keeps its own toggle — outside those disclosures, against the canvas it arms — but
+ * takes the full width beneath the canvas instead of 22rem beside it. The status line stays visible at both widths: it is what makes every
  * pixel traceable to a document, and a map whose provenance is folded away is a picture.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -61,8 +63,10 @@ import {
   type TrackPoint,
 } from './map-data.js';
 import { whenInDocument } from './attach.js';
-import { areaRing, pickedPosition, type ComposerChoices } from './composer.js';
-import { axisValues, cubeFrame, volumeEdges, type CubeFrame } from './cube.js';
+import { areaRing, pickPrompt, pickedPosition, type ComposerChoices } from './composer.js';
+import { axisValues, cubeFrame, ownshipInCube, volumeEdges, type CubeFrame } from './cube.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { mapTour } from '../../shell/walkthrough/tour.js';
 import { ComposerPane } from './ComposerPane.js';
 import { displayInstant } from '../../shell/display.js';
 import { Disclosure } from '../../shell/Disclosure.js';
@@ -95,7 +99,7 @@ interface SpreadState {
 }
 
 /**
- * The provenance holding as a gridded layer (feature 115): each cell tinted by which
+ * The provenance holding as a gridded layer (feature 116): each cell tinted by which
  * of the four shares owns most of it. One area query answers for all four, because
  * they are four parameters of one coverage.
  */
@@ -365,7 +369,7 @@ export function MapPanel({ params }: PanelProps) {
     displayedSimTime,
   );
   /**
-   * The provenance holding, when the tint is what is drawn (feature 115). Four share
+   * The provenance holding, when the tint is what is drawn (feature 116). Four share
    * parameters of one coverage, so one area query answers for all of them — asking
    * four times would be four chances for the answers to disagree about an instant.
    *
@@ -652,6 +656,13 @@ export function MapPanel({ params }: PanelProps) {
   const cubeMaximum = Math.max(...cubeValues);
   const frame = volume.frame;
 
+  // The platform in the volume (FR-69), in the frame's own cartesian space. Computed by a
+  // pure function so that the claim SC-07 makes — the track is at the depths the platform
+  // reported, not at the surface — is one a test can assert without a WebGL context.
+  const ownshipVolume = frame
+    ? ownshipInCube(frame, track.points, ray, platformState?.current.depth_m)
+    : { track: [], demand: undefined };
+
   const cubeLayers = frame
     ? [
         // One layer per level, coloured against the whole volume's range rather than
@@ -722,6 +733,51 @@ export function MapPanel({ params }: PanelProps) {
               getLineWidth: 2,
               lineWidthUnits: 'pixels',
               stroked: true,
+            })
+          : undefined,
+        // The platform, in the volume (feature 116, FR-74). The plan view and the globe
+        // have drawn the track and the demanded course since 113; the cube drew neither,
+        // because `cubeLayers` and `geographicLayers` are selected whole and the ownship
+        // layers lived only in the second. That absence was not a decision — it was where
+        // the seam between the two coordinate systems fell.
+        //
+        // The track is drawn at the depths the platform *reported*, against the levels
+        // the volume already draws. Ownship depth is a reported measurement (FR-54), and
+        // a track flattened to the surface in a display whose subject is depth would be
+        // the panel discarding the one dimension that view exists for.
+        ownshipVolume.track.length > 1
+          ? new PathLayer({
+              id: 'cube-ownship-track',
+              data: [ownshipVolume.track],
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPath: (path) => path,
+              getColor: [99, 190, 222, 220],
+              getWidth: 2,
+              widthUnits: 'pixels',
+            })
+          : undefined,
+        ownshipVolume.track.length > 0
+          ? new ScatterplotLayer({
+              id: 'cube-ownship-reports',
+              data: ownshipVolume.track,
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPosition: (position) => position,
+              getFillColor: [99, 190, 222, 200],
+              getRadius: 3,
+              radiusUnits: 'pixels',
+              billboard: true,
+            })
+          : undefined,
+        ownshipVolume.demand
+          ? new PathLayer({
+              id: 'cube-ownship-demand',
+              data: [ownshipVolume.demand],
+              coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+              getPath: (path) => path,
+              getColor: [99, 190, 222, 160],
+              getWidth: 1.5,
+              widthUnits: 'pixels',
+              getDashArray: [6, 4],
             })
           : undefined,
         composing && choices.longitude !== undefined && choices.latitude !== undefined
@@ -981,11 +1037,38 @@ export function MapPanel({ params }: PanelProps) {
     .filter(Boolean);
 
   const layers = projection === 'cube' ? cubeLayers : geographicLayers;
+  /**
+   * The layer ids actually handed to deck.gl, published on the panel's own root (feature
+   * 114, FR-70). It is not decoration: it is what holds the layer registry honest, and
+   * what lets the capture proof read which layers a projection drew without a WebGL
+   * context to interrogate. Derived from the same array deck.gl is given, so the two
+   * cannot drift.
+   */
+  const drawnLayerIds = layers.flatMap((layer) => {
+    // `geographicLayers` carries falsy placeholders where a layer is not drawn, and one
+    // entry is an array of two; both are flattened here rather than upstream, because the
+    // shape deck.gl accepts is the shape that array is for.
+    const flat: unknown[] = Array.isArray(layer) ? layer : [layer];
+    return flat.flatMap((entry) =>
+      entry && typeof entry === 'object' && 'id' in entry ? [String((entry as { id: unknown }).id)] : [],
+    );
+  });
 
   const horizonSpan = plan?.horizon.span_seconds ?? 21600;
 
   return (
-    <div className="panel map-panel" ref={rootRef} data-narrow={narrow}>
+    <div
+      className="panel map-panel"
+      ref={rootRef}
+      data-narrow={narrow}
+      data-projection={projection}
+      data-map-layers={drawnLayerIds.join(' ')}
+    >
+      {/* The panel carries its own help control (FR-70, ADR-0037). */}
+      <div className="panel-head">
+        <span className="panel-head-title">the field, the doubt over it, and the route through it</span>
+        <HelpButton tour={mapTour()} />
+      </div>
       <Disclosure label="view controls" narrow={narrow} className="map-controls-disclosure">
       <div className="map-controls">
         <label>
@@ -1019,7 +1102,7 @@ export function MapPanel({ params }: PanelProps) {
             ))}
           </select>
         </label>
-        <label className="map-time">
+        <label className="map-time" data-testid="time-control">
           displayed time {timeOffset === 0 ? '(live)' : `(${timeOffset > 0 ? '+' : ''}${timeOffset}s)`}{' '}
           <input
             type="range"
@@ -1034,6 +1117,7 @@ export function MapPanel({ params }: PanelProps) {
           doubt{' '}
           <select
             value={doubt}
+            data-testid="doubt-select"
             disabled={projection === 'cube'}
             onChange={(event) =>
               setDoubt(event.target.value as 'projection' | 'spread' | 'provenance' | 'none')
@@ -1053,6 +1137,7 @@ export function MapPanel({ params }: PanelProps) {
           view{' '}
           <select
             value={projection}
+            data-testid="projection-select"
             onChange={(event) => setProjection(event.target.value as 'globe' | 'flat' | 'cube')}
           >
             <option value="globe">globe (drag to rotate)</option>
@@ -1060,9 +1145,6 @@ export function MapPanel({ params }: PanelProps) {
             <option value="cube">depth cube (drag to rotate)</option>
           </select>
         </label>
-        <button onClick={() => setComposing((previous) => !previous)}>
-          {composing ? 'close the composer' : 'EDR composer'}
-        </button>
       </div>
       </Disclosure>
       <p className="map-status" data-testid="ownship-status">
@@ -1074,6 +1156,13 @@ export function MapPanel({ params }: PanelProps) {
             : 'no ownship observations have been served: nothing is drawn for the track'
           : 'ownship track: not asked for yet'}
         {ray ? ` · demanded course drawn as one hour at the demanded speed` : ''}
+        {/* Parity, said (FR-69). The track and the demand are in every projection, and in
+            the volume the track is at the depths the platform reported — a track flattened
+            to the surface in a display whose subject is depth would discard the one
+            dimension that view exists for. */}
+        {projection === 'cube' && track.points.length > 0
+          ? ' · in the volume the track is drawn at the depths the platform reported, not at the surface'
+          : ''}
         {' · '}
         {displayedSimTime ? `displayed instant ${displayInstant(displayedSimTime)}` : 'no clock sample yet'}
         {projection === 'cube'
@@ -1115,7 +1204,6 @@ export function MapPanel({ params }: PanelProps) {
           : ''}
         {plan ? ` · plan ${plan.plan_id} (${plan.route.vertices.length} stop(s))` : ' · no plan published yet'}
         {` · ${validAdvisories.length} of ${advisories.length} advisory(ies) valid at the displayed instant`}
-        {composing ? ' · click the canvas to place the composed query' : ''}
       </p>
       {doubt === 'provenance' && provenanceGrid ? (
         <ul className="map-legend" aria-label="what the provenance tint means">
@@ -1132,8 +1220,37 @@ export function MapPanel({ params }: PanelProps) {
         </ul>
       ) : null}
       {arrival && <p className="map-arrival">{arrival}</p>}
+      {/* The composer's toggle is the map's own control and not one of the view
+          controls: inside that disclosure it was behind a summary named for something
+          else at a narrow width, which is where 112's plan already put it — "the
+          composer keeps its own toggle". It sits against the canvas because that is
+          what opening it arms. */}
+      <div className="map-compose">
+        <button
+          className="map-compose-toggle"
+          data-testid="composer-toggle"
+          aria-expanded={composing}
+          onClick={() => setComposing((previous) => !previous)}
+        >
+          {composing ? 'close the composer' : 'compose an EDR query'}
+        </button>
+        {!composing && (
+          <span className="map-compose-hint">
+            build a genuine OGC API-EDR request against the served collections
+            {canDraw ? ', placing its position by clicking the map' : ''}
+          </span>
+        )}
+      </div>
       <div className="map-body">
-        <div className="map-canvas" ref={canvasHost}>
+        <div className="map-canvas" ref={canvasHost} data-picking={composing && canDraw}>
+          {/* The instruction sits where the gesture is, not at the tail of the status
+              line. It is inert to the pointer, so it can never swallow the click it
+              asks for. */}
+          {composing && canDraw && (
+            <p className="map-pick-prompt" data-testid="map-pick-prompt">
+              {pickPrompt(projection, positionNote)}
+            </p>
+          )}
           {canDraw && hostInDocument ? (
             <DeckGL
               key={projection}
@@ -1178,6 +1295,7 @@ export function MapPanel({ params }: PanelProps) {
             choices={choices}
             onChoices={(patch) => setChoices((previous) => ({ ...previous, ...patch }))}
             positionNote={positionNote}
+            canPick={canDraw}
           />
         )}
       </div>

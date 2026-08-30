@@ -65,9 +65,9 @@ export const controlLoop: Explainer = {
       title: 'Four stations, none of them lit',
       prose: [
         'Sense, decide, act, publish. Nothing is running, so nothing is lit.',
-        'Under the same rule the System tab obeys: a box brightens because a message arrived, not because a flag says it should.',
+        'Under the same rule the Operator flow chart obeys: a box brightens because a message arrived, not because a flag says it should.',
       ],
-      liveView: { view: 'system', label: 'See which components this run has actually heard from' },
+      liveView: { view: 'operator', label: 'See which components this run has actually heard from' },
       figure: {
         minWidth: 340,
         label: 'Four stations of the loop, all dark and nothing moving',

@@ -273,7 +273,7 @@ describe('the ownship track (feature 113)', () => {
   });
 });
 
-describe('the provenance tint (feature 115)', () => {
+describe('the provenance tint (feature 116)', () => {
   const grid = (shares: Record<string, number[]>): GridCoverage => ({
     domain: {
       domainType: 'Grid',

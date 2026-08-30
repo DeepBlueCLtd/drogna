@@ -43,7 +43,7 @@
         },
         "analysis_published": {
           "$ref": "config.common.schema.json#/$defs/topic",
-          "description": "Where the analyst announces a cycle. The runner initialises from what this message names and from nothing else: feature 115 replaced a subscription to the run request, under which the runner initialised from a field evaluated from the true ocean."
+          "description": "Where the analyst announces a cycle. The runner initialises from what this message names and from nothing else: feature 116 replaced a subscription to the run request, under which the runner initialised from a field evaluated from the true ocean."
         },
         "run_started": {
           "$ref": "config.common.schema.json#/$defs/topic"

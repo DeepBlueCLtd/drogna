@@ -16,7 +16,6 @@ import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js
 import type { PanelParams } from '../shell/Shell.js';
 import { createSeamFetch } from '../seam/http.js';
 import { displayInstant } from '../shell/display.js';
-import { SystemPanel } from './system/SystemPanel.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
@@ -106,53 +105,14 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     vi.useRealTimers();
   });
 
-  it('System lights exactly the components whose heartbeats arrived, greys the rest', () => {
-    render(<SystemPanel {...panelProps(config, runtime)} />);
-    act(() => vi.advanceTimersByTime(2100));
-    const lit = document.querySelectorAll('tr[data-lit="true"]');
-    expect([...lit].map((row) => row.getAttribute('data-component')).sort()).toEqual([
-      'advisory-source',
-      'advisory-store',
-      'analyst',
-      'boundary',
-      'broker',
-      'clock',
-      'coverage-store',
-      'env-generator',
-      'feature-store',
-      'ingest',
-      'model-runner',
-      'monitor',
-      'observation-store',
-      'offload',
-      'operator',
-      'planner',
-      'platform',
-      'query',
-      'scheduler',
-      'sensors',
-      'telemetry',
-    ]);
-    // The full declared layout renders from day one (FR-16): every future beat greyed.
-    expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
-      config.shell.components.length,
-    );
-    // Every declared component has landed and is heard from: nothing renders greyed.
-    // Written against the declared length rather than a typed count, so a component
-    // added to the configuration and never built fails this rather than sliding past.
-    expect(screen.queryAllByText('not heard').length).toBe(0);
-  });
-
-  it('a component that stops goes dark because its heartbeats cease', () => {
-    render(<SystemPanel {...panelProps(config, runtime)} />);
-    act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(21);
-    runtime.stop();
-    // Past every liveness window, with the sweep interval re-evaluating.
-    act(() => vi.advanceTimersByTime(8000));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(0);
-  });
-
+  /**
+   * The two System-panel tests that stood here retired with the tab (feature 115,
+   * FR-68). What they asserted did not: the Operator flow chart draws every declared
+   * component greyed until a heartbeat from it arrives, and a component that stops goes
+   * dark because its heartbeats cease — the same two claims, against the surface that
+   * discharges FR-16's obligation now. They are below, keyed to `data-operator-component`
+   * rather than to `data-component`.
+   */
   it('Messages counts received traffic and holds the refusal claim at zero', () => {
     render(<MessagesPanel {...panelProps(config, runtime)} />);
     // Provoke traffic: heartbeats on their cadence.
@@ -204,9 +164,11 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         await Promise.resolve();
       });
       expect(screen.getByTestId('holdings-count').textContent).toMatch(/^2 holding\(s\)/);
-      const archiveRow = document.querySelector('tr[data-era="archive"]');
-      expect(archiveRow).not.toBeNull();
-      act(() => (archiveRow as HTMLElement).click());
+      // The inventory table retired at feature 115 (FR-69); the timeline carries the
+      // holdings now, and a bar is the thing a reader selects.
+      const archiveBar = document.querySelector('[data-holding][data-era="archive"]');
+      expect(archiveBar).not.toBeNull();
+      act(() => (archiveBar as HTMLElement).click());
       expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
     }
   });
@@ -235,14 +197,20 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
 
   it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
     const { asked } = seam();
-    const inventoryRequests = () => asked.length;
+    // Counted by path rather than by total: since feature 115 the panel also fetches
+    // telemetry's report on the same announcement (FR-70 shows telemetry's own skill
+    // figure beside the comparison), and a total would call that a poll.
+    const inventoryRequests = () =>
+      asked.filter((path) => path.includes(config.shell.endpoints.holdings)).length;
     {
       render(<HoldingsPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
       expect(inventoryRequests()).toBe(1);
-      const nowcastBefore = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      const nowcastBefore = document
+        .querySelector('[data-holding][data-era="nowcast"]')
+        ?.getAttribute('data-holding');
       expect(nowcastBefore).toBeTruthy();
       // Time passing is not an announcement: nothing polls, so nothing is refetched.
       await act(async () => {
@@ -259,7 +227,9 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         await settle(() => inventoryRequests() > 1);
       });
       expect(inventoryRequests()).toBe(2);
-      const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      const nowcastAfter = document
+        .querySelector('[data-holding][data-era="nowcast"]')
+        ?.getAttribute('data-holding');
       expect(nowcastAfter).not.toBe(nowcastBefore);
     }
   });
@@ -293,7 +263,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       expect(screen.getByText(/present and stating empty/)).toBeTruthy();
       // Open the composer: it enumerates from the served subset statement and
       // collections list, never a stub (FR-41).
-      act(() => screen.getByText('EDR composer').click());
+      act(() => screen.getByTestId('composer-toggle').click());
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -327,6 +297,44 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         fireEvent.change(numbers[0], { target: { value: '-25' } });
       });
       expect(screen.getByText(/outside the domain: the server will decline/)).toBeTruthy();
+    }
+  });
+
+  it('offers the composer, and the click that places its position, where they can be found (issue #53)', async () => {
+    seam();
+    {
+      render(<MapPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // The toggle is the map's own control, not one of the view controls: inside that
+      // disclosure it is behind a summary named for something else at a narrow width,
+      // which is how a built feature goes unfound. 112's plan already said so — "the
+      // composer keeps its own toggle".
+      const toggle = screen.getByTestId('composer-toggle');
+      expect(toggle.closest('.map-controls-disclosure')).toBeNull();
+      // Closed, it names the action and what the action is for.
+      expect(toggle.textContent).toBe('compose an EDR query');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.getByText(/build a genuine OGC API-EDR request/)).toBeTruthy();
+      act(() => toggle.click());
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      // The step with a gesture behind it states the gesture, and states the position
+      // as a fact rather than falling silent when there is none.
+      expect(screen.getByTestId('composer-pick-note').textContent).toBe('no position yet');
+      // jsdom has no WebGL, so there is no canvas to click — and the step says to type
+      // it rather than naming a gesture that would do nothing here. The on-canvas
+      // prompt is not drawn for the same reason: the instruction is never a claim
+      // about a surface that is not there.
+      expect(screen.getByTestId('composer-pick').textContent).toContain('type it below');
+      expect(screen.getByTestId('composer-pick').textContent).toContain('no map to click');
+      expect(screen.queryByTestId('map-pick-prompt')).toBeNull();
+      expect(document.querySelector('.map-canvas')?.getAttribute('data-picking')).toBe('false');
     }
   });
 

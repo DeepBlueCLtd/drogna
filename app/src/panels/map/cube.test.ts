@@ -5,7 +5,7 @@
  * about somewhere the reader did not click.
  */
 import { describe, expect, it } from 'vitest';
-import { axisValues, cubeFrame, volumeEdges, type CubeBounds } from './cube.js';
+import { axisValues, cubeFrame, ownshipInCube, volumeEdges, type CubeBounds } from './cube.js';
 
 const bounds: CubeBounds = { west: -14, east: -8, south: 44, north: 48, deepest: 1000 };
 
@@ -63,5 +63,58 @@ describe('the depth cube (issue #59)', () => {
       expect(upright[0][2]).toBe(0);
       expect(upright[1][2]).toBeLessThan(0);
     }
+  });
+});
+
+describe('the platform in the volume (feature 115, FR-74)', () => {
+  const frame = cubeFrame({ west: -2, east: -1, south: 50, north: 51, deepest: 400 });
+
+  it('draws the track at the depths the platform reported, not at the surface', () => {
+    // The claim SC-07 makes, and the one this file exists to hold: the plan view and the
+    // globe flatten a track of necessity, and the volume must not. A track along the
+    // floor of a display whose subject is depth is the panel discarding the one dimension
+    // that view exists for.
+    const { track } = ownshipInCube(
+      frame,
+      [
+        { longitude: -1.5, latitude: 50.5, depthM: 0 },
+        { longitude: -1.4, latitude: 50.6, depthM: 100 },
+        { longitude: -1.3, latitude: 50.7, depthM: 300 },
+      ],
+      undefined,
+      undefined,
+    );
+    expect(track).toHaveLength(3);
+    const heights = track.map(([, , z]) => z);
+    // Distinct, ordered downwards, and derived from the frame rather than typed here.
+    expect(new Set(heights).size).toBe(3);
+    expect(heights[0]).toBe(0);
+    expect(heights[1]).toBeGreaterThan(heights[2]);
+    expect(frame.depthAt(heights[1])).toBeCloseTo(100);
+    expect(frame.depthAt(heights[2])).toBeCloseTo(300);
+  });
+
+  it('draws the demanded course at the depth the platform is at, not at the surface', () => {
+    const { demand } = ownshipInCube(
+      frame,
+      [],
+      [
+        [-1.5, 50.5],
+        [-1.4, 50.6],
+      ],
+      120,
+    );
+    expect(demand).toHaveLength(2);
+    // A demand carries a course and a speed and says nothing about descending, so the ray
+    // sits at the reported depth. On the surface it would say the platform had been told
+    // to come up, which nobody told it.
+    for (const [, , z] of demand ?? []) expect(frame.depthAt(z)).toBeCloseTo(120);
+  });
+
+  it('draws no ray where no demand is standing, and none where no depth was reported', () => {
+    expect(ownshipInCube(frame, [], undefined, 120).demand).toBeUndefined();
+    expect(
+      ownshipInCube(frame, [], [[-1.5, 50.5], [-1.4, 50.6]], undefined).demand,
+    ).toBeUndefined();
   });
 });

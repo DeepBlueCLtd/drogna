@@ -1,5 +1,5 @@
 /**
- * The course: the twelve explainers in order (FR-002, as feature 115 amends it). The order carries the
+ * The course: the twelve explainers in order (FR-002, as feature 116 amends it). The order carries the
  * argument — why a standard at all, what shape the data is, how it is stored, what a
  * holding actually contains, the two ways it is served, the server that serves both,
  * how consumers hear about it, why the two paths never contend, the whole thing

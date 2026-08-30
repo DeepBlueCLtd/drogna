@@ -134,20 +134,91 @@
 }
 
 .composer-pick {
+  border-left: 3px solid var(--shell-accent);
+  background: rgba(76, 194, 255, 0.12);
+  color: var(--shell-fg);
+  padding: 0.35rem 0.5rem;
+}
+
+.composer-pick p {
   margin: 0;
-  color: #444;
+}
+
+.composer-pick-lead strong {
+  color: var(--shell-accent);
+}
+
+.composer-pick-drawn {
+  color: var(--shell-dim);
+  font-size: 0.76rem;
 }
 
 .composer-pick-note {
   margin: 0;
   font-family: monospace;
   font-size: 0.76rem;
-  background: #f4f2ec;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--shell-fg);
   padding: 0.25rem 0.4rem;
 }
 
+/* The composer's toggle is the map's own control: it sits against the canvas, named
+   for the action rather than for the tool, and says what it is for while closed.
+
+   These take the shell's own variables rather than the light values the rest of this
+   file was written with. The shell is dark, and a pale box with no colour set inherits
+   `--shell-fg` — light text on light paper, which is how `.composer-pick` read at
+   about 1.1:1 the first time it was drawn in a browser. Measured, not eyeballed. */
+.map-compose {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.3rem 0;
+}
+
+.map-compose-toggle {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--shell-accent);
+  background: transparent;
+  color: var(--shell-accent);
+  cursor: pointer;
+}
+
+.map-compose-toggle[aria-expanded='true'] {
+  background: var(--shell-accent);
+  color: var(--shell-bg);
+}
+
+.map-compose-hint {
+  font-size: 0.78rem;
+  color: var(--shell-dim);
+}
+
+/* Armed for picking, visibly and not only under the pointer: the crosshair cursor was
+   the whole of the old affordance, and it is found by hovering something the viewer
+   had no reason to hover. */
+.map-canvas[data-picking='true'] {
+  border-color: var(--shell-accent);
+}
+
+.map-pick-prompt {
+  position: absolute;
+  z-index: 1;
+  top: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  margin: 0;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  font-family: monospace;
+  background: var(--shell-accent);
+  color: var(--shell-bg);
+  /* Inert to the pointer: the prompt must never swallow the click it asks for. */
+  pointer-events: none;
 /*
- * The provenance legend (feature 115). A tint with no legend is a picture: four
+ * The provenance legend (feature 116). A tint with no legend is a picture: four
  * swatches and the count of cells each owns, so the reader can tell "the boat has been
  * here" from "nobody has" without guessing at a hue.
  */

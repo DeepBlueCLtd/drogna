@@ -53,6 +53,13 @@ import { buildRunManifest, deriveRunId } from './manifest.js';
 
 export interface BackendRuntime {
   readonly transport: SeamTransport;
+  /**
+   * The broker itself, for the one thing only it knows: how many deliveries threw.
+   * A component that answers a command by throwing publishes nothing, exactly as a
+   * component that declined by rule publishes nothing — and a test that cannot tell
+   * those apart passes against machinery that is falling over quietly.
+   */
+  readonly broker: Broker;
   readonly httpBackend: SeamHttpBackend;
   readonly manifest: RunManifest;
   readonly runId: string;
@@ -256,7 +263,7 @@ export function buildBackend(
     const client = transport.connect(config.scheduler.id, config.scheduler.id);
     return { component: new Scheduler(config.scheduler, client, runId), client };
   });
-  // The analyst stands between the request and the run (feature 115): the scheduler
+  // The analyst stands between the request and the run (feature 116): the scheduler
   // asks, the analyst corrects the field by what was measured and announces, and the
   // runner forecasts from what the announcement names.
   register(config.analyst.id, () => {
@@ -391,6 +398,7 @@ export function buildBackend(
 
   return {
     transport,
+    broker,
     httpBackend: gate,
     manifest,
     runId,

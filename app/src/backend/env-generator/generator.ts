@@ -12,6 +12,13 @@
  * seam, digest-checked like everything after them. The now-cast is regenerated on
  * its configured cadence, driven by received clock ticks, and its manifest records
  * the derivation each time.
+ *
+ * A reader may ask for the next now-cast now (FR-65). What that moves is when a
+ * snapshot of the world is published, never what is in it: the field is a
+ * deterministic function of simulation time, so a prompted now-cast at tick t and a
+ * cadenced one at tick t are the same field. It reaches the coverage store, the
+ * Holdings tab and the map; it does not reach the sensors, which sample the world
+ * through their own port and never read a holding.
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
@@ -20,6 +27,7 @@ import type {
   Manifest,
   ManifestFeature,
   ManifestSpatialAxis,
+  OperatorCommand,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
@@ -63,6 +71,8 @@ export class EnvGenerator {
   private simTime = { value: '', tick: 0 };
   private lastNowcastTick = 0;
   private nowcastCount = 0;
+  /** Now-casts authored because a reader asked, rather than on the cadence. */
+  private prompted = 0;
   private published = 0;
 
   /** Ticks until the next now-cast is authored, from the cadence it declares. */
@@ -132,6 +142,9 @@ export class EnvGenerator {
         detail: `${this.published} holding(s) authored; now-cast every ${config.nowcast.interval_ticks} tick(s)`,
         figures: [
           { key: 'holdings_authored', value: this.published, label: 'authored' },
+          // Absent until one has been asked for: a face may not draw a zero where
+          // nothing has happened (FR-58).
+          ...(this.prompted === 0 ? [] : [{ key: 'prompted', value: this.prompted, label: 'prompted' }]),
           {
             key: 'ticks_to_nowcast',
             value: this.ticksToNextNowcast(),
@@ -159,6 +172,20 @@ export class EnvGenerator {
       if (sample.tick - this.lastNowcastTick >= this.config.nowcast.interval_ticks) {
         this.publishNowcast();
       }
+    });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== this.config.id || command.kind !== 'event') return;
+      if (command.event !== this.config.prompt_event) return;
+      // Nothing is authored before the first clock sample: a holding dated at the
+      // empty instant would be a record of a moment that has not happened.
+      if (this.simTime.value === '') return;
+      this.prompted += 1;
+      // The cadence restarts because publishing a now-cast restarts it — the same
+      // line that serves the cadenced path, not a second one here. Written out that
+      // way first, and removed when planting against it changed nothing: a line
+      // whose removal no test notices is a line doing no work.
+      this.publishNowcast();
     });
     this.heartbeat.start();
   }

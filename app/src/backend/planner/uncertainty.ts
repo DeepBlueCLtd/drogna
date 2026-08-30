@@ -118,7 +118,7 @@ export function createUncertaintyModel(
    * How far a visit reaches, and how much it collapses — both taken from the analysis
    * rather than declared here.
    *
-   * Until feature 115 this was a `footprint` block in the planner's own configuration:
+   * Until feature 116 this was a `footprint` block in the planner's own configuration:
    * a peak of 0.85, two exponential e-foldings and two hard ring cutoffs, hand-authored
    * before there was an analysis to imitate. Every one of those numbers was a second
    * declaration of something the analysis now actually does, and they disagreed with it

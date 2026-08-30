@@ -5,6 +5,13 @@
  * docs/algorithms/informative-path-planning.md, carried whole: routes are WALKED,
  * each vertex scored against the state as it stands at its arrival instant —
  * after every earlier visit's collapse and the regrowth since — and the naive
+ * A reader may ask it to recompute now, and may move the doubt level it calls
+ * unusable (FR-64, FR-65). Neither changes what it is: it recommends, and nothing
+ * here turns a recommendation into an order (Constitution VIII). The threshold in
+ * force is reported in the heartbeat and carried in the plan's own projection, so a
+ * plan says which threshold produced it rather than leaving a reader to assume the
+ * configured one.
+ *
  * figure is published beside the honest one so the size of the avoided error is a
  * number somebody can see.
  */
@@ -16,6 +23,7 @@ import type {
   ConfigSensors,
   ConfigPlanner,
   Observation,
+  OperatorCommand,
   Plan,
   PlanProjectionEntry,
   PlanVertex,
@@ -58,7 +66,7 @@ export class Planner {
   private platform: { latitude: number; longitude: number; depth_m: number } | undefined;
   /**
    * The analysis error field the plan is scored against, and the run it came from.
-   * Until feature 115 this was the ensemble spread multiplied by an observation-age
+   * Until feature 116 this was the ensemble spread multiplied by an observation-age
    * field — a proxy that had to exist because the spread carries no spatial structure
    * at all: every ensemble member starts from the same state, so its divergence is a
    * function of lead time and nothing else. The analysis error has the structure for
@@ -68,6 +76,10 @@ export class Planner {
   private errorDigest: string | null = null;
   private errorRunId: string | undefined;
   private coverCells: PlanningCell[] | undefined;
+  /** The doubt threshold in force, where the operator plane has changed it. */
+  private tunedUsable: number | undefined;
+  /** Plans computed because a reader asked, rather than on the interval. */
+  private prompted = 0;
   lastPlan: Plan | undefined;
 
   constructor(
@@ -95,6 +107,8 @@ export class Planner {
           { key: 'plans_emitted', value: this.planOrdinal, label: 'plans' },
           { key: 'route_stops', value: this.lastRouteStops, label: 'stops' },
           { key: 'soundings', value: this.soundingsInformed, label: 'soundings' },
+          { key: 'usable_threshold', value: this.usableThreshold(), label: 'usable doubt' },
+          ...(this.prompted === 0 ? [] : [{ key: 'prompted', value: this.prompted, label: 'prompted' }]),
         ],
       }),
       runId,
@@ -114,9 +128,14 @@ export class Planner {
     this.client.subscribe(this.config.topics.observations, (message) => {
       this.inform(message.payload as Observation);
     });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      this.obey(message.payload as OperatorCommand);
+    });
     // Read from the analyst's own configuration rather than restated in the planner's:
     // the topic an analysis is announced on is declared once, by the component that
-    // announces it.
+    // announces it. This replaced a subscription to run_published, under which the
+    // planner scored the ensemble spread — a field with no spatial structure at all,
+    // which is why it needed an observation-age term beside it (feature 116).
     this.client.subscribe(this.analyst.topics.analysis_published, (message) => {
       const published = message.payload as AnalysisPublished;
       this.errorHoldingId = published.collections.error;
@@ -280,6 +299,34 @@ export class Planner {
       position = { latitude: vertex.latitude, longitude: vertex.longitude, depth_m: vertex.depthM };
     }
     return { value, consumedSeconds: consumed, distanceM: distance, marginals, arrivals };
+  }
+
+  /**
+   * The doubt threshold in force: what the operator plane last set, or what
+   * configuration says. Read in one place, so the rule that calls a region unusable
+   * and the threshold the plan reports having used cannot disagree.
+   */
+  usableThreshold(): number {
+    return this.tunedUsable ?? this.config.usable_threshold;
+  }
+
+  /** An operator command addressed to this planner; anything else on the topic is not. */
+  private obey(command: OperatorCommand): void {
+    if (command.target !== this.config.id) return;
+    if (command.kind === 'tuning') {
+      if (command.setting === 'usable_threshold') this.tunedUsable = command.value;
+      return;
+    }
+    if (command.event !== this.config.prompt_event) return;
+    // No guard here on time not yet existing: replan() refuses without an
+    // uncertainty field, and there cannot be one before the clock has spoken. One
+    // was written, and planting against it changed nothing — a guard whose removal
+    // no test notices is guarding nothing.
+    this.prompted += 1;
+    // The interval restarts from here: a countdown that carried on regardless would
+    // say a replan was due when one had just been computed.
+    this.lastPlanTick = this.simTime.tick;
+    this.replan();
   }
 
   private replan(): void {
@@ -448,14 +495,14 @@ export class Planner {
       const uNow = model.uncertainty(cell, now, this.deficits);
       if (uNow === undefined) continue;
       const tau = model.tau(cell, now);
-      if (uNow > this.config.usable_threshold) {
+      if (uNow > this.usableThreshold()) {
         regions.push(entry(cell, 'already-lapsed', null, uNow, model.saturation(cell, now) ?? uNow, tau));
         continue;
       }
       let crossing: number | null = null;
       for (let t = now; t <= now + this.config.projection.horizon_seconds; t += this.config.projection.step_seconds) {
         const u = model.uncertainty(cell, t, this.deficits);
-        if (u !== undefined && u > this.config.usable_threshold) {
+        if (u !== undefined && u > this.usableThreshold()) {
           crossing = t;
           break;
         }
@@ -474,7 +521,7 @@ export class Planner {
     return {
       step_seconds: this.config.projection.step_seconds,
       horizon_seconds: this.config.projection.horizon_seconds,
-      usable_threshold: this.config.usable_threshold,
+      usable_threshold: this.usableThreshold(),
       region_count: regions.length,
       regions,
     };

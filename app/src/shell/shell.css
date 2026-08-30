@@ -175,6 +175,31 @@ body,
   background: var(--shell-refused);
 }
 
+/* A panel's own header row: what the tab is, and its help control at the right
+   (feature 115, FR-75, ADR-0037). It lives here rather than in one panel's stylesheet
+   because more than one panel carries one, and a rule owned by whichever panel happened
+   to define it first is a rule that disappears when that panel is restyled.
+
+   The same row at both widths: the control reaches the same place narrow as wide, which
+   is what FR-50 asks of a control moved out of the shell header. It is never folded into
+   a disclosure — a help affordance behind a "more" label is one the people who need it
+   will not find. */
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9em;
+  flex-wrap: wrap;
+}
+
+.panel-head > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-head-title {
+  color: var(--shell-dim);
+}
+
 .messages-panel {
   display: flex;
   flex-direction: column;

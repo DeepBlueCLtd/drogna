@@ -60,6 +60,8 @@ import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { DemandControl } from './DemandControl.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { componentTour } from '../../shell/walkthrough/tour.js';
 import { TuningControl } from './TuningControl.js';
 import { EventControl } from './EventControl.js';
 import './operator.css';
@@ -328,6 +330,9 @@ export function OperatorPanel({ params }: PanelProps) {
     const windowSeconds =
       entry?.heartbeat.liveness_window_seconds ?? config.liveness.default_window_seconds;
     const lit = entry !== undefined && nowMs - entry.heardAtHostMs <= windowSeconds * 1000;
+    // The window a component is *judged against* is configuration; a component may also
+    // report its own, and where it does the two are drawn as the two different kinds of
+    // figure they are (FR-58: a figure may not change kind between states).
     const word = lit
       ? entry.heartbeat.status
       : entry
@@ -360,6 +365,13 @@ export function OperatorPanel({ params }: PanelProps) {
 
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
+      {/* The tab carries its own help control (FR-70, ADR-0037). This is the tour that
+          used to live in the shell header: it explains the components, and the components
+          are what this tab draws. */}
+      <div className="panel-head">
+        <span className="panel-head-title">the harness, component by component</span>
+        <HelpButton tour={componentTour(config)} />
+      </div>
       <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
         <button
           onClick={() => setAsList((value) => !value)}
@@ -466,6 +478,8 @@ export function OperatorPanel({ params }: PanelProps) {
         />
       )}
 
+      <Legend />
+
       {selectedNode ? (
         <Drawer
           node={selectedNode}
@@ -489,6 +503,65 @@ export function OperatorPanel({ params }: PanelProps) {
           figure says whether it was declared, reported by the component, or counted here.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * A figure that came from the configuration document (FR-57's first kind). Drawn with
+ * the treatment the stylesheet has carried since 113, which until feature 115 nothing
+ * used: the three kinds were named in CSS and the faces drew reported figures only.
+ */
+function Declared({ value, unit }: { value: number | string | undefined; unit?: string }) {
+  if (value === undefined) return <span className="flow-figure-absent">not declared</span>;
+  return (
+    <span className="flow-figure flow-figure-declared">
+      <span className="flow-figure-label">declared</span>
+      <span className="flow-figure-value">
+        {value}
+        {unit ? ` ${unit}` : ''}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The legend (feature 115, FR-68). Six states a node can be in, named — and with them
+ * the sentence the System tab's footnote carried and nothing else did: *a grey node is a
+ * component that has not run yet, or has stopped, and the display cannot tell you which,
+ * only the silence.* That is a true statement about what liveness-from-heartbeats can and
+ * cannot distinguish, and it had to survive the withdrawal of the tab that made it.
+ *
+ * It is not quite true of every grey node any more, and the legend says the finer thing
+ * too: where the operator plane has *told* the shell a component is stopped, the word is
+ * `stopped` rather than `silent`, because that is a fact the surface was given rather
+ * than one it inferred from silence.
+ */
+function Legend() {
+  const states: { status: string; word: string; meaning: string }[] = [
+    { status: 'ok', word: 'ok', meaning: 'heartbeats arriving inside the declared window, and the component says it is working' },
+    { status: 'starting', word: 'starting', meaning: 'alive and not yet working — the component’s own word for it' },
+    { status: 'degraded', word: 'degraded', meaning: 'alive and working badly, said rather than gone quiet' },
+    { status: 'stalled', word: 'stalled', meaning: 'alive and not working, said rather than gone quiet' },
+    { status: 'dark', word: 'silent', meaning: 'heard from once, and not inside its window since' },
+    { status: 'dark', word: 'unheard', meaning: 'no heartbeat from it has ever arrived' },
+  ];
+  return (
+    <div className="flow-legend" data-testid="flow-legend">
+      <ul>
+        {states.map((state) => (
+          <li key={state.word} data-legend-state={state.word}>
+            <span className={`status-dot status-${state.status}`} />
+            <b>{state.word}</b> — {state.meaning}
+          </li>
+        ))}
+      </ul>
+      <p className="panel-footnote">
+        A grey node is a component that has not run yet, or has stopped — the display
+        cannot tell you which, only the silence. The one exception is a component the
+        operator plane has reported stopped: that is a fact this surface was given, not one
+        it inferred, and it is drawn as <b>stopped</b> rather than as silence.
+      </p>
     </div>
   );
 }
@@ -527,11 +600,17 @@ function ListView({
   command: (path: string, method?: string) => void | Promise<void>;
   config: PanelParams['config'];
 }) {
+  const declaredBeat = (id: string) => config.components.find((entry) => entry.id === id)?.beat;
   return (
     <table className="system-grid" data-testid="operator-components">
       <thead>
         <tr>
           <th>component</th>
+          {/* The two facts the System tab carried alone, moved here before that tab was
+              withdrawn (FR-68). Both are configuration and both are drawn as declared
+              figures, which is what makes withdrawing System a move rather than a loss. */}
+          <th>beat</th>
+          <th>liveness window</th>
           <th>state</th>
           <th>last heard (sim time)</th>
           <th>what it says about itself</th>
@@ -541,12 +620,29 @@ function ListView({
       <tbody>
         {flow.nodes.map((node) => {
           const { lit, word, entry, record } = stateOf(node.id);
+          const reportedWindow = entry?.heartbeat.liveness_window_seconds;
           return (
             <tr key={node.id} data-operator-component={node.id} data-lit={lit}>
               <td>
                 <button className="link-button" onClick={() => onSelect(node.id)}>
                   {node.label}
                 </button>
+              </td>
+              <td data-declared-beat={declaredBeat(node.id)}>
+                <Declared value={declaredBeat(node.id)} />
+              </td>
+              <td data-declared-window={config.liveness.default_window_seconds}>
+                <Declared value={config.liveness.default_window_seconds} unit="s" />
+                {/* A component may report its own window. It is a different figure from a
+                    different source, so it is drawn as one rather than quietly replacing
+                    the declared one in the same cell. */}
+                {reportedWindow !== undefined &&
+                  reportedWindow !== config.liveness.default_window_seconds && (
+                    <span className="flow-figure flow-figure-reported">
+                      <span className="flow-figure-label">reported</span>
+                      <span className="flow-figure-value">{reportedWindow} s</span>
+                    </span>
+                  )}
               </td>
               <td>{word}</td>
               <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>

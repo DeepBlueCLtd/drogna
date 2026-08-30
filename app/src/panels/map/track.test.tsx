@@ -7,7 +7,7 @@
  * after the assertions of whichever test came next — which is exactly how it broke two
  * of its neighbours when it lived there. Isolation here is a fix, not a convenience.
  */
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
@@ -17,6 +17,7 @@ import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { MapPanel } from './MapPanel.js';
+import { unregisteredLayers } from './layers.js';
 
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
@@ -99,5 +100,66 @@ describe('the Map’s ownship track (feature 113)', () => {
     // The count on screen is the count the seam served — not a number the panel held.
     expect(status).toMatch(/ownship track: \d+ reported position\(s\), drawn point to point/);
     expect(status).toContain(`${reported.length} reported position(s)`);
+  });
+
+  it('FR-74: the track and the demanded course are drawn in every projection', async () => {
+    act(() => {
+      for (let index = 0; index < 150; index++) runtime.clock.tickOnce();
+    });
+    render(<MapPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+    });
+    const layersNow = () =>
+      (document.querySelector('.map-panel')?.getAttribute('data-map-layers') ?? '').split(' ');
+    const select = document.querySelector<HTMLSelectElement>('[data-testid="projection-select"]');
+    if (!select) throw new Error('the map offers no projection control');
+
+    // Parity, asserted rather than eyeballed. The volume drew neither the track nor the
+    // demand before feature 115: `cubeLayers` and `geographicLayers` are selected whole
+    // and the ownship layers lived only in the second.
+    for (const projection of ['flat', 'globe', 'cube'] as const) {
+      await act(async () => {
+        fireEvent.change(select, { target: { value: projection } });
+        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+      });
+      const drawn = layersNow();
+      expect(
+        drawn.some((id) => id.endsWith('ownship-track')),
+        `the ${projection} projection drew no ownship track`,
+      ).toBe(true);
+      expect(
+        drawn.some((id) => id.endsWith('ownship-reports')),
+        `the ${projection} projection drew no reported positions`,
+      ).toBe(true);
+    }
+  });
+
+  it('FR-75: every layer the panel draws is placed by the map’s own registry', async () => {
+    act(() => {
+      for (let index = 0; index < 150; index++) runtime.clock.tickOnce();
+    });
+    render(<MapPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+    });
+    const select = document.querySelector<HTMLSelectElement>('[data-testid="projection-select"]');
+    if (!select) throw new Error('the map offers no projection control');
+    // Every projection, because the registry has to place the cube's layers too — and
+    // the ids the panel emits are the ones deck.gl was handed, so the two cannot drift.
+    for (const projection of ['flat', 'globe', 'cube'] as const) {
+      await act(async () => {
+        fireEvent.change(select, { target: { value: projection } });
+        for (let flush = 0; flush < 12; flush++) await Promise.resolve();
+      });
+      const drawn = (document.querySelector('.map-panel')?.getAttribute('data-map-layers') ?? '')
+        .split(' ')
+        .filter((id) => id.length > 0);
+      expect(drawn.length).toBeGreaterThan(0);
+      expect(
+        unregisteredLayers(drawn),
+        `the ${projection} projection draws layers the registry does not place`,
+      ).toEqual([]);
+    }
   });
 });

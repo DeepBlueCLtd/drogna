@@ -220,6 +220,24 @@ store's stack had never drawn a bar, and the packager's refusals were published 
 That is the second time the running page has been the thing that found them, which is
 the argument for the habit rather than an anecdote about it.
 
+**Feature 115, the tabs beyond Operator** (`specs/115-engaging-tabs/`, SRD-v2 §5.15),
+sits outside the arc as 111, 112 and 113 do, and reaches into none of it: it changes no
+simulation, adds no component, moves no data and needs no new master. 113 set a bar and
+the rest of the shell divided in two — Background designed, the Map an instrument, Intro
+prose doing its job, and System, Holdings and Messages each a table showing the least
+interesting projection of the most interesting thing it had. So: Messages leads with a
+traffic display and promotes the topic tree out of its disclosure, Holdings becomes the
+store's timeline with a derived comparison of forecast against truth, the map draws the
+ownship track in all three projections, the yellow help button moves from the header into
+the panel it explains, and **the System tab is withdrawn** — the Operator flow chart has
+discharged FR-16's obligation since 113, and nothing replaces it. That the feature needs
+no new master is the evidence it is the right one: everything a reader would want to see
+was already crossing the seam. **It was specified as 114 and renumbered to 115** when the
+operator-controls work above took that number on `main` while this was in flight — the
+same collision 113 met and settled the same way: the tree is the authority, so the work
+still in flight moves rather than argues. Its requirements moved with it, from FR-63 to
+FR-70 into FR-68 to FR-75.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

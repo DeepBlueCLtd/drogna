@@ -3,13 +3,13 @@ import { addressFromHash, hashForView, hashOnActivation, viewFromHash } from './
 
 describe('URL-addressable views (FR-15)', () => {
   it('round-trips a view id through the hash', () => {
-    expect(viewFromHash(hashForView('system'))).toBe('system');
+    expect(viewFromHash(hashForView('holdings'))).toBe('holdings');
   });
 
   it('reads nothing from hashes that are not view addresses', () => {
     expect(viewFromHash('')).toBeUndefined();
     expect(viewFromHash('#/view/')).toBeUndefined();
-    expect(viewFromHash('#/other/system')).toBeUndefined();
+    expect(viewFromHash('#/other/holdings')).toBeUndefined();
     expect(viewFromHash('#/view/Shouty')).toBeUndefined();
   });
 });
@@ -27,8 +27,8 @@ describe('addressability below the panel (feature 111 FR-003, ADR-0032)', () => 
   });
 
   it('carries no remainder when the address names the view alone', () => {
-    expect(addressFromHash('#/view/system')).toEqual({ view: 'system' });
-    expect(addressFromHash('#/view/system/')).toEqual({ view: 'system' });
+    expect(addressFromHash('#/view/holdings')).toEqual({ view: 'holdings' });
+    expect(addressFromHash('#/view/holdings/')).toEqual({ view: 'holdings' });
   });
 
   it('hands the remainder on whole, whatever shape it is: the shell does not parse it', () => {

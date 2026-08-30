@@ -230,6 +230,23 @@
   stroke-linejoin: round;
 }
 
+/*
+ * A poke region under the pointer, and under keyboard focus.
+ *
+ * FR-025's affordance is the dashed outline and it stays static: this is the region's
+ * answer to a viewer who has already reached it, not something that happens on
+ * arrival (FR-019). The dashes brighten to the same ink an active region wears, so
+ * nothing new has to be learned and nothing here is carried by hue alone (FR-011).
+ */
+.bg-poke {
+  cursor: pointer;
+}
+
+.bg-poke:hover > rect,
+.bg-poke:focus-visible > rect {
+  stroke: #d5dde5;
+}
+
 .bg-readout {
   color: var(--shell-fg);
   font-size: 0.88em;

@@ -870,7 +870,7 @@
    here — the fallback is what a stylesheet loaded without a canvas would use, and the
    canvas always sets it. */
 .flow-pulse[data-pulse='fading'] {
-  animation-duration: var(--flow-pulse-fade, 500ms);
+  animation-duration: var(--flow-pulse-fade, 2000ms);
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }

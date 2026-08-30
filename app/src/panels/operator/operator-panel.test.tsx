@@ -21,7 +21,7 @@ import type { PanelParams } from '../../shell/Shell.js';
 import { OperatorPanel } from './OperatorPanel.js';
 import { BANDS, buildFlow } from './graph.js';
 import { inReadingOrder } from './layout.js';
-import { edgesCarrying } from './pulse.js';
+import { edgesCarrying, lingerSweeps } from './pulse.js';
 import { componentsWithoutFaces } from './faces.js';
 
 const validator = createSeamValidator();
@@ -1065,6 +1065,9 @@ describe('the Operator flow chart (feature 113)', () => {
         wire.getAttribute('data-flow-pulse'),
       );
 
+    /** The panel's sweep, in host milliseconds — the beat a light is measured in. */
+    const SWEEP_MS = 1000;
+
     /**
      * Enough ticks for the sensors to sample. Their cadence is configuration, so the
      * count is read from it rather than typed: a slower instrument changes this number
@@ -1110,11 +1113,17 @@ describe('the Operator flow chart (feature 113)', () => {
         sampleOnce();
       });
       expect(lit().length).toBeGreaterThan(0);
-      // Two sweeps with no traffic: the first closes the window the tick fell in, the
-      // second finds the wires quiet. Silence darkens a wire exactly as it darkens a
-      // node — nothing arrived, so the picture stops saying something did.
+      // Long enough for the beats the fade is owed, and no longer: the wire is still
+      // lit one beat before it runs out, and out on the beat after. Both halves matter
+      // — a light that goes out early does not fade, it vanishes, and a light that
+      // never goes out is a picture claiming traffic that stopped.
+      const beats = lingerSweeps(config.shell.flow.pulse.fade_ms, SWEEP_MS);
       await act(async () => {
-        vi.advanceTimersByTime(2100);
+        vi.advanceTimersByTime(SWEEP_MS * beats);
+      });
+      expect(lit().length).toBeGreaterThan(0);
+      await act(async () => {
+        vi.advanceTimersByTime(SWEEP_MS * 2);
       });
       expect(lit()).toEqual([]);
     });
@@ -1157,9 +1166,10 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(screen.getByTestId('flow-pulse-note').textContent).toContain(
         `${fast.clock.rate}× real time`,
       );
-      // A sweep with no traffic first, so what is lit below is this run's doing.
+      // Quiet first, for as long as any light could be owed, so what is lit below is
+      // this run's doing and not the tick that taught the panel the rate.
       await act(async () => {
-        vi.advanceTimersByTime(2100);
+        vi.advanceTimersByTime(SWEEP_MS * (lingerSweeps(fast.shell.flow.pulse.fade_ms, SWEEP_MS) + 2));
       });
       expect(lit()).toEqual([]);
       await act(async () => {
@@ -1175,9 +1185,11 @@ describe('the Operator flow chart (feature 113)', () => {
         // times a second. That is the whole difference between the two states.
         expect(wire.hasAttribute('data-pulse-turn')).toBe(false);
       }
-      // A held light still goes out when the traffic does.
+      // A held light still goes out when the traffic does, and it is owed one beat
+      // rather than a fade's worth: it says traffic is running, and the first quiet
+      // sweep makes that false.
       await act(async () => {
-        vi.advanceTimersByTime(2100);
+        vi.advanceTimersByTime(SWEEP_MS * 2);
       });
       expect(lit()).toEqual([]);
     });

@@ -10,7 +10,7 @@ import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { topology } from '../../generated/topology.js';
 import { buildFlow, type FlowEdge } from './graph.js';
-import { PulseBoard, edgeKey, edgesCarrying, topicsWithSeveralSenders } from './pulse.js';
+import { PulseBoard, edgeKey, edgesCarrying, lingerSweeps, topicsWithSeveralSenders } from './pulse.js';
 
 const config = runConfigDocument as ConfigRun;
 const flow = buildFlow(config.shell, topology);
@@ -100,9 +100,16 @@ describe('what a lit wire says', () => {
     { from: 'env-generator', to: 'sensors', kind: 'port', label: 'world-sampler port' },
   ];
   const key = edgeKey(edges[0]);
+  /**
+   * The beats a fading light gets, worked out the way the panel works it out and from
+   * the fade the shell document declares — not a number typed here, which would agree
+   * with the configuration only until somebody changed it. The sweep is the panel's
+   * one-second beat.
+   */
+  const LINGER = lingerSweeps(config.shell.flow.pulse.fade_ms, 1000);
 
   it('a message lights the wire, and a second message inside the fade lights it again', () => {
-    const board = new PulseBoard(edges);
+    const board = new PulseBoard(edges, LINGER);
     const element = wire(key);
     board.attach(key, element);
 
@@ -121,7 +128,7 @@ describe('what a lit wire says', () => {
   });
 
   it('an accelerated clock holds the light on instead of restarting it', () => {
-    const board = new PulseBoard(edges);
+    const board = new PulseBoard(edges, LINGER);
     const element = wire(key);
     board.attach(key, element);
 
@@ -135,15 +142,15 @@ describe('what a lit wire says', () => {
     expect(element.getAttribute('data-pulse-turn')).toBeNull();
   });
 
-  it('goes out on the sweep that finds the wire quiet, and not before', () => {
-    const board = new PulseBoard(edges);
+  it('a held light goes out on the sweep that finds the wire quiet, and not before', () => {
+    const board = new PulseBoard(edges, LINGER);
     const element = wire(key);
     board.attach(key, element);
 
     board.mark('obs/a/b', 'held');
     board.settle();
-    // Marked inside the window that just closed: still lit. A light cleared on the
-    // sweep that follows the message it announced is a light nobody sees.
+    // Marked inside the beat that just closed: still lit. A light cleared on the sweep
+    // that follows the message it announced is a light nobody sees.
     expect(element.getAttribute('data-pulse')).toBe('held');
 
     board.settle();
@@ -151,8 +158,55 @@ describe('what a lit wire says', () => {
     expect(element.hasAttribute('data-pulse-turn')).toBe(false);
   });
 
+  it('a fading light is given the beats its fade needs, and goes out after them', () => {
+    const board = new PulseBoard(edges, LINGER);
+    const element = wire(key);
+    board.attach(key, element);
+
+    board.mark('obs/a/b', 'fading');
+    // The fade outlasts a sweep now, and the attribute is what runs it: taken away
+    // mid-fade the light does not finish fading, it vanishes at whatever opacity it had
+    // reached. So it survives every beat it was owed — this is the assertion that the
+    // 2 s fade and the 1 s sweep were reconciled rather than left to collide.
+    for (let beat = 0; beat < LINGER; beat++) {
+      board.settle();
+      expect(element.getAttribute('data-pulse')).toBe('fading');
+    }
+    board.settle();
+    expect(element.hasAttribute('data-pulse')).toBe(false);
+  });
+
+  it('the beats a fade is given outlast the fade itself', () => {
+    // The property that matters, stated against the two declared numbers rather than
+    // against the count: whatever the fade is set to, the light survives long enough
+    // for it to finish. At 500 ms this was true without anybody arranging it; at 2 s it
+    // is true because the linger is derived.
+    const sweepMs = 1000;
+    expect(lingerSweeps(config.shell.flow.pulse.fade_ms, sweepMs) * sweepMs).toBeGreaterThan(
+      config.shell.flow.pulse.fade_ms,
+    );
+    // And it holds for fades either side of a sweep, not just today's.
+    for (const fadeMs of [1, 250, 500, 999, 1000, 1001, 2000, 5500]) {
+      expect(lingerSweeps(fadeMs, sweepMs) * sweepMs).toBeGreaterThan(fadeMs);
+    }
+  });
+
+  it('a fresh message renews the beats, so a busy wire is never cut off', () => {
+    const board = new PulseBoard(edges, LINGER);
+    const element = wire(key);
+    board.attach(key, element);
+
+    board.mark('obs/a/b', 'fading');
+    for (let beat = 0; beat < LINGER * 2; beat++) {
+      board.settle();
+      board.mark('obs/a/b', 'fading');
+    }
+    board.settle();
+    expect(element.getAttribute('data-pulse')).toBe('fading');
+  });
+
   it('writes nothing on a wire nobody is drawing', () => {
-    const board = new PulseBoard(edges);
+    const board = new PulseBoard(edges, LINGER);
     const element = wire(key);
     board.attach(key, element);
     board.attach(key, null);

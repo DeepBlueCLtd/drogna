@@ -57,7 +57,7 @@ import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
 import { METRICS, NARROW_METRICS } from './layout.js';
-import { PulseBoard, topicsWithSeveralSenders, type PulseKind } from './pulse.js';
+import { PulseBoard, lingerSweeps, topicsWithSeveralSenders, type PulseKind } from './pulse.js';
 import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
@@ -83,6 +83,13 @@ function detailOf(entry: Heard | undefined): string {
   if (!entry) return 'no heartbeat has ever arrived';
   return entry.heartbeat.detail ?? 'beating, and saying nothing beyond that';
 }
+
+/**
+ * How often the panel looks at what has gone quiet, in host milliseconds. One beat
+ * darkens a component whose liveness window has lapsed and puts out a wire that has
+ * stopped carrying traffic; both are the same statement, so both are on the same beat.
+ */
+const SWEEP_MS = 1000;
 
 const BAND_CAPTION: Record<Band, string> = {
   loop: 'the loop — assimilation',
@@ -111,8 +118,14 @@ export function OperatorPanel({ params }: PanelProps) {
   /**
    * The wires' lights (pulse.ts). Built from the same derived edge set the canvas
    * draws, and held across renders: it owns DOM the panel does not re-render.
+   *
+   * How many sweeps a fading light is given is the declared fade measured in beats of
+   * the sweep above (`lingerSweeps`), which is the one place the two numbers meet.
    */
-  const pulses = useMemo(() => new PulseBoard(flow.edges), [flow]);
+  const pulses = useMemo(
+    () => new PulseBoard(flow.edges, lingerSweeps(config.flow.pulse.fade_ms, SWEEP_MS)),
+    [config.flow.pulse.fade_ms, flow],
+  );
   /**
    * Which kind of light traffic gets, as the broker subscription sees it. A ref rather
    * than the state it follows, because the subscription is established once and a rate
@@ -328,13 +341,13 @@ export function OperatorPanel({ params }: PanelProps) {
   useEffect(() => {
     // harness:allow-wallclock liveness windows lapse in host time (ADR-0006)
     const sweep = setInterval(() => {
-      // A wire that carried nothing since the last sweep goes out. Held here rather
+      // A wire that has run out of the beats it was owed goes out. Held here rather
       // than on a timer of its own: one beat darkens a component whose window lapsed
       // and a wire whose traffic stopped, and both are the same kind of statement —
       // nothing arrived, and the picture stops saying something did.
       pulses.settle();
       setSweep((n) => n + 1);
-    }, 1000);
+    }, SWEEP_MS);
     return () => clearInterval(sweep);
   }, [pulses]);
 

@@ -1459,7 +1459,7 @@
       ],
       "series_samples": 60,
       "pulse": {
-        "fade_ms": 500,
+        "fade_ms": 2000,
         "hold_above_rate": 1
       }
     },

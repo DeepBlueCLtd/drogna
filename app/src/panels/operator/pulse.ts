@@ -15,12 +15,13 @@
  *   offered.
  * - **It does not re-render React.** A message crossing the broker writes one
  *   attribute on one path element. The alternative — a piece of state per message —
- *   redraws twenty faces and fifty wires for a light that lasts half a second, and at
+ *   redraws twenty faces and fifty wires for a light that lasts a second or two, and at
  *   an accelerated rate it does that dozens of times a second.
  * - **It does not time anything itself.** The fade is a CSS animation whose duration
- *   is the declared `fade_ms`, and going out again is the panel's existing sweep:
- *   a wire that carried nothing since the last sweep is cleared. So there is no timer
- *   here, no `Date.now`, and nothing to keep in step with the clock.
+ *   is the declared `fade_ms`, and going out again is the panel's existing sweep, which
+ *   tells this module how many of its beats a light must be given rather than being
+ *   asked how long a beat is. So there is no timer here, no `Date.now`, and nothing to
+ *   keep in step with the clock.
  *
  * Above `hold_above_rate` the light is *held* rather than re-lit: a highlight
  * restarted dozens of times a second is a flicker, and a flicker says less than a
@@ -68,6 +69,21 @@ export function topicsWithSeveralSenders(edges: readonly FlowEdge[]): string[] {
 }
 
 /**
+ * How many beats of a sweep a fading light must be given, for a declared fade and a
+ * declared sweep. Here rather than at the call site so the rule is one thing that can
+ * be held by a test, and so the two numbers meet in one place.
+ *
+ * A fade shorter than a sweep still gets one beat: a light is never put out on the same
+ * beat it was lit, or a message that arrived just before a sweep would never be seen at
+ * all. The extra beat is for the fade and the sweep being unsynchronised host timers —
+ * the sweep that ought to be the last one can arrive a few milliseconds early, and a
+ * fade cut off does not end gently (see `settle`).
+ */
+export function lingerSweeps(fadeMs: number, sweepMs: number): number {
+  return Math.max(1, Math.ceil(fadeMs / sweepMs)) + 1;
+}
+
+/**
  * How a lit wire is lit. `fading` is the ordinary case, a light per message dying over
  * the declared window; `held` is what an accelerated clock gets, a light that stays on
  * while traffic runs down the wire. Which one is in force is the clock's business and
@@ -87,8 +103,15 @@ export class PulseBoard {
   private readonly elements = new Map<string, SVGElement>();
   /** Memoised: the topics are a fixed couple of dozen strings, matched once each. */
   private readonly carried = new Map<string, readonly string[]>();
-  /** Which wires carried something since the last sweep. */
-  private readonly marked = new Set<string>();
+  /**
+   * How many more sweeps each lit wire is owed before it may be put out. A held light
+   * is owed one — it means "traffic is running down this wire", and the first quiet
+   * sweep makes that false. A fading light is owed enough of them that its fade cannot
+   * still be running, which is `lingerSweeps` and is why that number exists: with a
+   * fade longer than a sweep, clearing on the first quiet beat would take the attribute
+   * off mid-animation and snap the light out at whatever opacity it had reached.
+   */
+  private readonly owed = new Map<string, number>();
   /**
    * Which keyframe name each wire is animating under. A CSS animation restarts when
    * its name changes and not when the same value is written again, so a wire that
@@ -97,7 +120,15 @@ export class PulseBoard {
    */
   private readonly turn = new Map<string, 'a' | 'b'>();
 
-  constructor(private readonly edges: readonly FlowEdge[]) {}
+  /**
+   * `linger` is how many beats of the caller's sweep a fading light is given, from
+   * `lingerSweeps` above. It arrives as a number because the caller owns the sweep:
+   * this module knows what a light means and nothing about how long anything takes.
+   */
+  constructor(
+    private readonly edges: readonly FlowEdge[],
+    private readonly linger: number,
+  ) {}
 
   /** The canvas hands over each drawn wire, and takes it back when it unmounts. */
   attach(key: string, element: SVGElement | null): void {
@@ -111,7 +142,7 @@ export class PulseBoard {
    */
   mark(topic: string, kind: PulseKind): void {
     for (const key of this.carrying(topic)) {
-      this.marked.add(key);
+      this.owed.set(key, kind === 'held' ? 1 : this.linger);
       const element = this.elements.get(key);
       if (!element) continue;
       if (kind === 'held') {
@@ -131,18 +162,33 @@ export class PulseBoard {
   }
 
   /**
-   * A wire that carried nothing since the last sweep goes out. Called from the panel's
-   * existing one-second sweep rather than from a timer of its own: a fade has already
-   * finished by the time a sweep reaches it, and a held light going out one sweep
-   * after the traffic stopped is the display being late, not the display lying.
+   * One beat of the caller's sweep: a wire that has run out of the beats it was owed
+   * goes out. Called from the panel's existing sweep rather than from a timer of its
+   * own — one beat darkens a component whose liveness window lapsed and a wire whose
+   * traffic stopped, and both are the same statement: nothing arrived.
+   *
+   * A held light going out a beat after the traffic stopped is the display being late,
+   * not the display lying. A fading light is owed more beats than that, and the reason
+   * is worth stating: the fade is a CSS animation with `forwards`, so removing the
+   * attribute mid-fade does not end the fade gently — it takes the animation away and
+   * the light snaps back to invisible from wherever it had got to. Before the fade was
+   * lengthened this could not happen, because every fade was over before the sweep that
+   * followed the sweep it began in.
    */
   settle(): void {
-    for (const [key, element] of this.elements) {
-      if (this.marked.has(key)) continue;
-      element.removeAttribute('data-pulse');
-      element.removeAttribute('data-pulse-turn');
+    // Over what is owed rather than over what is drawn: a wire that lit and then left
+    // the document — the list view, a re-render — would otherwise keep its debt for
+    // ever and be handed it back if it returned.
+    for (const [key, left] of this.owed) {
+      if (left > 0) {
+        this.owed.set(key, left - 1);
+        continue;
+      }
+      this.owed.delete(key);
+      const element = this.elements.get(key);
+      element?.removeAttribute('data-pulse');
+      element?.removeAttribute('data-pulse-turn');
     }
-    this.marked.clear();
   }
 
   private carrying(topic: string): readonly string[] {

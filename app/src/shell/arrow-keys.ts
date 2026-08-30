@@ -1,8 +1,8 @@
 /**
- * The arrow keys, for a panel that walks a sequence (FR-014, FR-076).
+ * The arrow keys, for a panel that walks a sequence (FR-014, FR-086).
  *
  * Lifted out of `panels/background/BackgroundPanel.tsx` when the Intro walkthrough
- * (feature 118) needed the same thing. It is not a convenience: the three guards below
+ * (feature 119) needed the same thing. It is not a convenience: the three guards below
  * are subtle, each is there because of a specific way the naive version is wrong, and a
  * second copy of them is a copy that rots. One implementation, two panels, and both
  * panels' tests hold it.

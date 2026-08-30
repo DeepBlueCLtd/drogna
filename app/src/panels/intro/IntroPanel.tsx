@@ -1,5 +1,5 @@
 /**
- * The Intro tab (SRD-v2 FR-42 as amended, FR-76 to FR-80; feature 118): the shape of the
+ * The Intro tab (SRD-v2 FR-42 as amended, FR-86 to FR-90; feature 119): the shape of the
  * system, grown one part at a time, with the links between the parts in motion and every
  * message crossing one open to inspection.
  *
@@ -10,9 +10,9 @@
  * quietly falling behind the tree as components landed — which it did, catching the
  * analyst on the day it was written. This one makes no claim a merge can falsify, so
  * there is nothing left for that gate to check and it retires with the storyboard it
- * checked (`specs/118-intro-architecture/spec.md` records why).
+ * checked (`specs/119-intro-architecture/spec.md` records why).
  *
- * **The motion is a fixed cycle, not received traffic** (FR-80, and the author's
+ * **The motion is a fixed cycle, not received traffic** (FR-90, and the author's
  * decision). Feature 115's FR-71 holds the Messages tab to the opposite rule, and this
  * tab is deliberately outside it: the Intro tab reads the same whether the clock is
  * running, stopped, or absent, which is what a first page should do. The cost is that a

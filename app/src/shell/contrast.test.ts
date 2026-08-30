@@ -37,13 +37,13 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { AA_NON_TEXT, AA_TEXT, contrast } from './colour.js';
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-/** WCAG 2.1 AA, 1.4.3: body text against its background. */
-const AA_TEXT = 4.5;
-/** WCAG 2.1 AA, 1.4.11: the least difference that reads as two colours at all. */
-const VISIBLE = 3;
+// The arithmetic and the two WCAG bounds are shared with the consumers' greyscale check
+// (`panels/consumers/greyscale.test.ts`), which asks the same question of its marks.
+const VISIBLE = AA_NON_TEXT;
 
 function stylesheets(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -133,24 +133,6 @@ function expand(hex: string): string {
   const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(hex.trim());
   return (short ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}` : hex.trim())
     .toLowerCase();
-}
-
-function luminance(hex: string): number {
-  const packed = Number.parseInt(hex.slice(1), 16);
-  const channel = (raw: number) => {
-    const unit = raw / 255;
-    return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
-  };
-  return (
-    0.2126 * channel((packed >> 16) & 0xff) +
-    0.7152 * channel((packed >> 8) & 0xff) +
-    0.0722 * channel(packed & 0xff)
-  );
-}
-
-function contrast(one: string, other: string): number {
-  const [a, b] = [luminance(one), luminance(other)];
-  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
 function token(name: string): string {

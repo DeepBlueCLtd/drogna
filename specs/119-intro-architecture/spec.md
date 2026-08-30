@@ -34,7 +34,7 @@ components with all fifty-eight wires, which is the right picture for somebody
 interrogating a running system and the wrong one for somebody meeting it. That bullet is
 amended in place rather than left disagreeing with the tree.
 
-**SRD change.** New §5.16 carries **FR-76 to FR-79**. FR-42 (the Intro tab) is amended in
+**SRD change.** New §5.17 carries **FR-86 to FR-89**. FR-42 (the Intro tab) is amended in
 place.
 
 ### What the review settled
@@ -95,7 +95,7 @@ store; the walkthrough goes back to the step that introduced it.
 
 ## Requirements
 
-Carried by SRD-v2 §5.16, FR-76 to FR-79. In summary: the drawing grows under the reader
+Carried by SRD-v2 §5.17, FR-86 to FR-89. In summary: the drawing grows under the reader
 and never on a timer; it is derived from the declaration rather than authored beside it;
 it is a subset whose omissions are recorded with reasons and held by a gate; and nothing
 in it is lit.
@@ -118,7 +118,7 @@ in it is lit.
 
 ## Deliberately not in this feature
 
-- **Liveness in the drawing.** Considered and refused: see FR-79. A second surface where a
+- **Liveness in the drawing.** Considered and refused: see FR-89. A second surface where a
   node lights would be a second answer to a question Operator already answers, and the
   first one a reader would meet.
 - **A tour button.** The tab is a walkthrough. A help control offering to walk a reader

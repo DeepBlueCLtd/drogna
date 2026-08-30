@@ -330,7 +330,7 @@ as a table.
   it "engaging" would mean making it a demonstration, and every demonstration it would
   contain is one tab away and linked from the sentence that mentions it.
 
-  *Superseded by feature 118, 30 August 2026, and the reason is worth recording because
+  *Superseded by feature 119, 30 August 2026, and the reason is worth recording because
   this bullet was wrong in a specific way. The objection it answers — "engaging" meaning
   a second copy of a demonstration that lives one tab away — still stands, and 118 does
   not do that. What this bullet missed is that the numbered list was never answering the

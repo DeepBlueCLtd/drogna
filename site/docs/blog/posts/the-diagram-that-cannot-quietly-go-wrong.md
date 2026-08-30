@@ -1,7 +1,7 @@
 ---
 title: A diagram is a claim about a system, and it is the one nobody checks
 date: 2026-08-30
-feature: specs/118-intro-architecture
+feature: specs/119-intro-architecture
 description: >-
   Every architecture diagram starts accurate and ends up lying, because the system moves
   and the picture does not. The fix was to derive the boxes and wires from the same

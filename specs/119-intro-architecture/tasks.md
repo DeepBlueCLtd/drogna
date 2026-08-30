@@ -13,7 +13,7 @@ derived wiring) are hard prerequisites. Nothing here derives the wiring a second
 - [x] T001 Write `spec.md`: the subject, what the numbered list was answering, and the
       review that cut the first design down.
 - [x] T002 Amend SRD FR-42 in place rather than leave it disagreeing with the tree, and
-      add §5.16 with FR-76 to FR-79.
+      add §5.17 with FR-86 to FR-89.
 - [x] T003 Amend feature 115's "deliberately not in this feature — Intro" bullet with what
       it missed, rather than quietly contradicting it. It was not wrong about the risk it
       named; it was wrong that the tab had no subject of its own.
@@ -84,7 +84,7 @@ derived wiring) are hard prerequisites. Nothing here derives the wiring a second
 
 ## Declined, with the reason
 
-- [x] T024 **Lighting the drawing from heartbeats.** Refused: FR-79. Two surfaces
+- [x] T024 **Lighting the drawing from heartbeats.** Refused: FR-89. Two surfaces
       answering "is it alive" would put the less complete one first, and a diagram that
       looks like a readout is the cheapest way to break Constitution VII.
 - [x] T025 **Drawing all twenty components.** Refused in review: the picture that resulted

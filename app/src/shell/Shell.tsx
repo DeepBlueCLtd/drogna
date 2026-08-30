@@ -48,9 +48,27 @@ export interface ShellProps {
 
 export type { PanelParams };
 
-/** The views are the harness's faces, not documents: rearrangeable, never closable. */
-function PermanentTab(props: IDockviewPanelHeaderProps) {
-  return <DockviewDefaultTab hideClose {...props} />;
+/**
+ * The views are the harness's faces, not documents: rearrangeable, never closable.
+ *
+ * Three of them are not the harness's faces at all (feature 116): a downstream consumer
+ * view is drawn in its own chrome so the boundary is legible without explanation and
+ * survives a screenshot. Which views those are is read from the view's declared kind, not
+ * from a list here — the shell holds no such list, and a fourth consumer is a line in a
+ * configuration document (FR-76). A view that declares no kind is the harness's own,
+ * which is every view that existed before the property did.
+ */
+function PermanentTab(props: IDockviewPanelHeaderProps<PanelParams>) {
+  const kind = props.params?.config.views.find((view) => view.id === props.api.id)?.kind ?? 'harness';
+  return (
+    // `data-view` alongside the kind so a capture can read the tab strip in this
+    // presentation too. The stack's tabs have carried both since feature 112; the dock's
+    // carried only the kind, which left the consumers' proof (T035) with no way to ask
+    // the page which views it was meant to sweep.
+    <span className="tab-kind" data-kind={kind} data-view={props.api.id}>
+      <DockviewDefaultTab hideClose {...props} />
+    </span>
+  );
 }
 
 /**

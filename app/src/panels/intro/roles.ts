@@ -1,5 +1,5 @@
 /**
- * What the Intro tab draws, and what crosses between the parts (feature 118).
+ * What the Intro tab draws, and what crosses between the parts (feature 119).
  *
  * **This is a schematic, and it names nothing.** Six roles — what is measured, what tests
  * it against belief, what re-forecasts, what is believed, who is told, who asks — and not
@@ -16,7 +16,7 @@
  *
  * **The motion is illustrative, and the panel says so.** Feature 115's FR-71 holds the
  * Messages tab to motion that comes from received traffic and nothing else. This tab is
- * deliberately outside that rule (FR-80): it runs on a fixed CSS cycle, independent of
+ * deliberately outside that rule (FR-90): it runs on a fixed CSS cycle, independent of
  * whether anything is running, so the Intro tab reads the same on a stopped clock, in a
  * screenshot, and in a printed page. The cost is that a reader must not mistake it for a
  * readout — which is why the panel labels it, and why every sample below is marked as a

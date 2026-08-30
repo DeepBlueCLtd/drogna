@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Intro walkthrough (feature 118, FR-76 to FR-80).
+ * The Intro walkthrough (feature 119, FR-86 to FR-90).
  *
  * What is worth holding here changed with the redraw. The earlier passes drew declared
  * components, so the tests held the picture to the declaration. This one draws six roles
@@ -84,7 +84,7 @@ const press = (key: string, target: HTMLElement | Document = stage()) =>
     fireEvent.keyDown(target, { key });
   });
 
-describe('it says what it is (FR-80)', () => {
+describe('it says what it is (FR-90)', () => {
   it('calls the motion an illustration, in the frame, before anyone reads it as a readout', () => {
     // The whole risk of a schematic that moves: a reader takes it for a report of the
     // run. The frame is where that is headed off, so the frame is what is asserted.
@@ -128,7 +128,7 @@ describe('it says what it is (FR-80)', () => {
   });
 });
 
-describe('it grows, under the reader (FR-76)', () => {
+describe('it grows, under the reader (FR-86)', () => {
   it('brings in each step’s roles and channels, and nothing ahead of them', () => {
     render(<IntroPanel {...panelProps().props} />);
     expect(roles()).toEqual(BEATS[0].roles);
@@ -196,7 +196,7 @@ describe('it grows, under the reader (FR-76)', () => {
   });
 });
 
-describe('it holds at any width (FR-76)', () => {
+describe('it holds at any width (FR-86)', () => {
   it('lays the lanes out as a flow that wraps, not a row that overflows', () => {
     // Watched failing on an iPad: seven parts would not sit side by side, the lane
     // overflowed its column, and the last of them was painted over by the narration
@@ -215,7 +215,7 @@ describe('it holds at any width (FR-76)', () => {
   });
 });
 
-describe('it is inert, and reads no clock (FR-79)', () => {
+describe('it is inert, and reads no clock (FR-89)', () => {
   it('draws every step with nothing running and nothing answering', () => {
     const realFetch = globalThis.fetch;
     const reachedFetch: string[] = [];

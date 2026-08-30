@@ -28,7 +28,8 @@
     "advisory_source",
     "advisory_store",
     "offload",
-    "shell"
+    "shell",
+    "start_conditions"
   ],
   "additionalProperties": false,
   "properties": {
@@ -106,6 +107,9 @@
     },
     "shell": {
       "$ref": "config.shell.schema.json"
+    },
+    "start_conditions": {
+      "$ref": "config.start-conditions.schema.json"
     }
   }
 }

@@ -117,6 +117,7 @@ const NO_TEXT_ON: Record<string, string> = {
   '.flow-tape-track': 'the drawer’s tape track',
   '.flow-tape-fill': 'the fill inside it',
   '.flow-slot-filled': 'a filled slot in the drawer',
+  '.welcome-progress-fill': 'the fill inside the welcome page’s progress track; the figure is written under it',
   '.walkthrough-button:hover': 'the help button under the pointer; its own rule sets the text colour',
   '.driver-popover.walkthrough-popover button:hover': 'a popover button under the pointer; its own rule sets the text colour',
 };

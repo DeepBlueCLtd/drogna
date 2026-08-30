@@ -8,12 +8,21 @@ import type { ConfigRun, RunManifest } from '../../generated/types.js';
 import { SEED_DERIVATION } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 
-export function deriveRunId(scenario: string, rootSeed: number): string {
-  return `${scenario}-${rootSeed.toString(36)}`;
+/**
+ * Identity of a run: the scenario, the start condition the visit chose, and the root
+ * seed. The condition is in here rather than only in the manifest because two visits
+ * that chose differently genuinely are different runs — a different platform position,
+ * a different pre-roll, different holdings — and a run id is stamped into every
+ * holding id and every observation id. Without it they would collide on the one
+ * identifier everything downstream keys on.
+ */
+export function deriveRunId(scenario: string, startCondition: string, rootSeed: number): string {
+  return `${scenario}-${startCondition}-${rootSeed.toString(36)}`;
 }
 
 export function buildRunManifest(
   config: ConfigRun,
+  startCondition: string,
   rootSeed: number,
   revision: string,
   dirty: boolean,
@@ -21,7 +30,8 @@ export function buildRunManifest(
 ): RunManifest {
   return {
     schema_version: 1,
-    run_id: deriveRunId(config.scenario, rootSeed),
+    run_id: deriveRunId(config.scenario, startCondition, rootSeed),
+    start_condition: startCondition,
     root_seed: rootSeed,
     seed_derivation: { rule: SEED_DERIVATION.rule, version: SEED_DERIVATION.version },
     clock: {

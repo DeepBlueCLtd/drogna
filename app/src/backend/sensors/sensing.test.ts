@@ -19,7 +19,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 77, revision: 'test', dirty: false };
+const options = { rootSeed: 77, startCondition: 'loitering', revision: 'test', dirty: false };
 
 describe('sensing (feature 103)', () => {
   it('sensors sample on their cadence and every observation reaches the store valid', () => {
@@ -163,7 +163,11 @@ describe('sensing (feature 103)', () => {
   it('the feature store is provisioned at start and structurally read-only', () => {
     const runtime = buildBackend(lockstepConfig(), options, validator);
     const features = runtime.featureStore.features();
-    expect(features.map((feature) => feature.kind).sort()).toEqual(['domain', 'loiter_region']);
+    // The bound is the configuration document, not a list typed here: a reference area
+    // added to the scenario is provisioned by being declared, and this says so.
+    expect(features.map((feature) => feature.kind).sort()).toEqual(
+      lockstepConfig().feature_store.features.map((feature) => feature.kind).sort(),
+    );
     // Mutating a returned copy changes nothing inside.
     features[0].name = 'defaced';
     expect(runtime.featureStore.features()[0].name).not.toBe('defaced');

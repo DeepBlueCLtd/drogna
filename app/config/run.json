@@ -1099,6 +1099,38 @@
             ]
           ]
         }
+      },
+      {
+        "feature_id": "quay-approaches",
+        "name": "quay approaches",
+        "kind": "reference_area",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -8.9,
+                47.3
+              ],
+              [
+                -8.5,
+                47.3
+              ],
+              [
+                -8.5,
+                47.6
+              ],
+              [
+                -8.9,
+                47.6
+              ],
+              [
+                -8.9,
+                47.3
+              ]
+            ]
+          ]
+        }
       }
     ]
   },
@@ -1465,5 +1497,226 @@
     "messages": {
       "buffer": 200
     }
+  },
+  "start_conditions": {
+    "default": "arriving",
+    "conditions": [
+      {
+        "id": "leaving",
+        "label": "Leaving quay-side",
+        "situation": "Alongside at the quay approaches and casting off for the work area, 240 km to the south-west. The instruments are not streaming yet.",
+        "holds": [
+          "twenty years of monthly archive",
+          "one now-cast of the ocean as it stands",
+          "a departure forecast, assimilated from the now-cast alone",
+          "the ownship track since the quay — and no measurement of the ocean"
+        ],
+        "platform": {
+          "latitude": 47.45,
+          "longitude": -8.7,
+          "course_degrees": 232,
+          "speed_m_per_s": 1.0,
+          "depth_m": 5
+        },
+        "legs": [
+          {
+            "note": "clearing the quay, instruments not yet streamed",
+            "ticks": 900,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 232,
+              "speed_m_per_s": 3.0,
+              "depth_m": 30,
+              "note": "make for the work area"
+            }
+          },
+          {
+            "note": "the departure forecast the cadence floor warranted",
+            "ticks": 900,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "arriving",
+        "label": "Arriving in the work area",
+        "situation": "Closing the work area from the north-east after a long passage, instruments streaming the whole way in. Nothing has been assimilated under way.",
+        "holds": [
+          "twenty years of monthly archive",
+          "a now-cast, and the forecasts the passage was run under",
+          "measurements the length of the passage in",
+          "not one measurement inside the work area itself",
+          "no word from shore since the quay"
+        ],
+        "platform": {
+          "latitude": 46.78,
+          "longitude": -10.3,
+          "course_degrees": 232,
+          "speed_m_per_s": 2.4,
+          "depth_m": 60
+        },
+        "legs": [
+          {
+            "note": "the passage in — instruments streaming since the quay",
+            "ticks": 4800,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 232,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "close the work area from the north-east"
+            }
+          },
+          {
+            "note": "closing the area, under the forecast the passage was run on",
+            "ticks": 1140,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "prompt": [
+              "run-now"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "loitering",
+        "label": "Loitering in the work area",
+        "situation": "On station inside the work area, running a box and sampling it, with the shore link up and advisories arriving on their cadence.",
+        "holds": [
+          "the archive and the now-cast",
+          "measurements throughout the work area, and nowhere else",
+          "analyses corrected by what was measured there, and the forecasts that followed",
+          "shore advisories received over the link"
+        ],
+        "platform": {
+          "latitude": 46.1,
+          "longitude": -11.2,
+          "course_degrees": 90,
+          "speed_m_per_s": 2.4,
+          "depth_m": 50
+        },
+        "legs": [
+          {
+            "note": "on station, the first leg of the box",
+            "ticks": 1800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 75,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "first leg of the box"
+            }
+          },
+          {
+            "note": "the second leg of the box, deeper",
+            "ticks": 1800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 165,
+              "speed_m_per_s": 2.4,
+              "depth_m": 90,
+              "note": "second leg of the box"
+            }
+          },
+          {
+            "note": "a run on what the box has given up",
+            "ticks": 1200,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 255,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60,
+              "note": "third leg of the box"
+            },
+            "prompt": [
+              "run-now"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "returning",
+        "label": "Returning to quay-side",
+        "situation": "A period on station spent and outbound for the quay, with a full picture of the work area to review and a package staged for the shore.",
+        "holds": [
+          "the archive, the now-cast, and the forecasts of a whole period on station",
+          "measurements across the work area and out along the passage home",
+          "shore advisories through the period",
+          "a package staged for offload, with the measurement geometry beside it"
+        ],
+        "platform": {
+          "latitude": 46.28,
+          "longitude": -10.8,
+          "course_degrees": 60,
+          "speed_m_per_s": 2.4,
+          "depth_m": 80
+        },
+        "legs": [
+          {
+            "note": "the period on station, working the area to its north-eastern corner",
+            "ticks": 4800,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 60,
+              "speed_m_per_s": 2.4,
+              "depth_m": 80,
+              "note": "work the area north-eastward"
+            }
+          },
+          {
+            "note": "an advisory from shore, and the last run of the period",
+            "ticks": 900,
+            "stopped": [
+              "planner"
+            ],
+            "prompt": [
+              "advisory-now",
+              "run-now"
+            ]
+          },
+          {
+            "note": "outbound for the quay, staging what the shore will want",
+            "ticks": 3600,
+            "stopped": [
+              "planner"
+            ],
+            "demand": {
+              "course_degrees": 52,
+              "speed_m_per_s": 3.5,
+              "depth_m": 30,
+              "note": "make for the quay"
+            },
+            "prompt": [
+              "offload-now"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

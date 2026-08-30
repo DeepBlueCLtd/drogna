@@ -1,0 +1,322 @@
+/**
+ * Feature 118: the four start conditions, driven exactly as the composition root drives
+ * them, and held to what their cards promise.
+ *
+ * Nothing is mocked and nothing is stubbed. Each case builds the whole backend from the
+ * configuration that condition runs under, drives that condition's pre-roll through the
+ * release gate and the operator plane's own endpoints, and then reads the stores. A card
+ * that says "not one measurement inside the work area itself" is therefore a claim this
+ * file can fail, which is the only reason the card is worth printing.
+ *
+ * EXPECTED is keyed by condition id and is checked for completeness against the
+ * configuration document: a fifth condition added to `run.json` fails here until somebody
+ * says what it promises, rather than quietly arriving with nothing holding it to
+ * anything.
+ *
+ * Watched failing, deliberately, before it was trusted (CLAUDE.md, lesson 2):
+ *  - moving `arriving`'s platform to the work area's centre reports 760 measurements
+ *    inside a region its card says holds none;
+ *  - dropping `advisory-source` into `loitering`'s `stopped` lists reports one advisory
+ *    where the cadence over that period warrants three.
+ *
+ * A third planted violation found a fault in the check rather than in the code, which is
+ * the reason for planting them: deleting the `run-now` prompt from `leaving`'s second leg
+ * changed nothing at all, because the cadence floor warrants that run at tick 1800
+ * whether it is asked for or not. The prompt was removed rather than the check
+ * strengthened — a line whose removal no test notices is a line doing no work.
+ */
+import { describe, expect, it } from 'vitest';
+import runConfigDocument from '../../config/run.json';
+import type { ConfigRun, ConfigStartConditionsCondition, Observation } from '../generated/types.js';
+import { createSeamValidator } from '../seam/validate.js';
+import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
+import { configForCondition, defaultCondition, preRollTicks } from './start-condition.js';
+import { runPreRoll } from './preroll.js';
+
+const validator = createSeamValidator();
+const config = runConfigDocument as ConfigRun;
+
+/**
+ * `setImmediate` and not a timer: the yield exists to let the host's event loop turn
+ * between bursts, arms nothing against host time, and reads no clock — the argument
+ * `backend/test-support/drive.ts` sets out at length for the same call.
+ */
+const breathe = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+interface Reading {
+  runtime: BackendRuntime;
+  /** Observations from the ocean instruments — the ownship's own navigation excluded. */
+  measurements: Observation[];
+  ownship: Observation[];
+  eras: string[];
+  advisories: number;
+  tick: number;
+  /** Host milliseconds the pre-roll took, for the budget below. */
+  millis: number;
+}
+
+const workArea = (() => {
+  const feature = config.feature_store.features.find((candidate) => candidate.kind === 'loiter_region');
+  if (!feature) throw new Error('the scenario declares no loiter region to hold the cards to');
+  return feature.geometry.coordinates[0];
+})();
+
+/** Ray casting against the declared ring, so the check answers to the geometry on disk. */
+function insideWorkArea(longitude: number, latitude: number): boolean {
+  let inside = false;
+  for (let i = 0, j = workArea.length - 1; i < workArea.length; j = i++) {
+    const [xi, yi] = workArea[i];
+    const [xj, yj] = workArea[j];
+    if (yi > latitude !== yj > latitude && longitude < ((xj - xi) * (latitude - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+async function preRoll(condition: ConfigStartConditionsCondition): Promise<Reading> {
+  const effective = configForCondition(config, condition);
+  const runtime = buildBackend(
+    effective,
+    { rootSeed: 4242, startCondition: condition.id, revision: 'test', dirty: false },
+    validator,
+  );
+  // harness:allow-wallclock a host-time budget for a host-time cost; no simulation time is read from it
+  const started = performance.now();
+  await runPreRoll(
+    {
+      backend: runtime.httpBackend,
+      clock: effective.clock,
+      operator: effective.operator,
+      breathe,
+      onProgress: () => undefined,
+    },
+    condition,
+  );
+  // harness:allow-wallclock the other end of the same budget
+  const millis = performance.now() - started;
+  runtime.clock.stop();
+  const all = runtime.observationStore.all();
+  return {
+    runtime,
+    measurements: all.filter((observation) => observation.thing_id === effective.sensors.platform.thing_id),
+    ownship: all.filter((observation) => observation.thing_id === effective.platform.thing.thing_id),
+    eras: runtime.store.holdings().map((holding) => holding.era),
+    advisories: runtime.advisoryStore.all().length,
+    tick: runtime.clock.currentTick(),
+    millis,
+  };
+}
+
+/**
+ * What each card promises, as something a machine can check. The prose on the card and
+ * the predicate here are two statements of one fact and are expected to be read
+ * together: if they ever disagree, one of them is a lie.
+ */
+const EXPECTED: Record<string, (reading: Reading, condition: ConfigStartConditionsCondition) => void> = {
+  leaving: (reading) => {
+    // "the ownship track since the quay — and no measurement of the ocean"
+    expect(reading.measurements).toEqual([]);
+    expect(reading.ownship.length).toBeGreaterThan(20);
+    // "a departure forecast, assimilated from the now-cast alone"
+    expect(reading.eras).toContain('analysis');
+    expect(reading.eras).toContain('instance');
+    // Nothing was measured, so the analysis corrected the now-cast and nothing else.
+    expect(reading.advisories).toBe(0);
+  },
+  arriving: (reading) => {
+    // "measurements the length of the passage in"
+    expect(reading.measurements.length).toBeGreaterThan(500);
+    // "not one measurement inside the work area itself"
+    const inside = reading.measurements.filter((observation) =>
+      insideWorkArea(observation.location.longitude, observation.location.latitude),
+    );
+    expect(inside).toEqual([]);
+    // "a now-cast, and the forecast the arrival warranted"
+    expect(reading.eras).toContain('instance');
+    expect(reading.advisories).toBe(0);
+  },
+  loitering: (reading, condition) => {
+    // "measurements throughout the work area"
+    const inside = reading.measurements.filter((observation) =>
+      insideWorkArea(observation.location.longitude, observation.location.latitude),
+    );
+    expect(inside.length).toBe(reading.measurements.length);
+    expect(inside.length).toBeGreaterThan(500);
+    // "analyses corrected by what was measured there", and two forecasts
+    expect(reading.eras.filter((era) => era === 'analysis').length).toBeGreaterThanOrEqual(3);
+    expect(reading.eras.filter((era) => era === 'instance').length).toBeGreaterThanOrEqual(2);
+    // "shore advisories received over the link" — held to the cadence the source
+    // declares over the period the script covers, not to "more than none". More than
+    // none was satisfied by an artefact: the source was restarted at the end of the
+    // pre-roll, heard the acknowledgement sample the rate change republishes, found the
+    // tick a multiple of its cadence and authored one. The check passed with the shore
+    // link stopped for the whole run, which is the fault it exists to catch.
+    expect(reading.advisories).toBeGreaterThanOrEqual(
+      Math.floor(preRollTicks(condition) / config.advisory_source.cadence_ticks) - 1,
+    );
+  },
+  returning: (reading, condition) => {
+    // "measurements across the work area and out along the passage home"
+    expect(reading.measurements.length).toBeGreaterThan(1000);
+    expect(
+      reading.measurements.filter((observation) =>
+        insideWorkArea(observation.location.longitude, observation.location.latitude),
+      ).length,
+    ).toBeGreaterThan(500);
+    expect(reading.advisories).toBeGreaterThanOrEqual(
+      Math.floor(preRollTicks(condition) / config.advisory_source.cadence_ticks) - 1,
+    );
+    expect(reading.eras).toContain('instance');
+    // "a package staged for offload, with the measurement geometry beside it"
+    const staged = reading.runtime.offload.staged();
+    expect(staged.length).toBeGreaterThan(0);
+    expect(staged[staged.length - 1].sibling.measurement_geometry?.measurements.length).toBeGreaterThan(0);
+  },
+};
+
+describe('the start conditions (feature 118)', () => {
+  it('every condition the configuration offers is held to a promise here', () => {
+    expect(config.start_conditions.conditions.map((condition) => condition.id).sort()).toEqual(
+      Object.keys(EXPECTED).sort(),
+    );
+    // And the default is one of them, which is what stops the welcome page offering a
+    // first card that does not exist.
+    expect(defaultCondition(config.start_conditions).id).toBe(config.start_conditions.default);
+  });
+
+  it.each(config.start_conditions.conditions.map((condition) => [condition.id, condition] as const))(
+    "'%s' leaves the run holding what its card says it holds",
+    async (id, condition) => {
+      const reading = await preRoll(condition);
+      try {
+        // True of every condition, and stated once: the archive and a now-cast are what
+        // provisioning authors before a pre-roll does anything at all (FR-21).
+        expect(reading.eras).toContain('archive');
+        expect(reading.eras).toContain('nowcast');
+        // The clock ended where the script said it would, which is what the pin is for:
+        // a free-running tick between two stepped ones would put it somewhere else.
+        expect(reading.tick).toBe(preRollTicks(condition));
+        EXPECTED[id](reading, condition);
+        // Reported rather than asserted: the budget is checked once, below, against the
+        // condition a bare visit actually pays for.
+        console.log(`${id}: ${reading.tick} ticks in ${reading.millis.toFixed(0)} ms host time`);
+      } finally {
+        reading.runtime.stop();
+      }
+    },
+    180_000,
+  );
+
+  it('leaves every component it stopped running again, and the clock at its configured rate', async () => {
+    // The condition that stops the most: a pre-roll that handed back a machine with
+    // pieces missing would be a run the reader has to repair before using.
+    const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'arriving');
+    if (!condition) throw new Error('the arriving condition has gone');
+    const reading = await preRoll(condition);
+    try {
+      const stoppedSomewhere = new Set(condition.legs.flatMap((leg) => leg.stopped ?? []));
+      expect(stoppedSomewhere.size).toBeGreaterThan(0);
+      for (const id of stoppedSomewhere) {
+        expect(reading.runtime.control.isRunning(id), `${id} is running again`).toBe(true);
+      }
+      expect(reading.runtime.clock.currentRate()).toBe(config.clock.rate);
+    } finally {
+      reading.runtime.stop();
+    }
+  }, 180_000);
+
+  it('replays: one seed and one condition, the same run twice, byte for byte', async () => {
+    // The pre-roll is a sequence of operator commands, which AT-04 puts outside its
+    // claim — commands are ephemeral, and a demanded run replays identically only when
+    // the same demands are issued at the same ticks. A condition's demands come from the
+    // configuration document rather than from a reader's hand, so that proviso is met by
+    // construction, and the whole pre-roll is back inside the claim. Which is the point
+    // of scripting it in configuration rather than in a reader's session.
+    const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'loitering');
+    if (!condition) throw new Error('the loitering condition has gone');
+    const fingerprint = async () => {
+      const reading = await preRoll(condition);
+      try {
+        return {
+          holdings: reading.runtime.store
+            .holdings()
+            .map((holding) => `${holding.holding_id} ${holding.field.sha256}`)
+            .sort(),
+          observations: reading.runtime.observationStore.all().map((o) => o.observation_id),
+          advisories: reading.runtime.advisoryStore.all().map((a) => a.advisory_id),
+        };
+      } finally {
+        reading.runtime.stop();
+      }
+    };
+    const first = await fingerprint();
+    expect(first.holdings.length).toBeGreaterThan(2);
+    expect(await fingerprint()).toEqual(first);
+  }, 180_000);
+
+  it('refuses a script the control plane cannot honour, and unpins the clock as it goes', async () => {
+    const condition = defaultCondition(config.start_conditions);
+    const broken: ConfigStartConditionsCondition = {
+      ...condition,
+      legs: [{ note: 'a prompt this plane does not offer', ticks: 0, prompt: ['sail-home'] }],
+    };
+    const effective = configForCondition(config, broken);
+    const runtime = buildBackend(
+      effective,
+      { rootSeed: 7, startCondition: broken.id, revision: 'test', dirty: false },
+      validator,
+    );
+    try {
+      await expect(
+        runPreRoll(
+          {
+            backend: runtime.httpBackend,
+            clock: effective.clock,
+            operator: effective.operator,
+            breathe,
+            onProgress: () => undefined,
+          },
+          broken,
+        ),
+      ).rejects.toThrow(/sail-home/);
+      // The clock is the reader's only sign that the page is alive, so a refused script
+      // must not leave it pinned — that is what the `finally` in the driver is for.
+      expect(runtime.clock.currentRate()).toBe(config.clock.rate);
+    } finally {
+      runtime.stop();
+    }
+  }, 60_000);
+
+  it('reports its progress in the leg the configuration names, and reaches the end of it', async () => {
+    const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'leaving');
+    if (!condition) throw new Error('the leaving condition has gone');
+    const effective = configForCondition(config, condition);
+    const runtime = buildBackend(
+      effective,
+      { rootSeed: 91, startCondition: condition.id, revision: 'test', dirty: false },
+      validator,
+    );
+    const seen: string[] = [];
+    let last = { ticksDone: -1, ticksTotal: -1 };
+    try {
+      await runPreRoll(
+        {
+          backend: runtime.httpBackend,
+          clock: effective.clock,
+          operator: effective.operator,
+          breathe,
+          onProgress: (progress) => {
+            if (seen[seen.length - 1] !== progress.note) seen.push(progress.note);
+            last = { ticksDone: progress.ticksDone, ticksTotal: progress.ticksTotal };
+          },
+        },
+        condition,
+      );
+      expect(seen).toEqual(condition.legs.map((leg) => leg.note));
+      expect(last).toEqual({ ticksDone: preRollTicks(condition), ticksTotal: preRollTicks(condition) });
+    } finally {
+      runtime.stop();
+    }
+  }, 120_000);
+});

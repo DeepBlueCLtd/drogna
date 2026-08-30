@@ -63,6 +63,19 @@ const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
 
+/**
+ * How long a capture waits for the shell to be there.
+ *
+ * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
+ * that is not going to. Feature 118 changed what that number is measuring: the shell is
+ * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
+ * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
+ * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
+ * render"; it was a coin toss on the longest condition.
+ */
+const SHELL_TIMEOUT = 60_000;
+
+
 /** How many marks each lane is carrying, read off the running page. */
 async function laneMarks(page: Page): Promise<Record<string, number>> {
   return page.evaluate(() =>
@@ -81,8 +94,8 @@ mkdirSync(outDir, { recursive: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`${base}#/view/messages`);
-  await page.getByTestId('sim-time').waitFor({ timeout: 10_000 });
-  await page.getByTestId('traffic-display').waitFor({ timeout: 10_000 });
+  await page.getByTestId('sim-time').waitFor({ timeout: SHELL_TIMEOUT });
+  await page.getByTestId('traffic-display').waitFor({ timeout: SHELL_TIMEOUT });
 
   // Run the simulation faster than real time for the capture, through the shell's own
   // rate control. Not cosmetic: the heartbeat cadence is host time (ADR-0006) while
@@ -117,20 +130,20 @@ try {
   // Stop the sensors from the Operator tab, through the control a reader would use.
   // The capture drives the shell; it never reaches past it.
   await page.goto(`${base}#/view/operator`);
-  await page.getByTestId('view-toggle').waitFor({ timeout: 10_000 });
+  await page.getByTestId('view-toggle').waitFor({ timeout: SHELL_TIMEOUT });
   const list = page.getByTestId('view-toggle');
   if ((await list.textContent())?.includes('show the list')) await list.click();
   const sensorRow = page.locator('[data-operator-component="sensors"]');
-  await sensorRow.waitFor({ timeout: 10_000 });
+  await sensorRow.waitFor({ timeout: SHELL_TIMEOUT });
   const stop = sensorRow.getByRole('button', { name: 'stop' });
-  await stop.waitFor({ timeout: 10_000 });
+  await stop.waitFor({ timeout: SHELL_TIMEOUT });
   await stop.click();
 
   // Back to Messages. Nothing is refreshed and nothing is reloaded: the hash changes,
   // the shell shows the panel it already had, and the panel has been listening
   // throughout — which is exactly the claim.
   await page.goto(`${base}#/view/messages`);
-  await page.getByTestId('traffic-display').waitFor({ timeout: 10_000 });
+  await page.getByTestId('traffic-display').waitFor({ timeout: SHELL_TIMEOUT });
   await page.waitForTimeout(Number(process.env.DROGNA_MESSAGES_SETTLE_MS ?? 12_000));
   const after = await laneMarks(page);
   await page.screenshot({ path: join(outDir, 'traffic-sensors-stopped.png'), fullPage: false });

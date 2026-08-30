@@ -1,20 +1,32 @@
 /**
  * The composition root (ADR-0030): the only module that imports both sides of the
- * seam. It reads the run configuration document, seeds and provisions the run,
- * installs the fetch shim (ADR-0029), and mounts the shell — handing each half only
- * configuration and seam interfaces. Nothing imports this module.
+ * seam. It reads the run configuration document, resolves the start condition this
+ * visit begins in, seeds and provisions the run, drives that condition's pre-roll
+ * through the control plane, installs the fetch shim (ADR-0029), and mounts the shell —
+ * handing each half only configuration and seam interfaces. Nothing imports this module.
  */
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import runConfigDocument from '../../config/run.json';
-import type { ConfigRun, RunManifest } from '../generated/types.js';
+import type { ConfigRun, ConfigStartConditionsCondition, RunManifest } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
 import type { SeamValidator } from '../seam/validate.js';
 import { installSeamFetch } from '../seam/http.js';
 import type { SeamHttpBackend } from '../seam/http.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
 import { Shell } from '../shell/Shell.js';
+import { Welcome, type WelcomePreparation } from '../shell/Welcome.js';
+import { viewFromHash } from '../shell/views.js';
+import {
+  conditionById,
+  conditionFromSearch,
+  configForCondition,
+  defaultCondition,
+  searchNaming,
+  START_PARAMETER,
+} from './start-condition.js';
+import { runPreRoll } from './preroll.js';
 
 declare const __DROGNA_REVISION__: string;
 declare const __DROGNA_DIRTY__: boolean;
@@ -51,7 +63,7 @@ function freshRootSeed(): number {
 let runtime: BackendRuntime | undefined;
 
 /**
- * Building the backend is one unbroken task — validating twenty-one configuration
+ * Building the backend is one unbroken task — validating twenty-two configuration
  * documents, constructing every component, then provisioning the archive on the clock's
  * first sample — and until it returns the page has painted nothing but the background
  * colour in `index.html`. On a mid-range laptop that is over a second of blank screen
@@ -71,11 +83,36 @@ function whenPainted(proceed: () => void): void {
 }
 
 /**
- * What the page shows while the backend is being built. It says the harness is starting
- * rather than leaving the screen dark; the seam is already honest behind it, because the
- * fetch shim answers 503 until a run is provisioned.
+ * The yield between the pre-roll's bursts of stepped ticks. It arms a timer and so reads
+ * the host, which is why it lives here rather than in `preroll.ts`: simulation time
+ * advances on the step operation and on nothing else, so what this pauses is the host's
+ * event loop and never the run — the same argument `backend/test-support/drive.ts` makes
+ * for the same yield, and the reason a progress reading can paint at all.
  */
-function Starting(): ReactNode {
+function breathe(): Promise<void> {
+  // harness:allow-wallclock a yield between stepped bursts, so the page can paint; no timestamp is read and no simulation time passes
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * What the page shows while a run is being built and pre-rolled, when there is no
+ * welcome page in front of it — a deep link, or a manifest import. It says what is
+ * happening rather than leaving the screen dark; the seam is already honest behind it,
+ * because the fetch shim answers 503 until a run is provisioned.
+ *
+ * `refusal` is the other end of the same screen. A boot that throws — a configuration
+ * document its master refuses, a pre-roll script the control plane will not honour —
+ * would otherwise leave the page showing a progress reading that has stopped moving,
+ * which is the one thing worse than an error: a page that looks like it is still
+ * working. The fault is named where the reading was.
+ */
+function Starting({
+  preparation,
+  refusal,
+}: {
+  preparation?: WelcomePreparation;
+  refusal?: string;
+}): ReactNode {
   return (
     <div className="shell">
       <header className="shell-header">
@@ -84,36 +121,91 @@ function Starting(): ReactNode {
       </header>
       <div className="shell-body">
         <div className="panel">
-          <p className="not-landed">provisioning the run…</p>
+          {refusal === undefined ? (
+            <p className="not-landed">
+              {preparation === undefined
+                ? 'provisioning the run…'
+                : `${preparation.note} — ${preparation.ticksDone} of ${preparation.ticksTotal} ticks stepped`}
+            </p>
+          ) : (
+            <p className="shell-refusal">the run could not be started: {refusal}</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function boot(rootSeed: number): void {
+/**
+ * Boot into one start condition: build the backend from the configuration that condition
+ * runs under, drive its pre-roll, then mount the shell.
+ *
+ * `render` is how the caller draws progress — the welcome page when the reader chose
+ * there, the starting frame when nothing was asked. The shell is mounted only once the
+ * pre-roll has finished, because a console that opens onto a run still being wound
+ * forward would show a clock racing and figures no reader can read.
+ */
+async function boot(
+  condition: ConfigStartConditionsCondition,
+  rootSeed: number,
+  render: (preparation: WelcomePreparation) => void,
+): Promise<void> {
   runtime?.stop();
   const validator = validatorForRun();
+  const effective = configForCondition(config, condition);
   runtime = buildBackend(
-    config,
-    { rootSeed, revision: __DROGNA_REVISION__, dirty: __DROGNA_DIRTY__ },
+    effective,
+    {
+      rootSeed,
+      startCondition: condition.id,
+      revision: __DROGNA_REVISION__,
+      dirty: __DROGNA_DIRTY__,
+    },
     validator,
   );
-  const shellClient = runtime.transport.connect(config.shell.id, config.shell.role);
+  const built = runtime;
+
+  await runPreRoll(
+    {
+      backend: built.httpBackend,
+      clock: effective.clock,
+      operator: effective.operator,
+      breathe,
+      onProgress: (progress) =>
+        render({
+          conditionId: condition.id,
+          note: progress.note,
+          leg: progress.leg,
+          legs: progress.legs,
+          ticksDone: progress.ticksDone,
+          ticksTotal: progress.ticksTotal,
+        }),
+    },
+    condition,
+  );
+
+  const shellClient = built.transport.connect(effective.shell.id, effective.shell.role);
   root.render(
     <StrictMode>
       <Shell
-        key={runtime.runId}
-        config={config.shell}
+        key={built.runId}
+        config={effective.shell}
         client={shellClient}
         validator={validator}
-        manifest={runtime.manifest}
+        manifest={built.manifest}
         onImportManifest={importManifest}
       />
     </StrictMode>,
   );
 }
 
+/**
+ * A manifest names the condition its run began in, and a replay that ignored that would
+ * reproduce a different world under the same run id — every seeded draw correct, and the
+ * platform somewhere else entirely. So the import resolves the condition first and
+ * refuses when this build does not offer it, which is the same class of refusal as a
+ * seed-derivation rule this build does not implement.
+ */
 function importManifest(candidate: unknown): string | undefined {
   const verdict = validatorForRun().validate('run-manifest', candidate);
   if (!verdict.ok) return `manifest refused by its master: ${verdict.refusals[0]}`;
@@ -121,8 +213,37 @@ function importManifest(candidate: unknown): string | undefined {
   if (manifest.seed_derivation.rule !== runtime?.manifest.seed_derivation.rule) {
     return `manifest derives seeds by '${manifest.seed_derivation.rule}', this build by '${runtime?.manifest.seed_derivation.rule}'`;
   }
-  boot(manifest.root_seed);
+  const condition = conditionById(config.start_conditions, manifest.start_condition);
+  if (!condition) {
+    return `manifest began in start condition '${manifest.start_condition}', which this build does not offer`;
+  }
+  root.render(<Starting />);
+  void boot(condition, manifest.root_seed, (preparation) =>
+    root.render(<Starting preparation={preparation} />),
+  )
+    .then(() => {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${searchNaming(window.location.search, condition.id)}${window.location.hash}`,
+      );
+    })
+    .catch((fault: unknown) => {
+      root.render(<Starting refusal={fault instanceof Error ? fault.message : String(fault)} />);
+    });
   return undefined;
+}
+
+/** Boot into a condition and write it into the address, so the visit is linkable. */
+function start(condition: ConfigStartConditionsCondition, render: (p: WelcomePreparation) => void): void {
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${searchNaming(window.location.search, condition.id)}${window.location.hash}`,
+  );
+  void boot(condition, freshRootSeed(), render).catch((fault: unknown) => {
+    root.render(<Starting refusal={fault instanceof Error ? fault.message : String(fault)} />);
+  });
 }
 
 // The shim is installed once; re-boots swap the backend behind it.
@@ -136,9 +257,51 @@ installSeamFetch(config.boundary.api_prefix, {
 const container = document.getElementById('root');
 if (!container) throw new Error('no #root element to mount into');
 const root = createRoot(container);
-// flushSync, because `root.render` only schedules: React 18 would otherwise still be
-// holding the starting frame uncommitted when the yield below expires, and the first
-// thing painted would be the finished shell — measured, and the reason this is not a
-// plain render (spikes/load-time).
-flushSync(() => root.render(<Starting />));
-whenPainted(() => boot(freshRootSeed()));
+
+/**
+ * Which screen the visit opens on.
+ *
+ * A `?start=` in the address is an explicit choice and is honoured without asking again.
+ * So is a `#/view/...`: views have been addressable since feature 101 precisely so a
+ * pull request or a blog entry can point a reader at the thing being discussed (D16), and
+ * a welcome page in front of such a link would put the work of finding it back on the
+ * reader — exactly what the link was supposed to save. Everything else — a bare visit to
+ * the front door — is a reader who has not chosen, and is asked.
+ */
+// An empty `?start=` names nothing and is treated as an absent choice rather than as a
+// request for a condition called '' — which would have drawn a refusal quoting nothing.
+const requestedId = new URLSearchParams(window.location.search).get(START_PARAMETER) || undefined;
+const requested = conditionFromSearch(config.start_conditions, window.location.search);
+const fallback = defaultCondition(config.start_conditions);
+
+if (requested !== undefined || (requestedId === undefined && viewFromHash(window.location.hash) !== undefined)) {
+  const condition = requested ?? fallback;
+  flushSync(() => root.render(<Starting />));
+  whenPainted(() =>
+    start(condition, (preparation) => root.render(<Starting preparation={preparation} />)),
+  );
+} else {
+  const drawWelcome = (preparing?: WelcomePreparation) =>
+    root.render(
+      <Welcome
+        conditions={config.start_conditions}
+        initial={fallback}
+        unknownRequest={requestedId}
+        preparing={preparing}
+        onChoose={(condition) => {
+          // Painted before the build begins, so the card the reader pressed is already
+          // showing its progress when the first unbroken stretch of work starts.
+          drawWelcome({
+            conditionId: condition.id,
+            note: condition.legs[0].note,
+            leg: 1,
+            legs: condition.legs.length,
+            ticksDone: 0,
+            ticksTotal: condition.legs.reduce((total, leg) => total + leg.ticks, 0),
+          });
+          whenPainted(() => start(condition, (preparation) => drawWelcome(preparation)));
+        }}
+      />,
+    );
+  flushSync(() => drawWelcome());
+}

@@ -71,7 +71,7 @@ describe('the Messages tab (feature 115)', { timeout: 120_000 }, () => {
   beforeEach(() => {
     vi.useFakeTimers();
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 7, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 7, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
   });
 
   afterEach(() => {

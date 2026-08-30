@@ -17,7 +17,7 @@ import { soundSpeedMs } from '../env-generator/analytic.js';
 import { driveUntil } from '../test-support/drive.js';
 
 const validator = createSeamValidator();
-const options = { rootSeed: 4242, revision: 'test', dirty: false };
+const options = { rootSeed: 4242, startCondition: 'loitering', revision: 'test', dirty: false };
 
 function lockstepConfig(): ConfigRun {
   const config = JSON.parse(JSON.stringify(runConfigDocument)) as ConfigRun;

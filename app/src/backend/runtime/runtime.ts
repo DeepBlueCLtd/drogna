@@ -82,6 +82,15 @@ export interface BackendRuntime {
 
 export interface BuildOptions {
   readonly rootSeed: number;
+  /**
+   * Which start condition the visit chose (config.start-conditions.schema.json). It
+   * reaches the manifest and the run id and nothing else here: the condition's effect
+   * on the run is a patched configuration document and a pre-roll driven through the
+   * operator plane, both of which happen at the composition root before and after this
+   * function. A runtime that knew about conditions would be a second place they are
+   * applied.
+   */
+  readonly startCondition: string;
   readonly revision: string;
   readonly dirty: boolean;
 }
@@ -131,8 +140,8 @@ export function buildBackend(
   validated(validator, 'config.offload', config.offload);
   validated(validator, 'config.shell', config.shell);
 
-  const runId = deriveRunId(config.scenario, options.rootSeed);
-  const manifest = buildRunManifest(config, options.rootSeed, options.revision, options.dirty, [
+  const runId = deriveRunId(config.scenario, options.startCondition, options.rootSeed);
+  const manifest = buildRunManifest(config, options.startCondition, options.rootSeed, options.revision, options.dirty, [
     config.env_generator.stream,
     config.platform.stream,
     config.sensors.stream,

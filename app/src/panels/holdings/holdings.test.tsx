@@ -82,7 +82,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     // setTimeout, setInterval and Date; setImmediate is not one of them.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     config = lockstepConfig();
-    runtime = buildBackend(config, { rootSeed: 11, revision: 'test', dirty: false }, validator);
+    runtime = buildBackend(config, { rootSeed: 11, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
     asked = [];
     const seamFetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
     vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {

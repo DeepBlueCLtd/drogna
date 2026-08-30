@@ -33,7 +33,7 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 4242, revision: 'test', dirty: false };
+const options = { rootSeed: 4242, startCondition: 'loitering', revision: 'test', dirty: false };
 
 interface AdvisoryRecord {
   advisories: Advisory[];
@@ -208,7 +208,9 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     });
     const referencePage = JSON.parse(reference.body) as FeaturesResponseFeatureCollection;
     expect(validator.validate('features-response#feature_collection', referencePage).refusals).toEqual([]);
-    expect(referencePage.features.map((f) => f.id).sort()).toEqual(['domain', 'loiter-region']);
+    expect(referencePage.features.map((f) => f.id).sort()).toEqual(
+      config.feature_store.features.map((feature) => feature.feature_id).sort(),
+    );
 
     // Refusals name the thing refused (E9): the filter option, the resource.
     const filtered = await runtime.httpBackend.handle({

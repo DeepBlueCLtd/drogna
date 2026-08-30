@@ -2637,7 +2637,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "advisory_source",
       "advisory_store",
       "offload",
-      "shell"
+      "shell",
+      "start_conditions"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2715,6 +2716,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "shell": {
         "$ref": "config.shell.schema.json"
+      },
+      "start_conditions": {
+        "$ref": "config.start-conditions.schema.json"
       }
     }
   },
@@ -3277,6 +3281,223 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         }
       }
     }
+  },
+  "config.start-conditions": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/config.start-conditions.schema.json",
+    "title": "drogna start conditions",
+    "description": "The situations a visit may begin in, offered on the welcome page before the shell is mounted. A start condition is configuration and not state: it says where the platform is when the first tick arrives, and it scripts a pre-roll — a sequence of legs the composition root drives through the operator plane's own HTTP endpoints, exactly as a reader could drive them by hand. Nothing here writes into a store: the archive, the measurements, the analyses, the forecasts and the advisories a condition promises are authored by the components that author them during a run, on the clock's own step (SRD-v2 FR-11, FR-09). What a condition changes is therefore only how much of the run has already happened when the reader arrives, and which components were running while it did — both stated here, on disk, rather than left to be inferred from the result.",
+    "type": "object",
+    "required": [
+      "default",
+      "conditions"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "default": {
+        "$ref": "#/$defs/condition_id",
+        "description": "The condition a visit starts in when the address names a view rather than a choice, and the one the welcome page offers first. It names a condition in the list below; a default naming no condition is a welcome page whose first card does not exist."
+      },
+      "conditions": {
+        "type": "array",
+        "minItems": 1,
+        "description": "The conditions offered, in the order the welcome page draws them. The order is the arc — quayside, arrival, station, return — because a reader choosing between four situations is choosing a point in a passage, not an item from a menu.",
+        "items": {
+          "$ref": "#/$defs/condition"
+        }
+      }
+    },
+    "$defs": {
+      "condition_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "condition": {
+        "title": "Start condition",
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "situation",
+          "holds",
+          "platform",
+          "legs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/condition_id",
+            "description": "Identity of the condition. It joins the scenario name and the root seed in deriving the run id, so two visits that chose differently can never share one — and it is recorded in the run manifest, so an imported manifest replays the condition it was exported from rather than whichever one the reader happens to be sitting in."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The card's heading on the welcome page."
+          },
+          "situation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One sentence saying where the platform is and what it has been doing. Written for the reader choosing, not for the machinery."
+          },
+          "holds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "What the run will hold when the shell opens, in the reader's terms — and what it will not. Drawn on the card and asserted by test against the stores the pre-roll actually leaves behind, so a card that promises measurements in the work area is a claim the suite can fail.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "platform": {
+            "type": "object",
+            "required": [
+              "latitude",
+              "longitude",
+              "course_degrees",
+              "speed_m_per_s",
+              "depth_m"
+            ],
+            "additionalProperties": false,
+            "description": "Where the platform is, and how it is moving, when the first tick arrives. Replaces the platform document's own initial vector for this visit — configuration, on the same footing as the vector it replaces, and digested into the manifest's participant entry like any other configuration.",
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "course_degrees": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 360
+              },
+              "speed_m_per_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "depth_m": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "legs": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The pre-roll, in order. Each leg is a stretch of simulation time with a stated crew: which components are running, what the platform has been told to do, and what it was asked to do now. A condition with one empty leg is a cold start, which is what the harness did before this document existed.",
+            "items": {
+              "$ref": "#/$defs/leg"
+            }
+          }
+        }
+      },
+      "leg": {
+        "title": "Pre-roll leg",
+        "type": "object",
+        "required": [
+          "note",
+          "ticks"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this leg is, in one phrase. Shown while the pre-roll runs, so the reader watching the progress is reading what is happening rather than a bar."
+          },
+          "ticks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Simulation ticks the leg advances, each one stepped through the clock's own step operation and published, heard and acted on exactly as a free-running tick is (FR-09). Zero is legitimate: a leg that only issues a demand or a prompt still costs a leg to say so."
+          },
+          "stopped": {
+            "type": "array",
+            "description": "Component ids not running during this leg, stopped and started through the operator plane's own control endpoints (FR-36). A leg that stops the analyst is a leg during which nothing was assimilated, and the card says so; the honesty is that the fact is declared here rather than achieved by not calling something.",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          },
+          "demand": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "A demanded course, speed and depth, published at the head of the leg through the operator surface's demand endpoint. The platform applies it under its own limits and says what is binding; nothing here claims it was reached.",
+            "properties": {
+              "course_degrees": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 360
+              },
+              "speed_m_per_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "depth_m": {
+                "type": "number",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "prompt": {
+            "type": "array",
+            "description": "Operator event ids asked for at the head of the leg, in order, through the event endpoint. The target component decides: a prompted run goes through the scheduler's ordinary policy and may be declined, and a decline is published like any other decision. Naming an event this plane does not offer is refused by the plane, not silently ignored.",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          }
+        }
+      }
+    },
+    "examples": [
+      {
+        "default": "arriving",
+        "conditions": [
+          {
+            "id": "arriving",
+            "label": "Arriving in the work area",
+            "situation": "Closing the work area from the north-east, instruments streaming since the quay.",
+            "holds": [
+              "the archive",
+              "a now-cast",
+              "measurements along the passage",
+              "no measurement inside the work area"
+            ],
+            "platform": {
+              "latitude": 46.72,
+              "longitude": -10.35,
+              "course_degrees": 233,
+              "speed_m_per_s": 2.4,
+              "depth_m": 60
+            },
+            "legs": [
+              {
+                "note": "the passage in",
+                "ticks": 4800,
+                "stopped": [
+                  "analyst",
+                  "model-runner",
+                  "advisory-source"
+                ],
+                "demand": {
+                  "course_degrees": 233,
+                  "speed_m_per_s": 2.4,
+                  "depth_m": 60,
+                  "note": "close the work area"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   "config.telemetry": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7644,6 +7865,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "required": [
       "schema_version",
       "run_id",
+      "start_condition",
       "root_seed",
       "seed_derivation",
       "clock",
@@ -7663,6 +7885,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9_-]*$",
         "description": "Identity of the run. Deterministic: derived from seed and scenario, never from entropy or a host clock."
+      },
+      "start_condition": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which of the offered start conditions this run began in (config.start-conditions.schema.json). Required, and required for the same reason the root seed is: a condition scripts a pre-roll, so a manifest that did not name one would replay a different world under the same run id — silently, since everything downstream of the pre-roll would still be derived correctly from the seed. It also appears inside run_id, which is how two visits that chose differently are kept from sharing an identity; it is recorded here as a field as well because reading meaning out of an identifier is not reading a record."
       },
       "root_seed": {
         "type": "integer",

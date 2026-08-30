@@ -91,6 +91,19 @@ const address = server.address();
 if (address === null || typeof address === 'string') throw new Error('no listening address');
 const base = `http://127.0.0.1:${address.port}/`;
 
+/**
+ * How long a capture waits for the shell to be there.
+ *
+ * It was ten seconds, on the reckoning that a page which has not rendered in ten is a page
+ * that is not going to. Feature 118 changed what that number is measuring: the shell is
+ * mounted only once the chosen situation's pre-roll has finished, and a pre-roll is
+ * thousands of stepped ticks — measured at two to eight seconds in a browser here, and a
+ * CI runner is slower than here. Ten seconds was no longer a bound on "not going to
+ * render"; it was a coin toss on the longest condition.
+ */
+const SHELL_TIMEOUT = 60_000;
+
+
 function revision(): string {
   try {
     return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -241,7 +254,7 @@ const controlTops = new Map<string, number>();
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
   await page.goto(`${base}#/view/background`);
-  await page.locator('.bg-rail li button').first().waitFor({ timeout: 10_000 });
+  await page.locator('.bg-rail li button').first().waitFor({ timeout: SHELL_TIMEOUT });
   const course = await courseFromPage(page);
   if (course.length === 0) throw new Error('the rail listed no explainers');
   mkdirSync(outDir, { recursive: true });

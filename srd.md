@@ -765,6 +765,24 @@ pass only one of the three is not finished.
   regions their panels declare — so that a surface gaining a feature and not a step is
   reported by name. FR-62 is unchanged and now applies four times. The control shall reach
   the same place in both presentations (FR-50, ADR-0033).
+- **FR-76** A visit shall begin in a **start condition** chosen on a **welcome page** shown
+  before the shell (ADR-0039). The conditions are declared in configuration
+  (`config.start-conditions.schema.json`) and each names the platform's initial state and a
+  **pre-roll**: an ordered script of legs the composition root drives through the operator
+  plane's own endpoints — stop and start (FR-36), a platform demand (FR-53), a prompted
+  event (FR-65), and the clock's step (FR-09) — with the clock pinned to rate zero for the
+  duration and restored after it. Nothing shall be written into a store to arrange a
+  situation: what a condition promises is authored by the components that author it, which
+  is FR-11 applied to the whole pre-roll rather than to provisioning alone. Each condition's
+  card shall state what the run will hold, and shall be **held to that by test** against the
+  stores the pre-roll leaves behind. The choice shall travel in the address as `?start=<id>`
+  beside the view address rather than inside it (ADR-0032 unchanged), and an address naming
+  a view shall open the shell at that view without asking (D16). The condition shall enter
+  the run id and be recorded in the run manifest, so a manifest replays the condition it was
+  exported from; a condition's demands and prompts being configuration issued at fixed
+  ticks, the pre-roll is inside AT-04's claim rather than outside it with a reader's
+  commands. The four conditions are *leaving quay-side*, *arriving in the work area*
+  (the default), *loitering in the work area* and *returning to quay-side*.
 ---
 
 ## 6. Interfaces and shared types

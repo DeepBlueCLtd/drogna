@@ -180,6 +180,21 @@ export function IntroPanel({ params }: PanelProps) {
         </p>
       </section>
       <section>
+        <h3>Where this visit began</h3>
+        <p>
+          This run did not start at its epoch. It began in the situation chosen on the
+          welcome page — <code>{manifest.start_condition}</code> — and the platform,
+          the instruments and the loop were then run forward to it through the same
+          controls the <a href={hashForView('operator')}>Operator</a> tab offers, before
+          this console opened. Nothing was written into a store to arrange it: what{' '}
+          <a href={hashForView('holdings')}>Holdings</a> lists and what the{' '}
+          <a href={hashForView('map')}>Map</a> draws was authored by the components that
+          author it, and the whole pre-roll is in{' '}
+          <a href={hashForView('messages')}>Messages</a> where you can read it back. The
+          address bar carries the choice, so this exact situation is a link.
+        </p>
+      </section>
+      <section>
         <h3>The walkthrough, whole</h3>
         <p>
           Every beat above is live in this page, and this tab is the demo script:

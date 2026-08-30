@@ -14,7 +14,7 @@ function testConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 42, revision: 'test', dirty: false };
+const options = { rootSeed: 42, startCondition: 'loitering', revision: 'test', dirty: false };
 
 describe('the backend runtime', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -35,7 +35,10 @@ describe('the backend runtime', () => {
     const runtime = buildBackend(testConfig(), options, validator);
     const verdict = validator.validate('run-manifest', runtime.manifest);
     expect(verdict.refusals).toEqual([]);
-    expect(runtime.manifest.run_id).toBe('loiter-16');
+    // Derived rather than typed: the id is scenario, start condition and seed, and a
+    // literal here would have to be re-typed every time any of the three is renamed.
+    expect(runtime.manifest.run_id).toBe(`${runConfigDocument.scenario}-loitering-${(42).toString(36)}`);
+    expect(runtime.manifest.start_condition).toBe('loitering');
     runtime.stop();
   });
 

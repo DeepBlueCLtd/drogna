@@ -236,3 +236,83 @@ export function nearestInstant(
   }
   return { instant: chosen, beyond: undefined };
 }
+
+/**
+ * The ownship track (SRD-v2 FR-60): the places the platform reported, in phenomenon
+ * time order, taken from observations the query layer served.
+ *
+ * Not interpolated. The planner's route is a four-dimensional curve and is drawn as
+ * one; this is a record of where the platform said it was, and drawing a smooth line
+ * between two distant reports would claim positions nothing published. Where the
+ * platform was stopped the track has a gap, and the gap is what the silence looked
+ * like.
+ */
+export interface TrackPoint {
+  readonly longitude: number;
+  readonly latitude: number;
+  readonly depthM: number;
+  readonly simTime: string;
+}
+
+/**
+ * One served Observation, as the SensorThings subset returns it. Where the observation
+ * pertains to is its FeatureOfInterest — that is SensorThings' own answer to the
+ * question, and the reason the track needs no entity set of its own: the geometry is
+ * already on every observation the query layer serves.
+ */
+export interface ServedObservation {
+  readonly phenomenonTime: string;
+  readonly result: number;
+  readonly FeatureOfInterest?: {
+    readonly feature?: { readonly type: string; readonly coordinates: readonly number[] };
+  };
+}
+
+/**
+ * Order by phenomenon time and drop anything with no geometry. An observation with no
+ * place is not a place: it is dropped rather than defaulted to zero, which would put
+ * the platform in the Gulf of Guinea.
+ */
+export function ownshipTrack(observations: readonly ServedObservation[]): TrackPoint[] {
+  return observations
+    .flatMap((observation) => {
+      const point = observation.FeatureOfInterest?.feature;
+      if (!point || point.type !== 'Point' || point.coordinates.length < 2) return [];
+      return [
+        {
+          longitude: point.coordinates[0],
+          latitude: point.coordinates[1],
+          depthM: point.coordinates[2] ?? 0,
+          simTime: observation.phenomenonTime,
+        },
+      ];
+    })
+    .sort((a, b) => a.simTime.localeCompare(b.simTime));
+}
+
+/**
+ * The demanded course drawn as a ray from where the platform is, its length the
+ * demanded speed against a stated scale. Returns nothing when no demand is standing:
+ * a ray pointing along the current course would say the platform had been told to
+ * carry on, which nobody told it.
+ */
+export function demandRay(
+  current: { longitude: number; latitude: number },
+  demandedCourseDegrees: number | undefined,
+  demandedSpeed: number | undefined,
+  metresPerUnitSpeed: number,
+): [[number, number], [number, number]] | undefined {
+  if (demandedCourseDegrees === undefined || demandedSpeed === undefined) return undefined;
+  const metres = demandedSpeed * metresPerUnitSpeed;
+  const radians = (demandedCourseDegrees * Math.PI) / 180;
+  const north = (metres * Math.cos(radians)) / (KM_PER_DEGREE_LATITUDE * 1000);
+  const eastScale = KM_PER_DEGREE_LATITUDE * 1000 * Math.cos((current.latitude * Math.PI) / 180);
+  const east = eastScale === 0 ? 0 : (metres * Math.sin(radians)) / eastScale;
+  return [
+    [current.longitude, current.latitude],
+    [current.longitude + east, current.latitude + north],
+  ];
+}
+
+/** The one conversion constant, shared with the motion simulator rather than retyped. */
+const KM_PER_DEGREE_LATITUDE = 111.32;

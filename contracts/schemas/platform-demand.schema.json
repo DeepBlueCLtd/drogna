@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/platform-demand.schema.json",
+  "title": "drogna platform demand",
+  "description": "A demanded course, speed and depth, published on the platform's demand topic (SRD-v2 FR-53). The platform applies the last demand it heard; a demand beyond a declared limit is applied as far as the limit allows and the shortfall is stated in the platform's own state message, so an unreachable demand is never silently turned into a reachable one. Who may publish this is a broker rule, not a field: today the operator surface, and the rules are written to admit a future adaptive-sampling component. The planner is not a publisher and may not become one without amending Constitution VIII — it emits recommendations, and turning a recommendation into a demand is a decision.",
+  "type": "object",
+  "required": ["component", "scenario_run_id", "sim_time", "tick"],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The component id of whoever issued the demand. Carried so the platform's state can say where its current demand came from, and so a reader can tell an operator's demand from a sampler's."
+    },
+    "scenario_run_id": { "type": "string", "description": "The scenario run this demand belongs to." },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time the demand was issued at, ISO-8601 UTC with microsecond precision. No host clock takes part."
+    },
+    "tick": { "type": "integer", "minimum": 0 },
+    "course_degrees": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 360,
+      "description": "Demanded course over ground, degrees true. Absent leaves the standing demand untouched — a demand for speed alone is a speed demand, not an implicit order to steer north."
+    },
+    "speed_m_per_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Demanded speed over ground. Absent leaves the standing demand untouched."
+    },
+    "depth_m": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Demanded depth below the surface, positive downwards. Absent leaves the standing demand untouched."
+    },
+    "note": {
+      "type": "string",
+      "description": "One line for a human, carried into the platform's state report. Never a substitute for the numbers."
+    }
+  },
+  "examples": [
+    {
+      "component": "operator",
+      "scenario_run_id": "loiter-a1b2c3d4",
+      "sim_time": "2026-01-01T04:12:30.000000Z",
+      "tick": 4812,
+      "course_degrees": 90,
+      "speed_m_per_s": 3,
+      "depth_m": 120,
+      "note": "turn east and go deeper"
+    }
+  ]
+}

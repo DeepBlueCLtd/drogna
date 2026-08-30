@@ -134,7 +134,12 @@ describe('the query seam (feature 104)', () => {
     const things = await get('/api/st/v1.1/Things');
     expect(things.status).toBe(200);
     expect(validator.validate('sensorthings-subset#things_response', things.body).refusals).toEqual([]);
-    expect((things.body as { value: { name: string }[] }).value[0].name).toBe('sampling platform A');
+    // Two Things since feature 113: the sampling platform, and the ownship the
+    // platform component reports on. Asserted as a set, because which sorts first is
+    // the store's business and not this test's claim.
+    expect(
+      (things.body as { value: { name: string }[] }).value.map((thing) => thing.name).sort(),
+    ).toEqual(['ownship', 'sampling platform A']);
 
     const observations = await get('/api/st/v1.1/Observations?%24top=5&%24skip=2');
     const page = observations.body as { '@iot.count': number; value: unknown[] };
@@ -143,7 +148,25 @@ describe('the query seam (feature 104)', () => {
 
     const nested = await get("/api/st/v1.1/Datastreams('platform-a/temperature-050m')/Observations");
     const nestedPage = nested.body as { '@iot.count': number };
-    expect(nestedPage['@iot.count']).toBe(3);
+    // Sixty ticks, sampling every thirty, minus the tick-0 sample the sensors skip for
+    // want of a position (FR-55): ticks 30 and 60.
+    expect(nestedPage['@iot.count']).toBe(2);
+
+    // The ownship datastreams are served by the same resource and no other: the track
+    // the Map draws is this read, which is what makes it a query rather than a wire.
+    const ownship = await get("/api/st/v1.1/Datastreams('ownship/ownship-course')/Observations");
+    const ownshipPage = ownship.body as {
+      '@iot.count': number;
+      value: { phenomenonTime: string }[];
+    };
+    expect(ownshipPage['@iot.count']).toBe(3);
+    expect(validator.validate('sensorthings-subset#observations_response', ownship.body).refusals).toEqual([]);
+
+    // HistoricalLocations stays refused by name: the track has one representation, and
+    // two that can disagree is what this refusal buys (FR-54).
+    const historical = await get('/api/st/v1.1/HistoricalLocations');
+    expect(historical.status).toBe(501);
+    expect((historical.body as { refused: string }).refused).toMatch(/'HistoricalLocations' is not implemented/);
 
     const filter = await get('/api/st/v1.1/Observations?%24filter=result%20gt%2010');
     expect(filter.status).toBe(501);

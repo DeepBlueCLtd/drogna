@@ -162,6 +162,7 @@ mode; the ancestry column is the map back into the archived record.
 | V2-C18 | Operator surface | Aggregated component state; commands with observable refusals | C-21 (sans container runtime) |
 | V2-C19 | Shell | Dockable multi-panel front-end: Intro, Background, System, Holdings, Map, Messages | C-18 |
 | V2-C20 | Offload packager | Export shape and departure announcements; no real transfer until V3 | C-17 |
+| V2-C21 | Platform | Ownship motion simulator: demanded and current course, speed and depth; state published as measurements | new in feature 113 |
 
 - **FR-12** Store semantics carry although the engines do not: one writer per store
   through its ingestion seam; the feature store read-only during a run; the advisory
@@ -259,7 +260,10 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-22** Sensors publish observations in SensorThings vocabulary on the observation
   namespace; the broker's role-based rules confine sensors to that namespace; the
   ingestion seam validates against the message schema and is the store's sole writer
-  *(v1 FR-14, FR-16 to FR-18)*.
+  *(v1 FR-14, FR-16 to FR-18)*. **Amended by feature 113:** the sensors sample at the
+  position they last heard from the platform component (FR-60) and publish nothing
+  before they have heard one; the closed-form loiter they originally evaluated
+  themselves retires with that amendment.
 - **FR-23** The Messages tab renders live broker traffic with inspection of the
   message that just passed, and the client validates every received message against
   its schema, showing a running refusal count — "0 refused by their schema" is itself
@@ -336,7 +340,14 @@ directed → the machinery is interrogated → advice travels light → it is se
   components. A refused command names the bound or rule; refusals are surfaced, and a
   stopped component goes dark because its heartbeats cease, never because the surface
   says so *(v1 FR-67, FR-71, FR-72, FR-76)*. Commands are ephemeral and outside
-  AT-04's replay claim, stated wherever replay is claimed *(v1 FR-73)*.
+  AT-04's replay claim, stated wherever replay is claimed *(v1 FR-73)*. **Amended by feature
+  113:** the surface's behaviour is unchanged, and its *presentation* moves to §5.12 —
+  the tab becomes the flow chart of FR-57 to FR-59, of which the table specified here is
+  one of two equal views. A **platform demand** (FR-53) is a command of this kind and
+  carries the same boundary: the manifest replays the run, not the demands issued into
+  it. What is new in 113 is that the platform's own motion *is* inside the claim, and
+  that the sensors' output now depends on delivery order rather than on a closed form —
+  deterministic in lockstep, and asserted there (`platform/replay.test.ts`).
 
 ### 5.8 Shore advisories and the boundary (feature 108)
 
@@ -384,6 +395,8 @@ directed → the machinery is interrogated → advice travels light → it is se
   imply the field extends there. Doubt shall be drawn as one thing at a time: the
   plan's projection cells or the run's published spread as a gridded field, chosen
   by the reader, never both — two doubt layers at once read as one wrong one.
+  **Amended by feature 113:** the panel also draws the platform's historic track and
+  its demanded course (FR-60).
 - **FR-41** The EDR composer carries as a mode of the map: a guided sequence with the
   literal request URL always visible, assembling live and copyable; offering only what
   the query components genuinely serve, enumerated from server metadata, never
@@ -472,6 +485,99 @@ directed → the machinery is interrogated → advice travels light → it is se
   input, nor browser chrome, nor safe areas, nor device pixel ratio.
 
 ---
+
+---
+
+### 5.12 The platform, and the operator's flow (feature 113)
+
+This beat sits outside the 101-to-109 arc. It gives the harness the component its
+sampling platform never had, and redraws the operator's view as the picture §2 has
+always said the architecture is: *a flow chart with a loop in it*. The specification is
+`specs/113-operator-flowchart/`; the visual design is its `mockup.html`.
+
+- **FR-52** A **platform** component (V2-C21) shall hold ownship state — position,
+  course over ground, speed over ground and depth — and integrate it once per tick under
+  declared limits: maximum speed, maximum depth, turn rate, longitudinal acceleration
+  and dive rate. **Demanded** and **current** are held, published and displayed
+  separately and are never conflated; where current lags demanded, the limit that is
+  binding is named. Motion is a pure function of the clock, the demands heard and the
+  component's own seed stream.
+- **FR-53** Demands shall arrive as messages on a demand topic, the platform applying
+  the last demand heard. A demand beyond a declared limit is applied as far as the limit
+  allows and the shortfall is stated in the platform's own report, never silently
+  clipped. The topic's publish rules admit the operator surface today and are written to
+  admit a future adaptive-sampling component as a second publisher; no component is
+  declared or drawn for that publisher until it exists. **The planner shall not publish
+  demands** — its recommendations reach a demand only through a component that decides,
+  and Constitution VIII governs whether such a component may exist.
+- **FR-54** The platform shall publish its own state as SensorThings observations on its
+  own Thing, through the same broker topics, ingestion seam and observation store as
+  every other measurement — no second write path. The observation master's
+  observed-property enumeration grows by exactly the ownship quantities and states in the
+  same amendment why that does not reopen ADR-0005's closure. Position is not a scalar
+  result: it is the location every observation already carries, and the ownship
+  datastream is what makes a series of them a track. `HistoricalLocations` stays outside
+  the served SensorThings subset, refused by name, so the track has one representation
+  and not two that can disagree.
+- **FR-55** No component shall compute the platform's position a second time. Consumers
+  of position take it from the ownship observations; see FR-22 as amended.
+- **FR-56** An ownship observation is not a sample of the ocean. Components that reason
+  about where the ocean has been measured — the monitor's pairing, the planner's
+  observation-age field — shall exclude the ownship datastreams by name, and the
+  exclusion carries a test that fails when it is removed. The ingestion seam's quality
+  flagging covers the ownship properties with ranges taken from the platform's declared
+  limits.
+- **FR-57** The Operator tab shall present the declared components as a **directed flow
+  chart** with the assimilation cycle drawn as a cycle. Node structure comes from the
+  configuration document; **topic edges are derived from the broker topology artefact**,
+  so the picture cannot disagree with the wiring, and the couplings that carry no broker
+  traffic — the world-sampler port and the store interfaces — are declared beside the
+  components and drawn dashed, because a picture in which the environment generator sits
+  isolated would be a false one. A gate fails the build when a declared component is
+  undrawn or a topology edge is neither drawn nor named as suppressed. Exactly two namespaces are suppressed — `ctl/clock` and `ctl/heartbeat` —
+  drawn instead as the plane the flow runs on. Illumination remains heartbeats and
+  nothing else. Three kinds of figure are visually distinct and never mix: **declared**
+  (configuration), **reported** (carried in a message from the component) and
+  **observed** (counted by the shell from traffic it received itself); a figure may not
+  change kind between states.
+- **FR-58** Each component's node shall carry an instrument designed for what that
+  component does — among them the monitor's residual against the threshold that will
+  raise a divergence and the persistence streak beneath it, the stores' record volume and
+  growth, the scheduler's minimum-interval and cadence-floor bars, the model runner's
+  ensemble and its inbound run trigger, the sensors' per-instrument value sparklines, and
+  the platform's demanded and current course, speed and depth. Every face states the
+  simulation time its figures were last updated at. A series with no samples says so and
+  is never drawn as a flat line at zero; a gap is drawn as a gap.
+- **FR-59** A **list view** shall carry every fact and every control the flow chart
+  carries, reachable by keyboard and readable by assistive technology, with identical
+  refusals in both views; neither view is the other's fallback. The graph shall be
+  legible in greyscale and shall respect `prefers-reduced-motion`, traffic animation
+  becoming a count and a timestamp.
+- **FR-60** The Map panel shall draw the platform's historic track from a genuine query
+  over the ownship datastreams through the seam, ordered by phenomenon time and visually
+  distinct from the planner's route, together with the demanded course as a ray from the
+  current position. Where no ownship observations have been served the panel says so
+  rather than drawing a stub or the configured loiter.
+
+### 5.13 The walkthrough (feature 110)
+
+`docs/v2/plan.md` §5 reserved feature 110 for interactive walkthrough machinery and
+left the slot named but unclaimed. It is spent. The specification is
+`specs/110-walkthrough/`.
+
+- **FR-61** The shell shall carry a **help control**, visually distinct from the
+  controls that operate the harness, which walks a reader through the components one at
+  a time: what each does, and what its panel shows. The steps shall be keyed to the
+  declared component list and presented in the order the Operator flow chart draws
+  them, so a component with no step — or a step for something that is not a component —
+  is reported by name rather than passing unnoticed. A walkthrough that quietly stopped
+  covering a component would read as a complete tour.
+- **FR-62** The walkthrough **teaches and does not report**: it shall not claim any
+  particular component's live state, and a test shall hold it to that. It stands in for
+  no component, which is why Constitution VII is not engaged by it (feature 111's
+  precedent) — and the reason that stays true is the rule above, not the intention. The
+  control shall be parameterised by the tour it starts and shall open that tour's view
+  before running, so a tour for another view is a tour and not a second control.
 
 ---
 
@@ -570,5 +676,5 @@ exemption retires with them); offload's real transfer and verified-receipt evict
 (v1 FR-43, FR-44 — deferred to V3, the export shape and announcements carried by
 FR-39); the second-broker fallback (v1 FR-15 — moot with one in-browser broker; V3
 revisits); and every implementation-specific requirement of a retired engine (v1
-FR-51 among them — the *property* it protected, per-vertex time surviving the parse,
+FR-56 among them — the *property* it protected, per-vertex time surviving the parse,
 lives on in FR-28 and AT-01).

@@ -34,6 +34,8 @@ import { DEFERRED_VIEWS, panelComponents, type PanelParams } from './registry.js
 import { Disclosure } from './Disclosure.js';
 import { Stack } from './Stack.js';
 import { ClockStrip } from './ClockStrip.js';
+import { HelpButton } from './walkthrough/HelpButton.js';
+import { componentTour } from './walkthrough/tour.js';
 import { presentationFor, useMeasuredSize, viewportHeight, viewportWidth } from './viewport.js';
 import './shell.css';
 
@@ -171,6 +173,15 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
     [config, params],
   );
 
+  /**
+   * Open a view by id, through the same path a link does. The walkthrough uses it to
+   * reach the tab its steps highlight: a step pointing at an element on a tab you are
+   * not looking at points at nothing.
+   */
+  const openView = useCallback((view: string) => {
+    apiRef.current?.getPanel(view)?.api.setActive();
+  }, []);
+
   useEffect(() => {
     const onHashChange = () => {
       const requested = viewFromHash(window.location.hash);
@@ -244,6 +255,11 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
           {importRefusal && <span className="shell-refusal">{importRefusal}</span>}
         </Disclosure>
         <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
+        {/* Last in the header, so it sits at the top right: the one control here that
+            is for the reader rather than for the harness (feature 110). It stays out of
+            the disclosure above — a help control folded behind a "more" label is one
+            the people who need it will not find. */}
+        <HelpButton tour={componentTour(config)} onOpenView={openView} />
       </header>
       <div className="shell-body" ref={bodyRef}>
         {narrow ? (

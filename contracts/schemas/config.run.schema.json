@@ -12,6 +12,7 @@
     "boundary",
     "env_generator",
     "coverage_store",
+    "platform",
     "sensors",
     "ingest",
     "observation_store",
@@ -53,6 +54,9 @@
     },
     "coverage_store": {
       "$ref": "config.coverage-store.schema.json"
+    },
+    "platform": {
+      "$ref": "config.platform.schema.json"
     },
     "sensors": {
       "$ref": "config.sensors.schema.json"

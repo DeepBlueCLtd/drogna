@@ -40,6 +40,10 @@ export class AdvisoryStore {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.byId.size} advisory(ies), append-only; ${this.refused} refused`,
+        figures: [
+          { key: 'advisories', value: this.byId.size, label: 'advisories' },
+          { key: 'refused', value: this.refused, label: 'refused' },
+        ],
       }),
       runId,
       configDigest(config),

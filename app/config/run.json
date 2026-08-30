@@ -9,109 +9,304 @@
     "rate": 1,
     "min_rate": 0,
     "max_rate": 3600,
-    "topics": { "clock": "ctl/clock" },
-    "http": { "rate_path": "/api/ctl/clock/rate" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "topics": {
+      "clock": "ctl/clock"
+    },
+    "http": {
+      "rate_path": "/api/ctl/clock/rate"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "broker": {
     "id": "broker",
     "roles": [
-      { "role": "clock", "publish": ["ctl/clock", "ctl/heartbeat"], "subscribe": [] },
-      { "role": "broker", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "clock",
+        "publish": [
+          "ctl/clock",
+          "ctl/heartbeat"
+        ],
+        "subscribe": []
+      },
+      {
+        "role": "broker",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
       {
         "role": "boundary",
-        "publish": ["ctl/boundary/denial", "ctl/heartbeat"],
-        "subscribe": ["ctl/clock"]
+        "publish": [
+          "ctl/boundary/denial",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
       },
-      { "role": "env-generator", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
-      { "role": "sensors", "publish": ["obs/+/+", "ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "env-generator",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
+      {
+        "role": "platform",
+        "publish": [
+          "obs/ownship/+",
+          "ctl/platform/state",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/platform/demand",
+          "ctl/clock"
+        ]
+      },
+      {
+        "role": "sensors",
+        "publish": [
+          "obs/+/+",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "obs/ownship/+",
+          "ctl/clock"
+        ]
+      },
       {
         "role": "ingest",
-        "publish": ["ctl/heartbeat"],
-        "subscribe": ["obs/#", "ctl/clock"]
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "obs/#",
+          "ctl/clock"
+        ]
       },
-      { "role": "feature-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
-      { "role": "observation-store", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
-      { "role": "query", "publish": ["ctl/heartbeat"], "subscribe": ["ctl/clock"] },
+      {
+        "role": "feature-store",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
+      {
+        "role": "observation-store",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
+      {
+        "role": "query",
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
+      },
       {
         "role": "monitor",
-        "publish": ["ctl/divergence", "ctl/telemetry", "ctl/heartbeat"],
-        "subscribe": ["obs/#", "ctl/clock"]
+        "publish": [
+          "ctl/divergence",
+          "ctl/telemetry",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "obs/#",
+          "ctl/clock"
+        ]
       },
       {
         "role": "scheduler",
-        "publish": ["ctl/run/request", "ctl/telemetry", "ctl/heartbeat"],
-        "subscribe": ["ctl/divergence", "ctl/run/published", "ctl/clock"]
+        "publish": [
+          "ctl/run/request",
+          "ctl/telemetry",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/divergence",
+          "ctl/run/published",
+          "ctl/clock"
+        ]
       },
       {
         "role": "planner",
-        "publish": ["ctl/plan", "ctl/heartbeat"],
-        "subscribe": ["obs/#", "ctl/run/published", "ctl/clock"]
+        "publish": [
+          "ctl/plan",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "obs/#",
+          "ctl/run/published",
+          "ctl/clock"
+        ]
       },
       {
         "role": "model-runner",
-        "publish": ["ctl/run/started", "ctl/run/published", "ctl/heartbeat"],
-        "subscribe": ["ctl/run/request", "ctl/clock"]
+        "publish": [
+          "ctl/run/started",
+          "ctl/run/published",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/run/request",
+          "ctl/clock"
+        ]
       },
       {
         "role": "coverage-store",
-        "publish": ["cov/holdings", "ctl/heartbeat"],
-        "subscribe": ["ctl/clock"]
+        "publish": [
+          "cov/holdings",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
       },
       {
         "role": "advisory-source",
-        "publish": ["adv/advisories", "ctl/heartbeat"],
-        "subscribe": ["ctl/clock"]
+        "publish": [
+          "adv/advisories",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/clock"
+        ]
       },
       {
         "role": "advisory-store",
-        "publish": ["ctl/heartbeat"],
-        "subscribe": ["adv/advisories", "ctl/clock"]
+        "publish": [
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "adv/advisories",
+          "ctl/clock"
+        ]
       },
       {
         "role": "offload",
-        "publish": ["ctl/offload", "ctl/heartbeat"],
-        "subscribe": ["ctl/run/published", "ctl/clock"]
+        "publish": [
+          "ctl/offload",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/run/published",
+          "ctl/clock"
+        ]
       },
       {
         "role": "telemetry",
-        "publish": ["ctl/telemetry", "ctl/heartbeat"],
-        "subscribe": ["ctl/telemetry", "ctl/run/published", "obs/#", "ctl/clock"]
+        "publish": [
+          "ctl/telemetry",
+          "ctl/heartbeat"
+        ],
+        "subscribe": [
+          "ctl/telemetry",
+          "ctl/run/published",
+          "obs/#",
+          "ctl/clock"
+        ]
       },
       {
         "role": "operator",
-        "publish": ["ctl/heartbeat"],
-        "subscribe": ["ctl/heartbeat", "ctl/clock"]
+        "publish": [
+          "ctl/heartbeat",
+          "ctl/platform/demand"
+        ],
+        "subscribe": [
+          "ctl/heartbeat",
+          "ctl/clock"
+        ]
       },
-      { "role": "shell", "publish": [], "subscribe": ["#"] }
+      {
+        "role": "shell",
+        "publish": [],
+        "subscribe": [
+          "#"
+        ]
+      }
     ],
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "boundary": {
     "id": "boundary",
     "api_prefix": "/api",
-    "allow_prefixes": ["/api/ctl/", "/api/edr/", "/api/st/", "/api/features/"],
-    "topics": { "denial": "ctl/boundary/denial" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "allow_prefixes": [
+      "/api/ctl/",
+      "/api/edr/",
+      "/api/st/",
+      "/api/features/"
+    ],
+    "topics": {
+      "denial": "ctl/boundary/denial"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "env_generator": {
     "id": "env-generator",
     "stream": "env-generator",
-    "topics": { "clock": "ctl/clock" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "topics": {
+      "clock": "ctl/clock"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "domain": {
-      "latitude": { "minimum": 44, "maximum": 48 },
-      "longitude": { "minimum": -14, "maximum": -8 },
-      "depth": { "minimum": 0, "maximum": 1000 }
+      "latitude": {
+        "minimum": 44,
+        "maximum": 48
+      },
+      "longitude": {
+        "minimum": -14,
+        "maximum": -8
+      },
+      "depth": {
+        "minimum": 0,
+        "maximum": 1000
+      }
     },
     "nowcast": {
-      "grid": { "longitude": 24, "latitude": 20, "depth": 6 },
+      "grid": {
+        "longitude": 24,
+        "latitude": 20,
+        "depth": 6
+      },
       "interval_ticks": 900,
       "time_steps": 4,
       "step_seconds": 3600
     },
     "archive": {
-      "grid": { "longitude": 12, "latitude": 10, "depth": 4 },
+      "grid": {
+        "longitude": 12,
+        "latitude": 10,
+        "depth": 4
+      },
       "months": 240,
       "month_seconds": 2592000
     },
@@ -135,7 +330,11 @@
           "depth_centre_m": 150,
           "depth_half_thickness_m": 220
         },
-        "jitter": { "centre_degrees": 0.4, "radius_km": 10, "strength_c": 0.5 }
+        "jitter": {
+          "centre_degrees": 0.4,
+          "radius_km": 10,
+          "strength_c": 0.5
+        }
       },
       "front": {
         "nominal": {
@@ -147,7 +346,10 @@
           "salinity_amplitude_psu": -0.2,
           "depth_scale_m": 250
         },
-        "jitter": { "anchor_degrees": 0.3, "bearing_degrees": 10 }
+        "jitter": {
+          "anchor_degrees": 0.3,
+          "bearing_degrees": 10
+        }
       },
       "thermocline": {
         "nominal": {
@@ -156,7 +358,10 @@
           "temperature_drop_c": 4,
           "salinity_rise_psu": 0.1
         },
-        "jitter": { "depth_m": 15, "temperature_drop_c": 0.8 }
+        "jitter": {
+          "depth_m": 15,
+          "temperature_drop_c": 0.8
+        }
       },
       "moving": {
         "nominal": {
@@ -171,7 +376,10 @@
           "drift_east_km_per_day": 8,
           "drift_north_km_per_day": 5
         },
-        "jitter": { "centre_degrees": 0.4, "drift_km_per_day": 2 }
+        "jitter": {
+          "centre_degrees": 0.4,
+          "drift_km_per_day": 2
+        }
       }
     },
     "timescale": {
@@ -187,25 +395,106 @@
   },
   "coverage_store": {
     "id": "coverage-store",
-    "topics": { "clock": "ctl/clock", "published": "cov/holdings" },
-    "http": { "holdings_path": "/api/ctl/holdings" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "topics": {
+      "clock": "ctl/clock",
+      "published": "cov/holdings"
+    },
+    "http": {
+      "holdings_path": "/api/ctl/holdings"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
+  },
+  "platform": {
+    "id": "platform",
+    "stream": "platform-navigation",
+    "topics": {
+      "clock": "ctl/clock",
+      "demand": "ctl/platform/demand",
+      "state": "ctl/platform/state",
+      "observation_prefix": "obs"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
+    "thing": {
+      "thing_id": "ownship",
+      "name": "ownship",
+      "description": "The simulated vehicle the sampling platform rides on. Its own datastreams carry its motion, and a series of them is its track."
+    },
+    "initial": {
+      "latitude": 46.1,
+      "longitude": -11.2,
+      "course_degrees": 90,
+      "speed_m_per_s": 2.4,
+      "depth_m": 50
+    },
+    "limits": {
+      "maximum_speed_m_per_s": 4.0,
+      "maximum_depth_m": 400,
+      "turn_rate_degrees_per_second": 3.0,
+      "acceleration_m_per_s2": 0.05,
+      "dive_rate_m_per_s": 0.5
+    },
+    "report_interval_ticks": 30,
+    "instruments": [
+      {
+        "sensor_id": "nav-compass",
+        "datastream_id": "ownship-course",
+        "observed_property": "platform_course",
+        "noise_std": 0.4,
+        "unit": {
+          "name": "degree true",
+          "symbol": "deg",
+          "definition": "degree_true"
+        }
+      },
+      {
+        "sensor_id": "nav-log",
+        "datastream_id": "ownship-speed",
+        "observed_property": "platform_speed",
+        "noise_std": 0.03,
+        "unit": {
+          "name": "metre per second",
+          "symbol": "m/s",
+          "definition": "m s-1"
+        }
+      },
+      {
+        "sensor_id": "nav-depth",
+        "datastream_id": "ownship-depth",
+        "observed_property": "platform_depth",
+        "noise_std": 0.2,
+        "unit": {
+          "name": "metre",
+          "symbol": "m",
+          "definition": "m"
+        }
+      }
+    ]
   },
   "sensors": {
     "id": "sensors",
     "stream": "sensors-noise",
-    "topics": { "clock": "ctl/clock", "observation_prefix": "obs" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "topics": {
+      "clock": "ctl/clock",
+      "ownship": "obs/ownship/+",
+      "observation_prefix": "obs"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "platform": {
       "thing_id": "platform-a",
       "name": "sampling platform A",
-      "description": "A simulated sampling platform. A coordinate and a sampler.",
-      "loiter": {
-        "centre_latitude": 46.1,
-        "centre_longitude": -11.2,
-        "radius_km": 45,
-        "period_seconds": 43200
-      }
+      "description": "A simulated sampling platform. A coordinate and a sampler."
     },
     "sample_interval_ticks": 30,
     "instruments": [
@@ -215,7 +504,11 @@
         "observed_property": "temperature",
         "depth_m": 50,
         "noise_std": 0.02,
-        "unit": { "name": "degree Celsius", "symbol": "degC", "definition": "degree_C" }
+        "unit": {
+          "name": "degree Celsius",
+          "symbol": "degC",
+          "definition": "degree_C"
+        }
       },
       {
         "sensor_id": "ctd-sal-050",
@@ -223,7 +516,11 @@
         "observed_property": "salinity",
         "depth_m": 50,
         "noise_std": 0.01,
-        "unit": { "name": "practical salinity unit", "symbol": "psu", "definition": "1e-3" }
+        "unit": {
+          "name": "practical salinity unit",
+          "symbol": "psu",
+          "definition": "1e-3"
+        }
       },
       {
         "sensor_id": "ctd-temp-200",
@@ -231,7 +528,11 @@
         "observed_property": "temperature",
         "depth_m": 200,
         "noise_std": 0.02,
-        "unit": { "name": "degree Celsius", "symbol": "degC", "definition": "degree_C" }
+        "unit": {
+          "name": "degree Celsius",
+          "symbol": "degC",
+          "definition": "degree_C"
+        }
       },
       {
         "sensor_id": "ctd-pres-200",
@@ -239,30 +540,53 @@
         "observed_property": "pressure",
         "depth_m": 200,
         "noise_std": 0.5,
-        "unit": { "name": "decibar", "symbol": "dbar", "definition": "dbar" }
+        "unit": {
+          "name": "decibar",
+          "symbol": "dbar",
+          "definition": "dbar"
+        }
       }
     ]
   },
   "ingest": {
     "id": "ingest",
-    "topics": { "clock": "ctl/clock", "observations": "obs/#" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "topics": {
+      "clock": "ctl/clock",
+      "observations": "obs/#"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "observation_store": {
     "id": "observation-store",
-    "topics": { "clock": "ctl/clock" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "topics": {
+      "clock": "ctl/clock"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "query": {
     "id": "query",
-    "topics": { "clock": "ctl/clock" },
+    "topics": {
+      "clock": "ctl/clock"
+    },
     "http": {
       "edr_prefix": "/api/edr",
       "st_prefix": "/api/st/v1.1",
       "subsets_path": "/api/ctl/query-subsets",
       "features_prefix": "/api/features"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 }
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    }
   },
   "monitor": {
     "id": "monitor",
@@ -272,7 +596,11 @@
       "divergence": "ctl/divergence",
       "telemetry": "ctl/telemetry"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "pairs": [
       {
         "thing_id": "platform-a",
@@ -283,7 +611,10 @@
     ],
     "threshold_m_per_s": 1.2,
     "persistence_count": 3,
-    "region": { "radius_m": 60000, "depth_pad_m": 40 }
+    "region": {
+      "radius_m": 60000,
+      "depth_pad_m": 40
+    }
   },
   "scheduler": {
     "id": "scheduler",
@@ -294,7 +625,11 @@
       "run_published": "ctl/run/published",
       "telemetry": "ctl/telemetry"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "min_interval_ticks": 600,
     "max_interval_ticks": 1800,
     "ensemble_size": 5
@@ -308,12 +643,22 @@
       "run_started": "ctl/run/started",
       "run_published": "ctl/run/published"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "kernel": "shift-advect-v1",
     "steps": 4,
     "step_seconds": 900,
-    "advection": { "east_km_per_day": 4, "north_km_per_day": 2 },
-    "noise_std": { "temperature": 0.35, "salinity": 0.03 }
+    "advection": {
+      "east_km_per_day": 4,
+      "north_km_per_day": 2
+    },
+    "noise_std": {
+      "temperature": 0.35,
+      "salinity": 0.03
+    }
   },
   "planner": {
     "id": "planner",
@@ -324,16 +669,36 @@
       "run_published": "ctl/run/published",
       "plan": "ctl/plan"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
+    "excluded_datastreams": [
+      "ownship-course",
+      "ownship-speed",
+      "ownship-depth"
+    ],
     "replan_interval_ticks": 600,
     "region_feature": "loiter-region",
     "h3_resolution": 5,
     "depth_bands": [
-      { "index": 0, "minimum_depth_m": 0, "maximum_depth_m": 120 },
-      { "index": 1, "minimum_depth_m": 120, "maximum_depth_m": 400 }
+      {
+        "index": 0,
+        "minimum_depth_m": 0,
+        "maximum_depth_m": 120
+      },
+      {
+        "index": 1,
+        "minimum_depth_m": 120,
+        "maximum_depth_m": 400
+      }
     ],
     "budget_seconds": 21600,
-    "speeds": { "horizontal_m_per_s": 2.5, "vertical_m_per_s": 0.5 },
+    "speeds": {
+      "horizontal_m_per_s": 2.5,
+      "vertical_m_per_s": 0.5
+    },
     "footprint": {
       "peak": 0.85,
       "horizontal_efolding_m": 12000,
@@ -344,7 +709,10 @@
     "usable_threshold": 0.12,
     "restarts": 4,
     "shortlist": 3,
-    "projection": { "step_seconds": 1800, "horizon_seconds": 21600 }
+    "projection": {
+      "step_seconds": 1800,
+      "horizon_seconds": 21600
+    }
   },
   "telemetry": {
     "id": "telemetry",
@@ -354,29 +722,66 @@
       "run_published": "ctl/run/published",
       "observations": "obs/#"
     },
-    "http": { "report_path": "/api/ctl/telemetry" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "http": {
+      "report_path": "/api/ctl/telemetry"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "cadence_ticks": 300,
     "staleness_window_seconds": 1800,
     "minimum_skill_samples": 5,
-    "regions": { "rows": 2, "columns": 3, "minimum_samples": 3 }
+    "regions": {
+      "rows": 2,
+      "columns": 3,
+      "minimum_samples": 3
+    }
   },
   "operator": {
     "id": "operator",
-    "topics": { "clock": "ctl/clock", "heartbeat": "ctl/heartbeat" },
+    "topics": {
+      "clock": "ctl/clock",
+      "heartbeat": "ctl/heartbeat",
+      "platform_demand": "ctl/platform/demand"
+    },
     "http": {
       "components_path": "/api/ctl/components",
       "step_path": "/api/ctl/clock/step",
-      "command_prefix": "/api/ctl/components"
+      "command_prefix": "/api/ctl/components",
+      "platform_demand_path": "/api/ctl/platform/demand"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
-    "protected": ["clock", "broker", "boundary", "operator", "coverage-store", "observation-store", "feature-store", "advisory-store", "query", "telemetry"]
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
+    "protected": [
+      "clock",
+      "broker",
+      "boundary",
+      "operator",
+      "coverage-store",
+      "observation-store",
+      "feature-store",
+      "advisory-store",
+      "query",
+      "telemetry"
+    ]
   },
   "advisory_source": {
     "id": "advisory-source",
     "stream": "advisory-source",
-    "topics": { "clock": "ctl/clock", "advisory": "adv/advisories" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "topics": {
+      "clock": "ctl/clock",
+      "advisory": "adv/advisories"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "cadence_ticks": 1200,
     "valid_seconds": 14400,
     "region_feature": "loiter-region",
@@ -385,8 +790,15 @@
   },
   "advisory_store": {
     "id": "advisory-store",
-    "topics": { "clock": "ctl/clock", "advisory": "adv/advisories" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "topics": {
+      "clock": "ctl/clock",
+      "advisory": "adv/advisories"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "size_ceiling_bytes": 2048
   },
   "offload": {
@@ -396,15 +808,25 @@
       "run_published": "ctl/run/published",
       "offload": "ctl/offload"
     },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "identification_radius_m": 60000,
     "format_version": "drogna-bundle-2.0",
     "staging_bound_bytes": 8388608
   },
   "feature_store": {
     "id": "feature-store",
-    "topics": { "clock": "ctl/clock" },
-    "heartbeat": { "topic": "ctl/heartbeat", "interval_seconds": 2, "liveness_window_seconds": 6 },
+    "topics": {
+      "clock": "ctl/clock"
+    },
+    "heartbeat": {
+      "topic": "ctl/heartbeat",
+      "interval_seconds": 2,
+      "liveness_window_seconds": 6
+    },
     "features": [
       {
         "feature_id": "domain",
@@ -412,7 +834,30 @@
         "kind": "domain",
         "geometry": {
           "type": "Polygon",
-          "coordinates": [[[-14, 44], [-8, 44], [-8, 48], [-14, 48], [-14, 44]]]
+          "coordinates": [
+            [
+              [
+                -14,
+                44
+              ],
+              [
+                -8,
+                44
+              ],
+              [
+                -8,
+                48
+              ],
+              [
+                -14,
+                48
+              ],
+              [
+                -14,
+                44
+              ]
+            ]
+          ]
         }
       },
       {
@@ -421,7 +866,30 @@
         "kind": "loiter_region",
         "geometry": {
           "type": "Polygon",
-          "coordinates": [[[-11.8, 45.7], [-10.6, 45.7], [-10.6, 46.5], [-11.8, 46.5], [-11.8, 45.7]]]
+          "coordinates": [
+            [
+              [
+                -11.8,
+                45.7
+              ],
+              [
+                -10.6,
+                45.7
+              ],
+              [
+                -10.6,
+                46.5
+              ],
+              [
+                -11.8,
+                46.5
+              ],
+              [
+                -11.8,
+                45.7
+              ]
+            ]
+          ]
         }
       }
     ]
@@ -430,34 +898,176 @@
     "id": "shell",
     "role": "shell",
     "views": [
-      { "id": "intro", "label": "Intro" },
-      { "id": "background", "label": "Background" },
-      { "id": "system", "label": "System" },
-      { "id": "holdings", "label": "Holdings" },
-      { "id": "operator", "label": "Operator" },
-      { "id": "map", "label": "Map" },
-      { "id": "messages", "label": "Messages" }
+      {
+        "id": "intro",
+        "label": "Intro"
+      },
+      {
+        "id": "background",
+        "label": "Background"
+      },
+      {
+        "id": "system",
+        "label": "System"
+      },
+      {
+        "id": "holdings",
+        "label": "Holdings"
+      },
+      {
+        "id": "operator",
+        "label": "Operator"
+      },
+      {
+        "id": "map",
+        "label": "Map"
+      },
+      {
+        "id": "messages",
+        "label": "Messages"
+      }
     ],
     "components": [
-      { "id": "clock", "label": "Simulation clock", "beat": 101 },
-      { "id": "broker", "label": "Broker", "beat": 101 },
-      { "id": "boundary", "label": "Release gate", "beat": 101 },
-      { "id": "env-generator", "label": "Environment generator", "beat": 102 },
-      { "id": "coverage-store", "label": "Coverage store", "beat": 102 },
-      { "id": "sensors", "label": "Sensors", "beat": 103 },
-      { "id": "ingest", "label": "Ingestion seam", "beat": 103 },
-      { "id": "observation-store", "label": "Observation store", "beat": 103 },
-      { "id": "feature-store", "label": "Feature store", "beat": 103 },
-      { "id": "query", "label": "Query components", "beat": 104 },
-      { "id": "monitor", "label": "Monitor", "beat": 105 },
-      { "id": "scheduler", "label": "Scheduler", "beat": 105 },
-      { "id": "model-runner", "label": "Model runner", "beat": 105 },
-      { "id": "planner", "label": "Planner", "beat": 106 },
-      { "id": "telemetry", "label": "Telemetry", "beat": 107 },
-      { "id": "operator", "label": "Operator surface", "beat": 107 },
-      { "id": "advisory-source", "label": "Shore advisory source", "beat": 108 },
-      { "id": "advisory-store", "label": "Advisory store", "beat": 108 },
-      { "id": "offload", "label": "Offload packager", "beat": 108 }
+      {
+        "id": "clock",
+        "label": "Simulation clock",
+        "beat": 101,
+        "band": "plane",
+        "rank": 0
+      },
+      {
+        "id": "broker",
+        "label": "Broker",
+        "beat": 101,
+        "band": "plane",
+        "rank": 1
+      },
+      {
+        "id": "boundary",
+        "label": "Release gate",
+        "beat": 101,
+        "band": "plane",
+        "rank": 2
+      },
+      {
+        "id": "env-generator",
+        "label": "Environment generator",
+        "beat": 102,
+        "band": "loop",
+        "rank": 0
+      },
+      {
+        "id": "platform",
+        "label": "Platform",
+        "beat": 112,
+        "band": "path",
+        "rank": 0
+      },
+      {
+        "id": "coverage-store",
+        "label": "Coverage store",
+        "beat": 102,
+        "band": "loop",
+        "rank": 1
+      },
+      {
+        "id": "sensors",
+        "label": "Sensors",
+        "beat": 103,
+        "band": "path",
+        "rank": 1
+      },
+      {
+        "id": "ingest",
+        "label": "Ingestion seam",
+        "beat": 103,
+        "band": "path",
+        "rank": 2
+      },
+      {
+        "id": "observation-store",
+        "label": "Observation store",
+        "beat": 103,
+        "band": "path",
+        "rank": 3
+      },
+      {
+        "id": "feature-store",
+        "label": "Feature store",
+        "beat": 103,
+        "band": "path",
+        "rank": 4
+      },
+      {
+        "id": "query",
+        "label": "Query components",
+        "beat": 104,
+        "band": "path",
+        "rank": 5
+      },
+      {
+        "id": "monitor",
+        "label": "Monitor",
+        "beat": 105,
+        "band": "loop",
+        "rank": 2
+      },
+      {
+        "id": "scheduler",
+        "label": "Scheduler",
+        "beat": 105,
+        "band": "loop",
+        "rank": 3
+      },
+      {
+        "id": "model-runner",
+        "label": "Model runner",
+        "beat": 105,
+        "band": "loop",
+        "rank": 4
+      },
+      {
+        "id": "planner",
+        "label": "Planner",
+        "beat": 106,
+        "band": "downstream",
+        "rank": 1
+      },
+      {
+        "id": "telemetry",
+        "label": "Telemetry",
+        "beat": 107,
+        "band": "downstream",
+        "rank": 2
+      },
+      {
+        "id": "operator",
+        "label": "Operator surface",
+        "beat": 107,
+        "band": "downstream",
+        "rank": 0
+      },
+      {
+        "id": "advisory-source",
+        "label": "Shore advisory source",
+        "beat": 108,
+        "band": "downstream",
+        "rank": 3
+      },
+      {
+        "id": "advisory-store",
+        "label": "Advisory store",
+        "beat": 108,
+        "band": "downstream",
+        "rank": 4
+      },
+      {
+        "id": "offload",
+        "label": "Offload packager",
+        "beat": 108,
+        "band": "downstream",
+        "rank": 5
+      }
     ],
     "topics": {
       "clock": "ctl/clock",
@@ -466,22 +1076,72 @@
       "plan": "ctl/plan",
       "run_published": "ctl/run/published",
       "advisories": "adv/advisories",
-      "all": "#"
+      "all": "#",
+      "platform_state": "ctl/platform/state",
+      "observations": "obs/#",
+      "telemetry": "ctl/telemetry"
     },
     "message_schemas": [
-      { "filter": "ctl/clock", "schema": "clock" },
-      { "filter": "ctl/heartbeat", "schema": "heartbeat" },
-      { "filter": "ctl/boundary/denial", "schema": "boundary-denial" },
-      { "filter": "cov/holdings", "schema": "holding-published" },
-      { "filter": "obs/#", "schema": "observation" },
-      { "filter": "ctl/divergence", "schema": "divergence" },
-      { "filter": "ctl/run/request", "schema": "run-request" },
-      { "filter": "ctl/run/started", "schema": "run-started" },
-      { "filter": "ctl/run/published", "schema": "run-published" },
-      { "filter": "ctl/plan", "schema": "plan" },
-      { "filter": "ctl/telemetry", "schema": "telemetry" },
-      { "filter": "adv/advisories", "schema": "advisory" },
-      { "filter": "ctl/offload", "schema": "offload-telemetry" }
+      {
+        "filter": "ctl/clock",
+        "schema": "clock"
+      },
+      {
+        "filter": "ctl/heartbeat",
+        "schema": "heartbeat"
+      },
+      {
+        "filter": "ctl/boundary/denial",
+        "schema": "boundary-denial"
+      },
+      {
+        "filter": "cov/holdings",
+        "schema": "holding-published"
+      },
+      {
+        "filter": "obs/#",
+        "schema": "observation"
+      },
+      {
+        "filter": "ctl/divergence",
+        "schema": "divergence"
+      },
+      {
+        "filter": "ctl/run/request",
+        "schema": "run-request"
+      },
+      {
+        "filter": "ctl/run/started",
+        "schema": "run-started"
+      },
+      {
+        "filter": "ctl/run/published",
+        "schema": "run-published"
+      },
+      {
+        "filter": "ctl/plan",
+        "schema": "plan"
+      },
+      {
+        "filter": "ctl/telemetry",
+        "schema": "telemetry"
+      },
+      {
+        "filter": "adv/advisories",
+        "schema": "advisory"
+      },
+      {
+        "filter": "ctl/offload",
+        "schema": "offload-telemetry"
+      },
+      {
+        "filter": "ctl/platform/demand",
+        "schema": "platform-demand"
+      },
+      {
+        "filter": "ctl/platform/state",
+        "schema": "platform-state"
+      }
     ],
     "endpoints": {
       "clock_rate": "/api/ctl/clock/rate",
@@ -492,9 +1152,99 @@
       "component_command": "/api/ctl/components",
       "edr": "/api/edr",
       "features": "/api/features",
-      "query_subsets": "/api/ctl/query-subsets"
+      "query_subsets": "/api/ctl/query-subsets",
+      "platform_demand": "/api/ctl/platform/demand",
+      "sensorthings": "/api/st/v1.1"
     },
-    "liveness": { "default_window_seconds": 6 },
-    "messages": { "buffer": 200 }
+    "flow": {
+      "suppressed_filters": [
+        "ctl/clock",
+        "ctl/heartbeat"
+      ],
+      "ports": [
+        {
+          "from": "env-generator",
+          "to": "sensors",
+          "label": "world-sampler port"
+        },
+        {
+          "from": "env-generator",
+          "to": "coverage-store",
+          "label": "authors the archive and now-cast"
+        },
+        {
+          "from": "coverage-store",
+          "to": "monitor",
+          "label": "samples the current holding"
+        },
+        {
+          "from": "coverage-store",
+          "to": "query",
+          "label": "reads holdings"
+        },
+        {
+          "from": "coverage-store",
+          "to": "telemetry",
+          "label": "reads holdings"
+        },
+        {
+          "from": "coverage-store",
+          "to": "planner",
+          "label": "reads the current holding"
+        },
+        {
+          "from": "coverage-store",
+          "to": "offload",
+          "label": "reads holdings"
+        },
+        {
+          "from": "model-runner",
+          "to": "coverage-store",
+          "label": "writes the holding"
+        },
+        {
+          "from": "ingest",
+          "to": "observation-store",
+          "label": "the store\u2019s sole writer"
+        },
+        {
+          "from": "observation-store",
+          "to": "query",
+          "label": "reads observations"
+        },
+        {
+          "from": "observation-store",
+          "to": "offload",
+          "label": "reads observations"
+        },
+        {
+          "from": "feature-store",
+          "to": "query",
+          "label": "reads features"
+        },
+        {
+          "from": "feature-store",
+          "to": "planner",
+          "label": "reads the loiter region"
+        },
+        {
+          "from": "feature-store",
+          "to": "advisory-source",
+          "label": "reads the loiter region"
+        },
+        {
+          "from": "advisory-store",
+          "to": "query",
+          "label": "reads advisories"
+        }
+      ],
+      "series_samples": 60
+    },
+    "liveness": {
+      "default_window_seconds": 6
+    },
+    "messages": {
+      "buffer": 200
+    }
   }
 }

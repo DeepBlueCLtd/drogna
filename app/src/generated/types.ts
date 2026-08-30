@@ -390,11 +390,13 @@ export type ConfigOperator = {
   "topics": {
     "clock": ConfigCommonTopic;
     "heartbeat": ConfigCommonTopicFilter;
+    "platform_demand": ConfigCommonTopic;
   };
   "http": {
     "components_path": ConfigCommonRelativePath;
     "step_path": ConfigCommonRelativePath;
     "command_prefix": ConfigCommonRelativePath;
+    "platform_demand_path": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "protected": ConfigCommonComponentId[];
@@ -411,6 +413,7 @@ export type ConfigPlanner = {
     "plan": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
+  "excluded_datastreams"?: string[];
   "replan_interval_ticks": number;
   "region_feature": string;
   "h3_resolution": number;
@@ -440,6 +443,50 @@ export type ConfigPlanner = {
   };
 };
 
+/** drogna platform configuration (V2-C21) — from config.platform.schema.json */
+export type ConfigPlatform = {
+  "id": ConfigCommonComponentId;
+  "stream": string;
+  "topics": {
+    "clock": ConfigCommonTopic;
+    "demand": ConfigCommonTopic;
+    "state": ConfigCommonTopic;
+    "observation_prefix": string;
+  };
+  "heartbeat": ConfigCommonHeartbeat;
+  "thing": {
+    "thing_id": string;
+    "name": string;
+    "description": string;
+  };
+  "initial": {
+    "latitude": number;
+    "longitude": number;
+    "course_degrees": number;
+    "speed_m_per_s": number;
+    "depth_m": number;
+  };
+  "limits": {
+    "maximum_speed_m_per_s": number;
+    "maximum_depth_m": number;
+    "turn_rate_degrees_per_second": number;
+    "acceleration_m_per_s2": number;
+    "dive_rate_m_per_s": number;
+  };
+  "report_interval_ticks"?: number;
+  "instruments": {
+    "sensor_id": string;
+    "datastream_id": string;
+    "observed_property": "platform_course" | "platform_speed" | "platform_depth";
+    "noise_std": number;
+    "unit": {
+      "name": string;
+      "symbol": string;
+      "definition": string;
+    };
+  }[];
+};
+
 /** drogna query components configuration (V2-C09) — from config.query.schema.json */
 export type ConfigQuery = {
   "id": ConfigCommonComponentId;
@@ -464,6 +511,7 @@ export type ConfigRun = {
   "boundary": ConfigBoundary;
   "env_generator": ConfigEnvGenerator;
   "coverage_store": ConfigCoverageStore;
+  "platform": ConfigPlatform;
   "sensors": ConfigSensors;
   "ingest": ConfigIngest;
   "observation_store": ConfigObservationStore;
@@ -503,6 +551,7 @@ export type ConfigSensors = {
   "stream": string;
   "topics": {
     "clock": ConfigCommonTopic;
+    "ownship": ConfigCommonTopicFilter;
     "observation_prefix": string;
   };
   "heartbeat": ConfigCommonHeartbeat;
@@ -510,12 +559,6 @@ export type ConfigSensors = {
     "thing_id": string;
     "name": string;
     "description": string;
-    "loiter": {
-      "centre_latitude": number;
-      "centre_longitude": number;
-      "radius_km": number;
-      "period_seconds": number;
-    };
   };
   "sample_interval_ticks": number;
   "instruments": {
@@ -544,6 +587,8 @@ export type ConfigShell = {
     "id": ConfigCommonComponentId;
     "label": string;
     "beat": number;
+    "band": "plane" | "loop" | "path" | "downstream";
+    "rank": number;
   }[];
   "topics": {
     "clock": ConfigCommonTopicFilter;
@@ -553,6 +598,9 @@ export type ConfigShell = {
     "plan": ConfigCommonTopicFilter;
     "run_published": ConfigCommonTopicFilter;
     "advisories": ConfigCommonTopicFilter;
+    "platform_state": ConfigCommonTopicFilter;
+    "telemetry": ConfigCommonTopicFilter;
+    "observations": ConfigCommonTopicFilter;
   };
   "message_schemas": {
     "filter": ConfigCommonTopicFilter;
@@ -565,9 +613,20 @@ export type ConfigShell = {
     "telemetry": ConfigCommonRelativePath;
     "clock_step": ConfigCommonRelativePath;
     "component_command": ConfigCommonRelativePath;
+    "platform_demand": ConfigCommonRelativePath;
+    "sensorthings": ConfigCommonRelativePath;
     "edr": ConfigCommonRelativePath;
     "features": ConfigCommonRelativePath;
     "query_subsets": ConfigCommonRelativePath;
+  };
+  "flow": {
+    "suppressed_filters": string[];
+    "ports": {
+      "from": ConfigCommonComponentId;
+      "to": ConfigCommonComponentId;
+      "label": string;
+    }[];
+    "series_samples": number;
   };
   "liveness": {
     "default_window_seconds": number;
@@ -826,6 +885,13 @@ export type Heartbeat = {
   "heartbeat_interval_seconds"?: number;
   "liveness_window_seconds"?: number;
   "detail"?: string;
+  "figures"?: {
+    "key": string;
+    "value": number;
+    "unit"?: string;
+    "of"?: number;
+    "label"?: string;
+  }[];
 };
 
 /** drogna holding-published announcement — from holding-published.schema.json */
@@ -1108,7 +1174,7 @@ export type Observation = {
 };
 
 /** observation.schema.json #/$defs/observed_property */
-export type ObservationObservedProperty = "temperature" | "salinity" | "pressure";
+export type ObservationObservedProperty = "temperature" | "salinity" | "pressure" | "platform_course" | "platform_speed" | "platform_depth";
 
 /** observation.schema.json #/$defs/location */
 export type ObservationLocation = {
@@ -1310,6 +1376,66 @@ export type PlanProjectionEntry = {
   "uncertainty_now": number;
   "saturated_uncertainty": number;
   "timescale_seconds": number;
+};
+
+/** drogna platform demand — from platform-demand.schema.json */
+export type PlatformDemand = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "course_degrees"?: number;
+  "speed_m_per_s"?: number;
+  "depth_m"?: number;
+  "note"?: string;
+};
+
+/** drogna platform state — from platform-state.schema.json */
+export type PlatformState = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "current": PlatformStateVector;
+  "demanded": (PlatformStateDemanded) | (null);
+  "demand_from"?: string | null;
+  "limits": PlatformStateLimits;
+  "binding_limit": "none" | "turn_rate" | "acceleration" | "dive_rate" | "maximum_speed" | "maximum_depth";
+  "shortfall"?: (PlatformStateShortfall) | (null);
+  "note"?: string;
+};
+
+/** platform-state.schema.json #/$defs/vector */
+export type PlatformStateVector = {
+  "latitude": number;
+  "longitude": number;
+  "course_degrees": number;
+  "speed_m_per_s": number;
+  "depth_m": number;
+};
+
+/** platform-state.schema.json #/$defs/demanded */
+export type PlatformStateDemanded = {
+  "course_degrees": number;
+  "speed_m_per_s": number;
+  "depth_m": number;
+};
+
+/** platform-state.schema.json #/$defs/limits */
+export type PlatformStateLimits = {
+  "maximum_speed_m_per_s": number;
+  "maximum_depth_m": number;
+  "turn_rate_degrees_per_second": number;
+  "acceleration_m_per_s2": number;
+  "dive_rate_m_per_s": number;
+};
+
+/** platform-state.schema.json #/$defs/shortfall */
+export type PlatformStateShortfall = {
+  "quantity": "speed_m_per_s" | "depth_m";
+  "asked": number;
+  "allowed": number;
+  "statement": string;
 };
 
 /** drogna query subset statement — from query-subsets.schema.json */
@@ -1610,6 +1736,14 @@ export type TelemetryResidualSampleReport = {
   "forecast_run_id": TelemetryForecastRunId;
   "samples": TelemetryResidualPoint[];
   "sound_speed_equation": TelemetrySoundSpeedEquation;
+  "breach"?: TelemetryBreachState;
+};
+
+/** telemetry.schema.json #/$defs/breach_state */
+export type TelemetryBreachState = {
+  "threshold_m_per_s": number;
+  "streak": number;
+  "persistence_count": number;
 };
 
 /** telemetry.schema.json #/$defs/residual_summary */

@@ -1,0 +1,113 @@
+/* The one control on the page that is for the reader rather than for the harness. */
+.walkthrough-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  background: #f2c14e;
+  color: #10151b;
+  border: 1px solid #d9a72c;
+  border-radius: 4px;
+  padding: 0.35em 0.9em;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.walkthrough-button:hover {
+  background: #ffd469;
+}
+
+.walkthrough-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.walkthrough-button span[aria-hidden] {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  background: #10151b;
+  color: #f2c14e;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* The label folds and the yellow disc stays, so the control is still the one obviously
+   different thing in the header. Keyed to the *presentation* the shell chose and not to
+   a width, which is ADR-0033's rule and the reason it is here rather than in a media
+   query: a phone in landscape is 844 pixels wide and passes any width test, and it was
+   exactly there that the full-width button pushed the header onto a second row and put
+   the shell's chrome over its quarter-of-the-height bound on every view. Found by the
+   narrow-presentation capture, which measures what a browser did rather than what a
+   stylesheet said. */
+.shell[data-presentation='stack'] .walkthrough-button-label {
+  display: none;
+}
+
+/* driver.js' popover, in the shell's own idiom rather than its default light card. */
+.driver-popover.walkthrough-popover {
+  background: #18202a;
+  color: #d5dde5;
+  border: 1px solid #2b3742;
+  max-width: 30rem;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-title {
+  color: #ffffff;
+  font-size: 1.05rem;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-description p {
+  margin: 0 0 0.6em;
+  line-height: 1.5;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-description .walkthrough-panel {
+  color: #9fb0bd;
+  border-left: 3px solid #f2c14e;
+  padding-left: 0.7em;
+  margin-bottom: 0;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-progress-text {
+  color: #6b7785;
+}
+
+.driver-popover.walkthrough-popover button {
+  background: #222c36;
+  color: #d5dde5;
+  border: 1px solid #2c3742;
+  border-radius: 3px;
+  text-shadow: none;
+}
+
+.driver-popover.walkthrough-popover button:hover {
+  background: #2c3742;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-arrow-side-left {
+  border-left-color: #18202a;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-arrow-side-right {
+  border-right-color: #18202a;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-arrow-side-top {
+  border-top-color: #18202a;
+}
+
+.driver-popover.walkthrough-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: #18202a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.walkthrough-popover,
+  .driver-active-element {
+    transition: none !important;
+  }
+}

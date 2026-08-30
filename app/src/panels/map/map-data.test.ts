@@ -6,16 +6,18 @@ import { describe, expect, it } from 'vitest';
 import { latLngToCell } from 'h3-js';
 import type { Plan } from '../../generated/types.js';
 import {
+  demandRay,
   graticule,
   gridCells,
   insideRing,
   manifestInstants,
   nearestInstant,
+  ownshipTrack,
   projectionCells,
   rampColour,
   routePositionAt,
-  validAt,
   type GridCoverage,
+  validAt,
 } from './map-data.js';
 
 const coverage: GridCoverage = {
@@ -226,5 +228,45 @@ describe('the map data builders (feature 109)', () => {
     });
     expect(nearestInstant([], '2026-01-01T00:00:00.000000Z')).toBeUndefined();
     expect(nearestInstant(instants, '')).toBeUndefined();
+  });
+});
+
+describe('the ownship track (feature 113)', () => {
+  it('orders by phenomenon time and keeps only what has a position', () => {
+    const at = (lon: number, lat: number, depth: number) => ({
+      feature: { type: 'Point', coordinates: [lon, lat, depth] },
+    });
+    const track = ownshipTrack([
+      { phenomenonTime: '2026-01-01T02:00:00.000000Z', result: 90, FeatureOfInterest: at(-11, 46, 50) },
+      { phenomenonTime: '2026-01-01T01:00:00.000000Z', result: 88, FeatureOfInterest: at(-12, 45, 40) },
+      // No geometry: dropped, not defaulted to zero, which would put the platform in
+      // the Gulf of Guinea.
+      { phenomenonTime: '2026-01-01T03:00:00.000000Z', result: 91 },
+    ]);
+    expect(track.map((point) => point.simTime)).toEqual([
+      '2026-01-01T01:00:00.000000Z',
+      '2026-01-01T02:00:00.000000Z',
+    ]);
+    expect(track[0].latitude).toBe(45);
+  });
+
+  it('an empty answer is an empty track, never a stub', () => {
+    expect(ownshipTrack([])).toEqual([]);
+  });
+
+  it('the demanded ray points where it was told, and is absent when nothing was', () => {
+    const here = { longitude: -11, latitude: 46 };
+    // Due east: all of it into longitude, none into latitude.
+    const east = demandRay(here, 90, 3, 1000);
+    expect(east?.[1][1]).toBeCloseTo(46, 9);
+    expect(east?.[1][0]).toBeGreaterThan(-11);
+    // Due north: the other way round.
+    const north = demandRay(here, 0, 3, 1000);
+    expect(north?.[1][0]).toBeCloseTo(-11, 9);
+    expect(north?.[1][1]).toBeGreaterThan(46);
+    // No standing demand: no ray. A ray along the current course would say the
+    // platform had been told to carry on, which nobody told it.
+    expect(demandRay(here, undefined, 3, 1000)).toBeUndefined();
+    expect(demandRay(here, 90, undefined, 1000)).toBeUndefined();
   });
 });

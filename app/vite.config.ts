@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     // Two pages, one application. `mobile.html` frames the built shell at a phone's
     // viewport size so the narrow presentation can be reviewed from a desktop browser
-    // (feature 112, FR-021). It is an entry rather than a copied asset because Vite has
+    // (feature 113, FR-021). It is an entry rather than a copied asset because Vite has
     // to rewrite its relative reference to index.html for the published estate.
     rollupOptions: {
       input: {
@@ -41,5 +41,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Several tests build a whole backend, turn the loop until the model runner
+    // genuinely publishes, and then drive a panel against what it published. Those are
+    // integration tests wearing unit clothes, and they are the ones worth having: the
+    // alternative is a fixture, which publishes nothing. As the suite grew they began
+    // to lose the race against vitest's 5s default under parallel load — the spread
+    // test at ~5.3s, and its file-neighbour failing behind it because a timed-out test
+    // leaves its runtime ticking. The bound is raised rather than the tests trimmed.
+    testTimeout: 20_000,
   },
 });

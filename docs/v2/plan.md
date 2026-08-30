@@ -178,6 +178,23 @@ exist at a width they were never designed for (`specs/112-mobile-support/spec.md
 SRD-v2 §5.11, ADR-0033). It took the next free number rather than a slot in the arc,
 and, like 111, leaves the named 110 candidate alone.
 
+**The candidate was not dropped: feature 110 is spent** (`specs/110-walkthrough/`,
+SRD-v2 §5.13). A yellow help control in the shell header walks a reader through the
+components one at a time — what each does and what its panel shows — stepping over the
+Operator flow chart, whose one-node-per-component layout is what gave the tour something
+to point at. It teaches and does not report: no step claims a component's live state,
+and a test holds it there.
+
+**Feature 113, the Operator flow chart and the platform** (`specs/113-operator-flowchart/`,
+SRD-v2 §5.12), also sits outside the arc, though it reaches into it: it gives the sampling
+platform its own component with a motion simulator — demanded and current course, speed
+and depth, commandable over the broker — publishes ownship state as ordinary SensorThings
+measurements so the map can draw the track, and redraws the Operator tab as the picture §2
+of the V1 SRD always said the architecture is: a flow chart with a loop in it, every
+component wearing an instrument designed for what it does. **It was specified as 112 and
+renumbered to 113** when the mobile-support work above took that number on `main` while
+this was in flight; the tree is the authority, so it moved rather than argued.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

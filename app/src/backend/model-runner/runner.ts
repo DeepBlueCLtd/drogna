@@ -28,6 +28,13 @@ export class ModelRunner {
   private readonly heartbeat: HeartbeatEmitter;
   private readonly kernel: ModelKernel;
   private simTime = { value: '', tick: 0 };
+  /**
+   * Ensemble members the last run produced, and how many it asked for. Reported so
+   * the Operator's face can draw the ensemble filling rather than a spinner that
+   * means nothing; both are read from the run that happened.
+   */
+  membersDone = 0;
+  ensembleSize = 0;
   runsCompleted = 0;
 
   constructor(
@@ -51,6 +58,16 @@ export class ModelRunner {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.runsCompleted} run(s) completed; kernel ${this.kernel.name}, ${this.config.steps} step(s)`,
+        figures: [
+          { key: 'runs_completed', value: this.runsCompleted, label: 'runs' },
+          {
+            key: 'members_done',
+            value: this.membersDone,
+            of: this.ensembleSize,
+            label: 'ensemble',
+          },
+          { key: 'horizon_seconds', value: this.config.steps * this.config.step_seconds, unit: 's', label: 'horizon' },
+        ],
       }),
       runId,
       configDigest(config),
@@ -116,6 +133,8 @@ export class ModelRunner {
     };
 
     const drawOrder: string[] = [];
+    this.ensembleSize = request.ensemble_size;
+    this.membersDone = 0;
     const members = Array.from({ length: request.ensemble_size }, (_, member) => {
       const streamName = `${this.config.stream}:${request.run_id}:m${member}`;
       drawOrder.push(streamName);
@@ -165,6 +184,9 @@ export class ModelRunner {
       collections: { forecast: forecastId, uncertainty: spreadId },
       digests: { forecast: forecastDigest, uncertainty: spreadDigest },
     } satisfies RunPublished);
+    // The run finished, so every member it asked for was produced: reported from the
+    // run that happened rather than counted up by the display.
+    this.membersDone = this.ensembleSize;
     this.runsCompleted += 1;
   }
 

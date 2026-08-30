@@ -37,11 +37,14 @@ import type {
   FeaturesResponseFeature,
   FeaturesResponseFeatureCollection,
   Plan,
+  PlatformState,
   RunPublished,
 } from '../../generated/types.js';
 import {
+  demandRay,
   graticule,
   gridCells,
+  ownshipTrack,
   insideRing,
   manifestInstants,
   nearestInstant,
@@ -51,6 +54,8 @@ import {
   validAt,
   type AdvisoryFeature,
   type GridCoverage,
+  type ServedObservation,
+  type TrackPoint,
 } from './map-data.js';
 import { whenInDocument } from './attach.js';
 import { areaRing, pickedPosition, type ComposerChoices } from './composer.js';
@@ -111,6 +116,16 @@ export function MapPanel({ params }: PanelProps) {
   const [plan, setPlan] = useState<Plan | undefined>();
   const [latestRun, setLatestRun] = useState<RunPublished | undefined>();
   const [advisories, setAdvisories] = useState<readonly AdvisoryFeature[]>([]);
+  /**
+   * The ownship track, and whether the query has answered yet (FR-55). Held as two
+   * facts rather than one, because an empty array before the first answer and an empty
+   * array after an empty answer are different things to say.
+   */
+  const [track, setTrack] = useState<{ points: TrackPoint[]; answered: boolean }>({
+    points: [],
+    answered: false,
+  });
+  const [platformState, setPlatformState] = useState<PlatformState | undefined>();
   const [reference, setReference] = useState<readonly FeaturesResponseFeature[]>([]);
   const [field, setField] = useState<FieldState>({});
   /** The store's inventory: each holding's manifest states its own axes. */
@@ -160,9 +175,42 @@ export function MapPanel({ params }: PanelProps) {
       client.subscribe(config.topics.run_published, (message) =>
         setLatestRun(message.payload as RunPublished),
       ),
+      client.subscribe(config.topics.platform_state, (message) =>
+        setPlatformState(message.payload as PlatformState),
+      ),
     ];
     return () => stops.forEach((stop) => stop());
-  }, [client, config.topics.clock, config.topics.plan, config.topics.run_published]);
+  }, [
+    client,
+    config.topics.clock,
+    config.topics.plan,
+    config.topics.platform_state,
+    config.topics.run_published,
+  ]);
+
+  // The track is a genuine SensorThings read through the seam — the same read any
+  // client would make, which is what makes it a query rather than a wire from the
+  // platform to the canvas. Refetched when the platform reports; never polled.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `${config.endpoints.sensorthings}/Datastreams('ownship/ownship-course')/Observations?%24top=500`,
+        );
+        if (!response.ok) return;
+        const body = (await response.json()) as { value?: ServedObservation[] };
+        if (!cancelled) setTrack({ points: ownshipTrack(body.value ?? []), answered: true });
+      } catch {
+        // A read that did not complete is not an empty track: the panel goes on saying
+        // it has not been answered, rather than drawing nothing and implying nothing
+        // is there. Constitution VII, in its second direction.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [config.endpoints.sensorthings, platformState?.tick]);
 
   const refreshAdvisories = useCallback(async () => {
     const response = await fetch(`${config.endpoints.features}/collections/advisories/items`);
@@ -434,6 +482,21 @@ export function MapPanel({ params }: PanelProps) {
   const grid = field.coverage ? gridCells(field.coverage, parameter) : undefined;
   const validAdvisories = advisories.filter((feature) => validAt(feature.properties, displayedSimTime));
   const platform = plan ? routePositionAt(plan, displayedSimTime) : undefined;
+  // The ownship track is where the platform SAID it was, drawn point to point and
+  // never interpolated. The route above is what the planner recommends, drawn as a
+  // curve — reading one as the other would be reading a recommendation as a record.
+  const trackRing: [number, number][] = track.points.map((point) => [point.longitude, point.latitude]);
+  const ray =
+    platformState && platformState.demanded
+      ? demandRay(
+          platformState.current,
+          platformState.demanded.course_degrees,
+          platformState.demanded.speed_m_per_s,
+          // One hour of the demanded speed, so the ray's length means something the
+          // status line can state rather than being a pleasing number of pixels.
+          3600,
+        )
+      : undefined;
   const doubtCells = doubt === 'projection' && plan ? projectionCells(plan, 0) : [];
   const spreadGrid =
     doubt === 'spread' && spread.coverage && spread.parameterKey
@@ -703,6 +766,36 @@ export function MapPanel({ params }: PanelProps) {
         getWidth: 2,
         widthUnits: 'pixels',
       }),
+    // Where the platform has been: circles at reported positions, joined point to
+    // point, deliberately unlike the planner's interpolated route.
+    trackRing.length > 1 &&
+      new PathLayer({
+        id: 'ownship-track',
+        data: [trackRing],
+        getPath: (path) => path,
+        getColor: [99, 190, 222, 220],
+        getWidth: 2,
+        widthUnits: 'pixels',
+      }),
+    trackRing.length > 0 &&
+      new ScatterplotLayer({
+        id: 'ownship-reports',
+        data: trackRing,
+        getPosition: (point: [number, number]) => point,
+        getFillColor: [99, 190, 222, 200],
+        getRadius: 3,
+        radiusUnits: 'pixels',
+      }),
+    ray &&
+      new PathLayer({
+        id: 'ownship-demand',
+        data: [ray],
+        getPath: (path) => path,
+        getColor: [99, 190, 222, 160],
+        getWidth: 1.5,
+        widthUnits: 'pixels',
+        getDashArray: [6, 4],
+      }),
     validAdvisories.length > 0 &&
       new PathLayer({
         id: 'advisories',
@@ -872,7 +965,16 @@ export function MapPanel({ params }: PanelProps) {
         </button>
       </div>
       </Disclosure>
-      <p className="map-status">
+      <p className="map-status" data-testid="ownship-status">
+        {/* The track says what it is, and what it is not. An empty answer is a
+            statement, never a stub or the configured loiter drawn from nowhere. */}
+        {track.answered
+          ? track.points.length > 0
+            ? `ownship track: ${track.points.length} reported position(s), drawn point to point`
+            : 'no ownship observations have been served: nothing is drawn for the track'
+          : 'ownship track: not asked for yet'}
+        {ray ? ` · demanded course drawn as one hour at the demanded speed` : ''}
+        {' · '}
         {displayedSimTime ? `displayed instant ${displayInstant(displayedSimTime)}` : 'no clock sample yet'}
         {projection === 'cube'
           ? volume.servedFrom

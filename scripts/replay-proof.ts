@@ -16,7 +16,14 @@ Claim: for a fixed seed, code revision and configuration, a lockstep run
 reproduces byte-identical published holdings and identical control traffic.
 Boundary: lockstep mode only (free-running modes reproduce drawn values, not
 interleaving), and operator commands are ephemeral — deliberately outside the
-claim, as the Intro states beside it. The run manifest is sufficient input.
+claim, as the Intro states beside it. Since feature 113 a platform demand is a
+command of that kind: the manifest carries no demand, so a demanded run replays
+identically only when the same demands are issued at the same ticks. Inside the
+claim, and new in 113: the platform's motion, and the sensors' sampling
+positions, which are no longer a closed form over simulation time but the last
+ownship report the sensors heard. That is a dependency on delivery order, which
+lockstep makes deterministic and registration order makes stable — stated here
+rather than left to be discovered. The run manifest is sufficient input.
 `);
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'app');

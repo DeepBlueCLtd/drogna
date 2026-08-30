@@ -39,12 +39,20 @@ export class Planner {
   private simTime = { value: '', tick: 0 };
   private lastPlanTick = -1;
   private planOrdinal = 0;
+  /** Stops on the route last recommended. Zero until one has been. */
+  lastRouteStops = 0;
   private previousPlanId: string | null = null;
   private previousRoute: { h3: string; band: number }[] = [];
   private previousValue = 0;
   private state: PlannerState = 'no-field';
   private deficits: DeficitState = new Map();
   private readonly informed = new Set<string>();
+  /**
+   * Soundings this planner has let inform its age field. Public for the same reason
+   * the monitor's residual count is: whether an ownship observation was mistaken for a
+   * measurement of the sea is a claim a test has to be able to check (FR-56).
+   */
+  soundingsInformed = 0;
   private platform: { latitude: number; longitude: number; depth_m: number } | undefined;
   private spreadHoldingId: string | undefined;
   private spreadDigest: string | null = null;
@@ -71,6 +79,11 @@ export class Planner {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `state ${this.state}; ${this.planOrdinal} recommendation(s) emitted`,
+        figures: [
+          { key: 'plans_emitted', value: this.planOrdinal, label: 'plans' },
+          { key: 'route_stops', value: this.lastRouteStops, label: 'stops' },
+          { key: 'soundings', value: this.soundingsInformed, label: 'soundings' },
+        ],
       }),
       runId,
       configDigest(config),
@@ -113,10 +126,17 @@ export class Planner {
    * observation naming the same pair informs nothing new.
    */
   private inform(observation: Observation): void {
+    // The age field says when the ocean was last measured here. An ownship
+    // observation measures the platform, so counting one would refresh confidence
+    // everywhere the platform went without a single sounding being taken — the trap
+    // this feature is most likely to spring, and the reason a test fails when this
+    // line is removed (FR-56).
+    if (this.config.excluded_datastreams?.includes(observation.datastream_id)) return;
     this.platform = { ...observation.location };
     const soundingKey = `${observation.thing_id}:${observation.tick}`;
     if (this.informed.has(soundingKey)) return;
     this.informed.add(soundingKey);
+    this.soundingsInformed += 1;
     const model = this.model();
     if (!model) return;
     const band = this.bandFor(observation.location.depth_m);
@@ -330,6 +350,7 @@ export class Planner {
     const now = this.posixNow();
     const horizonEnd = now + this.config.budget_seconds;
 
+    this.lastRouteStops = route.length;
     const vertices: PlanVertex[] = route.map((cell, index) => ({
       sequence: index,
       h3_index: cell.h3,

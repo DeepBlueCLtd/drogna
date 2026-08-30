@@ -229,22 +229,35 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
         if ((message.payload as { component: string }).component === 'sensors') sensorHeartbeats += 1;
       });
 
+      // Counted per datastream, not in total: since feature 113 the platform is
+      // publishing ownship rows into the same store, so a total row count would go on
+      // climbing with the sensors stopped and the assertion would pass for the wrong
+      // reason. What must freeze is the ocean sampling.
+      const oceanRows = () =>
+        runtime.observationStore.byDatastream(config.sensors.platform.thing_id, 'temperature-050m').length;
+      const ownshipRows = () =>
+        runtime.observationStore.byDatastream(config.platform.thing.thing_id, 'ownship-course').length;
+
       const stop = await get(runtime, `${config.operator.http.command_prefix}/sensors/stop`, 'POST');
       expect(stop.status).toBe(200);
-      const observationsAtStop = runtime.observationStore.count();
+      const observationsAtStop = oceanRows();
+      const ownshipAtStop = ownshipRows();
       const heartbeatsAtStop = sensorHeartbeats;
       for (let i = 0; i < 120; i++) runtime.clock.tickOnce();
       vi.advanceTimersByTime(10_000);
       // Silence, not a claim: no heartbeats, no samples, while the world runs on.
       expect(sensorHeartbeats).toBe(heartbeatsAtStop);
-      expect(runtime.observationStore.count()).toBe(observationsAtStop);
+      expect(oceanRows()).toBe(observationsAtStop);
+      // And the world genuinely ran on: the platform kept reporting throughout, which
+      // is what makes the sensors' silence a fact about the sensors.
+      expect(ownshipRows()).toBeGreaterThan(ownshipAtStop);
 
       const start = await get(runtime, `${config.operator.http.command_prefix}/sensors/start`, 'POST');
       expect(start.status).toBe(200);
       for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
       vi.advanceTimersByTime(3000);
       expect(sensorHeartbeats).toBeGreaterThan(heartbeatsAtStop);
-      expect(runtime.observationStore.count()).toBeGreaterThan(observationsAtStop);
+      expect(oceanRows()).toBeGreaterThan(observationsAtStop);
       runtime.stop();
     });
 

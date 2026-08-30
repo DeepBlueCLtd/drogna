@@ -126,6 +126,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       'offload',
       'operator',
       'planner',
+      'platform',
       'query',
       'scheduler',
       'sensors',
@@ -135,14 +136,16 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
       config.shell.components.length,
     );
-    // Every declared beat has now landed: nothing renders greyed.
-    expect(screen.queryAllByText('not heard').length).toBe(config.shell.components.length - 19);
+    // Every declared component has landed and is heard from: nothing renders greyed.
+    // Written against the declared length rather than a typed count, so a component
+    // added to the configuration and never built fails this rather than sliding past.
+    expect(screen.queryAllByText('not heard').length).toBe(0);
   });
 
   it('a component that stops goes dark because its heartbeats cease', () => {
     render(<SystemPanel {...panelProps(config, runtime)} />);
     act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(19);
+    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(20);
     runtime.stop();
     // Past every liveness window, with the sweep interval re-evaluating.
     act(() => vi.advanceTimersByTime(8000));
@@ -583,6 +586,16 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
       }
       expect(runtime.telemetry.lastRegionStatistics.length).toBeGreaterThan(0);
       render(<OperatorPanel {...panelProps(config, runtime)} />);
+      // The Operator tab is a flow chart now, and the telemetry these figures belong to
+      // is in the telemetry component's own drawer — which is where a reader goes to
+      // ask that component what it has to say. The figures are the same figures, from
+      // the same report, asserted the same way; only the route changed.
+      await act(async () => {
+        await settle(() => document.querySelector('[data-flow-node="telemetry"]') !== null);
+      });
+      await act(async () => {
+        fireEvent.click(document.querySelector('[data-flow-node="telemetry"]') as HTMLElement);
+      });
       await act(async () => {
         await settle(() => screen.queryByTestId('region-statistics') !== null);
       });

@@ -70,6 +70,16 @@ export class OffloadPackager {
         tick: this.simTime.tick,
         status: 'ok',
         detail: `${this.stagedBundles.length} bundle(s) staged, ${this.stagedBytes} of ${this.config.staging_bound_bytes} byte(s); announcement-only until V3`,
+        figures: [
+          { key: 'bundles', value: this.stagedBundles.length, label: 'bundles' },
+          {
+            key: 'staged_bytes',
+            value: this.stagedBytes,
+            of: this.config.staging_bound_bytes,
+            unit: 'B',
+            label: 'staged',
+          },
+        ],
       }),
       runId,
       configDigest(config),

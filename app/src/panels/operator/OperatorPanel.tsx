@@ -1,29 +1,114 @@
 /**
- * The Operator tab (FR-35, FR-36): the machinery interrogated. Component state as
- * the components report it (unheard is a statement, not a blank), commands with
- * their refusals surfaced verbatim, and telemetry — residual statistics for the
- * scenario and for each sampled region of the configured grid, forecast skill
- * against persistence in the telemetry component's own sentence, throughput per
- * simulation second, and end-to-end latency in simulation seconds (issue #61). Everything here crosses the seam as genuine
- * requests; a stopped component goes dark in System because its heartbeats cease,
- * never because a response here said so.
+ * The Operator tab (FR-35, FR-36, FR-57 to FR-59): the machinery interrogated, drawn
+ * as the picture the SRD has always said the architecture is — *a flow chart with a
+ * loop in it*. A table has no cycle in it, and consequence should be visible where the
+ * cause was applied: stop the platform here and the sensors' own sentence changes two
+ * nodes along.
  *
- * Narrow (feature 112, FR-010 to FR-012): telemetry is the primary surface — it is what
- * the tab is read for — and the two acting surfaces, the commands and the components
- * table, disclose beneath it under labels that name them. Wide, the three sections
- * render exactly as they did.
+ * What is drawn is derived, never authored (graph.ts): nodes are the declared
+ * components, topic edges come from the topology master, port edges are declared
+ * beside them because they carry no broker traffic. A gate fails the build when the
+ * picture and the wiring disagree.
+ *
+ * Illumination is heartbeats and nothing else, on the System tab's rule. Every figure
+ * says which of three kinds it is — declared, reported, observed — and a figure may
+ * not change kind between states.
+ *
+ * The table has not retired: it is the list view, fed from the same graph, with the
+ * same controls and the same refusals. An SVG graph is not a keyboard surface and not
+ * a screen-reader surface, and neither view is the other's fallback.
+ *
+ * The telemetry the tab has always carried is not lost in the redraw: the skill
+ * sentence, the residual statistics for the scenario and for each sampled region of
+ * the configured grid, throughput per simulation second, and end-to-end latency in
+ * simulation seconds (issue #61) are in the telemetry component's own drawer, which is
+ * where a reader now goes to ask that component what it has to say.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
-import { Disclosure } from '../../shell/Disclosure.js';
 import { useIsNarrow } from '../../shell/viewport.js';
-import type { OperatorComponents, TelemetryReport } from '../../generated/types.js';
+import { Disclosure } from '../../shell/Disclosure.js';
+import type { PanelParams } from '../../shell/Shell.js';
+import type {
+  Heartbeat,
+  Observation,
+  OperatorComponents,
+  PlatformState,
+  Telemetry,
+  TelemetryReport,
+  TelemetryResidualSampleReport,
+} from '../../generated/types.js';
+import { topology } from '../../generated/topology.js';
+import { displayInstant } from '../../shell/display.js';
+import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
+import { Series } from './series.js';
+import { FACES, type FaceContext } from './faces.js';
+import { FlowCanvas } from './FlowCanvas.js';
+import { DemandControl } from './DemandControl.js';
+import './operator.css';
+
+interface Heard {
+  heartbeat: Heartbeat;
+  heardAtHostMs: number;
+}
+
+/**
+ * What a component says about itself, and the two different silences. A heartbeat with
+ * no detail line is not an absent heartbeat: the clock, the broker and the release gate
+ * publish none, and reading them as never heard was the display inventing a silence
+ * that had not happened. Found by looking at the running page, not by a test.
+ */
+function detailOf(entry: Heard | undefined): string {
+  if (!entry) return 'no heartbeat has ever arrived';
+  return entry.heartbeat.detail ?? 'beating, and saying nothing beyond that';
+}
+
+const BAND_CAPTION: Record<Band, string> = {
+  loop: 'the loop — assimilation',
+  path: 'the path — sensing to serving',
+  downstream: 'deciding, advising, leaving',
+  plane: 'the plane the flow runs on',
+};
 
 export function OperatorPanel({ params }: PanelProps) {
   const { config, client, validator } = params;
+  const flow = useMemo(() => buildFlow(config, topology), [config]);
   const [components, setComponents] = useState<OperatorComponents | undefined>();
   const [report, setReport] = useState<TelemetryReport | undefined>();
+  const [platformState, setPlatformState] = useState<PlatformState | undefined>();
+  const [breach, setBreach] = useState<TelemetryResidualSampleReport['breach']>();
   const [refusal, setRefusal] = useState<string | undefined>();
+  const [selected, setSelected] = useState<string | undefined>();
+  const [asList, setAsList] = useState(false);
+  const [heard, setHeard] = useState<ReadonlyMap<string, Heard>>(new Map());
+  const [clock, setClock] = useState<{ tick: number | null; rate: number | undefined }>({
+    tick: null,
+    rate: undefined,
+  });
+  const holdingSizesRef = useRef<number[]>([]);
+  /**
+   * Ocean datastreams the shell has genuinely heard, in arrival order. Kept rather
+   * than typed into the sensors' face: a hardcoded list drew the pressure instrument
+   * as silent while it had been publishing all along.
+   */
+  const oceanStreamsRef = useRef<string[]>([]);
+  const [, setSweep] = useState(0);
+
+  // The rolling windows. Held in a ref rather than in state: they are drawn from, not
+  // rendered by identity, and a new Map per sample would re-render the whole graph on
+  // every message that crosses the broker.
+  const seriesRef = useRef(new Map<string, Series>());
+  const countedRef = useRef(new Map<string, number>());
+  const series = useCallback(
+    (key: string) => {
+      const existing = seriesRef.current.get(key);
+      if (existing) return existing;
+      const created = new Series(config.flow.series_samples);
+      seriesRef.current.set(key, created);
+      return created;
+    },
+    [config.flow.series_samples],
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const narrow = useIsNarrow(rootRef);
 
@@ -44,10 +129,94 @@ export function OperatorPanel({ params }: PanelProps) {
 
   useEffect(() => {
     void refresh();
-    // Refreshed when telemetry or heartbeats move — subscription, not polling.
-    const unsubscribe = client.subscribe(config.topics.heartbeat, () => void refresh());
-    return unsubscribe;
-  }, [client, config.topics.heartbeat, refresh]);
+    const stop = [
+      client.subscribe(config.topics.all, (message) => {
+        // Counted here, and marked as counted here: nobody publishes a throughput.
+        const namespace = message.topic.split('/')[0];
+        countedRef.current.set(namespace, (countedRef.current.get(namespace) ?? 0) + 1);
+        countedRef.current.set('all', (countedRef.current.get('all') ?? 0) + 1);
+      }),
+      client.subscribe(config.topics.heartbeat, (message) => {
+        const heartbeat = message.payload as Heartbeat;
+        const rows = heartbeat.figures?.find((entry) => entry.key === 'rows');
+        if (heartbeat.component === 'observation-store' && rows && heartbeat.tick !== null && heartbeat.tick !== undefined) {
+          // The store's own count, followed over simulation time: the growth line is
+          // a series of reported figures, not a rate the shell worked out.
+          series('store:rows').push(heartbeat.tick, rows.value);
+        }
+        setHeard((previous) => {
+          const next = new Map(previous);
+          // harness:allow-wallclock liveness evaluation measures arrival in host time (ADR-0006)
+          next.set(heartbeat.component, { heartbeat, heardAtHostMs: Date.now() });
+          return next;
+        });
+        void refresh();
+      }),
+      client.subscribe(config.topics.platform_state, (message) => {
+        const state = message.payload as PlatformState;
+        setPlatformState(state);
+        series('platform:course').push(state.tick, state.current.course_degrees);
+        series('platform:speed').push(state.tick, state.current.speed_m_per_s);
+      }),
+      client.subscribe(config.topics.clock, (message) => {
+        const sample = message.payload as { tick: number; rate?: number };
+        setClock({ tick: sample.tick, rate: sample.rate });
+      }),
+      client.subscribe(config.topics.holdings, (message) => {
+        // The store announces; the face draws the sizes the announcement carries.
+        const published = message.payload as { holding?: { field?: { byte_length?: number } } };
+        const bytes = published.holding?.field?.byte_length;
+        if (typeof bytes === 'number') {
+          holdingSizesRef.current = [bytes, ...holdingSizesRef.current].slice(0, 12);
+        }
+      }),
+      client.subscribe(config.topics.telemetry, (message) => {
+        const payload = message.payload as Telemetry;
+        if (!('kind' in payload) || payload.kind !== 'residual-sample') return;
+        // The monitor's own numbers, drawn as it reported them: the threshold it scores
+        // against and how far its streak has got. Recomputing either here would be a
+        // second implementation of the rule (FR-58).
+        setBreach(payload.breach);
+        for (const sample of payload.samples) {
+          series('residual').push(payload.tick, sample.residual_m_per_s);
+        }
+      }),
+      client.subscribe(config.topics.observations, (message) => {
+        const observation = message.payload as Observation;
+        // Counted here, and marked as counted here: nobody publishes a throughput.
+        countedRef.current.set(
+          `obs:${observation.datastream_id}`,
+          (countedRef.current.get(`obs:${observation.datastream_id}`) ?? 0) + 1,
+        );
+        countedRef.current.set('obs:all', (countedRef.current.get('obs:all') ?? 0) + 1);
+        series(`obs:${observation.datastream_id}`).push(observation.tick, observation.result);
+        if (
+          observation.thing_id !== 'ownship' &&
+          !oceanStreamsRef.current.includes(observation.datastream_id)
+        ) {
+          oceanStreamsRef.current = [...oceanStreamsRef.current, observation.datastream_id];
+        }
+      }),
+    ];
+    return () => stop.forEach((unsubscribe) => unsubscribe());
+  }, [
+    client,
+    config.topics.all,
+    config.topics.clock,
+    config.topics.heartbeat,
+    config.topics.holdings,
+    config.topics.observations,
+    config.topics.platform_state,
+    config.topics.telemetry,
+    refresh,
+    series,
+  ]);
+
+  useEffect(() => {
+    // harness:allow-wallclock liveness windows lapse in host time (ADR-0006)
+    const sweep = setInterval(() => setSweep((n) => n + 1), 1000);
+    return () => clearInterval(sweep);
+  }, []);
 
   const command = async (path: string, method = 'POST') => {
     const response = await fetch(path, { method });
@@ -56,26 +225,280 @@ export function OperatorPanel({ params }: PanelProps) {
     void refresh();
   };
 
+  // harness:allow-wallclock liveness evaluation measures arrival in host time (ADR-0006)
+  const nowMs = Date.now();
+  const stateOf = (id: string) => {
+    const entry = heard.get(id);
+    const record = components?.components.find((component) => component.id === id);
+    const windowSeconds =
+      entry?.heartbeat.liveness_window_seconds ?? config.liveness.default_window_seconds;
+    const lit = entry !== undefined && nowMs - entry.heardAtHostMs <= windowSeconds * 1000;
+    const word = lit
+      ? entry.heartbeat.status
+      : entry
+        ? record && !record.running
+          ? 'stopped'
+          : 'silent'
+        : 'unheard';
+    return { lit, word, entry, record };
+  };
+
+  /**
+   * What a face is allowed to draw from: the component's own heartbeat figures, the
+   * messages the shell subscribes to, and counts the shell made of traffic it heard
+   * itself. Nothing else — a face that reached past this would be drawing something
+   * nobody published (FR-008).
+   */
+  const faceContext = (id: string, heartbeat: Heartbeat | undefined): FaceContext => ({
+    id,
+    heartbeat,
+    platformState,
+    breach,
+    series,
+    counted: (key) => countedRef.current.get(key) ?? 0,
+    holdingSizes: holdingSizesRef.current,
+    oceanDatastreams: oceanStreamsRef.current,
+    clock,
+  });
+
+  const selectedNode = flow.nodes.find((node) => node.id === selected);
+
   return (
-    <div className="panel" ref={rootRef} data-narrow={narrow}>
-      <h3>Telemetry</h3>
-      {report ? (
+    <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
+      <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
+        <button
+          onClick={() => setAsList((value) => !value)}
+          data-testid="view-toggle"
+          aria-pressed={asList}
+        >
+          {asList ? 'show the flow chart' : 'show the list'}
+        </button>
+        <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
+          step the clock one tick
+        </button>
+        <span className="panel-footnote">
+          {flow.nodes.length} components · {flow.edges.length} edges derived from the topology ·{' '}
+          {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
+        </span>
+      </Disclosure>
+      {refusal && (
+        <p className="shell-refusal" data-testid="command-refusal">
+          {refusal}
+        </p>
+      )}
+
+      {asList ? (
+        <ListView
+          flow={flow}
+          stateOf={stateOf}
+          onSelect={setSelected}
+          command={command}
+          config={config}
+        />
+      ) : (
+        <FlowCanvas
+          nodes={flow.nodes}
+          edges={flow.edges}
+          bandOrder={BANDS}
+          bandCaption={(band) => BAND_CAPTION[band as Band]}
+          selected={selected}
+          stateOf={(id) => {
+            const { lit, word } = stateOf(id);
+            return { lit, word };
+          }}
+          onSelect={(id) => setSelected(id === selected ? undefined : id)}
+          renderNode={(node) => {
+            const { lit, word, entry, record } = stateOf(node.id);
+            const face = FACES[node.id];
+            return (
+              <span className={lit ? 'flow-node-body flow-node-lit' : 'flow-node-body flow-node-dark'}>
+                <span className="flow-node-head">
+                  <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
+                  <span className="flow-node-name">{node.label}</span>
+                  {record && !record.stoppable ? (
+                    <svg
+                      className="flow-node-lock"
+                      viewBox="0 0 12 14"
+                      role="img"
+                      aria-label="protected from the operator plane by rule"
+                    >
+                      <path d="M 3 6 a 3 3 0 0 1 6 0" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                      <rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                  ) : null}
+                </span>
+                {/* Lit or dark, the face draws only what was reported; a dark node's
+                    figures keep the simulation time they were reported at. */}
+                <span className="flow-node-face">
+                  {face ? face(faceContext(node.id, entry?.heartbeat)) : null}
+                </span>
+                <span className="flow-node-state">
+                  {word}
+                  <i>{entry ? displayInstant(entry.heartbeat.sim_time) : 'never heard'}</i>
+                </span>
+              </span>
+            );
+          }}
+        />
+      )}
+
+      {selectedNode ? (
+        <Drawer
+          node={selectedNode}
+          state={stateOf(selectedNode.id)}
+          flow={flow}
+          config={config}
+          faceContext={faceContext}
+          report={report}
+          counted={(key) => countedRef.current.get(key) ?? 0}
+          command={command}
+          onClose={() => setSelected(undefined)}
+        />
+      ) : (
+        <p className="panel-footnote">
+          Select a component to open its account. Structure above is declared configuration; a node
+          is lit only because a heartbeat from it arrived within its declared window, and every
+          figure says whether it was declared, reported by the component, or counted here.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** What a node's chrome needs to know, shared by the graph, the list and the drawer. */
+interface StateOf {
+  lit: boolean;
+  word: string;
+  entry: Heard | undefined;
+  record: OperatorComponents['components'][number] | undefined;
+}
+
+function ListView({
+  flow,
+  stateOf,
+  onSelect,
+  command,
+  config,
+}: {
+  flow: ReturnType<typeof buildFlow>;
+  stateOf: (id: string) => StateOf;
+  onSelect: (id: string) => void;
+  command: (path: string, method?: string) => void | Promise<void>;
+  config: PanelParams['config'];
+}) {
+  return (
+    <table className="system-grid" data-testid="operator-components">
+      <thead>
+        <tr>
+          <th>component</th>
+          <th>state</th>
+          <th>last heard (sim time)</th>
+          <th>what it says about itself</th>
+          <th>control</th>
+        </tr>
+      </thead>
+      <tbody>
+        {flow.nodes.map((node) => {
+          const { lit, word, entry, record } = stateOf(node.id);
+          return (
+            <tr key={node.id} data-operator-component={node.id} data-lit={lit}>
+              <td>
+                <button className="link-button" onClick={() => onSelect(node.id)}>
+                  {node.label}
+                </button>
+              </td>
+              <td>{word}</td>
+              <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>
+              <td>{detailOf(entry)}</td>
+              <td>
+                {record?.stoppable ? (
+                  <>
+                    <button
+                      onClick={() =>
+                        void command(
+                          `${config.endpoints.component_command}/${node.id}/${record.running ? 'stop' : 'start'}`,
+                        )
+                      }
+                    >
+                      {record.running ? 'stop' : 'start'}
+                    </button>{' '}
+                    <button onClick={() => void command(`${config.endpoints.component_command}/${node.id}/restart`)}>
+                      restart
+                    </button>
+                  </>
+                ) : (
+                  'protected'
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function Drawer({
+  node,
+  state,
+  flow,
+  config,
+  faceContext,
+  report,
+  counted,
+  command,
+  onClose,
+}: {
+  node: FlowNode;
+  state: StateOf;
+  flow: ReturnType<typeof buildFlow>;
+  config: PanelParams['config'];
+  faceContext: (id: string, heartbeat: Heartbeat | undefined) => FaceContext;
+  report: TelemetryReport | undefined;
+  counted: (key: string) => number;
+  command: (path: string, method?: string) => void | Promise<void>;
+  onClose: () => void;
+}) {
+  const { entry, record } = state;
+  const inbound = flow.edges.filter((edge) => edge.to === node.id);
+  const outbound = flow.edges.filter((edge) => edge.from === node.id);
+  return (
+    <aside className="flow-drawer" data-testid="flow-drawer" data-drawer-component={node.id}>
+      <div className="flow-drawer-head">
+        <h3>{node.label}</h3>
+        <button onClick={onClose} aria-label="close">
+          ×
+        </button>
+      </div>
+      <p className="flow-drawer-state">
+        <span className={`status-dot status-${state.lit ? entry?.heartbeat.status : 'dark'}`} />
+        {state.word}
+        {entry ? ` · heard at ${displayInstant(entry.heartbeat.sim_time)}` : ' · nothing has ever arrived'}
+      </p>
+      <p className="flow-drawer-detail">{detailOf(entry)}</p>
+
+      {/* The node's own instrument again at full size: the drawer is where a reader
+          goes to read it rather than to glance at it. */}
+      <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
+      {node.id === 'platform' ? <DemandControl config={config} onRefusal={() => undefined} /> : null}
+      {node.id === 'telemetry' && report ? (
         <div className="operator-telemetry">
-          <p data-testid="skill-statement">
+          <p className="flow-drawer-detail" data-testid="skill-statement">
             <strong>skill:</strong> {report.skill?.statement ?? 'nothing published yet'}
             {report.skill?.freshness === 'stale' && <span className="shell-refusal"> (stale)</span>}
           </p>
-          <p>
+          <p className="flow-drawer-detail">
             <strong>residuals:</strong>{' '}
             {report.statistics && report.statistics.count > 0
               ? `${report.statistics.count} scored · mean |r| ${report.statistics.mean_absolute_m_per_s?.toFixed(2)} m/s · rms ${report.statistics.root_mean_square_m_per_s?.toFixed(2)} m/s`
               : (report.statistics?.state ?? 'nothing published yet')}
           </p>
-          <p>
-            <strong>throughput:</strong> {report.throughput.observations_per_sim_second.toFixed(3)} obs/sim-s ·{' '}
+          <p className="flow-drawer-detail">
+            <strong>throughput:</strong>{' '}
+            {report.throughput.observations_per_sim_second.toFixed(3)} obs/sim-s ·{' '}
             {report.throughput.telemetry_messages_per_sim_second.toFixed(3)} telemetry msg/sim-s
           </p>
-          <p data-testid="latency">
+          <p className="flow-drawer-detail" data-testid="latency">
             <strong>latency:</strong>{' '}
             {report.latency.sample_count === 0
               ? 'nothing folded yet — no figure rather than a zero'
@@ -123,77 +546,51 @@ export function OperatorPanel({ params }: PanelProps) {
             )}
           </div>
         </div>
-      ) : (
-        <p className="panel-footnote">no telemetry report yet</p>
-      )}
+      ) : null}
+      {node.id === 'observation-store' ? (
+        <p className="flow-drawer-counted">
+          {counted('obs:all')} observations counted here, from traffic the shell heard itself
+        </p>
+      ) : null}
 
-      <Disclosure label="commands" narrow={narrow} className="operator-commands">
-      {!narrow && <h3>Commands</h3>}
-      <p>
-        <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
-          step the clock one tick
-        </button>
-        <span className="panel-footnote">
-          {' '}
-          rate lives in the header; commands are ephemeral and outside the replay claim
-        </span>
-      </p>
-      {refusal && (
-        <p className="shell-refusal" data-testid="command-refusal">
-          {refusal}
+      <h4>wires</h4>
+      <ul className="flow-wires">
+        {inbound.map((edge) => (
+          <li key={`in-${edge.from}-${edge.label}`}>
+            <span className={`flow-wire flow-wire-${edge.kind}`} /> from <b>{edge.from}</b> — {edge.label}
+            {edge.kind === 'port' ? ' (a port: no broker traffic crosses it)' : ''}
+          </li>
+        ))}
+        {outbound.map((edge) => (
+          <li key={`out-${edge.to}-${edge.label}`}>
+            <span className={`flow-wire flow-wire-${edge.kind}`} /> to <b>{edge.to}</b> — {edge.label}
+            {edge.kind === 'port' ? ' (a port: no broker traffic crosses it)' : ''}
+          </li>
+        ))}
+      </ul>
+
+      {record?.stoppable ? (
+        <p>
+          <button
+            onClick={() =>
+              void command(
+                `${config.endpoints.component_command}/${node.id}/${record.running ? 'stop' : 'start'}`,
+              )
+            }
+            data-testid="drawer-stop"
+          >
+            {record.running ? 'stop' : 'start'}
+          </button>{' '}
+          <button onClick={() => void command(`${config.endpoints.component_command}/${node.id}/restart`)}>
+            restart
+          </button>
+        </p>
+      ) : (
+        <p className="panel-footnote">
+          protected from the operator plane by rule: stopping it would take the evidence of the
+          stopping with it.
         </p>
       )}
-      </Disclosure>
-
-      <Disclosure label="components, as they report themselves" narrow={narrow} className="operator-components">
-      {!narrow && <h3>Components, as they report themselves</h3>}
-      <div className="table-scroll">
-      <table className="system-grid" data-testid="operator-components">
-        <thead>
-          <tr>
-            <th>component</th>
-            <th>reported</th>
-            <th>control</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {components?.components.map((component) => (
-            <tr key={component.id} data-operator-component={component.id}>
-              <td>{component.id}</td>
-              <td>
-                {component.heard
-                  ? `${component.last_heartbeat?.status} · ${component.last_heartbeat?.detail ?? ''}`
-                  : 'unheard — no heartbeat has ever arrived'}
-              </td>
-              <td>{component.stoppable ? (component.running ? 'running' : 'stopped') : 'protected'}</td>
-              <td>
-                {component.stoppable && (
-                  <>
-                    <button
-                      onClick={() =>
-                        void command(`${config.endpoints.component_command}/${component.id}/${component.running ? 'stop' : 'start'}`)
-                      }
-                    >
-                      {component.running ? 'stop' : 'start'}
-                    </button>{' '}
-                    <button onClick={() => void command(`${config.endpoints.component_command}/${component.id}/restart`)}>
-                      restart
-                    </button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-      <p className="panel-footnote">
-        This table is what components say about themselves, aggregated. Whether one is
-        alive is the System tab&rsquo;s heartbeat column; a stopped component goes dark
-        there because its heartbeats cease, not because a command claimed success.
-      </p>
-      </Disclosure>
-    </div>
+    </aside>
   );
 }

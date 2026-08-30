@@ -12,6 +12,7 @@
     "topics",
     "message_schemas",
     "endpoints",
+    "flow",
     "liveness",
     "messages"
   ],
@@ -54,7 +55,9 @@
         "required": [
           "id",
           "label",
-          "beat"
+          "beat",
+          "band",
+          "rank"
         ],
         "additionalProperties": false,
         "properties": {
@@ -67,8 +70,18 @@
           "beat": {
             "type": "integer",
             "minimum": 101,
-            "maximum": 109,
-            "description": "The narrative beat (feature number) at which this component lands."
+            "maximum": 112,
+            "description": "The narrative beat (feature number) at which this component lands. The ceiling is the highest landed feature rather than absent: a component declared at a beat that does not exist is a typo worth catching."
+          },
+          "band": {
+            "type": "string",
+            "enum": ["plane", "loop", "path", "downstream"],
+            "description": "Which band of the Operator flow chart this component sits in (FR-052): the plane every component runs on, the assimilation loop, the observation path, or what comes after it. Structure from declaration; nothing here can light anything (Constitution VII)."
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Left-to-right position within the band. Declared rather than solved for: a layout that moves between renders cannot be learned and cannot be tested."
           }
         }
       }
@@ -82,7 +95,10 @@
         "all",
         "plan",
         "run_published",
-        "advisories"
+        "advisories",
+        "platform_state",
+        "observations",
+        "telemetry"
       ],
       "additionalProperties": false,
       "properties": {
@@ -107,6 +123,18 @@
         },
         "advisories": {
           "$ref": "config.common.schema.json#/$defs/topic_filter"
+        },
+        "platform_state": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The platform's own report of demanded beside current (FR-047). Read by the Operator flow chart's platform face and by the Map's demanded-course ray; the track itself is a query, not this."
+        },
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The telemetry branch. The monitor's residual samples carry the threshold it scores against and how far its streak has got, so the Operator's drift face draws the monitor's own numbers rather than a second implementation of the rule (FR-58)."
+        },
+        "observations": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The observation namespace, for the sensors' and stores' faces to count what genuinely crossed the broker. Counted here and marked as counted here, never presented as a figure a component reported (FR-008)."
         }
       }
     },
@@ -142,6 +170,8 @@
         "telemetry",
         "clock_step",
         "component_command",
+        "platform_demand",
+        "sensorthings",
         "edr",
         "features",
         "query_subsets"
@@ -167,6 +197,14 @@
         "component_command": {
           "$ref": "config.common.schema.json#/$defs/relative_path"
         },
+        "platform_demand": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Where the shell POSTs a demanded course, speed and depth. It goes to the operator surface, which publishes it on the broker: the shell connects under a role that may never publish (E13), so a front-end reaching the demand topic directly would be a front-end that had stopped being one."
+        },
+        "sensorthings": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "The SensorThings prefix. The Map reads the ownship track from it as ordinary Observations \u2014 the same read any client would make (FR-055)."
+        },
         "edr": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "The EDR prefix the Map panel and the composer issue genuine GETs against."
@@ -178,6 +216,38 @@
         "query_subsets": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "Where the subset statement is served; the composer offers only what it states."
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["suppressed_filters", "ports", "series_samples"],
+      "additionalProperties": false,
+      "description": "What the Operator flow chart needs that the topology master cannot supply (FR-052 to FR-054). Edges themselves are NOT here: topic edges are derived from contracts/topology.json, so the picture cannot disagree with the wiring, and a gate fails the build when a declared component is undrawn or a topology edge is neither drawn nor suppressed.",
+      "properties": {
+        "suppressed_filters": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Topic filters drawn as the plane the flow runs on rather than as edges. Exactly two earn it: every component subscribes to the clock and publishes heartbeats, so drawing them is forty edges that hide the ones carrying meaning. The panel names the suppression on screen; a third entry here needs FR-004 amended."
+        },
+        "ports": {
+          "type": "array",
+          "description": "Couplings that carry no broker traffic and therefore never pulse: the world-sampler port and the store interfaces. Declared because they cannot be derived from a topology of topics \u2014 without them the environment generator, which publishes nothing but heartbeats, sits isolated in a picture of a system it is the source of.",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "$ref": "config.common.schema.json#/$defs/component_id" },
+              "to": { "$ref": "config.common.schema.json#/$defs/component_id" },
+              "label": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "series_samples": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How many samples each face's rolling series holds. In memory, discarded on reload, never persisted and never served: a window that outlived the page would be a second store. The bound is here rather than in the panel so it is not a number typed into a component (Constitution IV)."
         }
       }
     },

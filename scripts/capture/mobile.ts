@@ -74,6 +74,14 @@ const MAY_SCROLL_SIDEWAYS = [
   '.stack-tabs',
   '.table-scroll',
   '.bg-figure-pan',
+  // The Operator flow chart (feature 113). It is the second instance of the same case
+  // as `.bg-figure-pan`: a diagram whose geometry is its meaning, drawn at the size it
+  // needs and panned rather than shrunk past legibility. Squeezing fifty routed edges
+  // into 360 pixels would not be a smaller picture of the system, and the narrow
+  // presentation folds the panel's controls instead — it may fold a surface, never
+  // remove one, which is why the list view is not this canvas's small-screen
+  // replacement. Every other view is still held to the rule.
+  '.flow-canvas-scroll',
   '.messages-list-scroll',
   '.message-detail',
   'pre',

@@ -35,7 +35,7 @@
  * simulation seconds (issue #61) are in the telemetry component's own drawer, which is
  * where a reader now goes to ask that component what it has to say.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import { useIsNarrow } from '../../shell/viewport.js';
 import { Disclosure } from '../../shell/Disclosure.js';
@@ -56,6 +56,7 @@ import { topology } from '../../generated/topology.js';
 import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { BANDS, buildFlow, type Band, type FlowNode } from './graph.js';
+import { METRICS, NARROW_METRICS } from './layout.js';
 import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
@@ -363,6 +364,89 @@ export function OperatorPanel({ params }: PanelProps) {
 
   const selectedNode = flow.nodes.find((node) => node.id === selected);
 
+  /**
+   * The components in the order the arrows walk them, which is `flow.nodes` itself and
+   * nothing this file decides: the graph is built in the order the chart is drawn in —
+   * band by band down the arc, rank by rank across each — by the same rule the layout
+   * places by (`inReadingOrder`). A sort of its own here would be a second opinion about
+   * the order, agreeing with the picture today and free to drift from it later, and a
+   * reader following a sequence the picture does not show is worse off than one with no
+   * arrows at all.
+   */
+  const order = flow.nodes;
+  /**
+   * How the open card was arrived at, for the keyboard. Stepping with an arrow must
+   * leave the focus on the arrow — the card it was in is gone and a new one is in the
+   * document, so without this the second press has nothing to press.
+   */
+  const arrivedBy = useRef<'card' | 'step-previous' | 'step-next'>('card');
+  /**
+   * ← and → walk the components, from wherever the reader's focus is in the open card.
+   *
+   * The first cut of the walk left these keys unbound, for a real reason: the card holds
+   * range inputs, and a range input's own keys *are* the arrow keys, so a handler at the
+   * card would have taken fine adjustment away from every tuning control in order to move
+   * the card. The reason was right and the conclusion was not — the fix is to leave the
+   * keys with the control that owns them and take them everywhere else, which is what
+   * this does. A slider, a number field, a text field or a select keeps its arrows; the
+   * card takes them anywhere else, including on the arrow buttons themselves, so a reader
+   * who has stepped once can keep going without moving their hands.
+   *
+   * A modifier means something else is being asked for — a browser's own back, a word
+   * jump — and is left alone.
+   */
+  const walkKeys = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (direction === 0) return;
+    const from = event.target as HTMLElement;
+    if (from.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    step(direction);
+  };
+
+  const step = (direction: -1 | 1) => {
+    const at = order.findIndex((node) => node.id === selected);
+    if (at < 0) return;
+    // Round, because the chart is: the arc has no first or last component, and an arrow
+    // that stopped would be answering a question about the list rather than the system.
+    // Where it goes is named on the control itself, so the wrap is never a surprise.
+    arrivedBy.current = direction === 1 ? 'step-next' : 'step-previous';
+    setSelected(order[(at + direction + order.length) % order.length].id);
+  };
+
+  /**
+   * A component's full account: its state, its instrument at full size, the controls it
+   * takes and the wires it is on. One component, rendered in the one place the reader
+   * asked for it — inside the node in the chart, below the table in the list.
+   */
+  const account = (node: FlowNode, where: 'in-place' | 'below') => (
+    <Drawer
+      node={node}
+      where={where}
+      onKeys={walkKeys}
+      walk={{
+        at: order.findIndex((entry) => entry.id === node.id) + 1,
+        of: order.length,
+        previous: order[(order.findIndex((entry) => entry.id === node.id) + order.length - 1) % order.length],
+        next: order[(order.findIndex((entry) => entry.id === node.id) + 1) % order.length],
+      }}
+      onStep={step}
+      state={stateOf(node.id)}
+      flow={flow}
+      config={config}
+      faceContext={faceContext}
+      report={report}
+      controls={controls}
+      platformState={platformState}
+      decision={decision}
+      counted={(key) => countedRef.current.get(key) ?? 0}
+      command={command}
+      onRefusal={setRefusal}
+      onClose={() => setSelected(undefined)}
+    />
+  );
+
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
       {/* The tab carries its own help control (FR-70, ADR-0037). This is the tour that
@@ -429,11 +513,23 @@ export function OperatorPanel({ params }: PanelProps) {
           bandOrder={BANDS}
           bandCaption={(band) => BAND_CAPTION[band as Band]}
           selected={selected}
+          // A phone's space is vertical, so the open card is a different shape there.
+          metrics={narrow ? NARROW_METRICS : METRICS}
+          openFocus={arrivedBy.current}
+          // The open node is what holds the focus in the chart, so it is what hears the
+          // walk's keys — including from everything inside it, by bubbling.
+          onOpenKeyDown={walkKeys}
           stateOf={(id) => {
             const { lit, word } = stateOf(id);
             return { lit, word };
           }}
-          onSelect={(id) => setSelected(id === selected ? undefined : id)}
+          onSelect={(id) => {
+            arrivedBy.current = 'card';
+            setSelected(id === selected ? undefined : id);
+          }}
+          // The open node *is* the account: the reader stays where they clicked, and
+          // the instrument they came to read is at a size they can read it at.
+          renderExpanded={(node) => account(node, 'in-place')}
           renderNode={(node) => {
             const { lit, word, entry, record } = stateOf(node.id);
             const face = FACES[node.id];
@@ -480,27 +576,18 @@ export function OperatorPanel({ params }: PanelProps) {
 
       <Legend />
 
-      {selectedNode ? (
-        <Drawer
-          node={selectedNode}
-          state={stateOf(selectedNode.id)}
-          flow={flow}
-          config={config}
-          faceContext={faceContext}
-          report={report}
-          controls={controls}
-          platformState={platformState}
-          decision={decision}
-          counted={(key) => countedRef.current.get(key) ?? 0}
-          command={command}
-          onRefusal={setRefusal}
-          onClose={() => setSelected(undefined)}
-        />
-      ) : (
+      {/* The list is a column of rows and has no room to open one of them in place, so
+          there the account still opens below the table. It is the same account, from the
+          same component, with the same controls and the same refusals (FR-015). */}
+      {asList && selectedNode ? account(selectedNode, 'below') : null}
+
+      {selectedNode ? null : (
         <p className="panel-footnote">
-          Select a component to open its account. Structure above is declared configuration; a node
-          is lit only because a heartbeat from it arrived within its declared window, and every
-          figure says whether it was declared, reported by the component, or counted here.
+          Select a component to open it: the node expands where it stands, carrying its
+          instrument at a readable size and the controls that act on it, and the rest of the
+          chart moves aside for it. Structure above is declared configuration; a node is lit only
+          because a heartbeat from it arrived within its declared window, and every figure says
+          whether it was declared, reported by the component, or counted here.
         </p>
       )}
     </div>
@@ -675,8 +762,22 @@ function ListView({
   );
 }
 
+/**
+ * A component's account. Since feature 117 this is drawn inside the node itself in the
+ * chart — the reason the panel was sent back was that a 208-pixel card could be glanced
+ * at and not read, and an account that opened somewhere else made the reader carry the
+ * node's name across the page to find it. In the list view, where a row has nowhere to
+ * expand into, it still opens below the table.
+ *
+ * The content does not change between the two: same figures, same controls, same
+ * refusals. Only the chrome does.
+ */
 function Drawer({
   node,
+  where,
+  walk,
+  onStep,
+  onKeys,
   state,
   flow,
   config,
@@ -691,6 +792,13 @@ function Drawer({
   onClose,
 }: {
   node: FlowNode;
+  /** In the node it belongs to, or below the list that has no room for it. */
+  where: 'in-place' | 'below';
+  /** Where this component sits in the order the chart reads, and its two neighbours. */
+  walk: { at: number; of: number; previous: FlowNode; next: FlowNode };
+  onStep: (direction: -1 | 1) => void;
+  /** ← and → walk the components. See `walkKeys`. */
+  onKeys: (event: KeyboardEvent<HTMLElement>) => void;
   state: StateOf;
   flow: ReturnType<typeof buildFlow>;
   config: PanelParams['config'];
@@ -710,10 +818,57 @@ function Drawer({
   const inbound = flow.edges.filter((edge) => edge.to === node.id);
   const outbound = flow.edges.filter((edge) => edge.from === node.id);
   return (
-    <aside className="flow-drawer" data-testid="flow-drawer" data-drawer-component={node.id}>
+    <div
+      className={where === 'in-place' ? 'flow-drawer flow-drawer-in-place' : 'flow-drawer'}
+      data-testid="flow-drawer"
+      data-drawer-component={node.id}
+      data-drawer-where={where}
+      {...(where === 'below'
+        ? // In the list the account itself is what a reader is in, so it hears the keys
+          // and can be focused to start hearing them. In the chart the open node hears
+          // them already — everything in here bubbles up to it — so a listener here as
+          // well would be a second call on one press. Planting that showed it changes
+          // nothing today, because both calls read the same selection and ask for the
+          // same next component; that is a property of this render, not a design, and
+          // one listener with one job does not need it to hold.
+          { onKeyDown: onKeys, tabIndex: -1 }
+        : {})}
+    >
       <div className="flow-drawer-head">
         <h3>{node.label}</h3>
-        <button onClick={onClose} aria-label="close">
+        {/* Forward and back through the components, in the order the chart draws them.
+            Each arrow names the component it will open, so the reader knows what they
+            are about to get and the wrap at either end is stated rather than sprung —
+            and so a screen reader announces a destination rather than a glyph.
+
+            ← and → do the same from the keyboard, everywhere in the card except inside a
+            control whose own keys they are (`walkKeys`). The shortcut is declared on the
+            buttons rather than only implemented, so it is discoverable by the reader who
+            most needs it. */}
+        <span className="flow-drawer-walk">
+          <button
+            data-step="previous"
+            onClick={() => onStep(-1)}
+            aria-label={`back to ${walk.previous.label}`}
+            aria-keyshortcuts="ArrowLeft"
+            title={`back to ${walk.previous.label} (left arrow)`}
+          >
+            ←
+          </button>
+          <span className="flow-drawer-place" data-walk-place={`${walk.at}/${walk.of}`}>
+            {walk.at} of {walk.of}
+          </span>
+          <button
+            data-step="next"
+            onClick={() => onStep(1)}
+            aria-label={`on to ${walk.next.label}`}
+            aria-keyshortcuts="ArrowRight"
+            title={`on to ${walk.next.label} (right arrow)`}
+          >
+            →
+          </button>
+        </span>
+        <button onClick={onClose} aria-label={`close ${node.label}`} data-testid="drawer-close">
           ×
         </button>
       </div>
@@ -867,6 +1022,6 @@ function Drawer({
           stopping with it.
         </p>
       )}
-    </aside>
+    </div>
   );
 }

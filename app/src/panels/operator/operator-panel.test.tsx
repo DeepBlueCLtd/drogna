@@ -19,7 +19,8 @@ import { createSeamFetch } from '../../seam/http.js';
 import { topology } from '../../generated/topology.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { OperatorPanel } from './OperatorPanel.js';
-import { buildFlow } from './graph.js';
+import { BANDS, buildFlow } from './graph.js';
+import { inReadingOrder } from './layout.js';
 import { componentsWithoutFaces } from './faces.js';
 
 const validator = createSeamValidator();
@@ -359,6 +360,440 @@ describe('the Operator flow chart (feature 113)', () => {
       fireEvent.click(document.querySelector('[data-flow-node="monitor"]') as HTMLElement);
     });
     expect(screen.getByTestId('flow-drawer').textContent).toContain('no residual has been reported yet');
+  });
+
+  /**
+   * Feature 117: the node opens where it stands. The tab was sent back because a
+   * 208×116 card could be glanced at and not read — the instrument was legible only as
+   * a shape, and a slider in it was not usable at all. What is held here is the
+   * behaviour that answers it, and specifically the part a stylesheet could not have
+   * done: the account is *in the node*, and the chart moves aside rather than covering
+   * what the reader was looking at.
+   */
+  describe('opening a node where it stands (feature 117)', () => {
+    /** The absolutely-positioned slot the canvas places a node in. */
+    const slotOf = (id: string) =>
+      document.querySelector(`[data-flow-node="${id}"]`)?.closest('.flow-node-slot') as HTMLElement;
+    const boxOf = (id: string) => ({
+      width: Number.parseFloat(slotOf(id).style.width),
+      height: Number.parseFloat(slotOf(id).style.height),
+      left: Number.parseFloat(slotOf(id).style.left),
+      top: Number.parseFloat(slotOf(id).style.top),
+    });
+    /** Click a node and let the chart finish rearranging (feature 117's animation). */
+    const open = async (id: string) => {
+      await act(async () => {
+        fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+    };
+    /** Click a node and stop part-way through the rearrangement. */
+    const openPartway = async (id: string) => {
+      await act(async () => {
+        fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+      // Two frames of the 200ms move: far enough in to have moved, nowhere near done.
+      await act(async () => {
+        vi.advanceTimersByTime(32);
+      });
+    };
+
+    it('opens the account inside the node itself, not somewhere the reader has to go and find', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(screen.queryByTestId('flow-drawer')).toBeNull();
+      await open('monitor');
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.getAttribute('data-drawer-where')).toBe('in-place');
+      // Inside the node it belongs to — the assertion the old drawer could not have
+      // passed, since it hung below the whole chart.
+      expect(document.querySelector('[data-flow-node="monitor"]')?.contains(drawer)).toBe(true);
+      // And its controls came with it: this is the reason the node stopped being a
+      // button, because a button may not contain one.
+      expect(drawer.querySelector('[data-tunable="drift-threshold"]')).toBeTruthy();
+    });
+
+    it('gives the open node room, and the rest of the picture moves out of its way', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const flow = buildFlow(config.shell, topology);
+      const opened = 'monitor';
+      const band = flow.nodes.find((node) => node.id === opened)?.band;
+      // A node after it in the same band, and one in a band below: the two directions
+      // the reflow has to work in.
+      const rank = flow.nodes.find((node) => node.id === opened)?.rank ?? 0;
+      const along = flow.nodes.find((node) => node.band === band && node.rank > rank);
+      const below = flow.nodes.find((node) => node.band !== band && node.rank === 0);
+      if (!along || !below) throw new Error('the chart has no neighbour to be moved aside');
+
+      const restingOpen = boxOf(opened);
+      const restingAlong = boxOf(along.id);
+      const restingBelow = boxOf(below.id);
+      const canvas = () => document.querySelector('[data-testid="flow-chart"]') as HTMLElement;
+      // Height, not width: the band a node opens in may not be the widest band, but
+      // every band below it moves down, so the canvas always gets taller.
+      const restingCanvas = Number.parseFloat(canvas().style.height);
+
+      await open(opened);
+      expect(boxOf(opened).width).toBeGreaterThan(restingOpen.width);
+      expect(boxOf(opened).height).toBeGreaterThan(restingOpen.height);
+      // Moved along, not covered: the neighbour's left edge is past the open node's
+      // right edge, and it is still the same size it was.
+      expect(boxOf(along.id).left).toBeGreaterThanOrEqual(boxOf(opened).left + boxOf(opened).width);
+      expect(boxOf(along.id).width).toBe(restingAlong.width);
+      expect(boxOf(along.id).left).toBeGreaterThan(restingAlong.left);
+      // And the canvas grew to hold it rather than clipping it.
+      expect(Number.parseFloat(canvas().style.height)).toBeGreaterThan(restingCanvas);
+      expect(boxOf(below.id).top).toBeGreaterThan(restingBelow.top);
+      expect(boxOf(below.id).left).toBe(restingBelow.left);
+
+      // Closing puts everything back where the reader learned it was.
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('drawer-close'));
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(boxOf(opened)).toEqual(restingOpen);
+      expect(boxOf(along.id)).toEqual(restingAlong);
+      expect(boxOf(below.id)).toEqual(restingBelow);
+      expect(screen.queryByTestId('flow-drawer')).toBeNull();
+    });
+
+    it('leaves the keyboard on the node it opened, and back on it when it closes', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('scheduler');
+      // The button that was focused no longer exists; without this the focus ring falls
+      // to the document and a keyboard reader is returned to the top of the tab.
+      expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('drawer-close'));
+        vi.advanceTimersByTime(400);
+      });
+      expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
+      expect(document.activeElement?.tagName).toBe('BUTTON');
+    });
+
+    it('draws the rearrangement rather than jumping to it, so the eye can follow it', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const resting = boxOf('monitor');
+      await openPartway('monitor');
+      const moving = boxOf('monitor');
+      // Part-way: bigger than it was and smaller than it will be. A jump passes neither
+      // of these, and this is the whole of what the author asked for — a card that
+      // arrives at full size between two frames is a card nobody saw grow.
+      expect(moving.width).toBeGreaterThan(resting.width);
+      expect(moving.height).toBeGreaterThan(resting.height);
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      const settled = boxOf('monitor');
+      expect(moving.width).toBeLessThan(settled.width);
+      expect(moving.height).toBeLessThan(settled.height);
+    });
+
+    it('keeps every wire on the node it is moving, frame by frame', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await openPartway('monitor');
+      const box = boxOf('monitor');
+      const leaving = [...document.querySelectorAll('[data-flow-edge^="monitor->"]')];
+      expect(leaving.length).toBeGreaterThan(0);
+      for (const edge of leaving) {
+        const start = /^M (-?[\d.]+),(-?[\d.]+)/.exec(edge.getAttribute('d') ?? '');
+        expect(start, edge.getAttribute('data-flow-edge') ?? '').toBeTruthy();
+        const [x, y] = [Number(start?.[1]), Number(start?.[2])];
+        // A wire leaves one of the four faces of the box as it is drawn *now*. This is
+        // the reason the movement is a tween over the geometry and not a CSS transition
+        // on the boxes: a transition glides the cards and leaves fifty wires pointing at
+        // where those cards used to be for as long as it lasts.
+        const onAFace =
+          Math.abs(x - box.left) < 1 ||
+          Math.abs(x - (box.left + box.width)) < 1 ||
+          Math.abs(y - box.top) < 1 ||
+          Math.abs(y - (box.top + box.height)) < 1;
+        expect(onAFace, `${edge.getAttribute('data-flow-edge')} at ${x},${y}`).toBe(true);
+      }
+    });
+
+    it('moves nothing at all for a reader who asked for that', async () => {
+      // FR-016: the graph respects prefers-reduced-motion. The platform is asked rather
+      // than assumed, and when it says yes the new placement is committed on the frame
+      // the click landed on — the picture this tab drew before the animation existed.
+      const asked = vi
+        .spyOn(globalThis, 'matchMedia')
+        .mockImplementation(
+          (query: string) =>
+            ({ matches: query.includes('prefers-reduced-motion'), media: query }) as MediaQueryList,
+        );
+      try {
+        render(<OperatorPanel {...panelProps(config, runtime)} />);
+        await act(async () => {
+          vi.advanceTimersByTime(2100);
+        });
+        const resting = boxOf('monitor');
+        await act(async () => {
+          fireEvent.click(document.querySelector('[data-flow-node="monitor"]') as HTMLElement);
+        });
+        // No frames advanced: it is already where it is going.
+        expect(boxOf('monitor').width).toBeGreaterThan(resting.width);
+        const settled = boxOf('monitor').width;
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+        expect(boxOf('monitor').width).toBe(settled);
+        expect(asked).toHaveBeenCalled();
+      } finally {
+        asked.mockRestore();
+      }
+    });
+
+    it('walks forward and back through the components, in the order the chart draws them', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // The order the arrows walk is the order the chart is drawn in. Asserted as the
+      // same rule rather than as a list typed here: a second opinion about the order
+      // would agree today and drift later, and the reader would then be following a
+      // sequence the picture does not show.
+      //
+      // The configuration on disk declares its components in a different order from
+      // this one — the clock is declared first and drawn last — so this is a real
+      // constraint on the traversal and not a restatement of the file.
+      const drawn = buildFlow(config.shell, topology).nodes;
+      expect(drawn.map((node) => node.id)).toEqual(inReadingOrder(drawn, BANDS).map((n) => n.id));
+      expect(drawn.map((node) => node.id)).not.toEqual(config.shell.components.map((c) => c.id));
+      const openAt = (index: number) => drawn[((index % drawn.length) + drawn.length) % drawn.length];
+      const start = 3;
+      await open(drawn[start].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[start].id);
+      expect(drawer().querySelector('[data-walk-place]')?.getAttribute('data-walk-place')).toBe(
+        `${start + 1}/${drawn.length}`,
+      );
+
+      const press = async (which: 'next' | 'previous') => {
+        await act(async () => {
+          fireEvent.click(drawer().querySelector(`[data-step="${which}"]`) as HTMLElement);
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+      };
+
+      await press('next');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start + 1).id);
+      await press('next');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start + 2).id);
+      await press('previous');
+      await press('previous');
+      await press('previous');
+      expect(drawer().getAttribute('data-drawer-component')).toBe(openAt(start - 1).id);
+      // Exactly one component is open at a time: stepping moves the account, it does not
+      // leave a trail of open cards behind it.
+      expect(document.querySelectorAll('[data-testid="flow-drawer"]').length).toBe(1);
+      expect(document.querySelectorAll('[data-expanded="true"]').length).toBe(1);
+    });
+
+    it('names the component each arrow will open, so the round trip is stated not sprung', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      // The first component in the chart's order: its back arrow wraps to the last one,
+      // and says so. An arrow that named nothing would make the wrap look like a fault.
+      await open(drawn[0].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      expect(drawer().querySelector('[data-step="previous"]')?.getAttribute('aria-label')).toBe(
+        `back to ${drawn[drawn.length - 1].label}`,
+      );
+      expect(drawer().querySelector('[data-step="next"]')?.getAttribute('aria-label')).toBe(
+        `on to ${drawn[1].label}`,
+      );
+      await act(async () => {
+        fireEvent.click(drawer().querySelector('[data-step="previous"]') as HTMLElement);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[drawn.length - 1].id);
+    });
+
+    it('leaves the keyboard on the arrow, so a reader can keep stepping', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await open(drawn[2].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      // The card the arrow was in has left the document; the arrow in the card that
+      // replaced it is what the next press needs to land on. Without this, stepping
+      // twice from the keyboard is impossible.
+      for (const which of ['next', 'next', 'previous'] as const) {
+        await act(async () => {
+          fireEvent.click(drawer().querySelector(`[data-step="${which}"]`) as HTMLElement);
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+        expect(document.activeElement?.getAttribute('data-step')).toBe(which);
+        expect(drawer().contains(document.activeElement)).toBe(true);
+      }
+    });
+
+    it('walks with the left and right arrow keys, from anywhere the reader is in the card', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await open(drawn[4].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      const press = async (key: string, from: Element) => {
+        await act(async () => {
+          fireEvent.keyDown(from, { key });
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+      };
+
+      // From the card itself, which is where the focus lands when a node is opened.
+      await press('ArrowRight', document.activeElement as Element);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[5].id);
+      await press('ArrowLeft', document.activeElement as Element);
+      await press('ArrowLeft', document.activeElement as Element);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[3].id);
+
+      // And from something inside it that does not own those keys — a heading, a button.
+      const heading = drawer().querySelector('h3') as Element;
+      await press('ArrowRight', heading);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[4].id);
+    });
+
+    it('leaves the arrow keys to the control that owns them', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // The monitor's card holds two range inputs, and a range input's own keys are the
+      // arrow keys. Taking them would trade fine adjustment of a live threshold for a
+      // shortcut — the reason the walk shipped without them at first.
+      await open('monitor');
+      const drawer = () => screen.getByTestId('flow-drawer');
+      const slider = drawer().querySelector('[data-tunable="drift-threshold"] input[type="range"]');
+      expect(slider).toBeTruthy();
+      await act(async () => {
+        fireEvent.keyDown(slider as Element, { key: 'ArrowRight' });
+        vi.advanceTimersByTime(400);
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe('monitor');
+      // The number field beside it, and the text entry the tuner offers, keep them too.
+      for (const field of drawer().querySelectorAll('input:not([type="range"]), select, textarea')) {
+        await act(async () => {
+          fireEvent.keyDown(field, { key: 'ArrowLeft' });
+          vi.advanceTimersByTime(400);
+        });
+        expect(drawer().getAttribute('data-drawer-component')).toBe('monitor');
+      }
+    });
+
+    it('leaves a modified arrow alone: that is somebody asking for something else', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('monitor');
+      const drawer = () => screen.getByTestId('flow-drawer');
+      for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+        await act(async () => {
+          fireEvent.keyDown(document.activeElement as Element, {
+            key: 'ArrowRight',
+            [modifier]: true,
+          });
+          vi.advanceTimersByTime(400);
+        });
+        expect(drawer().getAttribute('data-drawer-component'), modifier).toBe('monitor');
+      }
+    });
+
+    it('says on the control which key does it, rather than leaving it to be discovered', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('monitor');
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.querySelector('[data-step="previous"]')?.getAttribute('aria-keyshortcuts')).toBe(
+        'ArrowLeft',
+      );
+      expect(drawer.querySelector('[data-step="next"]')?.getAttribute('aria-keyshortcuts')).toBe(
+        'ArrowRight',
+      );
+    });
+
+    it('the list view walks with the same keys, on the account itself', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('view-toggle'));
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await act(async () => {
+        fireEvent.click(
+          document.querySelector(`[data-operator-component="${drawn[2].id}"] .link-button`) as HTMLElement,
+        );
+      });
+      const drawer = () => screen.getByTestId('flow-drawer');
+      await act(async () => {
+        fireEvent.keyDown(drawer(), { key: 'ArrowRight' });
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[3].id);
+      // Exactly one step per press: the account is the only thing listening here.
+      await act(async () => {
+        fireEvent.keyDown(drawer(), { key: 'ArrowRight' });
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[4].id);
+    });
+
+    it('opens it below the table in the list view, which has nowhere to expand into', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('view-toggle'));
+      });
+      await act(async () => {
+        fireEvent.click(
+          document.querySelector('[data-operator-component="monitor"] .link-button') as HTMLElement,
+        );
+      });
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.getAttribute('data-drawer-where')).toBe('below');
+      // Same account, same controls: the list carries everything the chart does (FR-015).
+      expect(drawer.getAttribute('data-drawer-component')).toBe('monitor');
+      expect(drawer.querySelector('[data-tunable="drift-threshold"]')).toBeTruthy();
+    });
   });
 
   /**

@@ -15,6 +15,7 @@
     "capture:messages": "tsx scripts/capture/messages.ts",
     "capture:map": "tsx scripts/capture/map.ts",
     "capture:mobile": "tsx scripts/capture/mobile.ts",
+    "capture:motion": "tsx scripts/capture/motion.ts",
     "replay-proof": "tsx scripts/replay-proof.ts",
     "site:build": "tsx scripts/build-site.ts",
     "site:publish": "tsx scripts/publish-site.ts",

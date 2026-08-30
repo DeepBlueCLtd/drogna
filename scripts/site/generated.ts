@@ -139,9 +139,19 @@ export function blogCoverageTable(
       named.length === 0
         ? '_no entry yet_'
         : named.map((post) => `[${post.title}](${post.url})`).join(', ');
-    return `| ${number} | ${feature.slice(4).replace(/-/g, ' ')} | ${entries} |`;
+    // An entry that shows the thing, and one that only tells you about it, are not the
+    // same evidence. Both are published as what they are.
+    const shown =
+      named.length === 0
+        ? '—'
+        : named.every((post) => post.shows)
+          ? 'shown'
+          : named.some((post) => post.shows)
+            ? 'partly'
+            : '_told only_';
+    return `| ${number} | ${feature.slice(4).replace(/-/g, ' ')} | ${entries} | ${shown} |`;
   });
-  return ['| Feature | Beat | Entries |', '|---|---|---|', ...rows].join('\n');
+  return ['| Feature | Beat | Entries | Shown |', '|---|---|---|---|', ...rows].join('\n');
 }
 
 export interface Entry {
@@ -150,6 +160,16 @@ export interface Entry {
   readonly description: string;
   readonly date: string;
   readonly feature?: string;
+  /**
+   * Whether the entry shows the thing rather than only describing it — a committed
+   * capture under `site/docs/blog/assets/`, still or moving.
+   *
+   * The authoring note has required one since it was written, and seven of the first
+   * eleven entries do not have one, which is what a rule with nothing counting it is
+   * worth. Counted here for the same reason the coverage table counts entries at all:
+   * a gap that is published gets closed, and a gap nobody can see does not.
+   */
+  readonly shows: boolean;
 }
 
 /**
@@ -170,6 +190,7 @@ export function readEntry(url: string, markdown: string): Entry {
     description: frontMatter.description ?? '',
     date: frontMatter.date ?? '',
     feature: frontMatter.feature,
+    shows: /!\[[^\]]*\]\(\.\.\/assets\//s.test(body),
   };
 }
 

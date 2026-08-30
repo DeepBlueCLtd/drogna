@@ -66,7 +66,14 @@ const base = `http://127.0.0.1:${address.port}/`;
 // another; CI installs the version Playwright pins and leaves this unset.
 const browser = await chromium.launch({ executablePath: process.env.DROGNA_CHROMIUM_PATH });
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  // The viewport is capturable rather than fixed: the narrow presentation is a real
+  // presentation (feature 112), and a picture of it should come out of the same command
+  // with the same sidecar rather than out of a copy of this file with a number changed.
+  const [width, height] = (process.env.DROGNA_GLANCE_VIEWPORT ?? '1440x900').split('x').map(Number);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    throw new Error(`DROGNA_GLANCE_VIEWPORT should be like 390x844, not ${process.env.DROGNA_GLANCE_VIEWPORT}`);
+  }
+  const page = await browser.newPage({ viewport: { width, height } });
   await page.goto(viewId ? `${base}#/view/${viewId}` : base);
   await page.getByTestId('sim-time').waitFor({ timeout: 10_000 });
 
@@ -153,7 +160,7 @@ try {
       warmRate > 0 && warmMillis > 0
         ? `run at rate ${warmRate} for ${warmMillis} ms of host time before the clock was pinned`
         : 'not warmed: the picture is of the run at its epoch',
-    viewport: { width: 1440, height: 900 },
+    viewport: { width, height },
     browser: { name: 'chromium', version: browser.version() },
     caption: process.env.DROGNA_GLANCE_CAPTION ?? '',
   };

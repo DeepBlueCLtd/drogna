@@ -113,13 +113,29 @@ in the coverage table's row for it, which is visible on the page: the table is c
 from the feature directories under `specs/` and from each entry's own front matter, so
 a mistyped feature shows up as a beat with no entry.
 
-## Screenshots
+## Show it
 
-Where a claim can be embedded and played, embed it: a picture of a running system is a
-claim about it, and an instance opened at the view is the system. A screenshot is the
-fallback, for something no URL reaches.
+Every entry carries at least one committed capture, which is the evidence that the
+feature works rather than the claim that it does. **A moving change is captured moving**:
+a card that grows, a chart that reflows, a lane that pulses — a still of the end state is
+a picture of something else, and no wording recovers what the reader did not see happen.
+`pnpm capture:motion` records a burst of frames across one interaction and writes a GIF
+with its sidecar; `pnpm capture:glance` does the same for one moment, and takes
+`DROGNA_GLANCE_VIEWPORT=390x844` for the narrow presentation.
 
-Images live in `site/docs/blog/assets/`, named `<feature-number>-<slug>.png`, and each
+**The instance link does not discharge that**, and the reason is who is reading. A pull
+request is read by a reviewer with the branch in front of them, who will click a link to
+a running instance and should be given one. An entry is read by somebody who arrived from
+elsewhere, will not open a build of an application they do not use, and is reading after
+that instance has been replaced. Link the instance as well — it is the system rather than
+a picture of it — but the entry has to work without it.
+
+This rule is older than the entries that keep it: seven of the first eleven have no
+capture at all, which is what a rule with nothing counting it is worth. The coverage
+table on the blog index now says of each beat whether it is **shown** or **told only**,
+for the same reason it says which beats have no entry.
+
+Images live in `site/docs/blog/assets/`, named `<feature-number>-<slug>.png` or `.gif`, and each
 carries a `.provenance.json` sidecar beside it recording the seed, the viewport, the
 browser and what the clock was doing. Images come only from the capture mechanism under
 `scripts/capture/`; a screenshot taken any other way is not reproducible and does not go

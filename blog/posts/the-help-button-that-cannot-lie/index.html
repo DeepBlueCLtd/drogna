@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Everything else on these screens is forbidden from saying anything it did not observe. A walkthrough is prose somebody typed months ago — so the interesting question was what it is allowed to say.">
+<title>A guided tour is the one part of an honest display allowed to be written in advance — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="a-guided-tour-is-the-one-part-of-an-honest-display-allowed-to-be-written-in-advance">A guided tour is the one part of an honest display allowed to be written in advance</h1>
+<h2 id="the-background">The background</h2>
+<p>This application opens on a screen showing twenty moving parts and no explanation of
+what any of them is. Everyone who has been shown it in person has been shown it by
+somebody talking over their shoulder, which works fine and does not scale to a link in
+a pull request.</p>
+<p>The obvious fix is a help page. The obvious fix is also the one nobody reads, because it
+is somewhere else: you have to leave the thing you did not understand in order to read
+about it, and then come back and re-find what you were looking at.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>A single obvious control — large, yellow, top right — that walks a reader through the
+running system one part at a time, highlighting the part on screen while it explains it.
+It had to be reusable on the other screens later, and it had to survive a part being
+added or removed without quietly going out of date.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>The rule that governs everything else on these screens is that the display may not claim
+anything it did not observe. A lamp is lit because a message arrived, never because a
+configuration file said the piece exists. A walkthrough breaks that rule by
+construction: it is a paragraph written weeks ago and shipped in the bundle.</p>
+<p>The resolution is a line, not an exception. A step may say what a part is <strong>for</strong>. It may
+not say anything about its <strong>state</strong> — not that it is running, not how many records it
+holds, not that it is healthy. Each step highlights the part's own display and says what
+the part does; every live number in view was drawn from traffic that actually arrived.
+The prose teaches, the panel reports, and the two never swap jobs.</p>
+<p>The going-out-of-date problem got a mechanical answer rather than a promise. Steps are
+keyed to the parts they describe, and checked against the list of parts the application
+declares: a part with no step fails, and a step naming a part that no longer exists
+fails too. A tour that had silently stopped covering something would be worse than no
+tour, because it reads as complete.</p>
+<p>The tour itself is <a href="https://driver.js.org/">driver.js</a>, which is small, keyboard-
+operable, and does the one thing needed — spotlight an element, show a card, move on.
+One thing it could not be trusted with: a step pointing at an element on a screen you
+are not looking at points at nothing, so the button opens the right screen first and
+waits for it to actually be there. The first version waited with an animation-frame
+callback and was refused by the check that forbids reading the host clock. The check was
+right; the wait is now two rendering passes, which is what was actually meant.</p>
+<h2 id="the-demo">The demo</h2>
+<p>The yellow button is top right on every screen. On the operator view it walks the whole
+system, part by part:</p>
+<p><a href="../../../instances/main/#/view/operator">Open it at the operator view</a></p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

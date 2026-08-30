@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0034: ownship state is measured, not declared — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0034-ownship-state-is-measured-not-declared">ADR-0034: ownship state is measured, not declared</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 29 August 2026
+<strong>Feature:</strong> 113 (the Operator flow chart, and the platform beneath it)
+<strong>Requirements:</strong> SRD-v2 FR-52 to FR-56, FR-60
+<strong>Engages:</strong> ADR-0005, which closed the observed-property enumeration; Constitution V</p>
+<h2 id="context">Context</h2>
+<p>Before this feature nothing in drogna held ownship state. The sensors computed their own
+position from simulation time — <code>Sensors.positionAt(seconds)</code>, a closed form — which
+made the platform's motion a private detail of the component that sampled the sea. There
+was nothing to command, nothing to stop, and nothing to draw a track from.</p>
+<p>FR-52 gives that motion its own component, and the question the component forces is how
+its state reaches the rest of the harness. Two answers were live:</p>
+<ul>
+<li><strong>Declared:</strong> the platform publishes a state message on a control topic and the map
+reads it. This is the smallest change, and it keeps the observed-property enumeration
+shut.</li>
+<li><strong>Measured:</strong> the platform's navigation instruments publish course, speed and depth as
+SensorThings observations, exactly as the ocean instruments publish temperature.</li>
+</ul>
+<p>The second requires amending a closed enumeration, and <code>observation.schema.json</code> names
+ADR-0005 in the enumeration's own description as the reason it is closed. A closed list
+reopened without a record is how the next reader learns the wrong lesson, which is why
+this record is owed before the master is amended rather than after.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>The platform's course, speed and depth are measured quantities. The enumeration grows
+by three, and the amendment does not reopen ADR-0005's closure.</strong></p>
+<ul>
+<li><code>observed_property</code> becomes <code>temperature | salinity | pressure | platform_course | platform_speed | platform_depth</code>. The ownship three are produced by declared
+instruments with declared noise models, on the platform's own Thing and Datastreams,
+through the same topic prefix and the same ingest path as the ocean three. They reach
+the world through the SensorThings subset already cleared under Constitution X; no new
+collection is released.</li>
+<li><strong>ADR-0005's closure stands, because its argument is about derived values.</strong> Sound
+speed is a function of temperature, salinity and pressure, all of which the store
+already holds; storing it beside its inputs creates a second source of truth that can
+disagree with them after a change to the equation, with no way to tell which is right.
+Course, speed and depth over ground are the motion simulator's <em>primary</em> state.
+Nothing else in the harness holds them, so there is no second source for them to
+disagree with. The enumeration is closed against derivation, not against measurement,
+and it remains closed on those terms: no derived quantity joins it without amending
+ADR-0005 itself.</li>
+<li><strong>Position is not among them.</strong> A latitude is not a measurement result, and every
+observation already carries <code>/location</code>. Position therefore arrives where position has
+always arrived, and the ownship track is those locations in phenomenon-time order — the
+ordinary Observations resource, read through the ordinary query path (FR-60).</li>
+<li><strong><code>HistoricalLocations</code> stays outside the served subset.</strong> SensorThings offers it and
+it would be the obvious home for a track. It is refused for the same reason sound speed
+is: a second representation of one fact is two answers that can disagree. The track has
+no representation of its own.</li>
+<li><strong>An ownship observation is not a sample of the ocean</strong> (FR-56). Sharing a transport is
+not sharing a meaning, and the two consumers that reason about <em>where the sea has been
+measured</em> refuse it in the two shapes their existing designs already had. The planner's
+observation-age field is a denylist naming the platform's own datastreams, asserted
+against the platform's declared instruments so a fourth ownship datastream cannot
+arrive and be quietly counted as a sounding. The monitor needs nothing added: its
+<code>pairs</code> document is already an allowlist naming the Thing and the two datastreams it
+scores, which is the stronger of the two. A denylist was written for it as well,
+planted against, and found <strong>unable to fail</strong> — so it was removed, the master no longer
+admits the field, and a test asserts its absence.</li>
+<li><strong>Constitution V is engaged and satisfied.</strong> One moving Thing whose series is a track
+is exactly the case Principle V's own text keeps &quot;track&quot; as ordinary navigational
+English for: the harness's own vehicle, whose position it knows because it computed it.
+What the principle forbids is the third party whose position the harness would infer.
+The ocean datastreams are unaffected — a series of sampling locations is a sampling
+path, and its FeatureOfInterest is still not a place anything went.</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li><strong>The sensors' output now depends on delivery order.</strong> They sample at the last ownship
+position they heard rather than at a position they computed, so a closed form has
+become a subscription. AT-04's replay claim is unaffected in its stated form —
+components run in lockstep and delivery order is deterministic — but the dependency is
+new and is stated in the claim's boundary rather than left to be discovered. The
+platform is scheduled before the sensors in the composition root (ADR-0030) so that the
+cold start lasts one tick.</li>
+<li><strong>The cold start is a real behaviour, not an edge case.</strong> Before the first ownship
+position arrives the sensors publish nothing and say so, counting what they skipped.
+Stopping the platform therefore stops the sea being sampled, which is the consequence
+chain SC-001 watches; a harness where stopping a component changed nothing visible
+would be a worse demonstration.</li>
+<li><strong>The store holds ownship history</strong>, which it did not before. It is bounded by the same
+retention the ocean observations have and served by the same subset.</li>
+<li><strong>A consumer that iterates every datastream will now see ownship series.</strong> That is the
+cost of one vocabulary for both, and FR-56's named exclusions are where it is paid.
+A consumer added later that forgets to refuse them is a defect no existing test catches
+for it. The mitigation is that the refusal is in configuration rather than in each
+consumer's code — best served, where the design allows it, by naming what <em>is</em> wanted
+rather than what is not.</li>
+</ul>
+<h2 id="alternatives-rejected">Alternatives rejected</h2>
+<ul>
+<li><strong>A control-topic state message only</strong> (the &quot;declared&quot; option). Smaller, and it keeps
+the enumeration shut — but the map's track would then be drawn from control traffic the
+query layer never served, which is exactly the thing this harness exists to avoid
+claiming. FR-60 wants the track to come back through a genuine query, and it does. The
+state message still exists (<code>platform-state.schema.json</code>) because the Operator tab
+needs demanded-versus-current and the binding limit, which are not measurements of
+anything; it is not what the map reads.</li>
+<li><strong>A fourth ocean-style datastream carrying position as a scalar.</strong> There is no scalar:
+position is two numbers and a depth, and flattening it into three results would invent
+observed properties (<code>platform_latitude</code>) that mean nothing outside this harness while
+duplicating a field every observation already has.</li>
+<li><strong><code>HistoricalLocations</code>, served.</strong> Rejected above. It is also the more standards-shaped
+answer, which is why the refusal is recorded rather than assumed.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

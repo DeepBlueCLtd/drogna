@@ -129,7 +129,7 @@ prose below is where that is said.</p>
 <tr>
 <td><code>operator</code></td>
 <td><code>app/src/backend/operator</code></td>
-<td><code>ctl/heartbeat</code></td>
+<td><code>ctl/heartbeat</code>, <code>ctl/platform/demand</code></td>
 <td><code>ctl/heartbeat</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
@@ -137,6 +137,12 @@ prose below is where that is said.</p>
 <td><code>app/src/backend/planner</code></td>
 <td><code>ctl/plan</code>, <code>ctl/heartbeat</code></td>
 <td><code>obs/#</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td><code>app/src/backend/platform</code></td>
+<td><code>obs/ownship/+</code>, <code>ctl/platform/state</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/platform/demand</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>query</code></td>
@@ -154,7 +160,7 @@ prose below is where that is said.</p>
 <td><code>sensors</code></td>
 <td><code>app/src/backend/sensors</code></td>
 <td><code>obs/+/+</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/clock</code></td>
+<td><code>obs/ownship/+</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>shell</code></td>
@@ -244,7 +250,7 @@ would fail the drift gate before it reached this page.</p>
 <td><code>ctl/clock</code></td>
 <td><code>clock.schema.json</code></td>
 <td><code>clock</code></td>
-<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>ctl/divergence</code></td>
@@ -255,7 +261,7 @@ would fail the drift gate before it reached this page.</p>
 <tr>
 <td><code>ctl/heartbeat</code></td>
 <td><code>heartbeat.schema.json</code></td>
-<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>clock</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>telemetry</code></td>
+<td><code>advisory-source</code>, <code>advisory-store</code>, <code>boundary</code>, <code>broker</code>, <code>clock</code>, <code>coverage-store</code>, <code>env-generator</code>, <code>feature-store</code>, <code>ingest</code>, <code>model-runner</code>, <code>monitor</code>, <code>observation-store</code>, <code>offload</code>, <code>operator</code>, <code>planner</code>, <code>platform</code>, <code>query</code>, <code>scheduler</code>, <code>sensors</code>, <code>telemetry</code></td>
 <td><code>operator</code>, <code>shell</code></td>
 </tr>
 <tr>
@@ -268,6 +274,18 @@ would fail the drift gate before it reached this page.</p>
 <td><code>ctl/plan</code></td>
 <td><code>plan.schema.json</code></td>
 <td><code>planner</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/platform/demand</code></td>
+<td><code>platform-demand.schema.json</code></td>
+<td><code>operator</code></td>
+<td><code>platform</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/platform/state</code></td>
+<td><code>platform-state.schema.json</code></td>
+<td><code>platform</code></td>
 <td><code>shell</code></td>
 </tr>
 <tr>
@@ -299,6 +317,12 @@ would fail the drift gate before it reached this page.</p>
 <td><code>observation.schema.json</code></td>
 <td>—</td>
 <td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>shell</code>, <code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>obs/ownship/+</code></td>
+<td><code>observation.schema.json</code></td>
+<td><code>platform</code>, <code>sensors</code></td>
+<td><code>ingest</code>, <code>monitor</code>, <code>planner</code>, <code>sensors</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/platform-a/pressure-200m</code></td>

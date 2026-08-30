@@ -202,8 +202,17 @@ export const pointsAndFields: Explainer = {
                   onPoke={() => onPoke(position.id)}
                 />
               ))}
-              <line x1={asked.x - 20} y1={94} x2={asked.x + 20} y2={94} stroke={INK.strong} />
-              <line x1={asked.x} y1={74} x2={asked.x} y2={114} stroke={INK.strong} />
+              {/*
+                * The crosshair marks where the question is asked and is not itself a
+                * target: it is drawn after the poke regions and lands on top of the
+                * one it marks, so a stroked line would take the clicks aimed at the
+                * region under it. Watched happening — with the regions clickable, the
+                * middle position was the one position you could not pick.
+                */}
+              <g pointerEvents="none">
+                <line x1={asked.x - 20} y1={94} x2={asked.x + 20} y2={94} stroke={INK.strong} />
+                <line x1={asked.x} y1={74} x2={asked.x} y2={114} stroke={INK.strong} />
+              </g>
               </Section>
               <Readout>
                 <b>field</b>: 11.2 °C. <b>observations</b>:{' '}

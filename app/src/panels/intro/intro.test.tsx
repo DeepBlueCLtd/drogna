@@ -82,6 +82,7 @@ function panelProps(rest?: string): {
     },
     manifest,
     address: {
+      names: () => true,
       current: () => rest,
       write: (next: string | undefined) => written.push(next),
       onChange: () => () => {},
@@ -108,9 +109,9 @@ function stage(): HTMLElement {
   return found;
 }
 
-function press(key: string): void {
+function press(key: string, target: HTMLElement | Document = stage()): void {
   act(() => {
-    fireEvent.keyDown(stage(), { key });
+    fireEvent.keyDown(target, { key });
   });
 }
 
@@ -323,6 +324,35 @@ describe('the walkthrough grows, under the reader (FR-76, FR-78)', () => {
     for (const wire of wires()) {
       for (const end of wire.split('->')) expect(omitted.has(end)).toBe(false);
     }
+  });
+
+  it('walks on the arrow keys having clicked nothing', () => {
+    // The fault this guards: a handler hung on the panel's own element never fires for a
+    // viewer who has just opened the tab, because nothing inside it holds the focus. That
+    // was the first version, and it made the arrow keys — the whole of what was asked for
+    // — do nothing until you thought to click the drawing. The listener is on the
+    // document, with the guards in `shell/arrow-keys.ts`.
+    const { props } = panelProps();
+    render(<IntroPanel {...props} />);
+    expect(document.activeElement).toBe(document.body);
+    press('ArrowRight', document.body);
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 2 of ${STORYBOARD.length}`);
+    press('ArrowLeft', document.body);
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${STORYBOARD.length}`);
+  });
+
+  it('leaves the arrow keys alone while the address names another view', () => {
+    // Every panel stays mounted when another is shown, so a hidden Intro must not walk
+    // itself while the viewer is on the Map.
+    const { props } = panelProps();
+    const params = props.params as unknown as { address: { names: () => boolean } };
+    params.address.names = () => false;
+    render(<IntroPanel {...props} />);
+    press('ArrowRight', document.body);
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 1 of ${STORYBOARD.length}`);
+    // Focus inside this panel is still this panel's business, addressed or not.
+    press('ArrowRight');
+    expect(screen.getByTestId('intro-position').textContent).toBe(`step 2 of ${STORYBOARD.length}`);
   });
 
   it('leaves a port wire able to be dashed: no pathLength rescaling its dash', () => {

@@ -26,6 +26,7 @@ import { hashForView } from '../../shell/views.js';
 import { buildFlow } from '../operator/graph.js';
 import { topology } from '../../generated/topology.js';
 import { useMeasuredWidth } from '../../shell/viewport.js';
+import { useArrowKeys } from '../../shell/arrow-keys.js';
 import { Diagram, diagramPlacement } from './Diagram.js';
 import { NOT_DRAWN, STORYBOARD } from './storyboard.js';
 import { clampStep, restForStep, stepFromRest } from './address.js';
@@ -46,6 +47,7 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
   const [step, setStep] = useState<number>(() =>
     stepFromRest(STORYBOARD, address.current()),
   );
+  const rootRef = useRef<HTMLDivElement>(null);
   const columnRef = useRef<HTMLDivElement>(null);
   const measured = useMeasuredWidth(columnRef);
 
@@ -71,6 +73,17 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
   const arriving = beat.reveals.map((node) => labelOf(node.component)).join(' · ');
 
   const go = useCallback((next: number) => setStep(clampStep(STORYBOARD, next)), []);
+  // FR-076: the walkthrough moves on the arrow keys. The listener is on the document,
+  // with the guards `shell/arrow-keys.ts` writes out — a viewer who has just opened the
+  // tab has clicked nothing, and a handler on this panel would never see the key.
+  useArrowKeys({
+    root: rootRef,
+    address,
+    onStep: useCallback(
+      (delta: 1 | -1) => setStep((current) => clampStep(STORYBOARD, current + delta)),
+      [],
+    ),
+  });
   const select = useCallback(
     (component: string) => setStep(stepFromRest(STORYBOARD, component)),
     [],
@@ -83,7 +96,7 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
   const drawn = panned ? 1 : scale;
 
   return (
-    <div className="panel intro-panel">
+    <div className="panel intro-panel" ref={rootRef}>
       <header className="intro-head">
         <h1>drogna</h1>
         <p className="disclaimer">
@@ -114,9 +127,11 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
         role="group"
         aria-label={`The drogna architecture, step ${step} of ${total}: ${beat.title}`}
         onKeyDown={(event) => {
-          if (event.key === 'ArrowRight') go(step + 1);
-          else if (event.key === 'ArrowLeft') go(step - 1);
-          else if (event.key === 'Home') go(1);
+          // The arrow keys are answered on the document (above), so that they work for a
+          // viewer who has clicked nothing. Home and End stay here, bound to the stage: a
+          // document-level Home would take the key from every scrollable region on the
+          // page, and unlike the arrows nobody arrives expecting to press it.
+          if (event.key === 'Home') go(1);
           else if (event.key === 'End') go(total);
           else return;
           event.preventDefault();
@@ -219,7 +234,7 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           The drawing above says nothing about what is <em>alive</em>: it is the wiring,
           not the run, and every component's own account of itself is in Operator. For why
           any of this is standards-based rather than bespoke,{' '}
-          <a href={hashForView('background')}>Background</a> is a course of eleven short
+          <a href={hashForView('background')}>Background</a> is a course of ten short
           illustrated explainers — SensorThings, OGC API-EDR, NetCDF, MQTT and what it
           takes to use them honestly.
         </p>

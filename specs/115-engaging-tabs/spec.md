@@ -15,7 +15,7 @@ Feature 113 landed and set a bar. The Operator tab is a flow chart with the loop
 as a loop, twenty bespoke faces, and three kinds of figure that never mix. Standing
 beside it, the rest of the shell divides sharply in two.
 
-Background (feature 111) is designed: eleven explainers, a bespoke slide component, a
+Background (feature 111) is designed: ten explainers, a bespoke slide component, a
 rail. The Map (109, extended by 113) is a deck.gl surface carrying the field, the
 spread, the plan's doubt, advisories, the planner's route, the ownship track and the
 EDR composer. Intro is prose and grows one section per beat, which is what it is for.

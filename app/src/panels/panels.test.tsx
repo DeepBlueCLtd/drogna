@@ -33,6 +33,7 @@ function lockstepConfig(): ConfigRun {
 
 /** A panel that addresses no position inside itself never reads this (ADR-0032). */
 const noAddress: PanelParams['address'] = {
+  names: () => false,
   current: () => undefined,
   write: () => {},
   onChange: () => () => {},

@@ -110,6 +110,34 @@ lesson 1).
       list. The rule is the query component's and lives on the other side of the seam
       where it cannot be imported, so the two are held together by a check instead.
 
+## Reported against the built tab, and fixed
+
+- [x] T037 **The open chart never refetched.** Its effect was keyed on the datastream
+      alone, so it fetched once and held that picture for the life of the selection.
+      Reproduced against the built page at ×600: sixty-six points, and still sixty-six
+      twenty-six simulated minutes later. **Watched failing** with the dependency removed
+      again after the fix, which reported one point where two were held.
+- [x] T038 **And the tab refetched the wrong thing constantly.** The observation
+      subscription refetched the platform list and the datastream list on *every* sample —
+      two requests each, for a list that changes when a sensor first reports and never
+      after. The tab was busiest exactly when it looked most static.
+- [x] T039 Arrivals are counted rather than acted on; the head states how many are waiting
+      and a refresh applies them, the open chart included. The author's own framing —
+      refreshing on every update would be jittery — is the requirement now, and FR-95
+      carries the reversal with its reason.
+- [x] T040 The count is part of the control, not decoration: "three waiting" and "nothing
+      waiting" are different facts about how old the picture is, and a button whose effect
+      a reader can only discover by pressing it has stopped saying anything (feature 117's
+      rule about the walk arrows, applied here).
+- [x] T041 `readAt` is recorded *before* the fetch, not after. An observation arriving
+      while the two requests are in flight is one that read may not carry, and counting it
+      as read would lose it silently; erring the other way costs a press and no
+      information.
+- [x] T042 SC-005 restated. It asserted that observation announcements grew the request
+      count, which is the behaviour this reverses — so it now says what is true: the
+      coverage branches move on their announcement, the measurements do not, and the two
+      tests above cover the control.
+
 ## The record
 
 - [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,
@@ -118,6 +146,7 @@ lesson 1).
       the Intro tab, one Background explainer, the demo index and a published blog entry.
       All updated.
 - [x] T036 The blog entry, within the 300-word budget, with a motion capture.
+- [x] T043 SRD: FR-95 rewritten as the reversal above, with what it got wrong and why.
 
 ## Not done, and why
 

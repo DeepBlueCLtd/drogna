@@ -13,10 +13,16 @@
  *
  * Two rules run through everything here:
  *
- *  - **Nothing polls.** Every branch refreshes when the store behind it announces a
- *    publication on its declared topic, and at no other time (FR-04, FR-46). An open
- *    chart grows as observations arrive because the announcement arrived, not because a
- *    timer fired.
+ *  - **Nothing polls**, and not everything that announces is acted on. The coverage
+ *    store and the advisory store announce rarely — a publication, a new advisory — so
+ *    their branches refresh on the announcement and at no other time (FR-04, FR-46).
+ *    Observations announce constantly, and the first cut treated them the same way: it
+ *    refetched the whole datastream list on *every* observation, and — because the open
+ *    chart's fetch was keyed on the datastream alone — never refetched the one thing a
+ *    reader was actually watching. So the tab sat still while it worked hardest.
+ *    Arrivals are now *counted* rather than acted on, the tab says how many are waiting,
+ *    and a refresh applies them. Redrawing a chart on every sample is a picture that
+ *    jitters under the reader, which is worse than one that admits it is a moment old.
  *  - **An empty display is a claim.** Where a store refuses, or a response fails its
  *    master, the branch says so where its content would have been. It never draws an
  *    empty table, an empty canvas or a chart with no points as though those were the
@@ -79,6 +85,29 @@ export function DataPanel({ params }: PanelProps) {
   const [advisoriesRefusal, setAdvisoriesRefusal] = useState<string | undefined>();
   const [telemetry, setTelemetry] = useState<TelemetryReport | undefined>();
   const [nowSimTime, setNowSimTime] = useState<string | undefined>();
+  /**
+   * Observations announced, and observations the tab has read.
+   *
+   * The difference is what a reader is owed before they decide whether to press
+   * anything: "3 waiting" and "nothing waiting" are different facts, and a refresh
+   * control that cannot tell them apart asks the reader to press it to find out.
+   */
+  const [announced, setAnnounced] = useState(0);
+  const [readAt, setReadAt] = useState(0);
+  /**
+   * The same count, in a ref.
+   *
+   * `refreshMeasurements` needs the latest value and must not *depend* on it: a
+   * dependency would rebuild the callback on every observation, and the effect that
+   * calls it once on mount would then call it once per observation — reintroducing, by
+   * a longer route, exactly the refetch-per-sample this change removes.
+   */
+  const announcedRef = useRef(0);
+  useEffect(() => {
+    announcedRef.current = announced;
+  }, [announced]);
+  /** Bumped by a refresh, and read by the open chart as its cue to fetch again. */
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // The address is the selection (FR-03): one place, so a link and a click cannot
   // disagree about what is open.
@@ -113,6 +142,11 @@ export function DataPanel({ params }: PanelProps) {
   }, [config.endpoints.telemetry, validator]);
 
   const refreshMeasurements = useCallback(async () => {
+    // Recorded before the fetch, not after: an observation that arrives while these two
+    // requests are in flight is one this read may not carry, and counting it as read
+    // would lose it silently. Erring the other way shows a reader one more waiting than
+    // strictly is, which costs a press and no information.
+    setReadAt(announcedRef.current);
     const [platforms, streams] = await Promise.all([
       readThings(config.endpoints.sensorthings, validator),
       readDatastreams(config.endpoints.sensorthings, validator),
@@ -152,10 +186,16 @@ export function DataPanel({ params }: PanelProps) {
 
   useEffect(() => {
     void refreshMeasurements();
+  }, [refreshMeasurements]);
+
+  // Counted, not acted on. Every observation used to refetch the platforms and the
+  // datastream list — two requests per sample, for a list that changes when a sensor
+  // first reports and at no other time.
+  useEffect(() => {
     return client.subscribe(config.topics.observations, () => {
-      void refreshMeasurements();
+      setAnnounced((seen) => seen + 1);
     });
-  }, [client, config.topics.observations, refreshMeasurements]);
+  }, [client, config.topics.observations]);
 
   useEffect(() => {
     void refreshAdvisories();
@@ -192,6 +232,24 @@ export function DataPanel({ params }: PanelProps) {
    * had never asked for changing under them (feature 112, SC-005, which caught it).
    * A deep link selects what is shown; it never records what happened (FR-15).
    */
+  /**
+   * How many observations the tab has not read yet.
+   *
+   * Clamped at zero because the two counters are written from different places and a
+   * refresh records the count *before* its fetch: a reader is never shown a negative
+   * backlog, which would be arithmetic leaking through the display.
+   */
+  const waiting = Math.max(announced - readAt, 0);
+
+  /** Read every store again, and tell the open chart to do the same. */
+  const refreshAll = () => {
+    void refreshCoverage();
+    void refreshTelemetry();
+    void refreshMeasurements();
+    void refreshAdvisories();
+    setRefreshToken((token) => token + 1);
+  };
+
   const select = (branchId: string, nodeId?: string) => {
     setSelection({ branchId, nodeId });
     if (address.names()) address.write(restForSelection({ branchId, nodeId }));
@@ -216,7 +274,30 @@ export function DataPanel({ params }: PanelProps) {
           {advisories?.features.length ?? 0} advisory(ies)
           {holdingsRefusal && <span className="shell-refusal"> · {holdingsRefusal}</span>}
         </p>
-        <HelpButton tour={dataTour()} />
+        <div className="data-head-controls">
+          {/* What is waiting, said before it is asked for. A control whose effect a
+              reader can only discover by pressing it is a control that has stopped
+              saying anything (feature 117's rule about the walk arrows, applied here). */}
+          <span className="data-waiting" data-testid="data-waiting">
+            {waiting > 0
+              ? `${waiting} observation(s) have arrived since the last read`
+              : 'nothing has arrived since the last read'}
+          </span>
+          <button
+            type="button"
+            className="data-refresh"
+            data-testid="data-refresh"
+            aria-label={
+              waiting > 0
+                ? `refresh: read the ${waiting} observation(s) that have arrived`
+                : 'refresh: read the stores again'
+            }
+            onClick={refreshAll}
+          >
+            refresh
+          </button>
+          <HelpButton tour={dataTour()} />
+        </div>
       </div>
 
       <div className="data-body">
@@ -264,6 +345,7 @@ export function DataPanel({ params }: PanelProps) {
             <Measurements
               things={things}
               datastreams={datastreams}
+              refreshToken={refreshToken}
               refusal={measurementsRefusal}
               selected={missing === undefined ? selection.nodeId : undefined}
               onSelect={(datastreamId) => select(branch.id, datastreamId)}

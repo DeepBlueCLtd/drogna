@@ -994,10 +994,28 @@ three browsable from one place.
   carrying the query component's own words — which name the thing refused (FR-27). It
   shall never draw an empty table, an empty canvas or a chart with no points as though
   those were the answer (Constitution VII).
-- **FR-95** Each branch shall refresh **on the announcement its own store publishes** —
-  coverage publications, the observation namespace, the advisory topic — and nothing in
-  the tab shall poll (FR-46). An open chart grows as observations arrive because an
-  announcement arrived, and for no other reason.
+- **FR-95** Nothing in the tab shall poll (FR-46), and **not every announcement is acted
+  on**. The coverage store and the advisory store announce rarely — a publication, an
+  advisory — so those branches refresh on the announcement and at no other time. The
+  observation namespace announces continuously, and those arrivals shall be **counted**
+  rather than fetched on: the tab shall state how many have arrived since its last read,
+  and a **refresh control** shall apply them, the open chart included.
+
+  *This reverses the requirement as first written, and the reason is worth keeping.* It
+  said an open chart grows as observations arrive, which was both too much and too little
+  at once. Too much, because at any interesting clock rate it redraws a chart several
+  times a second — a picture that jitters under the reader, which is worse than one that
+  admits it is a moment old. And too little, because the tab as built did the expensive
+  half and not the useful one: it refetched the platform and datastream lists on *every*
+  observation, while the chart a reader was actually watching was keyed on the datastream
+  alone and so never refetched at all. Reported against the running page and reproduced at
+  ×600 — sixty-six points, and still sixty-six points twenty-six simulated minutes later.
+  The tab was busiest exactly when it looked most static.
+
+  What the control must not become is a substitute for saying what is true: the count of
+  what is waiting is part of the requirement, not decoration on it. A control whose effect
+  a reader can discover only by pressing it has stopped saying anything, and "three
+  waiting" and "nothing waiting" are different facts about how old the picture is.
 - **FR-96** The **selected node shall be addressable** (FR-15): `#/view/data/<branch>` and
   `#/view/data/<branch>/<node>`, so a pull request or a blog entry links a reader to a
   chosen datastream or holding rather than to the tab's front door. Selecting writes the

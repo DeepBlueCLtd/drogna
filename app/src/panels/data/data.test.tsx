@@ -63,6 +63,7 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
   /** The address, as a controllable stand-in for the shell's own. */
   let rest: string | undefined;
   let listener: ((rest: string | undefined) => void) | undefined;
+  let observationCount = 0;
 
   function panelProps(overrides?: Partial<ConfigRun['shell']>) {
     const params: PanelParams = {
@@ -94,6 +95,12 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     asked = [];
     rest = undefined;
     listener = undefined;
+    observationCount = 0;
+    runtime.transport
+      .connect('observation-watch', config.shell.role)
+      .subscribe(config.shell.topics.observations, () => {
+        observationCount += 1;
+      });
     const seamFetch = createSeamFetch(config.boundary.api_prefix, runtime.httpBackend, realFetch);
     vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
       asked.push(String(input));
@@ -113,6 +120,11 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     await act(async () => {
       await settle(() => document.querySelectorAll('[data-branch]').length >= BRANCHES.length);
     });
+  }
+
+  /** Observation messages the broker has actually delivered, counted independently. */
+  function announcedObservations(): number {
+    return observationCount;
   }
 
   async function openBranch(branchId: string): Promise<void> {
@@ -149,7 +161,7 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     expect(screen.getByTestId('count-departure').textContent).toBe('1');
   });
 
-  it('SC-005: refreshes only on the announcement its store makes, and never on a timer', async () => {
+  it('SC-005: refreshes on the announcement its store makes, and never on a timer', async () => {
     const inventoryRequests = () =>
       asked.filter((path) => path.includes(config.shell.endpoints.holdings)).length;
     const observationRequests = () =>
@@ -170,13 +182,95 @@ describe('the Data tab (feature 120)', { timeout: 180_000 }, () => {
     expect(inventoryRequests()).toBe(inventoryBefore);
     expect(observationRequests()).toBe(observationsBefore);
 
-    // A genuine publication, driven by the clock the components share, does move it.
+    // A genuine publication, driven by the clock the components share, does move the
+    // coverage branches: the store announces rarely, so acting on the announcement costs
+    // a request when there is something new and nothing when there is not.
     await act(async () => {
       await driveUntil(runtime.clock, () => inventoryRequests() > inventoryBefore, 2000);
       await settle(() => inventoryRequests() > inventoryBefore);
     });
     expect(inventoryRequests()).toBeGreaterThan(inventoryBefore);
-    expect(observationRequests()).toBeGreaterThan(observationsBefore);
+    // The measurements do *not* move with it, and that is the change rather than an
+    // oversight: observations announce constantly, and this used to refetch the platform
+    // list on every one of them while never refetching the chart a reader was watching.
+    // The backlog is counted and the refresh control applies it (the two tests above).
+    expect(observationRequests()).toBe(observationsBefore);
+  });
+
+  it('the open chart is stale until refreshed, and the tab says how stale (feature 120, reported)', async () => {
+    // The fault this was written for, reported against the built page and reproduced at
+    // ×600: the chart held 66 points while twenty-six simulated minutes ran past it,
+    // because its fetch was keyed on the datastream alone. The tab was busiest exactly
+    // when it looked most static.
+    await mounted();
+    await openBranch('measurements');
+    await act(async () => {
+      await driveUntil(runtime.clock, () => document.querySelector('[data-datastream]') !== null, 2000);
+      await settle(() => document.querySelector('[data-datastream]') !== null);
+    });
+    const stream = document.querySelector<HTMLElement>('[data-datastream]');
+    if (!stream) throw new Error('no datastream reached the tab');
+    const datastreamId = stream.getAttribute('data-datastream') ?? '';
+    const [thingId, streamId] = datastreamId.split('/');
+    await act(async () => {
+      fireEvent.click(stream);
+      await settle(() => screen.queryByTestId('datastream-chart') !== null, 8000);
+    });
+    const plotted = () =>
+      (document.querySelector('.series-line')?.getAttribute('points') ?? '')
+        .split(' ')
+        .filter((pair) => pair !== '').length;
+    const drawnAt = plotted();
+    expect(drawnAt).toBe(runtime.observationStore.byDatastream(thingId, streamId).length);
+
+    // More observations arrive. The chart does not move — deliberately, because a
+    // picture that jitters under the reader is worse than one a moment old — and the
+    // tab says how many are waiting rather than leaving that to be guessed.
+    await act(async () => {
+      await driveUntil(
+        runtime.clock,
+        () => runtime.observationStore.byDatastream(thingId, streamId).length > drawnAt,
+        2000,
+      );
+      await settle(() => (screen.getByTestId('data-waiting').textContent ?? '').includes('have arrived'));
+    });
+    const held = runtime.observationStore.byDatastream(thingId, streamId).length;
+    expect(held).toBeGreaterThan(drawnAt);
+    expect(plotted()).toBe(drawnAt);
+    expect(screen.getByTestId('data-waiting').textContent).toMatch(/\d+ observation\(s\) have arrived/);
+
+    // Refreshing applies them, and the chart is the store's again.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('data-refresh'));
+      await settle(() => plotted() > drawnAt, 8000);
+    });
+    expect(plotted()).toBe(runtime.observationStore.byDatastream(thingId, streamId).length);
+    expect(screen.getByTestId('data-waiting').textContent).toMatch(/nothing has arrived/);
+  });
+
+  it('does not refetch the datastream list on every observation (feature 120)', async () => {
+    // The other half of the same fault: the observation subscription refetched the
+    // platforms and the datastream list on every single sample — two requests each, for
+    // a list that changes when a sensor first reports and at no other time.
+    const listRequests = () =>
+      asked.filter((path) => path.includes(`${config.shell.endpoints.sensorthings}/Datastreams`) && !path.includes('Observations')).length;
+    await mounted();
+    await act(async () => {
+      await settle(() => listRequests() >= 1);
+    });
+    const atMount = listRequests();
+    await act(async () => {
+      await driveUntil(runtime.clock, () => announcedObservations() > 20, 2000);
+      await settle(() => false, 200);
+    });
+    expect(announcedObservations()).toBeGreaterThan(20);
+    expect(listRequests()).toBe(atMount);
+    // And the control still reads them when asked.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('data-refresh'));
+      await settle(() => listRequests() > atMount);
+    });
+    expect(listRequests()).toBe(atMount + 1);
   });
 
   it('SC-004: an address names a branch and a node, and a node the store lacks is reported rather than absorbed', async () => {

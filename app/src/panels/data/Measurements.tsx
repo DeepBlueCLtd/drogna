@@ -22,6 +22,7 @@ const CHART = { width: 640, height: 220 };
 export function Measurements({
   things,
   datastreams,
+  refreshToken,
   refusal,
   selected,
   onSelect,
@@ -31,6 +32,8 @@ export function Measurements({
 }: {
   readonly things: readonly Thing[];
   readonly datastreams: readonly Datastream[];
+  /** Bumped by the tab's refresh control; the open chart reads it as its cue to fetch. */
+  readonly refreshToken: number;
   /** Why the branch has nothing, where it has nothing (FR-06). */
   readonly refusal?: string;
   /** The datastream key, `<thing>/<datastream>`. */
@@ -105,7 +108,14 @@ export function Measurements({
       )}
 
       <div data-region="chart">
-        {chosen && <DatastreamChart stream={chosen} stPrefix={stPrefix} validator={validator} />}
+        {chosen && (
+          <DatastreamChart
+            stream={chosen}
+            refreshToken={refreshToken}
+            stPrefix={stPrefix}
+            validator={validator}
+          />
+        )}
       </div>
     </div>
   );
@@ -118,10 +128,12 @@ type HistoryState =
 
 function DatastreamChart({
   stream,
+  refreshToken,
   stPrefix,
   validator,
 }: {
   readonly stream: Datastream;
+  readonly refreshToken: number;
   readonly stPrefix: string;
   readonly validator: SeamValidator;
 }) {
@@ -138,7 +150,12 @@ function DatastreamChart({
     return () => {
       abandoned = true;
     };
-  }, [stPrefix, stream.id, validator]);
+    // `refreshToken` is the dependency that was missing. Keyed on the datastream alone,
+    // this effect fetched once and never again: the chart a reader was watching was the
+    // one thing in the tab that could not change, while the clock ran on. Reported
+    // against the built page, and reproduced at ×600 — 66 points, and still 66 points
+    // twenty-six simulated minutes later.
+  }, [refreshToken, stPrefix, stream.id, validator]);
 
   if (state.status === 'refused') {
     return (

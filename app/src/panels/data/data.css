@@ -592,3 +592,39 @@
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* ------------------------------------------------- the refresh control --- */
+
+.data-head-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* The backlog is quiet text, not an alert: it is a fact about how old the picture is,
+   and a reader who does not care should be able to ignore it. */
+.data-waiting {
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
+.data-refresh {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.data-refresh:hover {
+  background: #1b2530;
+}
+
+/* A phone has no room for the sentence beside the button; the button keeps its own
+   accessible name, which carries the same count. */
+.data-panel[data-narrow='true'] .data-waiting {
+  display: none;
+}

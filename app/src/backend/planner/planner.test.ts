@@ -11,6 +11,7 @@ import { latLngToCell } from 'h3-js';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
+import { driveTicks } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { timescaleFromManifest, worldFromManifest } from '../lib/manifest-world.js';
 import { cellKey, createUncertaintyModel, type PlanningCell } from './uncertainty.js';
@@ -26,22 +27,22 @@ function lockstepConfig(): ConfigRun {
 
 const options = { rootSeed: 909, revision: 'test', dirty: false };
 
-function turnLoop(runtime: BackendRuntime, ticks: number): void {
-  for (let i = 0; i < ticks; i++) runtime.clock.tickOnce();
+async function turnLoop(runtime: BackendRuntime, ticks: number): Promise<void> {
+  await driveTicks(runtime.clock, ticks);
 }
 
 describe('the planner (feature 106)', { timeout: 60_000 }, () => {
-  it('is honestly quiet before the loop turns: no field, no hollow message', () => {
+  it('is honestly quiet before the loop turns: no field, no hollow message', async () => {
     const runtime = buildBackend(lockstepConfig(), options, validator);
-    turnLoop(runtime, 1200);
+    await turnLoop(runtime, 1200);
     expect(runtime.planner.lastPlan).toBeUndefined();
     runtime.stop();
   });
 
-  it('emits a master-valid recommendation with a walked route once a spread field exists', () => {
+  it('emits a master-valid recommendation with a walked route once a spread field exists', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    turnLoop(runtime, 2500);
+    await turnLoop(runtime, 2500);
     const plan = runtime.planner.lastPlan;
     expect(plan).toBeDefined();
     if (!plan) throw new Error('unreachable');
@@ -71,10 +72,10 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     runtime.stop();
   });
 
-  it('holds the uncertainty model’s four consequences against a genuinely published field', () => {
+  it('holds the uncertainty model’s four consequences against a genuinely published field', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    turnLoop(runtime, 2000);
+    await turnLoop(runtime, 2000);
     const plan = runtime.planner.lastPlan;
     const spread = runtime.store.holding(`${plan?.uncertainty_field.run_id}-spread`);
     const nowcast = runtime.store.currentNowcast();
@@ -117,14 +118,14 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     runtime.stop();
   });
 
-  it('recommends deterministically: one seed, one plan, twice', () => {
+  it('recommends deterministically: one seed, one plan, twice', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);
-    turnLoop(first, 2500);
+    await turnLoop(first, 2500);
     const planA = JSON.stringify(first.planner.lastPlan);
     first.stop();
     const second = buildBackend(config, options, validator);
-    turnLoop(second, 2500);
+    await turnLoop(second, 2500);
     const planB = JSON.stringify(second.planner.lastPlan);
     second.stop();
     expect(planB).toBe(planA);

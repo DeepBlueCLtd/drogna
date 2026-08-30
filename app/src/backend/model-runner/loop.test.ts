@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, Divergence, RunPublished, RunRequest } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
+import { driveTicks } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 
 const validator = createSeamValidator();
@@ -28,7 +29,7 @@ interface LoopRecord {
   published: RunPublished[];
 }
 
-function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): LoopRecord {
+async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): Promise<LoopRecord> {
   const shell = runtime.transport.connect(`shell-${Math.random()}`, 'shell');
   const record: LoopRecord = { divergences: [], requests: [], published: [] };
   shell.subscribe(config.monitor.topics.divergence, (message) => {
@@ -43,18 +44,18 @@ function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): LoopR
     expect(validator.validate('run-published', message.payload).refusals).toEqual([]);
     record.published.push(message.payload as RunPublished);
   });
-  for (let i = 0; i < ticks; i++) runtime.clock.tickOnce();
+  await driveTicks(runtime.clock, ticks);
   return record;
 }
 
 describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
-  it('AT-02 descendant: the loop turns end to end — floor-scheduled first, then divergence-triggered, every message master-valid', () => {
+  it('AT-02 descendant: the loop turns end to end — floor-scheduled first, then divergence-triggered, every message master-valid', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
     // Before the loop turns, quiet is legible in the monitor's own words (FR-32).
     expect(runtime.monitor.quietReason()).toMatch(/no forecast instance to score against/);
 
-    const record = drive(runtime, config, 6000);
+    const record = await drive(runtime, config, 6000);
 
     // The cadence floor produced the first run, at exactly the configured interval,
     // labelled by its cause (FR-31: the loop cannot be becalmed).
@@ -92,10 +93,10 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     runtime.stop();
   });
 
-  it('declines inside the minimum interval, and the decline is legible (FR-32)', () => {
+  it('declines inside the minimum interval, and the decline is legible (FR-32)', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    drive(runtime, config, 6000);
+    await drive(runtime, config, 6000);
     expect(runtime.scheduler.declinedByPolicy).toBeGreaterThanOrEqual(1);
     runtime.stop();
   });
@@ -103,7 +104,7 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
   it('serves each instance through EDR by convention, without configuration edits (FR-29)', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    const record = drive(runtime, config, 2000);
+    const record = await drive(runtime, config, 2000);
     expect(record.published.length).toBeGreaterThanOrEqual(1);
     const response = await runtime.httpBackend.handle({ method: 'GET', path: '/api/edr/collections', body: '' });
     const ids = (JSON.parse(response.body) as { collections: { id: string }[] }).collections.map((c) => c.id);
@@ -112,14 +113,14 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     runtime.stop();
   });
 
-  it('replays byte-identically: one seed, one loop, twice (AT-04 grows with the loop)', () => {
+  it('replays byte-identically: one seed, one loop, twice (AT-04 grows with the loop)', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);
-    const firstRecord = drive(first, config, 2500);
+    const firstRecord = await drive(first, config, 2500);
     const firstDigests = first.store.holdings().map((h) => `${h.holding_id}:${h.field.sha256}`).sort();
     first.stop();
     const second = buildBackend(config, options, validator);
-    const secondRecord = drive(second, config, 2500);
+    const secondRecord = await drive(second, config, 2500);
     const secondDigests = second.store.holdings().map((h) => `${h.holding_id}:${h.field.sha256}`).sort();
     second.stop();
     expect(secondDigests).toEqual(firstDigests);

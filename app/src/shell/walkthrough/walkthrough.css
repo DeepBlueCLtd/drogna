@@ -36,10 +36,16 @@
   line-height: 1;
 }
 
-@media (max-width: 720px) {
-  .walkthrough-button-label {
-    display: none;
-  }
+/* The label folds and the yellow disc stays, so the control is still the one obviously
+   different thing in the header. Keyed to the *presentation* the shell chose and not to
+   a width, which is ADR-0033's rule and the reason it is here rather than in a media
+   query: a phone in landscape is 844 pixels wide and passes any width test, and it was
+   exactly there that the full-width button pushed the header onto a second row and put
+   the shell's chrome over its quarter-of-the-height bound on every view. Found by the
+   narrow-presentation capture, which measures what a browser did rather than what a
+   stylesheet said. */
+.shell[data-presentation='stack'] .walkthrough-button-label {
+  display: none;
 }
 
 /* driver.js' popover, in the shell's own idiom rather than its default light card. */

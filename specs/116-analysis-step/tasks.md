@@ -87,6 +87,20 @@ and the planner.
 
 ## What was not done, and why
 
+- **Salinity's provenance is not published.** Both variables are analysed, because sound
+  speed is derived from the pair and correcting one alone would bias every residual the
+  monitor scores. But nothing reads salinity's shares — the Map tints by temperature's
+  and the explainer follows one cell of it — and publishing them would add four
+  full-grid fields to hash and hold every cycle to answer a question nothing asks.
+- **Analysis holdings accumulate.** The store retires the previous now-cast but keeps
+  every analysis, so an analysis, an error field and a provenance field are added on
+  every cycle and never released: about 1.5 MB a cycle at the shipped grid, for the life
+  of a run. The published run instances are the historical record and are meant to
+  accumulate; a working analysis is not. Giving the analysis era the retention the
+  now-cast has — keep the holdings of the most recent publication tick, release the rest
+  — is the fix, and it is a change to shared store code that this feature did not make
+  late in its life.
+
 - **Cross-variable covariance.** Temperature and salinity are analysed independently,
   though they are physically correlated and a real system would exploit it. Out of scope
   in the specification and left there: it would double the system's order for no effect

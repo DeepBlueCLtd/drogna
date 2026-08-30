@@ -247,14 +247,21 @@ export class Analyst {
 
     const analysisDigest = this.publish(analysisId, 'analysis', request, manifest, analysedValues, VARIABLES.map((name) => name), `optimal-interpolation-v1: xᵃ = xᵇ + K(y − Hxᵇ), K = BHᵀ(HBHᵀ + R)⁻¹, B from the published spread tapered by Gaspari–Cohn at ${this.config.correlation.horizontal_km} km and ${this.config.correlation.vertical_m} m half-widths, R from each instrument's declared noise. ${observationNote}`);
     const errorDigest = this.publish(errorId, 'analysis', request, manifest, analysedError, VARIABLES.map((name) => `${name}_error`), `The diagonal of Pᵃ = (I − KH)B: what the correction left. Doubt falls only where a measurement reached, and the taper's support says exactly how far that is.`);
+    // Provenance is published for temperature alone, and deliberately.
+    //
+    // Both variables are analysed — sound speed is derived from the pair, so correcting
+    // one and not the other would bias every residual the monitor scores. But nothing
+    // reads salinity's shares: the Map tints by temperature's, and the explainer follows
+    // one cell of it. Publishing them would add four more full-grid fields to hash and
+    // hold on every cycle — at the shipped grid, three quarters of a megabyte a cycle,
+    // kept for the life of the run — to answer a question nothing asks. If something
+    // comes to ask it, this loop is where it is answered.
     const provenanceValues: Float32Array[] = [];
     const provenanceNames: string[] = [];
     const shareNames = [this.config.shares.archive, this.config.shares.departure, this.config.shares.measurement, this.config.shares.model];
-    for (let v = 0; v < VARIABLES.length; v++) {
-      for (let s = 0; s < shareNames.length; s++) {
-        provenanceValues.push(analysedShares[v][s]);
-        provenanceNames.push(`${VARIABLES[v]}_share_${shareNames[s].replace(/[^a-z]+/gi, '_').toLowerCase()}`);
-      }
+    for (let s = 0; s < shareNames.length; s++) {
+      provenanceValues.push(analysedShares[0][s]);
+      provenanceNames.push(`${VARIABLES[0]}_share_${shareNames[s].replace(/[^a-z]+/gi, '_').toLowerCase()}`);
     }
     const provenanceDigest = this.publish(provenanceId, 'analysis', request, manifest, provenanceValues, provenanceNames, `Where each cell's value came from. Because H selects a cell, xᵃ = (I − KH)xᵇ + Ky exactly, so these shares are read off the gain rather than approximated, and they sum to one. A share may be negative: where a cell's background error greatly exceeds the observed cell's, the gain extrapolates, ω passes one, and that is optimal interpolation behaving correctly rather than a fault to clamp away.`);
 

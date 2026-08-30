@@ -68,22 +68,29 @@
 }
 
 /*
- * Centred, not stretched. The lower lane stacks two channels between its roles, and with
- * `stretch` the roles grew to that height — two labels marooned in a box four times the
- * size of the ones above them.
+ * A lane wraps. It is a *flow*, not a row: at a tablet's width seven parts will not sit
+ * side by side, and without wrapping they did not — they overflowed the column and were
+ * painted over by the narration beside it, which is how a reader met the tab on an iPad.
+ * Wrapping is what makes the drawing hold at any width without a second layout: the parts
+ * keep their order and take as many rows as they need.
+ *
+ * Centred rather than stretched, because the lower lane stacks two channels between its
+ * roles and with `stretch` the roles grew to that height — two labels marooned in a box
+ * four times the size of the ones above them.
  */
 .intro-lane {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.7em 0.5em;
   background: #141b22;
   border-radius: 8px;
   padding: 0.9em 0.8em;
 }
 
 .intro-pair {
-  flex: 1 1 12em;
-  min-width: 6em;
+  flex: 1 1 14em;
+  min-width: 8em;
   display: flex;
   flex-direction: column;
   gap: 0.5em;
@@ -101,7 +108,9 @@
 /* ---- a role ---- */
 
 .intro-role {
-  flex: 0 0 9.5em;
+  flex: 1 1 9em;
+  max-width: 14em;
+  min-width: 7.5em;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -140,8 +149,8 @@
  */
 
 .intro-chan {
-  flex: 1 1 9em;
-  min-width: 5em;
+  flex: 1 1 8em;
+  min-width: 6.5em;
   display: flex;
   flex-direction: column;
   justify-content: center;

@@ -17,6 +17,9 @@
  *   and a fetch that throws. No timer is set: the motion is CSS, which is what keeps
  *   Constitution I out of it.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
@@ -190,6 +193,25 @@ describe('it grows, under the reader (FR-76)', () => {
     render(<IntroPanel {...props} />);
     expect(roles()).toContain('ran');
     expect(written.at(-1)).toBe('ran');
+  });
+});
+
+describe('it holds at any width (FR-76)', () => {
+  it('lays the lanes out as a flow that wraps, not a row that overflows', () => {
+    // Watched failing on an iPad: seven parts would not sit side by side, the lane
+    // overflowed its column, and the last of them was painted over by the narration
+    // beside it. jsdom lays nothing out, so what is checked is the property that makes
+    // the overflow impossible — the lane wraps, and its parts may shrink.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'intro.css'), 'utf8');
+    const rule = (selector: string) => {
+      const found = new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`).exec(css);
+      if (!found) throw new Error(`${selector} declares nothing`);
+      return found[1];
+    };
+    expect(rule('.intro-lane')).toMatch(/flex-wrap:\s*wrap/);
+    // A part with a fixed basis cannot give ground, which is what forced the overflow.
+    expect(rule('.intro-role')).not.toMatch(/flex:\s*0\s+0/);
+    expect(rule('.intro-chan')).not.toMatch(/flex:\s*0\s+0/);
   });
 });
 

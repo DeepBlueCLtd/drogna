@@ -38,9 +38,26 @@
  * Nothing moves for a reader who has asked for that (FR-016): with reduced motion the
  * new placement is committed on the same frame, and the picture is exactly the one this
  * file drew before the animation existed.
+ *
+ * **A wire that carries a message lights** (pulse.ts). The light is a *second* path
+ * lying over the wire rather than a change to the wire itself, for two reasons: the
+ * resting strengths below stay the one place a wire's weight is decided, and a light
+ * that writes only its own opacity can be handed to CSS and to the board's attributes
+ * without either of them arguing with React over the same property. It is routed from
+ * the same interpolated boxes the wire is, so a light stays on its wire while the chart
+ * rearranges under it.
  */
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { FlowEdge, FlowNode } from './graph.js';
+import { edgeKey, type PulseBoard } from './pulse.js';
 import {
   METRICS,
   layout,
@@ -108,6 +125,10 @@ export interface FlowCanvasProps {
   readonly openFocus?: 'card' | 'step-previous' | 'step-next';
   /** Keys pressed anywhere in the open node. The open node is what holds the focus. */
   readonly onOpenKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
+  /** Where traffic lights the wires. Absent in a test that is not asking about it. */
+  readonly pulses?: PulseBoard;
+  /** The declared fade, handed to the stylesheet rather than typed into it. */
+  readonly fadeMs: number;
 }
 
 export function FlowCanvas({
@@ -123,6 +144,8 @@ export function FlowCanvas({
   metrics = METRICS,
   openFocus = 'card',
   onOpenKeyDown,
+  pulses,
+  fadeMs,
 }: FlowCanvasProps) {
   // Where the chart is going. Recomputed only when something that decides geometry
   // changes, so the frame loop below has a stable thing to walk towards.
@@ -152,6 +175,29 @@ export function FlowCanvas({
     if (selected === undefined) return { opacity: 0.45, width: 1.3 };
     return touches(edge) ? { opacity: 1, width: 1.8 } : { opacity: 0.08, width: 1 };
   };
+  /**
+   * A light is at full strength whatever the resting wire is doing — traffic is the
+   * thing the reader came to see — except where they have selected a node, which is
+   * them saying they want to read one part of the picture and not the rest.
+   */
+  const litStrength = (edge: Routed) =>
+    selected === undefined || touches(edge) ? 1 : 0.12;
+  /**
+   * One handler per wire, kept. An inline arrow would be a new function every render,
+   * and since feature 117 a render is a frame of the rearrangement: React would hand
+   * the board every wire twice per frame for the length of every move. Stable callbacks
+   * mean it is handed each wire once, when the wire first appears.
+   */
+  const attachTo = useMemo(() => {
+    const handlers = new Map<string, (element: SVGElement | null) => void>();
+    return (key: string) => {
+      const known = handlers.get(key);
+      if (known) return known;
+      const handler = (element: SVGElement | null) => pulses?.attach(key, element);
+      handlers.set(key, handler);
+      return handler;
+    };
+  }, [pulses]);
 
   /**
    * Where the keyboard goes when a node opens and when it closes. Opening a node
@@ -232,7 +278,9 @@ export function FlowCanvas({
     <div className="flow-canvas-scroll" ref={rootRef}>
       <div
         className="flow-canvas"
-        style={{ width: placed.width, height: placed.height }}
+        style={
+          { width: placed.width, height: placed.height, '--flow-pulse-fade': `${fadeMs}ms` } as CSSProperties
+        }
         data-testid="flow-chart"
       >
         <svg
@@ -256,6 +304,20 @@ export function FlowCanvas({
                 <path d="M 0 1 L 9 5 L 0 9 z" fill={hue} />
               </marker>
             ))}
+            {/* The light reaches the arrowhead too: a wire whose head stays grey while
+                its length brightens reads as a wire lighting up, not as something
+                arriving somewhere. */}
+            <marker
+              id="flow-arrow-pulse"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--flow-pulse)" />
+            </marker>
           </defs>
           {placed.bands.map((band) => (
             <text key={band.band} x={metrics.padding} y={band.y + 12} className="flow-band-caption-text">
@@ -284,6 +346,26 @@ export function FlowCanvas({
               </title>
             </path>
           ))}
+          {/* Over the wires, one light per wire that can carry traffic. Ports are not
+              here at all: a coupling carries no broker traffic, so no message can ever
+              have crossed one, and a light that could never fire is a light the reader
+              would eventually read something into. */}
+          <g className="flow-pulses">
+            {routed
+              .filter((edge) => edge.kind === 'topic')
+              .map((edge) => (
+                <g key={`pulse-${edgeKey(edge)}`} opacity={litStrength(edge)}>
+                  <path
+                    className="flow-pulse"
+                    d={edge.d}
+                    fill="none"
+                    markerEnd="url(#flow-arrow-pulse)"
+                    data-flow-pulse={edgeKey(edge)}
+                    ref={attachTo(edgeKey(edge))}
+                  />
+                </g>
+              ))}
+          </g>
         </svg>
         {nodes.map((node) => {
           const at = positionOf.get(node.id);

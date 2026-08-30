@@ -475,7 +475,7 @@
       "acceleration_m_per_s2": 0.05,
       "dive_rate_m_per_s": 0.5
     },
-    "report_interval_ticks": 30,
+    "report_interval_ticks": 5,
     "instruments": [
       {
         "sensor_id": "nav-compass",
@@ -532,7 +532,7 @@
       "name": "sampling platform A",
       "description": "A simulated sampling platform. A coordinate and a sampler."
     },
-    "sample_interval_ticks": 30,
+    "sample_interval_ticks": 5,
     "instruments": [
       {
         "sensor_id": "ctd-temp-050",
@@ -1520,7 +1520,11 @@
           "label": "reads advisories"
         }
       ],
-      "series_samples": 60
+      "series_samples": 60,
+      "pulse": {
+        "fade_ms": 2000,
+        "hold_above_rate": 1
+      }
     },
     "liveness": {
       "default_window_seconds": 6
@@ -1925,7 +1929,17 @@
               "speed_m_per_s": 3.0,
               "depth_m": 30,
               "note": "make for the work area"
-            }
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
           },
           {
             "note": "the departure forecast the cadence floor warranted",
@@ -1935,6 +1949,26 @@
               "advisory-source",
               "offload",
               "planner"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "sensors",
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
             ]
           }
         ]
@@ -1976,7 +2010,17 @@
               "speed_m_per_s": 2.4,
               "depth_m": 60,
               "note": "close the work area from the north-east"
-            }
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
           },
           {
             "note": "closing the area, under the forecast the passage was run on",
@@ -1988,6 +2032,25 @@
             ],
             "prompt": [
               "run-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "advisory-source",
+              "offload",
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
             ]
           }
         ]
@@ -2026,7 +2089,17 @@
               "speed_m_per_s": 2.4,
               "depth_m": 60,
               "note": "first leg of the box"
-            }
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
           },
           {
             "note": "the second leg of the box, deeper",
@@ -2055,6 +2128,23 @@
             },
             "prompt": [
               "run-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
             ]
           }
         ]
@@ -2093,7 +2183,17 @@
               "speed_m_per_s": 2.4,
               "depth_m": 80,
               "note": "work the area north-eastward"
-            }
+            },
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 30
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 30
+              }
+            ]
           },
           {
             "note": "an advisory from shore, and the last run of the period",
@@ -2120,6 +2220,23 @@
             },
             "prompt": [
               "offload-now"
+            ]
+          },
+          {
+            "note": "the cadence the console opens at",
+            "ticks": 0,
+            "stopped": [
+              "planner"
+            ],
+            "tune": [
+              {
+                "id": "sampling-cadence",
+                "value": 5
+              },
+              {
+                "id": "ownship-reporting",
+                "value": 5
+              }
             ]
           }
         ]

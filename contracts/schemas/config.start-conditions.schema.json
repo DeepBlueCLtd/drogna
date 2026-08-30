@@ -108,6 +108,23 @@
             "note": { "type": "string", "minLength": 1 }
           }
         },
+        "tune": {
+          "type": "array",
+          "description": "Settings to put in force for this leg, through the operator plane's tuning endpoint, named by the tunable id that plane declares. A pre-roll uses this for what a vessel uses it for: a passage samples on a coarser cadence than a box worked on station, and the last leg puts back what the configuration declares so the console opens at the cadence the run ships with. It is the plane's own control, published as a command and visible in the Messages tab, and the plane enforces its own declared bounds — a leg cannot ask for something a reader could not ask for by hand.",
+          "items": {
+            "type": "object",
+            "required": ["id", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "description": "The tunable's id in the operator's configuration, which is what carries the target and the setting. Named by id rather than by target-and-setting so a leg cannot address a setting the plane does not offer."
+              },
+              "value": { "type": "number" }
+            }
+          }
+        },
         "prompt": {
           "type": "array",
           "description": "Operator event ids asked for at the head of the leg, in order, through the event endpoint. The target component decides: a prompted run goes through the scheduler's ordinary policy and may be declined, and a decline is published like any other decision. Naming an event this plane does not offer is refused by the plane, not silently ignored.",

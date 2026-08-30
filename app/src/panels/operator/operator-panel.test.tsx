@@ -21,6 +21,7 @@ import type { PanelParams } from '../../shell/Shell.js';
 import { OperatorPanel } from './OperatorPanel.js';
 import { BANDS, buildFlow } from './graph.js';
 import { inReadingOrder } from './layout.js';
+import { edgesCarrying, lingerSweeps } from './pulse.js';
 import { componentsWithoutFaces } from './faces.js';
 
 const validator = createSeamValidator();
@@ -1045,4 +1046,232 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(runtime.clock.currentTick()).toBe(before + config.operator.step.maximum_ticks);
     });
   });
+
+  describe('traffic on the wires (the light a message leaves behind)', () => {
+    /**
+     * What genuinely crossed the broker, heard the way the panel hears it. The
+     * expectations below are computed from this rather than typed: a wire lit for a
+     * message that never crossed, or a message that crossed and lit nothing, both fail.
+     */
+    function spyOnTraffic(): string[] {
+      const heard: string[] = [];
+      const spy = runtime.transport.connect('pulse-spy', config.shell.role);
+      spy.subscribe(config.shell.topics.all, (message) => heard.push(message.topic));
+      return heard;
+    }
+
+    const lit = () =>
+      [...document.querySelectorAll('[data-flow-pulse][data-pulse]')].map((wire) =>
+        wire.getAttribute('data-flow-pulse'),
+      );
+
+    /** The panel's sweep, in host milliseconds — the beat a light is measured in. */
+    const SWEEP_MS = 1000;
+
+    /**
+     * Enough ticks for the sensors to sample. Their cadence is configuration, so the
+     * count is read from it rather than typed: a slower instrument changes this number
+     * without changing this test.
+     */
+    const sampleOnce = () => {
+      for (let tick = 0; tick < config.sensors.sample_interval_ticks; tick++) {
+        runtime.clock.tickOnce();
+      }
+    };
+
+    it('a message lights every wire that carries it, and only those', async () => {
+      const heard = spyOnTraffic();
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // Nothing is lit yet, and two seconds of heartbeats is why that is right: the
+      // clock and the heartbeat are the plane the flow runs on, not edges in it.
+      expect(heard.length).toBeGreaterThan(0);
+      expect(lit()).toEqual([]);
+
+      heard.length = 0;
+      await act(async () => {
+        sampleOnce();
+      });
+
+      const flow = buildFlow(config.shell, topology);
+      const expected = new Set(heard.flatMap((topic) => edgesCarrying(flow.edges, topic)));
+      // Derived on both sides: the traffic is the run's, the wires are the topology's,
+      // and the assertion is that the picture agrees with both.
+      expect(expected.size).toBeGreaterThan(0);
+      expect(lit().sort()).toEqual([...expected].sort());
+      // Not one of them is a coupling: a port carries no broker traffic and can never
+      // light, whatever crossed.
+      expect(document.querySelectorAll('[data-edge-kind="port"][data-pulse]').length).toBe(0);
+    });
+
+    it('a wire that stops carrying goes out, and says nothing in the meantime', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        sampleOnce();
+      });
+      expect(lit().length).toBeGreaterThan(0);
+      // Long enough for the beats the fade is owed, and no longer: the wire is still
+      // lit one beat before it runs out, and out on the beat after. Both halves matter
+      // — a light that goes out early does not fade, it vanishes, and a light that
+      // never goes out is a picture claiming traffic that stopped.
+      const beats = lingerSweeps(config.shell.flow.pulse.fade_ms, SWEEP_MS);
+      await act(async () => {
+        vi.advanceTimersByTime(SWEEP_MS * beats);
+      });
+      expect(lit().length).toBeGreaterThan(0);
+      await act(async () => {
+        vi.advanceTimersByTime(SWEEP_MS * 2);
+      });
+      expect(lit()).toEqual([]);
+    });
+
+    it('at real time a wire fades per message and says so', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        sampleOnce();
+      });
+      const wires = [...document.querySelectorAll('[data-flow-pulse][data-pulse]')];
+      expect(wires.length).toBeGreaterThan(0);
+      for (const wire of wires) {
+        expect(wire.getAttribute('data-pulse')).toBe('fading');
+        expect(wire.hasAttribute('data-pulse-turn')).toBe(true);
+      }
+      expect(screen.getByTestId('flow-pulse-note').textContent).toContain(
+        `fades over ${config.shell.flow.pulse.fade_ms / 1000} s`,
+      );
+    });
+
+    it('above the declared rate the light is held, on the clock’s own figure', async () => {
+      // The clock reports the rate it is running at, and the panel reads that rather
+      // than deciding for itself. Lockstep keeps the run deterministic; the rate on
+      // the samples is what the picture responds to.
+      const fast = lockstepConfig();
+      fast.clock.rate = config.shell.flow.pulse.hold_above_rate + 19;
+      runtime.stop();
+      runtime = buildBackend(fast, { rootSeed: 41, startCondition: 'loitering', revision: 'test', dirty: false }, validator);
+      vi.stubGlobal('fetch', createSeamFetch(fast.boundary.api_prefix, runtime.httpBackend, realFetch));
+
+      render(<OperatorPanel {...panelProps(fast, runtime)} />);
+      // One tick, because a clock sample is how the panel learns the rate at all: it
+      // subscribes, it does not ask. Until one arrives the picture says what it can
+      // support, which is the real-time sentence.
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        runtime.clock.tickOnce();
+      });
+      expect(screen.getByTestId('flow-pulse-note').textContent).toContain(
+        `${fast.clock.rate}× real time`,
+      );
+      // Quiet first, for as long as any light could be owed, so what is lit below is
+      // this run's doing and not the tick that taught the panel the rate.
+      await act(async () => {
+        vi.advanceTimersByTime(SWEEP_MS * (lingerSweeps(fast.shell.flow.pulse.fade_ms, SWEEP_MS) + 2));
+      });
+      expect(lit()).toEqual([]);
+      await act(async () => {
+        for (let tick = 0; tick < fast.sensors.sample_interval_ticks; tick++) {
+          runtime.clock.tickOnce();
+        }
+      });
+      const wires = [...document.querySelectorAll('[data-flow-pulse][data-pulse]')];
+      expect(wires.length).toBeGreaterThan(0);
+      for (const wire of wires) {
+        expect(wire.getAttribute('data-pulse')).toBe('held');
+        // Held, not animating: nothing to restart, so nothing to restart dozens of
+        // times a second. That is the whole difference between the two states.
+        expect(wire.hasAttribute('data-pulse-turn')).toBe(false);
+      }
+      // A held light still goes out when the traffic does, and it is owed one beat
+      // rather than a fade's worth: it says traffic is running, and the first quiet
+      // sweep makes that false.
+      await act(async () => {
+        vi.advanceTimersByTime(SWEEP_MS * 2);
+      });
+      expect(lit()).toEqual([]);
+    });
+
+    it('says how long the picture has been dark, so quiet is not mistaken for broken', async () => {
+      // The complaint this answers: at real time the instruments sample every thirty
+      // ticks, so for twenty-seven seconds in every thirty the chart is legitimately
+      // dark — and nothing on screen said whether that was the system being quiet or
+      // the display having stopped. Found by watching the running page at ×1, not here.
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const quiet = () => screen.getByTestId('flow-quiet-note').textContent ?? '';
+      // Ticking without reaching a sampling tick: traffic crosses the broker the whole
+      // time and lights nothing, which is exactly the state that looked broken.
+      await act(async () => {
+        runtime.clock.tickOnce();
+      });
+      expect(lit()).toEqual([]);
+      expect(quiet()).toContain('Nothing has crossed a drawn wire');
+      // And it says so as a figure it counted itself (FR-008).
+      expect(quiet()).toContain('counted here');
+
+      // Once something has crossed, the gap is reported in ticks — the harness's unit,
+      // not the host's. Asserted as growth rather than as a value: the gap after a
+      // sampling tick is however far past it the run got, and pinning that number would
+      // be pinning the sensors' cadence in a test about the display.
+      const ticksAgo = () => Number(/(\d+) tick\(s\) ago/.exec(quiet())?.[1]);
+      await act(async () => {
+        sampleOnce();
+      });
+      expect(Number.isNaN(ticksAgo())).toBe(false);
+
+      // Nothing may reach a drawn wire while the gap is being measured, so the two
+      // components that put anything on one are stopped first. Without this the test
+      // was measuring growth across a sampling tick: it passed while the cadence was
+      // thirty and every tick it added stayed inside one interval, and failed the
+      // moment the cadence became five — the figure under test reset halfway through.
+      await act(async () => {
+        await fetch(`${config.operator.http.command_prefix}/sensors/stop`, { method: 'POST' });
+        await fetch(`${config.operator.http.command_prefix}/platform/stop`, { method: 'POST' });
+      });
+      const settled = ticksAgo();
+      await act(async () => {
+        for (let tick = 0; tick < 7; tick++) runtime.clock.tickOnce();
+      });
+      expect(ticksAgo()).toBe(settled + 7);
+    });
+
+    it('names what crosses the broker and lights nothing, from the wiring', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const flow = buildFlow(config.shell, topology);
+      const quiet = screen.getByTestId('flow-quiet-note').textContent ?? '';
+      // Counted from the same graph the picture is drawn from: a topic that stops being
+      // terminal moves this number without anybody editing a sentence.
+      expect(quiet).toContain(`${flow.suppressed.length} filter(s)`);
+      expect(quiet).toContain(`${flow.topicsTerminal.length} topic(s)`);
+      expect(flow.topicsTerminal.length).toBeGreaterThan(0);
+    });
+
+    it('names the topics whose lights are an approximation, because the broker names no sender', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const note = screen.getByTestId('flow-pulse-note').textContent ?? '';
+      expect(note).toContain('never a sender');
+      // The topics it names are the wiring's, not a phrase: a topic with one publisher
+      // has an exact light and must not be listed as an approximation.
+      const flow = buildFlow(config.shell, topology);
+      for (const edge of flow.edges) {
+        if (edge.kind !== 'topic') continue;
+        const senders = new Set(
+          flow.edges.filter((other) => other.kind === 'topic' && other.label === edge.label).map((other) => other.from),
+        );
+        expect(note.includes(edge.label)).toBe(senders.size > 1);
+      }
+    });
+  });
 });
+

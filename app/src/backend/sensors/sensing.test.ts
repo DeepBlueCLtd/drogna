@@ -25,15 +25,30 @@ describe('sensing (feature 103)', () => {
   it('sensors sample on their cadence and every observation reaches the store valid', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
-    // Sample ticks 30 and 60 × four instruments. Tick 0 is missing on purpose and the
-    // sensors say why: since feature 113 they sample where ownship last reported, and
-    // the platform's first report is published *during* tick 0's delivery pass, so it
-    // is queued behind the clock sample the sensors are handling. One sampling tick of
-    // cold start, stated rather than papered over — sampling the ocean at a place
-    // nobody has reported would be inventing the place (FR-55).
-    expect(runtime.observationStore.byDatastream('platform-a', 'temperature-050m').length).toBe(2);
-    expect(runtime.observationStore.count()).toBe(8 + 9);
+    const ticks = 60;
+    for (let i = 0; i < ticks; i++) runtime.clock.tickOnce();
+    // Every sampling tick after the first, times the declared instruments. Tick 0 is
+    // missing on purpose and the sensors say why: since feature 113 they sample where
+    // ownship last reported, and the platform's first report is published *during* tick
+    // 0's delivery pass, so it is queued behind the clock sample the sensors are
+    // handling. One sampling tick of cold start, stated rather than papered over —
+    // sampling the ocean at a place nobody has reported would be inventing the place
+    // (FR-55). The platform loses no such tick: it reports from tick 0.
+    //
+    // Read from the cadences rather than typed. When both dials moved from 30 ticks to
+    // 5 this test failed on `2` and `8 + 9`, which were those cadences written out; the
+    // arithmetic below reproduces both of those numbers exactly at 30, and follows the
+    // configuration when it changes.
+    const samplingTicks = Math.floor(ticks / config.sensors.sample_interval_ticks);
+    // Absent means every tick — the master's word, and the platform's own fallback.
+    const reportingTicks = Math.floor(ticks / (config.platform.report_interval_ticks ?? 1)) + 1;
+    expect(runtime.observationStore.byDatastream('platform-a', 'temperature-050m').length).toBe(
+      samplingTicks,
+    );
+    expect(runtime.observationStore.count()).toBe(
+      samplingTicks * config.sensors.instruments.length +
+        reportingTicks * config.platform.instruments.length,
+    );
     expect(runtime.ingest.refused).toBe(0);
     expect(runtime.ingest.flagged).toBe(0);
     for (const observation of runtime.observationStore.all()) {
@@ -87,7 +102,9 @@ describe('sensing (feature 103)', () => {
     expect(runtime.sensors.detail()).toContain('sampling where ownship reported at tick 0');
 
     // Once a sampling tick comes round with that position still current, they sample.
-    for (let i = 0; i < 30; i++) runtime.clock.tickOnce();
+    // One cadence forward, read from the configuration: the `30` this line used to
+    // carry was the cadence written out, and it said `1` only while that was 30.
+    for (let i = 0; i < config.sensors.sample_interval_ticks; i++) runtime.clock.tickOnce();
     expect(runtime.observationStore.byDatastream('platform-a', 'temperature-050m').length).toBe(1);
     expect(runtime.sensors.detail()).toContain('sampling where ownship reported at tick');
     runtime.stop();

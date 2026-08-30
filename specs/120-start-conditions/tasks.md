@@ -186,6 +186,26 @@ but those controls, driven from a script.
       plane. It now reads the store's inventory — descriptors, never the truth-derived
       field, which `check-truth-initialisation` holds it to — and resumes.
 
+## What merging `main` forced
+
+- [x] T043 Renumbered to 120 when features 118 and 119 merged first; FR-76/77 to FR-91/92,
+      ADR-0039/0040 to ADR-0040/0041. Recorded rather than done silently.
+- [x] T044 The Intro tab was rewritten wholesale on `main` as a moving drawing. Main's
+      version is taken whole and this branch's two edits re-applied to its footer.
+- [x] T045 A mechanical both-sides resolution of `shell.css` split main's last rule from
+      its closing brace. Every test passed; the **build** caught it. Main's 799 lines are
+      now verified byte-identical to main's own file rather than assumed to be.
+- [x] T046 Feature 103 took the instruments to a sample every 5 ticks — six times the
+      observations, and three times the pre-roll, because the analysis scales
+      super-linearly in what it assimilates. A leg may now **tune** a setting the plane
+      declares, and the first leg of every condition puts the sampling cadence and the
+      ownship reporting interval to 30 for the passage: what a vessel does, published as a
+      command, inside the plane's own bounds. A leg advancing nothing puts both back before
+      the console opens. Better than before 103: 0.82, 2.32, 2.33 and 4.02 seconds.
+- [x] T047 Planted against the two new checks. Deleting the restoring leg reports
+      `arriving leaves 'sampling-cadence' at 30, not the configured 5`; naming a setting
+      the plane does not offer reports it by name, twice.
+
 ## Deliberately not done
 
 - [ ] **The forecast eras in the artefacts.** The other 10.9 MB and the other 2.1 seconds.

@@ -141,6 +141,33 @@ composition root (ADR-0030), the operator surface and the map all come from them
       the consequence chain of SC-001 asserted end to end.
 - [ ] T049 Watched turns, captured (Constitution IX): SC-001 stopping the platform, and
       SC-002 turning it.
+- [x] T050 `pulse.ts`: the wires light as traffic crosses them, which `graph.ts` has
+      promised since T040 — *"a topic edge carries traffic and can pulse; a port edge
+      never can"* — and nothing did. A light per message, fading over the declared
+      `flow.pulse.fade_ms`; above `flow.pulse.hold_above_rate` it is held on while
+      traffic continues, because at sixty times real time a light restarted per message
+      is a flicker that says less than a steady one. It goes out on the sweep that
+      already darkens a lapsed node, so nothing here keeps time of its own. Written to
+      the DOM rather than to React state: a light is one attribute for a second or two,
+      and re-rendering twenty faces for it would have the display competing for the
+      machine with the system it draws. The fade was 500 ms and is 2 s, which is long
+      enough to follow a message down a wire and long enough to outlast the sweep that
+      puts lights out — so how many beats a fading light is owed is derived from the two
+      declared numbers (`lingerSweeps`) rather than left to collide. **Watched failing**
+      seven ways: the fade that never restarts, the accelerated clock ignored, the sweep
+      that clears a light nobody saw, a port allowed to light, the panel hearing traffic
+      and lighting nothing, and — once the fade outgrew the sweep — a light put out
+      mid-fade and a derivation that forgot a fade can outlast a beat.
+      Watching it at ×1 asked the question the tab could not answer: the wires are dark
+      for twenty-seven seconds in every thirty, because the instruments sample every
+      thirty ticks and everything crossing in between is either the plane or a topic
+      only the shell subscribes to — and nothing on screen distinguished that from a
+      display that had stopped. So the chart now says how many ticks since anything ran
+      down a drawn wire (counted here), and how much of the traffic legitimately lights
+      nothing, both derived from the graph rather than written into a sentence.
+      What the lights cannot say is said on screen instead — the seam hands a subscriber
+      a topic and never a sender, so a topic with two publishers lights both their wires,
+      and the panel names those topics from the edge set rather than from a phrase.
 
 ## Not doing, and why
 

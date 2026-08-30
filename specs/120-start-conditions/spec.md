@@ -233,6 +233,36 @@ for 1.73 MB of artefacts across all four.
 planes before gzip takes the archive from 63:1 to 158:1 and the now-cast from 2.1:1 to
 3.5:1. It is a permutation, so the digest the store checks is untouched.
 
+## The pre-roll samples on a passage cadence
+
+Feature 103 landed on `main` while this branch was open and took the instruments from a
+sample every 30 ticks to one every 5 — six times the observations, which makes the live
+demo livelier and made every pre-roll three times dearer, because the analysis scales
+super-linearly in the observations it assimilates. `arriving`, the default, went from 3.0
+to 9.8 seconds.
+
+The answer is the plane's own control rather than a shorter pre-roll. A leg may **tune** a
+setting the operator plane declares, by the tunable's id, and the first leg of every
+condition puts the sampling cadence and the ownship reporting interval to 30 for the
+passage. It is what a vessel does — a passage samples more coarsely than a box worked on
+station — it is published as a command and visible in the Messages tab, and the plane
+enforces its own declared bounds, so a leg cannot ask for something a reader could not ask
+for by hand.
+
+A **leg of its own, advancing nothing**, puts both back before the console opens, so the
+run opens at the cadence the configuration ships. That the handover is a leg rather than a
+side effect of whichever leg came last is the point: a 3,600-tick final leg at the dense
+cadence would have spent most of what the coarse one saved. A test holds every condition
+to putting back everything it tuned — planted by deleting that leg, and it reports
+`arriving leaves 'sampling-cadence' at 30, not the configured 5`.
+
+| | before 103 | after 103 | with the passage cadence |
+|---|---|---|---|
+| leaving | 1.07 s | 0.86 s | **0.82 s** |
+| arriving | 3.04 s | 9.80 s | **2.32 s** |
+| loitering | 3.02 s | 5.80 s | **2.33 s** |
+| returning | 5.24 s | 15.44 s | **4.02 s** |
+
 ## Not done, and why
 
 - **NetCDF export is not implemented.** The input names it under "returning to quay-side",

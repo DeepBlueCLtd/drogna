@@ -43,7 +43,11 @@ describe('choosing a start condition (feature 120)', () => {
       expect(condition.holds.length, `${condition.id} promises something`).toBeGreaterThan(0);
       expect(condition.legs.length, `${condition.id} has a pre-roll`).toBeGreaterThan(0);
       for (const leg of condition.legs) {
-        const acts = leg.ticks > 0 || leg.demand !== undefined || (leg.prompt ?? []).length > 0;
+        const acts =
+          leg.ticks > 0 ||
+          leg.demand !== undefined ||
+          (leg.prompt ?? []).length > 0 ||
+          (leg.tune ?? []).length > 0;
         expect(acts, `${condition.id}: '${leg.note}' does something`).toBe(true);
       }
       expect(preRollTicks(condition)).toBeGreaterThan(0);
@@ -59,6 +63,49 @@ describe('choosing a start condition (feature 120)', () => {
         for (const id of leg.stopped ?? []) {
           expect(stoppable.has(id), `${condition.id} stops '${id}', which is protected`).toBe(false);
         }
+      }
+    }
+  });
+
+  it('a leg may only tune a setting the plane offers, within the bound it declares', () => {
+    // Refused mid-pre-roll otherwise, with the page already showing progress — and the
+    // bound is the plane's, so a leg cannot ask for something a reader could not.
+    const offered = new Map(config.operator.tunables.map((tunable) => [tunable.id, tunable]));
+    for (const condition of conditions.conditions) {
+      for (const leg of condition.legs) {
+        for (const wanted of leg.tune ?? []) {
+          const tunable = offered.get(wanted.id);
+          expect(tunable, `${condition.id} tunes '${wanted.id}', which is not offered`).toBeDefined();
+          if (!tunable) continue;
+          expect(wanted.value).toBeGreaterThanOrEqual(tunable.minimum);
+          expect(wanted.value).toBeLessThanOrEqual(tunable.maximum);
+          if (tunable.integer) expect(Number.isInteger(wanted.value)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('puts every setting it tuned back before the console opens', () => {
+    // A pre-roll samples on a passage cadence; the console must open on the one the
+    // configuration ships. A condition that tuned something and did not put it back
+    // would hand the reader a run quietly running under settings nothing declares.
+    // `number | undefined` because the platform's reporting interval is optional in its
+    // master. The check below refuses an id it has no shipped value for rather than
+    // comparing against undefined and passing, which is the way this would go wrong.
+    const shipped: Record<string, number | undefined> = {
+      'sampling-cadence': config.sensors.sample_interval_ticks,
+      'ownship-reporting': config.platform.report_interval_ticks,
+    };
+    for (const condition of conditions.conditions) {
+      const inForce = new Map<string, number>();
+      for (const leg of condition.legs) {
+        for (const wanted of leg.tune ?? []) inForce.set(wanted.id, wanted.value);
+      }
+      for (const [id, value] of inForce) {
+        expect(shipped[id], `${condition.id} tunes '${id}', which this check does not know`).toBeDefined();
+        expect(value, `${condition.id} leaves '${id}' at ${value}, not the configured ${shipped[id]}`).toBe(
+          shipped[id],
+        );
       }
     }
   });

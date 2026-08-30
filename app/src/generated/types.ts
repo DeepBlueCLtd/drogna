@@ -707,6 +707,10 @@ export type ConfigShell = {
       "label": string;
     }[];
     "series_samples": number;
+    "pulse": {
+      "fade_ms": number;
+      "hold_above_rate": number;
+    };
   };
   "consumers": {
     "notice": string;
@@ -851,6 +855,10 @@ export type ConfigStartConditionsLeg = {
     "depth_m"?: number;
     "note"?: string;
   };
+  "tune"?: {
+    "id": string;
+    "value": number;
+  }[];
   "prompt"?: string[];
 };
 

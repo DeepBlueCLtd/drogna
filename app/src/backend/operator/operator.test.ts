@@ -783,6 +783,19 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
 
       const rows = () =>
         runtime.observationStore.byDatastream(config.sensors.platform.thing_id, 'temperature-050m').length;
+      // The mismatch is built rather than inherited. It used to arrive for free from
+      // the declared cadences — the sensors sampling every thirty and the platform
+      // reporting every thirty, so a tuned five starved them — and when both dials were
+      // shortened to five this test went green for the wrong reason: nothing starved,
+      // because nothing was mismatched. The starvation is the claim, so it is now set
+      // up on purpose: push the platform's reporting out first.
+      const starved = config.sensors.sample_interval_ticks * 6;
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'platform',
+        setting: 'report_interval_ticks',
+        value: starved,
+      });
+      vi.advanceTimersByTime(2500);
       const beforeRows = rows();
       await post(runtime, config.operator.http.tuning_path, {
         target: 'sensors',
@@ -794,8 +807,8 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
 
       // The cadence alone is not enough, and the harness says so rather than
       // pretending: the sensors treat a position older than their own cadence as no
-      // position at all, so at five ticks they starve on a platform reporting every
-      // thirty. Found by this test failing, which is the coupling being real.
+      // position at all, so at five ticks they starve on a platform reporting far more
+      // slowly. Found by this test failing, which is the coupling being real.
       const skippedBefore = figureOf(heard, 'sensors', 'skipped') ?? 0;
       for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
       vi.advanceTimersByTime(2500);

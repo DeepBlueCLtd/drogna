@@ -11,7 +11,7 @@
  *
  * So this module is a **scripted operator**. It holds the clock still, then drives the
  * run forward through the operator plane's own HTTP endpoints: stop and start a
- * component, publish a demand, prompt an event, step the clock. Every one of those is a
+ * component, tune a declared setting, publish a demand, prompt an event, step the clock. Every one of those is a
  * control a reader can work by hand in the Operator tab, and every message the run
  * produces on the way is on the broker where the Messages tab can see it. Nothing here
  * reaches past the release gate; nothing here writes to a store; nothing here knows what
@@ -176,6 +176,28 @@ export async function runPreRoll(
         await insist(ports, 'POST', operator.http.step_path, { ticks: settle });
         ticksDone += settle;
         report();
+      }
+
+      // Tunings before the demand and the prompts, because a leg's settings are the
+      // terms the rest of it runs under: a run prompted before the cadence it is to be
+      // scored at is in force would be scored at the previous leg's.
+      for (const wanted of leg.tune ?? []) {
+        const tunable = operator.tunables.find((candidate) => candidate.id === wanted.id);
+        if (!tunable) {
+          throw new PreRollRefused(
+            operator.http.tuning_path,
+            400,
+            `'${wanted.id}' is not a setting this plane offers; offered: ${operator.tunables
+              .map((candidate) => candidate.id)
+              .sort()
+              .join(', ')}`,
+          );
+        }
+        await insist(ports, 'POST', operator.http.tuning_path, {
+          target: tunable.target,
+          setting: tunable.setting,
+          value: wanted.value,
+        });
       }
 
       if (leg.demand) {

@@ -77,14 +77,14 @@ jobs:
       - name: Background course proofs (keyboard, greyscale, labels)
         run: pnpm run capture:background
 
-      # Feature 114's SC-01 is the feature's yardstick and cannot be made by assertion:
+      # Feature 115's SC-01 is the feature's yardstick and cannot be made by assertion:
       # it is a claim about a running page, not about a data structure. This runs the
       # harness, stops the sensors through the Operator tab's own control, and fails
       # unless the observation lane stills while the control lane goes on beating.
       - name: Messages traffic proof (SC-01: stopping the sensors stills a lane)
         run: pnpm run capture:messages
 
-      # Feature 114's SC-07 drives all three of the map's projections, because the fault
+      # Feature 115's SC-07 drives all three of the map's projections, because the fault
       # it exists against is invisible at any one of them: the volume drew no ownship
       # track at all, and a screenshot of the default projection would never have said so.
       - name: Map projection proof (SC-07: the track in all three projections)

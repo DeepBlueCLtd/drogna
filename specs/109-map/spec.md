@@ -50,6 +50,14 @@ rather than pretending (Constitution VII, carried into presentation).
   `composeUrl` writes into the WKT. The map says whether the position falls inside
   the domain it fetched from the reference collection; it is a warning, never a
   veto, because the server's own refusal is the authority (Constitution VII).
+  **The affordance is part of the feature** (amended again): the first version of this
+  was built and could not be found in the running shell — the way in was inside the
+  view-controls disclosure, and the only cue that the canvas was armed was a crosshair
+  cursor. A gesture nobody knows about is not a feature, so the toggle is the map's own
+  control, named for the action; the instruction is drawn over the canvas where the
+  gesture is, and states what the click will do; and the canvas is outlined while armed.
+  Where WebGL is absent, none of it is said at all: there is no map to click, and the
+  composer's number boxes are the way.
 - **The time control carries the field, without a cache** (issue #60, FR-40
   amended): the slider drove the route, the platform and the advisories; the field
   stood at one instant. It now moves too. The decision the issue asked for is *no

@@ -1,8 +1,8 @@
 /**
- * Gate: nothing names a view the configuration does not declare (feature 114, FR-63,
+ * Gate: nothing names a view the configuration does not declare (feature 115, FR-68,
  * SC-06).
  *
- * Feature 114 withdraws the System tab, and withdraws it properly: `#/view/system`
+ * Feature 115 withdraws the System tab, and withdraws it properly: `#/view/system`
  * becomes an unknown view, handled as the shell already handles one. No redirect and no
  * tombstone — an address that resolves is a claim the thing still exists.
  *

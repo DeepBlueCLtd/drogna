@@ -98,7 +98,7 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(backgroundMarks(REPO_ROOT)).toEqual([]);
   });
 
-  it('view-ids: a link to a view the configuration does not declare fails (FR-63, SC-06)', () => {
+  it('view-ids: a link to a view the configuration does not declare fails (FR-68, SC-06)', () => {
     // Three shapes, because a view is named in three ways, and a gate that caught only
     // the literal address would leave the helper and the registry to rot quietly.
     const messages = viewIds(join(fixtures, 'views-dangling')).map((f) => f.message).join('\n');

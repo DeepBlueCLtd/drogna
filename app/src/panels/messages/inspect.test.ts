@@ -1,5 +1,5 @@
 /**
- * The inspector's pure half (feature 114, FR-68), read against a real master rather
+ * The inspector's pure half (feature 115, FR-73), read against a real master rather
  * than a hand-written schema: `heartbeat` and `observation` are on disk, are amended
  * rather than rewritten, and are what the panel will actually be handed.
  */

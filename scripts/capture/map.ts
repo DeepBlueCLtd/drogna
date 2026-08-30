@@ -1,10 +1,10 @@
 /**
- * SC-07, watched happening (feature 114 T032).
+ * SC-07, watched happening (feature 115 T032).
  *
  * The claim: *the ownship track appears in all three projections, and the volume's track
  * is drawn at the depths the platform reported rather than at the surface.*
  *
- * Before feature 114 the depth volume drew neither the track nor the demanded course.
+ * Before feature 115 the depth volume drew neither the track nor the demanded course.
  * That was not a decision — `MapPanel` selects `cubeLayers` or `geographicLayers` whole,
  * and the ownship layers existed only in the second — which is exactly the kind of gap
  * that a screenshot of the map at its default projection would never have shown. So the

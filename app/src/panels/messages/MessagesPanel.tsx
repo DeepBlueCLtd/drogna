@@ -1,10 +1,10 @@
 /**
- * The Messages tab (FR-23, FR-24, and feature 114's FR-66 to FR-68): live seam traffic,
+ * The Messages tab (FR-23, FR-24, and feature 115's FR-71 to FR-73): live seam traffic,
  * every received message validated against the master its topic declares, with a running
  * refusal count — "0 refused by their schema" is itself a claim this display makes and
  * the tests check.
  *
- * Feature 114 reorders the tab into **motion, tree, inspector**, in that order down the
+ * Feature 115 reorders the tab into **motion, tree, inspector**, in that order down the
  * page. The traffic display leads because it is what reads from across a room: stop the
  * sensors from Operator and the observation lane drains while the clock lane goes on
  * beating, with nothing refreshed and no number read. The topic tree comes out of the
@@ -13,7 +13,7 @@
  * renders a payload against its master rather than as a blob, marking a refusal on the
  * field that caused it.
  *
- * **The list stays.** Messages does not exercise feature 114's table-replacement licence:
+ * **The list stays.** Messages does not exercise feature 115's table-replacement licence:
  * the traffic display shows *that* and *where*, and the list shows *what*, and neither is
  * the other's fallback. Every message the panel receives is still validated and still
  * counted, the kinds suppressed from the list included, so the refusal claim keeps its
@@ -61,7 +61,7 @@ interface Row {
 }
 
 /**
- * The regions this panel declares, and the authority its tour is held to (FR-70). A
+ * The regions this panel declares, and the authority its tour is held to (FR-75). A
  * region added here with no step is named by `missingSteps`; a step naming a region that
  * is not here is named too. The bound is this list rather than a number typed into a
  * test, so a fifth region cannot arrive unstepped (CLAUDE.md, lesson 2).
@@ -178,7 +178,7 @@ export function MessagesPanel({ params }: PanelProps) {
             (in the list; counted, validated and drawn either way)
           </span>
         </p>
-        {/* The panel carries its own help control (FR-70, ADR-0037): a tab with a tour
+        {/* The panel carries its own help control (FR-75, ADR-0037): a tab with a tour
             shows one, and a tab without shows nothing. */}
         <HelpButton tour={messagesTour()} />
       </div>
@@ -206,7 +206,7 @@ export function MessagesPanel({ params }: PanelProps) {
 
       <div className="messages-split">
         {/* The tree is a primary region rather than a disclosure at a desktop width
-            (FR-67); narrow, it discloses like every other secondary surface, which is
+            (FR-72); narrow, it discloses like every other secondary surface, which is
             FR-50 changing where it is and not whether it is. */}
         <div className="messages-tree-region" data-region="tree">
           <Disclosure label="topic tree" narrow={narrow} className="messages-tree-disclosure">
@@ -253,7 +253,7 @@ export function MessagesPanel({ params }: PanelProps) {
 }
 
 /**
- * The inspector (FR-68). A payload read against the master its topic declares, with the
+ * The inspector (FR-73). A payload read against the master its topic declares, with the
  * refusal marked on the field that caused it — and the raw wire document one control
  * away for every message, because the wire form is the thing the seam actually carried.
  */

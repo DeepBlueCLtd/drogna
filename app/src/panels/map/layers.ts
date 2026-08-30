@@ -1,8 +1,8 @@
 /**
- * The map's layer registry (feature 114, FR-70).
+ * The map's layer registry (feature 115, FR-75).
  *
  * FR-61 held the component walkthrough to the shell's declared component list, so a
- * component with no step is reported by name rather than passing unnoticed. FR-70
+ * component with no step is reported by name rather than passing unnoticed. FR-75
  * generalises that: every tour is held to a list on disk, and the map's list is this one.
  *
  * It is two statements, and the pair is what makes the rule work:
@@ -35,7 +35,7 @@ export const MAP_SUBJECTS: readonly TourSubject[] = [
   { id: 'advisories', label: 'shore advisories valid at the displayed instant', element: '.map-canvas' },
   { id: 'domain', label: 'the domain and the reference features', element: '.map-canvas' },
   { id: 'time', label: 'the time control', element: '[data-testid="time-control"]' },
-  { id: 'composer', label: 'the EDR query composer', element: '[data-testid="composer"]' },
+  { id: 'composer', label: 'the EDR query composer', element: '[data-testid="composer-toggle"]' },
 ];
 
 /**

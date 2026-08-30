@@ -10,7 +10,7 @@
  * the shell's read-everything identity, and a received topic no entry declares is
  * rendered as an undeclared branch — a finding, never a silence.
  *
- * Feature 114 (FR-67) promotes it out of the disclosure it spent three features behind
+ * Feature 115 (FR-72) promotes it out of the disclosure it spent three features behind
  * and makes a node selectable: selecting one filters the traffic display and the list to
  * that subtree. Selection is the only thing added — the structure is still the artefact
  * and the light is still received traffic, and the two still never mix. A node is a

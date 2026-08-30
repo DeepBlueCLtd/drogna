@@ -9,6 +9,15 @@
  * happening — no forecast to score against, nothing breaching, or how far a streak
  * has got.
  *
+ * The threshold and the persistence count are tunable from the operator plane while
+ * the run is going (FR-64). What arrives is a command addressed to this component, not
+ * a new configuration document: the configured values stay what they were, the values
+ * in force are reported in the heartbeat and on every residual sample, and a restart
+ * rebuilds this component from configuration and so returns it to them. Everything
+ * that scores against a threshold reads it from one place below, because a tuning that
+ * reached the streak rule but not the sample report would have the monitor disagreeing
+ * with itself about what it is doing.
+ *
  * An ownship observation is not a sample of the ocean (FR-56), and the monitor needs
  * no rule to say so: `pairs` names the thing and the two datastreams it scores, so an
  * observation it did not ask for informs nothing. That is an allowlist, and it is
@@ -18,7 +27,12 @@
  * check worth nothing (CLAUDE.md, lesson 2).
  */
 import type { SeamClient } from '../../seam/transport.js';
-import type { ConfigMonitor, Divergence, Observation } from '../../generated/types.js';
+import type {
+  ConfigMonitor,
+  Divergence,
+  Observation,
+  OperatorCommand,
+} from '../../generated/types.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { soundSpeedMs } from '../env-generator/analytic.js';
@@ -42,6 +56,9 @@ export class Monitor {
   residualCount = 0;
   divergencesRaised = 0;
   private lastResidual: number | undefined;
+  /** Settings in force, where the operator plane has changed one from configuration. */
+  private tunedThreshold: number | undefined;
+  private tunedPersistence: number | undefined;
 
   constructor(
     private readonly config: ConfigMonitor,
@@ -53,21 +70,54 @@ export class Monitor {
       config.id,
       config.heartbeat,
       client,
-      () => ({ sim_time: this.simTime.value, tick: this.simTime.tick, status: 'ok', detail: this.quietReason() }),
+      () => ({
+        sim_time: this.simTime.value,
+        tick: this.simTime.tick,
+        status: 'ok',
+        detail: this.quietReason(),
+        // The settings in force, reported rather than left to be read out of the
+        // sentence above: a display that parses prose is a display inventing figures.
+        figures: [
+          { key: 'threshold', value: this.threshold(), unit: 'm/s', label: 'drift threshold' },
+          { key: 'persistence', value: this.persistence(), unit: 'samples', label: 'persistence' },
+        ],
+      }),
       runId,
       configDigest(config),
     );
   }
 
+  /**
+   * The threshold in force: what the operator plane last set, or what configuration
+   * says. One reader for the whole component, so the streak rule and the sample report
+   * can never be scoring against different numbers.
+   */
+  threshold(): number {
+    return this.tunedThreshold ?? this.config.threshold_m_per_s;
+  }
+
+  /** The persistence count in force, on the same rule as the threshold. */
+  persistence(): number {
+    return this.tunedPersistence ?? this.config.persistence_count;
+  }
+
+  /** Whether either setting differs from the document this component was built from. */
+  private tunedFrom(): string {
+    const changed: string[] = [];
+    if (this.tunedThreshold !== undefined) changed.push(`threshold ${this.config.threshold_m_per_s} → ${this.tunedThreshold} m/s`);
+    if (this.tunedPersistence !== undefined) changed.push(`persistence ${this.config.persistence_count} → ${this.tunedPersistence}`);
+    return changed.length === 0 ? '' : ` (tuned from the operator plane: ${changed.join(', ')})`;
+  }
+
   /** FR-32: three different quiets, three different sentences. */
   quietReason(): string {
     if (!this.store.currentInstance()) {
-      return 'quiet: no forecast instance to score against yet — the loop has not turned';
+      return `quiet: no forecast instance to score against yet — the loop has not turned${this.tunedFrom()}`;
     }
     if (this.breaches.length === 0) {
-      return `scoring against ${this.scoredAgainst ?? 'the current run'}: ${this.residualCount} residual(s), last ${this.lastResidual?.toFixed(2) ?? '—'} m/s, nothing breaching`;
+      return `scoring against ${this.scoredAgainst ?? 'the current run'}: ${this.residualCount} residual(s), last ${this.lastResidual?.toFixed(2) ?? '—'} m/s, nothing breaching${this.tunedFrom()}`;
     }
-    return `scoring against ${this.scoredAgainst}: streak of ${this.breaches.length}/${this.config.persistence_count} breaching sample(s)`;
+    return `scoring against ${this.scoredAgainst}: streak of ${this.breaches.length}/${this.persistence()} breaching sample(s)${this.tunedFrom()}`;
   }
 
   start(): void {
@@ -78,11 +128,31 @@ export class Monitor {
     this.client.subscribe(this.config.topics.observations, (message) => {
       this.consider(message.payload as Observation);
     });
+    this.client.subscribe(this.config.topics.command, (message) => {
+      this.obey(message.payload as OperatorCommand);
+    });
     this.heartbeat.start();
   }
 
   stop(): void {
     this.heartbeat.stop();
+  }
+
+  /**
+   * An operator command addressed to this monitor. A command for another component is
+   * ignored — the topic is one, the address is in the message — and a setting this
+   * component does not hold is ignored too rather than stored: the surface refuses an
+   * undeclared setting at the seam, and a second, quieter store of unknown settings
+   * here would be somewhere for one to hide.
+   *
+   * A tightened threshold does not re-score what has already been scored. The streak
+   * is evidence gathered under the rule that was in force when it was gathered, and
+   * re-deciding it now would be the monitor rewriting its own record.
+   */
+  private obey(command: OperatorCommand): void {
+    if (command.target !== this.config.id || command.kind !== 'tuning') return;
+    if (command.setting === 'threshold_m_per_s') this.tunedThreshold = command.value;
+    if (command.setting === 'persistence_count') this.tunedPersistence = command.value;
   }
 
   private consider(observation: Observation): void {
@@ -164,13 +234,13 @@ export class Monitor {
       // would be a second implementation of the rule, free to disagree with the
       // monitor about whether the loop is about to turn (FR-58).
       breach: {
-        threshold_m_per_s: this.config.threshold_m_per_s,
-        streak: Math.abs(residual) > this.config.threshold_m_per_s ? this.breaches.length + 1 : 0,
-        persistence_count: this.config.persistence_count,
+        threshold_m_per_s: this.threshold(),
+        streak: Math.abs(residual) > this.threshold() ? this.breaches.length + 1 : 0,
+        persistence_count: this.persistence(),
       },
     });
 
-    if (Math.abs(residual) > this.config.threshold_m_per_s) {
+    if (Math.abs(residual) > this.threshold()) {
       this.breaches.push({
         tick: temperature.tick,
         simTime: temperature.sim_time,
@@ -178,7 +248,7 @@ export class Monitor {
         latitude: temperature.location.latitude,
         longitude: temperature.location.longitude,
       });
-      if (this.breaches.length >= this.config.persistence_count) {
+      if (this.breaches.length >= this.persistence()) {
         this.raise(depthM, instance.descriptor.holding_id);
         this.breaches = [];
       }
@@ -208,7 +278,7 @@ export class Monitor {
       residual: {
         mean_m_per_s: mean,
         peak_m_per_s: peak,
-        threshold_m_per_s: this.config.threshold_m_per_s,
+        threshold_m_per_s: this.threshold(),
         sample_count: streak.length,
       },
       persistence: {

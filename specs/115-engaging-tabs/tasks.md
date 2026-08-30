@@ -1,4 +1,4 @@
-# Feature 114 — tasks
+# Feature 115 — tasks
 
 Grouped by subject and ordered by the build order the author ruled: **Messages first**,
 because the traffic display is the yardstick made visible and the rest is built on the
@@ -48,11 +48,16 @@ the Operator flow chart all come from them.
       than staying as a fallback; what the absence of a button now means; how the
       completeness rule generalises from the declared component list to a per-surface list
       on disk. Amends the record of feature 110 rather than replacing it.
-- [x] T008 Amend `srd.md`: new §5.14 with FR-63 to FR-70; FR-14, FR-16, FR-23, FR-24,
+- [x] T008 Amend `srd.md`: new §5.15 with FR-68 to FR-75; FR-14, FR-16, FR-23, FR-24,
       FR-40, FR-46 and FR-61 amended in place. FR-16's obligation is named as discharged
       by the Operator flow chart — the amendment must say that, not merely delete System.
-- [x] T009 Note feature 114 in `docs/v2/plan.md` §5, beside the notes 111, 112 and 113
-      left, so the numbering stays reconciled openly.
+- [x] T009 Note feature 115 in `docs/v2/plan.md` §5, beside the notes 111, 112 and 113
+      left, so the numbering stays reconciled openly. It carries a second note it did not
+      expect to: **this was specified as 114 and renumbered to 115** when the
+      operator-controls work took that number on `main` while the implementation was in
+      flight, landing its own §5.14 with FR-63 to FR-67. Exactly the collision 113 met,
+      settled the same way — the tree is the authority, so the work still in flight moves
+      rather than argues — and the requirements moved with it into FR-68 to FR-75.
 - [x] T010 Design the three displays before any of them is built: the traffic display, the
       holdings timeline, the comparison. A committed mockup that leads implementation
       rather than records it, as 113's `mockup.html` did — at both densities, with the
@@ -282,7 +287,7 @@ the Operator flow chart all come from them.
 ## The map
 
 - [x] T031 Draw the ownship track and demanded course in the cube, in the frame's own
-      cartesian space, at the depths the platform reported — not at the surface (FR-69).
+      cartesian space, at the depths the platform reported — not at the surface (FR-74).
       `ownshipInCube` in `cube.ts`, pure, so the claim worth checking — the track is at
       the depths the platform *reported* — is one a test can assert without a WebGL
       context. The demanded ray sits at the depth the platform is at rather than at the
@@ -332,7 +337,7 @@ the Operator flow chart all come from them.
 
 ## Showing the work
 
-- [ ] T037 Link the hosted instance from the pull request, opened at each changed view —
+- [x] T037 Link the hosted instance from the pull request, opened at each changed view —
       `#/view/messages`, `#/view/holdings`, `#/view/map` — not at the shell's front door
       (CLAUDE.md; D16). Narrate progress in PR comments as PR-05 asks, each comment
       linking the instance at what it is about.
@@ -346,3 +351,29 @@ the Operator flow chart all come from them.
       the map already drew the track in two projections and now draws it in three, and the
       help control is the same control in a different place. Both would be entries about a
       change rather than about a thing to watch work.
+
+## The record this feature leaves
+
+Three places where the specification and the tree disagreed, resolved in the tree's
+favour and written down at the moment each was found — the part that cannot be
+reconstructed later (CLAUDE.md, lesson 1).
+
+- **FR-70's counterpart rule** (T027) refuses every comparison this harness can make when
+  applied literally. What makes a document truth here is who wrote it, not when. The
+  requirement's intent survives; its test does not. `srd.md` FR-70 still carries the
+  original form, deliberately: amending a requirement on the strength of an
+  implementation's reading is the move this repository has already paid for, and the
+  ruling belongs to the author.
+- **FR-71's undeclared lane** (T011) asked for a fault that cannot happen: the broker
+  refuses an undeclared namespace at the seam. The fault that can happen is an undeclared
+  *topic* in a declared namespace, and that is what is drawn.
+- **T018's Operator legend** did not exist. It was built here rather than amended into.
+
+And one habit worth naming, because it produced four fixes no test would have: **every
+new display was captured and looked at.** `.traffic-row` and `.timeline-row` were each
+themselves a grid item, so two lanes landed on every line. Four ISO instants printed over
+each other on one axis. A run's forecast and its uncertainty field cover the same
+interval, so one bar hid the other and eight holdings drew as five. And the SC-01 capture
+reported an empty observation lane before anything had been stopped, because heartbeat
+cadence is host time while sampling is simulation time. Every one of those passed its
+tests.

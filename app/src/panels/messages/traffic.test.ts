@@ -1,5 +1,5 @@
 /**
- * The traffic display's pure half (feature 114, FR-66).
+ * The traffic display's pure half (feature 115, FR-71).
  *
  * The properties worth asserting are the ones a picture cannot show: that a declared
  * namespace is drawn whether or not it has been heard from, that an undeclared one

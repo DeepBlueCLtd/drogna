@@ -1,7 +1,7 @@
 ---
 title: The fastest way to see a system stop is to stop watching the numbers
 date: 2026-08-30
-feature: specs/114-engaging-tabs
+feature: specs/115-engaging-tabs
 description: >-
   A page listing every message a system passes is complete, honest and almost unreadable.
   Drawing the same traffic as marks on lanes turned out to answer a question the list

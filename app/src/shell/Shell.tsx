@@ -245,7 +245,7 @@ export function Shell({ config, client, validator, manifest, onImportManifest }:
         </Disclosure>
         <span className="shell-disclaimer">synthetic throughout — holds no third-party entities</span>
         {/* The help control used to sit here, last in the header and therefore at the top
-            right. Feature 114 moved it into the panel it explains (FR-70, ADR-0037): with
+            right. Feature 115 moved it into the panel it explains (FR-75, ADR-0037): with
             four tours the header would have had to carry a menu, or one button whose
             meaning changed under the reader's hand as the active view changed. No
             fallback stays behind, because a button that is always present says nothing by

@@ -1,5 +1,5 @@
 /**
- * What the timeline says about a holding (feature 114, FR-64, T022).
+ * What the timeline says about a holding (feature 115, FR-69, T022).
  *
  * The Holdings tab is the one place in this feature where a table is *replaced* rather
  * than kept beside a new display or deleted with its tab. Nothing stands behind the

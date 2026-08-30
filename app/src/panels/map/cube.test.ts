@@ -66,7 +66,7 @@ describe('the depth cube (issue #59)', () => {
   });
 });
 
-describe('the platform in the volume (feature 114, FR-69)', () => {
+describe('the platform in the volume (feature 115, FR-74)', () => {
   const frame = cubeFrame({ west: -2, east: -1, south: 50, north: 51, deepest: 400 });
 
   it('draws the track at the depths the platform reported, not at the surface', () => {

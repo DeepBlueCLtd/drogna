@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 /**
- * Messages against a live backend (feature 114, FR-66 to FR-68). Nothing here is mocked
+ * Messages against a live backend (feature 115, FR-71 to FR-73). Nothing here is mocked
  * below the seam: the runtime is provisioned as the bootstrap provisions it and every
  * assertion reads what a real message actually caused.
  *
- * The load-bearing test is **SC-02: silence is still**. FR-66 forbids motion while the
+ * The load-bearing test is **SC-02: silence is still**. FR-71 forbids motion while the
  * broker is silent, because a display that keeps moving with nothing arriving is
  * asserting traffic that does not exist (Constitution VII). Two things could break that
  * and only one of them is visible in the markup, so both are checked:
@@ -52,7 +52,7 @@ const noAddress: PanelParams['address'] = {
   onChange: () => () => {},
 };
 
-describe('the Messages tab (feature 114)', { timeout: 120_000 }, () => {
+describe('the Messages tab (feature 115)', { timeout: 120_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
 
@@ -160,7 +160,7 @@ describe('the Messages tab (feature 114)', { timeout: 120_000 }, () => {
     expect(received()).toBe(before);
   });
 
-  it('FR-67: selecting a tree node filters the traffic display and the list', () => {
+  it('FR-72: selecting a tree node filters the traffic display and the list', () => {
     render(<MessagesPanel {...panelProps()} />);
     act(() => vi.advanceTimersByTime(2100));
     act(() => {
@@ -184,7 +184,7 @@ describe('the Messages tab (feature 114)', { timeout: 120_000 }, () => {
     expect(marksOn('ctl')).toBeGreaterThan(0);
   });
 
-  it('FR-68: the inspector reads a payload against its master, and the raw wire stays reachable', () => {
+  it('FR-73: the inspector reads a payload against its master, and the raw wire stays reachable', () => {
     render(<MessagesPanel {...panelProps()} />);
     act(() => vi.advanceTimersByTime(2100));
     act(() => screen.getByLabelText('show heartbeats').click());
@@ -200,7 +200,7 @@ describe('the Messages tab (feature 114)', { timeout: 120_000 }, () => {
     expect(screen.getByTestId('inspect-raw').textContent).toContain('"component"');
   });
 
-  it('FR-68: a refused payload is marked on its fields, and the wire document stays reachable', () => {
+  it('FR-73: a refused payload is marked on its fields, and the wire document stays reachable', () => {
     render(<MessagesPanel {...panelProps()} />);
     const rogue = runtime.transport.connect('rogue', 'sensors');
     act(() => rogue.publish('obs/platform-a/mystery', { not: 'declared' }));
@@ -220,7 +220,7 @@ describe('the Messages tab (feature 114)', { timeout: 120_000 }, () => {
     expect(screen.getByTestId('inspect-raw').textContent).toContain('"not"');
   });
 
-  it('FR-70: the tour covers every region the panel declares, and no region it does not', () => {
+  it('FR-75: the tour covers every region the panel declares, and no region it does not', () => {
     // The bound is the panel's own declared region list, read from the module rather
     // than typed here: a fifth region cannot arrive unstepped.
     expect(

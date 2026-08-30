@@ -1,5 +1,5 @@
 /**
- * A holding's coverage interval, read from its own manifest (feature 114, FR-64, T023).
+ * A holding's coverage interval, read from its own manifest (feature 115, FR-69, T023).
  *
  * The timeline draws each holding at the interval it covers rather than at the instant
  * it was published, because the thing a table hides is the store *filling up*: the

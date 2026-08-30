@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 30 August 2026
 **Feature:** 114 (the tabs beyond Operator)
-**Requirements:** SRD-v2 FR-65; amends the figure vocabulary of FR-57
+**Requirements:** SRD-v2 FR-70; amends the figure vocabulary of FR-57
 **Engages:** Constitution VII (a display shows what it received); Constitution IX (no
 skill claim without a persistence reference); ADR-0035, whose three kinds of figure this
 adds a fourth to
@@ -17,7 +17,7 @@ distinct and a figure may not change kind between states. The point of the vocab
 Constitution VII: a reader can tell, without reading the source, whether the shell is
 relaying something or asserting it.
 
-Feature 114's Holdings comparison does neither. It asks the query layer for three
+Feature 115's Holdings comparison does neither. It asks the query layer for three
 coverages at one instant and depth — a forecast instance, the now-cast that covers the
 same instant (the truth), and a persistence reference held constant from the instance's
 own initial step — and it subtracts them. The picture it draws is a difference field. No

@@ -102,7 +102,7 @@ describe('the Map’s ownship track (feature 113)', () => {
     expect(status).toContain(`${reported.length} reported position(s)`);
   });
 
-  it('FR-69: the track and the demanded course are drawn in every projection', async () => {
+  it('FR-74: the track and the demanded course are drawn in every projection', async () => {
     act(() => {
       for (let index = 0; index < 150; index++) runtime.clock.tickOnce();
     });
@@ -116,7 +116,7 @@ describe('the Map’s ownship track (feature 113)', () => {
     if (!select) throw new Error('the map offers no projection control');
 
     // Parity, asserted rather than eyeballed. The volume drew neither the track nor the
-    // demand before feature 114: `cubeLayers` and `geographicLayers` are selected whole
+    // demand before feature 115: `cubeLayers` and `geographicLayers` are selected whole
     // and the ownship layers lived only in the second.
     for (const projection of ['flat', 'globe', 'cube'] as const) {
       await act(async () => {
@@ -135,7 +135,7 @@ describe('the Map’s ownship track (feature 113)', () => {
     }
   });
 
-  it('FR-70: every layer the panel draws is placed by the map’s own registry', async () => {
+  it('FR-75: every layer the panel draws is placed by the map’s own registry', async () => {
     act(() => {
       for (let index = 0; index < 150; index++) runtime.clock.tickOnce();
     });

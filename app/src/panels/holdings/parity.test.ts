@@ -1,5 +1,5 @@
 /**
- * The Holdings parity check (feature 114, T022, SC-03) — **written before the timeline
+ * The Holdings parity check (feature 115, T022, SC-03) — **written before the timeline
  * it holds**, on the interview's condition: the licence to replace the inventory table
  * was conditional on this passing, and if it could not be satisfied the table stayed and
  * the reason went into `tasks.md`. A verification written after the display is one this

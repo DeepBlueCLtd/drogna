@@ -2,20 +2,24 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.advisory-source.schema.json",
   "title": "drogna shore advisory source configuration (V2-C16)",
-  "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here.",
+  "description": "The shore advisory source (SRD-v2 FR-37): authors advisories deterministically from its seed stream and simulation time on the cadence below, cycling the closed kinds, with guidance values derived from the background profiles' sound speed plus seeded jitter. It publishes on its declared topic and holds nothing back for a second channel: what the store refuses is refused observably at the store's seam, not silently here. It may also be prompted from the operator plane to author the next advisory now; prompted or on cadence, the advisory is the same deterministic next one in its sequence.",
   "type": "object",
-  "required": ["id", "stream", "topics", "heartbeat", "cadence_ticks", "valid_seconds", "region_feature", "depth_span_m", "sound_speed_half_width_m_per_s"],
+  "required": ["id", "stream", "topics", "heartbeat", "cadence_ticks", "valid_seconds", "region_feature", "depth_span_m", "sound_speed_half_width_m_per_s", "prompt_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
     "stream": { "type": "string", "minLength": 1 },
     "topics": {
       "type": "object",
-      "required": ["clock", "advisory"],
+      "required": ["clock", "advisory", "command"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "advisory": { "$ref": "config.common.schema.json#/$defs/topic" }
+        "advisory": { "$ref": "config.common.schema.json#/$defs/topic" },
+    "command": {
+      "$ref": "config.common.schema.json#/$defs/topic",
+      "description": "Operator commands (operator-command.schema.json). The source acts on an event addressed to it and ignores everything else on the topic."
+    }
       }
     },
     "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
@@ -27,6 +31,11 @@
       "description": "The feature-store feature whose bounding box advisories cover."
     },
     "depth_span_m": { "type": "number", "exclusiveMinimum": 0 },
-    "sound_speed_half_width_m_per_s": { "type": "number", "exclusiveMinimum": 0 }
+    "sound_speed_half_width_m_per_s": { "type": "number", "exclusiveMinimum": 0 },
+    "prompt_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id this source answers to (operator-command.schema.json). Named on both sides, as a topic is."
+    }
   }
 }

@@ -1,12 +1,12 @@
 /**
- * The traffic display's pure half (feature 114, FR-66).
+ * The traffic display's pure half (feature 115, FR-71).
  *
  * Lanes are the declared top-level namespaces of the derived topology artefact —
  * structure, on FR-24's rule — and marks are received messages and nothing else.
  *
  * **Nothing here reads a clock, and that is the design rather than an accident.** A mark
  * is placed by its position in the receive order, not by how long ago it arrived, so the
- * display advances when — and only when — a message arrives. FR-66 forbids animation
+ * display advances when — and only when — a message arrives. FR-71 forbids animation
  * while the broker is silent, because a display that keeps moving with nothing arriving
  * is asserting traffic that does not exist (Constitution VII), and the cheapest way to
  * be unable to do that is to hold no time at all.

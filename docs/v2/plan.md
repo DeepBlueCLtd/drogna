@@ -195,7 +195,32 @@ component wearing an instrument designed for what it does. **It was specified as
 renumbered to 113** when the mobile-support work above took that number on `main` while
 this was in flight; the tree is the authority, so it moved rather than argued.
 
-**Feature 114, the tabs beyond Operator** (`specs/114-engaging-tabs/`, SRD-v2 §5.14),
+**Feature 114, the operator's controls** (`specs/114-operator-controls/`, SRD-v2 §5.14),
+follows 113 directly and answers the reading of it: the tab drew the machinery and let a
+reader stop it, and little else. It makes the tab drivable — a demanded platform state
+with presets and reported limits, the monitor's threshold and persistence and the
+scheduler's two intervals tunable while a run is going, and prompts that ask a component
+to act now. The prompts go to the component that decides rather than around it, so a
+prompted forecast run can be — and routinely is — declined by the scheduler's own policy,
+and the decline is published like any other decision. What the plane offers is declared
+once in the operator's configuration and served as a statement the shell draws from, so
+the panel holds no bound of its own. It also records something worth keeping: the demand
+control the request asked for **already existed**, unmarked, behind a node click. A
+control nobody can find is a control that does not exist.
+
+A second round followed from an interview rather than from a plan, and is recorded here
+because the interview changed the shape of the work: the components that would really
+fail may now be asked to publish one deliberately faulty message (SRD-v2 FR-67), the
+generator, planner and packager take prompts, and the sampling cadence joins the tunable
+set — where a failing test found that shortening it starves the sensors, because a heard
+position is fresh for exactly one sampling interval. Driving the built page found three
+defects that had been on `main` since 113 and that no test had reached: the flow chart
+drew from unvalidated traffic and fell over on the first bad message, the coverage
+store's stack had never drawn a bar, and the packager's refusals were published nowhere.
+That is the second time the running page has been the thing that found them, which is
+the argument for the habit rather than an anecdote about it.
+
+**Feature 115, the tabs beyond Operator** (`specs/115-engaging-tabs/`, SRD-v2 §5.15),
 sits outside the arc as 111, 112 and 113 do, and reaches into none of it: it changes no
 simulation, adds no component, moves no data and needs no new master. 113 set a bar and
 the rest of the shell divided in two — Background designed, the Map an instrument, Intro
@@ -207,7 +232,11 @@ ownship track in all three projections, the yellow help button moves from the he
 the panel it explains, and **the System tab is withdrawn** — the Operator flow chart has
 discharged FR-16's obligation since 113, and nothing replaces it. That the feature needs
 no new master is the evidence it is the right one: everything a reader would want to see
-was already crossing the seam.
+was already crossing the seam. **It was specified as 114 and renumbered to 115** when the
+operator-controls work above took that number on `main` while this was in flight — the
+same collision 113 met and settled the same way: the tree is the authority, so the work
+still in flight moves rather than argues. Its requirements moved with it, from FR-63 to
+FR-70 into FR-68 to FR-75.
 
 ## 6. Emergent requirements from the open pull requests
 

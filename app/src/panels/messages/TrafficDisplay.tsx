@@ -1,5 +1,5 @@
 /**
- * The traffic display (feature 114, FR-66): received messages drawn as marks on lanes,
+ * The traffic display (feature 115, FR-71): received messages drawn as marks on lanes,
  * arriving as they arrive.
  *
  * It is the headline of the Messages tab because it is the one thing on that tab that
@@ -8,7 +8,7 @@
  *
  * **The display holds no clock.** Marks are placed by receive order (`traffic.ts`), so
  * it advances when a message arrives and at no other time. There is no sweep interval
- * here and no CSS animation on a mark, because FR-66 forbids motion while the broker is
+ * here and no CSS animation on a mark, because FR-71 forbids motion while the broker is
  * silent — a display that keeps moving with nothing arriving is asserting traffic that
  * does not exist (Constitution VII). SC-02 is the check, and it was planted.
  *

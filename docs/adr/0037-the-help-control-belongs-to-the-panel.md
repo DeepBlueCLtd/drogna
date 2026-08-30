@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 30 August 2026
 **Feature:** 114 (the tabs beyond Operator)
-**Requirements:** SRD-v2 FR-70; amends FR-61 and the record of feature 110
+**Requirements:** SRD-v2 FR-75; amends FR-61 and the record of feature 110
 **Engages:** ADR-0033 (two presentations of one shell); FR-50 (the narrow presentation
 changes where a panel is, never whether it is)
 

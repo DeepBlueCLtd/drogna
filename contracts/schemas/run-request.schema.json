@@ -81,9 +81,10 @@
       "type": "string",
       "enum": [
         "divergence",
-        "scheduled"
+        "scheduled",
+        "operator"
       ],
-      "description": "Why this run is warranted: a sustained divergence, or the cadence floor alone (FR-31). Labelled wherever runs are shown."
+      "description": "Why this run is warranted: a sustained divergence, the cadence floor alone (FR-31), or an operator prompt considered under the same policy as a divergence. Labelled wherever runs are shown, so a run a reader asked for is never mistaken for one the world asked for. A prompted request carries divergence and region null, as a scheduled one does."
     }
   }
 }

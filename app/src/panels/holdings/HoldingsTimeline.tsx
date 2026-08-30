@@ -1,12 +1,12 @@
 /**
- * The coverage store's timeline (feature 114, FR-64).
+ * The coverage store's timeline (feature 115, FR-69).
  *
  * Not a list in arrival order: a picture of the store *filling up*. Each holding is drawn
  * at the interval its own manifest says it covers, on a lane for its era — the archive as
  * a long band twenty years wide, the now-cast advancing on its cadence, instances as bars
  * spanning the validity they reach into.
  *
- * **This replaces the inventory table**, the one place in feature 114 where a table goes
+ * **This replaces the inventory table**, the one place in feature 115 where a table goes
  * rather than being kept beside a new display or deleted with its tab. Nothing stands
  * behind it to be a keyboard and screen-reader surface, so it is one: every holding is a
  * `<button>` in publication order, carrying an accessible name that announces everything
@@ -114,7 +114,7 @@ export function HoldingsTimeline({
             </span>
           </div>
           <p className="panel-footnote" data-testid="timeline-scale">
-            {/* The scale is stated, never inferred from tick spacing (FR-64). */}
+            {/* The scale is stated, never inferred from tick spacing (FR-69). */}
             Scale: {scale.description}.
           </p>
         </>

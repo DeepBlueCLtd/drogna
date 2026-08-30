@@ -1,11 +1,11 @@
 /**
- * The Messages tab's own stylesheet (feature 114). The tab's older rules — the
+ * The Messages tab's own stylesheet (feature 115). The tab's older rules — the
  * counters, the split, the list — stay in `shell.css` where three features left them;
  * what is here is the surfaces this feature added.
  *
  * One rule governs the whole file and is the reason it is worth reading: **nothing in
  * the traffic display animates or transitions.** No `animation`, no `transition`, no
- * keyframes. FR-66 forbids motion while the broker is silent, and a CSS animation is
+ * keyframes. FR-71 forbids motion while the broker is silent, and a CSS animation is
  * motion the markup cannot see — a check that watched the DOM would pass while the page
  * pulsed away at a stopped harness. The check that holds this reads this file
  * (`messages.test.tsx`), so a transition added here for a nice fade fails it by name.
@@ -95,7 +95,7 @@
 
 /* ------------------------------------------------------------ the topic tree --- */
 
-/* Promoted out of its disclosure (FR-67): at a desktop width it is a region of its own
+/* Promoted out of its disclosure (FR-72): at a desktop width it is a region of its own
    with room to be read, and it scrolls in its own container so the page never does. */
 .messages-tree-region {
   flex: 0 0 auto;
@@ -174,7 +174,7 @@
 }
 
 /* The refusal is marked on the field that caused it, which is the whole point of
-   reading a payload against its master rather than printing it (FR-68). */
+   reading a payload against its master rather than printing it (FR-73). */
 .inspect-refused th,
 .inspect-refused .inspect-value {
   color: var(--shell-refused);

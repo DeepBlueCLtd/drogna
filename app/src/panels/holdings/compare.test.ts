@@ -1,5 +1,5 @@
 /**
- * The Holdings tab's pure halves (feature 114): the interval a manifest states, the axis
+ * The Holdings tab's pure halves (feature 115): the interval a manifest states, the axis
  * that carries twenty years and six hours at once, and the rules that decide what an
  * instance may honestly be compared against.
  *

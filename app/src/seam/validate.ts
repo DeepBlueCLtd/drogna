@@ -15,7 +15,7 @@ export interface ValidationVerdict {
   readonly refusals: readonly string[];
   /**
    * The same refusals, with the instance path kept apart from the sentence (feature
-   * 114, FR-68). The Messages inspector marks a refusal *on the field that caused it*,
+   * 115, FR-73). The Messages inspector marks a refusal *on the field that caused it*,
    * and re-parsing the path back out of the sentence above would make the sentence's
    * punctuation load-bearing. `path` is Ajv's instance path — '' for the document
    * itself, '/context/datastream_id' for a field.

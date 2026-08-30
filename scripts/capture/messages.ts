@@ -1,5 +1,5 @@
 /**
- * SC-01, watched happening (feature 114 T013).
+ * SC-01, watched happening (feature 115 T013).
  *
  * The claim is one sentence: *stopping the sensors from Operator visibly stills the
  * observation lane in Messages, with no refresh and no reload.* It is the feature's

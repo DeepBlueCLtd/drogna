@@ -1,5 +1,5 @@
 /**
- * The inspector's pure half (feature 114, FR-68): a received payload read against the
+ * The inspector's pure half (feature 115, FR-73): a received payload read against the
  * master its topic declares.
  *
  * The old inspector printed `JSON.stringify(payload, null, 2)` with the refusal above

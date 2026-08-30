@@ -18,7 +18,7 @@ export interface GridCoverage {
   /**
    * The parameters the coverage describes itself with. Optional here because the map
    * has never needed them — it takes its labels from the composer's own list — and
-   * declared because feature 114's comparison does: a difference in degrees Celsius
+   * declared because feature 115's comparison does: a difference in degrees Celsius
    * drawn with no unit is a number, and the unit is on the document the seam served
    * rather than in a table the shell would otherwise have to keep.
    */

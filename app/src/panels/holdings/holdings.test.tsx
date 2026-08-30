@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The Holdings tab against a live backend (feature 114, FR-64 and FR-65). Nothing here is
+ * The Holdings tab against a live backend (feature 115, FR-69 and FR-70). Nothing here is
  * mocked below the seam: the coverage store is the real one, the EDR service answers the
  * real queries, and the coverages differenced are the ones the seam actually served.
  *
@@ -53,7 +53,7 @@ async function settle(until: () => boolean, rounds = 4000): Promise<void> {
   for (let round = 0; round < rounds && !until(); round++) await Promise.resolve();
 }
 
-describe('the Holdings tab (feature 114)', { timeout: 180_000 }, () => {
+describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
   let asked: string[];
@@ -134,7 +134,7 @@ describe('the Holdings tab (feature 114)', { timeout: 180_000 }, () => {
     }
   });
 
-  it('FR-64: the panel states the scale it is showing rather than leaving it to be inferred', async () => {
+  it('FR-69: the panel states the scale it is showing rather than leaving it to be inferred', async () => {
     await mounted();
     const scale = screen.getByTestId('timeline-scale').textContent ?? '';
     expect(scale).toMatch(/logarithmic in elapsed simulation time|one instant/);
@@ -286,7 +286,7 @@ describe('the Holdings tab (feature 114)', { timeout: 180_000 }, () => {
     expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
   });
 
-  it('FR-70: the tour covers every region the panel declares, and no region it does not', () => {
+  it('FR-75: the tour covers every region the panel declares, and no region it does not', () => {
     expect(uncoveredSubjects('holdings', HOLDINGS_REGIONS, HOLDINGS_TOUR_STEPS)).toEqual([]);
     expect(HOLDINGS_REGIONS.length).toBeGreaterThan(0);
   });

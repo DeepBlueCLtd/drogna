@@ -1,5 +1,5 @@
 /**
- * The timeline's axis (feature 114, FR-64).
+ * The timeline's axis (feature 115, FR-69).
  *
  * The problem this file exists for is stated in one line of the requirement: *the archive
  * spans twenty years and an instance spans hours*. On a linear axis the archive is the

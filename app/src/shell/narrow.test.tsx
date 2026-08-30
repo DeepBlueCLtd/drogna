@@ -234,8 +234,8 @@ describe('the chrome (FR-007)', () => {
     }
   });
 
-  it('FR-70: the help control is carried by the panel, and reaches the same place at both widths', async () => {
-    // Feature 114 moved it out of the header (ADR-0037). FR-50 governs the move: the
+  it('FR-75: the help control is carried by the panel, and reaches the same place at both widths', async () => {
+    // Feature 115 moved it out of the header (ADR-0037). FR-50 governs the move: the
     // narrow presentation changes *where* a panel is, never whether it is — so the
     // control is in the panel's own header row at both widths, and is never folded into
     // a disclosure. A help affordance behind a "more" label is one the people who need
@@ -254,7 +254,7 @@ describe('the chrome (FR-007)', () => {
     }
   });
 
-  it('FR-70: a view with no tour shows no control, and the absence is the answer', async () => {
+  it('FR-75: a view with no tour shows no control, and the absence is the answer', async () => {
     // Intro is prose and Background is eleven explainers that are their own walkthrough.
     // A button that was always present would say nothing by being present.
     for (const view of ['intro', 'background']) {

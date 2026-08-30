@@ -118,7 +118,7 @@ export function volumeEdges(frame: CubeFrame): [number, number, number][][] {
 }
 
 /**
- * The platform in the volume (feature 114, FR-69): the track it reported and the course
+ * The platform in the volume (feature 115, FR-74): the track it reported and the course
  * it was demanded, carried into the cube's cartesian space.
  *
  * Pure, and here rather than inline in the panel, because the claim worth checking is not

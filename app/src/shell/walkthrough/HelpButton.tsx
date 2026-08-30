@@ -1,5 +1,5 @@
 /**
- * The help button (feature 110, moved into the panel by feature 114): a large yellow
+ * The help button (feature 110, moved into the panel by feature 115): a large yellow
  * button that walks a reader through the surface it sits on.
  *
  * Yellow because it is the one control on the page that is *for the reader* rather
@@ -7,10 +7,10 @@
  * affordance that looked like the others would be found only by people who did not
  * need it.
  *
- * Built to be repeated, and feature 114 is the repetition. The button takes a tour, not
+ * Built to be repeated, and feature 115 is the repetition. The button takes a tour, not
  * a hard-wired script, so adding one to another tab is a tour and a line. What changed
  * at 114 is where it lives: **the panel it explains carries it, at that panel's top
- * right** (FR-70, ADR-0037). A tab with a tour shows one; a tab without shows nothing,
+ * right** (FR-75, ADR-0037). A tab with a tour shows one; a tab without shows nothing,
  * and the absence is information — the button means *this tab explains itself*.
  *
  * That move deletes machinery rather than adding it. In the header the button had to

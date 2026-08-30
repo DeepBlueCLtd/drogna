@@ -1,5 +1,5 @@
 /**
- * Truth against forecast, the pure half (feature 114, FR-65, T027 and T029).
+ * Truth against forecast, the pure half (feature 115, FR-70, T027 and T029).
  *
  * The question the Holdings tab can now answer, and a table never could: *was the
  * forecast any good?* Three coverages, at one instant and one depth, all three genuine

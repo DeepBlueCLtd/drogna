@@ -1,5 +1,5 @@
 /**
- * Truth against forecast (feature 114, FR-65, ADR-0036).
+ * Truth against forecast (feature 115, FR-70, ADR-0036).
  *
  * Three genuine EDR area queries at one instant and one depth — the instance, the
  * now-cast covering that instant, and the persistence reference held constant from the

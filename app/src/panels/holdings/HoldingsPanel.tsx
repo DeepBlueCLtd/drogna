@@ -1,10 +1,10 @@
 /**
- * The Holdings tab (FR-46, extended by feature 114's FR-64 and FR-65): what the coverage
+ * The Holdings tab (FR-46, extended by feature 115's FR-69 and FR-70): what the coverage
  * store holds, fetched through the seam and the release gate as a genuine GET against the
  * configured relative path. Refreshed when the store announces a publication on its
  * declared topic; nothing polls.
  *
- * Feature 114 replaces the inventory table with **the store's timeline** — the one place
+ * Feature 115 replaces the inventory table with **the store's timeline** — the one place
  * in that feature where a table goes rather than being kept beside a new display or
  * deleted with its tab. The reason is that the two things a table cannot show are the two
  * things worth seeing here: accumulation over time, and whether the forecast was any good.
@@ -19,7 +19,7 @@
  *
  * Selecting a holding still opens its embedded manifest whole (FR-46) — the ground truth
  * AT-01 and AT-03 score against, never summarised — and, for a forecast instance whose
- * validity has elapsed, offers the derived comparison of FR-65.
+ * validity has elapsed, offers the derived comparison of FR-70.
  *
  * Narrow (feature 112, FR-010, FR-016): the timeline is the primary surface and keeps all
  * three era lanes at every width; the manifest and the comparison are shown over it with
@@ -43,7 +43,7 @@ import { announceHolding } from './announce.js';
 import './holdings.css';
 
 /**
- * The regions this panel declares, and the authority its tour is held to (FR-70). The
+ * The regions this panel declares, and the authority its tour is held to (FR-75). The
  * bound is this list rather than a number typed into a test, so a region added here with
  * no step is named by the check (CLAUDE.md, lesson 2).
  */
@@ -80,7 +80,7 @@ export function HoldingsPanel({ params }: PanelProps) {
   }, [config.endpoints.holdings, validator]);
 
   /**
-   * Telemetry's own report, shown beside the comparison and never recomputed (FR-65).
+   * Telemetry's own report, shown beside the comparison and never recomputed (FR-70).
    * Fetched on the same announcement the inventory is: a run publishing is the event
    * after which both have something new to say.
    */

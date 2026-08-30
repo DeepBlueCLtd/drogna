@@ -57,7 +57,7 @@ describe('the walkthrough (feature 110)', () => {
   });
 
   it('teaches, and never asserts live state — in every tour, not only the first', () => {
-    // FR-62 is unchanged by feature 114 and now applies four times over. Enumerated
+    // FR-62 is unchanged by feature 115 and now applies four times over. Enumerated
     // from `allTours` rather than listed here: a fifth tour that this check did not
     // cover would be a tour no rule applied to, which is the failure mode the
     // enumeration exists against (SC-09).
@@ -87,7 +87,7 @@ describe('the walkthrough (feature 110)', () => {
     }
   });
 
-  it('FR-70: the map tour is held to the map’s own layer registry', () => {
+  it('FR-75: the map tour is held to the map’s own layer registry', () => {
     expect(uncoveredSubjects('map', MAP_SUBJECTS, MAP_TOUR_STEPS)).toEqual([]);
     // And the registry itself is held to the panel: a subject nothing belongs to would
     // be a step about something the map does not draw.

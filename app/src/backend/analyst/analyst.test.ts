@@ -50,6 +50,12 @@ async function driveUntilAnalyses(
   return record;
 }
 
+/** A request through the release gate, exactly as the browser's fetch makes it. */
+async function get(runtime: BackendRuntime, path: string) {
+  const response = await runtime.httpBackend.handle({ method: 'GET', path, body: '' });
+  return { status: response.status, body: JSON.parse(response.body) as unknown };
+}
+
 /** A holding's fields as float32, one array per variable, at its single instant. */
 function fieldsOf(holding: { descriptor: CoverageHolding; bytes: Uint8Array }): Float32Array[] {
   const grid = holding.descriptor.manifest.grid;
@@ -111,6 +117,37 @@ describe('the analysis, on the loop as it ships', () => {
     expect(runtime.store.holding(record.analyses[0].collections.analysis)?.descriptor.manifest.composition.description).toContain(
       'Cold start',
     );
+  });
+
+  it('serves each of the cycle\'s three fields under its own EDR collection id', async () => {
+    // The three are one era, and an era is not an identity: naming a collection by era
+    // works only where the era holds one field. It held for archive and now-cast, and
+    // it silently stopped holding here — all three ids resolved to whichever of the
+    // three had been stored last, so the map's provenance query was refused 404 while
+    // the analysis and its error answered with each other's numbers.
+    const analysis = record.analyses[1];
+    const wanted = [analysis.collections.analysis, analysis.collections.error, analysis.collections.provenance];
+    expect(new Set(wanted).size).toBe(3);
+
+    const listed = await get(runtime, '/api/edr/collections');
+    const served = new Set((listed.body as { collections: { id: string }[] }).collections.map((c) => c.id));
+    for (const id of wanted) expect(served.has(id)).toBe(true);
+
+    // And each answers from its own bytes rather than a neighbour's. The identity that
+    // separates them is the one the figure is built on: provenance's four shares sum to
+    // one at every cell, which neither the analysis nor its error does. Serve the wrong
+    // holding under this id and the sum is a temperature.
+    const shares = runtime.store.holding(analysis.collections.provenance)?.descriptor.manifest.variables.map((v) => v.name);
+    if (!shares || shares.length !== 4) throw new Error('the provenance holding does not carry four shares');
+    const answer = await get(
+      runtime,
+      `/api/edr/collections/${analysis.collections.provenance}/position?coords=POINT(-11 46)&z=0`,
+    );
+    expect(answer.status).toBe(200);
+    // `Record` is taken by this file's own interface, so the shape is spelled out.
+    const ranges = (answer.body as { ranges: { [name: string]: { values: number[] } } }).ranges;
+    expect(Object.keys(ranges).sort()).toEqual([...shares].sort());
+    expect(shares.reduce((total, name) => total + ranges[name].values[0], 0)).toBeCloseTo(1, 3);
   });
 
   it('changes the field only where the measurements reach, and leaves the rest byte-identical', () => {

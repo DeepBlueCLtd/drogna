@@ -34,7 +34,8 @@ import {
   type DepthZone,
   type Domain,
 } from '../domain.js';
-import { coverDomain, hexAt, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import { coverExtent, hexAt, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import { useMapView } from '../view.js';
 import type { ServedObservation } from '../../map/map-data.js';
 import {
   coverageAtResolution,
@@ -226,10 +227,12 @@ export function SamplingPanel({ params }: PanelProps) {
   );
   const reachableZones = zones.filter((band) => band.reachable).length;
 
+  // What the map is looking at: the wheel zooms it and a drag pans it (`view.ts`). The
+  // hexes cover the *view*, which is what makes a fine resolution affordable at all.
+  const view = useMapView(domain, MAP_WIDTH, MAP_HEIGHT);
   const cover = useMemo(
-    () =>
-      domain ? coverDomain(domain, resolution, config.consumers.hexes.cell_ceiling) : undefined,
-    [domain, resolution, config.consumers.hexes.cell_ceiling],
+    () => (domain ? coverExtent(view.rect, resolution, config.consumers.hexes.cell_ceiling) : undefined),
+    [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],
   );
   const refusedResolution = cover && isRefusal(cover) ? cover.refused : undefined;
   const cells = cover && !isRefusal(cover) ? cover.cells : [];
@@ -331,24 +334,26 @@ export function SamplingPanel({ params }: PanelProps) {
 
   const { ghost, dismiss } = useGhostOnRunChange(planned?.withDrops, freshness.basis?.identity);
 
-  const plot = useMemo(
-    () => (domain ? projector(domain, MAP_WIDTH, MAP_HEIGHT) : undefined),
-    [domain],
-  );
+  const plot = useMemo(() => (domain ? projector(view.rect, MAP_WIDTH, MAP_HEIGHT) : undefined), [domain, view.rect]);
   /**
-   * The shading runs between the values actually present, not from zero to saturation.
-   * Early in a run almost every hex is at saturation and a zero-to-saturation ramp draws
-   * one flat dark field — watched happening, and the picture said nothing at all. Scaling
-   * to the observed range makes the water that *has* been sampled visible, which is the
-   * whole question this tab exists to answer, and the range is stated below so the shade
-   * is readable as a number rather than an impression. It is the Map's idiom (`gridCells`
-   * returns its own minimum and maximum for the same reason).
+   * The shading is **absolute**, from zero to the configured saturation, and a hex nothing
+   * has been heard from is drawn as an outline rather than a fill.
+   *
+   * Both of those are corrections from looking at the running page. Shading between the
+   * values *present* gave a field of 176 identical hexes one identical colour, because
+   * early in a run every cell really is at saturation — the relative scale had nothing to
+   * spread. An absolute scale says the true thing (everything here is unknown) and then
+   * genuinely darkens as the vessel samples; and the outline distinguishes *never heard
+   * from* — which is what the ocean starts as — from *heard from, and gone stale*, which
+   * is the distinction the whole tab turns on.
    */
+  const saturation = settings.uncertainty.saturation;
+  const shade = (value: number) => Math.min(1, Math.max(0, value / saturation));
   const zoneValues = field.map((entry) => entry.byZone[zone] ?? 0);
-  const highest = zoneValues.length > 0 ? Math.max(...zoneValues) : 1;
-  const lowest = zoneValues.length > 0 ? Math.min(...zoneValues) : 0;
-  const shade = (value: number) => (highest > lowest ? (value - lowest) / (highest - lowest) : 1);
+  const highest = zoneValues.length > 0 ? Math.max(...zoneValues) : saturation;
+  const lowest = zoneValues.length > 0 ? Math.min(...zoneValues) : saturation;
   const byHexValue = new Map(field.map((entry) => [entry.hex, entry.byZone[zone] ?? 0]));
+  const heardOf = new Map(field.map((entry) => [entry.hex, entry.observations]));
 
   const chosen = chosenDrop !== undefined ? planned?.withDrops.drops[chosenDrop] : undefined;
 
@@ -418,6 +423,12 @@ export function SamplingPanel({ params }: PanelProps) {
         <button type="button" onClick={() => setPlanCount((count) => count + 1)} data-testid="sampling-plan">
           {planCount === 0 ? 'plan' : 'replan now'}
         </button>
+        <span className="consumer-control" data-testid="sampling-zoom">
+          <span>zoom</span> ×{view.factor.toFixed(1)}
+          <button type="button" onClick={view.reset}>
+            whole domain
+          </button>
+        </span>
       </div>
 
       <p className="consumer-note">
@@ -434,7 +445,9 @@ export function SamplingPanel({ params }: PanelProps) {
         ) : (
           ' The vessel’s reach is not known yet — no platform state and no plan has been heard, so no zone is drawn as reachable.'
         )}{' '}
-        Transit is costed at {speedUsed.toFixed(1)} m/s, from {speedFrom}.
+        Transit is costed at {speedUsed.toFixed(1)} m/s, from {speedFrom}. The wheel zooms the map
+        and a drag pans it; the hexes cover what is in view, and the plan is made over those{' '}
+        {cells.length} hexes.
       </p>
 
       {refusedResolution && (
@@ -450,16 +463,20 @@ export function SamplingPanel({ params }: PanelProps) {
           role="img"
           aria-label={`observation-driven uncertainty over ${cells.length} hexes at depth zone ${zone + 1}`}
           data-testid="sampling-map"
+          ref={view.ref}
+          data-panning={view.panning}
         >
           {cells.map((cell) => (
             <polygon
               key={cell.index}
               className="consumer-hex"
+              data-unheard={(heardOf.get(cell.index) ?? 0) === 0}
               points={plot.ring(cell.boundary)}
               fill={uncertaintyColour(shade(byHexValue.get(cell.index) ?? 0))}
             >
               <title>
-                {cell.index}: {(byHexValue.get(cell.index) ?? 0).toFixed(2)} at zone {zone + 1}
+                {cell.index}: {(byHexValue.get(cell.index) ?? 0).toFixed(2)} at zone {zone + 1},{' '}
+                {heardOf.get(cell.index) ?? 0} observation(s) heard
               </title>
             </polygon>
           ))}
@@ -528,10 +545,10 @@ export function SamplingPanel({ params }: PanelProps) {
 
       <div className="consumer-legend">
         <span data-testid="sampling-scale">
-          shaded between the values present at this zone: {lowest.toFixed(2)} (lightest) to{' '}
-          {highest.toFixed(2)} (darkest), against a saturation of{' '}
-          {settings.uncertainty.saturation.toFixed(2)}
+          shaded from 0 (dark) to the saturation of {saturation.toFixed(2)} (bright); at this zone
+          the values in view run {lowest.toFixed(2)} to {highest.toFixed(2)}
         </span>
+        <span>outlined: nothing heard from this hex yet — filled: heard from, and ageing</span>
         <span>route: this plan</span>
         <span>dashed fine: the same plan with no expendables — the difference is what depth cost</span>
         {ghost && <span>dashed heavy: the plan against forecast {ghost.runId}</span>}

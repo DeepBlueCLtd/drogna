@@ -25,7 +25,8 @@ import { useGhostOnRunChange } from '../freshness.js';
 import { useConsumerBasis } from '../basis.js';
 import { consumerStream } from '../rng.js';
 import { domainRing, type Domain } from '../domain.js';
-import { aggregateOntoHexes, coverDomain, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import { aggregateOntoHexes, coverExtent, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import { useMapView } from '../view.js';
 import { concealmentFromField, seedCloud, type ClassHypothesis } from './participants.js';
 import { buildCandidates, rank, type ScoredCandidate } from './candidates.js';
 
@@ -101,9 +102,11 @@ export function CoursesPanel({ params }: PanelProps) {
     })();
   }, [domain, collection, config.endpoints.edr, validator]);
 
+  // What the map is looking at: the wheel zooms it and a drag pans it (`view.ts`).
+  const view = useMapView(domain, MAP_WIDTH, MAP_HEIGHT);
   const cover = useMemo(
-    () => (domain ? coverDomain(domain, resolution, config.consumers.hexes.cell_ceiling) : undefined),
-    [domain, resolution, config.consumers.hexes.cell_ceiling],
+    () => (domain ? coverExtent(view.rect, resolution, config.consumers.hexes.cell_ceiling) : undefined),
+    [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],
   );
   const refusedResolution = cover && isRefusal(cover) ? cover.refused : undefined;
   const cells = cover && !isRefusal(cover) ? cover.cells : [];
@@ -191,7 +194,7 @@ export function CoursesPanel({ params }: PanelProps) {
   const { ghost, dismiss } = useGhostOnRunChange(ranked, freshness.basis?.identity);
   const ghostLeader = ghost?.value?.[0];
 
-  const plot = useMemo(() => (domain ? projector(domain, MAP_WIDTH, MAP_HEIGHT) : undefined), [domain]);
+  const plot = useMemo(() => (domain ? projector(view.rect, MAP_WIDTH, MAP_HEIGHT) : undefined), [domain, view.rect]);
 
   const setLikelihood = useCallback((id: string, likelihood: number) => {
     setRoster((standing) =>
@@ -264,6 +267,12 @@ export function CoursesPanel({ params }: PanelProps) {
             objective
           </span>
         </label>
+        <span className="consumer-control" data-testid="courses-zoom">
+          <span>zoom</span> ×{view.factor.toFixed(1)}
+          <button type="button" onClick={view.reset}>
+            whole domain
+          </button>
+        </span>
       </div>
 
       {/* Its own scrolling container, so the page never scrolls sideways (FR-017). */}
@@ -324,6 +333,8 @@ export function CoursesPanel({ params }: PanelProps) {
           role="img"
           aria-label={`${cloud.hypotheses} hypotheses over ${cells.length} hexes, and ${ranked.length} candidate courses`}
           data-testid="courses-map"
+          ref={view.ref}
+          data-panning={view.panning}
         >
           {cells.map((cell) => {
             const density = cloud.highest > 0 ? (cloud.density.get(cell.index) ?? 0) / cloud.highest : 0;

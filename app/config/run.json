@@ -1437,10 +1437,10 @@
     "consumers": {
       "notice": "Downstream consumer \u2014 not part of drogna",
       "hexes": {
-        "minimum_resolution": 2,
-        "maximum_resolution": 5,
+        "minimum_resolution": 4,
+        "maximum_resolution": 8,
         "default_resolution": 5,
-        "cell_ceiling": 1200
+        "cell_ceiling": 3000
       },
       "sampling": {
         "time_budget_hours": [3, 6, 12, 24],

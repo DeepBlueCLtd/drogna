@@ -3076,7 +3076,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "cell_ceiling": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
-                "description": "How many hexes a consumer will cover the domain with before it refuses the resolution and says why. Recomputation is synchronous and on the interaction path (FR-79); a ceiling here is what stops a resolution control freezing the page."
+                "description": "How many hexes a consumer will cover the *view* with before it refuses the resolution and says why. Recomputation is synchronous and on the interaction path (FR-79); a ceiling here is what stops a resolution control freezing the page. The finest resolutions on offer exceed it over the whole domain on purpose: zooming in is what makes them affordable, and the refusal names both remedies."
               }
             }
           },

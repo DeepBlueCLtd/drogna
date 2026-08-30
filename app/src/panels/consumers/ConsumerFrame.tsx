@@ -46,9 +46,12 @@ export function ConsumerFrame({
   return (
     <div className="panel consumer-panel" data-testid={testId} data-stale={pending !== undefined}>
       {/*
-        Not dismissible, not scrollable, and outside the scrolling body on purpose: a
-        screenshot taken from anywhere in this tab carries the caveat (FR-76).
+        The banner. Not dismissible, not scrollable, and outside the scrolling body on
+        purpose: a screenshot taken from anywhere in this tab carries the caveat (FR-76).
+        It is a banner rather than a whole yellow panel — the claim is made once, where it
+        cannot be cropped out, and the body below reads like every other panel.
       */}
+      <div className="consumer-banner">
       <p className="consumer-strip" role="note">
         {config.consumers.notice}
       </p>
@@ -80,6 +83,7 @@ export function ConsumerFrame({
           </button>
         )}
         {refusal && <span className="shell-refusal">{refusal}</span>}
+      </div>
       </div>
       <div className="consumer-body">{children}</div>
     </div>

@@ -129,8 +129,13 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     render(<SamplingPanel {...panelProps()} />);
     const strip = document.querySelector('.consumer-strip');
     expect(strip?.textContent).toBe(config.shell.consumers.notice);
-    // Outside the scrolling body, so a screenshot from anywhere in the tab carries it.
-    expect(strip?.parentElement?.className).toContain('consumer-panel');
+    // The property, rather than a parent's name: it sits in the banner, the banner is a
+    // child of the panel, and neither is inside the scrolling body — so a screenshot
+    // taken after scrolling anywhere in this tab still carries the caveat (FR-76).
+    const banner = document.querySelector('.consumer-banner');
+    expect(banner?.contains(strip)).toBe(true);
+    expect(banner?.parentElement?.className).toContain('consumer-panel');
+    expect(document.querySelector('.consumer-body')?.contains(strip)).toBe(false);
     expect(document.querySelector('.consumer-strip button')).toBeNull();
   });
 

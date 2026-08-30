@@ -157,6 +157,18 @@ presentations — dockview's dock and the narrow stack — because a phone-width
 carries exactly the same claim as a desktop one. The shell holds no list of which tabs are
 yellow; it reads the kind.
 
+**The yellow is the tab and a banner, not the whole panel.** The first build painted every
+consumer panel #ffd400 end to end. It made the boundary unmissable and everything inside
+it hard to read: tables, sliders and a map on a saturated ground, with the colour carrying
+no meaning any more because it was everywhere. The claim has to be made once, prominently,
+where a cropped screenshot still catches it — which is the tab and the strip, and never
+required the body. Below the banner a consumer reads like any other panel of the shell.
+
+**Which consumer tab is open must be as legible as which family it belongs to.** All three
+were the same yellow, so the family read and the state did not. The unopened ones are a
+muted yellow; the open one is the full colour, bold, over a black underline — two signals,
+both surviving greyscale.
+
 Contrast is a requirement, not a preference: the yellow and the black on it must clear
 WCAG AA for normal text, and the tab must remain distinguishable in greyscale — the
 Background capture already proves greyscale legibility for that panel and the same proof
@@ -249,6 +261,20 @@ index the planner already publishes in). A hex aggregates the underlying grid ce
 covers, and the panel says how many — at the coarsest resolution that is a genuine
 coarsening and the number makes it visible.
 
+**The map is approachable, and the hexes cover what is in view.** The wheel zooms it and a
+drag pans it; the wheel is held back from the page, which is what it scrolled at first.
+The two are one decision rather than two: a map you cannot approach has to show everything
+at once, and a grid that always covers the whole domain is either a handful of enormous
+cells or a hundred thousand unaffordable ones. Covering the *view* is what makes the finer
+resolutions offerable at all, so the cell ceiling refuses by naming both remedies — come
+closer, or choose a coarser grid — and the plan is made over the hexes on screen, which
+the panel says.
+
+The offered resolutions are **4 to 8**. The count is estimated from h3's own average hex
+area *before* enumerating: asking for the cells and then counting them is the obvious
+order and it is the one that exhausts memory at a fine resolution over a wide view, with
+the ceiling check sitting unreached on the next line.
+
 The vessel's current position is drawn from the platform state topic and is the planner's
 starting point.
 
@@ -275,11 +301,15 @@ it read and how many the service holds. A fresh visit is a fresh run, so early o
 history is genuinely short, and the number says so rather than the picture implying
 otherwise.
 
-**The shading runs between the values present**, not from zero to saturation, and the
-range is printed beneath the map. Early in a run almost every hex is at saturation, and a
-zero-to-saturation ramp draws one flat dark field that says nothing; scaling to the
-observed range makes the water that *has* been sampled visible, which is the question the
-tab exists to answer. It is the Map's own idiom.
+**The shading is absolute — zero to the configured saturation — and a hex nothing has been
+heard from is an outline rather than a fill.** Scaling to the observed range was tried
+first and is worse: early in a run every cell genuinely is at saturation, so a relative
+scale has nothing to spread and draws a hundred and seventy-six identical hexes in one
+identical colour. An absolute scale says the true thing and then genuinely darkens as the
+vessel samples; the outline is what separates *never heard from* — which is what the ocean
+starts as — from *heard from and gone stale*, which is the distinction the tab turns on.
+The ramp runs cold and dim for well-observed water to bright for unobserved, over the
+shell's dark ground: the bright cells are the ones worth going to.
 
 The interface is deliberately the one a true ensemble spread would fit: the tab consumes a
 scalar per hex per zone. Replacing the proxy with the published spread would change the

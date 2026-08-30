@@ -15,7 +15,8 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { consumerStream } from './rng.js';
-import { coverDomain, isRefusal } from './hexes.js';
+import { coverExtent, isRefusal } from './hexes.js';
+import { panBy, wholeDomain, zoomAbout, zoomFactor } from './view.js';
 import { depthZones, domainFromRun, metresBetween, type Domain } from './domain.js';
 import {
   coverageAtResolution,
@@ -77,7 +78,7 @@ describe('observation-driven uncertainty (FR-80)', () => {
   it('aggregates upward by containment without losing or double-counting anything', () => {
     const fine = new Map<string, CoverageBin>();
     const finest = consumers.hexes.maximum_resolution;
-    const cover = coverDomain(domain, finest, Number.MAX_SAFE_INTEGER);
+    const cover = coverExtent(domain, finest, Number.MAX_SAFE_INTEGER);
     if (isRefusal(cover)) throw new Error(cover.refused);
     for (const cell of cover.cells.slice(0, 40)) {
       recordObservation(fine, cell.index, 0, at(0));
@@ -106,7 +107,7 @@ function plannableField(): {
   start: { longitude: number; latitude: number };
   isolated: string;
 } {
-  const cover = coverDomain(domain, consumers.hexes.default_resolution, consumers.hexes.cell_ceiling);
+  const cover = coverExtent(domain, consumers.hexes.default_resolution, consumers.hexes.cell_ceiling);
   if (isRefusal(cover)) throw new Error(cover.refused);
   const start = { longitude: domain.west + 0.2, latitude: domain.south + 0.2 };
   const longest = Math.max(...consumers.sampling.time_budget_hours);
@@ -219,10 +220,29 @@ describe('the sampling plan (FR-83)', () => {
     expect(dropsFor(3, 6)).toBe(0);
   });
 
-  it('refuses a resolution that would exceed the configured ceiling rather than freezing', () => {
-    const refused = coverDomain(domain, consumers.hexes.maximum_resolution + 3, consumers.hexes.cell_ceiling);
+  it('refuses a resolution too fine for the view, without enumerating it first', () => {
+    // The finest resolution on offer does not fit the whole domain, by design: zooming in
+    // is what makes it affordable. It must be *refused cheaply* — asking h3 to enumerate
+    // and then counting is the obvious order and it is the one that runs out of memory
+    // before the ceiling is ever consulted, which is what happened here.
+    const refused = coverExtent(domain, consumers.hexes.maximum_resolution, consumers.hexes.cell_ceiling);
     expect(isRefusal(refused)).toBe(true);
-    if (isRefusal(refused)) expect(refused.refused).toContain(String(consumers.hexes.cell_ceiling));
+    if (isRefusal(refused)) {
+      expect(refused.refused).toContain(String(consumers.hexes.cell_ceiling));
+      // Both remedies named: a refusal that does not say what to do is a dead end.
+      expect(refused.refused).toContain('zoom in');
+      expect(refused.refused).toContain('coarser');
+    }
+  });
+
+  it('affords the finest resolution once the view is close enough', () => {
+    // A window a fortieth of the domain across, which a few turns of the wheel reaches.
+    const middleLongitude = (domain.west + domain.east) / 2;
+    const middleLatitude = (domain.south + domain.north) / 2;
+    const close = zoomAbout(wholeDomain(domain), domain, 1 / 40, middleLongitude, middleLatitude);
+    const cover = coverExtent(close, consumers.hexes.maximum_resolution, consumers.hexes.cell_ceiling);
+    expect(isRefusal(cover)).toBe(false);
+    if (!isRefusal(cover)) expect(cover.cells.length).toBeGreaterThan(0);
   });
 });
 
@@ -301,7 +321,7 @@ describe('hypothetical classes (FR-84)', () => {
 });
 
 describe('candidate courses (FR-84)', () => {
-  const cover = coverDomain(domain, consumers.hexes.default_resolution, consumers.hexes.cell_ceiling);
+  const cover = coverExtent(domain, consumers.hexes.default_resolution, consumers.hexes.cell_ceiling);
   if (isRefusal(cover)) throw new Error(cover.refused);
   const cloud = cloudFor(roster());
 
@@ -512,5 +532,38 @@ describe('the domain arrives over the seam, not from a constant', () => {
       minimumDepthM: 5,
       maximumDepthM: 6,
     });
+  });
+});
+
+describe('the map view (the wheel zooms the map, not the page)', () => {
+  const whole = wholeDomain(domain);
+
+  it('keeps the water under the cursor under the cursor', () => {
+    const anchorLongitude = domain.west + (domain.east - domain.west) * 0.25;
+    const anchorLatitude = domain.south + (domain.north - domain.south) * 0.75;
+    const closer = zoomAbout(whole, domain, 0.5, anchorLongitude, anchorLatitude);
+    const acrossBefore = (anchorLongitude - whole.west) / (whole.east - whole.west);
+    const acrossAfter = (anchorLongitude - closer.west) / (closer.east - closer.west);
+    expect(acrossAfter).toBeCloseTo(acrossBefore, 5);
+  });
+
+  it('never shows water outside the domain, however far it is pushed', () => {
+    let rect = zoomAbout(whole, domain, 0.25, domain.west, domain.north);
+    for (let push = 0; push < 12; push++) rect = panBy(rect, domain, -5, 5);
+    expect(rect.west).toBeGreaterThanOrEqual(domain.west);
+    expect(rect.north).toBeLessThanOrEqual(domain.north);
+    expect(rect.east).toBeLessThanOrEqual(domain.east);
+    expect(rect.south).toBeGreaterThanOrEqual(domain.south);
+  });
+
+  it('zooms back out to exactly the domain and no further', () => {
+    const out = zoomAbout(whole, domain, 4, (domain.west + domain.east) / 2, (domain.south + domain.north) / 2);
+    expect(out).toEqual(whole);
+    expect(zoomFactor(out, domain)).toBeCloseTo(1, 6);
+  });
+
+  it('reports how far in it is', () => {
+    const closer = zoomAbout(whole, domain, 0.5, (domain.west + domain.east) / 2, (domain.south + domain.north) / 2);
+    expect(zoomFactor(closer, domain)).toBeCloseTo(2, 6);
   });
 });

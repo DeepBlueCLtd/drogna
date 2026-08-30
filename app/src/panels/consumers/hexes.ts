@@ -16,8 +16,8 @@
  * the bound — instead of being silently rounded to something else, or accepted and left
  * to freeze the page.
  */
-import { cellToBoundary, cellToLatLng, latLngToCell, polygonToCells } from 'h3-js';
-import type { Domain } from './domain.js';
+import { cellToBoundary, cellToLatLng, getHexagonAreaAvg, latLngToCell, polygonToCells } from 'h3-js';
+import type { ViewRect } from './view.js';
 
 export interface HexCell {
   readonly index: string;
@@ -40,12 +40,29 @@ export function isRefusal(cover: HexCover | HexRefusal): cover is HexRefusal {
   return 'refused' in cover;
 }
 
+
+function tooMany(resolution: number, count: number, ceiling: number): string {
+  return `resolution ${resolution} needs about ${count} hexes to cover what is in view, above the configured ceiling of ${ceiling} — zoom in, or choose a coarser grid`;
+}
+
+/** The view's area in square kilometres, on a sphere flat enough for one domain. */
+function areaKm2(rect: ViewRect): number {
+  const midLatitude = ((rect.south + rect.north) / 2) * (Math.PI / 180);
+  const width = (rect.east - rect.west) * 111.32 * Math.cos(midLatitude);
+  const height = (rect.north - rect.south) * 110.57;
+  return Math.abs(width * height);
+}
+
 /**
- * The hexes covering the domain at this resolution, or a refusal naming the count and
- * the ceiling it exceeded.
+ * The hexes covering **what is in view** at this resolution, or a refusal naming the
+ * count and the ceiling it exceeded.
+ *
+ * The view rather than the domain, since the map gained a wheel (`view.ts`): a fine
+ * resolution over the whole domain is either unaffordable or unreadable, and zooming in
+ * is what makes it neither. That is why the refusal names both remedies.
  */
-export function coverDomain(
-  domain: Domain,
+export function coverExtent(
+  rect: ViewRect,
   resolution: number,
   cellCeiling: number,
 ): HexCover | HexRefusal {
@@ -53,16 +70,25 @@ export function coverDomain(
   // opposite of the order everything drawn uses. Stated here once, where the
   // conversion is, rather than discovered later in a picture drawn at right angles.
   const ring: [number, number][] = [
-    [domain.south, domain.west],
-    [domain.south, domain.east],
-    [domain.north, domain.east],
-    [domain.north, domain.west],
+    [rect.south, rect.west],
+    [rect.south, rect.east],
+    [rect.north, rect.east],
+    [rect.north, rect.west],
   ];
+  // Estimate before enumerating. Asking h3 for the cells and *then* counting them is the
+  // obvious order and it is wrong: at a fine resolution over a wide view the enumeration
+  // is what runs out of memory, so the refusal never gets to happen. Watched doing
+  // exactly that — "Memory allocation failed" from inside the library, with the ceiling
+  // check sitting unreached on the next line. The estimate divides the view's area by
+  // h3's own average hex area for the resolution, so the bound comes from the library
+  // rather than from a number typed here.
+  const estimate = Math.round(areaKm2(rect) / getHexagonAreaAvg(resolution, 'km2'));
+  if (estimate > cellCeiling) return { refused: tooMany(resolution, estimate, cellCeiling) };
   const indexes = polygonToCells(ring, resolution);
+  // And again against the real count, because the estimate is an average over a sphere
+  // and this is a rectangle on it.
   if (indexes.length > cellCeiling) {
-    return {
-      refused: `resolution ${resolution} would cover the domain with ${indexes.length} hexes, above the configured ceiling of ${cellCeiling}`,
-    };
+    return { refused: tooMany(resolution, indexes.length, cellCeiling) };
   }
   const cells = indexes.map((index) => {
     const [latitude, longitude] = cellToLatLng(index);
@@ -124,23 +150,23 @@ export interface Projector {
 }
 
 /**
- * The domain onto a fixed drawing box. Equirectangular with a cosine correction at the
- * domain's own middle latitude — the smallest thing that keeps a hex looking like a hex
+ * The view onto a fixed drawing box. Equirectangular with a cosine correction at the
+ * view's own middle latitude — the smallest thing that keeps a hex looking like a hex
  * over a few degrees of ocean. No renderer, no tiles, no third party: the consumers draw
  * SVG, because a hex grid and a polyline do not need a GPU and a panel that needed one
  * would be a panel that could not be tested without one.
  */
-export function projector(domain: Domain, width: number, height: number): Projector {
-  const midLatitude = ((domain.south + domain.north) / 2) * (Math.PI / 180);
-  const spanX = (domain.east - domain.west) * Math.cos(midLatitude);
-  const spanY = domain.north - domain.south;
+export function projector(rect: ViewRect, width: number, height: number): Projector {
+  const midLatitude = ((rect.south + rect.north) / 2) * (Math.PI / 180);
+  const spanX = (rect.east - rect.west) * Math.cos(midLatitude);
+  const spanY = rect.north - rect.south;
   const scale = Math.min(width / (spanX || 1), height / (spanY || 1));
   const offsetX = (width - spanX * scale) / 2;
   const offsetY = (height - spanY * scale) / 2;
   const at = (longitude: number, latitude: number): [number, number] => [
-    offsetX + (longitude - domain.west) * Math.cos(midLatitude) * scale,
+    offsetX + (longitude - rect.west) * Math.cos(midLatitude) * scale,
     // South at the bottom: SVG's y grows downwards and latitude does not.
-    height - offsetY - (latitude - domain.south) * scale,
+    height - offsetY - (latitude - rect.south) * scale,
   ];
   return {
     width,
@@ -157,11 +183,18 @@ export function projector(domain: Domain, width: number, height: number): Projec
 }
 
 /**
- * A value on [0, 1] to a colour that reads on the consumers' yellow ground and separates
- * in greyscale: lightness carries the value, dark for high uncertainty.
+ * A value on [0, 1] to a colour, over the shell's dark ground.
+ *
+ * The first version ran dark-for-high over a pale ground, and the running page showed
+ * what was wrong with it: a field where almost everything is near saturation came out as
+ * one flat dark rectangle with the hex edges invisible inside it. So the ramp now runs
+ * *cold and dim* for a well-observed cell to *hot and bright* for one nobody has looked
+ * at — which is also the right way round for the question, since the bright cells are the
+ * ones worth going to. Lightness carries the value from end to end, so it separates in
+ * greyscale as well as in colour, and the top of the ramp is the family's own yellow.
  */
 export function uncertaintyColour(fraction: number): string {
   const t = Math.min(Math.max(fraction, 0), 1);
-  const light = Math.round(255 - 190 * t);
-  return `rgb(${light}, ${Math.round(light * 0.92)}, ${Math.round(60 + 40 * (1 - t))})`;
+  const mix = (low: number, high: number) => Math.round(low + (high - low) * t);
+  return `rgb(${mix(26, 255)}, ${mix(48, 212)}, ${mix(74, 0)})`;
 }

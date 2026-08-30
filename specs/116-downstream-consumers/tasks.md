@@ -147,6 +147,29 @@ not by a failing test.
       `check-view-ids`, which the merged configuration and registry satisfy: nine views,
       six of drogna's own and three consumers.
 
+- [x] T041 Five faults raised from the running planning tab, all of them things a test
+      could not see. **The wheel scrolled the page instead of zooming the map** — the map
+      now has a view rectangle, a wheel that zooms about the cursor and a drag that pans,
+      with the listener attached by hand because React attaches wheel handlers passively.
+      **The hex resolutions were 2–5 and should be 4–8** — which the whole-domain cover
+      could not afford, so the hexes cover the *view*: one decision with the zoom, not two.
+      **The hexes were illegible** — absolute shading against saturation instead of a
+      relative scale with nothing to spread, unheard cells outlined rather than filled, a
+      ramp that runs bright for unobserved water over a dark ground, and visible edges.
+      **The open consumer tab was indistinguishable from the other two** — muted yellow for
+      the unopened, full yellow, bold and underlined for the open one. **The whole panel
+      was yellow** — it is now the tab and one banner, and the body reads like any other
+      panel of the shell.
+- [x] T042 Two faults found while fixing T041, each by measuring rather than reasoning.
+      The tab colour had come from the wrapper element all along, and the rule written
+      against dockview's own tab did nothing: dockview paints it through a five-class
+      selector that out-specifies anything shorter, and with `background-color` rather than
+      the shorthand. Measured in the running page, where the computed colour came back as
+      dockview's with the rule sitting there unapplied. And `coverExtent` enumerated before
+      it checked the ceiling, so a fine resolution over a wide view died inside h3 with
+      "Memory allocation failed" before it could refuse; it now estimates from h3's own
+      average hex area first, and a test holds both the refusal and its two remedies.
+
 ## Proof, and showing the work
 
 - [x] T031 Panel tests against a genuine backend, in the shape `panels.test.tsx` already

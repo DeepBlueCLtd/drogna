@@ -716,6 +716,12 @@ body,
  * dark with light text does that; #ffd400 against #101010 is about 13:1, and the pair
  * separates in greyscale as well as in colour.
  *
+ * **Which one is open has to be as legible as which family they belong to.** The first
+ * version painted every consumer tab the same yellow, so the selected one was
+ * indistinguishable from the other two — the family read and the state did not. The
+ * unselected ones are therefore a muted yellow and the open one is the full colour, bold,
+ * over a black underline: two signals, both of which survive greyscale.
+ *
  * The rule is written against the view's *declared kind* rather than against a list of
  * ids, in both presentations, so a fourth consumer is a line in a configuration document
  * and not an edit here.
@@ -726,26 +732,60 @@ body,
   height: 100%;
 }
 
+/*
+ * The wrapper carries the colour, and dockview's active class is read from the tab above
+ * it. This is the reliable half: the wrapper is *this* feature's element, so nothing in
+ * dockview's stylesheet competes for it.
+ */
 .tab-kind[data-kind='consumer'] {
-  background: #ffd400;
+  background: #b8990c;
   color: #101010;
   font-weight: 600;
+  padding: 0 0.2em;
 }
 
-/* dockview paints the tab itself, so the wrapper alone would leave the tab's own padding
-   dark around a yellow label. The tab carrying a consumer wrapper is painted too. */
-.dv-tab:has(.tab-kind[data-kind='consumer']) {
+.dv-tab.dv-active-tab .tab-kind[data-kind='consumer'],
+.dv-tabs-overflow-container .dv-active-tab .tab-kind[data-kind='consumer'] {
   background: #ffd400;
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 #101010;
+}
+
+/*
+ * And the tab's own box, so its padding is not dark around a yellow label.
+ *
+ * The selector is long on purpose, and the length is the finding: dockview paints the
+ * tab through `.dv-groupview.dv-active-group > .dv-tabs-and-actions-container
+ * .dv-tabs-container > .dv-tab.dv-active-tab`, which is five classes and out-specifies
+ * anything shorter — a rule written as `.dv-tab:has(…)` is in the stylesheet, matches in
+ * the document, and still loses. Measured in the running page, not reasoned about: the
+ * computed background came back as dockview's own colour with the rule sitting there
+ * unapplied. It also has to be `background-color` rather than the `background` shorthand,
+ * for the same reason.
+ */
+.dv-groupview > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab:has(.tab-kind[data-kind='consumer']) {
+  background-color: #b8990c;
+  color: #101010;
+}
+
+.dv-groupview
+  > .dv-tabs-and-actions-container
+  .dv-tabs-container
+  > .dv-tab.dv-active-tab:has(.tab-kind[data-kind='consumer']) {
+  background-color: #ffd400;
   color: #101010;
 }
 
 .stack-tab[data-kind='consumer'] {
-  background: #ffd400;
+  background: #b8990c;
   color: #101010;
   font-weight: 600;
+  border-bottom-color: #6b5a00;
 }
 
 .stack-tab[data-kind='consumer'].stack-tab-active {
+  background: #ffd400;
   color: #101010;
+  font-weight: 700;
   border-bottom-color: #101010;
 }

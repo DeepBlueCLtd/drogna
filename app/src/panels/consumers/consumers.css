@@ -1,23 +1,27 @@
 /*
  * The consumer family's one stylesheet (feature 116).
  *
- * Bright yellow with black text, against a shell that is dark with light text: the
- * boundary between drogna and a system consuming it is legible at a glance and without
- * explanation, and it survives being cropped out of context. The contrast is the point
- * rather than the palette — #ffd400 on #101010 is about 13:1, well clear of AA, and it
- * separates in greyscale too, which is what the Background capture checks for.
+ * **The yellow is a banner, not a wallpaper.** The first version painted the whole panel
+ * #ffd400, which made the boundary unmissable and everything inside it hard to read: a
+ * page of tables, sliders and a map on a saturated ground is a page nobody wants to look
+ * at for long, and the colour stopped carrying meaning the moment it was everywhere. So
+ * the yellow is now the tab and one banner across the top of the panel, and the body
+ * below it is the shell's own dark surface, like every other panel. The claim is made
+ * once, prominently, where a cropped screenshot still catches it — which was always the
+ * requirement (FR-76), and never required the whole panel.
+ *
+ * The contrast is the point rather than the palette: #ffd400 on #101010 is about 13:1,
+ * well clear of AA, and the pair separates in greyscale too.
  *
  * One breakpoint, and it is the shell's: the gate reads NARROW_WIDTH out of
  * app/src/shell/viewport.ts and fails any width in a media condition that is not it.
  */
 
 .consumer-panel {
-  --consumer-ground: #ffd400;
+  --consumer-yellow: #ffd400;
   --consumer-ink: #101010;
-  --consumer-line: #6b5a00;
-  --consumer-faint: #fff0a0;
-  background: var(--consumer-ground);
-  color: var(--consumer-ink);
+  --consumer-line: #2c3742;
+  --consumer-deep: #0d1a26;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -25,17 +29,24 @@
   overflow: hidden;
 }
 
-/* Not dismissible, and outside the scrolling body so it cannot leave the screen. */
+/*
+ * The banner: the strip and the freshness controls, in the family's colours, held out of
+ * the scrolling body so it cannot leave the screen (FR-76).
+ */
+.consumer-banner {
+  flex: 0 0 auto;
+  background: var(--consumer-yellow);
+  color: var(--consumer-ink);
+  border-bottom: 2px solid var(--consumer-ink);
+}
+
 .consumer-strip {
   margin: 0;
-  padding: 0.45em 0.9em;
-  background: var(--consumer-ink);
-  color: var(--consumer-ground);
+  padding: 0.35em 0.9em 0;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.82em;
-  flex: 0 0 auto;
+  font-size: 0.78em;
 }
 
 .consumer-head {
@@ -43,9 +54,7 @@
   align-items: baseline;
   gap: 0.8em;
   flex-wrap: wrap;
-  padding: 0.5em 0.9em;
-  border-bottom: 1px solid var(--consumer-line);
-  flex: 0 0 auto;
+  padding: 0.15em 0.9em 0.45em;
 }
 
 .consumer-summary {
@@ -56,55 +65,57 @@
 .consumer-provenance {
   font-family: monospace;
   font-size: 0.82em;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* The halo of FR-78: it has to read from across a room, and it has to be a button. */
-.consumer-update {
+.consumer-banner .consumer-update {
   background: var(--consumer-ink);
-  color: var(--consumer-ground);
+  color: var(--consumer-yellow);
   border: 2px solid var(--consumer-ink);
   border-radius: 3px;
-  padding: 0.25em 0.7em;
+  padding: 0.2em 0.7em;
   font-weight: 700;
+  font-size: 0.95em;
   cursor: pointer;
-  box-shadow: 0 0 0 4px rgba(16, 16, 16, 0.25);
+  box-shadow: 0 0 0 3px rgba(16, 16, 16, 0.3);
 }
 
-.consumer-dismiss,
-.consumer-panel button {
+.consumer-banner button {
   background: transparent;
   color: var(--consumer-ink);
-  border: 1px solid var(--consumer-line);
+  border: 1px solid var(--consumer-ink);
   border-radius: 3px;
-  padding: 0.15em 0.6em;
+  padding: 0.1em 0.55em;
   cursor: pointer;
   font-size: 0.85em;
 }
 
-.consumer-panel button.consumer-update {
-  background: var(--consumer-ink);
-  color: var(--consumer-ground);
-  font-size: 1em;
-}
-
-.consumer-panel button[aria-pressed='true'],
-.consumer-panel button.consumer-chosen {
-  background: var(--consumer-ink);
-  color: var(--consumer-ground);
-}
-
+/* Below the banner it is an ordinary panel of the shell, and reads like one. */
 .consumer-body {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 0.7em 0.9em 1.4em;
+  background: var(--shell-bg);
+  color: var(--shell-fg);
+}
+
+.consumer-body *,
+.consumer-body {
+  box-sizing: border-box;
+}
+
+.consumer-body h3 {
+  margin: 1em 0 0.4em;
+  font-size: 1em;
+  color: var(--shell-fg);
 }
 
 .consumer-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.9em 1.4em;
+  gap: 0.6em 1.2em;
   align-items: center;
   margin-bottom: 0.7em;
 }
@@ -116,22 +127,40 @@
   font-size: 0.9em;
 }
 
-.consumer-control > span {
-  font-weight: 600;
+.consumer-control > span:first-child {
+  color: var(--shell-dim);
+}
+
+.consumer-body button,
+.consumer-body select {
+  background: #1a2229;
+  color: var(--shell-fg);
+  border: 1px solid var(--consumer-line);
+  border-radius: 3px;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+  font-size: 0.85em;
 }
 
 .consumer-note {
   font-size: 0.85em;
-  max-width: 52em;
-  line-height: 1.5;
+  max-width: 60em;
+  line-height: 1.55;
+  color: var(--shell-dim);
+}
+
+.consumer-note strong {
+  color: var(--shell-fg);
 }
 
 .consumer-refusal {
-  border-left: 3px solid #a11;
+  border-left: 3px solid var(--shell-refused);
   padding-left: 0.6em;
-  font-weight: 600;
+  color: var(--shell-refused);
+  font-size: 0.9em;
 }
 
+/* Where a value came from, worn by the value (ADR-0038). */
 .consumer-source {
   font-size: 0.72em;
   text-transform: uppercase;
@@ -140,11 +169,18 @@
   border-radius: 2px;
   padding: 0 0.3em;
   white-space: nowrap;
+  color: var(--shell-dim);
 }
 
 .consumer-source[data-provenance='synthesised'] {
-  background: var(--consumer-ink);
-  color: var(--consumer-ground);
+  background: var(--consumer-yellow);
+  color: var(--consumer-ink);
+  border-color: var(--consumer-yellow);
+}
+
+.consumer-source[data-provenance='seam'] {
+  color: var(--shell-lit);
+  border-color: var(--shell-lit);
 }
 
 /* A table is the one thing that will not fold, so it scrolls inside its own container
@@ -157,6 +193,18 @@
   min-width: max-content;
 }
 
+.consumer-table caption {
+  text-align: left;
+  color: var(--shell-dim);
+  font-size: 0.95em;
+  padding-bottom: 0.3em;
+}
+
+.consumer-table th {
+  color: var(--shell-dim);
+  font-weight: 600;
+}
+
 .consumer-table th,
 .consumer-table td {
   border-bottom: 1px solid var(--consumer-line);
@@ -165,67 +213,75 @@
 }
 
 .consumer-table tr[aria-selected='true'] {
-  background: var(--consumer-faint);
+  background: #1c2733;
 }
 
-/* The map surfaces: plain SVG, no renderer. Nothing here needs a GPU.
-   `border-box` is load-bearing rather than tidy: with the default box model the map's
-   own 1px border put two pixels of content outside a 373px phone, and the narrow
-   presentation's proof failed on exactly that — a page that scrolls sideways by two
-   pixels is still a page that scrolls sideways (FR-017). */
+/*
+ * The map surfaces: plain SVG, no renderer. Nothing here needs a GPU.
+ *
+ * `border-box` is load-bearing rather than tidy: with the default box model the map's own
+ * 1px border put two pixels of content outside a 373px phone, and the narrow
+ * presentation's proof failed on exactly that — a page that scrolls sideways by two
+ * pixels is still a page that scrolls sideways (FR-017).
+ *
+ * `touch-action: none` is what lets a drag pan the map on a touch screen instead of
+ * scrolling the panel under it; the wheel is held back in `view.ts`, which needs a
+ * non-passive listener React will not give it.
+ */
 .consumer-map {
   display: block;
   width: 100%;
   height: auto;
   box-sizing: border-box;
-  background: #fff8c4;
+  background: var(--consumer-deep);
   border: 1px solid var(--consumer-line);
+  touch-action: none;
+  cursor: grab;
 }
 
-/* Everything in a consumer body measures its border and padding inside its width, for
-   the same reason. */
-.consumer-body *,
-.consumer-body {
-  box-sizing: border-box;
+.consumer-map[data-panning='true'] {
+  cursor: grabbing;
 }
 
 .consumer-hex {
-  stroke: rgba(16, 16, 16, 0.25);
-  stroke-width: 0.4;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.6;
 }
 
 .consumer-route {
   fill: none;
-  stroke: var(--consumer-ink);
-  stroke-width: 2.2;
+  stroke: var(--consumer-yellow);
+  stroke-width: 2.4;
   stroke-linejoin: round;
 }
 
 /* The ghost of FR-78: the previous answer, still legible, unmistakably previous. */
 .consumer-ghost {
   fill: none;
-  stroke: var(--consumer-ink);
+  stroke: var(--consumer-yellow);
   stroke-width: 2;
   stroke-dasharray: 5 4;
-  opacity: 0.4;
+  opacity: 0.45;
 }
 
 .consumer-comparison {
   fill: none;
-  stroke: var(--consumer-line);
-  stroke-width: 1.2;
-  stroke-dasharray: 2 3;
-  opacity: 0.8;
+  stroke: #9fb4c9;
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
 }
 
 .consumer-drop {
-  fill: #fff8c4;
-  stroke: var(--consumer-ink);
-  stroke-width: 1.6;
+  fill: var(--consumer-deep);
+  stroke: var(--consumer-yellow);
+  stroke-width: 1.8;
 }
 
 .consumer-vessel {
-  fill: var(--consumer-ink);
+  fill: #ffffff;
+  stroke: var(--consumer-ink);
+  stroke-width: 1;
 }
 
 .consumer-cloud {
@@ -236,19 +292,20 @@
   display: flex;
   gap: 1em;
   flex-wrap: wrap;
-  font-size: 0.82em;
+  font-size: 0.8em;
   margin: 0.4em 0;
   align-items: center;
+  color: var(--shell-dim);
 }
 
 /* The Gantt: lanes below, the derived band above, time running across. */
 .lane-row {
   display: grid;
-  grid-template-columns: 13em 1fr;
+  grid-template-columns: 15em 1fr;
   gap: 0.5em;
   align-items: center;
-  border-bottom: 1px solid rgba(107, 90, 0, 0.35);
-  padding: 0.15em 0;
+  border-bottom: 1px solid var(--consumer-line);
+  padding: 0.2em 0;
 }
 
 .lane-name {
@@ -260,43 +317,44 @@
 }
 
 .lane-plot {
-  height: 2.1em;
+  height: 2.2em;
   width: 100%;
   display: block;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--consumer-deep);
+  border: 1px solid var(--consumer-line);
 }
 
 .lane-plot[data-confidence='medium'] {
-  opacity: 0.78;
+  opacity: 0.8;
 }
 
 .lane-plot[data-confidence='low'] {
-  opacity: 0.55;
+  opacity: 0.58;
 }
 
 .lane-plot[data-confidence='off'] {
-  opacity: 0.25;
+  opacity: 0.28;
 }
 
 .lane-bar {
-  fill: var(--consumer-ink);
+  fill: var(--shell-accent);
 }
 
 .lane-trace {
   fill: none;
-  stroke: var(--consumer-ink);
-  stroke-width: 1.4;
+  stroke: var(--shell-accent);
+  stroke-width: 1.5;
 }
 
 .lane-threshold {
-  stroke: #a11;
+  stroke: var(--shell-refused);
   stroke-width: 1.4;
   stroke-dasharray: 4 3;
   cursor: ns-resize;
 }
 
 .lane-window {
-  fill: rgba(16, 16, 16, 0.18);
+  fill: rgba(255, 212, 0, 0.28);
 }
 
 .task-excluded {
@@ -309,10 +367,11 @@
   border-radius: 3px;
   padding: 0.45em 0.6em;
   margin-bottom: 0.5em;
+  font-size: 0.9em;
 }
 
 .consumer-set[data-rank='0'] {
-  border-width: 2px;
+  border-color: var(--consumer-yellow);
 }
 
 @media (max-width: 720px) {
@@ -323,4 +382,18 @@
   .consumer-controls {
     gap: 0.5em 0.8em;
   }
+}
+
+/*
+ * A hex nothing has been heard from is an outline, not a fill.
+ *
+ * The distinction is the tab's whole subject: water that has never been sampled and water
+ * that was sampled and has gone stale carry the same number at saturation, and drawing
+ * them identically made a field of a hundred and seventy-six identical hexes — watched in
+ * the running page, and the reason this rule exists.
+ */
+.consumer-hex[data-unheard='true'] {
+  fill-opacity: 0.14;
+  stroke: rgba(255, 212, 0, 0.5);
+  stroke-dasharray: 2 2;
 }

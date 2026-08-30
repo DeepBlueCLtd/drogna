@@ -99,26 +99,6 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
     <div className="panel intro-panel" ref={rootRef}>
       <header className="intro-head">
         <h1>drogna</h1>
-        <p className="disclaimer">
-          This is a demonstration harness and nothing else. Its numerics are deliberately
-          fake, its data synthetic, and it holds no third-party entities of any kind —{' '}
-          {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
-          no tracked entity, no contact, no detection — and never will. Nothing here is a
-          candidate system.
-        </p>
-        <p className="intro-lead">
-          A synthetic ocean, sensors that sample it, a forecast loop that assimilates what
-          they report, and a query layer that serves the result through OGC API-EDR and
-          SensorThings — all of it genuine programs running in this browser page, behind a
-          wire-protocol seam a real backend can replace by swapping a base URL. This run
-          was seeded fresh when you opened the page: run <code>{manifest.run_id}</code>,
-          root seed <code>{manifest.root_seed}</code>.
-        </p>
-        <p className="intro-instruction">
-          Below is what is inside it, built one part at a time. Move with the{' '}
-          <kbd>←</kbd> and <kbd>→</kbd> arrow keys, or the buttons; click any part to jump
-          to it.
-        </p>
       </header>
 
       <div
@@ -195,8 +175,17 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
         </div>
 
         <div className="intro-narration">
-          <p className="intro-position" data-testid="intro-position">
-            step {step} of {total}
+          {/*
+            The counter keeps its own element, so what a test reads is the count and not
+            the count plus whatever else the line carries. The hint sat inside it for one
+            run and four assertions went red on the hint's text — the right failure, and a
+            reason to fix the markup rather than loosen them.
+          */}
+          <p className="intro-position">
+            <span data-testid="intro-position">
+              step {step} of {total}
+            </span>
+            <span className="intro-keyhint">← → or click a part</span>
           </p>
           <div aria-live="polite">
             <h2>{beat.title}</h2>
@@ -230,6 +219,16 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
       </div>
 
       <footer className="intro-foot">
+        <p className="disclaimer">
+          This is a demonstration harness and nothing else. Its numerics are deliberately
+          fake, its data synthetic, and it holds no third-party entities of any kind —{' '}
+          {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
+          no tracked entity, no contact, no detection — and never will. Nothing here is a
+          candidate system. Everything drawn above is genuine programs running in this
+          browser page, behind a wire-protocol seam a real backend can replace by swapping
+          a base URL. This run was seeded fresh when you opened the page: run{' '}
+          <code>{manifest.run_id}</code>, root seed <code>{manifest.root_seed}</code>.
+        </p>
         <p>
           Every part of that drawing is running in this page. Watch the machinery light
           and interrupt it in <a href={hashForView('operator')}>Operator</a>, read the

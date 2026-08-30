@@ -22,25 +22,22 @@
   overflow: auto;
 }
 
+/*
+ * The heading, and nothing else. Three paragraphs used to sit between it and the drawing
+ * — the disclaimer, the pitch and an instruction — and on a laptop they pushed the plane
+ * strip, the record of what is not drawn, and the links out below the fold. The drawing
+ * is what a reader came for; FR-01's statement and the run identity moved under it, and
+ * the shell header carries the permanent one-liner that may never be disclosed away.
+ */
 .intro-head h1 {
-  margin-bottom: 0.2em;
+  margin-bottom: 0;
 }
 
-.intro-lead {
-  max-width: 62em;
-}
-
-.intro-instruction {
-  color: var(--shell-dim);
-  max-width: 62em;
-}
-
-.intro-instruction kbd {
-  border: 1px solid #2c3946;
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 0 0.35em;
-  font-size: 0.9em;
+/* Said out loud, because a key that is never mentioned is a key nobody presses. */
+.intro-keyhint {
+  margin-left: 0.9em;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 /* ---- the stage: the drawing, and what is being said about it ---- */

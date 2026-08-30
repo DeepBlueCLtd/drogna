@@ -1127,8 +1127,11 @@ export function MapPanel({ params }: PanelProps) {
             <option value="spread" disabled={!spreadCollection}>
               the run's spread{spreadCollection ? '' : ' (no run published yet)'}
             </option>
+            {/* Kept no longer than the option above it: the select takes its width from
+                its widest option, and at a phone's width the control row has none to
+                spare — a longer label here put the whole row two pixels over. */}
             <option value="provenance" disabled={!provenanceCollection}>
-              where the value came from{provenanceCollection ? '' : ' (no analysis published yet)'}
+              where it came from{provenanceCollection ? '' : ' (none published yet)'}
             </option>
             <option value="none">none</option>
           </select>

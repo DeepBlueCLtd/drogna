@@ -177,7 +177,7 @@ the Operator flow chart all come from them.
 
 ## Holdings — the timeline
 
-- [ ] T022 **The parity check, written before the display.** Enumerate what
+- [x] T022 **The parity check, written before the display.** Enumerate what
       `coverage-holding.schema.json` declares — era, `holding_id`,
       `published_at.sim_time`, `field.sha256`, the manifest's grid shape — and assert the
       timeline announces each, with every holding reachable by keyboard in publication
@@ -186,34 +186,98 @@ the Operator flow chart all come from them.
       survives a holding gaining a field (CLAUDE.md, lesson 2). The digest is announced as
       the twelve-character fingerprint the table already shows, not sixty-four characters
       read aloud. **Plant a new field in the master, watch the check name the timeline,
-      revert, and say so in the commit message.**
-- [ ] T023 Read a holding's coverage interval from its own manifest: `grid.time` gives
+      revert, and say so in the commit message.** Landed as `announce.ts` and
+      `parity.test.ts`, written and passing before `HoldingsTimeline.tsx` existed. Every
+      property of the master is either announced or exempted with a reason, and the
+      exemptions are a list the check reads — so an exemption cannot be added silently and
+      a new property cannot pass by being forgotten. There is one exemption,
+      `schema_version`, because a reader hearing "schema version 1" learns nothing about
+      what the store holds. Planted: `retention_ticks` added to
+      `coverage-holding.schema.json`, `pnpm generate` run, and the check failed naming the
+      property and the display. Reverted. The rendered half — every holding a keyboard stop
+      in publication order, each carrying the announcement (SC-03) — is in
+      `holdings.test.tsx`, against holdings the store genuinely published.
+- [x] T023 Read a holding's coverage interval from its own manifest: `grid.time` gives
       origin, start offset, step and count. A pure function with tests, no panel.
-- [ ] T024 The timeline: three era lanes, holdings drawn at their intervals, an axis that
+      `interval.ts`, a pure function with tests and no panel. It reads an era nowhere: an
+      archive holding and a forecast instance are read by the same three lines, which is
+      what makes the timeline's lanes a presentation choice rather than a parsing one. It
+      refuses an axis it cannot read rather than guessing — the archive's `start_offset`
+      is *negative*, reaching twenty years back before its origin, which a reader assuming
+      forwards-only offsets would have drawn in the wrong place.
+- [x] T024 The timeline: three era lanes, holdings drawn at their intervals, an axis that
       carries twenty years and six hours without either vanishing, and a stated scale.
       Grows on the store's publication topic; never polls. Built to pass T022.
-- [ ] T025 Retire the inventory table once T022 passes against the timeline. **If it does
+      `HoldingsTimeline.tsx` and `scale.ts`. The axis is logarithmic in elapsed simulation
+      time back from the newest step, and the panel states that beneath itself rather than
+      letting a reader infer it from tick spacing. Three faults were found by looking at
+      the running page rather than by reasoning, and each is recorded where it was fixed:
+      `.timeline-row` was itself a grid item so two lanes landed on every line; four ISO
+      instants printed over each other on one axis, so the labels are date-and-minute; and
+      a run's forecast and its uncertainty field cover exactly the same interval, so the
+      second bar hid the first entirely and four holdings drew as three — overlapping bars
+      are now stacked into tracks within their lane. A bar under six per cent of the width
+      draws no text, because a truncated identifier reading "loite" is worse than none;
+      its accessible name is unaffected.
+- [x] T025 Retire the inventory table once T022 passes against the timeline. **If it does
       not pass, the table stays and the reason is recorded here** — the licence was
       conditional on exactly this, and the check decides it rather than a judgment made
       at the end of the work.
-- [ ] T026 Keep the manifest view whole (FR-46) and the refusal path intact: a refused or
+      T022 passes, so the table is retired. The condition was met rather than waived: the
+      check was written first, planted against a new field in the master, watched naming
+      the timeline, and reverted.
+- [x] T026 Keep the manifest view whole (FR-46) and the refusal path intact: a refused or
       unparseable inventory states its refusal; an empty timeline is never drawn as an
       empty store.
+      The manifest is opened whole and the facts the timeline announces are written out
+      above it, because an accessible name is not a thing a sighted reader can see and both
+      are owed the same facts. A refused inventory states the refusal and draws **no**
+      timeline; an empty store says the store has announced nothing yet, which is a
+      different sentence from an empty picture.
 
 ## Holdings — truth against forecast
 
-- [ ] T027 Choose the counterpart: given an instance, find the nowcast holding whose time
+- [x] T027 Choose the counterpart: given an instance, find the nowcast holding whose time
       axis covers the instance's valid instant. Pure, tested, and refusing by name when
       there is none — including the in-validity case, which is the common one (SC-05).
-- [ ] T028 Three area queries — instance, truth, persistence — at the chosen instant and
+      `counterpartFor`, pure and tested, refusing by name in every case — including the
+      common one, an instance still inside its validity (SC-05).
+      **The specification's rule, applied literally, refuses everything, and the reason is
+      worth recording.** It asks for "never against a now-cast published before the instant
+      it forecasts". The environment generator authors a now-cast covering three hours from
+      the instant it publishes; a forecast instance reaches forty-five minutes past its
+      own. So the now-cast covering an instance's last step was, in every case, published
+      before that step, and the panel would always refuse. The requirement's *intent* is
+      right and its test was wrong: what makes a document truth here is not when it was
+      written but **who wrote it**. The environment generator is the world and evaluates
+      the true field at any instant; the model runner predicts. The manifest names its
+      generator, so the rule is read off the document — the truth's manifest must name a
+      different generator from the instance's. A second rule fell out of the same reading:
+      a run's *uncertainty* instance declares `temperature_spread`, which no now-cast
+      carries, so it is refused for sharing no variable rather than by a guess about its
+      identifier.
+- [x] T028 Three area queries — instance, truth, persistence — at the chosen instant and
       depth, through the seam and the release gate, with the three URLs shown and copyable
       (SC-04).
-- [ ] T029 The difference display: both differences on one shared scale, which is closer
+      Three area queries at the chosen instant and depth, through the seam and the release
+      gate, with the three URLs on screen and copyable. SC-04 is checked by fetching what
+      the panel put on screen and validating each answer against the `coveragejson` master,
+      against the real backend — not by eye.
+- [x] T029 The difference display: both differences on one shared scale, which is closer
       stated plainly, and *the model is not earning its compute* said in those terms when
       it is not (Principle IX).
-- [ ] T030 Label every derived figure as derived, distinctly from declared, reported and
+      Both differences on one shared scale — the larger magnitude of the two, so neither
+      flatters itself — with which is closer stated plainly and *the model is not earning
+      its compute* said in those terms when it is not, in the colour a refusal is said in.
+- [x] T030 Label every derived figure as derived, distinctly from declared, reported and
       observed. Show telemetry's reported skill beside the picture, unrecomputed, with the
       sentence that says which question each answers.
+      A fourth treatment joins 113's three: dashed, in its own hue, declared in
+      `holdings.css` where the feature that introduced it lives. Telemetry's own skill
+      figure sits beside the picture as a *reported* figure, carrying the component's own
+      sentence unparaphrased, with the paragraph that says which question each answers.
+      Where telemetry has published none, that is said and nothing is drawn in its place —
+      a zero would be a claim about a model nobody has scored.
 
 ## The map
 

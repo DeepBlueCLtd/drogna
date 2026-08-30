@@ -298,3 +298,35 @@ export function messagesTour(): Tour {
 
 /** The Messages tour's steps, for the completeness check. */
 export const MESSAGES_TOUR_STEPS: readonly SubjectStep[] = MESSAGES_STEPS;
+
+const HOLDINGS_STEPS: SubjectStep[] = [
+  {
+    subject: 'timeline',
+    element: '[data-region="timeline"]',
+    title: 'The store, filling up',
+    what: 'The coverage store holds three kinds of field: a historic archive authored when the run was provisioned, a now-cast replaced on its cadence, and one forecast instance for every turn the loop has taken. Each is drawn at the interval its own manifest says it covers, not at the moment it was published.',
+    panel: 'The archive spans twenty years and an instance spans hours, so the axis is logarithmic in elapsed time and says so beneath itself rather than leaving you to infer it from the tick spacing. Every bar is a button: tab through them and you walk the store’s history in the order it happened.',
+  },
+  {
+    subject: 'manifest',
+    element: '[data-region="manifest"]',
+    title: 'The ground-truth manifest',
+    what: 'Every generated field carries the document that produced it: the grid, the background state, the four seeded features with their parameters, the seed and the generator version. It is sufficient on its own — with the version it names, the field can be reconstructed at any point without the stored bytes.',
+    panel: 'It is shown whole and never summarised, because it is the thing the recovery tests score against. The facts above it are the same ones the timeline announces to a screen reader.',
+  },
+  {
+    subject: 'comparison',
+    element: '[data-region="comparison"]',
+    title: 'Was the forecast any good?',
+    what: 'For an instance whose validity has elapsed, the truth for the instant it forecast has since been published — so the two can be differenced. Beside that difference goes a third: the forecast’s own initial field held constant, which is what doing nothing would have produced. A picture of forecast error alone is a skill claim, and no skill claim is admitted here without that reference.',
+    panel: 'Both differences are drawn on one shared scale, so they are comparable by eye, and the panel says plainly which is closer — including when it is the reference. The three requests it made are on screen and copyable: a figure this page computed and you cannot re-derive is an assertion.',
+  },
+];
+
+/** The Holdings tour, held to the panel's own declared region list. */
+export function holdingsTour(): Tour {
+  return surfaceTour('holdings', 'holdings', 'The Holdings tab, region by region', HOLDINGS_STEPS);
+}
+
+/** The Holdings tour's steps, for the completeness check. */
+export const HOLDINGS_TOUR_STEPS: readonly SubjectStep[] = HOLDINGS_STEPS;

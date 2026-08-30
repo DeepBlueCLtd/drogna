@@ -164,9 +164,11 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         await Promise.resolve();
       });
       expect(screen.getByTestId('holdings-count').textContent).toMatch(/^2 holding\(s\)/);
-      const archiveRow = document.querySelector('tr[data-era="archive"]');
-      expect(archiveRow).not.toBeNull();
-      act(() => (archiveRow as HTMLElement).click());
+      // The inventory table retired at feature 114 (FR-64); the timeline carries the
+      // holdings now, and a bar is the thing a reader selects.
+      const archiveBar = document.querySelector('[data-holding][data-era="archive"]');
+      expect(archiveBar).not.toBeNull();
+      act(() => (archiveBar as HTMLElement).click());
       expect(screen.getByTestId('manifest-json').textContent).toMatch(/"analytic_form_version"/);
     }
   });
@@ -195,14 +197,20 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
 
   it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
     const { asked } = seam();
-    const inventoryRequests = () => asked.length;
+    // Counted by path rather than by total: since feature 114 the panel also fetches
+    // telemetry's report on the same announcement (FR-65 shows telemetry's own skill
+    // figure beside the comparison), and a total would call that a poll.
+    const inventoryRequests = () =>
+      asked.filter((path) => path.includes(config.shell.endpoints.holdings)).length;
     {
       render(<HoldingsPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         await Promise.resolve();
       });
       expect(inventoryRequests()).toBe(1);
-      const nowcastBefore = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      const nowcastBefore = document
+        .querySelector('[data-holding][data-era="nowcast"]')
+        ?.getAttribute('data-holding');
       expect(nowcastBefore).toBeTruthy();
       // Time passing is not an announcement: nothing polls, so nothing is refetched.
       await act(async () => {
@@ -219,7 +227,9 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
         await settle(() => inventoryRequests() > 1);
       });
       expect(inventoryRequests()).toBe(2);
-      const nowcastAfter = document.querySelector('tr[data-era="nowcast"] .message-topic')?.textContent;
+      const nowcastAfter = document
+        .querySelector('[data-holding][data-era="nowcast"]')
+        ?.getAttribute('data-holding');
       expect(nowcastAfter).not.toBe(nowcastBefore);
     }
   });

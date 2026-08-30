@@ -1,6 +1,6 @@
 /**
  * The Background tab (SRD-v2 FR-43 to FR-45, feature 111): a linear course of
- * eleven self-contained explainers about the standards this harness serves, and
+ * ten self-contained explainers about the standards this harness serves, and
  * about what it takes to use them honestly.
  *
  * The one claim this panel makes about itself: **it is inert**. No explainer reads
@@ -94,7 +94,7 @@ export function BackgroundPanel({ params }: PanelProps): ReactNode {
       <div className="bg-main">
         <header className="bg-head">
           <p className="bg-frame">
-            The standards, and what it takes to use them honestly. Eleven explainers, in
+            The standards, and what it takes to use them honestly. Ten explainers, in
             order. Nothing here reads the running system: these are drawings about
             interfaces, and where a claim is about drogna it links to the view that shows
             it rather than depicting it.

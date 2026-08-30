@@ -5,7 +5,7 @@
  * FR-004 says no explainer reads run state, subscribes to the broker, or issues a
  * request across the seam, and that the tab renders identically with every component
  * stopped. So this file starts nothing. It hands the panel a client whose every
- * method throws and a fetch that throws, walks all eleven explainers end to end, and
+ * method throws and a fetch that throws, walks all ten explainers end to end, and
  * reports anything either trap caught.
  *
  * Every absence asserted here is also watched being found. The planted faults live
@@ -80,7 +80,7 @@ function underNothingRunning(draw: (props: IDockviewPanelProps<PanelParams>) => 
 }
 
 describe('Background is inert (FR-004, SC-001, SC-002)', () => {
-  it('renders and traverses all eleven explainers with every component stopped', () => {
+  it('renders and traverses all ten explainers with every component stopped', () => {
     const reached = underNothingRunning((props) => {
       render(<BackgroundPanel {...props} />);
       for (const explainer of COURSE) {
@@ -205,7 +205,7 @@ describe('every explainer closes on the same three axes (FR-008, FR-020, SC-007)
  * ------------------------------------------------------------------ */
 
 describe('the course', () => {
-  it('carries the eleven explainers in order, each with a distinct id (FR-002)', () => {
+  it('carries the ten explainers in order, each with a distinct id (FR-002)', () => {
     expect(COURSE.map((explainer) => explainer.id)).toEqual([
       'why-a-standard',
       'points-and-fields',
@@ -217,7 +217,6 @@ describe('the course', () => {
       'mqtt',
       'cqrs',
       'control-loop',
-      'boundary',
     ]);
   });
 

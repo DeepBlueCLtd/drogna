@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Lighting a connection as data crosses it is easy at one message a second and useless at fifty. The fix was not a faster animation: it was letting the light mean a different thing when the clock is running fast, and saying on screen which it means.">
+<title>A light per message stops meaning anything once there are enough messages — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="a-light-per-message-stops-meaning-anything-once-there-are-enough-messages">A light per message stops meaning anything once there are enough messages</h1>
+<h2 id="the-background">The background</h2>
+<p>A diagram of a running system usually draws the parts and not the traffic, so it looks
+identical whether the thing is working or has been dead for an hour. Lighting each
+connection as data goes down it is the obvious repair, and it holds until the system is
+asked to run faster than real time — at which point every line is flashing constantly,
+and the picture is back to saying nothing at all.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>A line has to show that something crossed it and go dark when nothing does. Two things
+it may not do: claim traffic that did not happen, and cost more to draw than the traffic
+costs to carry. Redrawing twenty component faces for every message would have the
+display competing for the machine with the system it is watching.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>Shortening the flash as the clock speeds up keeps the flicker and adds arithmetic.
+Sampling the traffic means throwing away messages that did happen. What won was changing
+what the light <em>means</em>: at real time, one fade per message; above it, a steady light,
+held while traffic keeps arriving and dropped a second after it stops. The panel says
+which of the two it is doing, because they are different claims.</p>
+<h2 id="the-demo">The demo</h2>
+<p><a href="../../../instances/main/#/view/operator">Open it at the Operator view</a>, press <strong>step 60
+ticks</strong>, and watch the sensing path light and fade. Then set the clock to <strong>×60</strong> in the
+header: the same wires hold steady instead. The line under the chart names the topics
+whose lights are an approximation — the broker hands a subscriber a topic, never a
+sender.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

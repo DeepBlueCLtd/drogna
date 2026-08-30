@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Twenty components have to fit on one screen, so each gets a small box. Then someone asks to turn a dial inside one of those boxes.">
+<title>A card you can read and a card you can use are different sizes — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="a-card-you-can-read-and-a-card-you-can-use-are-different-sizes">A card you can read and a card you can use are different sizes</h1>
+<p><img src="../../assets/117-a-node-opening.gif" alt="The Operator diagram. Clicking the monitor's card makes it grow to about four times its
+size, showing its full account and two sliders; the cards to its right slide out of the
+way, the row of cards below moves down, and the wires connecting them stay attached to the
+card the whole time it is
+moving."></p>
+<h2 id="the-background">The background</h2>
+<p>One screen draws the running system as a diagram: twenty components, wired by their actual
+connections, each with its own instrument. All twenty must be visible at once — the shape
+of the system is what the diagram is for — which fixes each box at 200 by 116 pixels.</p>
+<p>At that size you see the drift line climbing and cannot read what it climbed to. Those
+boxes had also just gained sliders that change the running system: at that size, a picture
+of a control rather than one.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>Selecting a component opens it — big enough to read a figure off and move a slider in —
+with the rest of the diagram getting out of the way rather than being covered.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>A card floating over the diagram is the cheap build and a modal with extra steps: it hides
+the neighbours you opened this one to compare against, and every wire runs to a box
+underneath something.</p>
+<p>So the diagram makes room, and animates doing it — asked for after the first version
+shipped, because opening a box moves most of the diagram at once and the one that grew is
+not distinguished by having moved.</p>
+<p>It could not be a CSS transition: the wires are computed from where the boxes are, so a
+transition would glide the boxes and leave fifty wires pointing where they used to be.
+What moves is the layout itself, re-routed every frame — watch the wires stay on the card
+above.</p>
+<h2 id="the-demo">The demo</h2>
+<p><a href="../../../instances/main/#/view/operator">Open it at the Operator view</a> and click any box
+with a <strong>▸</strong>. Press <strong>→</strong> to walk the twenty. The same card on a phone, taller and
+narrower because the space a phone has is vertical:</p>
+<p><img src="../../assets/117-on-a-phone.png" alt="The same monitor card open on a 390-pixel-wide phone screen: taller and narrower, with
+its heading, walk arrows, both sliders and their limits all
+readable."></p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

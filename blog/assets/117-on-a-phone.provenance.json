@@ -1,0 +1,23 @@
+{
+  "image": "117-on-a-phone.png",
+  "run_id": "loiter-q2ignf",
+  "view": "operator",
+  "sim_time": "2026-01-01T00:04:59Z",
+  "clock_pinned": "rate 0",
+  "lit_components": "not readable from this view",
+  "controls": [
+    {
+      "click": "[data-flow-node=\"monitor\"]"
+    }
+  ],
+  "warmed": "run at rate 60 for 5000 ms of host time before the clock was pinned",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The monitor open on a phone: the account, its two tunables and the walk arrows, in a card the chart made room for."
+}

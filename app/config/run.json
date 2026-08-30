@@ -1443,7 +1443,7 @@
       "hexes": {
         "minimum_resolution": 2,
         "maximum_resolution": 5,
-        "default_resolution": 4,
+        "default_resolution": 5,
         "cell_ceiling": 1200
       },
       "sampling": {
@@ -1453,6 +1453,7 @@
         "default_expendable_interval_hours": 6,
         "depth_zones": 6,
         "nominal_speed_m_per_s": 2.5,
+        "observation_backfill": 4000,
         "uncertainty": {
           "saturation": 1,
           "recency_timescale_seconds": 10800,
@@ -1492,6 +1493,7 @@
           { "id": "monitoring", "label": "Monitoring" },
           { "id": "stealthy-reconnaissance", "label": "Stealthy reconnaissance" }
         ],
+        "default_objective": "investigation",
         "candidate_count": 4,
         "steps": 18,
         "step_seconds": 1800,
@@ -1548,7 +1550,7 @@
             "kind": "continuous",
             "provenance": "synthesised",
             "unit": "Douglas",
-            "default_confidence": "medium",
+            "default_confidence": "high",
             "period_minutes": 960,
             "minimum": 0,
             "maximum": 6

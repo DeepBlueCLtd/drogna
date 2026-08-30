@@ -24,17 +24,18 @@ import type { PanelProps } from '../../../shell/registry.js';
 import type { Observation, Plan, PlatformState } from '../../../generated/types.js';
 import { displayInstant } from '../../../shell/display.js';
 import { ConsumerFrame, Provenance } from '../ConsumerFrame.js';
-import { useForecastFreshness, useGhostOnRunChange } from '../freshness.js';
+import { useGhostOnRunChange } from '../freshness.js';
+import { useConsumerBasis } from '../basis.js';
 import { consumerStream } from '../rng.js';
 import {
   depthZones,
-  domainFromRun,
   vesselReach,
   zoneOfDepth,
   type DepthZone,
   type Domain,
 } from '../domain.js';
 import { coverDomain, hexAt, isRefusal, projector, uncertaintyColour } from '../hexes.js';
+import type { ServedObservation } from '../../map/map-data.js';
 import {
   coverageAtResolution,
   recordObservation,
@@ -53,7 +54,7 @@ const MAP_HEIGHT = 480;
 export function SamplingPanel({ params }: PanelProps) {
   const { config, client, validator, manifest } = params;
   const settings = config.consumers.sampling;
-  const freshness = useForecastFreshness(client, config.topics.run_published, validator);
+  const freshness = useConsumerBasis(config, client, validator);
 
   const [simTime, setSimTime] = useState<string | undefined>();
   const [plan, setPlan] = useState<Plan | undefined>();
@@ -73,6 +74,7 @@ export function SamplingPanel({ params }: PanelProps) {
   const coverage = useRef(new Map<string, CoverageBin>());
   const heard = useRef(0);
   const [heardAtSample, setHeardAtSample] = useState(0);
+  const [backfillSaid, setBackfillSaid] = useState<string | undefined>();
   /** The domain the observations are binned against, for the subscription's closure. */
   const domainRef = useRef<Domain | undefined>(undefined);
 
@@ -120,6 +122,86 @@ export function SamplingPanel({ params }: PanelProps) {
     settings.depth_zones,
   ]);
 
+  /**
+   * The coverage a downstream consumer arrives to.
+   *
+   * Counting only what arrives after the tab opens draws an empty ocean for the first
+   * hour and calls it uncertainty — watched happening, and the reason this exists. A
+   * downstream client reads the served history first, which is an ordinary paged
+   * SensorThings GET rather than a store read: the last page of Observations, filtered to
+   * the ocean datastreams by their CF standard names, so the platform's own three (its
+   * course, speed and depth, which describe the vehicle rather than the water) are left
+   * out without this panel holding a list of instrument identifiers.
+   *
+   * Once. The broker carries everything after it, and a consumer that re-read the history
+   * on a cadence would be polling the thing it is subscribed to.
+   */
+  const backfilled = useRef(false);
+  useEffect(() => {
+    if (backfilled.current || !domainRef.current) return;
+    backfilled.current = true;
+    const finest = config.consumers.hexes.maximum_resolution;
+    const wanted = settings.observation_backfill;
+    if (wanted === 0) return;
+    void (async () => {
+      const prefix = config.endpoints.sensorthings;
+      const streams = await fetch(`${prefix}/Datastreams?${new URLSearchParams({ $top: '200' })}`);
+      if (!streams.ok) return;
+      const listing = (await streams.json()) as {
+        value?: { '@iot.id': string; observedProperty?: { definition?: string } }[];
+      };
+      const ocean = new Set(
+        (listing.value ?? [])
+          .filter((stream) => stream.observedProperty?.definition?.startsWith('sea_water_'))
+          .map((stream) => stream['@iot.id']),
+      );
+      if (ocean.size === 0) return;
+      const head = await fetch(`${prefix}/Observations?${new URLSearchParams({ $top: '1' })}`);
+      if (!head.ok) return;
+      const total = ((await head.json()) as { '@iot.count'?: number })['@iot.count'] ?? 0;
+      const skip = Math.max(0, total - wanted);
+      const page = await fetch(
+        `${prefix}/Observations?${new URLSearchParams({ $top: String(wanted), $skip: String(skip) })}`,
+      );
+      if (!page.ok) return;
+      // The served entity carries its datastream as a navigation link rather than as a
+      // property, which is SensorThings' own shape; the map's reader covers the rest.
+      const served = (await page.json()) as {
+        value?: (ServedObservation & { 'Datastream@iot.navigationLink'?: string })[];
+      };
+      const domain = domainRef.current;
+      if (!domain) return;
+      const zones = depthZones(domain, settings.depth_zones, undefined);
+      let counted = 0;
+      for (const observation of served.value ?? []) {
+        const link = observation['Datastream@iot.navigationLink'] ?? '';
+        if (![...ocean].some((id) => link.includes(`'${id}'`))) continue;
+        const point = observation.FeatureOfInterest?.feature;
+        if (!point || point.coordinates.length < 2) continue;
+        recordObservation(
+          coverage.current,
+          hexAt(point.coordinates[0], point.coordinates[1], finest),
+          zoneOfDepth(zones, point.coordinates[2] ?? 0),
+          observation.phenomenonTime,
+        );
+        counted += 1;
+      }
+      heard.current += counted;
+      setHeardAtSample(heard.current);
+      setBackfillSaid(
+        counted === 0
+          ? 'the observation service has served nothing yet'
+          : `${counted} read from the observation service on opening, of ${total} served`,
+      );
+    })();
+  }, [
+    config.endpoints.sensorthings,
+    config.consumers.hexes.maximum_resolution,
+    settings.observation_backfill,
+    settings.depth_zones,
+    freshness.basis?.identity,
+  ]);
+
   useEffect(() => {
     return client.subscribe(config.topics.plan, (message) => {
       const verdict = validator.validate('plan', message.payload);
@@ -134,10 +216,7 @@ export function SamplingPanel({ params }: PanelProps) {
     });
   }, [client, config.topics.platform_state, validator]);
 
-  const domain: Domain | undefined = useMemo(
-    () => (freshness.accepted ? domainFromRun(freshness.accepted) : undefined),
-    [freshness.accepted],
-  );
+  const domain: Domain | undefined = freshness.basis?.domain;
   domainRef.current = domain;
 
   const reach = vesselReach(platform, plan);
@@ -248,16 +327,27 @@ export function SamplingPanel({ params }: PanelProps) {
   useEffect(() => {
     if (planCount === 0) return;
     makePlan();
-  }, [resolution, budgetHours, intervalHours, planCount, freshness.accepted?.run_id]);
+  }, [resolution, budgetHours, intervalHours, planCount, freshness.basis?.identity]);
 
-  const { ghost, dismiss } = useGhostOnRunChange(planned?.withDrops, freshness.accepted?.run_id);
+  const { ghost, dismiss } = useGhostOnRunChange(planned?.withDrops, freshness.basis?.identity);
 
   const plot = useMemo(
     () => (domain ? projector(domain, MAP_WIDTH, MAP_HEIGHT) : undefined),
     [domain],
   );
+  /**
+   * The shading runs between the values actually present, not from zero to saturation.
+   * Early in a run almost every hex is at saturation and a zero-to-saturation ramp draws
+   * one flat dark field — watched happening, and the picture said nothing at all. Scaling
+   * to the observed range makes the water that *has* been sampled visible, which is the
+   * whole question this tab exists to answer, and the range is stated below so the shade
+   * is readable as a number rather than an impression. It is the Map's idiom (`gridCells`
+   * returns its own minimum and maximum for the same reason).
+   */
   const zoneValues = field.map((entry) => entry.byZone[zone] ?? 0);
   const highest = zoneValues.length > 0 ? Math.max(...zoneValues) : 1;
+  const lowest = zoneValues.length > 0 ? Math.min(...zoneValues) : 0;
+  const shade = (value: number) => (highest > lowest ? (value - lowest) / (highest - lowest) : 1);
   const byHexValue = new Map(field.map((entry) => [entry.hex, entry.byZone[zone] ?? 0]));
 
   const chosen = chosenDrop !== undefined ? planned?.withDrops.drops[chosenDrop] : undefined;
@@ -333,7 +423,8 @@ export function SamplingPanel({ params }: PanelProps) {
       <p className="consumer-note">
         Hexes are coloured by <strong>observation-driven uncertainty</strong> <Provenance of="seam-derived" /> —
         a coverage proxy from recency, density and age decay over the {heardAtSample} observation(s)
-        this tab has heard since it opened, not forecast uncertainty and not ensemble spread.
+        this tab holds, not forecast uncertainty and not ensemble spread.
+        {backfillSaid ? ` ${backfillSaid}; the rest arrived over the broker.` : ''}
         {reach.metres !== undefined ? (
           <>
             {' '}
@@ -365,7 +456,7 @@ export function SamplingPanel({ params }: PanelProps) {
               key={cell.index}
               className="consumer-hex"
               points={plot.ring(cell.boundary)}
-              fill={uncertaintyColour(highest > 0 ? (byHexValue.get(cell.index) ?? 0) / highest : 0)}
+              fill={uncertaintyColour(shade(byHexValue.get(cell.index) ?? 0))}
             >
               <title>
                 {cell.index}: {(byHexValue.get(cell.index) ?? 0).toFixed(2)} at zone {zone + 1}
@@ -430,12 +521,17 @@ export function SamplingPanel({ params }: PanelProps) {
         </svg>
       ) : (
         <p className="consumer-note" data-testid="sampling-waiting">
-          Waiting for the first published forecast: until one arrives this consumer does not know
-          what water it is reasoning about, and draws nothing rather than a guess.
+          Waiting for the coverage store to say what it holds: until it does, this consumer does
+          not know what water it is reasoning about, and draws nothing rather than a guess.
         </p>
       )}
 
       <div className="consumer-legend">
+        <span data-testid="sampling-scale">
+          shaded between the values present at this zone: {lowest.toFixed(2)} (lightest) to{' '}
+          {highest.toFixed(2)} (darkest), against a saturation of{' '}
+          {settings.uncertainty.saturation.toFixed(2)}
+        </span>
         <span>route: this plan</span>
         <span>dashed fine: the same plan with no expendables — the difference is what depth cost</span>
         {ghost && <span>dashed heavy: the plan against forecast {ghost.runId}</span>}

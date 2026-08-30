@@ -22,7 +22,8 @@ import type { PanelProps } from '../../../shell/registry.js';
 import type { PlatformState } from '../../../generated/types.js';
 import { displayInstant } from '../../../shell/display.js';
 import { ConsumerFrame, Provenance } from '../ConsumerFrame.js';
-import { useForecastFreshness, useGhostOnRunChange } from '../freshness.js';
+import { useGhostOnRunChange } from '../freshness.js';
+import { useConsumerBasis } from '../basis.js';
 import { consumerStream } from '../rng.js';
 import { instantMillis, metresBetween } from '../domain.js';
 import { buildLanes, type Confidence } from './lanes.js';
@@ -37,7 +38,7 @@ const CONFIDENCES: readonly Confidence[] = ['high', 'medium', 'low', 'off'];
 export function FeasibilityPanel({ params }: PanelProps) {
   const { config, client, validator, manifest } = params;
   const settings = config.consumers.feasibility;
-  const freshness = useForecastFreshness(client, config.topics.run_published, validator);
+  const freshness = useConsumerBasis(config, client, validator);
 
   const [platform, setPlatform] = useState<PlatformState | undefined>();
   const [confidence, setConfidence] = useState<Record<string, Confidence>>(() =>
@@ -66,7 +67,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
     });
   }, [client, config.topics.platform_state, validator]);
 
-  const accepted = freshness.accepted;
+  const accepted = freshness.basis;
   /**
    * The horizon runs from the forecast's own validity start, and is longer than the
    * forecast is valid for. That is deliberate and visible: the run's validity here is an
@@ -80,8 +81,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
     ? Math.max(
         1,
         Math.round(
-          (instantMillis(accepted.valid_time.end_sim_time) -
-            instantMillis(accepted.valid_time.start_sim_time)) /
+          (instantMillis(accepted.validTo) - instantMillis(accepted.validFrom)) /
             60_000 /
             settings.step_minutes,
         ),
@@ -95,11 +95,11 @@ export function FeasibilityPanel({ params }: PanelProps) {
    */
   useEffect(() => {
     if (!accepted) return;
-    const collection = accepted.collections.forecast;
-    const startMillis = instantMillis(accepted.valid_time.start_sim_time);
-    const endMillis = instantMillis(accepted.valid_time.end_sim_time);
-    const centreLongitude = (accepted.grid_bounds.minimum_longitude + accepted.grid_bounds.maximum_longitude) / 2;
-    const centreLatitude = (accepted.grid_bounds.minimum_latitude + accepted.grid_bounds.maximum_latitude) / 2;
+    const collection = accepted.collection;
+    const startMillis = instantMillis(accepted.validFrom);
+    const endMillis = instantMillis(accepted.validTo);
+    const centreLongitude = (accepted.domain.west + accepted.domain.east) / 2;
+    const centreLatitude = (accepted.domain.south + accepted.domain.north) / 2;
     void (async () => {
       const values: number[] = [];
       for (let sample = 0; sample < settings.forecast_samples; sample++) {
@@ -107,7 +107,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
         const at = new Date(startMillis + (endMillis - startMillis) * fraction);
         const query = new URLSearchParams({
           coords: `POINT(${centreLongitude} ${centreLatitude})`,
-          z: String(accepted.grid_bounds.minimum_depth_m),
+          z: String(accepted.domain.minimumDepthM),
           datetime: `${at.toISOString().slice(0, 23)}000Z`,
           'parameter-name': FIELD_PARAMETER,
         });
@@ -132,10 +132,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
     // The rendezvous is this tab's own assumption — the north-west corner of the domain —
     // but the range to it is measured from the position the platform actually reported,
     // marched forward on the course and speed it actually reported.
-    const rendezvous = {
-      longitude: accepted.grid_bounds.minimum_longitude,
-      latitude: accepted.grid_bounds.maximum_latitude,
-    };
+    const rendezvous = { longitude: accepted.domain.west, latitude: accepted.domain.north };
     const metres: number[] = [];
     const heading = (platform.current.course_degrees * Math.PI) / 180;
     for (let step = 0; step < steps; step++) {
@@ -181,7 +178,7 @@ export function FeasibilityPanel({ params }: PanelProps) {
     [settings, lanes, confidence, thresholds, steps, locked],
   );
 
-  const { ghost, dismiss } = useGhostOnRunChange(outcome.sets, accepted?.run_id);
+  const { ghost, dismiss } = useGhostOnRunChange(outcome.sets, accepted?.identity);
 
   const byTask = new Map(outcome.perTask.map((entry) => [entry.task.id, entry]));
   const chosen = byTask.get(chosenTask);
@@ -199,17 +196,18 @@ export function FeasibilityPanel({ params }: PanelProps) {
     >
       {!accepted ? (
         <p className="consumer-note" data-testid="feasibility-waiting">
-          Waiting for the first published forecast: the horizon of this tab is the forecast’s own
-          validity span, so until one arrives there is no window to reason over.
+          Waiting for the coverage store to say what it holds: until it does there is no validity
+          span to anchor the horizon to, and no window to reason over.
         </p>
       ) : (
         <>
           <p className="consumer-note">
-            {steps} steps of {settings.step_minutes} minutes, from the forecast’s validity start at{' '}
-            {displayInstant(accepted.valid_time.start_sim_time)}. The forecast itself is valid to{' '}
-            {displayInstant(accepted.valid_time.end_sim_time)} — the first {forecastSteps} step(s) —
-            and the served lane stops there rather than being drawn on, so a task that needs it
-            cannot be scheduled past that point. Confidence weights are{' '}
+            {steps} steps of {settings.step_minutes} minutes, from the validity start of{' '}
+            {accepted.kind === 'nowcast' ? 'the now-cast' : 'the forecast'} at{' '}
+            {displayInstant(accepted.validFrom)}. It is itself valid to{' '}
+            {displayInstant(accepted.validTo)} — the first {forecastSteps} step(s) — and the served
+            lane stops there rather than being drawn on, so a task that needs it cannot be
+            scheduled past that point. Confidence weights are{' '}
             {settings.confidence_weights.high} / {settings.confidence_weights.medium} /{' '}
             {settings.confidence_weights.low}, and a window closes at {settings.veto_weight} — so a
             high-confidence source can close one alone and a low-confidence one never can.{' '}
@@ -220,8 +218,21 @@ export function FeasibilityPanel({ params }: PanelProps) {
           <div data-testid="feasibility-sets">
             {outcome.sets.length === 0 && (
               <p className="consumer-refusal">
-                No set of tasks survives these sources and thresholds. That is an answer, not a
-                failure: something has to give.
+                {/*
+                  Why nothing survives is the answer, not a footnote. A locked task with no
+                  window of its own cannot be scheduled at any price, and saying "no set
+                  survives" without naming it leaves the reader to work out which of their
+                  own decisions did it.
+                */}
+                {[...locked]
+                  .map((id) => byTask.get(id))
+                  .filter((entry) => entry && entry.windows.length === 0)
+                  .map((entry) => entry?.task.label)
+                  .join(', ') ||
+                  'No set of tasks survives these sources and thresholds. That is an answer, not a failure: something has to give.'}
+                {[...locked].some((id) => (byTask.get(id)?.windows.length ?? 1) === 0)
+                  ? ' is locked as mandatory and has no feasible window at all, so nothing can be scheduled around it. Unlock it, lower a threshold, or lower a source’s confidence.'
+                  : ''}
               </p>
             )}
             {outcome.sets.map((set, index) => (

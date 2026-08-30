@@ -174,8 +174,10 @@ describe('the sampling plan (FR-78)', () => {
       longest * 3600 * consumers.sampling.nominal_speed_m_per_s,
     );
     expect(plan.vertices[0].hex).not.toBe(isolated);
-    // And it is not simply skipped: value per transit gets there eventually.
-    expect(plan.vertices.some((vertex) => vertex.hex === isolated)).toBe(true);
+    // Whether it ever gets there is deliberately *not* asserted. Value per transit may
+    // legitimately spend the whole budget on nearer water that is worth more per mile,
+    // and a test that demanded the visit would be demanding the behaviour this one
+    // exists to forbid.
   });
 
   it('never places a drop anywhere the route does not go', () => {

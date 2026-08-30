@@ -74,6 +74,26 @@ environmental data has been demonstrated rather than asserted. And a tab that wa
 its inputs would have nothing to be stale about — which is why this behaviour, rather than
 the drawings, is the thing to look at first.
 
+**What watching it run changed.** The first version waited for a published forecast and
+drew nothing until one arrived, which at this simulator's own cadence is several minutes of
+three blank yellow tabs. The fix is what a downstream system actually does: work from
+whatever the service is already holding — the rolling now-cast — and take the forecast up
+when it lands. That turned out to make the demonstration *stronger*, because with an answer
+already on screen the very first forecast is a change of basis, so the halo, the refusal to
+move, and the ghost are all available from the first minute rather than after the first
+model run.
+
+Two smaller corrections came from the same place. The uncertainty map was a flat dark
+rectangle: a consumer that counts only what arrives after it opens has an empty ocean, and
+shading it from zero to saturation draws one uniform shade. It now reads the served
+observation history when it opens — an ordinary paged query, the same one any client would
+make — and shades between the values actually present, with the range printed underneath.
+And the candidate ranking did not always reorder under the opening objective: under
+*evasion*, staying clear of the traffic is both what the objective wants and what lowers
+exposure, so the two scores move together and no weighting can separate them. That is a
+property of the objective rather than a bug, so the tab now says so when it happens, and
+opens on an objective where the trade is real.
+
 **What the build changed about the specification.** Two things, both worth recording. The
 third tab's horizon was going to be the forecast's own validity span, which was elegant
 and wrong: this scenario's forecasts are valid for an hour, and a one-hour window cannot

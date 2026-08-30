@@ -1,76 +1,13 @@
 /**
- * Stale-then-refresh (FR-73), the behaviour that makes the consumer tabs checkable.
+ * The ghost of stale-then-refresh (FR-73).
  *
- * When a run becomes current, a consumer does **not** recalculate. It says a new forecast
- * is available and waits to be told. On the reader's click it takes the new run up and
- * the previous answer stays on screen as a ghost, so the delta is legible: where the
- * recommendation barely moves the new forecast was not decision-relevant, and where it
- * swings, the value of fresh environmental data has been shown rather than argued.
- *
- * A publication that is not current is not a new forecast to a consumer and does not
- * raise the halo. The message says which it is, so nothing here has to guess.
- *
- * Nothing polls. The only trigger is the run's own announcement on the configured topic,
- * which is also where a consumer learns the domain and the collections to ask for
- * (`domain.ts`).
+ * What a consumer is reasoning against, and how a newly published forecast is taken up,
+ * lives in `basis.ts`; what stays behind when it is taken up lives here. The ghost is the
+ * point of the ceremony: where the recommendation barely moves the new forecast was not
+ * decision-relevant, and where it swings, the value of fresh environmental data has been
+ * shown rather than argued.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RunPublished } from '../../generated/types.js';
-import type { SeamClient } from '../../seam/transport.js';
-import type { SeamValidator } from '../../seam/validate.js';
-
-export interface Freshness {
-  /** The run the displayed answer is computed against, or undefined before the first. */
-  readonly accepted?: RunPublished;
-  /** A newer current run, announced and not yet taken up. */
-  readonly pending?: RunPublished;
-  /** Take the pending run up. A no-op when there is none. */
-  readonly update: () => void;
-  /** Why the last announcement was refused, if it was. */
-  readonly refusal?: string;
-}
-
-export function useForecastFreshness(
-  client: SeamClient,
-  topic: string,
-  validator: SeamValidator,
-): Freshness {
-  const [accepted, setAccepted] = useState<RunPublished | undefined>();
-  const [pending, setPending] = useState<RunPublished | undefined>();
-  const [refusal, setRefusal] = useState<string | undefined>();
-
-  useEffect(() => {
-    return client.subscribe(topic, (message) => {
-      const verdict = validator.validate('run-published', message.payload);
-      if (!verdict.ok) {
-        setRefusal(`the publication was refused by its master: ${verdict.refusals[0]}`);
-        return;
-      }
-      setRefusal(undefined);
-      const run = message.payload as RunPublished;
-      // A run published for inspection is not a new forecast to a consumer of the
-      // current one. The message says which it is (run-published.schema.json).
-      if (!run.current) return;
-      setAccepted((standing) => {
-        // The first one a consumer hears is taken up without ceremony: there is nothing
-        // to be stale against, and a tab that opened empty and waited for a click would
-        // be asking the reader to confirm a forecast they had never seen.
-        if (standing === undefined) return run;
-        if (standing.run_id !== run.run_id) setPending(run);
-        return standing;
-      });
-    });
-  }, [client, topic, validator]);
-
-  const update = useCallback(() => {
-    setPending((waiting) => {
-      if (waiting) setAccepted(waiting);
-      return undefined;
-    });
-  }, []);
-
-  return { accepted, pending, update, refusal };
-}
 
 export interface Ghost<T> {
   readonly value: T;

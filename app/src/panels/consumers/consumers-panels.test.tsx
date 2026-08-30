@@ -72,6 +72,23 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     };
   }
 
+  /**
+   * Let the harness run for a few ticks. Enough for the platform to report its state,
+   * which several of these panels legitimately wait for: a consumer with no vessel
+   * position has no course to plan from and no range to measure, and says so.
+   */
+  async function tickFor(ticks: number): Promise<void> {
+    for (let tick = 0; tick < ticks; tick++) {
+      await act(async () => {
+        runtime.clock.tickOnce();
+        await Promise.resolve();
+      });
+    }
+    await act(async () => {
+      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
+    });
+  }
+
   /** Drive the harness's own loop until it has published `wanted` forecasts. */
   async function tickUntilPublished(wanted: number, limit = 5000): Promise<number> {
     let published = 0;
@@ -117,22 +134,32 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
     expect(document.querySelector('.consumer-strip button')).toBeNull();
   });
 
-  it('says it has computed nothing before a forecast has been heard (Constitution VII)', () => {
+  it('starts from the now-cast the store already holds, and says which basis it is on', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
-    expect(screen.getByTestId('sampling-run').textContent).toContain('no forecast heard yet');
-    expect(screen.getByTestId('sampling-waiting')).toBeTruthy();
+    // Before anything is served it says so rather than drawing a guessed domain.
+    expect(screen.getByTestId('sampling-run').textContent).toContain('nothing served yet');
+    await act(async () => {
+      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
+    });
+    // And then it is standing on the now-cast, without a forecast having been published:
+    // three blank tabs until the first model run is honest and useless (basis.ts).
+    expect(screen.getByTestId('sampling-run').textContent).toContain('against the now-cast');
+    expect(screen.queryByTestId('sampling-waiting')).toBeNull();
   });
 
   it('goes stale on a newly published forecast and recomputes only when asked (FR-73)', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
-    expect(await tickUntilPublished(1)).toBeGreaterThan(0);
+    await act(async () => {
+      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
+    });
 
     const runShown = () => screen.getByTestId('sampling-run').textContent ?? '';
     const first = runShown();
-    expect(first).toContain('against forecast');
-    // Nothing is stale yet: one forecast is not a change of forecast.
+    // The basis it starts on is the now-cast, so the *first* forecast is already a
+    // change of basis and raises the halo — the ceremony from the first minute.
+    expect(first).toContain('against the now-cast');
     expect(screen.queryByTestId('sampling-update')).toBeNull();
 
     // Plan against it, so there is an answer that could move.
@@ -141,7 +168,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
       await Promise.resolve();
     });
 
-    expect(await tickUntilPublished(2)).toBeGreaterThan(1);
+    expect(await tickUntilPublished(1)).toBeGreaterThan(0);
     // The halo is up — and the displayed answer still names the forecast it was
     // computed against. This is the assertion the whole feature turns on.
     expect(screen.getByTestId('sampling-update').textContent).toBe('New forecast available — update');
@@ -152,13 +179,16 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
       await Promise.resolve();
     });
     expect(runShown()).not.toBe(first);
+    expect(runShown()).toContain('against forecast');
     expect(screen.queryByTestId('sampling-update')).toBeNull();
   });
 
   it('couples the drop count to the budget and the rate, and recomputes at once (FR-74, FR-78)', async () => {
     seam();
     render(<SamplingPanel {...panelProps()} />);
-    await tickUntilPublished(1);
+    await act(async () => {
+      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
+    });
     const drops = () => screen.getByTestId('sampling-drops').textContent ?? '';
     fireEvent.change(screen.getByTestId('sampling-budget'), { target: { value: '12' } });
     fireEvent.change(screen.getByTestId('sampling-rate'), { target: { value: '6' } });
@@ -172,10 +202,7 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
   it('Courses draws the roster, the cloud and three or four candidates (FR-79)', async () => {
     seam();
     render(<CoursesPanel {...panelProps()} />);
-    await tickUntilPublished(1);
-    await act(async () => {
-      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
-    });
+    await tickFor(40);
     const rows = document.querySelectorAll('[data-testid^="courses-row-"]');
     expect(rows.length).toBe(config.shell.consumers.courses.candidate_count);
     expect(screen.getByTestId('courses-map')).toBeTruthy();
@@ -185,25 +212,25 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
   it('Courses reorders its candidates when the weighting moves (FR-79)', async () => {
     seam();
     render(<CoursesPanel {...panelProps()} />);
-    await tickUntilPublished(1);
-    await act(async () => {
-      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
-    });
+    await tickFor(40);
     const leader = () =>
       document.querySelector('[data-testid^="courses-row-"] td:nth-child(2)')?.textContent;
+    // Named rather than left to the default: under some objectives the two components
+    // move together and nothing reorders, which the panel states in its own words. The
+    // requirement is that the weighting *can* reorder, and investigation is where the
+    // trade is genuinely opposed — go and look at them, or stay clear of them.
+    fireEvent.change(screen.getByTestId('courses-objective'), { target: { value: 'investigation' } });
     fireEvent.change(screen.getByTestId('courses-weight'), { target: { value: '0' } });
     const byObjective = leader();
     fireEvent.change(screen.getByTestId('courses-weight'), { target: { value: '1' } });
     expect(leader()).not.toBe(byObjective);
+    expect(screen.getByTestId('courses-trade').textContent).toContain('the order changes');
   });
 
   it('Feasibility lanes say where they came from, and Off changes the answer (FR-76, FR-80)', async () => {
     seam();
     render(<FeasibilityPanel {...panelProps()} />);
-    await tickUntilPublished(1);
-    await act(async () => {
-      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
-    });
+    await tickFor(40);
     const lanes = document.querySelectorAll('[data-testid="feasibility-lanes"] .lane-row');
     expect(lanes.length).toBe(config.shell.consumers.feasibility.lanes.length);
     // Every lane wears its provenance, and at least one of each kind is present.
@@ -226,28 +253,27 @@ describe('the downstream consumers against a live backend', { timeout: 180_000 }
   it('Feasibility recomputes around a locked task (FR-80)', async () => {
     seam();
     render(<FeasibilityPanel {...panelProps()} />);
-    await tickUntilPublished(1);
-    await act(async () => {
-      for (let flush = 0; flush < 200; flush++) await Promise.resolve();
-    });
-    const before = screen.getByTestId('feasibility-sets').textContent ?? '';
+    await tickFor(40);
     const locks = document.querySelectorAll('[data-testid^="feasibility-lock-"]');
     expect(locks.length).toBe(config.shell.consumers.feasibility.tasks.length);
-    // Lock whatever the leading set gives up: the sets have to rearrange around it.
-    const givenUp = /gives up: ([^\n]+)/.exec(before)?.[1];
-    expect(givenUp).toBeTruthy();
-    const task = config.shell.consumers.feasibility.tasks.find((entry) =>
-      givenUp?.includes(entry.label),
-    );
+    // Lock a task that has a window of its own. A task with no window at all is excluded
+    // for its own reasons, and locking one of those is a different assertion — the panel
+    // names the blocker rather than saying "nothing survives" and leaving the reader to
+    // work out which of their own decisions did it.
+    const task = config.shell.consumers.feasibility.tasks.find((entry) => {
+      const row = screen.queryByTestId(`feasibility-task-${entry.id}`);
+      return Number(row?.children[2]?.textContent ?? '0') > 0;
+    });
     expect(task).toBeTruthy();
     if (!task) return;
     await act(async () => {
       fireEvent.click(screen.getByTestId(`feasibility-lock-${task.id}`));
       await Promise.resolve();
     });
-    const after = screen.getByTestId('feasibility-sets').textContent ?? '';
-    expect(after).not.toBe(before);
-    expect(after).toContain(task.label);
+    // Every set now carries it: the sets recompute *around* the lock (FR-80).
+    const sets = [...document.querySelectorAll('[data-testid^="feasibility-set-"]')];
+    expect(sets.length).toBeGreaterThan(0);
+    for (const set of sets) expect(set.textContent).toContain(task.label);
   });
 });
 

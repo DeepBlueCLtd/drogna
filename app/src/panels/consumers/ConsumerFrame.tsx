@@ -18,7 +18,7 @@
 import type { ReactNode } from 'react';
 import type { ConfigShell } from '../../generated/types.js';
 import { displayInstant } from '../../shell/display.js';
-import type { Freshness } from './freshness.js';
+import type { Freshness } from './basis.js';
 import './consumers.css';
 
 export interface ConsumerFrameProps {
@@ -42,7 +42,7 @@ export function ConsumerFrame({
   children,
   testId,
 }: ConsumerFrameProps) {
-  const { accepted, pending, refusal } = freshness;
+  const { basis, pending, refusal } = freshness;
   return (
     <div className="panel consumer-panel" data-testid={testId} data-stale={pending !== undefined}>
       {/*
@@ -54,10 +54,15 @@ export function ConsumerFrame({
       </p>
       <div className="consumer-head">
         <p className="consumer-summary">{summary}</p>
+        {/*
+          Which of the two bases the answer stands on is stated rather than implied: a
+          now-cast is what the store already holds and a forecast is a model run, and a
+          reader who cannot tell them apart cannot judge the answer (basis.ts).
+        */}
         <span className="consumer-provenance" data-testid={`${testId}-run`}>
-          {accepted
-            ? `against forecast ${accepted.run_id}, published ${displayInstant(accepted.sim_time)}`
-            : 'no forecast heard yet — nothing has been computed'}
+          {basis
+            ? `against ${basis.kind === 'nowcast' ? 'the now-cast' : 'forecast'} ${basis.identity}, published ${displayInstant(basis.since)}`
+            : 'nothing served yet — nothing has been computed'}
         </span>
         {pending && (
           <button

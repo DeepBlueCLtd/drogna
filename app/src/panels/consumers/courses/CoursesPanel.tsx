@@ -21,9 +21,10 @@ import type { PanelProps } from '../../../shell/registry.js';
 import type { PlatformState } from '../../../generated/types.js';
 import { gridCells, type GridCoverage } from '../../map/map-data.js';
 import { ConsumerFrame, Provenance } from '../ConsumerFrame.js';
-import { useForecastFreshness, useGhostOnRunChange } from '../freshness.js';
+import { useGhostOnRunChange } from '../freshness.js';
+import { useConsumerBasis } from '../basis.js';
 import { consumerStream } from '../rng.js';
-import { domainFromRun, domainRing, type Domain } from '../domain.js';
+import { domainRing, type Domain } from '../domain.js';
 import { aggregateOntoHexes, coverDomain, isRefusal, projector, uncertaintyColour } from '../hexes.js';
 import { concealmentFromField, seedCloud, type ClassHypothesis } from './participants.js';
 import { buildCandidates, rank, type ScoredCandidate } from './candidates.js';
@@ -36,11 +37,11 @@ const COURSE_LEGS = 14;
 export function CoursesPanel({ params }: PanelProps) {
   const { config, client, validator, manifest } = params;
   const settings = config.consumers.courses;
-  const freshness = useForecastFreshness(client, config.topics.run_published, validator);
+  const freshness = useConsumerBasis(config, client, validator);
 
   const [platform, setPlatform] = useState<PlatformState | undefined>();
   const [resolution, setResolution] = useState(config.consumers.hexes.default_resolution);
-  const [objective, setObjective] = useState(settings.objectives[0].id);
+  const [objective, setObjective] = useState(settings.default_objective);
   const [exposureWeight, setExposureWeight] = useState(settings.default_exposure_weight);
   const [roster, setRoster] = useState<readonly ClassHypothesis[]>(() =>
     settings.classes.map((entry) => ({
@@ -62,11 +63,8 @@ export function CoursesPanel({ params }: PanelProps) {
     });
   }, [client, config.topics.platform_state, validator]);
 
-  const domain: Domain | undefined = useMemo(
-    () => (freshness.accepted ? domainFromRun(freshness.accepted) : undefined),
-    [freshness.accepted],
-  );
-  const collection = freshness.accepted?.collections.forecast;
+  const domain: Domain | undefined = freshness.basis?.domain;
+  const collection = freshness.basis?.collection;
 
   // The field, fetched once per accepted forecast. A newly published run does not refetch
   // it: the halo is raised, and this fires again only when the reader takes the run up,
@@ -129,7 +127,7 @@ export function CoursesPanel({ params }: PanelProps) {
 
   const draw = useMemo(
     () => consumerStream(manifest.root_seed, 'consumer', 'courses'),
-    [manifest.root_seed, freshness.accepted?.run_id],
+    [manifest.root_seed, freshness.basis?.identity],
   );
 
   const cloud = useMemo(() => {
@@ -177,7 +175,20 @@ export function CoursesPanel({ params }: PanelProps) {
   );
   const leader = ranked[0];
 
-  const { ghost, dismiss } = useGhostOnRunChange(ranked, freshness.accepted?.run_id);
+  /**
+   * Whether this objective presents a trade at all.
+   *
+   * Under evasion the two components move *together*: staying clear of the density is
+   * both the objective and the way to lower exposure, so no weighting reorders anything.
+   * That is a real property of the problem rather than a defect, and the tab says so —
+   * a slider that cannot change the answer is worse than no slider if nobody is told.
+   */
+  const trades = useMemo(() => {
+    if (candidates.length < 2) return false;
+    return rank(candidates, 0)[0].id !== rank(candidates, 1)[0].id;
+  }, [candidates]);
+
+  const { ghost, dismiss } = useGhostOnRunChange(ranked, freshness.basis?.identity);
   const ghostLeader = ghost?.value?.[0];
 
   const plot = useMemo(() => (domain ? projector(domain, MAP_WIDTH, MAP_HEIGHT) : undefined), [domain]);
@@ -354,9 +365,9 @@ export function CoursesPanel({ params }: PanelProps) {
         </svg>
       ) : (
         <p className="consumer-note" data-testid="courses-waiting">
-          Waiting for the first published forecast: with no domain and no field there is nothing to
-          seed a hypothesis across, and a cloud drawn over a guessed domain would be a picture of
-          nothing.
+          Waiting for the coverage store to say what it holds: with no domain and no field there
+          is nothing to seed a hypothesis across, and a cloud drawn over a guessed domain would be
+          a picture of nothing.
         </p>
       )}
 
@@ -394,9 +405,12 @@ export function CoursesPanel({ params }: PanelProps) {
       {leader && (
         <p className="consumer-note" data-testid="courses-leader">
           Leading at this weighting: <strong>{leader.label}</strong>, exposure{' '}
-          {leader.exposure.toFixed(2)} against achievement {leader.achievement.toFixed(2)}. Move the
-          weighting and the order changes — that is the trade, and it is the tool reasoning rather
-          than reciting.
+          {leader.exposure.toFixed(2)} against achievement {leader.achievement.toFixed(2)}.{' '}
+          <span data-testid="courses-trade">
+            {trades
+              ? 'Move the weighting and the order changes — that is the trade, and it is the tool reasoning rather than reciting.'
+              : 'At this objective the two components move together — what the objective wants is also what keeps the course clear — so no weighting reorders these candidates. That is a property of the objective, not a broken slider; try another one.'}
+          </span>
           {ghostLeader && ghostLeader.id !== leader.id && (
             <> Against forecast {ghost?.runId} the leader was {ghostLeader.label}.</>
           )}

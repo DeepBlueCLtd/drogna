@@ -663,12 +663,15 @@ record-against-tree disagreement this repository has already paid for twice.
   relative endpoints and configured broker topics — and shall import no backend module
   (Constitution XI). It is a client of the same interfaces a Version 3 client would use,
   and nothing in it may know whether the seam is answered in this page or over a network.
-- **FR-73** A consumer view shall be marked **stale by a published run becoming current**,
-  shall recompute **only** on an explicit reader action, and shall retain the superseded
-  answer as a **ghost** naming the run it was computed from. The ghost is the point: where
-  the recommendation barely moves, the new forecast was not decision-relevant, and where
-  it swings, the value of fresh environmental data has been demonstrated rather than
-  argued. A tab that faked its inputs would have nothing to be stale about.
+- **FR-73** A consumer view shall reason from **what is already served** — the now-cast
+  the coverage store holds — until a forecast arrives, and shall name which of the two it
+  is standing on. It shall be marked **stale by a published run becoming current**, shall
+  recompute **only** on an explicit reader action, and shall retain the superseded answer
+  as a **ghost** naming what it was computed from. The ghost is the point: where the
+  recommendation barely moves, the new forecast was not decision-relevant, and where it
+  swings, the value of fresh environmental data has been demonstrated rather than argued.
+  A tab that faked its inputs would have nothing to be stale about — and one that drew
+  nothing until the first model run would demonstrate that only to whoever waited.
 - **FR-74** Every control that is not the update action shall recompute **immediately**;
   the ceremony of FR-73 belongs to newly arrived upstream data and to nothing else. Every
   bound on those recomputations — sample counts, candidate counts, the cell ceiling —

@@ -168,7 +168,29 @@ shared frame rather than by each panel, so a fourth consumer tab cannot be built
 it. It is present at both widths and is never abbreviated: the shell already holds this
 rule for its own disclaimer (FR-007) and this is the same rule.
 
-### 4.3 Stale-then-refresh *(source §2.3)*
+### 4.3 What a consumer stands on: the now-cast, then the forecast
+
+**Corrected during the build, from watching it.** The first implementation waited for a
+published forecast and drew nothing until one arrived — which, at the scenario's own
+cadence, is several minutes of three blank yellow tabs. Honest and useless: a downstream
+system opening at 0900 does not sit in the dark until the next model run, it works from
+whatever the service is already holding.
+
+So a consumer **starts from the now-cast the coverage store already holds**, read through
+the ordinary inventory endpoint, and names which of the two bases it is standing on. Its
+EDR collection identifier is the holding's own era, which is how the query layer names it.
+
+This makes the ceremony of §4.4 stronger rather than weaker. With a now-cast answer on
+screen, the **first** published forecast is already a change of basis: the halo goes up,
+the answer does not move, the click produces the ghost — the whole demonstration from the
+first minute, instead of after the first model run.
+
+What does **not** raise a halo: the now-cast is itself replaced on its own cadence and
+that replacement is announced. A consumer standing on a now-cast does not chase those.
+FR-73's trigger is a published run becoming current, and a second staleness source would
+make the halo mean two things.
+
+### 4.4 Stale-then-refresh *(source §2.3)*
 
 - A `run/published` message announcing a run that has become **current** marks every
   consumer tab stale. A publication that is not current is not a new forecast to a
@@ -178,10 +200,9 @@ rule for its own disclaimer (FR-007) and this is the same rule.
   available — update"**, naming the run and the simulation instant it became visible.
 - **Nothing recomputes until the control is clicked.** The displayed answer keeps saying
   what it said, against the forecast it was computed from, and says which one that was.
-- The **first** forecast a consumer hears is taken up without ceremony and raises no
-  ghost: there is nothing to be stale against, and asking a reader to confirm a forecast
-  they have not yet seen is a ceremony about nothing. Found by a test, which read a ghost
-  legend naming an empty run.
+- A forecast arriving when there is **no basis at all** — not even a now-cast — is taken
+  up without ceremony and raises no ghost: there is nothing to be stale against. Found by
+  a test, which read a ghost legend naming an empty run.
 - On the click, the tab refetches and recomputes, and the previous answer is retained as
   a **ghost**: reduced opacity and a dashed outline, drawn beneath the new answer, with a
   legend naming the run it came from.
@@ -190,7 +211,7 @@ rule for its own disclaimer (FR-007) and this is the same rule.
   control change, because a local change is exactly when the comparison is most useful —
   the reader is asking what the new forecast did, and re-tuning while looking at both.
 
-### 4.4 Local controls recompute immediately *(source §2.4)*
+### 4.5 Local controls recompute immediately *(source §2.4)*
 
 Every control that is not the update button recomputes on the spot: resolution, depth
 zone, time budget, expendable rate, roster, likelihoods, objective, weightings,
@@ -203,7 +224,7 @@ from configuration and are chosen so the recompute stays interactive. Where a ch
 resolution would exceed the stated cell bound, the control refuses that resolution and
 says why, rather than freezing the page.
 
-### 4.5 Honest labelling *(source §2.5)*
+### 4.6 Honest labelling *(source §2.5)*
 
 The scalar Tab 1 colours its hexes by is labelled **"observation-driven uncertainty"**,
 everywhere it is named, and the tab states in one sentence what it is derived from. It is
@@ -239,10 +260,24 @@ A hex's uncertainty is a proxy derived from observation coverage, per zone:
 - **age decay** — uncertainty grows monotonically with time since the last observation,
   toward a saturation it never exceeds.
 
-A hex and zone that has received nothing sits at saturation. The panel states plainly that
-the count is of observations **this tab has heard since it was opened** — a consumer that
-joined late has heard less, and saying so is cheaper than implying a history it does not
-have.
+A hex and zone that has received nothing sits at saturation.
+
+**Where the observations come from, corrected during the build.** Counting only what
+arrives after the tab opens draws an empty ocean for the first hour and calls it
+uncertainty — watched happening. A downstream client reads the served history first, so
+the view makes one paged SensorThings GET on opening (the last page of Observations,
+filtered to the ocean datastreams by their CF standard names, so the platform's own
+course, speed and depth are left out without this view holding a list of instrument
+identifiers), and hears everything after that over the broker. It says on screen how many
+it read and how many the service holds. A fresh visit is a fresh run, so early on that
+history is genuinely short, and the number says so rather than the picture implying
+otherwise.
+
+**The shading runs between the values present**, not from zero to saturation, and the
+range is printed beneath the map. Early in a run almost every hex is at saturation, and a
+zero-to-saturation ramp draws one flat dark field that says nothing; scaling to the
+observed range makes the water that *has* been sampled visible, which is the question the
+tab exists to answer. It is the Map's own idiom.
 
 The interface is deliberately the one a true ensemble spread would fit: the tab consumes a
 scalar per hex per zone. Replacing the proxy with the published spread would change the
@@ -357,6 +392,14 @@ within the slider's range for a representative roster — a candidate set whose 
 changes has not demonstrated a trade-off, and the tab would be reciting. This is a
 property of the candidate generator: candidates are drawn to span the trade rather than
 sampled at random, and a test holds the flip.
+
+**And the view says when there is no trade to make.** Under *evasion* the two components
+move together — staying clear of the density is both what the objective wants and what
+lowers exposure — so no weighting reorders anything. That is a property of the objective
+rather than a defect, and a slider that cannot change the answer is worse than no slider
+if nobody is told; the view states it in its own words. The view therefore opens on an
+objective where the trade is real (`default_objective`), rather than on whichever happens
+to be first in the list.
 
 ## 7. Tab 3 — Feasibility *(source §5)*
 

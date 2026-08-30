@@ -3089,7 +3089,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "default_expendable_interval_hours",
               "depth_zones",
               "uncertainty",
-              "nominal_speed_m_per_s"
+              "nominal_speed_m_per_s",
+              "observation_backfill"
             ],
             "additionalProperties": false,
             "properties": {
@@ -3123,6 +3124,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                 "type": "integer",
                 "exclusiveMinimum": 0,
                 "description": "How many zones the water column is divided into for display. The column's depth is not here: it arrives on the published run's grid bounds, and which zones the vessel can reach arrives on the planner's own depth bands (FR-77)."
+              },
+              "observation_backfill": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "How many recently served observations the view reads from the SensorThings service when it opens, before it starts hearing them over the broker. A consumer that only counted what arrived after it opened would draw an empty ocean for its first hour and call it uncertainty; reading the served history is the ordinary thing a downstream client does, and it is a genuine paged GET rather than a store read. The bound is here because the page is parsed on the way in."
               },
               "nominal_speed_m_per_s": {
                 "type": "number",
@@ -3163,6 +3169,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "required": [
               "classes",
               "objectives",
+              "default_objective",
               "candidate_count",
               "steps",
               "step_seconds",
@@ -3240,6 +3247,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                     }
                   }
                 }
+              },
+              "default_objective": {
+                "$ref": "config.common.schema.json#/$defs/component_id",
+                "description": "Which objective the view opens on. It is not simply the first in the list: under some objectives the two component scores move together — evading and staying clear of the density are the same thing — and no weighting reorders the candidates. The view says so when it happens, and opens on an objective where the trade is real."
               },
               "candidate_count": {
                 "type": "integer",

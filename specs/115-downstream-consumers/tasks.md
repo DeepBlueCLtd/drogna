@@ -104,6 +104,29 @@ broker, the coverage store and its EDR service, the planner and the map surface.
       sets; locking a task excludes the tasks that cannot coexist with it; the sets
       returned are maximal.
 
+## What watching it run corrected
+
+Written at the moment each was decided, because the reason is the part that cannot be
+reconstructed later (CLAUDE.md, lesson 1). Each was found by looking at the running page,
+not by a failing test.
+
+- [x] T036 The tabs drew nothing until the first published forecast — several minutes of
+      three blank yellow tabs, raised by the author watching the instance. A consumer now
+      starts from the **now-cast** the store already holds (`basis.ts`), which also makes
+      the freshness ceremony available from the first minute rather than after the first
+      model run: with a now-cast answer on screen, the first forecast is already a change
+      of basis.
+- [x] T037 The uncertainty field was a flat dark rectangle: a consumer that counts only
+      what arrived after it opened has an empty ocean, and a zero-to-saturation ramp draws
+      it as one uniform shade. Two fixes, both honest: the view reads the **served
+      observation history** on opening through an ordinary paged SensorThings GET, and the
+      shading runs **between the values present** with the range printed beneath the map.
+- [x] T038 The candidate ranking did not always flip on the default objective, and the
+      test that claimed it did was passing on a lucky seed. Under *evasion* the two
+      components genuinely move together, so no weighting reorders them. The view now
+      **says when there is no trade at this objective**, opens on one where the trade is
+      real, and the test names its objective rather than relying on the default.
+
 ## Proof, and showing the work
 
 - [x] T031 Panel tests against a genuine backend, in the shape `panels.test.tsx` already

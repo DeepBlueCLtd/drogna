@@ -669,6 +669,7 @@ export type ConfigShell = {
       "expendable_interval_hours": number[];
       "default_expendable_interval_hours": number;
       "depth_zones": number;
+      "observation_backfill": number;
       "nominal_speed_m_per_s": number;
       "uncertainty": {
         "saturation": number;
@@ -689,6 +690,7 @@ export type ConfigShell = {
         "id": ConfigCommonComponentId;
         "label": string;
       }[];
+      "default_objective": ConfigCommonComponentId;
       "candidate_count": number;
       "steps": number;
       "step_seconds": number;

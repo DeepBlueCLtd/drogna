@@ -363,14 +363,14 @@ describe('the Operator flow chart (feature 113)', () => {
   });
 
   /**
-   * Feature 116: the node opens where it stands. The tab was sent back because a
+   * Feature 117: the node opens where it stands. The tab was sent back because a
    * 208×116 card could be glanced at and not read — the instrument was legible only as
    * a shape, and a slider in it was not usable at all. What is held here is the
    * behaviour that answers it, and specifically the part a stylesheet could not have
    * done: the account is *in the node*, and the chart moves aside rather than covering
    * what the reader was looking at.
    */
-  describe('opening a node where it stands (feature 116)', () => {
+  describe('opening a node where it stands (feature 117)', () => {
     /** The absolutely-positioned slot the canvas places a node in. */
     const slotOf = (id: string) =>
       document.querySelector(`[data-flow-node="${id}"]`)?.closest('.flow-node-slot') as HTMLElement;
@@ -380,7 +380,7 @@ describe('the Operator flow chart (feature 113)', () => {
       left: Number.parseFloat(slotOf(id).style.left),
       top: Number.parseFloat(slotOf(id).style.top),
     });
-    /** Click a node and let the chart finish rearranging (feature 116's animation). */
+    /** Click a node and let the chart finish rearranging (feature 117's animation). */
     const open = async (id: string) => {
       await act(async () => {
         fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);

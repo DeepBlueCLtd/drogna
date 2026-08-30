@@ -137,7 +137,7 @@
         },
         "variable": {
           "type": "string",
-          "enum": ["temperature_spread", "salinity_spread"],
+          "enum": ["temperature_spread", "salinity_spread", "temperature_error", "salinity_error"],
           "description": "Which published spread variable the planner scored. One scalar field is scored, not both: combining degrees Celsius with practical salinity units needs a weighting between them that nothing in the requirements supplies, so none is invented here."
         },
         "digest": {
@@ -475,7 +475,7 @@
       },
       "uncertainty_field": {
         "run_id": "run-000017-3c1aead663b1",
-        "variable": "temperature_spread",
+        "variable": "temperature_error",
         "digest": "sha256:0f4c1e5b6a2d8397f0c1b2a3948576e5d4c3b2a1908172635445362718293a0b"
       },
       "indexing": {

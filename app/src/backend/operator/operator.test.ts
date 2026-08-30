@@ -21,6 +21,7 @@ import type {
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
+import { driveUntil } from '../test-support/drive.js';
 
 const validator = createSeamValidator();
 
@@ -45,9 +46,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       const runtime = buildBackend(config, options, validator);
       // Drive until a statistics cadence lands with a scored ledger: each
       // run-published resets it, so the tick this happens at is the loop's own.
-      for (let i = 0; i < 8000 && runtime.telemetry.lastStatistics?.state !== 'reporting'; i++) {
-        runtime.clock.tickOnce();
-      }
+      await driveUntil(runtime.clock, () => runtime.telemetry.lastStatistics?.state === 'reporting', 8000);
       const statistics = runtime.telemetry.lastStatistics;
       const skill = runtime.telemetry.lastSkill;
       expect(statistics).not.toBeNull();
@@ -69,9 +68,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
     it('scores each sampled region on its own, and never folds a thin one away (#61)', async () => {
       const config = lockstepConfig();
       const runtime = buildBackend(config, options, validator);
-      for (let i = 0; i < 8000 && runtime.telemetry.lastRegionStatistics.length === 0; i++) {
-        runtime.clock.tickOnce();
-      }
+      await driveUntil(runtime.clock, () => runtime.telemetry.lastRegionStatistics.length > 0, 8000);
       const regions = runtime.telemetry.lastRegionStatistics;
       const scenario = runtime.telemetry.lastStatistics;
       expect(regions.length).toBeGreaterThan(0);
@@ -145,9 +142,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       const config = lockstepConfig();
       config.telemetry.regions = { ...config.telemetry.regions, minimum_samples: 1_000_000 };
       const runtime = buildBackend(config, options, validator);
-      for (let i = 0; i < 8000 && runtime.telemetry.lastRegionStatistics.length === 0; i++) {
-        runtime.clock.tickOnce();
-      }
+      await driveUntil(runtime.clock, () => runtime.telemetry.lastRegionStatistics.length > 0, 8000);
       const regions = runtime.telemetry.lastRegionStatistics;
       expect(regions.length).toBeGreaterThan(0);
       for (const region of regions) {
@@ -172,7 +167,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
         const payload = message.payload as { kind?: string };
         if (payload.kind === 'residual-sample') captured ??= payload as TelemetryResidualSampleReport;
       });
-      for (let i = 0; i < 8000 && !captured; i++) runtime.clock.tickOnce();
+      await driveUntil(runtime.clock, () => captured !== undefined, 8000);
       expect(captured).toBeDefined();
       if (!captured) return;
 

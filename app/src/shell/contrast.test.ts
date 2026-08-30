@@ -17,7 +17,7 @@
  * cannot be read on, the tightest at 2.42:1; with it set equal to --shell-fg instead,
  * the step assertion below reports the distinction gone.
  *
- * Feature 116 arrived at the same fault from the other end and brought three checks this
+ * Feature 117 arrived at the same fault from the other end and brought three checks this
  * one does not make, kept below rather than in a second file that would drift from this
  * one. Each answers something the checks above cannot see:
  *

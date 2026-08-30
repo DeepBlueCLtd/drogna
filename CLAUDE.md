@@ -128,16 +128,22 @@ noticed.
   Not one per feature — one per new face in the shell or piece of backend simulation
   worth watching work (D17). Copy `site/authoring/blog-entry-template.md` to
   `site/docs/blog/posts/<slug>.md` and write the four parts D19 fixes: the background,
-  the requirement, the options considered, the demo. About 500 words; 1000 is long. The
-  running thing carries the weight the prose used to — which means **the entry carries a
-  capture of it**, and a change that moves is captured moving: `pnpm capture:motion` for
-  an interaction, `pnpm capture:glance` for a moment. The instance link above is for a
-  reviewer, who will click it; an entry's reader will not, and is reading after that
-  instance has been replaced. `site/authoring/README.md` is the authoring note, and the
-  coverage table on the blog index counts entries against the feature directories under
-  `specs/` and says of each whether it is *shown* or *told only*, so both gaps are
-  published rather than quietly missing. **Link it from the pull request as a full URL on
-  the branch** —
+  the requirement, the options considered, the demo. **Three to six tweets in total** —
+  300 words of prose, roughly 70 a part, enforced by `check-blog-length`, which reads
+  that number from the table in `site/authoring/README.md`. The first ten entries ran
+  576 to 2,088 words against a running instance one click away, which is what the budget
+  is a correction to: an entry is an invitation to the demo, and the demo carries the
+  weight the prose was carrying instead. An entry that will not fit is two entries, or
+  an entry whose middle belongs in an ADR; there is no exemption marker. Alt text and
+  URLs are not counted, because a screenshot's description is required to be long — and
+  because **the entry carries a capture**: a change that moves is captured moving
+  (`pnpm capture:motion`), one that does not is captured still (`pnpm capture:glance`).
+  The instance link is for a reviewer, who will click it; an entry's reader will not, and
+  is reading after that instance has been replaced. `site/authoring/README.md` is the
+  authoring note, and the coverage table on the blog index counts entries against the
+  feature directories under `specs/` and says of each whether it is *shown* or *told
+  only*, so both gaps are published rather than quietly missing. **Link it from the pull
+  request as a full URL on the branch** —
   `https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md`
   — because GitHub does not resolve a repository-relative path in a pull request body
   to the file: the browser resolves it against the page the body is read on, which is

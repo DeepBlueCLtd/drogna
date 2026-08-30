@@ -763,7 +763,7 @@ function ListView({
 }
 
 /**
- * A component's account. Since feature 116 this is drawn inside the node itself in the
+ * A component's account. Since feature 117 this is drawn inside the node itself in the
  * chart — the reason the panel was sent back was that a 208-pixel card could be glanced
  * at and not read, and an account that opened somewhere else made the reader carry the
  * node's name across the page to find it. In the list view, where a row has nowhere to

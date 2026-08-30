@@ -33,10 +33,16 @@ across the page to be sure they are reading the right one. Feature 114's own rul
 consequence is visible where the cause was applied; the drawer was the one place in the
 tab where it was not.
 
-**Feature number.** 116 follows 115. Like 111 to 115 it sits outside the arc: it changes
-no simulation, adds no component, moves no data across the seam, and asserts nothing new
+**Feature number.** 117. Like 111 to 116 it sits outside the arc: it changes no
+simulation, adds no component, moves no data across the seam, and asserts nothing new
 about the ocean. It is entirely about what the Operator tab does when a reader selects
 something.
+
+**It was specified as 116 and renumbered to 117** while the implementation was in flight,
+when the analysis step took 116 on `main`. The same thing happened to feature 115, which
+was specified as 114 and renumbered when the operator controls landed first: a number
+taken by whichever branch merges first is a fact about merge order, not about the work,
+and the branch still open is the one that moves.
 
 ## Requirements
 

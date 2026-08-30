@@ -70,7 +70,7 @@ export const BANDS: readonly Band[] = ['loop', 'path', 'downstream', 'plane'];
 export function buildFlow(shell: ConfigShell, topology: Topology): Flow {
   const declared = new Map(shell.components.map((component) => [component.id, component]));
   // Band by band down the arc, rank by rank across each: the order the chart is drawn
-  // in, and — since feature 116's arrows — the order a reader steps through it in. The
+  // in, and — since feature 117's arrows — the order a reader steps through it in. The
   // rule lives with the geometry that places by it, so the three uses cannot drift into
   // three orders that agree today.
   const nodes: FlowNode[] = inReadingOrder(

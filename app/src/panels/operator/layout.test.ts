@@ -97,13 +97,13 @@ describe('the flow chart’s layout (feature 113)', () => {
 });
 
 /**
- * Opening a node (feature 116). The complaint the feature answers is that a 208×116
+ * Opening a node (feature 117). The complaint the feature answers is that a 208×116
  * card cannot be read or used, and the answer is that the selected one grows — so what
  * has to be held here is not that it is bigger, which is trivially true of a number
  * typed into the metrics, but that **the rest of the picture gets out of its way**. A
  * card that grew over its neighbours would be a modal with extra steps.
  */
-describe('opening one node (feature 116)', () => {
+describe('opening one node (feature 117)', () => {
   /** Every pair, checked for overlap. The property the reflow exists to keep. */
   function overlapping(placed: readonly Placed[]): string[] {
     const clashes: string[] = [];
@@ -196,7 +196,7 @@ describe('opening one node (feature 116)', () => {
  * changed — which is what the author reported, and why the "no animation" decision was
  * reversed. This holds the arithmetic; the panel test holds that it is actually used.
  */
-describe('one frame between two placements (feature 116)', () => {
+describe('one frame between two placements (feature 117)', () => {
   const resting = layout(NODES, BANDS);
   const open = layout(NODES, BANDS, METRICS, 'a');
   const at = (from: ReturnType<typeof layout>, id: string) =>
@@ -243,12 +243,12 @@ describe('one frame between two placements (feature 116)', () => {
 });
 
 /**
- * The order the chart reads in, which is also the order feature 116's arrows walk. Held
+ * The order the chart reads in, which is also the order feature 117's arrows walk. Held
  * against a deliberately jumbled input, because the configuration on disk happens to
  * declare its components in an order that is *not* this one — and it is `buildFlow`
  * putting them in it that makes the two agree, which is the thing worth being sure of.
  */
-describe('the order the chart reads in (feature 116)', () => {
+describe('the order the chart reads in (feature 117)', () => {
   const jumbled = [
     { id: 'plane-1', band: 'plane', rank: 1 },
     { id: 'path-1', band: 'path', rank: 1 },

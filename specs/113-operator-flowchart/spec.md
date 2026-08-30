@@ -208,7 +208,7 @@ Local numbering. The SRD requirements this feature adds are FR-52 to FR-60 of `s
 - **FR-013** Selecting a node opens a detail drawer carrying that component's full
   account: last heartbeat verbatim, its declared configuration figures, its bespoke
   instrument at full size, its controls, and the last refusal it produced.
-  **Amended by feature 116**: the account opens *in the node itself*, and the chart flows
+  **Amended by feature 117**: the account opens *in the node itself*, and the chart flows
   around it. What it carries is unchanged; where it opened was the problem — below the
   whole chart, it was several hundred pixels from the node that was clicked, which is the
   one place in this tab where consequence was not visible where the cause was applied.

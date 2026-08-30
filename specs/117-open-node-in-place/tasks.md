@@ -1,4 +1,4 @@
-# Feature 116 — tasks
+# Feature 117 — tasks
 
 Small feature, one surface. Ticked as they were done, with the reasons written at the
 moment they were taken (CLAUDE.md, lesson 1).

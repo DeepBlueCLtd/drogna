@@ -115,14 +115,19 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
     what: 'Whether a run is warranted. It declines a divergence inside the minimum interval, refuses a duplicate while one is outstanding, and asks for a run on schedule alone when the cadence floor comes due — so the loop cannot be becalmed.',
     panel: 'Every decision, not only the ones that led to a run, and the two clocks that produce them. You can ask for a run here, and you can move both intervals. The ask goes to the scheduler rather than around it, so it is weighed under the policy a divergence is weighed under: inside the minimum interval it is declined, and the decline appears in this drawer in the scheduler’s own words. That is a complete answer, not a failure.',
   },
+  analyst: {
+    title: 'The analyst',
+    what: 'It corrects the standing forecast by what the instruments have actually measured, before anything is forecast from it. The correction is optimal interpolation: each cell moves toward the observations in proportion to how uncertain the forecast was there and how certain the instrument is, and the reach is a declared correlation that falls to exactly nothing at its support. It also publishes where every cell’s value came from.',
+    panel: 'The observations each cycle took in, and how far the analysis moved the field. Before this component existed the runner initialised from a field evaluated straight from the synthetic truth, so nothing measured here ever reached a forecast.',
+  },
   'model-runner': {
     title: 'The model runner',
-    what: 'It takes a run request and produces a small ensemble through an analytic kernel behind a port, then publishes the result as a holding. The kernel is deliberately fake and says so.',
+    what: 'It takes the analysis the analyst published, perturbs a small ensemble around it by the error the analysis left, and runs each member through an analytic kernel behind a port before publishing the mean as a forecast and the spread as uncertainty. The kernel is deliberately fake and says so.',
     panel: 'The inbound trigger and the ensemble filling — the forecast drawn as it is produced rather than announced after the fact.',
   },
   planner: {
     title: 'The planner',
-    what: 'It combines ensemble spread with observation age to say where the harness is least sure, and recommends where sampling would reduce that most. It recommends and does nothing else: turning a recommendation into an order is a decision, and no component here makes it.',
+    what: 'It reads the error the analysis left to say where the harness is least sure, and recommends where sampling would reduce that most. It used to multiply the ensemble spread by how long ago each region was measured, because the spread carried no spatial structure at all; now the doubt it scores is the doubt the analysis actually computed. It recommends and does nothing else: turning a recommendation into an order is a decision, and no component here makes it.',
     panel: 'Doubt against the threshold that makes a region unusable, and the recommended route. You can move that threshold and ask it to recompute now; with no uncertainty field to work from it says so rather than publishing a hollow plan, and the plan it does publish carries the threshold that produced it. Note that its arrow stops at its own topic — there is no line from here to the platform, and that absence is the point. Nothing on this tab turns a recommendation into an order.',
   },
   telemetry: {

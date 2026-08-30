@@ -127,7 +127,7 @@ export interface Layout {
 /**
  * The order the chart reads in: band by band down the arc, rank by rank across each
  * one. Exported because it is not only where the nodes are drawn — it is also the order
- * a reader steps through them in (feature 116's arrows), and those two must be the same
+ * a reader steps through them in (feature 117's arrows), and those two must be the same
  * order or the arrows walk a sequence the picture does not show. One rule, in one place,
  * rather than a sort in the panel that agrees with this one today.
  */

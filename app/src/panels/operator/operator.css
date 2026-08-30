@@ -159,7 +159,7 @@
   letter-spacing: 0;
 }
 
-/* ---- the open node (feature 116) ----
+/* ---- the open node (feature 117) ----
    A resting card is a glance; an open one is the account. It takes the space of two
    columns and three rows, the chart moves aside for it (layout.ts), and it sits above
    the wires so its own edges do not cross its text. */
@@ -566,7 +566,7 @@
 }
 
 /* Forward and back through the components, in the order the chart draws them (feature
-   116). Beside the title rather than at the foot of the card: it is a way of reading the
+   117). Beside the title rather than at the foot of the card: it is a way of reading the
    chart, not one of the things this component can be told to do, and the controls that
    act on the component are further down under its instrument where they belong. */
 .flow-drawer-walk {

@@ -16,7 +16,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
-import { driveTicks } from '../test-support/drive.js';
+import { driveTicks, driveUntil } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import {
   measurementSpanMetres,
@@ -68,6 +68,38 @@ function stringNodes(node: unknown, path: string, found: { path: string; node: R
     if (key === 'description' || key === 'title' || key === '$schema' || key === '$id') continue;
     stringNodes(value, `${path}/${key}`, found);
   }
+}
+
+
+/**
+ * Turn the loop until it has published `wanted` runs, or give up at `limit` ticks.
+ *
+ * A fixed tick count used to be enough because the loop breached often. Feature 116 put
+ * an analysis in front of the runner, so the forecast is corrected by what the platform
+ * measured and the residual stays under the monitor's threshold far longer: over 3700
+ * ticks the shipped configuration now publishes one run where it used to publish two.
+ * Waiting for the runs the test actually needs says what it needs, rather than encoding
+ * how excitable the sea happened to be.
+ */
+async function driveUntilRuns(
+  runtime: BackendRuntime,
+  config: ConfigRun,
+  wanted: number,
+  limit: number,
+): Promise<AdvisoryRecord> {
+  const record: AdvisoryRecord = { advisories: [], published: [], offloadReports: [] };
+  const shell = runtime.transport.connect(`until-${Math.random()}`, 'shell');
+  shell.subscribe(config.advisory_source.topics.advisory, (message) => {
+    record.advisories.push(message.payload as Advisory);
+  });
+  shell.subscribe(config.model_runner.topics.run_published, (message) => {
+    record.published.push(message.payload as RunPublished);
+  });
+  shell.subscribe(config.offload.topics.offload, (message) => {
+    record.offloadReports.push(message.payload as OffloadTelemetry);
+  });
+  await driveUntil(runtime.clock, () => record.published.length >= wanted, limit);
+  return record;
 }
 
 describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }, () => {
@@ -274,7 +306,7 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     const config = lockstepConfig();
     config.model_runner.noise_std = { temperature: 0, salinity: 0 };
     const runtime = buildBackend(config, options, validator);
-    const record = await drive(runtime, config, 3700);
+    const record = await driveUntilRuns(runtime, config, 2, 12000);
     expect(record.published.length).toBeGreaterThanOrEqual(2);
 
     const staged = runtime.offload.staged();
@@ -323,8 +355,13 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     // domain, which is the reason the open question recorded. It scores at chance
     // and is called clear, which is a pass earned by noise rather than by
     // mitigation: the third reason this is not yet a gate.
-    const noisy = buildBackend(lockstepConfig(), options, validator);
-    const noisyRecord = await drive(noisy, lockstepConfig(), 3700);
+    const noisyConfig = lockstepConfig();
+    const noisy = buildBackend(noisyConfig, options, validator);
+    const noisyRecord = await driveUntilRuns(noisy, noisyConfig, 2, 12000);
+    // Asserted rather than assumed: this branch read published[1] without ever checking
+    // there was one, so when the loop began breaching less it failed with an undefined
+    // read instead of saying what it had wanted.
+    expect(noisyRecord.published.length).toBeGreaterThanOrEqual(2);
     const noisyFirst = noisy.store.holding(noisyRecord.published[0].collections.forecast);
     const noisySecond = noisy.store.holding(noisyRecord.published[1].collections.forecast);
     if (noisyFirst && noisySecond) {

@@ -111,7 +111,7 @@ and backward through the system components.*
 - [x] T031 The arrow **keys** are not bound, and the reason is written into the code where
       the temptation is: the card holds range inputs, whose own keys are the arrow keys.
       Binding them would take fine adjustment away from every tuning control to move the
-      card.
+      card. **Reversed by T034**, which keeps the reason and drops the conclusion.
 - [x] T032 Plant each fault these checks exist to catch. Five planted, five caught, all
       reverted: (a) `buildFlow` no longer putting the nodes in the drawn order — the
       order check failed; (b) a walk that stops dead at the ends rather than coming round
@@ -126,6 +126,35 @@ and backward through the system components.*
       deliberately jumbled input, because the components on disk are declared in an order
       that is not the drawn one (the clock is declared first and drawn last) and a check
       fed only the real configuration would be reading the file back to itself.
+
+## The keys (added on the author's third report)
+
+*Please support keyboard navigation of arrows (left & right).*
+
+- [x] T034 Reverse T031. The objection recorded there was right and its conclusion was
+      not: leaving the arrow keys to a range input is an argument for giving them up
+      *inside the control*, not for declining them everywhere else. `walkKeys` takes ← and
+      → across the whole open card and returns them to any `input`, `textarea`, `select`
+      or editable region — the closest ancestor decides, so a key pressed in the tuner's
+      own text entry is the tuner's.
+- [x] T035 A modified arrow is left alone: alt, control, meta or shift means the reader is
+      asking the browser or the system for something else.
+- [x] T036 The keys are declared on the arrows themselves — `aria-keyshortcuts`, and the
+      key named in each control's tooltip. A keyboard affordance nobody can find is in the
+      position feature 114 found the demand control in: implemented, and absent.
+- [x] T037 One listener, in the place that already hears the whole card: the open node in
+      the chart (everything inside bubbles to it), the account itself in the list, which
+      is what the reader is in there.
+- [x] T038 Plant each fault. Three caught, all reverted: (a) the keys unbound, which is
+      the state this round started from — the walk-by-key check failed; (b) the guard
+      dropped — the slider check failed, with the card stepping off the threshold the
+      reader was adjusting; (c) modified arrows taken too — the modifier check failed.
+- [x] T039 A fourth plant did **not** fail, and the comment it disproved was corrected
+      rather than left standing. The plant was a second key listener on the account inside
+      the chart, which the code's comment claimed would step twice per press. It does not:
+      both calls read the same selection from the same render and ask for the same next
+      component, so the second is a no-op. Harmless, and not a property to design around —
+      the single listener stays, and the comment now says what was actually observed.
 
 ## Holding it
 

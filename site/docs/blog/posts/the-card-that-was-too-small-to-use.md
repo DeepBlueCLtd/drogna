@@ -171,13 +171,24 @@ configuration, for the same reason. The pieces on disk are declared in an order 
 not the drawn one — the clock is declared first and drawn last — so a check fed only the
 real file would have been reading the file back to itself.
 
-One thing the arrows deliberately do not do is answer the arrow keys. It is the obvious
-binding and it cannot be had: the card contains sliders, and a slider's own keys are the
-arrow keys. Binding them at the card would take fine adjustment away from every control
-in it in order to move the card, which trades a control for a shortcut. What the arrows do
-instead is keep the keyboard on themselves across a step — the card they were in has left
-the page by then, so the focus is moved to the same arrow in the card that replaced it,
-and a reader can hold down the tour without touching the mouse.
+The arrows shipped without a keyboard binding, and that was wrong in an instructive way.
+The objection was real: the card contains sliders, and a slider's own keys are the arrow
+keys, so a handler at the card would take fine adjustment away from every control in it
+in order to move the card. Trading a control for a shortcut is a bad trade. The mistake
+was the conclusion — that argument asks for the keys to be left with the control that
+owns them, not for them to be declined everywhere else.
+
+So ← and → now walk the pieces from anywhere in the card, and are handed back inside any
+slider, number field, text field or dropdown. There is a test that presses ← on a live
+threshold slider and requires the card not to move. The keys are also announced on the
+arrows themselves rather than left to be discovered, which matters more than it sounds:
+this project has already shipped one control that was fully implemented, reachable, and
+invisible, and the lesson was that a control nobody can find is a control that does not
+exist. A shortcut nobody can find is the same thing.
+
+The arrows also keep the keyboard on themselves across a step — the card they were in has
+left the page by then, so the focus moves to the same arrow in the card that replaced it,
+and a reader can walk the whole system without touching the mouse.
 
 ## The demo
 
@@ -192,8 +203,9 @@ way, which is the part a CSS transition could not have done. Both of its dials a
 and the residual line above them is at a size where you can read the number. Close it and
 everything returns to where it was.
 
-Then walk: the arrows in the card's header step through all twenty pieces in the order the
-diagram draws them, and each one names where it is about to take you. It comes round at
+Then walk: the arrows in the card's header — or the ← and → keys — step through all twenty
+pieces in the order the diagram draws them, and each one names where it is about to take
+you. It comes round at
 both ends, because the arc it is walking does.
 
 Then click the **platform**, bottom left, and use the presets: *all stop* drops the

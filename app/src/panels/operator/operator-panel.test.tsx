@@ -657,6 +657,123 @@ describe('the Operator flow chart (feature 113)', () => {
       }
     });
 
+    it('walks with the left and right arrow keys, from anywhere the reader is in the card', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await open(drawn[4].id);
+      const drawer = () => screen.getByTestId('flow-drawer');
+      const press = async (key: string, from: Element) => {
+        await act(async () => {
+          fireEvent.keyDown(from, { key });
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+      };
+
+      // From the card itself, which is where the focus lands when a node is opened.
+      await press('ArrowRight', document.activeElement as Element);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[5].id);
+      await press('ArrowLeft', document.activeElement as Element);
+      await press('ArrowLeft', document.activeElement as Element);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[3].id);
+
+      // And from something inside it that does not own those keys — a heading, a button.
+      const heading = drawer().querySelector('h3') as Element;
+      await press('ArrowRight', heading);
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[4].id);
+    });
+
+    it('leaves the arrow keys to the control that owns them', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // The monitor's card holds two range inputs, and a range input's own keys are the
+      // arrow keys. Taking them would trade fine adjustment of a live threshold for a
+      // shortcut — the reason the walk shipped without them at first.
+      await open('monitor');
+      const drawer = () => screen.getByTestId('flow-drawer');
+      const slider = drawer().querySelector('[data-tunable="drift-threshold"] input[type="range"]');
+      expect(slider).toBeTruthy();
+      await act(async () => {
+        fireEvent.keyDown(slider as Element, { key: 'ArrowRight' });
+        vi.advanceTimersByTime(400);
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe('monitor');
+      // The number field beside it, and the text entry the tuner offers, keep them too.
+      for (const field of drawer().querySelectorAll('input:not([type="range"]), select, textarea')) {
+        await act(async () => {
+          fireEvent.keyDown(field, { key: 'ArrowLeft' });
+          vi.advanceTimersByTime(400);
+        });
+        expect(drawer().getAttribute('data-drawer-component')).toBe('monitor');
+      }
+    });
+
+    it('leaves a modified arrow alone: that is somebody asking for something else', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('monitor');
+      const drawer = () => screen.getByTestId('flow-drawer');
+      for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const) {
+        await act(async () => {
+          fireEvent.keyDown(document.activeElement as Element, {
+            key: 'ArrowRight',
+            [modifier]: true,
+          });
+          vi.advanceTimersByTime(400);
+        });
+        expect(drawer().getAttribute('data-drawer-component'), modifier).toBe('monitor');
+      }
+    });
+
+    it('says on the control which key does it, rather than leaving it to be discovered', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await open('monitor');
+      const drawer = screen.getByTestId('flow-drawer');
+      expect(drawer.querySelector('[data-step="previous"]')?.getAttribute('aria-keyshortcuts')).toBe(
+        'ArrowLeft',
+      );
+      expect(drawer.querySelector('[data-step="next"]')?.getAttribute('aria-keyshortcuts')).toBe(
+        'ArrowRight',
+      );
+    });
+
+    it('the list view walks with the same keys, on the account itself', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('view-toggle'));
+      });
+      const drawn = buildFlow(config.shell, topology).nodes;
+      await act(async () => {
+        fireEvent.click(
+          document.querySelector(`[data-operator-component="${drawn[2].id}"] .link-button`) as HTMLElement,
+        );
+      });
+      const drawer = () => screen.getByTestId('flow-drawer');
+      await act(async () => {
+        fireEvent.keyDown(drawer(), { key: 'ArrowRight' });
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[3].id);
+      // Exactly one step per press: the account is the only thing listening here.
+      await act(async () => {
+        fireEvent.keyDown(drawer(), { key: 'ArrowRight' });
+      });
+      expect(drawer().getAttribute('data-drawer-component')).toBe(drawn[4].id);
+    });
+
     it('opens it below the table in the list view, which has nowhere to expand into', async () => {
       render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {

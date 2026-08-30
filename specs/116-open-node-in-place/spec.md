@@ -84,7 +84,15 @@ something.
   has stopped saying anything.
 - **FR-13** Stepping leaves the keyboard **on the arrow**, not on the card: the card the
   arrow was in has left the document, and a reader stepping through must be able to keep
-  pressing. The arrow *keys* are deliberately not bound — see below.
+  pressing.
+- **FR-14** **← and → walk the components** from anywhere the reader is in the open card,
+  *except* inside a control whose own keys they are — a range input, a number or text
+  field, a select, an editable region. Those keep them. A modified arrow is left alone:
+  that is somebody asking the browser or the operating system for something else.
+- **FR-15** The shortcut is **declared on the arrows themselves** (`aria-keyshortcuts`,
+  and in the control's own tooltip), not left to be discovered. A keyboard affordance
+  nobody can find is in the same position as the control feature 114 found buried in a
+  drawer: genuinely implemented and, to the reader, absent.
 - **FR-10** The open card is brought into view **once it has stopped moving**, by the
   least that makes it whole. Scrolling to a box that is still growing aims at the wrong
   place: on a phone the card ended up half off the screen, and on a desktop, where
@@ -115,13 +123,15 @@ something.
   placements the layout produced. Nothing derived from it reaches a figure, a message, a
   query or a test assertion — the movement belongs to the render path and stays there,
   under the wall-clock marker ADR-0007 established for exactly that.
-- **The arrow keys are not bound to the walk.** The obvious keyboard binding for a back
-  and forward arrow is ← and →, and it cannot be had here: the card holds range inputs,
-  and a range input's own keys *are* the arrow keys. Binding them at the card would take
-  fine adjustment away from every tuning control in order to move the card, which trades
-  a control for a shortcut. The arrows are ordinary buttons in the tab order, and FR-13
-  keeps the keyboard on them across a step, which is the same convenience by a route
-  that costs nothing.
+- **~~The arrow keys are not bound to the walk.~~ Reversed on the author's request, and
+  the original objection still stands — it was the conclusion that was wrong.** The
+  objection: the card holds range inputs, and a range input's own keys *are* the arrow
+  keys, so a handler at the card would take fine adjustment away from every tuning
+  control in order to move the card. That is true, and it argues for leaving those keys
+  with the control that owns them — not for leaving them unbound everywhere else. The
+  keys are now taken across the whole card and given up inside any control that uses
+  them (FR-14), which is what the objection actually asked for. Held by a test that
+  presses ← on the monitor's live threshold slider and requires the card not to move.
 - **The walk does not skip to what is interesting.** It steps one component at a time
   through every one of them, including the components that take no controls and the ones
   that have never been heard from. A walk that skipped the silent ones would be a walk
@@ -150,3 +160,7 @@ something.
 - **SC-009** Each arrow's accessible name is the label of the component it will open.
 - **SC-010** After a step, the focused element is the same arrow in the newly opened
   card.
+- **SC-011** ← and → step the walk from the open card and from anything in it that does
+  not own those keys; from a range, number, text, select or editable target, and from any
+  modified arrow, the card does not move.
+- **SC-012** Each arrow declares its key in a form assistive technology reads.

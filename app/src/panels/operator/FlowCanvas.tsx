@@ -39,7 +39,7 @@
  * new placement is committed on the same frame, and the picture is exactly the one this
  * file drew before the animation existed.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { FlowEdge, FlowNode } from './graph.js';
 import {
   METRICS,
@@ -106,6 +106,8 @@ export interface FlowCanvasProps {
    * pressing.
    */
   readonly openFocus?: 'card' | 'step-previous' | 'step-next';
+  /** Keys pressed anywhere in the open node. The open node is what holds the focus. */
+  readonly onOpenKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
 export function FlowCanvas({
@@ -120,6 +122,7 @@ export function FlowCanvas({
   stateOf,
   metrics = METRICS,
   openFocus = 'card',
+  onOpenKeyDown,
 }: FlowCanvasProps) {
   // Where the chart is going. Recomputed only when something that decides geometry
   // changes, so the frame loop below has a stable thing to walk towards.
@@ -301,6 +304,7 @@ export function FlowCanvas({
                   aria-label={`${node.label}, open`}
                   ref={openRef}
                   tabIndex={-1}
+                  onKeyDown={onOpenKeyDown}
                 >
                   {renderExpanded(node)}
                 </section>

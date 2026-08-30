@@ -35,7 +35,7 @@
  * simulation seconds (issue #61) are in the telemetry component's own drawer, which is
  * where a reader now goes to ask that component what it has to say.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import { useIsNarrow } from '../../shell/viewport.js';
 import { Disclosure } from '../../shell/Disclosure.js';
@@ -380,6 +380,31 @@ export function OperatorPanel({ params }: PanelProps) {
    * document, so without this the second press has nothing to press.
    */
   const arrivedBy = useRef<'card' | 'step-previous' | 'step-next'>('card');
+  /**
+   * ← and → walk the components, from wherever the reader's focus is in the open card.
+   *
+   * The first cut of the walk left these keys unbound, for a real reason: the card holds
+   * range inputs, and a range input's own keys *are* the arrow keys, so a handler at the
+   * card would have taken fine adjustment away from every tuning control in order to move
+   * the card. The reason was right and the conclusion was not — the fix is to leave the
+   * keys with the control that owns them and take them everywhere else, which is what
+   * this does. A slider, a number field, a text field or a select keeps its arrows; the
+   * card takes them anywhere else, including on the arrow buttons themselves, so a reader
+   * who has stepped once can keep going without moving their hands.
+   *
+   * A modifier means something else is being asked for — a browser's own back, a word
+   * jump — and is left alone.
+   */
+  const walkKeys = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (direction === 0) return;
+    const from = event.target as HTMLElement;
+    if (from.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    step(direction);
+  };
+
   const step = (direction: -1 | 1) => {
     const at = order.findIndex((node) => node.id === selected);
     if (at < 0) return;
@@ -399,6 +424,7 @@ export function OperatorPanel({ params }: PanelProps) {
     <Drawer
       node={node}
       where={where}
+      onKeys={walkKeys}
       walk={{
         at: order.findIndex((entry) => entry.id === node.id) + 1,
         of: order.length,
@@ -490,6 +516,9 @@ export function OperatorPanel({ params }: PanelProps) {
           // A phone's space is vertical, so the open card is a different shape there.
           metrics={narrow ? NARROW_METRICS : METRICS}
           openFocus={arrivedBy.current}
+          // The open node is what holds the focus in the chart, so it is what hears the
+          // walk's keys — including from everything inside it, by bubbling.
+          onOpenKeyDown={walkKeys}
           stateOf={(id) => {
             const { lit, word } = stateOf(id);
             return { lit, word };
@@ -748,6 +777,7 @@ function Drawer({
   where,
   walk,
   onStep,
+  onKeys,
   state,
   flow,
   config,
@@ -767,6 +797,8 @@ function Drawer({
   /** Where this component sits in the order the chart reads, and its two neighbours. */
   walk: { at: number; of: number; previous: FlowNode; next: FlowNode };
   onStep: (direction: -1 | 1) => void;
+  /** ← and → walk the components. See `walkKeys`. */
+  onKeys: (event: KeyboardEvent<HTMLElement>) => void;
   state: StateOf;
   flow: ReturnType<typeof buildFlow>;
   config: PanelParams['config'];
@@ -791,6 +823,16 @@ function Drawer({
       data-testid="flow-drawer"
       data-drawer-component={node.id}
       data-drawer-where={where}
+      {...(where === 'below'
+        ? // In the list the account itself is what a reader is in, so it hears the keys
+          // and can be focused to start hearing them. In the chart the open node hears
+          // them already — everything in here bubbles up to it — so a listener here as
+          // well would be a second call on one press. Planting that showed it changes
+          // nothing today, because both calls read the same selection and ask for the
+          // same next component; that is a property of this render, not a design, and
+          // one listener with one job does not need it to hold.
+          { onKeyDown: onKeys, tabIndex: -1 }
+        : {})}
     >
       <div className="flow-drawer-head">
         <h3>{node.label}</h3>
@@ -799,15 +841,17 @@ function Drawer({
             are about to get and the wrap at either end is stated rather than sprung —
             and so a screen reader announces a destination rather than a glyph.
 
-            The arrow keys themselves are deliberately not bound. This card holds range
-            inputs, and a range input's own keys are the arrow keys: binding them here
-            would take the tuning controls' fine adjustment away to move the card. */}
+            ← and → do the same from the keyboard, everywhere in the card except inside a
+            control whose own keys they are (`walkKeys`). The shortcut is declared on the
+            buttons rather than only implemented, so it is discoverable by the reader who
+            most needs it. */}
         <span className="flow-drawer-walk">
           <button
             data-step="previous"
             onClick={() => onStep(-1)}
             aria-label={`back to ${walk.previous.label}`}
-            title={`back to ${walk.previous.label}`}
+            aria-keyshortcuts="ArrowLeft"
+            title={`back to ${walk.previous.label} (left arrow)`}
           >
             ←
           </button>
@@ -818,7 +862,8 @@ function Drawer({
             data-step="next"
             onClick={() => onStep(1)}
             aria-label={`on to ${walk.next.label}`}
-            title={`on to ${walk.next.label}`}
+            aria-keyshortcuts="ArrowRight"
+            title={`on to ${walk.next.label} (right arrow)`}
           >
             →
           </button>

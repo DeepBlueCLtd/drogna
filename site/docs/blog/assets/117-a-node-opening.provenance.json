@@ -1,0 +1,28 @@
+{
+  "image": "117-a-node-opening.gif",
+  "run_id": "loiter-1cigwr5",
+  "view": "operator",
+  "sim_time": "2026-01-01T00:05:57Z",
+  "clock_pinned": "rate 0",
+  "motion": {
+    "acted_on": "[data-flow-node=\"monitor\"]",
+    "frames": 17,
+    "frame_interval_ms": 45,
+    "held_frames": 6
+  },
+  "clip": {
+    "x": 20,
+    "y": 150,
+    "width": 1180,
+    "height": 620
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "Clicking the monitor: the card grows into place, the nodes to its right slide along, the band below drops, and every wire stays on the card as it moves."
+}

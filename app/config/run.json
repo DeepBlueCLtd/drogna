@@ -293,8 +293,8 @@
     },
     "nowcast": {
       "grid": {
-        "longitude": 24,
-        "latitude": 20,
+        "longitude": 96,
+        "latitude": 80,
         "depth": 6
       },
       "interval_ticks": 900,

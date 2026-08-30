@@ -130,7 +130,13 @@ noticed.
   thing carries the weight the prose used to. `site/authoring/README.md` is the
   authoring note, and the coverage table on the blog index counts entries against the
   feature directories under `specs/`, so a beat with no entry is published as a gap
-  rather than quietly missing.
+  rather than quietly missing. **Link it from the pull request as a full URL on the
+  branch** — `https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md`
+  — because GitHub does not resolve a repository-relative path in a pull request body
+  to the file: the browser resolves it against the page the body is read on, which is
+  how five of the six entries linked so far pointed at a 404 under `/compare/`. The
+  published address, `https://deepbluecltd.github.io/drogna/blog/posts/<slug>/`, does
+  not exist until the branch merges, since the site publishes from `main` alone.
 
 Deciding a change needs neither is a fine answer and a common one — plumbing, a gate, a
 specification. Say so in the pull request, in the sentence it takes: the reason is the

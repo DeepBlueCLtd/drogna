@@ -336,6 +336,13 @@ the Operator flow chart all come from them.
       `#/view/messages`, `#/view/holdings`, `#/view/map` — not at the shell's front door
       (CLAUDE.md; D16). Narrate progress in PR comments as PR-05 asks, each comment
       linking the instance at what it is about.
-- [ ] T038 Blog entries for the two new faces: the traffic display and the holdings
+- [x] T038 Blog entries for the two new faces: the traffic display and the holdings
       timeline. One per new face in the shell, not one per feature (D17). The map parity
       and the button move are not new faces and get none — the reason recorded here.
+
+      Two entries: `watching-a-lane-go-quiet.md` for the traffic display and
+      `twenty-years-and-six-hours-on-one-axis.md` for the holdings timeline. The map
+      parity and the button move get none, and the reason is that neither is a new face:
+      the map already drew the track in two projections and now draws it in three, and the
+      help control is the same control in a different place. Both would be entries about a
+      change rather than about a thing to watch work.

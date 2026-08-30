@@ -41,6 +41,6 @@ now.
 
 ## The demo
 
-[Open it at the holdings tab](../../instances/main/#/view/holdings) and pick a forecast
+[Open it at the forecast branch](../../instances/main/#/view/data/forecast) and pick a forecast
 whose window has passed: the comparison draws the forecast, the truth, and the starting
 field held constant — error alone reads as a verdict.

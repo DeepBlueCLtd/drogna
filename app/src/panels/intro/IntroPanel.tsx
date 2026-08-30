@@ -48,10 +48,11 @@ export function IntroPanel({ params }: PanelProps) {
           four-dimensional temperature and salinity, a warm-core eddy, a front, a
           thermocline and a drifting feature, each with jittered parameters drawn from
           this run&rsquo;s seed and recorded — with the exact draw order — in a
-          ground-truth manifest. Twenty years of monthly history and a rolling
-          now-cast were published through the coverage store&rsquo;s own
-          digest-checked seam, and both are inspectable, manifest and all, in{' '}
-          <a href={hashForView('holdings')}>Holdings</a>. The manifest is sufficient:
+          ground-truth manifest. Twenty years of monthly history, the forecast the
+          vessel sailed with, and a rolling now-cast were published through the
+          coverage store&rsquo;s own digest-checked seam, and all three are
+          inspectable, manifest and all, in{' '}
+          <a href={hashForView('data')}>Data</a>. The manifest is sufficient:
           anyone holding it can reconstruct the field at any point and score a
           recovery against it.
         </p>
@@ -96,7 +97,7 @@ export function IntroPanel({ params }: PanelProps) {
           wherever runs appear. The model runner advects an ensemble behind the
           kernel port and publishes the mean with its spread through the same
           digest-checked seam as everything else; instances accumulate in{' '}
-          <a href={hashForView('holdings')}>Holdings</a> and are served through EDR
+          <a href={hashForView('data')}>Data</a> and are served through EDR
           by convention. Watch what each component says about itself in{' '}
           <a href={hashForView('operator')}>Operator</a>: the loop's quiet always says
           which quiet it is.
@@ -184,8 +185,8 @@ export function IntroPanel({ params }: PanelProps) {
         <p>
           Every beat above is live in this page, and this tab is the demo script:
           start at <a href={hashForView('operator')}>Operator</a> to watch the machinery
-          light, read the run&rsquo;s holdings in{' '}
-          <a href={hashForView('holdings')}>Holdings</a>, watch the traffic argue
+          light, read what the run holds in{' '}
+          <a href={hashForView('data')}>Data</a>, watch the traffic argue
           with its masters in <a href={hashForView('messages')}>Messages</a>,
           interrogate and interrupt the components there too, and end at the{' '}
           <a href={hashForView('map')}>Map</a>, where the whole loop is visible at

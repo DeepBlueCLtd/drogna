@@ -159,7 +159,7 @@ export const holdings: Explainer = {
       ],
       note: 'This is the beat: provenance you can replay, not provenance you assert.',
       play: 'Pick a run to see the manifest it carries.',
-      liveView: { view: 'holdings', label: 'See the holdings this run actually published' },
+      liveView: { view: 'data', label: 'See the holdings this run actually published' },
       figure: {
         minWidth: 360,
         label: 'Forecast runs accumulating, each carrying its own manifest',

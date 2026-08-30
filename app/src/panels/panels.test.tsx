@@ -17,7 +17,7 @@ import type { PanelParams } from '../shell/Shell.js';
 import { createSeamFetch } from '../seam/http.js';
 import { displayInstant } from '../shell/display.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
-import { HoldingsPanel } from './holdings/HoldingsPanel.js';
+import { DataPanel } from './data/DataPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
 import { MapPanel } from './map/MapPanel.js';
 import { OperatorPanel } from './operator/OperatorPanel.js';
@@ -156,22 +156,27 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     expect(received()).toBe(countedBefore);
   });
 
-  it('Holdings lists what the store holds, fetched through the seam, and opens a manifest', async () => {
+  it('Data lists what the store holds, fetched through the seam, and opens a manifest', async () => {
     seam();
     {
-      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      render(<DataPanel {...panelProps(config, runtime)} />);
       // Flush the fetch → validate → setState chain (microtasks only; timers are fake).
       await act(async () => {
-        await Promise.resolve();
+        for (let round = 0; round < 200; round++) await Promise.resolve();
       });
       // Bound to what the store actually holds rather than to a number typed here: the
       // count changed when feature 118 added the departure brief to provisioning, and a
       // literal would have had to be found and edited to say so.
-      expect(screen.getByTestId('holdings-count').textContent).toMatch(
+      expect(screen.getByTestId('data-counts').textContent).toMatch(
         new RegExp(`^${runtime.store.holdings().length} holding\\(s\\)`),
       );
       // The inventory table retired at feature 115 (FR-69); the timeline carries the
-      // holdings now, and a bar is the thing a reader selects.
+      // holdings now, and a bar is the thing a reader selects. The archive is its own
+      // branch since feature 118, so the branch is opened first.
+      await act(async () => {
+        (document.querySelector('[data-branch="archive"]') as HTMLElement).click();
+        for (let round = 0; round < 200; round++) await Promise.resolve();
+      });
       const archiveBar = document.querySelector('[data-holding][data-era="archive"]');
       expect(archiveBar).not.toBeNull();
       act(() => (archiveBar as HTMLElement).click());
@@ -201,7 +206,7 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     expect(undeclared?.className).toMatch(/topic-undeclared/);
   });
 
-  it('Holdings refreshes on the store\'s announcement and never polls (FR-46)', async () => {
+  it('the coverage branches refresh on the store\'s announcement and never poll (FR-46, FR-04)', async () => {
     const { asked } = seam();
     // Counted by path rather than by total: since feature 115 the panel also fetches
     // telemetry's report on the same announcement (FR-70 shows telemetry's own skill
@@ -209,9 +214,11 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     const inventoryRequests = () =>
       asked.filter((path) => path.includes(config.shell.endpoints.holdings)).length;
     {
-      render(<HoldingsPanel {...panelProps(config, runtime)} />);
+      render(<DataPanel {...panelProps(config, runtime)} />);
       await act(async () => {
-        await Promise.resolve();
+        for (let round = 0; round < 200; round++) await Promise.resolve();
+        (document.querySelector('[data-branch="nowcast"]') as HTMLElement).click();
+        for (let round = 0; round < 200; round++) await Promise.resolve();
       });
       expect(inventoryRequests()).toBe(1);
       const nowcastBefore = document
@@ -240,18 +247,20 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     }
   });
 
-  it('Holdings states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
+  it('the Data tab states the gate\'s refusal rather than showing an empty store (FR-46)', async () => {
     seam();
     {
       // A path the release gate does not clear: the refusal is the real gate's, and
       // an empty table would be a lie about what the store holds (Constitution VII).
       const misconfigured = lockstepConfig();
       misconfigured.shell.endpoints.holdings = '/api/not-a-cleared-prefix/holdings';
-      render(<HoldingsPanel {...panelProps(misconfigured, runtime)} />);
+      render(<DataPanel {...panelProps(misconfigured, runtime)} />);
       await act(async () => {
-        await Promise.resolve();
+        for (let round = 0; round < 200; round++) await Promise.resolve();
       });
-      expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
+      expect(screen.getByTestId('data-counts').textContent).toMatch(
+        /the coverage inventory: .*not-a-cleared-prefix/,
+      );
     }
   });
 

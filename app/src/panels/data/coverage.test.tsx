@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
 /**
- * The Holdings tab against a live backend (feature 115, FR-69 and FR-70). Nothing here is
- * mocked below the seam: the coverage store is the real one, the EDR service answers the
- * real queries, and the coverages differenced are the ones the seam actually served.
+ * The coverage branches of the Data tab against a live backend (feature 115's FR-69 and
+ * FR-70, carried by feature 118 into the tab that absorbed them). Nothing here is mocked
+ * below the seam: the coverage store is the real one, the EDR service answers the real
+ * queries, and the coverages differenced are the ones the seam actually served.
+ *
+ * These were the Holdings tab's tests and they still ask the Holdings tab's questions.
+ * What changed is where the answers live: a branch draws one era, so the parity claim —
+ * *every holding the store reports is reachable* — is now checked by walking the branches
+ * rather than by counting bars on one timeline. Weakening it to "every holding of the era
+ * I happened to open" would have been the easy edit and would have retired the check.
  *
  * The rendered half of the parity check lives here — SC-03's *every holding reachable by
  * keyboard in publication order, each announcing what the master declares* — because it
@@ -24,8 +31,9 @@ import { driveTicks, driveUntil } from '../../backend/test-support/drive.js';
 import { createSeamFetch } from '../../seam/http.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import type { PanelParams } from '../../shell/Shell.js';
-import { HoldingsPanel, HOLDINGS_REGIONS } from './HoldingsPanel.js';
-import { HOLDINGS_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
+import { DataPanel, DATA_REGIONS } from './DataPanel.js';
+import { DATA_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
+import { BRANCHES } from './tree.js';
 import { announceHolding } from './announce.js';
 
 const validator = createSeamValidator();
@@ -55,7 +63,7 @@ async function settle(until: () => boolean, rounds = 4000): Promise<void> {
   for (let round = 0; round < rounds && !until(); round++) await Promise.resolve();
 }
 
-describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
+describe('the Data tab’s coverage branches (features 115, 118)', { timeout: 180_000 }, () => {
   let config: ConfigRun;
   let runtime: BackendRuntime;
   let asked: string[];
@@ -109,31 +117,58 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     return response.json();
   }
 
-  async function mounted(): Promise<void> {
-    render(<HoldingsPanel {...panelProps()} />);
+  async function mounted(branchId = 'nowcast'): Promise<void> {
+    render(<DataPanel {...panelProps()} />);
     await act(async () => {
-      await settle(() => document.querySelector('[data-holding]') !== null);
+      await settle(() => document.querySelector(`[data-branch="${branchId}"]`) !== null);
+    });
+    await openBranch(branchId);
+  }
+
+  /** Open a branch the way a reader does, and wait for it to have drawn. */
+  async function openBranch(branchId: string): Promise<void> {
+    const button = document.querySelector<HTMLElement>(`[data-branch="${branchId}"]`);
+    if (!button) throw new Error(`no '${branchId}' branch in the tree`);
+    await act(async () => {
+      fireEvent.click(button);
+      await settle(
+        () =>
+          document.querySelector('[data-holding]') !== null ||
+          screen.queryByTestId('branch-empty') !== null ||
+          screen.queryByTestId('branch-refusal') !== null,
+      );
     });
   }
 
   it('SC-03: every holding is a keyboard stop in publication order, announcing what the master declares', async () => {
     await mounted();
     const held = await inventory();
-    const drawn = [...document.querySelectorAll('[data-holding]')] as HTMLElement[];
-    // Every holding the store reports is reachable — not a subset the display chose.
-    expect(drawn.map((bar) => bar.getAttribute('data-holding')).sort()).toEqual(
-      held.map((holding) => holding.holding_id).sort(),
-    );
-    // Each is a button, so it is a keyboard stop because the platform made it one.
-    expect(drawn.every((bar) => bar.tagName === 'BUTTON')).toBe(true);
-    // In publication order, which is the order the store's history happened in.
-    const byTick = [...held].sort((a, b) => a.published_at.tick - b.published_at.tick);
-    expect(drawn.map((bar) => bar.getAttribute('data-holding'))).toEqual(
-      byTick.map((holding) => holding.holding_id),
-    );
+    const reachable: string[] = [];
+    // Walked branch by branch, because a branch draws one era. The claim is unchanged:
+    // every holding the store reports is reachable, not a subset the display chose.
+    for (const branch of BRANCHES.filter((candidate) => candidate.kind === 'coverage')) {
+      await openBranch(branch.id);
+      const drawn = [...document.querySelectorAll('[data-holding]')] as HTMLElement[];
+      const ofEra = held.filter((holding) => holding.era === branch.era);
+      expect(drawn.map((bar) => bar.getAttribute('data-holding')).sort()).toEqual(
+        ofEra.map((holding) => holding.holding_id).sort(),
+      );
+      // Each is a button, so it is a keyboard stop because the platform made it one.
+      expect(drawn.every((bar) => bar.tagName === 'BUTTON')).toBe(true);
+      // In publication order, which is the order the store's history happened in.
+      const byTick = [...ofEra].sort((a, b) => a.published_at.tick - b.published_at.tick);
+      expect(drawn.map((bar) => bar.getAttribute('data-holding'))).toEqual(
+        byTick.map((holding) => holding.holding_id),
+      );
+      reachable.push(...drawn.map((bar) => bar.getAttribute('data-holding') ?? ''));
+    }
+    expect(reachable.sort()).toEqual(held.map((holding) => holding.holding_id).sort());
     // And each announces every fact `announce.ts` derives from the master — the bound
     // that `parity.test.ts` holds to `coverage-holding.schema.json` itself.
     for (const holding of held) {
+      const branch = BRANCHES.find((candidate) => candidate.era === holding.era);
+      if (!branch) throw new Error(`no branch draws the '${holding.era}' era`);
+      await openBranch(branch.id);
       const bar = document.querySelector(`[data-holding="${holding.holding_id}"]`);
       const label = bar?.getAttribute('aria-label') ?? '';
       for (const entry of announceHolding(holding)) {
@@ -164,13 +199,20 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
       manifest: runtime.manifest,
       address: noAddress,
     };
-    render(<HoldingsPanel {...({ params } as unknown as IDockviewPanelProps<PanelParams>)} />);
+    render(<DataPanel {...({ params } as unknown as IDockviewPanelProps<PanelParams>)} />);
     await act(async () => {
-      await settle(() => (screen.getByTestId('holdings-count').textContent ?? '').includes('403'));
+      await settle(() => (screen.getByTestId('data-counts').textContent ?? '').includes('not-a-cleared-prefix'));
     });
-    expect(screen.getByTestId('holdings-count').textContent).toMatch(/the inventory answered 403/);
-    // An empty timeline is a claim the shell is not entitled to make, so none is drawn.
+    // The release gate's own refusal, carried through rather than replaced by a status
+    // code: it names the path it would not clear, which is the useful half (FR-27, FR-06).
+    expect(screen.getByTestId('data-counts').textContent).toMatch(
+      /the coverage inventory: .*not-a-cleared-prefix/,
+    );
+    // An empty timeline is a claim the shell is not entitled to make, so none is drawn —
+    // and the branch says why where the timeline would have been.
+    await openBranch('archive');
     expect(screen.queryByTestId('holdings-timeline')).toBeNull();
+    expect(screen.getByTestId('branch-refusal').textContent).toMatch(/the coverage inventory/);
   });
 
   it('SC-05: an instance whose validity has not elapsed is refused with its reason', async () => {
@@ -181,7 +223,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     watcher.subscribe(config.shell.topics.run_published, () => {
       published = true;
     });
-    await mounted();
+    await mounted('forecast');
     // Turn the loop until it publishes, then select the instance while the run is still
     // inside the validity it forecasts — the common case, and the one the panel must
     // refuse rather than compare against a truth that has not happened.
@@ -211,7 +253,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
     watcher.subscribe(config.shell.topics.run_published, () => {
       published = true;
     });
-    await mounted();
+    await mounted('forecast');
     // Turn the loop until a run publishes, then keep turning until the panel offers the
     // comparison — which happens when the instance's validity has elapsed and a now-cast
     // covering the instant it forecast exists.
@@ -282,7 +324,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
   });
 
   it('a holding that is not an instance is refused by name rather than offered a comparison', async () => {
-    await mounted();
+    await mounted('archive');
     const archive = document.querySelector<HTMLElement>('[data-holding][data-era="archive"]');
     if (!archive) throw new Error('the store published no archive holding');
     await act(async () => {
@@ -297,7 +339,7 @@ describe('the Holdings tab (feature 115)', { timeout: 180_000 }, () => {
   });
 
   it('FR-75: the tour covers every region the panel declares, and no region it does not', () => {
-    expect(uncoveredSubjects('holdings', HOLDINGS_REGIONS, HOLDINGS_TOUR_STEPS)).toEqual([]);
-    expect(HOLDINGS_REGIONS.length).toBeGreaterThan(0);
+    expect(uncoveredSubjects('data', DATA_REGIONS, DATA_TOUR_STEPS)).toEqual([]);
+    expect(DATA_REGIONS.length).toBeGreaterThan(0);
   });
 });

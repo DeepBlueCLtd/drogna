@@ -26,7 +26,7 @@ discussed rather than at the front door. Append `#/view/<id>` to any instance UR
 |---|---|---|
 | Intro | [`#/view/intro`](../instances/main/#/view/intro) | What the harness is, and what its numbers are not |
 | Background | [`#/view/background`](../instances/main/#/view/background) | Eleven explainers of the standards the harness speaks, reading nothing from the run |
-| Holdings | [`#/view/holdings`](../instances/main/#/view/holdings) | The coverage store filling up, in simulation time, and how the forecast fared against the truth |
+| Data | [`#/view/data`](../instances/main/#/view/data) | Everything the system holds: measurements against time, the five coverage eras filling up, the volume, and what shore has sent |
 | Map | [`#/view/map`](../instances/main/#/view/map) | The field, the doubt over it, and the route chosen through it |
 | Messages | [`#/view/messages`](../instances/main/#/view/messages) | The traffic on the broker as it crosses, drawn as well as listed |
 | Operator | [`#/view/operator`](../instances/main/#/view/operator) | The machinery interrogated from the operator's side, drawn as the loop it is |

@@ -1,13 +1,14 @@
 /**
- * The Holdings tab's own stylesheet (feature 115). The tab shares the split, the detail
- * pane and the counters line with Messages — those rules are in `shell.css`, where three
- * features left them — and what is here is the timeline and the comparison.
+ * The Data tab's own stylesheet (feature 115 for the timeline and the comparison, 118 for
+ * the tree, the chart, the volume and the shore canvas). The tab shares the split, the
+ * detail pane and the counters line with Messages — those rules are in `shell.css`, where
+ * three features left them.
  *
  * The fourth kind of figure is declared here rather than in `operator.css`, because it
- * arrives with this feature; the other three stay where 113 put them and are unchanged.
+ * arrived with feature 115; the other three stay where 113 put them and are unchanged.
  */
 
-.holdings-panel {
+.data-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -16,14 +17,14 @@
 /* The timeline takes the whole width: an axis carrying twenty years wants it, and the
    first capture of this display had the instances a few pixels wide because the panel
    was sharing a row with the manifest. */
-.holdings-primary {
+.data-primary {
   flex: 0 0 auto;
   min-width: 0;
   overflow-x: auto;
 }
 
 /* The detail scrolls in its own container so the page never does (FR-017). */
-.holdings-detail {
+.data-detail {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -327,4 +328,260 @@
   .timeline-bar > span {
     display: none;
   }
+}
+
+/* ------------------------------------------------------- the tree (118) --- */
+
+.data-body {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.data-tree {
+  flex: 0 0 190px;
+  min-width: 0;
+  overflow-y: auto;
+  border-right: 1px solid #232c36;
+  padding-right: 8px;
+}
+
+.data-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.data-branch-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.data-branch-button:hover {
+  background: #161d26;
+}
+
+.data-branch-button[aria-current='true'] {
+  background: #1b2530;
+  border-color: #232c36;
+}
+
+.branch-count {
+  color: var(--shell-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+}
+
+.data-branch-region {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.data-branch-head h3 {
+  margin: 0 0 2px;
+}
+
+/* A phone has vertical space and no horizontal space: the tree becomes a strip above
+   the branch rather than a 190px column beside it (feature 112's rule, one breakpoint). */
+.data-panel[data-narrow='true'] .data-body {
+  flex-direction: column;
+}
+
+.data-panel[data-narrow='true'] .data-tree {
+  flex: 0 0 auto;
+  border-right: none;
+  border-bottom: 1px solid #232c36;
+  padding-right: 0;
+  padding-bottom: 6px;
+}
+
+.data-panel[data-narrow='true'] .data-tree ul {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.data-panel[data-narrow='true'] .data-branch-button {
+  white-space: nowrap;
+}
+
+/* --------------------------------------------- measurements and the chart --- */
+
+.measurement-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.measurement-platform {
+  min-width: 200px;
+}
+
+.measurement-platform h4 {
+  margin: 0 0 2px;
+}
+
+.measurement-streams {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.measurement-streams button,
+.analysis-cycle button {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.measurement-streams button[aria-pressed='true'],
+.analysis-cycle button[aria-pressed='true'] {
+  background: #1b2530;
+}
+
+.stream-unit {
+  color: var(--shell-dim);
+}
+
+.data-chart {
+  margin-top: 12px;
+}
+
+.series-chart {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+}
+
+.series-line {
+  fill: none;
+  stroke: var(--shell-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.series-gridline {
+  stroke: #232c36;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.series-tick {
+  fill: var(--shell-dim);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------- the volume and shore --- */
+
+.data-volume h4,
+.advisory-detail h4 {
+  margin: 12px 0 4px;
+}
+
+.volume-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.volume-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shell-dim);
+}
+
+.volume-instant {
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-canvas,
+.advisory-canvas {
+  position: relative;
+  height: 320px;
+  margin-top: 8px;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.advisory-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advisory-list button {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.advisory-list button[aria-pressed='true'] {
+  background: #1b2530;
+}
+
+/* Standing is carried in the canvas by alpha; in the list it is carried by the text,
+   because a list row has no fill a reader can compare against its neighbours. */
+.advisory-list button[data-standing='lapsed'] {
+  color: var(--shell-dim);
+}
+
+.advisory-standing,
+.advisory-window {
+  color: var(--shell-dim);
+}
+
+.analysis-cycles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.analysis-cycle ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.analysis-cycle h4 {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }

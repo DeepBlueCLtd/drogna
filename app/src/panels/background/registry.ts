@@ -18,6 +18,7 @@ import { whyAStandard } from './explainers/why-a-standard.js';
 import { pointsAndFields } from './explainers/points-and-fields.js';
 import { netcdf } from './explainers/netcdf.js';
 import { holdings } from './explainers/holdings.js';
+import { analysis } from './explainers/analysis.js';
 import { sensorthings } from './explainers/sensorthings.js';
 import { edr } from './explainers/edr.js';
 import { pygeoapi } from './explainers/pygeoapi.js';
@@ -31,6 +32,7 @@ export const COURSE: readonly Explainer[] = [
   pointsAndFields,
   netcdf,
   holdings,
+  analysis,
   sensorthings,
   edr,
   pygeoapi,

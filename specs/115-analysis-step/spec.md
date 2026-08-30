@@ -4,8 +4,9 @@
 
 **Created**: 30 August 2026
 
-**Status**: Draft — written from a structured interview with the author, 30 August 2026.
-The maths is built and proven; everything downstream of it is specified and unbuilt.
+**Status**: Built. Written from a structured interview with the author, 30 August 2026;
+its five open questions were resolved in a second interview the same day, and the
+resolutions are recorded in place below with what each cost.
 
 **Input**: "It would be very informative to be able to view the contribution of platform
 measurements to the nowcast and forecast data fields. This could be a valuable new
@@ -67,6 +68,13 @@ This feature adds the arrow.
 | Shore advisories are the **fourth arrow, and a different kind of arrow** | They are guidance with a region and a validity window, not a field that blends numerically. Rules out inventing a shore forecast field. |
 | The explainer sits **fifth in the course**, after *What a holding is* | Holdings introduces the eras as different things; this shows a measurement moving between them. It is the only explainer depicting drogna's own maths rather than a standard, and must say so. |
 | The Map shows a **provenance tint** | The stacked bar as geography. Depends on provenance being a field, which the decision above makes it. |
+| **Gaspari–Cohn**, not a Gaussian and not a truncated one | Compact support makes "this cell owes the measurements nothing" a fact rather than a small number, and positive definiteness survives it. Rules out a cutoff radius, which would hand the factorisation a system no covariance can produce. |
+| The correlation is declared **once, by the analyst**; the planner reads it | The planner's `footprint` block is deleted. Rules out two descriptions of one physical claim — which had already diverged, 0.85 against the arithmetic's 0.997. |
+| Ensemble members are **perturbed from the analysis error** | The published spread finally means "how well is this state known". Rules out retiring the observation-age field without a replacement, since the spread had no spatial structure to replace it with. |
+| Shares are **diluted at the forecast step**, the remainder credited to a fourth *model* share | A measurement's share decays as its forecast ages. Costs a fourth bar. |
+| An out-of-domain observation is **clamped and recorded** | The domain edge is where the harness stopped authoring a field, not where the ocean stops. Costs a count and a worst-displacement figure in every manifest and announcement. |
+| The cold start reads the **now-cast, once, stated in the lineage** | The loop starts immediately. Costs one deliberate truth reading per scenario, which the gate permits by name and the manifest records. |
+| A negative share is **drawn as an overshoot** | The figure states what the maths did. Rules out clamping for display. |
 
 ## The maths
 
@@ -109,6 +117,9 @@ chosen over a nudging scheme**, and it is the sentence the explainer is built ar
 
 ### Three things the maths does not let us say
 
+*(Written before the open questions were resolved. The third has since been fixed and
+the fix is recorded beneath it; the other two stand.)*
+
 **ω is not confined to [0, 1].** Where a cell's background error greatly exceeds the
 observed cell's and the two are well correlated, the gain extrapolates, ω passes one,
 and the prior shares go negative. This is optimal interpolation behaving correctly —
@@ -124,16 +135,28 @@ distinct source is a choice made for the operator's benefit, and the explainer m
 so on the step that introduces the third bar. Two bars — prior knowledge, and
 measurement — would have been the information-theoretic answer.
 
-**The recursion saturates, and this is unsolved.** Four analysis cycles over one short
-track, with a 40 km correlation length in a 142 × 134 km domain, leave measurement
-owning **at least 0.449 of every cell in the domain** and 1.077 of one cell beside the
-track. Every value is correct — each cycle genuinely did move each cell — but the
-shares are not, because `p ← (1−ω)p + ω` credits measurement again on every cycle
-though re-observing the same water brings almost no new information. Left as it stands,
-the provenance tint would show a corner of the domain the platform never approached as
-half measurement-derived, which is worse than showing nothing. This is recorded as
-Open Question 1 and pinned by a characterisation test; it is a fault in the recursion
-across cycles rather than in the gain, so the kernel is not where it is fixed.
+**The recursion saturated, and two things fixed it.** Four analysis cycles over one
+short track, with an unlocalised 40 km Gaussian, left measurement owning **at least
+0.449 of every cell in the domain** and 1.077 of one cell beside the track. Every value
+was correct — each cycle genuinely did move each cell — but the shares were not, because
+`p ← (1−ω)p + ω` credits measurement again on every cycle though re-observing the same
+water brings almost no new information.
+
+Measured across three covariance models at the configured deviations (σᵦ = 0.35 from
+`model_runner.noise_std`, σₒ = 0.02 from the CTD):
+
+| Model | off-track corner share | cells at exactly zero |
+|---|---|---|
+| Gaussian, 40 km, no cutoff | 0.170 | 0 of 126 |
+| Exponential at the planner's declared 12 km reach | 0.0012 | 0 of 126 |
+| Gaspari–Cohn, compactly supported | **0.0000** | **90 of 126** |
+
+Compact support is the first half of the fix and makes the off-track share exactly zero
+rather than merely small. The second half is dilution at the forecast step: the
+propagation adds error belonging to no observation, so every share is scaled by
+`σ²ₐ/σ²_f` and the remainder credited to a **model** share. Together they mean a
+measurement's share is bounded in space by the taper's support and decays in time as its
+forecast ages.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -267,35 +290,35 @@ a route over recently analysed water scores lower gain than one over unanalysed 
   clamping, and MUST NOT clamp a resulting negative share. *(Built.)*
 - **FR-004**: The kernel MUST publish the diagonal of `Pᵃ = (I − KH)B` as the analysis
   error. *(Built.)*
-- **FR-005**: An analyst component MUST subscribe to the run request topic, read the
+- **FR-005** *(built)*: An analyst component MUST subscribe to the run request topic, read the
   observations taken since its last cycle and the current forecast as background,
   call the kernel, and publish an `analysis` era holding through the coverage store's
   one write seam before the model runner initialises.
-- **FR-006**: The model runner MUST initialise from the current analysis. A run
+- **FR-006** *(built)*: The model runner MUST initialise from the current analysis. A run
   requested when no analysis exists MUST be refused with the reason named; it MUST NOT
   fall back to a truth-derived field.
-- **FR-007**: The environment generator MUST continue to publish its truth-derived
+- **FR-007** *(built)*: The environment generator MUST continue to publish its truth-derived
   now-cast, and no component other than the monitor's scoring and the display MUST read
   it. The gate registry gains a check that the model runner does not.
-- **FR-008**: The analysis manifest's `composition` MUST state the rule, the
+- **FR-008** *(built)*: The analysis manifest's `composition` MUST state the rule, the
   correlation lengths used, the count of observations assimilated and the identity of
   the background holding — the lineage readable from the holding alone.
-- **FR-009**: A provenance field with one share per source MUST be published alongside
+- **FR-009** *(built)*: A provenance field with one share per source MUST be published alongside
   each analysis, every cell's shares summing to one within float32 tolerance.
-- **FR-010**: The planner MUST score against the published analysis error, and the
+- **FR-010** *(built)*: The planner MUST score against the published analysis error, and the
   observation-age field MUST be removed from the planner and from its configuration
   document. SRD-v2 FR-33 is amended by this feature.
-- **FR-011**: `coverage-holding.schema.json` MUST admit an `analysis` era. The master is
+- **FR-011** *(built)*: `coverage-holding.schema.json` MUST admit an `analysis` era. The master is
   amended, never rewritten; SRD-v2 FR-21's three eras become four.
-- **FR-012**: A Background explainer MUST be added fifth in the course, after *What a
+- **FR-012** *(built)*: A Background explainer MUST be added fifth in the course, after *What a
   holding is*, taking the course to twelve. It MUST state that it depicts drogna's own
   arrangement rather than a standard, and MUST link the live view.
-- **FR-013**: The explainer's central figure MUST be one cell's provenance over time,
+- **FR-013** *(built)*: The explainer's central figure MUST be one cell's provenance over time,
   as a stacked bar, and MUST state on the step that introduces it that the departure
   bar's content is archive and the distinction a convention.
-- **FR-014**: The explainer MUST NOT read run state, in common with every other
+- **FR-014** *(built)*: The explainer MUST NOT read run state, in common with every other
   explainer (feature 111 FR-004).
-- **FR-015**: The Map MUST offer a provenance tint colouring each cell by its dominant
+- **FR-015** *(built)*: The Map MUST offer a provenance tint colouring each cell by its dominant
   share, with a legend naming the three sources, and the status line naming the
   holding, instant and shares for a picked cell.
 
@@ -360,36 +383,77 @@ a route over recently analysed water scores lower gain than one over unanalysed 
   provenance exact, so replacing it with interpolation is not a free change.
 - Temperature and salinity are analysed independently.
 
-## Open Questions
+## Open Questions, and how they were resolved
 
-1. **How is the provenance recursion kept from saturating?** Measured: four cycles over
-   one short track leave every cell at least 0.449 measurement. The candidate answer is
-   principled rather than cosmetic — the forecast step adds model error, that added
-   variance belongs to no observation, so every share should be diluted by `σ²ₐ/σ²_f`
-   at the propagation step, with the remainder credited to a fourth *model* share. This
-   would also make measurement share decay as a forecast ages, which is the honest
-   behaviour the figure wants: the boat's measurement mattered a lot yesterday and less
-   today. **Unresolved, and blocking User Story 3.** A localisation radius bounding a
-   measurement's reach is the alternative or the complement; it must be argued
-   physically, not as a compute optimisation, because at this observation count it buys
-   no speed.
-2. **What does the figure draw when a share is negative?** Stating it is required
-   (FR-003, FR-013); how, is not settled.
-3. **What seeds the first analysis?** Either the generator's first now-cast, once, with
-   the manifest saying so, or refuse the first run. The first is a one-off truth leak
-   at t=0 that must be visible in the lineage; the second delays the loop's start.
-4. **An observation outside the domain** is currently attributed by clamping, which
-   moves it. Refusing it, flagging it at ingest, or clamping and recording the fact are
-   the three options; none is chosen.
-5. **Does the departure bar earn its place?** It is a convention, and the explainer has
-   to admit as much. Two bars would need no admission. Kept because the operator's
-   question is genuinely "how much of this is what we knew before we sailed".
+All five were resolved in a second interview on 30 August 2026. They are kept here
+rather than deleted, because the reason is the part that cannot be reconstructed later.
+
+1. **How is the provenance recursion kept from saturating?** *Resolved: Gaspari–Cohn
+   localisation, plus dilution by the forecast step's added model error into a fourth
+   share.* The measurements above are what settled it. The candidate answer in the
+   original draft — dilution alone — would have reduced the saturation without ever
+   making a cell's share exactly zero; compact support is what turns "negligible" into
+   "none", and a tint that can only say *almost nothing* cannot say *the boat has never
+   been here*.
+2. **What does the figure draw when a share is negative?** *Resolved: draw the overshoot
+   explicitly*, past 100% with the prior share below the axis. The Map states the count
+   of overshooting cells in its status line rather than clamping. Worth noting that
+   perturbing the ensemble from `Pᵃ` made this case common rather than exotic: σ is now
+   small where the platform has been and large where it has not, which is exactly the
+   configuration that produces ω > 1.
+3. **What seeds the first analysis?** *Resolved: the generator's first now-cast, once,
+   stated in the lineage.* The analysis manifest's composition says "Cold start", the
+   announcement carries the background era, and the gate permits the analyst by name.
+4. **An observation outside the domain.** *Resolved: clamp, and record that it was
+   clamped.* The kernel reports a displacement and a clamped flag per observation; the
+   analyst carries the count and the worst distance into the manifest and the
+   announcement. In the shipped configuration nothing has yet been clamped, and the
+   worst displacement observed is about 9 km — a sub-cell effect of nearest-neighbour
+   attribution on a 19 × 23 km grid.
+5. **Does the departure bar earn its place?** *Resolved: kept, with the admission.*
+   Implementing it established the sharper form of the problem: `archive` and
+   `departure` cannot both be non-zero over time, because nothing after departure reads
+   the archive. So `departure` is credited by *relabelling* the archive share at the
+   moment the platform sails. That is a bookkeeping convention and the explainer's
+   closing step says so in as many words.
+
+## What resolving them changed beyond the maths
+
+- **`planner.footprint` is deleted** — five declared numbers (`peak`,
+  two e-foldings, `rings`, `band_reach`) replaced by the analyst's two half-widths and
+  the analysis's own closed form. They had already diverged: the block claimed a visit
+  collapses uncertainty by 0.85 where the arithmetic gives 0.997.
+- **The ensemble is perturbed from `Pᵃ`.** Every member used to start from the identical
+  state, so the published spread was a function of lead time with no spatial structure
+  at all — which is *why* the observation-age proxy existed. Retiring the proxy was only
+  sound once the spread carried structure of its own.
+- **Three masters amended**: `coverage-holding` and `holding-published` admit an
+  `analysis` era; `manifest`'s time-axis `count` falls from an unargued minimum of 2 to
+  1, with the reason it never had.
+- **Two tests rewritten** because the feature changed the behaviour they had encoded.
+  The FR-32 decline test drove the whole scenario and trusted the ocean to breach twice
+  inside the scheduler's minimum interval; a loop that assimilates breaches less, and
+  over 6000 ticks the divergence count fell from several to one. The advisories
+  release-scoring test read `published[1]` without asserting there was one. Neither was
+  weakened: the first now forces the decline it is about, the second waits for the runs
+  it needs and asserts the count.
 
 ## What is built
 
-`app/src/backend/analyst/` — the kernel port, `optimal-interpolation-v1`, the dense
-solve it needs, and fifteen tests. The tests were shown to have teeth before this was
-written: four faults were planted in the kernel, each was caught by three or four
-tests, and each was reverted. The commit message records them.
+All of it.
 
-Everything else in this specification is unbuilt.
+- `app/src/backend/analyst/` — the kernel port, `optimal-interpolation-v1`, the
+  Gaspari–Cohn taper, the dense solve, the share propagation, and the analyst component.
+- `app/src/backend/model-runner/` — initialises from the analysis, perturbs from `Pᵃ`.
+- `app/src/backend/planner/` — scores the analysis error; the footprint block is gone.
+- `contracts/schemas/config.analyst.schema.json`, `analysis-published.schema.json`, and
+  the three amended masters.
+- `scripts/gates/check-truth-initialisation.ts`, registered and watched failing.
+- `app/src/panels/background/explainers/analysis.tsx` — fifth in the course, taking it
+  to twelve.
+- `app/src/panels/map/` — the provenance tint, its legend and its status line.
+- `docs/adr/0036-measurements-reach-the-field.md`, and the blog entry.
+
+The tests were shown to have teeth before the specification was written: four faults
+were planted in the kernel, each caught by three or four tests, and each reverted. The
+gate was watched catching its planted violation, and that fixture is permanent.

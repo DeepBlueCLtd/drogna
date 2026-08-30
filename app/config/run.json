@@ -1120,6 +1120,7 @@
       "holdings": "cov/holdings",
       "plan": "ctl/plan",
       "run_published": "ctl/run/published",
+      "analysis_published": "ctl/analysis/published",
       "advisories": "adv/advisories",
       "all": "#",
       "platform_state": "ctl/platform/state",

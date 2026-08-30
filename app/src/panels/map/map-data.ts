@@ -316,3 +316,79 @@ export function demandRay(
 
 /** The one conversion constant, shared with the motion simulator rather than retyped. */
 const KM_PER_DEGREE_LATITUDE = 111.32;
+
+/**
+ * The four provenance shares, in the order the analyst stores them, and the ink each
+ * is drawn in (feature 115).
+ *
+ * Lightness carries the distinction as well as hue, so the tint survives greyscale:
+ * prior knowledge is dark, measurement is light, and the model sits between them.
+ * The labels are what the legend says; the analyst names its own shares in its
+ * configuration and the coverage carries those names, so these are the display's
+ * words for four positions, never a second declaration of what the shares are.
+ */
+export const PROVENANCE_INK: readonly { label: string; colour: [number, number, number] }[] = [
+  { label: 'archive', colour: [58, 66, 84] },
+  { label: 'departure forecast', colour: [92, 104, 130] },
+  { label: 'measurement', colour: [232, 206, 140] },
+  { label: 'model', colour: [150, 152, 156] },
+];
+
+export interface ProvenanceCell {
+  bounds: [number, number, number, number];
+  /** Which share owns most of this cell: an index into PROVENANCE_INK. */
+  dominant: number;
+  /** How much of it that share owns. May exceed one where the gain extrapolated. */
+  fraction: number;
+}
+
+/**
+ * Each grid cell tinted by the share that owns most of it.
+ *
+ * A share may be negative — where a cell is far less certain than the water measured
+ * beside it, optimal interpolation extrapolates past the reading and the prior shares
+ * go below zero to pay for it — so "dominant" is the largest share and not the largest
+ * magnitude, and the fraction is reported as it stands rather than clamped. A tint
+ * that quietly rounded an overshoot to a hundred per cent would be the display telling
+ * a story the maths did not.
+ */
+export function provenanceCells(
+  coverage: GridCoverage,
+  parameters: readonly string[],
+): { cells: ProvenanceCell[]; overshooting: number } | undefined {
+  if (coverage.domain.domainType !== 'Grid' || parameters.length === 0) return undefined;
+  const ranges = parameters.map((parameter) => coverage.ranges[parameter]);
+  if (ranges.some((range) => !range)) return undefined;
+  const lons = coverage.domain.axes.x.values;
+  const lats = coverage.domain.axes.y.values;
+  const lonHalf = lons.length > 1 ? (lons[1] - lons[0]) / 2 : 0.125;
+  const latHalf = lats.length > 1 ? (lats[1] - lats[0]) / 2 : 0.1;
+  const cells: ProvenanceCell[] = [];
+  let overshooting = 0;
+  for (let latIndex = 0; latIndex < lats.length; latIndex++) {
+    for (let lonIndex = 0; lonIndex < lons.length; lonIndex++) {
+      const at = latIndex * lons.length + lonIndex;
+      let dominant = 0;
+      let fraction = ranges[0].values[at];
+      for (let share = 1; share < ranges.length; share++) {
+        const value = ranges[share].values[at];
+        if (value > fraction) {
+          fraction = value;
+          dominant = share;
+        }
+      }
+      if (fraction > 1) overshooting += 1;
+      cells.push({
+        bounds: [
+          lons[lonIndex] - lonHalf,
+          lats[latIndex] - latHalf,
+          lons[lonIndex] + lonHalf,
+          lats[latIndex] + latHalf,
+        ],
+        dominant,
+        fraction,
+      });
+    }
+  }
+  return { cells, overshooting };
+}

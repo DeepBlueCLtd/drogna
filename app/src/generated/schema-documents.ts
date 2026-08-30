@@ -2928,6 +2928,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "all",
           "plan",
           "run_published",
+          "analysis_published",
           "advisories",
           "platform_state",
           "observations",
@@ -2953,6 +2954,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "run_published": {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "analysis_published": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the analyst announces a cycle. The Map reads the provenance holding it names, so the display learns of an analysis by hearing it announced rather than by polling the store."
           },
           "advisories": {
             "$ref": "config.common.schema.json#/$defs/topic_filter"

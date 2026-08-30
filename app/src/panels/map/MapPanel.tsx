@@ -32,6 +32,7 @@ import { PathLayer, PolygonLayer, ScatterplotLayer, SolidPolygonLayer } from '@d
 import type { PanelProps } from '../../shell/registry.js';
 import type {
   Advisory,
+  AnalysisPublished,
   CoverageHolding,
   HoldingsInventory,
   FeaturesResponseFeature,
@@ -49,6 +50,8 @@ import {
   manifestInstants,
   nearestInstant,
   projectionCells,
+  PROVENANCE_INK,
+  provenanceCells,
   rampColour,
   routePositionAt,
   validAt,
@@ -91,6 +94,19 @@ interface SpreadState {
   servedFrom?: string;
 }
 
+/**
+ * The provenance holding as a gridded layer (feature 115): each cell tinted by which
+ * of the four shares owns most of it. One area query answers for all four, because
+ * they are four parameters of one coverage.
+ */
+interface ProvenanceState {
+  coverage?: GridCoverage;
+  /** The four share parameters, in the order the analyst stores them. */
+  parameterKeys?: readonly string[];
+  refusal?: string;
+  servedFrom?: string;
+}
+
 interface VolumeState {
   levels: VolumeLevel[];
   /** The domain and depth extent the drawn volume stands for. */
@@ -115,6 +131,7 @@ export function MapPanel({ params }: PanelProps) {
   const [simTime, setSimTime] = useState('');
   const [plan, setPlan] = useState<Plan | undefined>();
   const [latestRun, setLatestRun] = useState<RunPublished | undefined>();
+  const [latestAnalysis, setLatestAnalysis] = useState<AnalysisPublished | undefined>();
   const [advisories, setAdvisories] = useState<readonly AdvisoryFeature[]>([]);
   /**
    * The ownship track, and whether the query has answered yet (FR-55). Held as two
@@ -131,7 +148,7 @@ export function MapPanel({ params }: PanelProps) {
   /** The store's inventory: each holding's manifest states its own axes. */
   const [inventory, setInventory] = useState<readonly CoverageHolding[]>([]);
   /** Which doubt is drawn: the plan's projection cells, the run's spread, neither. */
-  const [doubt, setDoubt] = useState<'projection' | 'spread' | 'none'>('projection');
+  const [doubt, setDoubt] = useState<'projection' | 'spread' | 'provenance' | 'none'>('projection');
   const [spread, setSpread] = useState<SpreadState>({});
   const [source, setSource] = useState<'nowcast' | 'forecast'>('nowcast');
   const [parameter, setParameter] = useState('temperature');
@@ -174,6 +191,9 @@ export function MapPanel({ params }: PanelProps) {
       client.subscribe(config.topics.plan, (message) => setPlan(message.payload as Plan)),
       client.subscribe(config.topics.run_published, (message) =>
         setLatestRun(message.payload as RunPublished),
+      ),
+      client.subscribe(config.topics.analysis_published, (message) =>
+        setLatestAnalysis(message.payload as AnalysisPublished),
       ),
       client.subscribe(config.topics.platform_state, (message) =>
         setPlatformState(message.payload as PlatformState),
@@ -344,6 +364,54 @@ export function MapPanel({ params }: PanelProps) {
     spreadHolding ? manifestInstants(spreadHolding.manifest.grid.time) : [],
     displayedSimTime,
   );
+  /**
+   * The provenance holding, when the tint is what is drawn (feature 115). Four share
+   * parameters of one coverage, so one area query answers for all of them — asking
+   * four times would be four chances for the answers to disagree about an instant.
+   *
+   * Its time axis carries a single step, because an analysis is a correction at one
+   * instant rather than a series; there is therefore nothing to snap a datetime to,
+   * and asking for one would be asking the holding about a time it does not claim.
+   */
+  const provenanceCollection = latestAnalysis?.collections.provenance;
+  const [provenance, setProvenance] = useState<ProvenanceState>({});
+  useEffect(() => {
+    if (doubt !== 'provenance' || !domainRing || !provenanceCollection || projection === 'cube') return;
+    let abandoned = false;
+    void (async () => {
+      const wkt = `POLYGON((${domainRing.map(([lon, lat]) => `${lon} ${lat}`).join(', ')}))`;
+      const query = new URLSearchParams({ coords: wkt, z: String(depthM) });
+      const response = await fetch(
+        `${config.endpoints.edr}/collections/${provenanceCollection}/area?${query.toString()}`,
+      );
+      const body = (await response.json()) as unknown;
+      if (abandoned) return;
+      if (!response.ok) {
+        setProvenance({ refusal: `the provenance query was refused: ${response.status}` });
+        return;
+      }
+      const verdict = validator.validate('coveragejson', body);
+      if (!verdict.ok) {
+        setProvenance({ refusal: `the provenance coverage was refused by its master: ${verdict.refusals[0]}` });
+        return;
+      }
+      const coverage = body as GridCoverage;
+      // The share parameters are read from what the coverage actually served, in the
+      // order it serves them, rather than from a list of names written down here: the
+      // analyst names its own shares in its configuration, and a second list would be
+      // free to drift from it.
+      const keys = Object.keys(coverage.ranges).filter((key) => key.startsWith('temperature_share_'));
+      setProvenance({
+        coverage,
+        parameterKeys: keys,
+        servedFrom: `${provenanceCollection}, ${coverage.domain.axes.z.values[0]} m`,
+      });
+    })();
+    return () => {
+      abandoned = true;
+    };
+  }, [config.endpoints.edr, depthM, domainRing, doubt, projection, provenanceCollection, validator]);
+
   useEffect(() => {
     if (doubt !== 'spread' || !domainRing || !spreadCollection || projection === 'cube') return;
     let abandoned = false;
@@ -501,6 +569,10 @@ export function MapPanel({ params }: PanelProps) {
   const spreadGrid =
     doubt === 'spread' && spread.coverage && spread.parameterKey
       ? gridCells(spread.coverage, spread.parameterKey)
+      : undefined;
+  const provenanceGrid =
+    doubt === 'provenance' && provenance.coverage && provenance.parameterKeys
+      ? provenanceCells(provenance.coverage, provenance.parameterKeys)
       : undefined;
 
   // Conditions at the moment of arrival (FR-40): a genuine position query at the
@@ -745,6 +817,29 @@ export function MapPanel({ params }: PanelProps) {
         stroked: false,
         pickable: false,
       }),
+    provenanceGrid &&
+      new PolygonLayer({
+        id: 'provenance',
+        data: provenanceGrid.cells,
+        getPolygon: (cell) => {
+          const [west, south, east, north] = cell.bounds;
+          return [
+            [west, south],
+            [east, south],
+            [east, north],
+            [west, north],
+          ];
+        },
+        // Tinted by which share owns the cell, with opacity carrying how decisively.
+        // A share past one is drawn at full opacity rather than scaled beyond it: the
+        // overshoot is stated in the status line, where it can be explained.
+        getFillColor: (cell) => {
+          const ink = PROVENANCE_INK[cell.dominant].colour;
+          return [ink[0], ink[1], ink[2], Math.round(60 + 150 * Math.min(Math.max(cell.fraction, 0), 1))];
+        },
+        stroked: false,
+        pickable: false,
+      }),
     doubtCells.length > 0 &&
       new PolygonLayer({
         id: 'doubt',
@@ -940,11 +1035,16 @@ export function MapPanel({ params }: PanelProps) {
           <select
             value={doubt}
             disabled={projection === 'cube'}
-            onChange={(event) => setDoubt(event.target.value as 'projection' | 'spread' | 'none')}
+            onChange={(event) =>
+              setDoubt(event.target.value as 'projection' | 'spread' | 'provenance' | 'none')
+            }
           >
             <option value="projection">the plan's projection cells</option>
             <option value="spread" disabled={!spreadCollection}>
               the run's spread{spreadCollection ? '' : ' (no run published yet)'}
+            </option>
+            <option value="provenance" disabled={!provenanceCollection}>
+              where the value came from{provenanceCollection ? '' : ' (no analysis published yet)'}
             </option>
             <option value="none">none</option>
           </select>
@@ -1003,10 +1103,34 @@ export function MapPanel({ params }: PanelProps) {
                   : '')
               : ' · spread: querying…'
           : ''}
+        {doubt === 'provenance'
+          ? provenance.refusal
+            ? ` · provenance declined: ${provenance.refusal}`
+            : provenanceGrid
+              ? ` · provenance: ${provenance.servedFrom}, each cell tinted by the share that owns most of it` +
+                (provenanceGrid.overshooting > 0
+                  ? `; ${provenanceGrid.overshooting} cell(s) hold a share past 100%, where the analysis extrapolated past the reading rather than averaging toward it`
+                  : '')
+              : ' · provenance: querying…'
+          : ''}
         {plan ? ` · plan ${plan.plan_id} (${plan.route.vertices.length} stop(s))` : ' · no plan published yet'}
         {` · ${validAdvisories.length} of ${advisories.length} advisory(ies) valid at the displayed instant`}
         {composing ? ' · click the canvas to place the composed query' : ''}
       </p>
+      {doubt === 'provenance' && provenanceGrid ? (
+        <ul className="map-legend" aria-label="what the provenance tint means">
+          {PROVENANCE_INK.map((entry, index) => (
+            <li key={entry.label}>
+              <span
+                className="map-legend-swatch"
+                style={{ background: `rgb(${entry.colour[0]}, ${entry.colour[1]}, ${entry.colour[2]})` }}
+              />
+              {entry.label}
+              {` (${provenanceGrid.cells.filter((cell) => cell.dominant === index).length} cell(s))`}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {arrival && <p className="map-arrival">{arrival}</p>}
       <div className="map-body">
         <div className="map-canvas" ref={canvasHost}>

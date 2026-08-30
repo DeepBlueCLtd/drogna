@@ -199,12 +199,17 @@ describe('every explainer closes on the same three axes (FR-008, FR-020, SC-007)
  * ------------------------------------------------------------------ */
 
 describe('the course', () => {
-  it('carries the eleven explainers in order, each with a distinct id (FR-002)', () => {
+  it('carries the twelve explainers in order, each with a distinct id (FR-002)', () => {
     expect(COURSE.map((explainer) => explainer.id)).toEqual([
       'why-a-standard',
       'points-and-fields',
       'netcdf',
       'holdings',
+      // Feature 115. It follows 'What a holding is' because that one introduced the
+      // eras as different things, and this one shows a measurement moving between
+      // them. It is the only explainer depicting drogna's own maths rather than a
+      // standard, and it says so.
+      'analysis',
       'sensorthings',
       'edr',
       'pygeoapi',
@@ -401,7 +406,7 @@ describe('the narrow panel (FR-021, FR-024)', () => {
     const options = [...document.querySelectorAll('option')];
     expect(options).toHaveLength(COURSE.length);
     expect(options.map((option) => option.value)).toEqual(COURSE.map((explainer) => explainer.id));
-    expect(options[7].textContent).toMatch(/8 · MQTT · \d+ steps/);
+    expect(options[8].textContent).toMatch(/9 · MQTT · \d+ steps/);
     cleanup();
     render(<Rail course={COURSE} current="mqtt" onSelect={() => {}} width={RAIL_WIDTH_THRESHOLD + 1} />);
     expect(document.querySelector('.bg-rail')?.getAttribute('data-collapsed')).toBe('false');

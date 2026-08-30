@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { latLngToCell } from 'h3-js';
 import type { Plan } from '../../generated/types.js';
 import {
+  PROVENANCE_INK,
+  provenanceCells,
   demandRay,
   graticule,
   gridCells,
@@ -268,5 +270,68 @@ describe('the ownship track (feature 113)', () => {
     // platform had been told to carry on, which nobody told it.
     expect(demandRay(here, undefined, 3, 1000)).toBeUndefined();
     expect(demandRay(here, 90, undefined, 1000)).toBeUndefined();
+  });
+});
+
+describe('the provenance tint (feature 115)', () => {
+  const grid = (shares: Record<string, number[]>): GridCoverage => ({
+    domain: {
+      domainType: 'Grid',
+      axes: { x: { values: [-12, -11.75] }, y: { values: [45, 45.2] }, z: { values: [50] }, t: { values: ['2026-01-01T00:00:00.000000Z'] } },
+    },
+    ranges: Object.fromEntries(
+      Object.entries(shares).map(([name, values]) => [name, { shape: [1, 1, 2, 2], values }]),
+    ),
+  });
+
+  const NAMES = [
+    'temperature_share_archive',
+    'temperature_share_departure_forecast',
+    'temperature_share_measurement',
+    'temperature_share_model',
+  ];
+
+  it('tints each cell by the share that owns most of it', () => {
+    // Four cells, one owned by each share in turn.
+    const built = provenanceCells(
+      grid({
+        [NAMES[0]]: [0.7, 0.1, 0.1, 0.1],
+        [NAMES[1]]: [0.1, 0.7, 0.1, 0.1],
+        [NAMES[2]]: [0.1, 0.1, 0.7, 0.1],
+        [NAMES[3]]: [0.1, 0.1, 0.1, 0.7],
+      }),
+      NAMES,
+    );
+    expect(built?.cells.map((cell) => cell.dominant)).toEqual([0, 1, 2, 3]);
+    expect(built?.cells.every((cell) => cell.fraction === 0.7)).toBe(true);
+    expect(built?.overshooting).toBe(0);
+    // Every position has a legend entry, or a cell would be drawn in an ink nothing
+    // names.
+    expect(PROVENANCE_INK).toHaveLength(NAMES.length);
+  });
+
+  it('counts an overshoot rather than rounding it to a full share', () => {
+    // Where the analysis extrapolated past the reading, measurement holds more than
+    // the whole cell and a prior share is negative. Both are reported as they stand.
+    const built = provenanceCells(
+      grid({
+        [NAMES[0]]: [-0.12, 0.4, 0.4, 0.4],
+        [NAMES[1]]: [0, 0.3, 0.3, 0.3],
+        [NAMES[2]]: [1.12, 0.2, 0.2, 0.2],
+        [NAMES[3]]: [0, 0.1, 0.1, 0.1],
+      }),
+      NAMES,
+    );
+    expect(built?.overshooting).toBe(1);
+    expect(built?.cells[0].dominant).toBe(2);
+    expect(built?.cells[0].fraction).toBeCloseTo(1.12, 6);
+  });
+
+  it('declines a coverage that is not a grid, or that lacks a share it was asked for', () => {
+    const notGrid = { ...grid({ [NAMES[0]]: [1, 1, 1, 1] }) };
+    notGrid.domain = { ...notGrid.domain, domainType: 'Trajectory' };
+    expect(provenanceCells(notGrid, NAMES)).toBeUndefined();
+    expect(provenanceCells(grid({ [NAMES[0]]: [1, 1, 1, 1] }), NAMES)).toBeUndefined();
+    expect(provenanceCells(grid({ [NAMES[0]]: [1, 1, 1, 1] }), [])).toBeUndefined();
   });
 });

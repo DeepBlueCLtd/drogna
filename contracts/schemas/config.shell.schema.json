@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.shell.schema.json",
   "title": "drogna shell configuration (V2-C19)",
-  "description": "The shell's configuration document: the views it hosts, the declared component layout the System panel renders greyed-out (structure from declaration, illumination only from received heartbeats \u2014 Constitution VII), the topics it reads and the seam endpoints it calls. The shell connects under a role that may read every namespace and may never publish (E13).",
+  "description": "The shell's configuration document: the views it hosts, the declared component layout the System panel renders greyed-out (structure from declaration, illumination only from received heartbeats — Constitution VII), the topics it reads and the seam endpoints it calls. The shell connects under a role that may read every namespace and may never publish (E13).",
   "type": "object",
   "required": [
     "id",
@@ -75,7 +75,12 @@
           },
           "band": {
             "type": "string",
-            "enum": ["plane", "loop", "path", "downstream"],
+            "enum": [
+              "plane",
+              "loop",
+              "path",
+              "downstream"
+            ],
             "description": "Which band of the Operator flow chart this component sits in (FR-052): the plane every component runs on, the assimilation loop, the observation path, or what comes after it. Structure from declaration; nothing here can light anything (Constitution VII)."
           },
           "rank": {
@@ -95,6 +100,7 @@
         "all",
         "plan",
         "run_published",
+        "analysis_published",
         "advisories",
         "platform_state",
         "observations",
@@ -120,6 +126,10 @@
         },
         "run_published": {
           "$ref": "config.common.schema.json#/$defs/topic_filter"
+        },
+        "analysis_published": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where the analyst announces a cycle. The Map reads the provenance holding it names, so the display learns of an analysis by hearing it announced rather than by polling the store."
         },
         "advisories": {
           "$ref": "config.common.schema.json#/$defs/topic_filter"
@@ -203,7 +213,7 @@
         },
         "sensorthings": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
-          "description": "The SensorThings prefix. The Map reads the ownship track from it as ordinary Observations \u2014 the same read any client would make (FR-055)."
+          "description": "The SensorThings prefix. The Map reads the ownship track from it as ordinary Observations — the same read any client would make (FR-055)."
         },
         "edr": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
@@ -221,26 +231,43 @@
     },
     "flow": {
       "type": "object",
-      "required": ["suppressed_filters", "ports", "series_samples"],
+      "required": [
+        "suppressed_filters",
+        "ports",
+        "series_samples"
+      ],
       "additionalProperties": false,
       "description": "What the Operator flow chart needs that the topology master cannot supply (FR-052 to FR-054). Edges themselves are NOT here: topic edges are derived from contracts/topology.json, so the picture cannot disagree with the wiring, and a gate fails the build when a declared component is undrawn or a topology edge is neither drawn nor suppressed.",
       "properties": {
         "suppressed_filters": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Topic filters drawn as the plane the flow runs on rather than as edges. Exactly two earn it: every component subscribes to the clock and publishes heartbeats, so drawing them is forty edges that hide the ones carrying meaning. The panel names the suppression on screen; a third entry here needs FR-004 amended."
         },
         "ports": {
           "type": "array",
-          "description": "Couplings that carry no broker traffic and therefore never pulse: the world-sampler port and the store interfaces. Declared because they cannot be derived from a topology of topics \u2014 without them the environment generator, which publishes nothing but heartbeats, sits isolated in a picture of a system it is the source of.",
+          "description": "Couplings that carry no broker traffic and therefore never pulse: the world-sampler port and the store interfaces. Declared because they cannot be derived from a topology of topics — without them the environment generator, which publishes nothing but heartbeats, sits isolated in a picture of a system it is the source of.",
           "items": {
             "type": "object",
-            "required": ["from", "to", "label"],
+            "required": [
+              "from",
+              "to",
+              "label"
+            ],
             "additionalProperties": false,
             "properties": {
-              "from": { "$ref": "config.common.schema.json#/$defs/component_id" },
-              "to": { "$ref": "config.common.schema.json#/$defs/component_id" },
-              "label": { "type": "string", "minLength": 1 }
+              "from": {
+                "$ref": "config.common.schema.json#/$defs/component_id"
+              },
+              "to": {
+                "$ref": "config.common.schema.json#/$defs/component_id"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },

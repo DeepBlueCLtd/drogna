@@ -647,6 +647,7 @@ export type ConfigShell = {
     "all": ConfigCommonTopicFilter;
     "plan": ConfigCommonTopicFilter;
     "run_published": ConfigCommonTopicFilter;
+    "analysis_published": ConfigCommonTopic;
     "advisories": ConfigCommonTopicFilter;
     "platform_state": ConfigCommonTopicFilter;
     "telemetry": ConfigCommonTopicFilter;

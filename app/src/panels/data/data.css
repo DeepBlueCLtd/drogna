@@ -408,13 +408,20 @@
   padding-bottom: 6px;
 }
 
+/* The branches **wrap**; they do not scroll sideways. Seven short labels are exactly the
+   case the narrow presentation is supposed to fold, and the mobile proof is right to
+   refuse a row that ran 842px wide in a 373px screen: the containers allowed to scroll
+   are the ones that genuinely cannot fold — a diagram at its own minimum, a document —
+   and a list of seven words is not one of them. Each button sizes to its own label
+   instead of filling the row, so the count stays beside the name it counts. */
 .data-panel[data-narrow='true'] .data-tree ul {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
 }
 
 .data-panel[data-narrow='true'] .data-branch-button {
+  width: auto;
   white-space: nowrap;
 }
 

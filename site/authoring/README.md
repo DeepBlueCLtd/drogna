@@ -17,6 +17,12 @@ takes the fixed shape D19 sets, and the fourth part is the one that carries the 
    reads the component through the seam and exercises it across its range; the wire
    shape is what makes such a page an ordinary consumer rather than a special build.
 
+The entry is linked from that pull request by its full URL on the branch —
+`https://github.com/DeepBlueCLtd/drogna/blob/<branch>/site/docs/blog/posts/<slug>.md` —
+not by its path in the tree, which GitHub resolves against the page the body is read on
+rather than against the repository, and so answers 404. After the branch merges the
+entry is published at `https://deepbluecltd.github.io/drogna/blog/posts/<slug>/`.
+
 The entry is written in the pull request that delivers the component, not afterwards.
 Afterwards is how V2 reached feature 111 with the estate publishing instances, the
 template and this note in place, and no entries at all: nothing was refused, the moment

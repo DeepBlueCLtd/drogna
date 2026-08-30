@@ -127,21 +127,53 @@ the Operator flow chart all come from them.
 
 ## System folds away — the two facts first
 
-- [ ] T017 Add **declared beat** and **liveness window** to the Operator list view, as
+- [x] T017 Add **declared beat** and **liveness window** to the Operator list view, as
       declared figures, typographically distinct from reported and observed per FR-58.
-      Nothing else in this group may land before this does.
-- [ ] T018 Move the System footnote's claim — that grey cannot distinguish *never ran*
+      Nothing else in this group may land before this does. The `.flow-figure-declared`
+      treatment had been in `operator.css` since 113 and nothing had ever used it — the
+      faces draw reported figures only — so this is its first instance. One thing needed
+      deciding: a component may report its own liveness window in its heartbeat, and the
+      System tab drew whichever it had. That would be a figure changing kind between
+      states, which FR-57 forbids, so the cell carries the **configured** window as a
+      declared figure always, and a component's own reported window is drawn beside it as
+      a reported one when the two differ.
+- [x] T018 Move the System footnote's claim — that grey cannot distinguish *never ran*
       from *stopped* — onto the Operator legend, where the six node states are named.
-- [ ] T019 A gate: no view id may be named in `app/src` that `config.run`'s shell document
+      **The legend did not exist**: the specification said "the Operator flow chart's
+      legend, which already distinguishes the six states", and the tree said otherwise —
+      113 shipped the six states as colours and words on the nodes and no legend beside
+      them. So the legend is built here, and it says one thing the footnote could not:
+      where the operator plane has *reported* a component stopped, the word is `stopped`
+      rather than `silent`, because that is a fact the surface was given rather than one
+      it inferred from silence.
+- [x] T019 A gate: no view id may be named in `app/src` that `config.run`'s shell document
       does not declare. Append one line to `scripts/gates.registry`; never edit the runner.
       **Plant a link to `#/view/system`, watch it fail, revert, and say so in the commit
-      message** (CLAUDE.md, lesson 2) — SC-06.
-- [ ] T020 Rewrite every reference to the System view: `IntroPanel.tsx` (two links, in the
+      message** (CLAUDE.md, lesson 2) — SC-06. `scripts/gates/check-view-ids.ts`, one line
+      appended to the registry, the runner untouched. It checks three shapes because a
+      view is named in three ways — a literal `#/view/<id>`, a `hashForView('<id>')` call,
+      and a key of the panel registry, which is the same fault seen from the other end: a
+      panel that exists and nothing can reach. It scans `site/docs` as well as `app/src`,
+      because a dangling link is the same fault wherever it is written and the published
+      site is where a reader meets one. Planted and watched failing on
+      `IntroPanel.tsx:34`, then reverted.
+- [x] T020 Rewrite every reference to the System view: `IntroPanel.tsx` (two links, in the
       101 and 105 sections), the arc's prose in 104, the walkthrough's component steps
       that name `system` as a panel, and any spec or blog text that links it. The gate
-      from T019 is what proves this complete, not a search by hand.
-- [ ] T021 Remove `SystemPanel.tsx`, its registry entry and its view in `config/run.json`.
+      from T019 is what proves this complete, not a search by hand. **It was four links in
+      `IntroPanel.tsx`, not two** — 101, 105, 107 and the walkthrough paragraph — and the
+      gate found three more the specification did not list: Background's control-loop
+      explainer names `system` as its live view, `site/docs/demo/index.md` tabulates the
+      address, and two shell tests used `system` as their example view id. The
+      walkthrough's component steps turned out not to name it at all. That is the
+      difference between a gate and a search by hand, in one task.
+- [x] T021 Remove `SystemPanel.tsx`, its registry entry and its view in `config/run.json`.
       Last in this group: the panel is the thing every earlier task is making removable.
+      Its two tests retired with it and nothing was lost: `operator-panel.test.tsx`
+      already asserted both claims — every declared component drawn, and a component that
+      stops going dark because its heartbeats cease — against the surface that discharges
+      FR-16's obligation now. The glance capture moved off `system` in the same change, as
+      did the topology artefact's line references (`pnpm generate`).
 
 ## Holdings — the timeline
 

@@ -907,10 +907,6 @@
         "label": "Background"
       },
       {
-        "id": "system",
-        "label": "System"
-      },
-      {
         "id": "holdings",
         "label": "Holdings"
       },

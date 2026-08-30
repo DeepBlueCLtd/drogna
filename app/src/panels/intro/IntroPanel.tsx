@@ -31,8 +31,8 @@ export function IntroPanel({ params }: PanelProps) {
         <p>
           What you are looking at is already the system, not a picture of one. The
           clock beating in the header is a component publishing over the broker; the{' '}
-          <a href={hashForView('system')}>System</a> tab lights each component only
-          because a heartbeat from it genuinely arrived, and shows the rest of the
+          <a href={hashForView('operator')}>Operator</a> tab lights each component only
+          because a heartbeat from it genuinely arrived, and draws the rest of the
           arc greyed out until each lands; the{' '}
           <a href={hashForView('messages')}>Messages</a> tab shows the traffic itself,
           validated against the committed masters as it arrives. This run was seeded
@@ -97,8 +97,9 @@ export function IntroPanel({ params }: PanelProps) {
           kernel port and publishes the mean with its spread through the same
           digest-checked seam as everything else; instances accumulate in{' '}
           <a href={hashForView('holdings')}>Holdings</a> and are served through EDR
-          by convention. Watch the <a href={hashForView('system')}>System</a> tab's
-          detail column: the loop's quiet always says which quiet it is.
+          by convention. Watch what each component says about itself in{' '}
+          <a href={hashForView('operator')}>Operator</a>: the loop's quiet always says
+          which quiet it is.
         </p>
       </section>
       <section>
@@ -126,8 +127,8 @@ export function IntroPanel({ params }: PanelProps) {
           components say about themselves — a component never heard from is reported
           <em> unheard</em>, not absent — and dispatches genuine commands through the
           seam: step the clock, stop, start or restart a component. A stopped
-          component goes dark in <a href={hashForView('system')}>System</a> because
-          its heartbeats genuinely cease, never because a response claimed success;
+          component goes dark in the flow chart because its heartbeats genuinely cease,
+          never because a response claimed success;
           a refused command names the bound or rule. Telemetry aggregates the
           monitor&rsquo;s residual samples into running statistics and a forecast
           skill figure against persistence, in its own sentence — the display says
@@ -182,12 +183,11 @@ export function IntroPanel({ params }: PanelProps) {
         <h3>The walkthrough, whole</h3>
         <p>
           Every beat above is live in this page, and this tab is the demo script:
-          start at <a href={hashForView('system')}>System</a> to watch the machinery
+          start at <a href={hashForView('operator')}>Operator</a> to watch the machinery
           light, read the run&rsquo;s holdings in{' '}
           <a href={hashForView('holdings')}>Holdings</a>, watch the traffic argue
           with its masters in <a href={hashForView('messages')}>Messages</a>,
-          interrogate and interrupt the components in{' '}
-          <a href={hashForView('operator')}>Operator</a>, and end at the{' '}
+          interrogate and interrupt the components there too, and end at the{' '}
           <a href={hashForView('map')}>Map</a>, where the whole loop is visible at
           once. Export the manifest from the header to replay this run
           byte-identically; your interventions are ephemeral and deliberately

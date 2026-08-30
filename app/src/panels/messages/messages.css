@@ -11,25 +11,6 @@
  * (`messages.test.tsx`), so a transition added here for a nice fade fails it by name.
  */
 
-/* The panel's own header row: what the tab is, and its help control at the right
-   (FR-70). The same row at both widths — the control reaches the same place narrow as
-   wide, which is what FR-50 asks of a move out of the shell header. */
-.panel-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.9em;
-  flex-wrap: wrap;
-}
-
-.panel-head > :first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-.panel-head-title {
-  color: var(--shell-dim);
-}
-
 /* ------------------------------------------------------- the traffic display --- */
 
 .traffic {

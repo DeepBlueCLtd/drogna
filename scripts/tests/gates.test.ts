@@ -27,6 +27,7 @@ import { buildSite } from '../site/build.js';
 import { runGate as backgroundInert } from '../gates/check-background-inert.js';
 import { runGate as backgroundMarks } from '../gates/check-background-marks.js';
 import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
+import { runGate as viewIds } from '../gates/check-view-ids.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -95,6 +96,28 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(messages).toMatch(/a paint literal/);
     expect(backgroundMarks(clean)).toEqual([]);
     expect(backgroundMarks(REPO_ROOT)).toEqual([]);
+  });
+
+  it('view-ids: a link to a view the configuration does not declare fails (FR-63, SC-06)', () => {
+    // Three shapes, because a view is named in three ways, and a gate that caught only
+    // the literal address would leave the helper and the registry to rot quietly.
+    const messages = viewIds(join(fixtures, 'views-dangling')).map((f) => f.message).join('\n');
+    expect(messages).toMatch(/names the view 'system'/);
+    expect(messages).toMatch(/names the view 'gone'/);
+    expect(messages).toMatch(/renders a panel for 'system'/);
+    // And it leaves alone a declared view, a deep address below one, and prose about a
+    // withdrawn address carrying its exemption — a gate paid for in exemptions would
+    // stop meaning anything, and one that failed the record of its own reason would be
+    // charging for the record.
+    expect(viewIds(join(fixtures, 'views-dangling')).filter((f) => f.message.includes("'holdings'"))).toEqual([]);
+    expect(viewIds(join(fixtures, 'views-declared'))).toEqual([]);
+    // And the tree it is actually for.
+    expect(viewIds(REPO_ROOT)).toEqual([]);
+  });
+
+  it('view-ids: a tree whose configuration declares no views is a failure, not a pass', () => {
+    // `run-gates.ts`'s rule: the outcome that proves nothing must not look like a pass.
+    expect(() => viewIds(join(fixtures, 'site-broken'))).toThrow(/which views exist/);
   });
 
   it('one-breakpoint: a stylesheet switching at a width the shell does not fails (FR-002)', () => {

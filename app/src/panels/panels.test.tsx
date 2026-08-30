@@ -16,7 +16,6 @@ import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js
 import type { PanelParams } from '../shell/Shell.js';
 import { createSeamFetch } from '../seam/http.js';
 import { displayInstant } from '../shell/display.js';
-import { SystemPanel } from './system/SystemPanel.js';
 import { MessagesPanel } from './messages/MessagesPanel.js';
 import { HoldingsPanel } from './holdings/HoldingsPanel.js';
 import { IntroPanel } from './intro/IntroPanel.js';
@@ -106,52 +105,14 @@ describe('the panels against a live backend', { timeout: 120_000 }, () => {
     vi.useRealTimers();
   });
 
-  it('System lights exactly the components whose heartbeats arrived, greys the rest', () => {
-    render(<SystemPanel {...panelProps(config, runtime)} />);
-    act(() => vi.advanceTimersByTime(2100));
-    const lit = document.querySelectorAll('tr[data-lit="true"]');
-    expect([...lit].map((row) => row.getAttribute('data-component')).sort()).toEqual([
-      'advisory-source',
-      'advisory-store',
-      'boundary',
-      'broker',
-      'clock',
-      'coverage-store',
-      'env-generator',
-      'feature-store',
-      'ingest',
-      'model-runner',
-      'monitor',
-      'observation-store',
-      'offload',
-      'operator',
-      'planner',
-      'platform',
-      'query',
-      'scheduler',
-      'sensors',
-      'telemetry',
-    ]);
-    // The full declared layout renders from day one (FR-16): every future beat greyed.
-    expect(document.querySelectorAll('tr[data-component]')).toHaveLength(
-      config.shell.components.length,
-    );
-    // Every declared component has landed and is heard from: nothing renders greyed.
-    // Written against the declared length rather than a typed count, so a component
-    // added to the configuration and never built fails this rather than sliding past.
-    expect(screen.queryAllByText('not heard').length).toBe(0);
-  });
-
-  it('a component that stops goes dark because its heartbeats cease', () => {
-    render(<SystemPanel {...panelProps(config, runtime)} />);
-    act(() => vi.advanceTimersByTime(2100));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(20);
-    runtime.stop();
-    // Past every liveness window, with the sweep interval re-evaluating.
-    act(() => vi.advanceTimersByTime(8000));
-    expect(document.querySelectorAll('tr[data-lit="true"]')).toHaveLength(0);
-  });
-
+  /**
+   * The two System-panel tests that stood here retired with the tab (feature 114,
+   * FR-63). What they asserted did not: the Operator flow chart draws every declared
+   * component greyed until a heartbeat from it arrives, and a component that stops goes
+   * dark because its heartbeats cease — the same two claims, against the surface that
+   * discharges FR-16's obligation now. They are below, keyed to `data-operator-component`
+   * rather than to `data-component`.
+   */
   it('Messages counts received traffic and holds the refusal claim at zero', () => {
     render(<MessagesPanel {...panelProps(config, runtime)} />);
     // Provoke traffic: heartbeats on their cadence.

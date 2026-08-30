@@ -25,14 +25,20 @@ discussed rather than at the front door. Append `#/view/<id>` to any instance UR
 | View | Address | What it shows |
 |---|---|---|
 | Intro | [`#/view/intro`](../instances/main/#/view/intro) | What the harness is, and what its numbers are not |
-| System | [`#/view/system`](../instances/main/#/view/system) | The components, lit by the heartbeats they are actually sending |
-| Holdings | [`#/view/holdings`](../instances/main/#/view/holdings) | The coverage holdings, and the eras they span |
+| Background | [`#/view/background`](../instances/main/#/view/background) | Eleven explainers of the standards the harness speaks, reading nothing from the run |
+| Holdings | [`#/view/holdings`](../instances/main/#/view/holdings) | The coverage store filling up, in simulation time, and how the forecast fared against the truth |
 | Map | [`#/view/map`](../instances/main/#/view/map) | The field, the doubt over it, and the route chosen through it |
-| Messages | [`#/view/messages`](../instances/main/#/view/messages) | The traffic on the broker, as it crosses |
-| Operator | [`#/view/operator`](../instances/main/#/view/operator) | The machinery interrogated from the operator's side |
+| Messages | [`#/view/messages`](../instances/main/#/view/messages) | The traffic on the broker as it crosses, drawn as well as listed |
+| Operator | [`#/view/operator`](../instances/main/#/view/operator) | The machinery interrogated from the operator's side, drawn as the loop it is |
 
 Activating a view writes the address back, so the address bar always names what is on
 screen and a link can be copied out of it.
+
+There was a seventh view, `System`, and it is gone rather than redirected — the Operator
+flow chart draws every declared component greyed until a heartbeat from it arrives, which
+was that tab's whole obligation. An address that resolves is a claim the thing still
+exists, so the address simply stops resolving, and a gate holds the tree to naming no view
+the configuration does not declare.
 
 ## Instances under review
 

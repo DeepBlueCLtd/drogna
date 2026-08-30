@@ -121,6 +121,56 @@ describe('the Operator flow chart (feature 113)', () => {
     expect(within(clockRow as HTMLElement).getByText('protected')).toBeTruthy();
   });
 
+  it('FR-63: the list carries the two facts the System tab carried alone, as declared figures', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('view-toggle'));
+    });
+    // The bound is the configuration, not a count typed here: a component added to the
+    // shell document and not to this table fails this rather than sliding past.
+    for (const component of config.shell.components) {
+      const row = document.querySelector(`[data-operator-component="${component.id}"]`);
+      expect(row?.querySelector(`[data-declared-beat="${component.beat}"]`)).not.toBeNull();
+      expect(
+        row?.querySelector(
+          `[data-declared-window="${config.shell.liveness.default_window_seconds}"]`,
+        ),
+      ).not.toBeNull();
+    }
+    // Both are drawn as declared figures — configuration, typographically apart from
+    // reported and observed (FR-57). A figure may not change kind between states, which
+    // is why a component's own reported window is drawn beside this one and never in it.
+    const clockRow = document.querySelector('[data-operator-component="clock"]') as HTMLElement;
+    expect(clockRow.querySelectorAll('.flow-figure-declared').length).toBe(2);
+  });
+
+  it('FR-63: the legend names the six states, and carries the claim the System footnote made', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    const legend = screen.getByTestId('flow-legend');
+    // The six states a node can be in, each named rather than only coloured.
+    expect([...legend.querySelectorAll('[data-legend-state]')].map((entry) =>
+      entry.getAttribute('data-legend-state'),
+    )).toEqual(['ok', 'starting', 'degraded', 'stalled', 'silent', 'unheard']);
+    // The true statement the withdrawn tab's footnote carried and nothing else did.
+    expect(legend.textContent).toContain('has not run yet, or has stopped');
+    expect(legend.textContent).toContain('only the silence');
+  });
+
+  it('FR-70: the panel carries its own help control, and it is the component tour', async () => {
+    render(<OperatorPanel {...panelProps(config, runtime)} />);
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    const button = screen.getByTestId('help-button');
+    expect(button.getAttribute('aria-label')).toContain('The system, component by component');
+  });
+
   it('a refused command is surfaced verbatim, in the words the surface used', async () => {
     render(<OperatorPanel {...panelProps(config, runtime)} />);
     await act(async () => {

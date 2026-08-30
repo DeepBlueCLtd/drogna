@@ -164,15 +164,15 @@ describe('the stack keeps the tabs (FR-004, FR-005)', () => {
   it('writes the address when a tab is chosen', async () => {
     const { done } = await shellAt('#/view/intro', 390);
     try {
-      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="system"]');
+      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="holdings"]');
       await act(async () => {
         tab?.click();
         await Promise.resolve();
       });
-      expect(window.location.hash).toBe('#/view/system');
+      expect(window.location.hash).toBe('#/view/holdings');
       expect(
         document.querySelector('.stack-view:not([hidden])')?.getAttribute('data-view'),
-      ).toBe('system');
+      ).toBe('holdings');
     } finally {
       done();
     }

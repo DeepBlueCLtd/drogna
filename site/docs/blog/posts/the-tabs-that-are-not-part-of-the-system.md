@@ -83,11 +83,16 @@ already on screen the very first forecast is a change of basis, so the halo, the
 move, and the ghost are all available from the first minute rather than after the first
 model run.
 
-Two smaller corrections came from the same place. The uncertainty map was a flat dark
+Two smaller corrections came from the same place. The uncertainty map was a flat
 rectangle: a consumer that counts only what arrives after it opens has an empty ocean, and
-shading it from zero to saturation draws one uniform shade. It now reads the served
-observation history when it opens — an ordinary paged query, the same one any client would
-make — and shades between the values actually present, with the range printed underneath.
+every cell in it carries the same value. It now reads the served observation history when
+it opens — an ordinary paged query, the same one any client would make — and, more to the
+point, it distinguishes water nobody has *ever* sampled from water that was sampled and
+has gone stale, by drawing the first as an outline and the second as a fill. Those two
+carry the same number and mean completely different things, which is the distinction the
+whole tab turns on. (Shading relative to the values present was tried first and is worse:
+early in a run there is no spread to scale to, so it draws every hex identically.)
+
 And the candidate ranking did not always reorder under the opening objective: under
 *evasion*, staying clear of the traffic is both what the objective wants and what lowers
 exposure, so the two scores move together and no weighting can separate them. That is a
@@ -109,7 +114,10 @@ synthesised and says so.
 
 [Open the sampling planner](../../instances/main/#/view/sampling) — a hex grid over the
 domain, coloured by how stale the observation coverage is at a chosen depth, with a route
-planned by value per mile rather than by heading for the worst cell. Change the time
+planned by value per mile rather than by heading for the worst cell. The wheel zooms the
+map and a drag pans it, and the grid covers what is in view rather than the whole domain —
+which is what makes the finer resolutions affordable at all, and why asking for one while
+zoomed out is refused with both remedies named. Change the time
 budget from 3 hours to 24 and the route changes shape, not just length. The vessel reaches
 only the top of the water column, so the deeper zones can only be addressed by expendable
 sensors — and because a sensor cannot be dropped where the vessel does not go, servicing a

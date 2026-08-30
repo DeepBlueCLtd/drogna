@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta
+      name="description"
+      content="drogna: the shell framed at a mobile viewport size, for review from a desktop browser. Deliberately fake numerics, synthetic data, no third-party entities."
+    />
+    <title>drogna — the shell at a phone's width</title>
+    <!--
+      The preview frame (feature 112, FR-021 to FR-025).
+
+      It exists because the narrow presentation is the deliverable and a reviewer cannot
+      be assumed to have a phone in their hand. It is part of the ordinary static build,
+      so every published instance carries it beside index.html and a pull request can
+      link it at a view (NFR-03, NFR-04).
+
+      It is not a second implementation of anything. It holds no panel, no configuration
+      and no copy of the shell: it is an iframe around the built app, and everything
+      inside the frame is the same code the desktop serves.
+
+      It mocks a viewport SIZE and nothing else, and it says so on the page rather than
+      leaving a reviewer to find out. Touch input, browser chrome, safe areas and device
+      pixel ratio are all the host browser's here, which is exactly what a frame cannot
+      lend you.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0f14;
+        --fg: #d5dde5;
+        --dim: #6b7785;
+        --accent: #4cc2ff;
+        --edge: #232c36;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        font-size: 14px;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 1.2rem 1rem 2rem;
+        box-sizing: border-box;
+      }
+
+      header {
+        max-width: 46rem;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        margin: 0 0 0.35rem;
+      }
+
+      .note {
+        color: var(--dim);
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+      }
+
+      select,
+      button {
+        background: #131a21;
+        color: var(--fg);
+        border: 1px solid #2c3742;
+        border-radius: 3px;
+        padding: 0.3rem 0.6rem;
+        font: inherit;
+        cursor: pointer;
+        min-height: 32px;
+      }
+
+      /* The frame. The bezel is a visual cue that what is inside is a smaller viewport;
+         it is not a claim to be a handset, and the caption below says so. */
+      .device {
+        border: 10px solid #1b232b;
+        border-radius: 22px;
+        box-shadow: 0 0 0 1px var(--edge), 0 18px 40px rgba(0, 0, 0, 0.55);
+        background: #10151b;
+        overflow: hidden;
+        flex: 0 0 auto;
+      }
+
+      iframe {
+        display: block;
+        border: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .caption {
+        color: var(--dim);
+        font-size: 0.75rem;
+        font-family: monospace;
+      }
+
+      .disclaimer {
+        color: var(--dim);
+        font-size: 0.75rem;
+        border-left: 3px solid #ff7b6b;
+        padding-left: 0.6rem;
+        max-width: 40rem;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/mobile-ZENKWomk.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+  </head>
+  <body>
+    <header>
+      <h1>drogna — the shell at a phone's width</h1>
+      <p class="note">
+        A mock of a viewport size, not a device. The frame below sets the size the shell
+        lays itself out for; it reproduces neither touch input, nor browser chrome, nor
+        safe areas, nor device pixel ratio. Everything inside it is the built application,
+        unchanged — the same code the desktop serves, choosing its narrow presentation
+        because of the width it measures.
+      </p>
+    </header>
+
+    <div class="controls">
+      <label>
+        size
+        <select id="size">
+          <option value="390x844">390 × 844 — a common phone</option>
+          <option value="360x800">360 × 800 — a small phone</option>
+          <option value="430x932">430 × 932 — a large phone</option>
+          <option value="768x1024">768 × 1024 — a tablet, portrait</option>
+        </select>
+      </label>
+      <button id="rotate" type="button">rotate</button>
+      <span class="caption" id="caption"></span>
+    </div>
+
+    <div class="device" id="device">
+      <iframe id="frame" title="drogna, framed at a mobile viewport size"></iframe>
+    </div>
+
+    <p class="disclaimer">
+      synthetic throughout — holds no third-party entities. Every number in the framed
+      application is deliberately fake.
+    </p>
+
+  </body>
+</html>

@@ -16,6 +16,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
+import { driveTicks } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import {
   measurementSpanMetres,
@@ -40,7 +41,7 @@ interface AdvisoryRecord {
   offloadReports: OffloadTelemetry[];
 }
 
-function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): AdvisoryRecord {
+async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): Promise<AdvisoryRecord> {
   const shell = runtime.transport.connect(`shell-${Math.random()}`, 'shell');
   const record: AdvisoryRecord = { advisories: [], published: [], offloadReports: [] };
   shell.subscribe(config.advisory_source.topics.advisory, (message) => {
@@ -54,7 +55,7 @@ function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number): Advis
     expect(validator.validate('offload-telemetry', message.payload).refusals).toEqual([]);
     record.offloadReports.push(message.payload as OffloadTelemetry);
   });
-  for (let i = 0; i < ticks; i++) runtime.clock.tickOnce();
+  await driveTicks(runtime.clock, ticks);
   return record;
 }
 
@@ -103,7 +104,7 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(validator.validate('features-response#feature_collection', emptyPage).refusals).toEqual([]);
     expect(emptyPage.numberReturned).toBe(0);
 
-    const record = drive(runtime, config, 3700);
+    const record = await drive(runtime, config, 3700);
     // Snapshot what the source authored, before this test redelivers copies below.
     const authored = [...record.advisories];
 
@@ -195,10 +196,10 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     runtime.stop();
   });
 
-  it('stages a bundle per published run, the run-manifest sibling beside it and never inside it (E11)', () => {
+  it('stages a bundle per published run, the run-manifest sibling beside it and never inside it (E11)', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    const record = drive(runtime, config, 3700);
+    const record = await drive(runtime, config, 3700);
     expect(record.published.length).toBeGreaterThanOrEqual(1);
 
     const staged = runtime.offload.staged();
@@ -244,14 +245,14 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     runtime.stop();
   });
 
-  it('replays identically: one seed, the same advisories and the same staged bundles, twice', () => {
+  it('replays identically: one seed, the same advisories and the same staged bundles, twice', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);
-    const firstRecord = drive(first, config, 2000);
+    const firstRecord = await drive(first, config, 2000);
     const firstStaged = JSON.stringify(first.offload.staged());
     first.stop();
     const second = buildBackend(config, options, validator);
-    const secondRecord = drive(second, config, 2000);
+    const secondRecord = await drive(second, config, 2000);
     const secondStaged = JSON.stringify(second.offload.staged());
     second.stop();
     expect(JSON.stringify(secondRecord.advisories)).toBe(JSON.stringify(firstRecord.advisories));
@@ -267,13 +268,13 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
    * that the day the harness changes enough for a verdict to be possible, this test
    * fails and somebody has to look at it.
    */
-  it('scores its own successive releases, and names why the comparison is inconclusive (#57)', () => {
+  it('scores its own successive releases, and names why the comparison is inconclusive (#57)', async () => {
     // The scoring run the open question proposed: the same kernel with its per-cell
     // noise suppressed, which is a configured deviation and needs no second kernel.
     const config = lockstepConfig();
     config.model_runner.noise_std = { temperature: 0, salinity: 0 };
     const runtime = buildBackend(config, options, validator);
-    const record = drive(runtime, config, 3700);
+    const record = await drive(runtime, config, 3700);
     expect(record.published.length).toBeGreaterThanOrEqual(2);
 
     const staged = runtime.offload.staged();
@@ -323,7 +324,7 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     // and is called clear, which is a pass earned by noise rather than by
     // mitigation: the third reason this is not yet a gate.
     const noisy = buildBackend(lockstepConfig(), options, validator);
-    const noisyRecord = drive(noisy, lockstepConfig(), 3700);
+    const noisyRecord = await drive(noisy, lockstepConfig(), 3700);
     const noisyFirst = noisy.store.holding(noisyRecord.published[0].collections.forecast);
     const noisySecond = noisy.store.holding(noisyRecord.published[1].collections.forecast);
     if (noisyFirst && noisySecond) {

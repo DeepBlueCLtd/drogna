@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0039: a consumer may synthesise its own inputs; it may never synthesise drogna's — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0039-a-consumer-may-synthesise-its-own-inputs-it-may-never-synthesise-drognas">ADR-0039: a consumer may synthesise its own inputs; it may never synthesise drogna's</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 30 August 2026
+<strong>Feature:</strong> 115 (the downstream consumer tabs)
+<strong>Requirements:</strong> SRD-v2 FR-76 to FR-85
+<strong>Engages:</strong> Constitution VII (liveness, not configuration); Constitution V (no tracked
+entities); Constitution VIII (recommendations, not decisions); Constitution II (seeded
+randomness); ADR-0027, whose seam these tabs are clients of</p>
+<h2 id="context">Context</h2>
+<p>Feature 116 puts three tabs in the shell that are not part of drogna. They are notional
+downstream systems — a sampling planner, a comparative course chooser, a temporal triage
+aid — consuming drogna's forecast to reach a decision, and they exist to answer the &quot;so
+what&quot; question the harness has never answered on screen.</p>
+<p>Two of them need data drogna does not model. The feasibility tab reasons over tidal
+windows, moon illumination, a ferry timetable, satellite overpasses and crew watch cycles;
+drogna models none of these and is not going to. The courses tab reasons over hypothetical
+vessel classes that may be present in a region; drogna holds no such thing by
+constitutional prohibition. The author's requirements document permits synthesis
+explicitly and asks for it freely, on the grounds that a densely populated illustration is
+more convincing than a sparse and technically honest one.</p>
+<p>Constitution VII forbids fixture data in the plainest terms it has: <strong>no data path may
+assert the existence of something that is not running.</strong> Fixture data, canned traffic and
+a &quot;populate for the screenshot&quot; mode are each named and each forbidden. The whole
+evidential value of drogna rests on that.</p>
+<p>Read carelessly, feature 118 is a fixture-data feature with a coat of paint. That reading
+has to be answered before a single synthesised lane is drawn, because if it is right the
+feature must not be built, and if it is wrong the next reader must be able to find the
+argument rather than reconstruct it.</p>
+<h2 id="decision">Decision</h2>
+<p>A consumer view may synthesise inputs drogna does not model. It may never synthesise
+anything that reads as a claim about drogna.</p>
+<p>Four conditions, all of them checkable:</p>
+<ol>
+<li><strong>A synthesised quantity is an input to a consumer's own reasoning, never a report
+about a component.</strong> Constitution VII's subject is the harness's account of itself: a
+lit component, a counted message, a store's holdings. A downstream system's own
+assumption about tomorrow's tide is not an assertion that anything in drogna exists or
+is running, and no drogna display changes by a pixel because of it.</li>
+<li><strong>Nothing synthesised crosses back over the seam.</strong> The consumer tabs publish nothing —
+the shell's broker role has an empty publish list and that is unchanged — and no
+synthesised value is written into a store, a message, or an export. The synthesis is
+terminal.</li>
+<li><strong>Every synthesised source is labelled on screen as synthesised by that tab</strong>, beside
+the sources that genuinely crossed the seam, which name the collection or topic they
+came from. A reader can therefore see, without asking, which half of a feasibility
+answer rests on drogna and which half rests on the tab's own assumption.</li>
+<li><strong>Synthesis is seeded from the run manifest</strong> through a named per-tab stream, so it
+replays with everything else (Constitution II) and moves only as a function of
+simulation time. Stop the clock and the synthesised lanes stop with the real ones —
+which is the property that distinguishes a synthesised <em>input</em> from a generator running
+on its own account.</li>
+</ol>
+<p>The yellow chrome and the provenance strip are part of this decision rather than
+decoration. The boundary is only defensible if it is visible, and it has to survive a
+screenshot: the strip does not scroll away and the tab colour is declared per view in
+configuration, so a consumer view cannot be added without it.</p>
+<h2 id="consequences">Consequences</h2>
+<p><strong>What this buys.</strong> The three tabs can be dense and convincing without a single line of
+fixture data reaching a drogna display. The feasibility tab can carry ten lanes when
+drogna publishes two. The courses tab can put a cloud on the map without the harness ever
+holding a position it did not place — a Monte Carlo seeded across the whole domain from a
+likelihood infers no position at all, which is the distinction Constitution V already
+draws between an entity and a hypothesis about a class.</p>
+<p><strong>What it costs.</strong> There is now a category of thing in the repository that looks like data
+and is not evidence, and it lives inside the same page as the thing whose entire value is
+that it is evidence. The mitigation is the visibility above, and it is deliberately
+redundant: colour, strip, per-source label, and a code boundary — everything synthesised
+lives under <code>app/src/panels/consumers/</code>, imports no backend module, and publishes nothing.</p>
+<p><strong>What would make this decision wrong</strong>, stated so a later reader can check rather than
+re-argue:</p>
+<ul>
+<li>a synthesised quantity appearing on a harness tab, or in the manifest, or in an export;</li>
+<li>a consumer tab publishing anything, or its role acquiring a publish list;</li>
+<li>a synthesised source drawn without its label, so that the reader cannot tell which half
+of an answer is drogna's;</li>
+<li>a &quot;populate for the screenshot&quot; path — synthesis that runs when the clock is stopped, or
+that is not a function of simulation time and the seed;</li>
+<li>the yellow chrome or the provenance strip becoming dismissible, or absent at one width.</li>
+</ul>
+<p>Any of these makes the feature the thing Constitution VII forbids, and the remedy is to
+remove it rather than to widen this ADR.</p>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<ul>
+<li><strong>Build the consumers outside the repository</strong>, as a separate application consuming the
+published instance. Cleanest boundary available, and rejected: the demonstration value
+is in the <em>seam</em>, watched live — a new forecast is published in one tab and goes stale
+in another, in the same page, in front of the reader. A second application would have to
+poll a static instance, which is exactly the polling FR-78 exists to avoid.</li>
+<li><strong>Restrict the consumers to what drogna already models.</strong> Honest, and it produces the
+sparse illustration the author's §1.1 specifically rejects. The feasibility tab would
+carry two lanes and demonstrate nothing about competing commitments.</li>
+<li><strong>Publish the synthesised sources over the seam</strong> so the consumers read everything the
+same way. Tempting, and it is the wrong direction across exactly the line this ADR
+draws: it would put a synthetic ferry timetable inside the harness, where Constitution
+VII does apply, to save the consumers a distinction they are better off making
+explicitly.</li>
+</ul>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

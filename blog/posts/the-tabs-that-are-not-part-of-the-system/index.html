@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A simulator that samples an ocean and forecasts it can show every part of itself working and still never answer &quot;so what&quot;. Three yellow tabs answer it — and the thing that proves they are genuinely consuming the forecast is that they refuse to recalculate when a new one arrives.">
+<title>The tabs that are not part of the system — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="the-tabs-that-are-not-part-of-the-system">The tabs that are not part of the system</h1>
+<h2 id="the-background">The background</h2>
+<p>A simulator can show every part of itself working and never answer <em>what would I do
+differently if this were fresher?</em> A system that measures the world and also decides is
+two systems; merging them hides the boundary an evaluator most wants to question.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>Three notional systems consuming the forecast to reach a decision: unmistakably not part
+of the simulator, and <em>checkably</em> consuming it rather than illustrating it.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p><strong>Build them elsewhere.</strong> The cleanest boundary, rejected on the demonstration: the
+moment worth showing is a forecast published in one tab and a recommendation going stale
+in another.</p>
+<p><strong>Keep them inside and mark them.</strong> What was built — yellow, under a strip that cannot be
+dismissed, declared in configuration so a fourth cannot arrive without it.
+<a href="../../../decisions/adr/0039-consumers-synthesise-their-own-inputs/">ADR-0039</a> settles the
+conflict with drogna's rule against asserting what is not running: a consumer may
+synthesise its own inputs, never drogna's, and says so.</p>
+<p><strong>What makes it checkable.</strong> A new forecast triggers no recalculation. The tab grows a
+halo and waits; on the click, the previous answer stays as a ghost. If the recommendation
+barely moves, that forecast was not decision-relevant. A tab faking its inputs would have
+nothing to go stale.</p>
+<h2 id="the-demo">The demo</h2>
+<p><a href="../../../instances/main/#/view/sampling">Sampling</a> — a hex grid coloured by observation
+coverage, routed by value per mile. The grid covers what is in view, making fine
+resolutions affordable; 3 hours against 24 changes the route's shape, not its length.</p>
+<p><a href="../../../instances/main/#/view/courses">Courses</a> — three classes of vessel that <em>may</em> be
+present, each moving by its own model rather than a multiplier. Drag the weighting; the
+ranking reorders.</p>
+<p><a href="../../../instances/main/#/view/feasibility">Feasibility</a> — no map, deliberately. Ten lanes
+wearing their provenance, and the maximal feasible sets: <em>A and B, or B and C, never A and
+C</em>.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

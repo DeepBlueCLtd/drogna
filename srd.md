@@ -579,6 +579,53 @@ left the slot named but unclaimed. It is spent. The specification is
   control shall be parameterised by the tour it starts and shall open that tour's view
   before running, so a tour for another view is a tour and not a second control.
 
+### 5.14 The operator's controls (feature 114)
+
+Feature 113 drew the machinery; this beat makes it drivable. The Operator tab acquires
+a demanded platform state a reader can steer, events a reader can prompt, and the two
+numbers the assimilation loop turns on. The specification is
+`specs/114-operator-controls/`.
+
+The rule the whole beat is built on is the one FR-36 already carried and this extends:
+**a control plane dispatches and reports what it dispatched; it applies nothing, it
+lights nothing, and it never speaks for a component.** What a command did is the target
+component's own answer, and it arrives where everything else that component says about
+itself arrives.
+
+- **FR-63** The operator surface shall **state what its plane offers** — how far one
+  step command may advance the clock, which settings may be tuned and between which
+  bounds, and which events may be prompted — as a document served over the seam and
+  derived from its own configuration. The shell shall draw its controls from that
+  statement alone: it holds no list of controls and no bound of its own, so a control a
+  reader can see is one the surface would accept, and a bound exists once (Constitution
+  IV). No value in force appears in the statement; a control plane that also reported a
+  setting would be a second source for one fact.
+- **FR-64** Declared settings shall be **tunable while a run is going**. The surface
+  enforces the declared bound and refuses outside it by naming the bound, the count or
+  the setting; the target component applies what it accepts and **reports the value in
+  force in its own heartbeat**, which is the only place a display may read it from. A
+  tuning is ephemeral on the rule commands already carry: a restarted component is
+  rebuilt from its configuration document and returns to the configured value. Every
+  figure a component publishes against a tunable setting — the threshold on a residual
+  sample, the interval a decline names — shall be the value in force, so a component
+  cannot disagree with itself about what it is doing.
+- **FR-65** A reader may **prompt a component to act now**. The prompt shall reach the
+  component that decides rather than going around it: a prompted forecast run is weighed
+  under exactly the policy a divergence is weighed under, may be declined by the minimum
+  interval or by a run already outstanding, and the decision — accepted or declined — is
+  published like any other. A run accepted from a prompt is labelled as such in its
+  request, so a run a reader asked for is never read back as one the world asked for. A
+  prompted advisory is the same deterministic next advisory in its sequence: a prompt
+  moves when a component acts and never what it does.
+- **FR-66** Controls shall live **at the node they act on**, in that component's own
+  drawer beside the instrument that shows the consequence, and a node that takes a
+  control shall say so on its face — a control nobody can find is a control that does
+  not exist. The platform's demand control shall be bounded by the limits the platform
+  itself reported, falling back to plain entry and saying why where nothing has been
+  reported; its presets shall demand only what they name, since the platform leaves a
+  standing demand alone for anything a demand does not carry. The list view of FR-59
+  carries every control the flow chart carries, by opening the same drawer.
+
 ---
 
 ## 6. Interfaces and shared types

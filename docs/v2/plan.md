@@ -195,6 +195,19 @@ component wearing an instrument designed for what it does. **It was specified as
 renumbered to 113** when the mobile-support work above took that number on `main` while
 this was in flight; the tree is the authority, so it moved rather than argued.
 
+**Feature 114, the operator's controls** (`specs/114-operator-controls/`, SRD-v2 §5.14),
+follows 113 directly and answers the reading of it: the tab drew the machinery and let a
+reader stop it, and little else. It makes the tab drivable — a demanded platform state
+with presets and reported limits, the monitor's threshold and persistence and the
+scheduler's two intervals tunable while a run is going, and prompts that ask a component
+to act now. The prompts go to the component that decides rather than around it, so a
+prompted forecast run can be — and routinely is — declined by the scheduler's own policy,
+and the decline is published like any other decision. What the plane offers is declared
+once in the operator's configuration and served as a statement the shell draws from, so
+the panel holds no bound of its own. It also records something worth keeping: the demand
+control the request asked for **already existed**, unmarked, behind a node click. A
+control nobody can find is a control that does not exist.
+
 ## 6. Emergent requirements from the open pull requests
 
 Six PRs are open besides this one (#43–#47, #49). Their markdown — spike findings, ADRs,

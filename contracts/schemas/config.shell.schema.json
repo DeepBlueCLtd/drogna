@@ -174,7 +174,10 @@
         "sensorthings",
         "edr",
         "features",
-        "query_subsets"
+        "query_subsets",
+        "operator_controls",
+        "operator_tuning",
+        "operator_event"
       ],
       "additionalProperties": false,
       "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -216,6 +219,18 @@
         "query_subsets": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "Where the subset statement is served; the composer offers only what it states."
+        },
+        "operator_controls": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Where the operator surface states what its plane offers (operator-controls.schema.json): the step bound, the tunables with their bounds, and the promptable events. The console is drawn from that statement, so the shell offers no control the surface would refuse and holds no bound of its own."
+        },
+        "operator_tuning": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Where the shell POSTs a tuning change. What comes back is what was dispatched; the value in force arrives in the target component's own heartbeat, never from this response."
+        },
+        "operator_event": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "The prefix a prompted event is POSTed under: <prefix>/<event-id>. The component prompted decides, and may decline."
         }
       }
     },

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.monitor.schema.json",
   "title": "drogna monitor configuration (V2-C11)",
-  "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried.",
+  "description": "The monitor (SRD-v2 FR-30): subscribes to the observation namespace, pairs co-located temperature and salinity samples, derives sound speed by the one implementation, scores the residual against the current forecast instance, and raises a divergence event only on sustained persistence — never a single spike. Evidence gathered against a superseded forecast is discarded, not carried. The threshold and the persistence count are tunable from the operator plane while the run is going (operator-command.schema.json): the values here are what the monitor starts with and returns to when it is restarted, and the values in force are reported in its own heartbeat figures and on every residual sample.",
   "type": "object",
   "required": [
     "id",
@@ -24,7 +24,8 @@
         "clock",
         "observations",
         "divergence",
-        "telemetry"
+        "telemetry",
+        "command"
       ],
       "additionalProperties": false,
       "properties": {
@@ -39,6 +40,10 @@
         },
         "telemetry": {
           "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "command": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Operator commands. The monitor acts on a tuning addressed to it and ignores the rest."
         }
       }
     },

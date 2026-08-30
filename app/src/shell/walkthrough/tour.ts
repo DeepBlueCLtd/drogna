@@ -13,6 +13,14 @@
  * the node that shows those things and says what the component is for. The reader's
  * eye does the rest, from figures the panel drew from received traffic.
  *
+ * **What a reader can do, said where they can do it.** From feature 114 the Operator
+ * tab is a control plane as well as a picture, and the controls live in each node's
+ * own drawer. A tour that walked past them would be a tour of a system the reader
+ * cannot touch, so the steps for the components that take controls say what is there
+ * and what the component will do about it — including declining. They say it in the
+ * conditional, because that is the truth: a prompt is considered, a tuning is
+ * published, and neither is a promise about what happens next.
+ *
  * **The steps cannot drift.** They are keyed by component id and checked against the
  * shell's declared component list: `missingSteps` names any component with no step,
  * and any step naming a component that is not declared. A walkthrough that quietly
@@ -45,7 +53,7 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   clock: {
     title: 'The simulation clock',
     what: 'Every other component takes its time from here, and none of them reads the host clock. That is what makes a run replayable: the same seed and the same configuration produce the same run, tick for tick.',
-    panel: 'The strip at the top of the shell shows the simulation instant and the rate. The rate is the one the clock acknowledged, never the one that was asked for, and the step button below advances exactly one tick.',
+    panel: 'The strip at the top of the shell shows the simulation instant and the rate. The rate is the one the clock acknowledged, never the one that was asked for. Above the chart are two step buttons: one tick, and a burst of as many as the operator surface says it will accept in one command — every tick in a burst is published, heard and acted on exactly as a single step is.',
   },
   broker: {
     title: 'The broker',
@@ -65,7 +73,7 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   platform: {
     title: 'The platform',
     what: 'The vehicle the instruments ride on. It holds a demanded course, speed and depth beside its current ones, and works from one toward the other under declared limits — a turn rate, an acceleration, a dive rate.',
-    panel: 'Open this node and the dial shows demanded as a hollow mark and current as the solid one, with the limit that is binding named beneath. You can issue a demand here; it is published, not applied, and what the platform does with it comes back on its own state topic.',
+    panel: 'Open this node and the dial shows demanded as a hollow mark and current as the solid one, with the limit that is binding named beneath. Under it are the controls: sliders that run between zero and the limits the platform itself reported, and presets — reverse course, all stop, full ahead, surface — each demanding only what it names, so anything a demand leaves out stays standing. What you send is published, not applied; watch the hollow mark move, then the solid one chase it.',
   },
   sensors: {
     title: 'The sensors',
@@ -100,12 +108,12 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   monitor: {
     title: 'The monitor',
     what: 'It pairs co-located temperature and salinity samples, derives sound speed, and scores the residual against the current forecast. A single spike never raises anything: a divergence needs a sustained streak, and evidence gathered against a superseded forecast is discarded.',
-    panel: 'The drift face: the residual with the breach threshold drawn across it, and the persistence streak beneath. That streak is the thing that will trigger a new forecast, drawn as what it is.',
+    panel: 'The drift face: the residual with the breach threshold drawn across it, and the persistence streak beneath. That streak is the thing that will trigger a new forecast, drawn as what it is. Both numbers it scores against are tunable here — lower the threshold and the streak beside it starts filling against the new one. What the slider holds is what you are asking for; the value marked in force is what the monitor reports it is using, and a restart returns it to what was configured.',
   },
   scheduler: {
     title: 'The scheduler',
     what: 'Whether a run is warranted. It declines a divergence inside the minimum interval, refuses a duplicate while one is outstanding, and asks for a run on schedule alone when the cadence floor comes due — so the loop cannot be becalmed.',
-    panel: 'Every decision, not only the ones that led to a run, and the two clocks that produce them.',
+    panel: 'Every decision, not only the ones that led to a run, and the two clocks that produce them. You can ask for a run here, and you can move both intervals. The ask goes to the scheduler rather than around it, so it is weighed under the policy a divergence is weighed under: inside the minimum interval it is declined, and the decline appears in this drawer in the scheduler’s own words. That is a complete answer, not a failure.',
   },
   'model-runner': {
     title: 'The model runner',
@@ -125,12 +133,12 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
   operator: {
     title: 'The operator surface',
     what: 'The control plane: it aggregates what components report about themselves and dispatches commands. A component never heard from is reported unheard, not absent, and a refused command names the rule rather than failing quietly.',
-    panel: 'This is the surface you are looking through. Stopping it is refused, and the refusal says why.',
+    panel: 'This is the surface you are looking through, and the one that dispatched everything you have pressed: its figures count what it published and what it refused by rule. It also states what the plane offers — the step bound, the tunables and their bounds, the promptable events — and this panel draws exactly that and nothing else, so a control you can see is one the surface would accept. Stopping it is refused, and the refusal says why.',
   },
   'advisory-source': {
     title: 'The shore advisory source',
     what: 'Deterministically authored advisories — the shore’s view arriving in the harness, valid over a stated window.',
-    panel: 'What it last wrote, in its own words, and when the next one is due.',
+    panel: 'What it last wrote, in its own words, when the next one is due, and how many were authored because somebody asked. You can ask here: prompted or on cadence it is the same deterministic next advisory in the sequence, so the prompt moves when it is written and never what it says.',
   },
   'advisory-store': {
     title: 'The advisory store',
@@ -154,7 +162,7 @@ export function componentTour(shell: ConfigShell): Tour {
       element: '[data-testid="flow-chart"]',
       title: 'The harness, end to end',
       what: 'drogna is a synthetic ocean, sensors that sample it, a forecast loop that assimilates what they report, and a query layer that serves the result. Everything in it is deliberately fake and says so.',
-      panel: 'This is the flow chart: every component drawn once, with the arrows derived from the broker wiring rather than drawn by hand. A node is lit only because a heartbeat from it arrived. Use Next to walk the components one at a time.',
+      panel: 'This is the flow chart: every component drawn once, with the arrows derived from the broker wiring rather than drawn by hand. A node is lit only because a heartbeat from it arrived, and a node marked with a ▸ takes controls — open it and you can steer the platform, tune what the loop scores against, or ask a component to act now. Use Next to walk the components one at a time.',
     },
     ...shell.components.map((component) => {
       const copy = COMPONENT_STEPS[component.id];
@@ -169,7 +177,7 @@ export function componentTour(shell: ConfigShell): Tour {
     {
       title: 'That is the tour',
       what: 'The loop turns because the world diverged: the monitor sees drift, the scheduler decides a run is warranted, the runner produces one, and the store announces it — which is what the monitor then scores against.',
-      panel: 'Stop a component from its node and watch what it costs the ones downstream. Nothing here is a mock: a stopped component goes dark because its heartbeats cease, never because a response said so.',
+      panel: 'Now drive it. Stop a component from its node and watch what it costs the ones downstream; steer the platform into a different part of the ocean and watch the residual answer; drop the drift threshold until the streak fills, or ask the scheduler for a run and read what it decides. Nothing here is a mock: a stopped component goes dark because its heartbeats cease, a tuning changes what the monitor genuinely scores against, and a prompt can be declined — never because a response said so.',
     },
   ];
   return { id: 'components', view: 'operator', title: 'The system, component by component', steps };

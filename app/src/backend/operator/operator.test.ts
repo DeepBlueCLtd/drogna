@@ -8,8 +8,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type {
+  Advisory,
   ConfigRun,
+  Heartbeat,
   OperatorComponents,
+  OperatorControls,
+  RunRequest,
+  TelemetrySchedulerDecision,
   TelemetryForecastSkill,
   TelemetryReport,
   TelemetryResidualSampleReport,
@@ -297,6 +302,304 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       expect(planner?.stoppable).toBe(true);
       const clockRow = report.components.find((component) => component.id === 'clock');
       expect(clockRow?.stoppable).toBe(false);
+      runtime.stop();
+    });
+  });
+
+  /**
+   * Feature 114: the plane a reader can drive. Every assertion below is about what a
+   * COMPONENT did with a command, not about what the surface said it dispatched — the
+   * surface's own answer is never evidence that anything happened (Constitution VII),
+   * and a test that read it as evidence would pass against a surface wired to nothing.
+   */
+  describe('the operator plane a reader drives (feature 114)', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    /** The last heartbeat a component genuinely published: where a value in force is read. */
+    function watchHeartbeats(runtime: BackendRuntime, config: ConfigRun): Map<string, Heartbeat> {
+      const heard = new Map<string, Heartbeat>();
+      const shell = runtime.transport.connect(`hb-${Math.random()}`, config.shell.role);
+      shell.subscribe(config.shell.topics.heartbeat, (message) => {
+        const heartbeat = message.payload as Heartbeat;
+        heard.set(heartbeat.component, heartbeat);
+      });
+      return heard;
+    }
+
+    function figureOf(heard: Map<string, Heartbeat>, component: string, key: string): number | undefined {
+      return heard.get(component)?.figures?.find((figure) => figure.key === key)?.value;
+    }
+
+    async function post(runtime: BackendRuntime, path: string, body?: unknown) {
+      const response = await runtime.httpBackend.handle({
+        method: 'POST',
+        path,
+        body: body === undefined ? '' : JSON.stringify(body),
+      });
+      return { status: response.status, body: JSON.parse(response.body) as Record<string, unknown> };
+    }
+
+    it('states what it offers, and offers only what its configuration declares', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const response = await get(runtime, config.operator.http.controls_path);
+      expect(response.status).toBe(200);
+      expect(validator.validate('operator-controls', response.body).refusals).toEqual([]);
+      const controls = response.body as OperatorControls;
+      expect(controls.step.maximum_ticks).toBe(config.operator.step.maximum_ticks);
+      expect(controls.demand.target).toBe(config.operator.demand.target);
+      expect(controls.tunables).toEqual(config.operator.tunables);
+      expect(controls.events).toEqual(config.operator.events);
+      // Nothing in the statement names a component the picture does not draw: a
+      // control on a node that does not exist is a control nobody can reach.
+      const drawn = new Set(config.shell.components.map((component) => component.id));
+      for (const target of [
+        controls.demand.target,
+        ...controls.tunables.map((tunable) => tunable.target),
+        ...controls.events.map((event) => event.target),
+      ]) {
+        expect(drawn.has(target)).toBe(true);
+      }
+      // And every event offered is one some component declares it answers to. Two
+      // sides naming the same event, as two components name the same topic.
+      const answered = new Set([config.scheduler.prompt_event, config.advisory_source.prompt_event]);
+      for (const event of controls.events) expect(answered.has(event.id)).toBe(true);
+      runtime.stop();
+    });
+
+    it('a tuning changes what the monitor genuinely scores against, and it says so', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'monitor', 'threshold')).toBe(config.monitor.threshold_m_per_s);
+
+      const tuned = 0.4;
+      const answer = await post(runtime, config.operator.http.tuning_path, {
+        target: 'monitor',
+        setting: 'threshold_m_per_s',
+        value: tuned,
+      });
+      expect(answer.status).toBe(200);
+      // The surface dispatched; the monitor decides. What is asserted is the
+      // monitor's own next heartbeat.
+      expect(answer.body.applied).toBe(false);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'monitor', 'threshold')).toBe(tuned);
+      expect(runtime.monitor.quietReason()).toMatch(/tuned from the operator plane/);
+
+      // And the number it scores against moved with it: the breach block on the
+      // monitor's own residual reports carries the value in force, so a display
+      // drawing the threshold draws the one the streak is filling against.
+      const shell = runtime.transport.connect('residual-watch', config.shell.role);
+      let breachThreshold: number | undefined;
+      shell.subscribe(config.telemetry.topics.telemetry, (message) => {
+        const payload = message.payload as { kind?: string; breach?: { threshold_m_per_s: number } };
+        if (payload.kind === 'residual-sample') breachThreshold ??= payload.breach?.threshold_m_per_s;
+      });
+      for (let i = 0; i < 8000 && breachThreshold === undefined; i++) runtime.clock.tickOnce();
+      expect(breachThreshold).toBe(tuned);
+      runtime.stop();
+    });
+
+    it('a tuning does not survive a restart, which is what the panel says of it', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'monitor',
+        setting: 'threshold_m_per_s',
+        value: 3.5,
+      });
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'monitor', 'threshold')).toBe(3.5);
+
+      const restart = await get(runtime, `${config.operator.http.command_prefix}/monitor/restart`, 'POST');
+      expect(restart.status).toBe(200);
+      vi.advanceTimersByTime(2500);
+      // Rebuilt from the configuration document by the same factory that built the
+      // first one, and reporting what that document says.
+      expect(figureOf(heard, 'monitor', 'threshold')).toBe(config.monitor.threshold_m_per_s);
+      runtime.stop();
+    });
+
+    it('refuses a tuning by naming the bound, the count or the setting — and changes nothing', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      vi.advanceTimersByTime(2500);
+
+      const beyond = await post(runtime, config.operator.http.tuning_path, {
+        target: 'monitor',
+        setting: 'threshold_m_per_s',
+        value: 99,
+      });
+      expect(beyond.status).toBe(400);
+      expect(beyond.body.refused).toMatch(/outside the declared bound for drift threshold \(0.2 to 6\)/);
+
+      const fractional = await post(runtime, config.operator.http.tuning_path, {
+        target: 'monitor',
+        setting: 'persistence_count',
+        value: 2.5,
+      });
+      expect(fractional.status).toBe(400);
+      expect(fractional.body.refused).toMatch(/counts samples/);
+
+      const unknown = await post(runtime, config.operator.http.tuning_path, {
+        target: 'monitor',
+        setting: 'mystery',
+        value: 1,
+      });
+      expect(unknown.status).toBe(404);
+      expect(unknown.body.refused).toMatch(/nothing tunable named 'mystery' on 'monitor'/);
+      expect(unknown.body.refused).toMatch(/monitor\/threshold_m_per_s/);
+
+      vi.advanceTimersByTime(2500);
+      // A refused command is a command that did not happen: the monitor is still
+      // reporting the values it was built with.
+      expect(figureOf(heard, 'monitor', 'threshold')).toBe(config.monitor.threshold_m_per_s);
+      expect(figureOf(heard, 'monitor', 'persistence')).toBe(config.monitor.persistence_count);
+      runtime.stop();
+    });
+
+    it('a prompted run is the scheduler’s decision, and its decline is published like any other', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('prompt-watch', config.shell.role);
+      const requests: RunRequest[] = [];
+      const decisions: TelemetrySchedulerDecision[] = [];
+      shell.subscribe(config.scheduler.topics.run_request, (message) => {
+        requests.push(message.payload as RunRequest);
+      });
+      shell.subscribe(config.telemetry.topics.telemetry, (message) => {
+        const payload = message.payload as { kind?: string };
+        if (payload.kind === 'scheduler-decision') decisions.push(payload as TelemetrySchedulerDecision);
+      });
+
+      // The runner is stopped first, so the run this prompt starts stays outstanding
+      // and the second prompt meets the rule about duplicates rather than the rule
+      // about intervals. In this harness a run completes within the tick it is
+      // requested in, so without this the two declines could not be told apart.
+      await get(runtime, `${config.operator.http.command_prefix}/model-runner/stop`, 'POST');
+      const prompt = `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`;
+      const first = await post(runtime, prompt);
+      expect(first.status).toBe(200);
+      // Nothing about the loop has been claimed by the surface: it published a prompt.
+      expect(first.body.applied).toBe(false);
+      expect(requests.length).toBe(1);
+      expect(requests[0].cause).toBe('operator');
+      expect(requests[0].divergence).toBeNull();
+      expect(validator.validate('run-request', requests[0]).refusals).toEqual([]);
+      expect(decisions[0].decision).toBe('accepted');
+      // A prompt has no divergence, and the record says null rather than naming one.
+      expect(decisions[0].divergence_id).toBeNull();
+      expect(validator.validate('telemetry', decisions[0]).refusals).toEqual([]);
+
+      // Asked again while that run is outstanding, the scheduler declines — and the
+      // decline is a published decision, not a silent nothing.
+      const second = await post(runtime, prompt);
+      expect(second.status).toBe(200);
+      expect(requests.length).toBe(1);
+      expect(decisions[1].decision).toBe('duplicate-outstanding');
+      expect(decisions[1].detail).toMatch(/operator prompt/);
+      expect(validator.validate('telemetry', decisions[1]).refusals).toEqual([]);
+      runtime.stop();
+    });
+
+    it('declines a prompt inside the minimum interval, and accepts once it is tuned away', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('interval-watch', config.shell.role);
+      const requests: RunRequest[] = [];
+      const decisions: TelemetrySchedulerDecision[] = [];
+      shell.subscribe(config.scheduler.topics.run_request, (message) =>
+        requests.push(message.payload as RunRequest),
+      );
+      shell.subscribe(config.telemetry.topics.telemetry, (message) => {
+        const payload = message.payload as { kind?: string };
+        if (payload.kind === 'scheduler-decision') decisions.push(payload as TelemetrySchedulerDecision);
+      });
+      const prompt = `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`;
+      await post(runtime, prompt);
+      // Let the requested run be published, so what declines the next prompt is the
+      // minimum interval rather than an outstanding run.
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      await post(runtime, prompt);
+      expect(requests.length).toBe(1);
+      expect(decisions.at(-1)?.decision).toBe('minimum-interval');
+
+      // Now shorten the interval below what has already elapsed, and ask again. The
+      // rule did not change; the number it is applied to did, and the scheduler is
+      // the thing that applied it.
+      await post(runtime, config.operator.http.tuning_path, {
+        target: 'scheduler',
+        setting: 'min_interval_ticks',
+        value: 30,
+      });
+      await post(runtime, prompt);
+      expect(requests.length).toBe(2);
+      expect(requests[1].cause).toBe('operator');
+      expect(decisions.at(-1)?.decision).toBe('accepted');
+      runtime.stop();
+    });
+
+    it('a prompted advisory is the next one in the sequence, authored now', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const shell = runtime.transport.connect('advisory-watch', config.shell.role);
+      const advisories: Advisory[] = [];
+      shell.subscribe(config.shell.topics.advisories, (message) =>
+        advisories.push(message.payload as Advisory),
+      );
+      // A handful of ticks, far short of the cadence: nothing is due.
+      for (let i = 0; i < 5; i++) runtime.clock.tickOnce();
+      expect(advisories.length).toBe(0);
+
+      const answer = await post(
+        runtime,
+        `${config.operator.http.event_prefix}/${config.advisory_source.prompt_event}`,
+      );
+      expect(answer.status).toBe(200);
+      expect(advisories.length).toBe(1);
+      expect(advisories[0].sequence).toBe(0);
+      expect(validator.validate('advisory', advisories[0]).refusals).toEqual([]);
+      // The store took it through its own seam, as it does an advisory on cadence.
+      expect(runtime.advisoryStore.all().length).toBe(1);
+      runtime.stop();
+    });
+
+    it('refuses an event nobody offers, naming what is offered', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const answer = await post(runtime, `${config.operator.http.event_prefix}/make-it-so`);
+      expect(answer.status).toBe(404);
+      expect(answer.body.refused).toMatch(/'make-it-so' is not an event this plane offers/);
+      expect(answer.body.refused).toMatch(/advisory-now, run-now/);
+      runtime.stop();
+    });
+
+    it('steps a burst of ticks, and refuses one beyond the declared bound', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const before = runtime.clock.currentTick();
+      const burst = await post(runtime, config.operator.http.step_path, { ticks: 12 });
+      expect(burst.status).toBe(200);
+      // Twelve genuine ticks, not one tick and a claim of twelve.
+      expect(runtime.clock.currentTick()).toBe(before + 12);
+
+      const beyond = await post(runtime, config.operator.http.step_path, {
+        ticks: config.operator.step.maximum_ticks + 1,
+      });
+      expect(beyond.status).toBe(400);
+      expect(beyond.body.refused).toMatch(
+        new RegExp(`beyond the declared bound of ${config.operator.step.maximum_ticks}`),
+      );
+      expect(runtime.clock.currentTick()).toBe(before + 12);
+
+      // And the endpoint still means one tick with no body at all.
+      await post(runtime, config.operator.http.step_path);
+      expect(runtime.clock.currentTick()).toBe(before + 13);
       runtime.stop();
     });
   });

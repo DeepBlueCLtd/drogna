@@ -580,6 +580,8 @@ function OperatorFace(c: FaceContext) {
         <Reported figure={dispatched} />
         <Reported figure={figure(c, 'refused')} />
         <Reported figure={figure(c, 'demands')} />
+        <Reported figure={figure(c, 'tunings')} />
+        <Reported figure={figure(c, 'events')} />
       </div>
       <p className="face-note">this is the surface you are looking through</p>
     </div>
@@ -594,6 +596,11 @@ function AdvisorySourceFace(c: FaceContext) {
       <div className="face-row">
         <Reported figure={authored} />
         <Reported figure={figure(c, 'cadence_ticks')} />
+        {/* How many were authored because a reader asked. Found missing by driving
+            the built page: the source was counting prompts and its face was not
+            drawing them, so pressing the button changed nothing a reader could see
+            until the next advisory landed on the map. */}
+        <Reported figure={figure(c, 'prompted')} />
       </div>
       <p className="face-note">deterministically authored from the seeded stream</p>
     </div>

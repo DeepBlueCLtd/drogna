@@ -224,7 +224,7 @@
     },
     "scheduler_decision": {
       "title": "Scheduler decision record",
-      "description": "The accepted-or-declined outcome the scheduler (C-12) records for every divergence, so that a declined divergence is visible rather than merely absent.",
+      "description": "The accepted-or-declined outcome the scheduler (C-12) records for every divergence, so that a declined divergence is visible rather than merely absent. An operator prompt is recorded the same way and decided under the same policy, which is why divergence_id is nullable: a prompt has no divergence, and naming one would be an invention.",
       "type": "object",
       "required": [
         "component",
@@ -244,7 +244,7 @@
         "sim_time": { "$ref": "#/$defs/sim_instant" },
         "tick": { "$ref": "#/$defs/tick_index" },
         "kind": { "const": "scheduler-decision" },
-        "divergence_id": { "type": "string", "minLength": 1, "description": "The divergence this decision was about." },
+        "divergence_id": { "type": ["string", "null"], "description": "The divergence this decision was about, or null where the scheduler was deciding on an operator prompt rather than on a divergence." },
         "decision": {
           "type": "string",
           "enum": ["accepted", "minimum-interval", "duplicate-outstanding"],

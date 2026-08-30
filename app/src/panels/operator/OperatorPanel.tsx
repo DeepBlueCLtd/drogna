@@ -18,6 +18,17 @@
  * same controls and the same refusals. An SVG graph is not a keyboard surface and not
  * a screen-reader surface, and neither view is the other's fallback.
  *
+ * The tab is a control plane as well as a picture (feature 114). Everything a reader
+ * can do to the running system is done at the node it acts on: the platform's demand
+ * in the platform's drawer, the monitor's threshold beside the streak that fills
+ * against it, the prompt for a forecast run beside the scheduler's own record of what
+ * it decided about the last one. What is offered is not decided here — it is the
+ * operator surface's controls statement, fetched like everything else, so the panel
+ * cannot offer a control the surface would refuse or draw a bound the surface does not
+ * hold (Constitution IV). And every control says what it did rather than what
+ * happened: a tuning is published, a prompt may be declined, and the value in force is
+ * whatever the component reports about itself.
+ *
  * The telemetry the tab has always carried is not lost in the redraw: the skill
  * sentence, the residual statistics for the scenario and for each sampled region of
  * the configured grid, throughput per simulation second, and end-to-end latency in
@@ -33,10 +44,12 @@ import type {
   Heartbeat,
   Observation,
   OperatorComponents,
+  OperatorControls,
   PlatformState,
   Telemetry,
   TelemetryReport,
   TelemetryResidualSampleReport,
+  TelemetrySchedulerDecision,
 } from '../../generated/types.js';
 import { topology } from '../../generated/topology.js';
 import { displayInstant } from '../../shell/display.js';
@@ -45,6 +58,8 @@ import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { DemandControl } from './DemandControl.js';
+import { TuningControl } from './TuningControl.js';
+import { EventControl } from './EventControl.js';
 import './operator.css';
 
 interface Heard {
@@ -75,6 +90,8 @@ export function OperatorPanel({ params }: PanelProps) {
   const flow = useMemo(() => buildFlow(config, topology), [config]);
   const [components, setComponents] = useState<OperatorComponents | undefined>();
   const [report, setReport] = useState<TelemetryReport | undefined>();
+  const [controls, setControls] = useState<OperatorControls | undefined>();
+  const [decision, setDecision] = useState<TelemetrySchedulerDecision | undefined>();
   const [platformState, setPlatformState] = useState<PlatformState | undefined>();
   const [breach, setBreach] = useState<TelemetryResidualSampleReport['breach']>();
   const [refusal, setRefusal] = useState<string | undefined>();
@@ -113,10 +130,17 @@ export function OperatorPanel({ params }: PanelProps) {
   const narrow = useIsNarrow(rootRef);
 
   const refresh = useCallback(async () => {
-    const [componentsResponse, reportResponse] = await Promise.all([
+    const [componentsResponse, reportResponse, controlsResponse] = await Promise.all([
       fetch(config.endpoints.components),
       fetch(config.endpoints.telemetry),
+      // What the plane offers, stated by the plane: the panel holds no list of
+      // controls and no bound of its own (Constitution IV).
+      fetch(config.endpoints.operator_controls),
     ]);
+    if (controlsResponse.ok) {
+      const body = (await controlsResponse.json()) as unknown;
+      if (validator.validate('operator-controls', body).ok) setControls(body as OperatorControls);
+    }
     if (componentsResponse.ok) {
       const body = (await componentsResponse.json()) as unknown;
       if (validator.validate('operator-components', body).ok) setComponents(body as OperatorComponents);
@@ -125,7 +149,12 @@ export function OperatorPanel({ params }: PanelProps) {
       const body = (await reportResponse.json()) as unknown;
       if (validator.validate('telemetry-report', body).ok) setReport(body as TelemetryReport);
     }
-  }, [config.endpoints.components, config.endpoints.telemetry, validator]);
+  }, [
+    config.endpoints.components,
+    config.endpoints.operator_controls,
+    config.endpoints.telemetry,
+    validator,
+  ]);
 
   useEffect(() => {
     void refresh();
@@ -172,6 +201,10 @@ export function OperatorPanel({ params }: PanelProps) {
       }),
       client.subscribe(config.topics.telemetry, (message) => {
         const payload = message.payload as Telemetry;
+        // The scheduler's own record of what it decided, kept for its drawer: a
+        // prompted run and a declined one are the same kind of fact, and this is
+        // where the consequence of pressing the button becomes visible.
+        if ('kind' in payload && payload.kind === 'scheduler-decision') setDecision(payload);
         if (!('kind' in payload) || payload.kind !== 'residual-sample') return;
         // The monitor's own numbers, drawn as it reported them: the threshold it scores
         // against and how far its streak has got. Recomputing either here would be a
@@ -218,10 +251,13 @@ export function OperatorPanel({ params }: PanelProps) {
     return () => clearInterval(sweep);
   }, []);
 
-  const command = async (path: string, method = 'POST') => {
-    const response = await fetch(path, { method });
-    const body = (await response.json()) as { refused?: string };
-    setRefusal(response.ok ? undefined : (body.refused ?? `refused with status ${response.status}`));
+  const command = async (path: string, method = 'POST', body?: unknown) => {
+    const response = await fetch(path, {
+      method,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const answer = (await response.json()) as { refused?: string };
+    setRefusal(response.ok ? undefined : (answer.refused ?? `refused with status ${response.status}`));
     void refresh();
   };
 
@@ -276,9 +312,26 @@ export function OperatorPanel({ params }: PanelProps) {
         <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
           step the clock one tick
         </button>
+        {/* A burst is the same command with a number on it, and the number the surface
+            will accept comes from the surface. Offered only once it has said so: a
+            button drawn against a bound nobody stated is a button that can be refused
+            for reasons the reader was never told. */}
+        {controls ? (
+          <button
+            onClick={() =>
+              void command(config.endpoints.clock_step, 'POST', { ticks: controls.step.maximum_ticks })
+            }
+            data-testid="step-burst-button"
+          >
+            step {controls.step.maximum_ticks} ticks
+          </button>
+        ) : null}
         <span className="panel-footnote">
           {flow.nodes.length} components · {flow.edges.length} edges derived from the topology ·{' '}
           {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
+          {controls
+            ? ` · ${controlled(controls).size} components take controls: open one to use them`
+            : ''}
         </span>
       </Disclosure>
       {refusal && (
@@ -315,6 +368,15 @@ export function OperatorPanel({ params }: PanelProps) {
                 <span className="flow-node-head">
                   <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
                   <span className="flow-node-name">{node.label}</span>
+                  {controls && controlled(controls).has(node.id) ? (
+                    // The affordance the first cut of this tab did not have: a reader
+                    // who cannot see that a node takes controls does not open it, and
+                    // the controls may as well not exist. Drawn from what the surface
+                    // said it offers, not from a list here.
+                    <span className="flow-node-controls" data-has-controls={node.id} aria-label="takes controls">
+                      ▸
+                    </span>
+                  ) : null}
                   {record && !record.stoppable ? (
                     <svg
                       className="flow-node-lock"
@@ -350,8 +412,12 @@ export function OperatorPanel({ params }: PanelProps) {
           config={config}
           faceContext={faceContext}
           report={report}
+          controls={controls}
+          platformState={platformState}
+          decision={decision}
           counted={(key) => countedRef.current.get(key) ?? 0}
           command={command}
+          onRefusal={setRefusal}
           onClose={() => setSelected(undefined)}
         />
       ) : (
@@ -363,6 +429,19 @@ export function OperatorPanel({ params }: PanelProps) {
       )}
     </div>
   );
+}
+
+/**
+ * Which components the surface says take a control of any kind. Derived from the
+ * statement rather than listed here, so a tunable added to the operator's
+ * configuration shows up on its node without a line changing in this panel.
+ */
+function controlled(controls: OperatorControls): ReadonlySet<string> {
+  return new Set([
+    controls.demand.target,
+    ...controls.tunables.map((tunable) => tunable.target),
+    ...controls.events.map((event) => event.target),
+  ]);
 }
 
 /** What a node's chrome needs to know, shared by the graph, the list and the drawer. */
@@ -445,8 +524,12 @@ function Drawer({
   config,
   faceContext,
   report,
+  controls,
+  platformState,
+  decision,
   counted,
   command,
+  onRefusal,
   onClose,
 }: {
   node: FlowNode;
@@ -455,8 +538,14 @@ function Drawer({
   config: PanelParams['config'];
   faceContext: (id: string, heartbeat: Heartbeat | undefined) => FaceContext;
   report: TelemetryReport | undefined;
+  /** What the operator surface says its plane offers; undefined until it has said. */
+  controls: OperatorControls | undefined;
+  platformState: PlatformState | undefined;
+  /** The scheduler's last published decision, drawn in the scheduler's own drawer. */
+  decision: TelemetrySchedulerDecision | undefined;
   counted: (key: string) => number;
-  command: (path: string, method?: string) => void | Promise<void>;
+  command: (path: string, method?: string, body?: unknown) => void | Promise<void>;
+  onRefusal: (refusal: string | undefined) => void;
   onClose: () => void;
 }) {
   const { entry, record } = state;
@@ -480,7 +569,36 @@ function Drawer({
       {/* The node's own instrument again at full size: the drawer is where a reader
           goes to read it rather than to glance at it. */}
       <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
-      {node.id === 'platform' ? <DemandControl config={config} onRefusal={() => undefined} /> : null}
+
+      {/* The controls this component takes, immediately under its own instrument, so
+          the thing a reader changes and the thing that changes are one glance apart.
+          Which controls those are is the surface's answer, not this file's. */}
+      {controls && controls.demand.target === node.id ? (
+        <DemandControl config={config} state={platformState} onRefusal={onRefusal} />
+      ) : null}
+      {controls ? (
+        <TuningControl
+          config={config}
+          tunables={controls.tunables.filter((tunable) => tunable.target === node.id)}
+          heartbeat={entry?.heartbeat}
+          onRefusal={onRefusal}
+        />
+      ) : null}
+      {controls ? (
+        <EventControl
+          config={config}
+          events={controls.events.filter((event) => event.target === node.id)}
+          onRefusal={onRefusal}
+        />
+      ) : null}
+      {/* What the scheduler decided about the last thing it was asked, in its own
+          words. The prompt button is a few lines above this: pressing it and being
+          declined is a complete, ordinary outcome, and this is where it is read. */}
+      {node.id === 'scheduler' && decision ? (
+        <p className="flow-drawer-detail" data-testid="scheduler-decision">
+          <strong>last decision:</strong> {decision.decision} — {decision.detail}
+        </p>
+      ) : null}
       {node.id === 'telemetry' && report ? (
         <div className="operator-telemetry">
           <p className="flow-drawer-detail" data-testid="skill-statement">

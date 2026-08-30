@@ -128,6 +128,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "obs/#",
           "ctl/clock"
         ]
@@ -140,6 +141,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/divergence",
           "ctl/run/published",
           "ctl/clock"
@@ -186,6 +188,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/clock"
         ]
       },
@@ -227,7 +230,8 @@
         "role": "operator",
         "publish": [
           "ctl/heartbeat",
-          "ctl/platform/demand"
+          "ctl/platform/demand",
+          "ctl/operator/command"
         ],
         "subscribe": [
           "ctl/heartbeat",
@@ -594,7 +598,8 @@
       "clock": "ctl/clock",
       "observations": "obs/#",
       "divergence": "ctl/divergence",
-      "telemetry": "ctl/telemetry"
+      "telemetry": "ctl/telemetry",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -623,7 +628,8 @@
       "divergence": "ctl/divergence",
       "run_request": "ctl/run/request",
       "run_published": "ctl/run/published",
-      "telemetry": "ctl/telemetry"
+      "telemetry": "ctl/telemetry",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -632,7 +638,8 @@
     },
     "min_interval_ticks": 600,
     "max_interval_ticks": 1800,
-    "ensemble_size": 5
+    "ensemble_size": 5,
+    "prompt_event": "run-now"
   },
   "model_runner": {
     "id": "model-runner",
@@ -744,13 +751,17 @@
     "topics": {
       "clock": "ctl/clock",
       "heartbeat": "ctl/heartbeat",
-      "platform_demand": "ctl/platform/demand"
+      "platform_demand": "ctl/platform/demand",
+      "command": "ctl/operator/command"
     },
     "http": {
       "components_path": "/api/ctl/components",
       "step_path": "/api/ctl/clock/step",
       "command_prefix": "/api/ctl/components",
-      "platform_demand_path": "/api/ctl/platform/demand"
+      "platform_demand_path": "/api/ctl/platform/demand",
+      "controls_path": "/api/ctl/controls",
+      "tuning_path": "/api/ctl/tuning",
+      "event_prefix": "/api/ctl/events"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -768,6 +779,80 @@
       "advisory-store",
       "query",
       "telemetry"
+    ],
+    "step": {
+      "maximum_ticks": 60
+    },
+    "demand": {
+      "target": "platform"
+    },
+    "tunables": [
+      {
+        "id": "drift-threshold",
+        "target": "monitor",
+        "setting": "threshold_m_per_s",
+        "label": "drift threshold",
+        "unit": "m/s",
+        "minimum": 0.2,
+        "maximum": 6,
+        "step": 0.1,
+        "integer": false,
+        "figure": "threshold",
+        "description": "How far a measured sound speed may sit from the forecast before the sample counts as breaching. Lower it and the loop turns sooner."
+      },
+      {
+        "id": "persistence",
+        "target": "monitor",
+        "setting": "persistence_count",
+        "label": "persistence",
+        "unit": "samples",
+        "minimum": 2,
+        "maximum": 12,
+        "step": 1,
+        "integer": true,
+        "figure": "persistence",
+        "description": "Consecutive breaching samples before a divergence is raised. Never one: a single spike is not drift."
+      },
+      {
+        "id": "minimum-interval",
+        "target": "scheduler",
+        "setting": "min_interval_ticks",
+        "label": "minimum interval",
+        "unit": "ticks",
+        "minimum": 30,
+        "maximum": 3600,
+        "step": 10,
+        "integer": true,
+        "figure": "min_interval",
+        "description": "No two runs closer together than this. A divergence inside it is declined by policy, and the decline is published."
+      },
+      {
+        "id": "cadence-floor",
+        "target": "scheduler",
+        "setting": "max_interval_ticks",
+        "label": "cadence floor",
+        "unit": "ticks",
+        "minimum": 60,
+        "maximum": 7200,
+        "step": 10,
+        "integer": true,
+        "figure": "max_interval",
+        "description": "The interval after which a run is warranted on schedule alone, once the current run's validity has lapsed."
+      }
+    ],
+    "events": [
+      {
+        "id": "run-now",
+        "target": "scheduler",
+        "label": "request a forecast run",
+        "description": "Ask the scheduler to consider a run now. It answers under the policy it applies to a divergence, so it may decline inside the minimum interval or while a run is outstanding — and either way the decision is published."
+      },
+      {
+        "id": "advisory-now",
+        "target": "advisory-source",
+        "label": "author an advisory",
+        "description": "Ask the shore source to author the next advisory in its sequence now rather than at its cadence. Prompted or not, it is the same deterministic next one."
+      }
     ]
   },
   "advisory_source": {
@@ -775,7 +860,8 @@
     "stream": "advisory-source",
     "topics": {
       "clock": "ctl/clock",
-      "advisory": "adv/advisories"
+      "advisory": "adv/advisories",
+      "command": "ctl/operator/command"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -786,7 +872,8 @@
     "valid_seconds": 14400,
     "region_feature": "loiter-region",
     "depth_span_m": 250,
-    "sound_speed_half_width_m_per_s": 6
+    "sound_speed_half_width_m_per_s": 6,
+    "prompt_event": "advisory-now"
   },
   "advisory_store": {
     "id": "advisory-store",
@@ -1141,6 +1228,10 @@
       {
         "filter": "ctl/platform/state",
         "schema": "platform-state"
+      },
+      {
+        "filter": "ctl/operator/command",
+        "schema": "operator-command"
       }
     ],
     "endpoints": {
@@ -1154,7 +1245,10 @@
       "features": "/api/features",
       "query_subsets": "/api/ctl/query-subsets",
       "platform_demand": "/api/ctl/platform/demand",
-      "sensorthings": "/api/st/v1.1"
+      "sensorthings": "/api/st/v1.1",
+      "operator_controls": "/api/ctl/controls",
+      "operator_tuning": "/api/ctl/tuning",
+      "operator_event": "/api/ctl/events"
     },
     "flow": {
       "suppressed_filters": [

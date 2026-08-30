@@ -72,6 +72,7 @@ export type ConfigAdvisorySource = {
   "topics": {
     "clock": ConfigCommonTopic;
     "advisory": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "cadence_ticks": number;
@@ -79,6 +80,7 @@ export type ConfigAdvisorySource = {
   "region_feature": string;
   "depth_span_m": number;
   "sound_speed_half_width_m_per_s": number;
+  "prompt_event": string;
 };
 
 /** drogna advisory store configuration (V2-C17) — from config.advisory-store.schema.json */
@@ -345,6 +347,7 @@ export type ConfigMonitor = {
     "observations": ConfigCommonTopicFilter;
     "divergence": ConfigCommonTopic;
     "telemetry": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "pairs": {
@@ -391,15 +394,23 @@ export type ConfigOperator = {
     "clock": ConfigCommonTopic;
     "heartbeat": ConfigCommonTopicFilter;
     "platform_demand": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
   "http": {
     "components_path": ConfigCommonRelativePath;
     "step_path": ConfigCommonRelativePath;
     "command_prefix": ConfigCommonRelativePath;
     "platform_demand_path": ConfigCommonRelativePath;
+    "controls_path": ConfigCommonRelativePath;
+    "tuning_path": ConfigCommonRelativePath;
+    "event_prefix": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "protected": ConfigCommonComponentId[];
+  "step": OperatorControlsStep;
+  "demand": OperatorControlsDemand;
+  "tunables": OperatorControlsTunable[];
+  "events": OperatorControlsEvent[];
 };
 
 /** drogna planner configuration (V2-C14) — from config.planner.schema.json */
@@ -538,11 +549,13 @@ export type ConfigScheduler = {
     "run_request": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
     "telemetry": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "min_interval_ticks": number;
   "max_interval_ticks": number;
   "ensemble_size": number;
+  "prompt_event": string;
 };
 
 /** drogna sensors configuration (V2-C04) — from config.sensors.schema.json */
@@ -618,6 +631,9 @@ export type ConfigShell = {
     "edr": ConfigCommonRelativePath;
     "features": ConfigCommonRelativePath;
     "query_subsets": ConfigCommonRelativePath;
+    "operator_controls": ConfigCommonRelativePath;
+    "operator_tuning": ConfigCommonRelativePath;
+    "operator_event": ConfigCommonRelativePath;
   };
   "flow": {
     "suppressed_filters": string[];
@@ -1245,6 +1261,35 @@ export type OffloadTelemetry = {
   };
 };
 
+/** drogna operator command — from operator-command.schema.json */
+export type OperatorCommand = (OperatorCommandTuningCommand) | (OperatorCommandEventCommand);
+
+/** operator-command.schema.json #/$defs/component_id */
+export type OperatorCommandComponentId = string;
+
+/** operator-command.schema.json #/$defs/tuning_command */
+export type OperatorCommandTuningCommand = {
+  "component": OperatorCommandComponentId;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "kind": "tuning";
+  "target": OperatorCommandComponentId;
+  "setting": string;
+  "value": number;
+};
+
+/** operator-command.schema.json #/$defs/event_command */
+export type OperatorCommandEventCommand = {
+  "component": OperatorCommandComponentId;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "kind": "event";
+  "target": OperatorCommandComponentId;
+  "event": string;
+};
+
 /** drogna operator components report — from operator-components.schema.json */
 export type OperatorComponents = {
   "schema_version": 1;
@@ -1255,6 +1300,48 @@ export type OperatorComponents = {
     "running": boolean;
     "last_heartbeat": (Heartbeat) | (null);
   }[];
+};
+
+/** drogna operator controls statement — from operator-controls.schema.json */
+export type OperatorControls = {
+  "schema_version": 1;
+  "step": OperatorControlsStep;
+  "demand": OperatorControlsDemand;
+  "tunables": OperatorControlsTunable[];
+  "events": OperatorControlsEvent[];
+};
+
+/** operator-controls.schema.json #/$defs/step */
+export type OperatorControlsStep = {
+  "maximum_ticks": number;
+};
+
+/** operator-controls.schema.json #/$defs/demand */
+export type OperatorControlsDemand = {
+  "target": string;
+};
+
+/** operator-controls.schema.json #/$defs/tunable */
+export type OperatorControlsTunable = {
+  "id": string;
+  "target": string;
+  "setting": string;
+  "label": string;
+  "unit"?: string;
+  "minimum": number;
+  "maximum": number;
+  "step": number;
+  "integer": boolean;
+  "figure": string;
+  "description": string;
+};
+
+/** operator-controls.schema.json #/$defs/event */
+export type OperatorControlsEvent = {
+  "id": string;
+  "target": string;
+  "label": string;
+  "description": string;
 };
 
 /** drogna sampling recommendation — from plan.schema.json */
@@ -1567,7 +1654,7 @@ export type RunRequest = {
   "ensemble_size": number;
   "region": (DivergenceRegion) | (null);
   "divergence": (Divergence) | (null);
-  "cause": "divergence" | "scheduled";
+  "cause": "divergence" | "scheduled" | "operator";
 };
 
 /** drogna model run started — from run-started.schema.json */
@@ -1769,7 +1856,7 @@ export type TelemetrySchedulerDecision = {
   "sim_time": TelemetrySimInstant;
   "tick": TelemetryTickIndex;
   "kind": "scheduler-decision";
-  "divergence_id": string;
+  "divergence_id": string | null;
   "decision": "accepted" | "minimum-interval" | "duplicate-outstanding";
   "detail": string;
   "run_id": string | null;

@@ -309,4 +309,166 @@ describe('the Operator flow chart (feature 113)', () => {
     });
     expect(screen.getByTestId('flow-drawer').textContent).toContain('no residual has been reported yet');
   });
+
+  /**
+   * Feature 114: the controls. Nothing below asserts what a control *said* it did —
+   * every assertion is either about a component's own reported state or about the
+   * refusal the surface published, because a panel that could be believed on its own
+   * word is the failure mode this tab exists to avoid.
+   */
+  describe('the controls, at the node that owns them (feature 114)', () => {
+    const drawerFor = async (id: string) => {
+      await act(async () => {
+        fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+      return screen.getByTestId('flow-drawer');
+    };
+
+    it('marks exactly the nodes the surface says take controls, and no others', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const marked = [...document.querySelectorAll('[data-has-controls]')]
+        .map((mark) => mark.getAttribute('data-has-controls'))
+        .sort();
+      // The set is the surface's, not this panel's: the same declarations it enforces
+      // against, fetched over the seam.
+      const offered = [
+        ...new Set([
+          config.operator.demand.target,
+          ...config.operator.tunables.map((tunable) => tunable.target),
+          ...config.operator.events.map((event) => event.target),
+        ]),
+      ].sort();
+      expect(marked).toEqual(offered);
+      expect(marked.length).toBeGreaterThan(0);
+      expect(screen.getByText(new RegExp(`${offered.length} components take controls`))).toBeTruthy();
+    });
+
+    it('a tuning set here changes what the monitor reports it is scoring against', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('monitor');
+      const inForce = () =>
+        drawer.querySelector('[data-tuning-in-force="drift-threshold"]')?.textContent ?? '';
+      // What the monitor reported, before anything was asked of it.
+      expect(inForce()).toContain(String(config.monitor.threshold_m_per_s));
+
+      const slider = drawer.querySelector('[data-tunable="drift-threshold"] input[type="range"]');
+      await act(async () => {
+        fireEvent.change(slider as HTMLElement, { target: { value: '0.5' } });
+      });
+      // Dragging asks for nothing: the in-force figure has not moved, because the
+      // monitor has not been told anything.
+      expect(inForce()).toContain(String(config.monitor.threshold_m_per_s));
+
+      await act(async () => {
+        fireEvent.click(drawer.querySelector('[data-tuning-send="drift-threshold"]') as HTMLElement);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // And now it has moved — in the monitor's own heartbeat, which is the only
+      // place this panel reads it from.
+      expect(inForce()).toContain('0.5');
+      expect(runtime.monitor.threshold()).toBe(0.5);
+    });
+
+    it('a tuning outside the bound is refused in the surface’s words, and changes nothing', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('monitor');
+      // Typed rather than dragged: the slider cannot leave the bound, and the entry
+      // beside it can — which is exactly why the surface enforces the bound and the
+      // panel does not.
+      await act(async () => {
+        fireEvent.change(drawer.querySelector('.flow-tuner-entry') as HTMLElement, {
+          target: { value: '40' },
+        });
+      });
+      await act(async () => {
+        fireEvent.click(drawer.querySelector('[data-tuning-send="drift-threshold"]') as HTMLElement);
+      });
+      expect(screen.getByTestId('command-refusal').textContent).toMatch(
+        /outside the declared bound for drift threshold/,
+      );
+      expect(runtime.monitor.threshold()).toBe(config.monitor.threshold_m_per_s);
+    });
+
+    it('a preset demands only what it names, and the platform is left holding the rest', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+        for (let i = 0; i < 20; i++) runtime.clock.tickOnce();
+      });
+      const drawer = await drawerFor('platform');
+      // The sliders are bounded by what the platform reported, not by a number here.
+      const speed = drawer.querySelector('[data-demand-field="speed"] input[type="range"]');
+      expect(speed?.getAttribute('max')).toBe(String(config.platform.limits.maximum_speed_m_per_s));
+      const courseBefore = runtime.platform.state().current.course_degrees;
+
+      await act(async () => {
+        fireEvent.click(drawer.querySelector('[data-demand-preset="all-stop"]') as HTMLElement);
+      });
+      await act(async () => {
+        runtime.clock.tickOnce();
+      });
+      const demanded = runtime.platform.state().demanded;
+      expect(demanded?.speed_m_per_s).toBe(0);
+      // Nothing was said about the course, so the platform holds the one it had:
+      // the preset named a speed and the platform did the rest of the deciding.
+      expect(demanded?.course_degrees).toBeCloseTo(courseBefore, 6);
+      expect(within(drawer).getByTestId('demand-said').textContent).toMatch(/published, not applied/);
+    });
+
+    it('a prompted run is answered by the scheduler, in the scheduler’s drawer', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('scheduler');
+      expect(drawer.querySelector('[data-testid="scheduler-decision"]')).toBeNull();
+
+      await act(async () => {
+        fireEvent.click(
+          drawer.querySelector(`[data-event-send="${config.scheduler.prompt_event}"]`) as HTMLElement,
+        );
+      });
+      // The decision arrived on the telemetry topic, from the scheduler. The panel
+      // draws what it heard; the button's own answer said only that it published.
+      const decision = within(screen.getByTestId('flow-drawer')).getByTestId('scheduler-decision');
+      expect(decision.textContent).toMatch(/accepted/);
+      expect(decision.textContent).toMatch(/operator prompt/);
+
+      // Asked again inside the minimum interval, the scheduler declines — and the
+      // panel shows the decline as the ordinary outcome it is.
+      await act(async () => {
+        fireEvent.click(
+          screen
+            .getByTestId('flow-drawer')
+            .querySelector(`[data-event-send="${config.scheduler.prompt_event}"]`) as HTMLElement,
+        );
+      });
+      expect(
+        within(screen.getByTestId('flow-drawer')).getByTestId('scheduler-decision').textContent,
+      ).toMatch(/minimum-interval/);
+    });
+
+    it('the burst step advances the clock by the number the surface declared', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const before = runtime.clock.currentTick();
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('step-burst-button'));
+      });
+      expect(runtime.clock.currentTick()).toBe(before + config.operator.step.maximum_ticks);
+    });
+  });
 });

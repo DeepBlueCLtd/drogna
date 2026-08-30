@@ -45,6 +45,8 @@ import { Series } from './series.js';
 import { FACES, type FaceContext } from './faces.js';
 import { FlowCanvas } from './FlowCanvas.js';
 import { DemandControl } from './DemandControl.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { componentTour } from '../../shell/walkthrough/tour.js';
 import './operator.css';
 
 interface Heard {
@@ -265,6 +267,13 @@ export function OperatorPanel({ params }: PanelProps) {
 
   return (
     <div className="panel operator-panel" ref={rootRef} data-narrow={narrow}>
+      {/* The tab carries its own help control (FR-70, ADR-0037). This is the tour that
+          used to live in the shell header: it explains the components, and the components
+          are what this tab draws. */}
+      <div className="panel-head">
+        <span className="panel-head-title">the harness, component by component</span>
+        <HelpButton tour={componentTour(config)} />
+      </div>
       <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
         <button
           onClick={() => setAsList((value) => !value)}

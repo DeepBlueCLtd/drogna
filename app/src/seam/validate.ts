@@ -13,6 +13,14 @@ export interface ValidationVerdict {
   readonly ok: boolean;
   /** Human-readable refusals, each naming the thing refused. Empty when ok. */
   readonly refusals: readonly string[];
+  /**
+   * The same refusals, with the instance path kept apart from the sentence (feature
+   * 114, FR-68). The Messages inspector marks a refusal *on the field that caused it*,
+   * and re-parsing the path back out of the sentence above would make the sentence's
+   * punctuation load-bearing. `path` is Ajv's instance path — '' for the document
+   * itself, '/context/datastream_id' for a field.
+   */
+  readonly faults: readonly { readonly path: string; readonly message: string }[];
 }
 
 export interface SeamValidator {
@@ -57,17 +65,20 @@ export function createSeamValidator(): SeamValidator {
       if (!validator) {
         const found = ajv.getSchema(idFor(schemaKey));
         if (!found) {
-          return { ok: false, refusals: [`no master named '${schemaKey}' under contracts/schemas`] };
+          const missing = `no master named '${schemaKey}' under contracts/schemas`;
+          return { ok: false, refusals: [missing], faults: [{ path: '', message: missing }] };
         }
         validator = found;
         compiled.set(schemaKey, validator);
       }
       const ok = validator(payload) as boolean;
-      if (ok) return { ok: true, refusals: [] };
-      const refusals = (validator.errors ?? []).map(
-        (error) => `${schemaKey}${error.instancePath || ''}: ${error.message ?? 'refused'}`,
-      );
-      return { ok: false, refusals };
+      if (ok) return { ok: true, refusals: [], faults: [] };
+      const faults = (validator.errors ?? []).map((error) => ({
+        path: error.instancePath || '',
+        message: error.message ?? 'refused',
+      }));
+      const refusals = faults.map((fault) => `${schemaKey}${fault.path}: ${fault.message}`);
+      return { ok: false, refusals, faults };
     },
   };
 }

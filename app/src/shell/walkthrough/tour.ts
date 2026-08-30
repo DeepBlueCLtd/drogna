@@ -148,6 +148,7 @@ const COMPONENT_STEPS: Record<string, { title: string; what: string; panel: stri
  * The tour of the components, built against the shell's declared list so its order is
  * the picture's order and a new component cannot be quietly left out.
  */
+// (the component tour follows; the per-surface tours of feature 114 are below it)
 export function componentTour(shell: ConfigShell): Tour {
   const steps: TourStep[] = [
     {
@@ -176,9 +177,9 @@ export function componentTour(shell: ConfigShell): Tour {
 }
 
 /**
- * What the tour does not cover, and what it covers that does not exist. Named rather
- * than counted: a walkthrough that quietly stopped covering a component would read as
- * a complete tour, which is worse than no tour at all.
+ * What the component tour does not cover, and what it covers that does not exist. Named
+ * rather than counted: a walkthrough that quietly stopped covering a component would
+ * read as a complete tour, which is worse than no tour at all.
  */
 export function missingSteps(shell: ConfigShell): string[] {
   const findings: string[] = [];
@@ -194,3 +195,106 @@ export function missingSteps(shell: ConfigShell): string[] {
   }
   return findings;
 }
+
+// ------------------------------------------- the per-surface tours (feature 114) ---
+//
+// FR-61 held the component tour to the shell's declared component list. FR-70
+// generalises that rule rather than repeating it: every tour is held to a list on disk,
+// and `uncoveredSubjects` below is the one check that does the holding. The map's
+// authority is its own layer registry; Holdings' and Messages' are the regions their
+// panels declare. A surface that gains a feature and not a step is named, because a
+// bound typed into a test would not survive the next layer (CLAUDE.md, lesson 2).
+
+/** One thing a surface offers, as the surface itself declares it. */
+export interface TourSubject {
+  readonly id: string;
+  readonly label: string;
+  readonly element: string;
+}
+
+/**
+ * A step keyed to a subject, so the check can say which subject has none. Kept apart
+ * from `TourStep`'s optional `component`: a component is a thing in the harness, a
+ * subject is a thing on a surface, and one field meaning both is one field that will
+ * eventually be asked which it means.
+ */
+export interface SubjectStep extends TourStep {
+  readonly subject: string;
+}
+
+/**
+ * What a tour of these subjects does not cover, and what it covers that the surface does
+ * not offer. The same two findings the component tour has always produced, in the same
+ * words, over a different list on disk.
+ */
+export function uncoveredSubjects(
+  tourId: string,
+  subjects: readonly TourSubject[],
+  steps: readonly SubjectStep[],
+): string[] {
+  const findings: string[] = [];
+  for (const subject of subjects) {
+    if (!steps.some((step) => step.subject === subject.id)) {
+      findings.push(`the ${tourId} tour has no step for '${subject.id}'`);
+    }
+  }
+  for (const step of steps) {
+    if (!subjects.some((subject) => subject.id === step.subject)) {
+      findings.push(`the ${tourId} tour explains '${step.subject}', which the surface does not offer`);
+    }
+  }
+  return findings;
+}
+
+/**
+ * Build a tour from subject-keyed steps. The completeness check is deliberately not run
+ * here: it needs the surface's own subject list, which lives with the surface, and a
+ * tour that threw at render would take the panel down rather than report the gap. The
+ * check runs where a finding can be read — a test, per FR-70.
+ */
+function surfaceTour(id: string, view: string, title: string, steps: readonly SubjectStep[]): Tour {
+  return { id, view, title, steps };
+}
+
+const MESSAGES_STEPS: SubjectStep[] = [
+  {
+    subject: 'traffic',
+    element: '[data-region="traffic"]',
+    title: 'The traffic display',
+    what: 'Every message this page passes crosses one broker, and this is that traffic drawn rather than listed. A lane is a top-level namespace the topology artefact declares; a mark is one message that arrived.',
+    panel: 'Nothing here moves except on arrival, so a still lane means a quiet namespace and never a paused display. Stop the sensors from the Operator tab and watch the observation lane drain while the clock lane goes on beating.',
+  },
+  {
+    subject: 'tree',
+    element: '[data-region="tree"]',
+    title: 'The topic tree',
+    what: 'The shape of the broker\'s topic space, drawn from the derived topology artefact — the structure — and lit by traffic that genuinely arrived. The two never mix, which is why a topic nobody declared shows up as an undeclared branch rather than not at all.',
+    panel: 'Select a node to narrow the traffic display and the list to that subtree. The chips beside a leaf are the consumers whose declared filters cover it.',
+  },
+  {
+    subject: 'list',
+    element: '[data-region="list"]',
+    title: 'The list',
+    what: 'The messages themselves, newest first. Heartbeats and clock samples are hidden here by default because they are most of the traffic and rarely what anyone came for — each has its own toggle, and both are counted and drawn either way.',
+    panel: 'The counters at the top say how many messages were received and how many their masters refused. That second number is a claim this display makes, and a test holds it to it.',
+  },
+  {
+    subject: 'inspector',
+    element: '[data-region="inspector"]',
+    title: 'The inspector',
+    what: 'A message read against the master its topic declares: each field named as the master names it, with the unit where the master states one. A refusal is marked on the field that caused it rather than printed as a sentence above the document.',
+    panel: 'The raw wire document is one control away for every message, because the wire form is what the seam actually carried. A topic with no declared master says so by name and shows the document.',
+  },
+];
+
+/**
+ * The Messages tour. Its authority is the panel's own declared region list, imported by
+ * the test rather than by this module: a tour importing the panel it explains would put
+ * a React tree behind every consumer of this file.
+ */
+export function messagesTour(): Tour {
+  return surfaceTour('messages', 'messages', 'The Messages tab, region by region', MESSAGES_STEPS);
+}
+
+/** The Messages tour's steps, for the completeness check. */
+export const MESSAGES_TOUR_STEPS: readonly SubjectStep[] = MESSAGES_STEPS;

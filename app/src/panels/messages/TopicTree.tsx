@@ -9,6 +9,13 @@
  * A display may not show cold where there is traffic (E13): this view hears through
  * the shell's read-everything identity, and a received topic no entry declares is
  * rendered as an undeclared branch — a finding, never a silence.
+ *
+ * Feature 114 (FR-67) promotes it out of the disclosure it spent three features behind
+ * and makes a node selectable: selecting one filters the traffic display and the list to
+ * that subtree. Selection is the only thing added — the structure is still the artefact
+ * and the light is still received traffic, and the two still never mix. A node is a
+ * `<button>` rather than a span with a click handler, so the tree is a keyboard surface
+ * because the platform made it one and not because this file remembered to.
  */
 import { useEffect, useRef, useState } from 'react';
 import { topology } from '../../generated/topology.js';
@@ -69,7 +76,17 @@ function rolesCovering(path: string): string[] {
     .map((role) => role.role);
 }
 
-export function TopicTree({ client }: { client: SeamClient }) {
+export function TopicTree({
+  client,
+  selected,
+  onSelect,
+}: {
+  client: SeamClient;
+  /** The path the panel is filtered to, or undefined for the whole tree. */
+  selected?: string;
+  /** Called with a path to filter to, or undefined when the same node is chosen again. */
+  onSelect?: (path: string | undefined) => void;
+}) {
   const [tree] = useState(buildTree);
   const activity = useRef(new Map<string, Activity>());
   const [, setSweep] = useState(0);
@@ -124,19 +141,24 @@ export function TopicTree({ client }: { client: SeamClient }) {
           const age = heard ? now - heard.lastMs : Number.POSITIVE_INFINITY;
           const pulse = age < 450;
           const intensity = heard ? Math.min(1, heard.rate / 2) : 0;
+          const chosen = selected === child.path;
           return (
             <li key={child.path}>
-              <span
-                className={`topic-node${pulse ? ' topic-pulse' : ''}${child.declared ? '' : ' topic-undeclared'}`}
+              <button
+                type="button"
+                className={`topic-node${pulse ? ' topic-pulse' : ''}${child.declared ? '' : ' topic-undeclared'}${chosen ? ' topic-chosen' : ''}`}
                 style={{ opacity: 0.45 + 0.55 * intensity }}
                 data-topic-path={child.path}
                 data-lit={heard !== undefined}
+                data-chosen={chosen || undefined}
+                aria-pressed={onSelect ? chosen : undefined}
                 title={child.schema ?? undefined}
+                onClick={() => onSelect?.(chosen ? undefined : child.path)}
               >
                 {child.segment}
                 {heard && <span className="topic-count">{heard.count}</span>}
                 {!child.declared && <span className="topic-flag">undeclared</span>}
-              </span>
+              </button>
               {(() => {
                 // The roles column (E12): on a leaf, the declared subscribers of the
                 // topic; on a branch, the roles whose filters cover the subtree.
@@ -174,6 +196,7 @@ export function TopicTree({ client }: { client: SeamClient }) {
       <p className="panel-footnote">
         Structure: the derived topology artefact ({topology.generator}). Light: received
         traffic. Roles beside a leaf are the consumers whose declared filters cover it.
+        {onSelect ? ' Select a node to filter the traffic display and the list to it.' : ''}
       </p>
       {renderNode(tree, 0)}
     </div>

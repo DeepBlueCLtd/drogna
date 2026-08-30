@@ -1,0 +1,242 @@
+/**
+ * The Messages tab's own stylesheet (feature 114). The tab's older rules — the
+ * counters, the split, the list — stay in `shell.css` where three features left them;
+ * what is here is the surfaces this feature added.
+ *
+ * One rule governs the whole file and is the reason it is worth reading: **nothing in
+ * the traffic display animates or transitions.** No `animation`, no `transition`, no
+ * keyframes. FR-66 forbids motion while the broker is silent, and a CSS animation is
+ * motion the markup cannot see — a check that watched the DOM would pass while the page
+ * pulsed away at a stopped harness. The check that holds this reads this file
+ * (`messages.test.tsx`), so a transition added here for a nice fade fails it by name.
+ */
+
+/* The panel's own header row: what the tab is, and its help control at the right
+   (FR-70). The same row at both widths — the control reaches the same place narrow as
+   wide, which is what FR-50 asks of a move out of the shell header. */
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9em;
+  flex-wrap: wrap;
+}
+
+.panel-head > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-head-title {
+  color: var(--shell-dim);
+}
+
+/* ------------------------------------------------------- the traffic display --- */
+
+.traffic {
+  margin: 0 0 0.7em;
+}
+
+.traffic-lanes {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 3px 0.7em;
+  align-items: center;
+}
+
+/* Each row is a wrapper for grouping, not a box: without this the wrapper is itself one
+   grid item and two lanes land on every line. Watched happening in the first capture —
+   `adv` and `cov` shared a row and their lanes were half the width of the others. */
+.traffic-row {
+  display: contents;
+}
+
+.traffic-lane-name {
+  color: var(--shell-dim);
+  font-family: monospace;
+  font-size: 0.85em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.traffic-lane-name.traffic-undeclared {
+  color: var(--shell-refused);
+}
+
+.traffic-lane {
+  position: relative;
+  display: block;
+  height: 18px;
+  background: #0b1016;
+  border: 1px solid #232c36;
+}
+
+/* An undeclared namespace is a finding and is drawn as one: the lane exists because a
+   message arrived on a topic no topology entry names. */
+.traffic-lane-undeclared {
+  border-color: var(--shell-refused);
+}
+
+.traffic-mark {
+  position: absolute;
+  top: 3px;
+  width: 3px;
+  height: 12px;
+  display: block;
+  background: var(--shell-accent);
+  cursor: pointer;
+}
+
+.traffic-mark-refused {
+  top: 1px;
+  height: 16px;
+  width: 4px;
+  background: var(--shell-refused);
+}
+
+.traffic-mark[data-selected] {
+  outline: 1px solid var(--shell-fg);
+  outline-offset: 1px;
+}
+
+.messages-filter {
+  margin: 0 0 0.5em;
+  color: var(--shell-dim);
+}
+
+.messages-filter b {
+  color: var(--shell-fg);
+  font-family: monospace;
+}
+
+.messages-filter button {
+  margin-left: 0.8em;
+}
+
+/* ------------------------------------------------------------ the topic tree --- */
+
+/* Promoted out of its disclosure (FR-67): at a desktop width it is a region of its own
+   with room to be read, and it scrolls in its own container so the page never does. */
+.messages-tree-region {
+  flex: 0 0 auto;
+  max-width: 26em;
+  min-width: 0;
+  overflow: auto;
+}
+
+/* A node is a button so the tree is a keyboard surface by construction; it is styled
+   back to text because a tree of buttons that look like buttons is a tree nobody can
+   read the shape of. */
+.topic-node {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0 0.2em;
+  cursor: pointer;
+  text-align: left;
+}
+
+.topic-node[data-chosen] {
+  outline: 1px solid var(--shell-accent);
+  color: var(--shell-accent);
+}
+
+/* -------------------------------------------------------------- the inspector --- */
+
+.inspect-fields {
+  border-collapse: collapse;
+  font-size: 0.85em;
+  width: 100%;
+}
+
+.inspect-fields th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--shell-dim);
+  vertical-align: top;
+  padding: 0.15em 0.6em 0.15em 0;
+  white-space: nowrap;
+}
+
+.inspect-fields td {
+  vertical-align: top;
+  padding: 0.15em 0.6em 0.15em 0;
+}
+
+.inspect-value {
+  font-family: monospace;
+  word-break: break-word;
+}
+
+.inspect-key {
+  margin-left: 0.5em;
+  font-family: monospace;
+  font-style: normal;
+  opacity: 0.6;
+}
+
+.inspect-unit {
+  margin-left: 0.4em;
+  font-style: normal;
+  color: var(--shell-dim);
+}
+
+.inspect-declared {
+  color: var(--shell-dim);
+  font-size: 0.9em;
+}
+
+.inspect-absent,
+.inspect-opened {
+  color: var(--shell-dim);
+  font-style: italic;
+}
+
+/* The refusal is marked on the field that caused it, which is the whole point of
+   reading a payload against its master rather than printing it (FR-68). */
+.inspect-refused th,
+.inspect-refused .inspect-value {
+  color: var(--shell-refused);
+}
+
+.inspect-fault {
+  color: var(--shell-refused);
+}
+
+.inspect-raw-toggle {
+  margin-top: 0.6em;
+}
+
+/* Narrow (FR-50, ADR-0033): the tree stops being a column beside the list and becomes a
+   disclosed region above it. The traffic display keeps every lane at every width —
+   folding a lane would be the narrow presentation changing whether a namespace is drawn,
+   which is precisely what FR-50 forbids. */
+@container (max-width: 720px) {
+  .messages-tree-region {
+    max-width: none;
+    overflow: visible;
+  }
+
+  .traffic-lane {
+    height: 14px;
+  }
+
+  .traffic-mark {
+    top: 2px;
+    height: 10px;
+  }
+
+  .traffic-mark-refused {
+    top: 1px;
+    height: 12px;
+  }
+}
+
+/* The finding, named on the lane rather than only implied by its colour: a reader who
+   cannot tell red from grey still reads the word. */
+.traffic-undeclared-flag {
+  margin-left: 0.4em;
+  font-style: normal;
+  font-size: 0.8em;
+  color: var(--shell-refused);
+}

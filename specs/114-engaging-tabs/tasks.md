@@ -65,24 +65,65 @@ the Operator flow chart all come from them.
 
 ## Messages — built first
 
-- [ ] T011 The traffic display: lanes from the topology artefact's top-level namespaces,
+- [x] T011 The traffic display: lanes from the topology artefact's top-level namespaces,
       marks as messages arrive, refusals visibly refused, an undeclared topic drawn as an
-      undeclared lane.
-- [ ] T012 Silence is still. **Plant it**: a run with publication stopped must show a
+      undeclared lane. `traffic.ts` and `TrafficDisplay.tsx`. **One thing the
+      specification assumed turned out not to be possible, and the display is better for
+      it:** an *undeclared namespace* can never arrive, because the broker's role rules
+      confine every publisher to declared prefixes and refuse a new first segment at the
+      seam. The fault that can happen — and that the topic tree has drawn since 103 — is a
+      topic nobody declared inside a namespace somebody did. So a mark's lane is its
+      namespace when the artefact declares its topic, and an undeclared lane beside that
+      namespace when it does not. One rule covers a rogue namespace too, if the broker
+      ever admits one.
+- [x] T012 Silence is still. **Plant it**: a run with publication stopped must show a
       still display, and the check must fail if anything animates — SC-02. An idling
-      animation is the display asserting traffic that is not there.
-- [ ] T013 Watch SC-01 happen end to end and capture it: stop the sensors from Operator,
+      animation is the display asserting traffic that is not there. **Two checks, because
+      one of the two faults is invisible to the other.** The panel's rendered tree must be
+      byte-identical across thirty seconds of host time with the harness stopped; and the
+      stylesheet that owns every traffic rule must declare no animation, transition or
+      keyframes, because a CSS animation is motion the DOM cannot see. Both were planted
+      and both were watched failing — a sweep interval in `TrafficDisplay`, and a
+      `@keyframes traffic-throb` on `.traffic-mark` — then reverted, and said so in the
+      commit message. The display holds no clock at all, which is what makes the first
+      check pass by construction rather than by care: a mark is placed by receive order,
+      so the display advances on arrival and at no other time.
+- [x] T013 Watch SC-01 happen end to end and capture it: stop the sensors from Operator,
       see the observation lane still while the clock lane beats on. Generator to pixel,
       never inferred from green tests (Constitution IX, PR-06). This is the task that
       proves the yardstick before three more surfaces are built on it.
-- [ ] T014 Promote the topic tree out of its disclosure to a primary region; selecting a
-      node filters the traffic display and the list.
-- [ ] T015 The schema-aware inspector: fields named and united from the master the topic
+      `scripts/capture/messages.ts`, run in CI, and it is a **proof and not a picture**:
+      it exits non-zero when the observation lane did not still, and also when the control
+      lane stilled with it, which would mean the page had stopped rather than the traffic.
+      Watched, at rate 60: **12 observation marks running, 0 with the sensors stopped, the
+      control lane beating on at 179 then 191.** Two things were found by running it
+      rather than by reasoning. The first draft ran at rate 1 and reported an empty
+      observation lane before anything was stopped — heartbeat cadence is host time while
+      sampling is simulation time, so twenty components' heartbeats crowd the observations
+      out of a window measured in messages; the capture sets the rate through the shell's
+      own control and says so in its provenance. The second was a layout fault the first
+      screenshot showed at a glance: `.traffic-row` was itself a grid item, so two lanes
+      landed on every line and `adv` and `cov` shared a row at half width.
+- [x] T014 Promote the topic tree out of its disclosure to a primary region; selecting a
+      node filters the traffic display and the list. A node is a `<button>` rather than a
+      span with a click handler, so the tree is a keyboard surface because the platform
+      made it one and not because this file remembered to. Narrow it still discloses —
+      FR-50 changes where a region is, never whether it is.
+- [x] T015 The schema-aware inspector: fields named and united from the master the topic
       declares, refusals marked on the offending field, the raw wire document always
-      reachable, an undeclared topic named as such.
-- [ ] T016 Hold the counters: everything received is validated and counted, suppressed
+      reachable, an undeclared topic named as such. `inspect.ts`. Two things the first
+      draft got wrong and the masters on disk caught. Refusals were being re-parsed out of
+      the refusal *sentence*, which made its punctuation load-bearing; `ValidationVerdict`
+      now carries `faults` with the instance path kept apart from the message, and the
+      sentence is derived from the pair rather than the other way round. And a `$ref` was
+      not followed, so `observation.location` — the richest field in the document — would
+      have been drawn as one line of JSON; references are now followed both inside a
+      document and across masters, carrying the target's own `$defs` with them.
+- [x] T016 Hold the counters: everything received is validated and counted, suppressed
       kinds included, and the "N refused by their schema" claim keeps its full coverage
-      (FR-23). The list stays — Messages does not exercise the replacement licence.
+      (FR-23). The list stays — Messages does not exercise the replacement licence. The
+      traffic display draws the suppressed kinds either way: a lane that hid the clock
+      would be the one lane whose stillness meant nothing.
 
 ## System folds away — the two facts first
 

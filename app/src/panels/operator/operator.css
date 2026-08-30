@@ -37,6 +37,17 @@
   pointer-events: none;
 }
 
+/* The dimming that answers "what does this one talk to?" fades over the same fifth of a
+   second the chart takes to rearrange itself, so the two readings arrive together
+   rather than one snapping while the other moves. The geometry is *not* transitioned
+   here — the wires are computed from where the nodes are, and only the frame loop in
+   FlowCanvas can move both together. */
+.flow-wires-layer path {
+  transition:
+    opacity 200ms ease,
+    stroke-width 200ms ease;
+}
+
 .flow-band-caption-text {
   fill: var(--flow-dim);
   font-size: 9.5px;
@@ -792,7 +803,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .flow-node,
-  .flow-tape-fill {
+  .flow-tape-fill,
+  .flow-wires-layer path {
     transition: none;
   }
 }

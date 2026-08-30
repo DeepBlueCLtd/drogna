@@ -17,6 +17,14 @@
  * - different bands → out of the bottom (or top) face into the other's, bowed so two
  *   edges between the same pair of bands do not lie on top of one another.
  *
+ * A placement can be **tweened** into another one (`tween`), which is how the chart
+ * moves between its resting shape and the shape with one node open rather than jumping
+ * between them. It is here, with the geometry, rather than in a stylesheet: the nodes
+ * are absolutely positioned and the wires are recomputed from where the nodes are, so a
+ * CSS transition would glide the nodes and snap the wires off their ends for the length
+ * of it. One interpolated placement per frame keeps every wire attached to both of its
+ * nodes the whole way.
+ *
  * One node may be **expanded**: a card at 208×116 holds a glance and nothing more, and
  * the account of a component — its instrument at a readable size, and the controls that
  * act on it — needs room. The expanded node takes the space of two columns and three
@@ -250,4 +258,39 @@ export function routeAll(
     routed.push(route(a, b, edge.kind, edge.label, sibling));
   }
   return routed;
+}
+
+/**
+ * One frame between two placements: every box, every band and the canvas itself at
+ * fraction `t` of the way from `from` to `to`.
+ *
+ * Pure, and linear — the easing is the caller's, because the shape of the movement is a
+ * judgement about how it should feel and this is arithmetic. A node that is in `to` and
+ * not in `from` is drawn where it ends up rather than flown in from nowhere.
+ */
+export function tween(from: Layout, to: Layout, t: number): Layout {
+  if (t <= 0) return from;
+  if (t >= 1) return to;
+  const mix = (a: number, b: number) => a + (b - a) * t;
+  const was = new Map(from.placed.map((node) => [node.id, node]));
+  return {
+    placed: to.placed.map((node) => {
+      const before = was.get(node.id);
+      if (!before) return node;
+      return {
+        ...node,
+        x: mix(before.x, node.x),
+        y: mix(before.y, node.y),
+        width: mix(before.width, node.width),
+        height: mix(before.height, node.height),
+      };
+    }),
+    bands: to.bands.map((band, index) => {
+      const before = from.bands[index];
+      if (!before || before.band !== band.band) return band;
+      return { band: band.band, y: mix(before.y, band.y), height: mix(before.height, band.height) };
+    }),
+    width: mix(from.width, to.width),
+    height: mix(from.height, to.height),
+  };
 }

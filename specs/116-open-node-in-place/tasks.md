@@ -43,6 +43,52 @@ the controls statement and the narrow presentation all come from them.
       border, and scrolls within itself. A wide table inside it scrolls in the card rather
       than stretching it — the geometry is the layout's to decide, not the content's.
 
+## The movement (added after the first round, on the author's report)
+
+The author's words on the built version: *it's possible to lose track of which panel has
+opened, animate the opening and the re-flowing of other panels*. The first round had
+declined animation deliberately; the reason it was declined was about the two end states
+and missed the transition, which is where the reader is. Recorded in `spec.md` as a
+reversal rather than a quiet deletion.
+
+- [x] T018 `layout.ts`: `tween(from, to, t)`, pure — every box, every band and the canvas
+      interpolated. Linear, with the easing left to the caller: the shape of a movement is
+      a judgement about how it should feel, and this is arithmetic. Facts that cannot be
+      averaged — the band, whether a node is open — are taken from the target.
+- [x] T019 `FlowCanvas` holds the placement it is drawing and walks it to the target over
+      200ms, re-routing the wires from the interpolated boxes each frame. A JavaScript
+      tween rather than a CSS transition **because the wires are computed from where the
+      nodes are**: a transition glides the cards and leaves fifty edges pointing at where
+      those cards used to be until it finishes. Planted and seen, T024.
+- [x] T020 An animation in flight is retargeted, not restarted: opening a second node
+      while the first is still moving continues from wherever the picture had got to.
+- [x] T021 The card's *contents* follow the selection immediately; only its box is
+      animated. Content that waited for the first frame is a click with nothing behind it,
+      which on a slow frame reads as a click that missed.
+- [x] T022 `prefers-reduced-motion` is put to the platform and honoured (FR-016): the new
+      placement is committed on the same frame, and where `matchMedia` is not there to ask
+      the answer is no — a silent downgrade for everybody is worse than the animation.
+- [x] T023 Scroll the open card into view **at the end** of the movement, by the least
+      that makes it whole. The first cut scrolled on focus, at which point the box was
+      still resting-sized: the phone card ended up half off the screen and the desktop
+      chart was dragged sideways for a card that had never left it. Found by looking at
+      both captures, not by a test.
+- [x] T024 Plant each fault the movement's checks exist to catch, and see it caught. Four
+      planted, four caught, all reverted: (a) commit the target immediately, the "no
+      animation" build — the part-way check failed, and so did the reduced-motion check,
+      which asserts the platform was actually *asked*; (b) reduced motion ignored — the
+      reduced-motion check failed; (c) wires routed from the destination while the boxes
+      move, which is what a CSS transition would give — the wire check failed on
+      `monitor->scheduler`; (d) the tween carrying the start's facts rather than the
+      target's — the facts check failed.
+- [x] T025 The wall-clock gate is watching these two lines: the marker was removed from
+      one `requestAnimationFrame` call and `check-wallclock` failed with that file and
+      line, then it was restored and the gate went green. An exemption nobody has seen
+      enforced is an exemption that might not be one.
+- [x] T026 Trace it in a real browser rather than only in jsdom: the card's box over
+      consecutive frames is 208 → 211 → 221 → 262 → 292 → 366 → 450, and the wire leaving
+      it starts at 708 → 950 — its right edge on every one of those frames.
+
 ## Holding it
 
 - [x] T011 Plant each fault the new checks exist to catch, and see it caught. Four

@@ -62,6 +62,20 @@ something.
   different one: the space a phone has is vertical, so it is taller and narrower there.
   Nothing in the layout knows about a viewport — the panel chooses which geometry to
   place against.
+- **FR-08** The rearrangement is **drawn rather than jumped**. Opening a node moves most
+  of the chart at once, and a picture that rearranged between two frames left the reader
+  hunting for which card had grown — the author's report, and the reversal recorded
+  below. The chart walks from its old placement to the new one over about a fifth of a
+  second, and every wire is re-routed from the interpolated boxes on every frame, so no
+  wire is ever detached from a node that is moving.
+- **FR-09** Nothing moves for a reader who has asked for that. `prefers-reduced-motion`
+  is put to the platform rather than assumed, and where it is answered *reduce* the new
+  placement is committed on the frame the selection changed — the picture this tab drew
+  before the animation existed (feature 113, FR-016).
+- **FR-10** The open card is brought into view **once it has stopped moving**, by the
+  least that makes it whole. Scrolling to a box that is still growing aims at the wrong
+  place: on a phone the card ended up half off the screen, and on a desktop, where
+  nothing needed to move at all, the whole chart was dragged sideways.
 
 ## What is deliberately not done
 
@@ -72,9 +86,22 @@ something.
 - **The resting card is not made bigger.** Twenty cards at a readable size is a picture
   no viewport holds, and the shape of the flow — which is what the tab exists to show —
   survives only while the whole of it is on screen at once.
-- **No animation.** A card that grows over 200ms would look better in a screenshot
-  sequence and would move the neighbours while the reader is reading them. The chart
-  reflows on the same render as the selection.
+- **~~No animation.~~ Reversed, and the reason it was reversed is the point.** The
+  original decision was that a card growing over 200ms would look better in a screenshot
+  sequence and would move the neighbours while the reader is reading them, so the chart
+  reflowed on the same render as the selection. That reasoning was about the two *end*
+  states, both of which are correct, and it missed the transition — which is where the
+  reader actually is. The author's report on the built version: *it's possible to lose
+  track of which panel has opened*. That follows directly from the reflow: opening a node
+  moves most of the chart at once, so between two frames a dozen cards are somewhere else
+  and the one that grew is not distinguished by having moved. Drawing the move is what
+  tells them apart, and it is now specified rather than declined (FR-08 to FR-10). What
+  the original decision was right about is kept: a reader who has asked for less movement
+  gets exactly the picture it described (FR-09).
+- **The animation carries no state and no meaning.** It is a transition between two
+  placements the layout produced. Nothing derived from it reaches a figure, a message, a
+  query or a test assertion — the movement belongs to the render path and stays there,
+  under the wall-clock marker ADR-0007 established for exactly that.
 - **The account was not rewritten.** Its content, figures and refusals are feature 113's
   and 114's, unchanged; what changed is where it opens and how much room it has.
 
@@ -86,3 +113,10 @@ something.
   trailing edge, that neighbour is the size it was, and the canvas is taller than it was.
 - **SC-003** Closing restores every box to its resting position exactly.
 - **SC-004** No two nodes overlap, whichever node is open, for every node in the chart.
+- **SC-005** Part-way through opening, the card is strictly larger than it was and
+  strictly smaller than it will be — a rearrangement that arrives between two frames
+  passes neither test.
+- **SC-006** Part-way through, every wire leaving the moving node starts on a face of
+  that node's box *as it is drawn at that moment*.
+- **SC-007** With reduced motion asked for, the placement after the click is already the
+  final one and does not change as frames pass.

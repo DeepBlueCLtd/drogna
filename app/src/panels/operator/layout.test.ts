@@ -3,7 +3,7 @@
  * because "the arrows look about right" is not a check.
  */
 import { describe, expect, it } from 'vitest';
-import { METRICS, NARROW_METRICS, layout, route, routeAll, type Placed } from './layout.js';
+import { METRICS, NARROW_METRICS, layout, route, routeAll, tween, type Placed } from './layout.js';
 
 const NODES = [
   { id: 'a', band: 'loop', rank: 0 },
@@ -178,5 +178,57 @@ describe('opening one node (feature 116)', () => {
     const { placed, width, height } = layout(NODES, BANDS, METRICS, undefined);
     expect(placed).toEqual(layout(NODES, BANDS).placed);
     expect([width, height]).toEqual([layout(NODES, BANDS).width, layout(NODES, BANDS).height]);
+  });
+});
+
+/**
+ * The frame between two placements. The chart rearranges when a node opens, and a
+ * rearrangement that happens between two frames leaves the reader hunting for what
+ * changed — which is what the author reported, and why the "no animation" decision was
+ * reversed. This holds the arithmetic; the panel test holds that it is actually used.
+ */
+describe('one frame between two placements (feature 116)', () => {
+  const resting = layout(NODES, BANDS);
+  const open = layout(NODES, BANDS, METRICS, 'a');
+  const at = (from: ReturnType<typeof layout>, id: string) =>
+    from.placed.find((node) => node.id === id) as Placed;
+
+  it('is the ends themselves at the ends, by identity, so nothing is redrawn for nothing', () => {
+    expect(tween(resting, open, 0)).toBe(resting);
+    expect(tween(resting, open, 1)).toBe(open);
+    // Out of range is clamped rather than extrapolated: no frame may overshoot into a
+    // placement the layout never produced.
+    expect(tween(resting, open, -0.5)).toBe(resting);
+    expect(tween(resting, open, 1.5)).toBe(open);
+  });
+
+  it('puts every box, every band and the canvas half way at half way', () => {
+    const half = tween(resting, open, 0.5);
+    for (const node of half.placed) {
+      const from = at(resting, node.id);
+      const to = at(open, node.id);
+      expect(node.x, node.id).toBe((from.x + to.x) / 2);
+      expect(node.y, node.id).toBe((from.y + to.y) / 2);
+      expect(node.width, node.id).toBe((from.width + to.width) / 2);
+      expect(node.height, node.id).toBe((from.height + to.height) / 2);
+    }
+    expect(half.width).toBe((resting.width + open.width) / 2);
+    expect(half.height).toBe((resting.height + open.height) / 2);
+    expect(half.bands[0].height).toBe((resting.bands[0].height + open.bands[0].height) / 2);
+  });
+
+  it('keeps the target’s own facts, which are not positions and cannot be averaged', () => {
+    const half = tween(resting, open, 0.5);
+    // A node is open or it is not; there is no half-open. The band it is in is the band
+    // it is in. Interpolating either would put a fact somewhere between two values.
+    expect(half.placed.map((node) => node.expanded)).toEqual(open.placed.map((node) => node.expanded));
+    expect(half.placed.map((node) => node.band)).toEqual(open.placed.map((node) => node.band));
+    expect(half.bands.map((band) => band.band)).toEqual(open.bands.map((band) => band.band));
+  });
+
+  it('draws a node the start does not have where it ends up, rather than flying it in', () => {
+    const fewer = layout(NODES.slice(0, 2), BANDS);
+    const arrival = at(tween(fewer, resting, 0.5), 'c');
+    expect([arrival.x, arrival.y]).toEqual([at(resting, 'c').x, at(resting, 'c').y]);
   });
 });

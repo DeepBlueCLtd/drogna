@@ -378,9 +378,23 @@ describe('the Operator flow chart (feature 113)', () => {
       left: Number.parseFloat(slotOf(id).style.left),
       top: Number.parseFloat(slotOf(id).style.top),
     });
+    /** Click a node and let the chart finish rearranging (feature 116's animation). */
     const open = async (id: string) => {
       await act(async () => {
         fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+    };
+    /** Click a node and stop part-way through the rearrangement. */
+    const openPartway = async (id: string) => {
+      await act(async () => {
+        fireEvent.click(document.querySelector(`[data-flow-node="${id}"]`) as HTMLElement);
+      });
+      // Two frames of the 200ms move: far enough in to have moved, nowhere near done.
+      await act(async () => {
+        vi.advanceTimersByTime(32);
       });
     };
 
@@ -441,6 +455,9 @@ describe('the Operator flow chart (feature 113)', () => {
       await act(async () => {
         fireEvent.click(screen.getByTestId('drawer-close'));
       });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
       expect(boxOf(opened)).toEqual(restingOpen);
       expect(boxOf(along.id)).toEqual(restingAlong);
       expect(boxOf(below.id)).toEqual(restingBelow);
@@ -458,9 +475,89 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
       await act(async () => {
         fireEvent.click(screen.getByTestId('drawer-close'));
+        vi.advanceTimersByTime(400);
       });
       expect(document.activeElement?.getAttribute('data-flow-node')).toBe('scheduler');
       expect(document.activeElement?.tagName).toBe('BUTTON');
+    });
+
+    it('draws the rearrangement rather than jumping to it, so the eye can follow it', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const resting = boxOf('monitor');
+      await openPartway('monitor');
+      const moving = boxOf('monitor');
+      // Part-way: bigger than it was and smaller than it will be. A jump passes neither
+      // of these, and this is the whole of what the author asked for — a card that
+      // arrives at full size between two frames is a card nobody saw grow.
+      expect(moving.width).toBeGreaterThan(resting.width);
+      expect(moving.height).toBeGreaterThan(resting.height);
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      const settled = boxOf('monitor');
+      expect(moving.width).toBeLessThan(settled.width);
+      expect(moving.height).toBeLessThan(settled.height);
+    });
+
+    it('keeps every wire on the node it is moving, frame by frame', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      await openPartway('monitor');
+      const box = boxOf('monitor');
+      const leaving = [...document.querySelectorAll('[data-flow-edge^="monitor->"]')];
+      expect(leaving.length).toBeGreaterThan(0);
+      for (const edge of leaving) {
+        const start = /^M (-?[\d.]+),(-?[\d.]+)/.exec(edge.getAttribute('d') ?? '');
+        expect(start, edge.getAttribute('data-flow-edge') ?? '').toBeTruthy();
+        const [x, y] = [Number(start?.[1]), Number(start?.[2])];
+        // A wire leaves one of the four faces of the box as it is drawn *now*. This is
+        // the reason the movement is a tween over the geometry and not a CSS transition
+        // on the boxes: a transition glides the cards and leaves fifty wires pointing at
+        // where those cards used to be for as long as it lasts.
+        const onAFace =
+          Math.abs(x - box.left) < 1 ||
+          Math.abs(x - (box.left + box.width)) < 1 ||
+          Math.abs(y - box.top) < 1 ||
+          Math.abs(y - (box.top + box.height)) < 1;
+        expect(onAFace, `${edge.getAttribute('data-flow-edge')} at ${x},${y}`).toBe(true);
+      }
+    });
+
+    it('moves nothing at all for a reader who asked for that', async () => {
+      // FR-016: the graph respects prefers-reduced-motion. The platform is asked rather
+      // than assumed, and when it says yes the new placement is committed on the frame
+      // the click landed on — the picture this tab drew before the animation existed.
+      const asked = vi
+        .spyOn(globalThis, 'matchMedia')
+        .mockImplementation(
+          (query: string) =>
+            ({ matches: query.includes('prefers-reduced-motion'), media: query }) as MediaQueryList,
+        );
+      try {
+        render(<OperatorPanel {...panelProps(config, runtime)} />);
+        await act(async () => {
+          vi.advanceTimersByTime(2100);
+        });
+        const resting = boxOf('monitor');
+        await act(async () => {
+          fireEvent.click(document.querySelector('[data-flow-node="monitor"]') as HTMLElement);
+        });
+        // No frames advanced: it is already where it is going.
+        expect(boxOf('monitor').width).toBeGreaterThan(resting.width);
+        const settled = boxOf('monitor').width;
+        await act(async () => {
+          vi.advanceTimersByTime(400);
+        });
+        expect(boxOf('monitor').width).toBe(settled);
+        expect(asked).toHaveBeenCalled();
+      } finally {
+        asked.mockRestore();
+      }
     });
 
     it('opens it below the table in the list view, which has nowhere to expand into', async () => {

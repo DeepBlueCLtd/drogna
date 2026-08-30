@@ -22,10 +22,58 @@
  * a button may not contain the sliders and buttons the account carries. So an open node
  * is a section with a heading and its own close control, and the two are different
  * elements — not one element with a class on it.
+ *
+ * **The move is drawn, not jumped.** Opening a node rearranges most of the chart at
+ * once, and a picture that rearranged between two frames left the reader hunting for
+ * which card had grown — the author's report, and the reason this was reversed from
+ * "deliberately not done". So the canvas holds a placement of its own and walks it to
+ * the new one over a fifth of a second, re-routing the wires from the interpolated boxes
+ * on every frame: the eye follows the card that grows and the neighbours that give way,
+ * which is exactly the information that was missing.
+ *
+ * It is a JavaScript tween rather than a CSS transition because the wires are computed
+ * from where the nodes are. A transition would glide the nodes and leave fifty edges
+ * pointing at where those nodes used to be until it finished.
+ *
+ * Nothing moves for a reader who has asked for that (FR-016): with reduced motion the
+ * new placement is committed on the same frame, and the picture is exactly the one this
+ * file drew before the animation existed.
  */
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { FlowEdge, FlowNode } from './graph.js';
-import { METRICS, layout, routeAll, type LayoutMetrics, type Routed } from './layout.js';
+import {
+  METRICS,
+  layout,
+  routeAll,
+  tween,
+  type Layout,
+  type LayoutMetrics,
+  type Routed,
+} from './layout.js';
+
+/**
+ * How long the chart takes to rearrange, in milliseconds of host time.
+ *
+ * Long enough for the eye to follow one card out of twenty — under about 150ms a move
+ * reads as a jump — and short enough that a reader who knows where they are going is
+ * not waiting for the picture to catch up.
+ */
+const REARRANGE_MS = 200;
+
+/** Slow at both ends, quickest in the middle: the movement of something with mass. */
+function ease(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+/**
+ * Whether this reader has asked the platform for less movement. Answered by the
+ * platform, never assumed: where `matchMedia` is not there to ask — a test environment,
+ * an old engine — the answer is no, and the animation is the one every other reader
+ * gets rather than a silent downgrade for everybody.
+ */
+function prefersReducedMotion(): boolean {
+  return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
 
 const HUE: Record<string, string> = {
   topic: 'var(--flow-ctl)',
@@ -64,7 +112,15 @@ export function FlowCanvas({
   stateOf,
   metrics = METRICS,
 }: FlowCanvasProps) {
-  const placed = layout(nodes, bandOrder, metrics, selected);
+  // Where the chart is going. Recomputed only when something that decides geometry
+  // changes, so the frame loop below has a stable thing to walk towards.
+  const target = useMemo(
+    () => layout(nodes, bandOrder, metrics, selected),
+    [nodes, bandOrder, metrics, selected],
+  );
+  // Where it is being drawn right now. Equal to the target except while it is moving.
+  const [placed, setPlaced] = useState<Layout>(target);
+  const drawn = useRef<Layout>(target);
   const routed = routeAll(edges, placed.placed);
   const positionOf = new Map(placed.placed.map((node) => [node.id, node]));
   const touches = (edge: Routed) => edge.from === selected || edge.to === selected;
@@ -88,16 +144,60 @@ export function FlowCanvas({
   const openRef = useRef<HTMLElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const previous = useRef<string | undefined>(undefined);
+
+  /**
+   * Walk the drawn placement to the target one. An animation already running is
+   * retargeted rather than restarted — a reader who opens a second node while the first
+   * is still moving gets one continuous rearrangement from wherever the picture had got
+   * to, not a jump back to the start.
+   */
+  useEffect(() => {
+    const from = drawn.current;
+    if (from === target) return;
+    const commit = (frame: Layout) => {
+      drawn.current = frame;
+      setPlaced(frame);
+    };
+    /**
+     * Once it has stopped moving, and only then: a card that is off the side of the
+     * canvas is brought in, by the least that makes it whole. Scrolling to a box that
+     * is still growing aims at the wrong place — on a phone the card ended up half off
+     * the screen, and on a desktop, where nothing needed to move at all, the whole
+     * chart was dragged sideways.
+     */
+    const settle = () => {
+      if (selected === undefined) return;
+      openRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    };
+    if (prefersReducedMotion() || globalThis.requestAnimationFrame === undefined) {
+      commit(target);
+      settle();
+      return;
+    }
+    let handle = 0;
+    let started: number | undefined;
+    const step = (now: number) => {
+      started ??= now;
+      const t = Math.min(1, (now - started) / REARRANGE_MS);
+      commit(t >= 1 ? target : tween(from, target, ease(t)));
+      if (t >= 1) settle();
+      // harness:allow-wallclock the chart's own rearrangement, drawn frame by frame; nothing derived from it leaves the render path (ADR-0007's rule 3)
+      if (t < 1) handle = requestAnimationFrame(step);
+    };
+    // harness:allow-wallclock as above: one frame of a layout transition, never a simulation time
+    handle = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(handle);
+  }, [target]);
   useEffect(() => {
     const was = previous.current;
     previous.current = selected;
     if (was === selected) return;
     if (selected !== undefined) {
-      openRef.current?.focus();
-      // The canvas pans, so an open card can sit half off the side of a phone. Bring
-      // its leading edge in: focusing alone scrolls by the least it can get away with,
-      // which on a 390-pixel screen left the controls over the edge.
-      openRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'start' });
+      // Without `preventScroll` the browser brings the card into view *now*, while it
+      // is still the size of a resting node, and then it grows back off the edge of a
+      // phone. Bringing it in is worth doing and is done once it has stopped moving,
+      // at the end of the rearrangement below.
+      openRef.current?.focus({ preventScroll: true });
       return;
     }
     // Closed: back to the node it was, not to nowhere.
@@ -165,14 +265,19 @@ export function FlowCanvas({
           const at = positionOf.get(node.id);
           if (!at) return null;
           const { lit, word } = stateOf(node.id);
+          // What is *in* the node follows the selection immediately; only its box is
+          // animated. A card whose content waited for the first frame would mean a
+          // click with nothing behind it, and on a slow frame that is a click that
+          // appears to have missed.
+          const open = node.id === selected;
           return (
             <div
               key={node.id}
               className="flow-node-slot"
-              data-expanded={at.expanded}
+              data-expanded={open}
               style={{ left: at.x, top: at.y, width: at.width, height: at.height }}
             >
-              {at.expanded ? (
+              {open ? (
                 <section
                   className="flow-node flow-node-open"
                   data-flow-node={node.id}

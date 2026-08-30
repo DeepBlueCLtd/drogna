@@ -99,13 +99,54 @@ which failed nine tests including every one of the control tests, because the co
 were then inside a card the size of a resting one — which is, precisely, the bug this
 feature exists to fix, reproduced on demand.
 
+## The part that was decided wrong first
+
+The first version shipped without any animation, and that was a deliberate decision with
+a written reason: a card growing over a fifth of a second looks good in a screenshot
+sequence, and it moves the neighbours while the reader is reading them. The chart
+rearranged on the same frame as the click.
+
+The person who had asked for the feature used it and said: *it's possible to lose track
+of which panel has opened.*
+
+That is the reflow's own doing, and it is obvious in hindsight. Opening a box moves most
+of the diagram at once — everything to its right, and every row below. Between two frames
+a dozen boxes are somewhere new and the one that grew is not distinguished by having
+moved, because they all moved. The original reasoning had been about the two end states,
+both of which are correct; what it missed is the transition, which is where the reader
+actually is.
+
+So the diagram now walks from one arrangement to the other over about a fifth of a
+second, and the eye follows the box that grows.
+
+The mechanism matters more than it sounds. The obvious build is a CSS transition on the
+boxes — three lines, no JavaScript, hardware-accelerated. It does not work here, and the
+reason is the wires: they are computed from where the boxes are, so a transition glides
+the boxes and leaves fifty edges pointing at where those boxes used to be until it
+finishes. What moves instead is the *layout*: the diagram holds the arrangement it is
+drawing, interpolates towards the new one, and re-routes every wire from the interpolated
+boxes on every frame. Traced in a real browser, the opened box goes 208 → 211 → 221 → 262
+→ 292 → 366 → 450 pixels wide over consecutive frames, and the wire leaving its right
+edge starts at 708 → 950 — on the edge, every frame.
+
+A reader who has told their system they want less movement gets none of this: the new
+arrangement is committed on the frame the click landed, which is exactly the version the
+original decision described. That question is put to the browser rather than assumed, and
+one of the planted faults was skipping the question — caught, because the test asserts the
+browser was actually asked, not merely that nothing moved.
+
 The last thing was found by looking rather than by testing. The open card was three rows
 tall, which fits the monitor's first slider and puts its second one just under the fold.
 A control you have to scroll to find is the complaint this feature started with, so the
 card is four rows tall. On a phone it is a different shape again — taller and narrower,
-because the space a phone has is vertical — and it is scrolled into view by its leading
-edge, since focusing an element scrolls by the least it can get away with and that left
-the *set* buttons over the edge of a 390-pixel screen.
+because the space a phone has is vertical.
+
+Bringing that card into view took two attempts, and the second one only became possible
+once the movement existed. Scrolling to it when it is selected aims at a box that is
+still the size of a resting card: on a phone it then grew back off the edge of the
+screen, and on a desktop, where the card had never left the viewport at all, the whole
+diagram was dragged sideways for no reason. It is scrolled into view at the *end* of the
+movement now, by the least that makes it whole, which on a desktop is nothing.
 
 ## The demo
 
@@ -114,8 +155,9 @@ takes a control.
 
 [Open it at the operator view](../../instances/main/#/view/operator)
 
-Click the **monitor**, top row: it opens where it stands, the boxes to its right slide
-along, and the rows below move down. Both of its dials are on screen without scrolling,
+Click the **monitor**, top row: it opens where it stands, and the boxes to its right
+slide along while the rows below move down — watch the wires stay on the box the whole
+way, which is the part a CSS transition could not have done. Both of its dials are on screen without scrolling,
 and the residual line above them is at a size where you can read the number. Close it and
 everything returns to where it was.
 

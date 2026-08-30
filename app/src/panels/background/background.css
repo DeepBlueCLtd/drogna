@@ -320,6 +320,15 @@
   font-family: monospace;
 }
 
+/* Smaller than the buttons on purpose: the row's height is a published proof
+   (scripts/capture/background.ts checks Next never moves), so a hint at the foot of
+   the stage must not be what grows it. */
+.bg-keyhint {
+  margin-left: auto;
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
 /* ---- the Consequences panel (FR-008) ---- */
 
 .bg-value h3 {

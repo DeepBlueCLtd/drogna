@@ -1,34 +1,30 @@
-<title>Intro, Redrawn</title>
+<title>Intro at Six Elements</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Public+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
   --paper:#EDF0F1; --surface:#FFFFFF; --sunk:#E1E7E9;
-  --ink:#101A20; --body:#2A3B43; --muted:#62757E; --line:#C6D0D4;
-  --accent:#B4650F; --accent-ink:#7A4308; --wash:#F6EEE3;
-  --port:#7E8E97;
+  --ink:#101A20; --body:#2A3B43; --muted:#5E727B; --line:#C6D0D4;
+  --accent:#B4530F; --accent-ink:#7A3908; --wash:#F7EDE4; --port:#7E8E97;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
     --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
-    --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1D2129;
-    --port:#66757F;
+    --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1E222A; --port:#66757F;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0C1418; --surface:#131E24; --sunk:#0A1216;
   --ink:#E2ECEF; --body:#BDCDD3; --muted:#8399A2; --line:#27383F;
-  --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1D2129;
-  --port:#66757F;
+  --accent:#E39A44; --accent-ink:#F0BE7F; --wash:#1E222A; --port:#66757F;
 }
-
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--body);margin:0;
   font-family:'Public Sans',system-ui,sans-serif;font-size:16px;line-height:1.6}
-.wrap{max-width:1140px;margin:0 auto;padding:0 24px 120px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 110px}
 h1,h2,h3{font-family:Spectral,Georgia,serif;color:var(--ink);margin:0;text-wrap:balance}
-h1{font-size:clamp(2rem,4.4vw,2.9rem);font-weight:600;line-height:1.08}
-h2{font-size:clamp(1.3rem,2.4vw,1.75rem);font-weight:600}
+h1{font-size:clamp(2rem,4.2vw,2.8rem);font-weight:600;line-height:1.1}
+h2{font-size:clamp(1.25rem,2.2vw,1.7rem);font-weight:600}
 h3{font-size:1.05rem;font-weight:600}
 p{margin:0}
 .prose{max-width:64ch}
@@ -36,175 +32,138 @@ code,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
 .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.16em;
   text-transform:uppercase;color:var(--muted)}
 a{color:var(--accent-ink)}
-
-header.top{border-bottom:1px solid var(--line);padding:56px 0 30px;
+header.top{border-bottom:1px solid var(--line);padding:54px 0 28px;
   display:flex;flex-direction:column;gap:14px}
 .meta{display:flex;flex-wrap:wrap;gap:6px 26px;font-family:'IBM Plex Mono',monospace;
   font-size:.76rem;color:var(--muted)}
 .meta b{color:var(--ink);font-weight:500}
-section{padding:40px 0;border-bottom:1px solid var(--line);display:flex;
+section{padding:38px 0;border-bottom:1px solid var(--line);display:flex;
   flex-direction:column;gap:16px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 @media (max-width:800px){.two{grid-template-columns:1fr}}
 .note{border-left:3px solid var(--accent);background:var(--sunk);padding:12px 16px;font-size:.94rem}
 
-/* ---------- the wireframe ---------- */
-.frame{background:var(--surface);border:1px solid var(--line);border-radius:2px;
-  display:flex;flex-direction:column}
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:2px}
 .frame-bar{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
   padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted)}
 .frame-bar .tabs{display:flex;gap:14px}
 .frame-bar .tabs span[aria-current]{color:var(--ink);border-bottom:2px solid var(--accent);
   padding-bottom:2px}
-.region{border:1px dashed var(--line);margin:10px 12px;padding:14px 14px 12px;position:relative}
-.region>.tag{position:absolute;top:-9px;left:10px;background:var(--surface);
-  font-family:'IBM Plex Mono',monospace;font-size:.64rem;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--muted);padding:0 6px}
-.ph{background:var(--sunk);height:9px;border-radius:1px}
-.ph.short{width:38%}
-.ph.mid{width:66%}
-.ph+.ph{margin-top:7px}
-.stage{display:grid;grid-template-columns:minmax(0,auto) minmax(280px,1fr);gap:26px;
+.panel{padding:18px 20px 14px}
+.panel h2.mast{font-size:1.5rem;margin-bottom:14px}
+.stage{display:grid;grid-template-columns:minmax(0,auto) minmax(270px,1fr);gap:28px;
   align-items:start}
 @media (max-width:900px){.stage{grid-template-columns:1fr}}
-
 .canvas-scroll{overflow-x:auto}
 .canvas{position:relative;transform-origin:top left}
 .wires{position:absolute;inset:0;overflow:visible}
-.wire{fill:none;stroke:var(--line);stroke-width:1.2;opacity:.75}
-.wire.port{stroke:var(--port);stroke-dasharray:5 4;opacity:.55}
-.wire.now{stroke:var(--accent);stroke-width:2;opacity:1}
+.wire{fill:none;stroke:#9aa9b4;stroke-width:1.5;opacity:.9}
+.wire.port{stroke:var(--port);stroke-dasharray:6 4;stroke-width:1.4;opacity:.78}
+.wire.now{stroke:var(--accent);stroke-width:2.4;opacity:1}
 .plane-band{fill:var(--sunk);stroke:var(--line);stroke-width:1}
-.loop-band{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:3 3}
-.plane-cap{fill:var(--muted);font-size:9px;letter-spacing:.16em;
-  font-family:'IBM Plex Mono',monospace}
-.node{position:absolute;display:flex;flex-direction:column;justify-content:center;
-  gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:2px;
-  padding:6px 9px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.3;
-  color:var(--ink);text-align:left;cursor:pointer;animation:grow 300ms ease-out}
+.cap{fill:var(--muted);font-size:9px;letter-spacing:.16em;font-family:'IBM Plex Mono',monospace}
+.node{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:8px 10px;
+  text-align:left;cursor:pointer;color:var(--ink);font:inherit;font-size:.82rem;line-height:1.25;
+  animation:grow 300ms ease-out}
 .node:hover{border-color:var(--accent)}
 .node.now{border:2px solid var(--accent);background:var(--wash)}
-.eras{display:flex;gap:3px;flex-wrap:wrap}
-.era{border:1px solid var(--line);border-radius:2px;color:var(--muted);
-  font-size:9px;padding:0 3px}
-.outside{position:absolute;border:1px dashed var(--port);border-radius:2px;padding:6px 9px;
-  font-family:'IBM Plex Mono',monospace;font-size:9.5px;line-height:1.4;color:var(--muted);
+.node b{font-weight:600;font-family:'Public Sans',sans-serif}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{border:1px solid var(--line);border-radius:2px;color:var(--muted);
+  font-family:'IBM Plex Mono',monospace;font-size:8.5px;padding:0 3px;line-height:1.5}
+.outside{position:absolute;border:1px dashed var(--port);border-radius:3px;padding:8px 10px;
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;line-height:1.45;color:var(--muted);
   display:flex;flex-direction:column;gap:1px;animation:grow 300ms ease-out}
-.outside b{color:var(--ink);font-weight:500;font-size:11px}
-@keyframes grow{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.outside b{color:var(--ink);font-weight:500;font-size:11px;font-family:'Public Sans',sans-serif}
+@keyframes grow{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.node,.outside{animation:none}}
-
-.narr{border-left:2px solid var(--line);padding-left:16px;display:flex;
-  flex-direction:column;gap:9px;min-height:330px}
+.narr{border-left:2px solid var(--line);padding-left:16px;display:flex;flex-direction:column;
+  gap:9px;min-height:300px}
 .narr .step{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;
   text-transform:uppercase;color:var(--muted)}
-.narr h3{font-size:1.08rem}
+.narr .step .hint{margin-left:.9em;text-transform:none;letter-spacing:.02em}
 .narr .who{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--accent-ink)}
 .narr p.body{font-size:.9rem;line-height:1.55;margin-bottom:6px}
 .narr .live{font-size:.8rem;font-family:'IBM Plex Mono',monospace;color:var(--accent-ink)}
 .ctl{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:10px}
 .ctl button{font:inherit;font-size:.82rem;font-family:'IBM Plex Mono',monospace;
-  background:var(--surface);border:1px solid var(--line);border-radius:2px;
-  padding:3px 10px;color:var(--ink);cursor:pointer}
+  background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:3px 10px;
+  color:var(--ink);cursor:pointer}
 .ctl button:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
 .ctl button:disabled{color:var(--muted);cursor:default;opacity:.55}
 .ctl button:focus-visible,.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.omit{font-size:.8rem;color:var(--muted);margin-top:10px}
+.foot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:.8rem;
+  color:var(--muted);display:flex;flex-direction:column;gap:7px}
+.foot .disc{border-left:3px solid var(--accent);padding-left:10px}
 .omit summary{cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.75rem}
 .omit ul{margin:6px 0 0;padding-left:1.1em}
-.omit li{margin-bottom:3px}
 .omit b{color:var(--ink);font-weight:500}
-.hint{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);
-  padding:0 12px 12px}
-kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;
-  padding:0 4px;font-family:'IBM Plex Mono',monospace;font-size:.9em}
-
 table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
 th{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted);font-weight:500}
 td.n{font-family:'IBM Plex Mono',monospace;color:var(--muted);width:2.4rem}
-td.c{font-family:'IBM Plex Mono',monospace;color:var(--accent-ink);font-size:.82rem}
+td.c{font-family:'IBM Plex Mono',monospace;color:var(--accent-ink);font-size:.8rem}
 tr.here td{background:var(--wash)}
 tbody tr{cursor:pointer}
 ol.q{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px}
 ol.q b{color:var(--ink)}
-.split{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
-@media (max-width:800px){.split{grid-template-columns:1fr}}
-.split h3{margin-bottom:6px}
-.split ul{margin:0 0 14px;padding-left:1.1em;font-size:.9rem}
-.split li{margin-bottom:5px}
 </style>
 
 <div class="wrap">
 <header class="top">
-  <p class="eyebrow">drogna &middot; feature 117 &middot; wireframe, second pass</p>
-  <h1>Intro, redrawn: four flows, drawn one at a time</h1>
-  <p class="prose">The Intro tab is a numbered list of landed features. This is a wireframe of what
-  would replace it: one drawing of the system, trimmed to the flows a reader arrives wanting —
-  samples in, validated and stored, the forecast updated when the field drifts or the cadence falls
-  due, the result interrogated from outside through standard interfaces — grown a step at a time
-  under the arrow keys.</p>
+  <p class="eyebrow">drogna &middot; feature 117 &middot; wireframe, third pass</p>
+  <h1>Six elements, and the loop is two arrows</h1>
+  <p class="prose">Fourteen boxes became six. Each one stands for the components it names,
+  the wires between them are still derived from the topology, and the forecast loop — four
+  components and an internal ring — becomes one box with two arrows to the fields.</p>
   <div class="meta">
     <span>date <b>30 August 2026</b></span>
     <span>status <b>wireframe — not built</b></span>
-    <span>steps <b>10</b></span>
-    <span>drawn <b>13 components</b></span>
-    <span>left out <b>7, each with its reason</b></span>
+    <span>elements <b>6, plus the plane</b></span>
+    <span>wires <b>8, all derived</b></span>
+    <span>components covered <b>14 of 21</b></span>
   </div>
 </header>
 
 <section>
-  <h2>What changed from the first pass</h2>
+  <h2>What changed, and the one thing it costs</h2>
   <div class="two">
-    <p>The first wireframe drew all twenty declared components on a five-column grid. It was
-    complete and it was a scribble: forty-one wires, and a loop you had to be told was a loop.
-    Completeness is the Operator tab's job, and it already does it better.</p>
-    <p>This one draws thirteen. The write path is a straight column down the right — sample,
-    validate, store. The four boxes at the left are laid out as an actual rectangle, because the
-    forecast loop <em>is</em> a loop and a picture of it that is not a ring has thrown away the one
-    thing worth saying. Fifteen wires. The seven components left out are listed under the drawing
-    with the reason for each, and a gate fails on any component that is in neither list.</p>
+    <p>The second pass drew thirteen components and fifteen wires, and the panel was taller
+    than a laptop screen. This one groups them: sensing is one box, not two; measurement in
+    is one box, not three; the whole forecast loop is one box carrying the four components
+    that turn in it. Six steps instead of eleven.</p>
+    <p><b>The cost is a name that nothing declares.</b> Every box in the last version was a
+    component and carried that component's own label. A group's name — <span class="mono">The
+    forecast loop</span> — is authored, so the storyboard now authors five things rather than
+    four. What stops that from rotting is unchanged: each box lists the declared labels it
+    stands for, the wires are still derived from the topology, and the gate still fails on any
+    component that is in neither a group nor the recorded omissions.</p>
   </div>
-  <p class="note">Drawn light and flat on purpose, so it is not mistaken for a picture of the
-  finished dark panel. The content is real: labels from <code>app/config/run.json</code>, wires
-  derived from <code>contracts/topology.json</code>, and the paragraphs are the draft copy.</p>
+  <p class="note">Drawn light and flat on purpose, so it is not mistaken for the finished dark
+  panel. Labels, membership and wires come from <code>app/config/run.json</code> and
+  <code>contracts/topology.json</code> as they stand after today's merge — the analyst
+  included.</p>
 </section>
 
 <section>
   <h2>The panel</h2>
-  <p class="prose">The name and the disclaimer stay exactly where a first-time reader already finds
-  them. The stage is new. The foot keeps the walkthrough's deep links into the other tabs.</p>
-
   <div class="frame">
     <div class="frame-bar">
       <span class="mono">drogna</span>
-      <span class="tabs">
-        <span aria-current="page">Intro</span><span>Background</span><span>Holdings</span>
-        <span>Operator</span><span>Map</span><span>Messages</span>
-      </span>
+      <span class="tabs"><span aria-current="page">Intro</span><span>Background</span>
+        <span>Holdings</span><span>Operator</span><span>Map</span><span>Messages</span></span>
       <span style="margin-left:auto">synthetic throughout &mdash; holds no third-party entities</span>
     </div>
-
-    <div class="region">
-      <span class="tag">A &middot; unchanged: name, disclaimer, run identity</span>
-      <div class="ph"></div><div class="ph mid"></div><div class="ph short"></div>
-    </div>
-
-    <div class="region">
-      <span class="tag">B &middot; the stage</span>
+    <div class="panel">
+      <h2 class="mast">drogna</h2>
       <div class="stage">
         <div>
           <div class="canvas-scroll"><div class="canvas" id="canvas"></div></div>
-          <details class="omit">
-            <summary id="omit-summary"></summary>
-            <ul id="omit-list"></ul>
-            <p style="margin-top:6px">The complete flow chart, every component and every wire, is
-            the Operator tab.</p>
-          </details>
         </div>
         <div class="narr">
-          <p class="step" id="pos"></p>
+          <p class="step"><span id="pos"></span><span class="hint">← → or click a part</span></p>
           <h3 id="title"></h3>
           <p class="who" id="who"></p>
           <div id="prose"></div>
@@ -216,62 +175,26 @@ ol.q b{color:var(--ink)}
           </div>
         </div>
       </div>
+      <div class="foot">
+        <details class="omit"><summary id="omit-summary"></summary><ul id="omit-list"></ul></details>
+        <p class="disc">This is a demonstration harness and nothing else. Its numerics are
+        deliberately fake, its data synthetic, and it holds no third-party entities of any kind
+        — and never will. Everything drawn above is genuine programs running in this browser
+        page, behind a wire-protocol seam a real backend can replace by swapping a base URL.
+        This run was seeded fresh when you opened the page: run <code>loiter-4uzcjd</code>,
+        root seed <code>1896946933</code>.</p>
+        <p>Watch the machinery light and interrupt it in Operator, read the store filling up in
+        Holdings, watch the traffic argue with its masters in Messages, and see the whole loop
+        at once on the Map.</p>
+      </div>
     </div>
-
-    <div class="region">
-      <span class="tag">C &middot; foot: the walkthrough's links into the live tabs</span>
-      <div class="ph"></div><div class="ph mid"></div>
-    </div>
-
-    <p class="hint">Try it: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to move, <kbd>Home</kbd> /
-    <kbd>End</kbd> for the ends, or click any box that has already appeared.</p>
   </div>
 </section>
 
 <section>
-  <h2>What is derived, and what is authored</h2>
-  <div class="split">
-    <div>
-      <h3>Derived — cannot go stale</h3>
-      <ul>
-        <li>Each node's text: that component's own declared label.</li>
-        <li>Every wire: the topology's publish/subscribe overlaps and the declared ports, collapsed
-        to one line per pair. Solid crosses the broker; dashed is a port and carries no traffic.</li>
-        <li>The plane strip: the components that declare <code>band: "plane"</code>, and the clock
-        and heartbeat filters the flow chart already suppresses.</li>
-        <li>The three eras inside the coverage store: the enum in the holding master.</li>
-        <li>The interfaces on the arrow leaving the harness: the shell's declared endpoints.</li>
-      </ul>
-    </div>
-    <div>
-      <h3>Authored — reviewed here</h3>
-      <ul>
-        <li>The ten steps, their order and their words.</li>
-        <li>Which cell each box sits in.</li>
-        <li>Which seven components are left out, and why.</li>
-        <li>Which live view each step links to.</li>
-      </ul>
-      <h3>Held by a gate</h3>
-      <ul>
-        <li>A component that is neither drawn nor recorded as deliberately left out.</li>
-        <li>A box for something the configuration declares nothing for.</li>
-        <li>An omission with no reason given, or one that is also drawn.</li>
-        <li>Two boxes in one cell; a plane component drawn outside the strip.</li>
-      </ul>
-    </div>
-  </div>
-  <p class="note">Nothing in the drawing is <em>lit</em>. It is the wiring, not the run: no
-  heartbeat reaches it and no box claims to be alive, because the cheapest way to break the rule
-  that illumination comes from heartbeats is a diagram that looks like a readout. The foot says so
-  and links to Operator, where the live answer is.</p>
-</section>
-
-<section>
-  <h2>The ten steps</h2>
-  <p class="prose">The order is the path the data takes, not the order the features landed. Click a
-  row to see it in the drawing above.</p>
+  <h2>The six steps</h2>
   <table>
-    <thead><tr><th>#</th><th>What appears</th><th>What the step says</th></tr></thead>
+    <thead><tr><th>#</th><th>Element</th><th>Stands for</th><th>What the step says</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
 </section>
@@ -279,187 +202,143 @@ ol.q b{color:var(--ink)}
 <section style="border-bottom:0">
   <h2>Still to settle</h2>
   <ol class="q">
-    <li><b>Is this the right thirteen?</b> The planner and telemetry are the two closest calls: they
-    genuinely track the measurements, but they read the stores through ports rather than EDR, and
-    each is a second argument the Map and Operator tabs already make.</li>
-    <li><b>&ldquo;Stored in Postgres.&rdquo;</b> Step 4 says it the only way that is true here: the
-    store is in memory behind a store interface, in V1 it was PostgreSQL with PostGIS behind that
-    same interface, and V3 brings the engines back. If you would rather the box itself said
-    <span class="mono">PostgreSQL / PostGIS</span>, it would be naming an engine this build does not
-    run.</li>
-    <li><b>The arrow out.</b> One box in the drawing is not a component — dashed, labelled
-    <span class="mono">anything outside</span>, carrying the three served interfaces. It is the
-    honest form of &ldquo;downstream systems interrogate the store with EDR&rdquo;: this page is
-    just another client, and the Map's field arrives by the same request anyone outside would make.</li>
-    <li><b>Prose length.</b> Longer on the four steps carrying the argument — measurement in, the
-    scheduler's two doors, the loop closing, and what the query layer serves — short elsewhere.</li>
+    <li><b>Is six the right six?</b> The grouping that carries the most weight is the loop:
+    monitor, scheduler, analyst and runner in one box, with the internal ring — watch, decide,
+    assimilate, forecast — told in prose rather than drawn. The two arrows to the fields are
+    the cycle at this altitude.</li>
+    <li><b>Do the member chips earn their place?</b> Each box lists the declared labels it
+    stands for, in small type. They are what keeps the abstraction anchored to the tree, but
+    they are also the busiest thing left in the picture.</li>
+    <li><b>The plane.</b> Clock and broker sit in the strip at the foot as the ground rather
+    than as a seventh element. The release gate moved in with the query components, since it
+    stands in front of every answer they give.</li>
+    <li><b>Six steps, or five?</b> The fields and the loop could be one step, told as
+    "the loop turns against the store" — but the three eras are the reason the archive,
+    the recent and the current can be talked about at all.</li>
   </ol>
 </section>
 </div>
 
-<script type="application/json" id="data">{"width":618,"height":644,"plane":{"x":17,"y":531,"width":584,"height":96},"planeRow":4,"outside":{"id":"outside","x":426,"y":394,"width":158,"height":62},"loop":{"x":16,"y":132,"width":384,"height":218},"loopMembers":["coverage-store","monitor","scheduler","model-runner"],"total":20,"endpoints":{"edr":"/api/edr","st":"/api/st/v1.1","features":"/api/features"},"suppressed":["ctl/clock","ctl/heartbeat"],"beats":[{"step":1,"id":"the-ocean","title":"A synthetic ocean, authored","prose":["Nothing in drogna was measured at sea. When this page opened, the environment generator authored a four-dimensional field of temperature and salinity — a warm-core eddy, a front, a thermocline, a drifting feature — from this run’s seed, and wrote the exact draw order into a ground-truth manifest.","Everything else in this drawing is downstream of that field, and everything that claims to have recovered it can be scored against it. That is the whole reason the world is synthetic: a demonstration that cannot mark its own homework is a demonstration of nothing."],"live":{"view":"holdings","label":"Read the manifest in Holdings"},"reveals":[{"id":"env-generator","label":"Environment generator","box":{"id":"env-generator","x":30,"y":34,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":2,"id":"sampling","title":"A platform, and instruments that sample the truth","prose":["A simulated platform loiters over the eddy and reports where it is. Its instruments read the true field through a port rather than a message — the dashed line, the kind of coupling that carries no traffic — at temperature and salinity at two depths, on a fixed cadence, at wherever the platform has got to."],"live":{"view":"map","label":"Watch the platform move on the Map"},"reveals":[{"id":"sensors","label":"Sensors","box":{"id":"sensors","x":228,"y":34,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false},{"id":"platform","label":"Platform","box":{"id":"platform","x":426,"y":34,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":3,"id":"measurement-in","title":"Measurement and location, in SensorThings vocabulary","prose":["Each sample leaves as a SensorThings observation — a result, the phenomenon time it was taken at, the datastream it belongs to, and the location it came from — published over a broker with MQTT topic semantics. Position is an observation like any other, on its own topic; nothing about where the platform is travels by a private route.","The ingestion seam is the only way in. Every message is validated against the committed master its topic declares, and one that fails is refused with the reason named and counted where the count can be seen. That is what makes the vocabulary a contract rather than a convention.","The broker carries every message in the picture, so its own wires are not drawn: forty lines through one box would hide the ones that carry meaning. It sits in the strip at the foot, with the rest of the plane."],"live":{"view":"messages","label":"The topic tree, lit by traffic"},"reveals":[{"id":"broker","label":"Broker","box":{"id":"broker","x":228,"y":548,"width":158,"height":62},"plane":true,"eras":null,"servesOutside":false},{"id":"ingest","label":"Ingestion seam","box":{"id":"ingest","x":426,"y":154,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":4,"id":"stored","title":"Stored, behind a store interface","prose":["Observations accumulate in a store with one writer and no other way in: values at instants at places, kept as what a sensor said, never smoothed into a field.","Here that store is in memory, behind an interface. In V1 it was PostgreSQL with PostGIS and the same interface stood in front of it; the engines return in V3. What the rest of the picture depends on is the interface and its one-writer rule, which is exactly why the store is a port and the database is not the subject of the drawing."],"live":{"view":"messages","label":"The refusals, counted, in Messages"},"reveals":[{"id":"observation-store","label":"Observation store","box":{"id":"observation-store","x":426,"y":274,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":5,"id":"the-fields","title":"The fields, in three eras","prose":["Beside the points sits the coverage store, which holds gridded fields: the archive, twenty years of monthly history; the now-cast, replaced on its cadence; and the forecast instances that accumulate once the loop turns. The three slabs in the box are the three the holding master declares, and nothing else is admitted."],"live":{"view":"holdings","label":"The store filling up, in Holdings"},"reveals":[{"id":"coverage-store","label":"Coverage store","box":{"id":"coverage-store","x":30,"y":154,"width":158,"height":62},"plane":false,"eras":["archive","nowcast","instance"],"servesOutside":false}]},{"step":6,"id":"drift","title":"Drift is watched, not guessed at","prose":["The monitor pairs each observation with the forecast that claimed to cover it and scores the residual. Sound speed is derived by one implementation, so two parts of the system cannot quietly disagree about it.","A divergence is raised only on sustained persistence. One spike is weather in the numbers, and a loop that ran on every spike would be a loop that never stopped running."],"live":{"view":"operator","label":"The streak filling, in Operator"},"reveals":[{"id":"monitor","label":"Monitor","box":{"id":"monitor","x":30,"y":274,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":7,"id":"warranted","title":"A run is warranted — by drift, or by the clock","prose":["The scheduler holds the policy, and it has two doors. A sustained divergence asks for a run; so does the cadence floor, which fires when enough simulation time has elapsed whether or not anything has drifted. A run warranted by the floor alone is labelled scheduled, never divergence-driven, wherever runs appear.","The other half of the policy is the minimum interval: a breach that arrives too soon after the last run is declined, observably, with the bound named. Between the two the loop can neither be stampeded nor becalmed for good."],"live":{"view":"operator","label":"What it decided last, in Operator"},"reveals":[{"id":"scheduler","label":"Scheduler","box":{"id":"scheduler","x":228,"y":274,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":8,"id":"the-loop","title":"The forecast updates, and the loop closes","prose":["The model runner takes three things: the archive as its prior, the observations since the last run, and the current holding as the state to start from. It advects an ensemble behind a kernel port and publishes the mean with its spread back into the coverage store, through the same digest-checked seam as everything else.","That write is the fourth side of the rectangle. The store feeds the monitor, the monitor feeds the scheduler, the scheduler asks for a run, the run writes the store — and the picture is a ring because the system is one."],"live":{"view":"holdings","label":"The instances it published"},"reveals":[{"id":"model-runner","label":"Model runner","box":{"id":"model-runner","x":228,"y":154,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":false}]},{"step":9,"id":"interrogated","title":"Interrogated from outside, through interfaces nobody has to be taught","prose":["Both stores are answered by the query components through standard interfaces: OGC API-EDR over the coverages — CoverageJSON, position, area and trajectory with per-vertex time — read-only SensorThings over the observations, and OGC API-Features over the reference geometry. Each is a stated subset, and everything not implemented is refused by its own name rather than answered vaguely.","The arrow leaving the picture is the one that matters. This browser page is not privileged: the Map fetches the field with the same EDR request anyone outside would make, and the composer will write you the URL. Every answer passes the release gate first, which denies by default and releases data prefixes one at a time."],"live":{"view":"map","label":"Compose an EDR query yourself"},"reveals":[{"id":"query","label":"Query components","box":{"id":"query","x":228,"y":394,"width":158,"height":62},"plane":false,"eras":null,"servesOutside":true},{"id":"boundary","label":"Release gate","box":{"id":"boundary","x":426,"y":548,"width":158,"height":62},"plane":true,"eras":null,"servesOutside":false}]},{"step":10,"id":"the-clock","title":"One clock, and it is not yours","prose":["Everything above beats on one simulation clock. Nothing in the picture reads the time on your wall, which is what makes a run replay byte-for-byte from its manifest — and what lets you stop the clock and watch the whole thing hold still.","That is the shape of it. It is entirely synthetic, and it says so."],"live":{"view":"operator","label":"Step the clock yourself"},"reveals":[{"id":"clock","label":"Simulation clock","box":{"id":"clock","x":30,"y":548,"width":158,"height":62},"plane":true,"eras":null,"servesOutside":false}]}],"notDrawn":[{"component":"planner","reason":"reads the released spread and recommends where to sample next — a second argument, and one the Map draws better than a box could","label":"Planner"},{"component":"telemetry","reason":"scores the residuals into skill against persistence; the figure it produces is the subject of the Operator tab, not of a wiring diagram","label":"Telemetry"},{"component":"feature-store","reason":"read-only reference geometry, written by nobody at run time","label":"Feature store"},{"component":"advisory-source","reason":"the shore-advisory path, which is about what a boundary admits rather than how the loop turns","label":"Shore advisory source"},{"component":"advisory-store","reason":"the same path: append-only, size-capped, no free text","label":"Advisory store"},{"component":"offload","reason":"stages an export beside each run; announcement-only until a real backend receives it","label":"Offload packager"},{"component":"operator","reason":"the way a reader reaches back into the machinery — it is the tab you press the button on","label":"Operator surface"}],"links":[{"from":"monitor","to":"scheduler","kind":"topic","labels":["ctl/divergence"],"d":"M 188 305 C 226 305, 190 305, 228 305"},{"from":"model-runner","to":"scheduler","kind":"topic","labels":["ctl/run/published"],"d":"M 311 216 C 311 261, 311 229, 311 274"},{"from":"scheduler","to":"model-runner","kind":"topic","labels":["ctl/run/request"],"d":"M 315 274 C 315 229, 315 261, 315 216"},{"from":"platform","to":"ingest","kind":"topic","labels":["obs/ownship/+"],"d":"M 505 96 C 505 141, 505 109, 505 154"},{"from":"platform","to":"monitor","kind":"topic","labels":["obs/ownship/+"],"d":"M 426 69 C 336 69, 278 309, 188 309"},{"from":"platform","to":"sensors","kind":"topic","labels":["obs/ownship/+"],"d":"M 426 73 C 388 73, 424 73, 386 73"},{"from":"sensors","to":"ingest","kind":"topic","labels":["obs/ownship/+","obs/platform-a/pressure-200m","obs/platform-a/salinity-050m","obs/platform-a/temperature-050m","obs/platform-a/temperature-200m"],"d":"M 386 65 C 424 65, 388 185, 426 185"},{"from":"sensors","to":"monitor","kind":"topic","labels":["obs/ownship/+","obs/platform-a/pressure-200m","obs/platform-a/salinity-050m","obs/platform-a/temperature-050m","obs/platform-a/temperature-200m"],"d":"M 311 96 C 311 170, 113 200, 113 274"},{"from":"env-generator","to":"sensors","kind":"port","labels":["world-sampler port"],"d":"M 188 73 C 226 73, 190 73, 228 73"},{"from":"env-generator","to":"coverage-store","kind":"port","labels":["authors the archive and now-cast"],"d":"M 109 96 C 109 141, 109 109, 109 154"},{"from":"coverage-store","to":"monitor","kind":"port","labels":["samples the current holding"],"d":"M 113 216 C 113 261, 113 229, 113 274"},{"from":"coverage-store","to":"query","kind":"port","labels":["reads holdings"],"d":"M 117 216 C 117 290, 315 320, 315 394"},{"from":"model-runner","to":"coverage-store","kind":"port","labels":["writes the holding"],"d":"M 228 185 C 190 185, 226 185, 188 185"},{"from":"ingest","to":"observation-store","kind":"port","labels":["the store’s sole writer"],"d":"M 509 216 C 509 261, 509 229, 509 274"},{"from":"observation-store","to":"query","kind":"port","labels":["reads observations"],"d":"M 426 313 C 388 313, 424 433, 386 433"}]}</script>
+<script type="application/json" id="data">{"width": 640, "height": 456, "steps": [{"step": 1, "id": "the-ocean", "name": "The synthetic ocean", "title": "A synthetic ocean, authored", "prose": ["Nothing here was measured at sea. A four-dimensional field of temperature and salinity \u2014 an eddy, a front, a thermocline \u2014 is authored from this run's seed when the page opens, and the exact draw order goes into a ground-truth manifest. Everything downstream can be scored against it."], "live": "Read the manifest in Holdings", "box": {"x": 26, "y": 26, "w": 168, "h": 74}, "members": ["Environment generator"], "eras": null}, {"step": 2, "id": "sensing", "name": "A platform, and instruments", "title": "A platform, and instruments that sample it", "prose": ["A simulated platform loiters over the eddy and reports where it is. Its instruments read the true field through a port rather than a message \u2014 the dashed line, a coupling that carries no traffic \u2014 and publish what they read as SensorThings observations: a result, a time, a datastream, a location."], "live": "Watch the platform on the Map", "box": {"x": 236, "y": 26, "w": 168, "h": 74}, "members": ["Platform", "Sensors"], "eras": null}, {"step": 3, "id": "observations", "name": "Measurements, validated and stored", "title": "Measurement in \u2014 validated, then stored", "prose": ["Every message is validated against the committed master its topic declares before it reaches the store, and one that fails is refused with the reason named. The store keeps points as points: values at instants at places, never smoothed into a field.", "The store is in memory behind an interface. In V1 that interface stood in front of PostgreSQL with PostGIS, and V3 brings the engines back."], "live": "The refusals, counted, in Messages", "box": {"x": 446, "y": 154, "w": 168, "h": 74}, "members": ["Ingestion seam", "Observation store"], "eras": null}, {"step": 4, "id": "the-fields", "name": "The fields", "title": "The fields, in three eras", "prose": ["Beside the points sit the gridded fields, in the three eras the holding master declares: the archive, twenty years of monthly history; the now-cast, replaced on its cadence; and the forecast instances that accumulate once the loop turns."], "live": "The store filling up, in Holdings", "box": {"x": 26, "y": 154, "w": 168, "h": 74}, "members": ["Coverage store"], "eras": ["archive", "nowcast", "instance"]}, {"step": 5, "id": "the-loop", "name": "The forecast loop", "title": "The loop: watch, decide, assimilate, forecast", "prose": ["Four components, and the two arrows to the fields are the cycle. The monitor scores observations against the standing forecast and raises a divergence only on sustained persistence. The scheduler decides \u2014 a sustained divergence asks for a cycle, so does the cadence floor when enough simulation time has elapsed \u2014 and declines a breach that arrives too soon, with the bound named.", "The analyst is where the measurements are let in: it corrects the standing forecast by the observations taken since its last cycle, weighting each by the run's own published spread and the instrument's declared noise. The runner initialises from that analysis, perturbs by the error it left, and writes the result back to the fields. That write closes the ring."], "live": "What it decided last, in Operator", "box": {"x": 236, "y": 154, "w": 168, "h": 74}, "members": ["Monitor", "Scheduler", "Analyst", "Model runner"], "eras": null}, {"step": 6, "id": "served", "name": "Served, and gated", "title": "Interrogated from outside", "prose": ["The stores are answered through interfaces nobody has to be taught: OGC API-EDR over the coverages, read-only SensorThings over the observations, OGC API-Features over the geometry. Everything passes the release gate first, which denies by default.", "The arrow leaving the picture is the one that matters. This browser page is not privileged \u2014 the Map fetches the field with the same request anyone outside would make.", "Underneath all of it, the plane: every message in the picture crosses one broker, and every component beats on one simulation clock. Nothing reads the time on your wall, which is what makes a run replay byte-for-byte from its manifest."], "live": "Compose an EDR query yourself", "box": {"x": 236, "y": 282, "w": 168, "h": 74}, "members": ["Query components", "Release gate"], "eras": null}], "wires": [{"from": "sensing", "to": "the-loop", "kind": "topic", "d": "M 320.0 100 C 320.0 121.6, 320.0 132.4, 320.0 154", "via": ["Platform \u2192 Analyst", "Platform \u2192 Monitor", "Sensors \u2192 Analyst", "Sensors \u2192 Monitor"]}, {"from": "sensing", "to": "observations", "kind": "topic", "d": "M 404 63.0 L 446 191.0", "via": ["Platform \u2192 Ingestion seam", "Sensors \u2192 Ingestion seam"]}, {"from": "the-ocean", "to": "sensing", "kind": "port", "d": "M 194 63.0 L 236 63.0", "via": ["Environment generator \u2192 Sensors"]}, {"from": "the-ocean", "to": "the-fields", "kind": "port", "d": "M 110.0 100 C 110.0 121.6, 110.0 132.4, 110.0 154", "via": ["Environment generator \u2192 Coverage store"]}, {"from": "the-fields", "to": "the-loop", "kind": "port", "d": "M 194 191.0 L 236 191.0", "via": ["Coverage store \u2192 Monitor"]}, {"from": "the-fields", "to": "served", "kind": "port", "d": "M 194 191.0 L 236 319.0", "via": ["Coverage store \u2192 Query components"]}, {"from": "the-loop", "to": "the-fields", "kind": "port", "d": "M 236 200.0 L 194 200.0", "via": ["Model runner \u2192 Coverage store"]}, {"from": "observations", "to": "served", "kind": "port", "d": "M 446 191.0 L 404 319.0", "via": ["Observation store \u2192 Query components"]}], "plane": {"x": 16, "y": 400, "w": 608, "h": 30}, "planeMembers": ["Simulation clock", "Broker"], "outside": {"x": 446, "y": 282, "w": 168, "h": 74}, "omitted": [{"id": "planner", "label": "Planner"}, {"id": "telemetry", "label": "Telemetry"}, {"id": "feature-store", "label": "Feature store"}, {"id": "advisory-source", "label": "Shore advisory source"}, {"id": "advisory-store", "label": "Advisory store"}, {"id": "offload", "label": "Offload packager"}, {"id": "operator", "label": "Operator surface"}], "total": 21, "endpoints": {"edr": "/api/edr", "st": "/api/st/v1.1", "features": "/api/features"}}</script>
 <script>
 (function(){
   const D = JSON.parse(document.getElementById('data').textContent);
   const canvas = document.getElementById('canvas');
   const scroller = canvas.parentElement;
   let step = 1;
-
-  const svgNS = 'http://www.w3.org/2000/svg';
-  function el(name, attrs){
-    const node = document.createElementNS(svgNS, name);
-    for (const key in attrs) node.setAttribute(key, attrs[key]);
-    return node;
-  }
-  const revealedThrough = n => D.beats.slice(0, n).flatMap(b => b.reveals);
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a) => { const e = document.createElementNS(NS, n);
+    for (const k in a) e.setAttribute(k, a[k]); return e; };
 
   function draw(){
     canvas.style.width = D.width + 'px';
     canvas.style.height = D.height + 'px';
     canvas.innerHTML = '';
-
-    const revealed = revealedThrough(step);
-    const shown = new Set(revealed.map(n => n.id));
-    const arriving = new Set(D.beats[step - 1].reveals.map(n => n.id));
+    const shown = new Set(D.steps.slice(0, step).map(s => s.id));
+    const now = D.steps[step - 1].id;
 
     const svg = el('svg', {class:'wires', width:D.width, height:D.height, 'aria-hidden':'true'});
     const defs = el('defs');
-    ['line','now','port'].forEach(kind => {
-      const marker = el('marker', {id:'a-'+kind, viewBox:'0 0 10 10', refX:'9', refY:'5',
-        markerWidth:'5', markerHeight:'5', orient:'auto-start-reverse'});
-      const head = el('path', {d:'M 0 1 L 9 5 L 0 9 z'});
-      head.style.fill = kind === 'now' ? 'var(--accent)' : (kind === 'port' ? 'var(--port)' : 'var(--line)');
-      marker.appendChild(head); defs.appendChild(marker);
+    ['line','now','port'].forEach(k => {
+      const m = el('marker', {id:'a-'+k, viewBox:'0 0 10 10', refX:'9', refY:'5',
+        markerWidth:'6.5', markerHeight:'6.5', orient:'auto-start-reverse'});
+      const h = el('path', {d:'M 0 1 L 9 5 L 0 9 z'});
+      h.style.fill = k==='now' ? 'var(--accent)' : (k==='port' ? 'var(--port)' : '#9aa9b4');
+      m.appendChild(h); defs.appendChild(m);
     });
     svg.appendChild(defs);
 
-    if (D.loopMembers.every(m => shown.has(m))){
-      svg.appendChild(el('rect', {class:'loop-band', x:D.loop.x, y:D.loop.y,
-        width:D.loop.width, height:D.loop.height, rx:8}));
-      const loopCap = el('text', {class:'plane-cap', x:D.loop.x + 10, y:D.loop.y + 13});
-      loopCap.textContent = 'THE FORECAST LOOP TURNS HERE';
-      svg.appendChild(loopCap);
-    }
-
-    if (revealed.some(n => n.plane)){
+    if (step === D.steps.length){
       svg.appendChild(el('rect', {class:'plane-band', x:D.plane.x, y:D.plane.y,
-        width:D.plane.width, height:D.plane.height, rx:6}));
-      const cap = el('text', {class:'plane-cap', x:D.plane.x + 10, y:D.plane.y + 15});
-      cap.textContent = 'THE PLANE — UNDER EVERYTHING ABOVE';
-      svg.appendChild(cap);
+        width:D.plane.w, height:D.plane.h, rx:6}));
+      const c = el('text', {class:'cap', x:D.plane.x + 12, y:D.plane.y + 19});
+      c.textContent = 'THE PLANE — ' + D.planeMembers.join(' · ').toUpperCase();
+      svg.appendChild(c);
     }
 
-    D.links.forEach(link => {
-      if (!shown.has(link.from) || !shown.has(link.to)) return;
-      const now = arriving.has(link.from) || arriving.has(link.to);
-      const path = el('path', {d:link.d,
-        class:'wire' + (link.kind === 'port' ? ' port' : '') + (now ? ' now' : ''),
-        'marker-end':'url(#a-' + (now ? 'now' : (link.kind === 'port' ? 'port' : 'line')) + ')'});
-      const title = el('title');
-      title.textContent = link.from + ' → ' + link.to + ': ' + link.labels.join(', ');
-      path.appendChild(title);
-      svg.appendChild(path);
+    D.wires.forEach(w => {
+      if (!shown.has(w.from) || !shown.has(w.to)) return;
+      const hot = w.from === now || w.to === now;
+      const p = el('path', {d:w.d, class:'wire' + (w.kind==='port'?' port':'') + (hot?' now':''),
+        'marker-end':'url(#a-' + (hot?'now':(w.kind==='port'?'port':'line')) + ')'});
+      const t = el('title'); t.textContent = w.via.join('\n'); p.appendChild(t);
+      svg.appendChild(p);
     });
     canvas.appendChild(svg);
 
-    revealed.forEach(node => {
-      const box = document.createElement('button');
-      box.type = 'button';
-      box.className = 'node' + (arriving.has(node.id) ? ' now' : '');
-      box.style.left = node.box.x + 'px';
-      box.style.top = node.box.y + 'px';
-      box.style.width = node.box.width + 'px';
-      box.style.height = node.box.height + 'px';
-      const label = document.createElement('span');
-      label.textContent = node.label;
-      box.appendChild(label);
-      if (node.eras){
-        const eras = document.createElement('span');
-        eras.className = 'eras';
-        node.eras.forEach(era => {
-          const chip = document.createElement('span');
-          chip.className = 'era'; chip.textContent = era; eras.appendChild(chip);
-        });
-        box.appendChild(eras);
-      }
-      const owner = D.beats.find(b => b.reveals.some(r => r.id === node.id));
-      box.addEventListener('click', () => go(owner.step));
-      canvas.appendChild(box);
+    D.steps.slice(0, step).forEach(s => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'node' + (s.id === now ? ' now' : '');
+      b.style.left = s.box.x + 'px'; b.style.top = s.box.y + 'px';
+      b.style.width = s.box.w + 'px'; b.style.height = s.box.h + 'px';
+      b.innerHTML = '<b>' + s.name + '</b><span class="chips">' +
+        (s.eras ? s.eras : s.members).map(m => '<span class="chip">' + m + '</span>').join('') +
+        '</span>';
+      b.addEventListener('click', () => go(s.step));
+      canvas.appendChild(b);
     });
 
-    const server = revealed.find(n => n.servesOutside);
-    if (D.outside && server){
-      const chip = document.createElement('div');
-      chip.className = 'outside';
-      chip.style.left = D.outside.x + 'px';
-      chip.style.top = D.outside.y + 'px';
-      chip.style.width = D.outside.width + 'px';
-      chip.innerHTML = '<b>anything outside</b>' +
-        '<span>OGC API-EDR ' + D.endpoints.edr + '</span>' +
-        '<span>SensorThings ' + D.endpoints.st + '</span>' +
-        '<span>OGC API-Features ' + D.endpoints.features + '</span>';
-      canvas.appendChild(chip);
-      svg.appendChild(el('path', {d:'M ' + (server.box.x + server.box.width) + ' ' +
-        (server.box.y + server.box.height/2) + ' L ' + D.outside.x + ' ' +
-        (D.outside.y + D.outside.height/2),
-        class:'wire' + (arriving.has(server.id) ? ' now' : ''),
-        'marker-end':'url(#a-' + (arriving.has(server.id) ? 'now' : 'line') + ')'}));
+    if (shown.has('served')){
+      const o = document.createElement('div');
+      o.className = 'outside';
+      o.style.left = D.outside.x + 'px'; o.style.top = D.outside.y + 'px';
+      o.style.width = D.outside.w + 'px';
+      o.innerHTML = '<b>anything outside</b><span>OGC API-EDR ' + D.endpoints.edr +
+        '</span><span>SensorThings ' + D.endpoints.st + '</span><span>OGC API-Features ' +
+        D.endpoints.features + '</span>';
+      canvas.appendChild(o);
+      const s = D.steps.find(x => x.id === 'served');
+      svg.appendChild(el('path', {d:'M ' + (s.box.x+s.box.w) + ' ' + (s.box.y+s.box.h/2) +
+        ' L ' + D.outside.x + ' ' + (D.outside.y+D.outside.h/2),
+        class:'wire' + (now==='served'?' now':''),
+        'marker-end':'url(#a-' + (now==='served'?'now':'line') + ')'}));
     }
-    fit();
-  }
-
-  function fit(){
-    const room = scroller.clientWidth;
-    const scale = Math.min(1, room / D.width);
+    const scale = Math.min(1, scroller.clientWidth / D.width);
     canvas.style.transform = scale === 1 ? '' : 'scale(' + scale + ')';
     scroller.style.height = (D.height * scale + 4) + 'px';
   }
 
   function render(){
-    const beat = D.beats[step - 1];
-    document.getElementById('pos').textContent = 'step ' + step + ' of ' + D.beats.length;
-    document.getElementById('title').textContent = beat.title;
-    document.getElementById('who').textContent = beat.reveals.map(r => r.label).join('  ·  ');
+    const s = D.steps[step - 1];
+    document.getElementById('pos').textContent = 'step ' + step + ' of ' + D.steps.length;
+    document.getElementById('title').textContent = s.title;
+    document.getElementById('who').textContent = s.members.join('  ·  ');
     document.getElementById('prose').innerHTML =
-      beat.prose.map(p => '<p class="body">' + p + '</p>').join('');
-    document.getElementById('live').textContent = beat.live ? beat.live.label + ' →' : '';
+      s.prose.map(p => '<p class="body">' + p + '</p>').join('');
+    document.getElementById('live').textContent = s.live + ' →';
     document.getElementById('prev').disabled = step === 1;
-    document.getElementById('next').disabled = step === D.beats.length;
+    document.getElementById('next').disabled = step === D.steps.length;
     document.getElementById('restart').disabled = step === 1;
-    [...document.querySelectorAll('#rows tr')].forEach((row, index) => {
-      row.classList.toggle('here', index === step - 1);
-    });
+    [...document.querySelectorAll('#rows tr')].forEach((r,i) => r.classList.toggle('here', i === step-1));
     draw();
   }
-
-  const go = next => { step = Math.min(Math.max(next, 1), D.beats.length); render(); };
+  const go = n => { step = Math.min(Math.max(n,1), D.steps.length); render(); };
 
   const rows = document.getElementById('rows');
-  D.beats.forEach(beat => {
-    const row = document.createElement('tr');
-    row.innerHTML = '<td class="n">' + beat.step + '</td><td class="c">' +
-      beat.reveals.map(r => r.label).join('<br>') + '</td><td>' + beat.title + '</td>';
-    row.addEventListener('click', () => go(beat.step));
-    rows.appendChild(row);
+  D.steps.forEach(s => {
+    const r = document.createElement('tr');
+    r.innerHTML = '<td class="n">' + s.step + '</td><td>' + s.name + '</td><td class="c">' +
+      s.members.join('<br>') + '</td><td>' + s.title + '</td>';
+    r.addEventListener('click', () => go(s.step));
+    rows.appendChild(r);
   });
-
   document.getElementById('omit-summary').textContent =
-    'Not drawn: ' + D.notDrawn.length + ' of the ' + D.total + ' components';
+    'Not drawn: ' + D.omitted.length + ' of the ' + D.total + ' components';
   document.getElementById('omit-list').innerHTML =
-    D.notDrawn.map(o => '<li><b>' + o.label + '</b> — ' + o.reason + '</li>').join('');
-
-  document.getElementById('prev').addEventListener('click', () => go(step - 1));
-  document.getElementById('next').addEventListener('click', () => go(step + 1));
+    D.omitted.map(o => '<li><b>' + o.label + '</b></li>').join('');
+  document.getElementById('prev').addEventListener('click', () => go(step-1));
+  document.getElementById('next').addEventListener('click', () => go(step+1));
   document.getElementById('restart').addEventListener('click', () => go(1));
-  document.addEventListener('keydown', event => {
-    if (event.key === 'ArrowRight') go(step + 1);
-    else if (event.key === 'ArrowLeft') go(step - 1);
-    else if (event.key === 'Home') go(1);
-    else if (event.key === 'End') go(D.beats.length);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(step+1);
+    else if (e.key === 'ArrowLeft') go(step-1);
+    else if (e.key === 'Home') go(1);
+    else if (e.key === 'End') go(D.steps.length);
     else return;
-    event.preventDefault();
+    e.preventDefault();
   });
-  window.addEventListener('resize', fit);
+  window.addEventListener('resize', draw);
   render();
 })();
 </script>

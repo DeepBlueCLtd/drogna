@@ -101,7 +101,7 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
         <h1>drogna</h1>
         <p className="disclaimer">
           This is a demonstration harness and nothing else. Its numerics are deliberately
-          fake, its data synthetic, and it holds no third-party entities of any kind —
+          fake, its data synthetic, and it holds no third-party entities of any kind —{' '}
           {/* harness:allow-forbidden-vocabulary the FR-01 statement of the prohibition itself */}
           no tracked entity, no contact, no detection — and never will. Nothing here is a
           candidate system.
@@ -137,7 +137,16 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           event.preventDefault();
         }}
       >
-        <div className="intro-figure-column" ref={columnRef}>
+        {/*
+          The cap is the drawing's own width: the column may grow to hold the drawing and
+          no further, so the narration sits beside it rather than across a gulf. Panning
+          is unaffected — a max-width never forces a column wider than the room it has.
+        */}
+        <div
+          className="intro-figure-column"
+          ref={columnRef}
+          style={{ maxWidth: placement.width * drawn }}
+        >
           <div className={panned ? 'intro-figure-pan' : 'intro-figure'} data-testid="intro-figure">
             <div
               className="intro-figure-scale"

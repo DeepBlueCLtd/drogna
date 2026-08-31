@@ -11,9 +11,15 @@
  * That is why the label reads "request" and not "run": a control that reads as a
  * guarantee is a display promising on a component's behalf, and the one thing this tab
  * is for is showing what the components actually decide.
+ *
+ * Since feature 121 the prompts are drawn by `Actions`, with every other thing a reader
+ * can do to a component, at the top of the drawer rather than under the instrument. The
+ * reasoning for that shape is in `Actions.tsx`; what stays here is the seam call and
+ * what the surface said about it.
  */
 import { useState } from 'react';
 import type { ConfigShell, OperatorControlsEvent } from '../../generated/types.js';
+import { Actions, type Action } from './Actions.js';
 
 export function EventControl({
   config,
@@ -25,7 +31,7 @@ export function EventControl({
   events: readonly OperatorControlsEvent[];
   onRefusal: (refusal: string | undefined) => void;
 }) {
-  const [said, setSaid] = useState<string | undefined>();
+  const [said, setSaid] = useState<Record<string, { text: string; refused: boolean }>>({});
   if (events.length === 0) return null;
 
   const prompt = async (event: OperatorControlsEvent) => {
@@ -33,30 +39,25 @@ export function EventControl({
     const answer = (await response.json()) as { refused?: string; note?: string };
     if (!response.ok) {
       const refusal = answer.refused ?? `refused with status ${response.status}`;
-      setSaid(refusal);
+      setSaid((previous) => ({ ...previous, [event.id]: { text: refusal, refused: true } }));
       onRefusal(refusal);
       return;
     }
-    setSaid(answer.note ?? 'published');
+    setSaid((previous) => ({
+      ...previous,
+      [event.id]: { text: answer.note ?? 'published', refused: false },
+    }));
     onRefusal(undefined);
   };
 
-  return (
-    <div className="flow-events" data-testid="event-control">
-      <h4>ask it to act now</h4>
-      {events.map((event) => (
-        <div className="flow-event" key={event.id} data-event={event.id}>
-          <button onClick={() => void prompt(event)} data-event-send={event.id}>
-            {event.label}
-          </button>
-          <p className="flow-tuner-detail">{event.description}</p>
-        </div>
-      ))}
-      {said ? (
-        <p className="flow-demand-said" data-testid="event-said">
-          {said}
-        </p>
-      ) : null}
-    </div>
-  );
+  const actions: Action[] = events.map((event) => ({
+    id: event.id,
+    label: event.label,
+    description: event.description,
+    said: said[event.id],
+    attributes: { 'data-event-send': event.id, 'data-event': event.id },
+    run: () => prompt(event),
+  }));
+
+  return <Actions heading="ask it to act now" actions={actions} testId="event-control" />;
 }

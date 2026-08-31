@@ -193,7 +193,8 @@
         "query_subsets",
         "operator_controls",
         "operator_tuning",
-        "operator_event"
+        "operator_event",
+        "undeclared_probe"
       ],
       "additionalProperties": false,
       "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -227,6 +228,10 @@
         "edr": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "The EDR prefix the Map panel and the composer issue genuine GETs against."
+        },
+        "undeclared_probe": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "A seam path the release gate is expected to refuse, so the Operator tab can demonstrate default-deny by asking for it. It is declared here rather than typed into the panel for the ordinary reason every path is (Constitution IV), and because 'a path nothing serves' is a fact about the boundary's configuration and not about the shell: it must sit under the api prefix and outside every one of the gate's allow_prefixes, and the operator panel's test asserts exactly that against the boundary's own document. A change to allow_prefixes that swallowed this path would turn the demonstration into a request that quietly succeeded, and the assertion is what stops that landing unnoticed."
         },
         "features": {
           "$ref": "config.common.schema.json#/$defs/relative_path",

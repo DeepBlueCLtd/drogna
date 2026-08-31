@@ -1475,7 +1475,8 @@
       "sensorthings": "/api/st/v1.1",
       "operator_controls": "/api/ctl/controls",
       "operator_tuning": "/api/ctl/tuning",
-      "operator_event": "/api/ctl/events"
+      "operator_event": "/api/ctl/events",
+      "undeclared_probe": "/api/nothing-is-declared-here"
     },
     "flow": {
       "suppressed_filters": [

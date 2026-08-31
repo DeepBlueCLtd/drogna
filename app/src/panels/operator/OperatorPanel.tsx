@@ -38,8 +38,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import { useIsNarrow } from '../../shell/viewport.js';
-import { Disclosure } from '../../shell/Disclosure.js';
 import type { PanelParams } from '../../shell/Shell.js';
+import type { SeamClient } from '../../seam/transport.js';
 import type {
   Heartbeat,
   HoldingsInventory,
@@ -66,6 +66,9 @@ import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
 import { componentTour } from '../../shell/walkthrough/tour.js';
 import { TuningControl } from './TuningControl.js';
 import { EventControl } from './EventControl.js';
+import { ProbeControl } from './ProbeControl.js';
+import { Actions, type Action } from './Actions.js';
+import { probesFor, deferralFor } from './probes.js';
 import './operator.css';
 
 interface Heard {
@@ -526,6 +529,12 @@ export function OperatorPanel({ params }: PanelProps) {
       decision={decision}
       counted={(key) => countedRef.current.get(key) ?? 0}
       command={command}
+      client={client}
+      rate={clock.rate}
+      onOpen={(id) => {
+        arrivedBy.current = 'card';
+        setSelected(id);
+      }}
       onRefusal={setRefusal}
       onClose={() => setSelected(undefined)}
     />
@@ -540,42 +549,31 @@ export function OperatorPanel({ params }: PanelProps) {
         <span className="panel-head-title">the harness, component by component</span>
         <HelpButton tour={componentTour(config)} />
       </div>
-      <Disclosure label="views and commands" narrow={narrow} className="operator-controls">
+      {/* The header carries the one control that changes what this panel *is*, and
+          nothing else. The two step commands that used to sit here are in the clock's
+          own drawer since feature 121: they are the clock's, this tab's rule is that a
+          cause is applied where its consequence shows, and they were the bulk of what a
+          reader had to scroll past on a phone before reaching the chart. */}
+      <div className="operator-controls">
         <button
+          className="flow-action"
           onClick={() => setAsList((value) => !value)}
           data-testid="view-toggle"
           aria-pressed={asList}
         >
           {asList ? 'show the flow chart' : 'show the list'}
         </button>
-        <button onClick={() => void command(config.endpoints.clock_step)} data-testid="step-button">
-          step the clock one tick
-        </button>
-        {/* A burst is the same command with a number on it, and the number the surface
-            will accept comes from the surface. Offered only once it has said so: a
-            button drawn against a bound nobody stated is a button that can be refused
-            for reasons the reader was never told. */}
-        {controls ? (
-          <button
-            onClick={() =>
-              void command(config.endpoints.clock_step, 'POST', { ticks: controls.step.maximum_ticks })
-            }
-            data-testid="step-burst-button"
-          >
-            step {controls.step.maximum_ticks} ticks
-          </button>
-        ) : null}
         <span className="panel-footnote">
           {flow.nodes.length} components · {flow.edges.length} edges derived from the topology ·{' '}
           {config.flow.suppressed_filters.join(' and ')} drawn as the plane, not as edges
           {controls
-            ? ` · ${controlled(controls).size} components take controls: open one to use them`
+            ? ` · ${actionable(controls, flow.nodes, components).size} of ${flow.nodes.length} components offer something to do: open one to use it`
             : ''}
           {refusedRef.current > 0
             ? ` · ${refusedRef.current} message(s) refused by their master and not drawn`
             : ''}
         </span>
-      </Disclosure>
+      </div>
       {refusal && (
         <p className="shell-refusal" data-testid="command-refusal">
           {refusal}
@@ -589,6 +587,7 @@ export function OperatorPanel({ params }: PanelProps) {
           onSelect={setSelected}
           command={command}
           config={config}
+          narrow={narrow}
         />
       ) : (
         <FlowCanvas
@@ -624,7 +623,7 @@ export function OperatorPanel({ params }: PanelProps) {
                 <span className="flow-node-head">
                   <span className={`status-dot status-${lit && entry ? entry.heartbeat.status : 'dark'}`} />
                   <span className="flow-node-name">{node.label}</span>
-                  {controls && controlled(controls).has(node.id) ? (
+                  {(controls && controlled(controls).has(node.id)) || probesFor(node.id).length > 0 || deferralFor(node.id) ? (
                     // The affordance the first cut of this tab did not have: a reader
                     // who cannot see that a node takes controls does not open it, and
                     // the controls may as well not exist. Drawn from what the surface
@@ -665,6 +664,16 @@ export function OperatorPanel({ params }: PanelProps) {
           the clock because the behaviour does, and a reader who speeds the clock up and
           watches the flicker become a steady light should be able to find out why
           without reading the source. */}
+      {/* The lights, the quiet and the six states a node can be in: three blocks of
+          prose that were always on screen, below the chart, at every width. They are
+          reference — read once, wanted again rarely — and on a phone they were the
+          reason the account a reader had opened scrolled off the bottom. Collapsed at
+          every width by decision rather than by measurement: the desktop reader is
+          reading the same three blocks, and has read them too. Nothing is removed; the
+          summary names what is inside it (FR-012). */}
+      <details className="disclosure operator-notes" data-testid="operator-notes" data-label="what the lights mean">
+        <summary>what the lights mean, and what the quiet means</summary>
+        <div className="disclosure-body">
       {asList ? null : (
         <>
           <p className="panel-footnote" data-testid="flow-pulse-note">
@@ -694,6 +703,8 @@ export function OperatorPanel({ params }: PanelProps) {
       )}
 
       <Legend />
+        </div>
+      </details>
 
       {/* The list is a column of rows and has no room to open one of them in place, so
           there the account still opens below the table. It is the same account, from the
@@ -773,6 +784,29 @@ function Legend() {
 }
 
 /**
+ * Which components a reader can *do* something at, of any kind: a control the surface
+ * offers, a probe this panel declares, or a lifecycle command the plane will carry out.
+ *
+ * Counted rather than asserted, and counted from the three statements themselves — the
+ * surface's controls, `probes.ts`, and the operator plane's own report of what is
+ * stoppable — because the number is the claim this feature makes. Before it, ten of the
+ * twenty-two nodes opened onto no button at all; a footnote that said so from a figure
+ * typed here would be a display marking its own homework.
+ */
+function actionable(
+  controls: OperatorControls,
+  nodes: readonly FlowNode[],
+  components: OperatorComponents | undefined,
+): ReadonlySet<string> {
+  const found = new Set(controlled(controls));
+  for (const node of nodes) {
+    if (probesFor(node.id).length > 0 || deferralFor(node.id)) found.add(node.id);
+    if (components?.components.find((entry) => entry.id === node.id)?.stoppable) found.add(node.id);
+  }
+  return found;
+}
+
+/**
  * Which components the surface says take a control of any kind. Derived from the
  * statement rather than listed here, so a tunable added to the operator's
  * configuration shows up on its node without a line changing in this panel.
@@ -799,28 +833,44 @@ function ListView({
   onSelect,
   command,
   config,
+  narrow,
 }: {
   flow: ReturnType<typeof buildFlow>;
   stateOf: (id: string) => StateOf;
   onSelect: (id: string) => void;
   command: (path: string, method?: string) => void | Promise<void>;
   config: PanelParams['config'];
+  /** At a phone's width a seven-column table is seven unreadable columns. */
+  narrow: boolean;
 }) {
   const declaredBeat = (id: string) => config.components.find((entry) => entry.id === id)?.beat;
+  /**
+   * The four columns that survive a phone's width, and why these four: the name, so a
+   * reader can find the component; the state and the time it was last heard, which are
+   * the whole of what the list is *for*; and nothing else. The beat, the liveness
+   * window, the component's own sentence and the lifecycle buttons are all in the
+   * account the name opens, which is one tap away and is where the sentence is legible
+   * anyway — a 28-character detail line in a 60-pixel column is not disclosure, it is a
+   * column that has stopped carrying its content.
+   *
+   * This is the one place where narrow drops content rather than disclosing it, and it
+   * is allowed for the reason FR-014 allows it: nothing here is unreachable, and the
+   * place it is reachable from is better than the place it was dropped from.
+   */
   return (
-    <table className="system-grid" data-testid="operator-components">
+    <table className="system-grid" data-testid="operator-components" data-narrow={narrow}>
       <thead>
         <tr>
           <th>component</th>
           {/* The two facts the System tab carried alone, moved here before that tab was
               withdrawn (FR-68). Both are configuration and both are drawn as declared
               figures, which is what makes withdrawing System a move rather than a loss. */}
-          <th>beat</th>
-          <th>liveness window</th>
+          {narrow ? null : <th>beat</th>}
+          {narrow ? null : <th>liveness window</th>}
           <th>state</th>
           <th>last heard (sim time)</th>
-          <th>what it says about itself</th>
-          <th>control</th>
+          {narrow ? null : <th>what it says about itself</th>}
+          {narrow ? null : <th>control</th>}
         </tr>
       </thead>
       <tbody>
@@ -834,9 +884,12 @@ function ListView({
                   {node.label}
                 </button>
               </td>
+              {narrow ? null : (
               <td data-declared-beat={declaredBeat(node.id)}>
                 <Declared value={declaredBeat(node.id)} />
               </td>
+              )}
+              {narrow ? null : (
               <td data-declared-window={config.liveness.default_window_seconds}>
                 <Declared value={config.liveness.default_window_seconds} unit="s" />
                 {/* A component may report its own window. It is a different figure from a
@@ -850,9 +903,11 @@ function ListView({
                     </span>
                   )}
               </td>
+              )}
               <td>{word}</td>
               <td>{entry ? displayInstant(entry.heartbeat.sim_time) : '—'}</td>
-              <td>{detailOf(entry)}</td>
+              {narrow ? null : <td>{detailOf(entry)}</td>}
+              {narrow ? null : (
               <td>
                 {record?.stoppable ? (
                   <>
@@ -873,6 +928,7 @@ function ListView({
                   'protected'
                 )}
               </td>
+              )}
             </tr>
           );
         })}
@@ -907,6 +963,9 @@ function Drawer({
   decision,
   counted,
   command,
+  client,
+  rate,
+  onOpen,
   onRefusal,
   onClose,
 }: {
@@ -930,6 +989,12 @@ function Drawer({
   decision: TelemetrySchedulerDecision | undefined;
   counted: (key: string) => number;
   command: (path: string, method?: string, body?: unknown) => void | Promise<void>;
+  /** The shell's own broker client: what the broker probe tries, and is refused, on. */
+  client: SeamClient;
+  /** The rate the clock last acknowledged, for the clock's own hold control. */
+  rate: number | undefined;
+  /** Opens another node: what a deferral offers in place of a button of its own. */
+  onOpen: (id: string) => void;
   onRefusal: (refusal: string | undefined) => void;
   onClose: () => void;
 }) {
@@ -998,30 +1063,49 @@ function Drawer({
       </p>
       <p className="flow-drawer-detail">{detailOf(entry)}</p>
 
-      {/* The node's own instrument again at full size: the drawer is where a reader
-          goes to read it rather than to glance at it. */}
-      <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
-
-      {/* The controls this component takes, immediately under its own instrument, so
-          the thing a reader changes and the thing that changes are one glance apart.
-          Which controls those are is the surface's answer, not this file's. */}
-      {controls && controls.demand.target === node.id ? (
-        <DemandControl config={config} state={platformState} onRefusal={onRefusal} />
-      ) : null}
-      {controls ? (
-        <TuningControl
-          config={config}
-          tunables={controls.tunables.filter((tunable) => tunable.target === node.id)}
-          heartbeat={entry?.heartbeat}
-          onRefusal={onRefusal}
-        />
-      ) : null}
+      {/* **Everything a reader can do to this component, first.**
+          
+          Until feature 121 the prompts were under the instrument and the stop and start
+          were under the wire list, at the bottom of a card that on a phone is several
+          screens long: the thing a reader came to press was the last thing they reached.
+          What follows the state line now is the buttons — the component's own prompts,
+          the probes for a component that serves rather than acts, the clock's step
+          commands, and its lifecycle — and the account is below them.
+          
+          Which prompts those are is still the surface's answer and not this file's. */}
+      <ProbeControl id={node.id} context={{ config, client, controls, rate }} onOpen={onOpen} />
       {controls ? (
         <EventControl
           config={config}
           events={controls.events.filter((event) => event.target === node.id)}
           onRefusal={onRefusal}
         />
+      ) : null}
+      <Lifecycle node={node} record={record} config={config} command={command} />
+
+      {/* The node's own instrument at full size: the drawer is where a reader goes to
+          read it rather than to glance at it. */}
+      <div className="flow-drawer-face">{FACES[node.id]?.(faceContext(node.id, entry?.heartbeat))}</div>
+
+      {/* The controls that are forms rather than buttons, under the instrument they
+          move, so the thing a reader changes and the thing that changes are one glance
+          apart. The demand's presets are buttons and stay where a reader can reach them;
+          the tuning sliders are set once and then watched, so they are disclosed. */}
+      {controls && controls.demand.target === node.id ? (
+        <DemandControl config={config} state={platformState} onRefusal={onRefusal} />
+      ) : null}
+      {controls && controls.tunables.some((tunable) => tunable.target === node.id) ? (
+        <details className="disclosure flow-drawer-section" data-label="tune what it scores against">
+          <summary>tune what it scores against</summary>
+          <div className="disclosure-body">
+            <TuningControl
+              config={config}
+              tunables={controls.tunables.filter((tunable) => tunable.target === node.id)}
+              heartbeat={entry?.heartbeat}
+              onRefusal={onRefusal}
+            />
+          </div>
+        </details>
       ) : null}
       {/* What the scheduler decided about the last thing it was asked, in its own
           words. The prompt button is a few lines above this: pressing it and being
@@ -1057,8 +1141,9 @@ function Drawer({
                 : `mean ${report.latency.mean_sim_seconds?.toFixed(1)} sim-s · worst ${report.latency.maximum_sim_seconds?.toFixed(1)} sim-s over ${report.latency.sample_count} residual(s)`}
             <span className="panel-footnote"> — {report.latency.basis}</span>
           </p>
-          <div className="operator-regions">
-            <strong>by region:</strong>{' '}
+          <details className="disclosure operator-regions" data-label="residuals by region">
+            <summary>residuals by region ({report.regions.length} sampled)</summary>
+            <div className="disclosure-body">
             {report.regions.length === 0 ? (
               <span className="panel-footnote">
                 no region has been sampled yet; an unsampled region is absent here rather than
@@ -1094,7 +1179,8 @@ function Drawer({
                 </tbody>
               </table>
             )}
-          </div>
+            </div>
+          </details>
         </div>
       ) : null}
       {node.id === 'observation-store' ? (
@@ -1103,7 +1189,15 @@ function Drawer({
         </p>
       ) : null}
 
-      <h4>wires</h4>
+      {/* The wires a component is on: reference material, drawn for every node, four to
+          ten lines of it. Read once when a reader is learning the shape of the system
+          and rarely again — and on a phone it is what sat between the account and the
+          buttons that used to follow it. */}
+      <details className="disclosure flow-drawer-section" data-testid="flow-wires-disclosure" data-label="wires">
+        <summary>
+          wires — {inbound.length} in, {outbound.length} out
+        </summary>
+        <div className="disclosure-body">
       <ul className="flow-wires">
         {inbound.map((edge) => (
           <li key={`in-${edge.from}-${edge.label}`}>
@@ -1118,29 +1212,62 @@ function Drawer({
           </li>
         ))}
       </ul>
-
-      {record?.stoppable ? (
-        <p>
-          <button
-            onClick={() =>
-              void command(
-                `${config.endpoints.component_command}/${node.id}/${record.running ? 'stop' : 'start'}`,
-              )
-            }
-            data-testid="drawer-stop"
-          >
-            {record.running ? 'stop' : 'start'}
-          </button>{' '}
-          <button onClick={() => void command(`${config.endpoints.component_command}/${node.id}/restart`)}>
-            restart
-          </button>
-        </p>
-      ) : (
-        <p className="panel-footnote">
-          protected from the operator plane by rule: stopping it would take the evidence of the
-          stopping with it.
-        </p>
-      )}
+        </div>
+      </details>
     </div>
   );
+}
+
+/**
+ * Stop, start and restart — or the rule that says why not (feature 121).
+ *
+ * These were the last thing in the drawer, under the wire list, which on a phone put
+ * the most consequential control on the tab several screens below the component it acts
+ * on. They are actions, so they are drawn where the actions are, in the same shape as
+ * every other action, with the same touch target.
+ *
+ * A protected component still says so, and still says why. That sentence is the honest
+ * answer to "why is there no button here", and a node with no answer at all is what
+ * this whole feature is a correction to.
+ */
+function Lifecycle({
+  node,
+  record,
+  config,
+  command,
+}: {
+  node: FlowNode;
+  record: OperatorComponents['components'][number] | undefined;
+  config: PanelParams['config'];
+  command: (path: string, method?: string, body?: unknown) => void | Promise<void>;
+}) {
+  if (!record?.stoppable) {
+    return (
+      <p className="panel-footnote flow-protected">
+        protected from the operator plane by rule: stopping it would take the evidence of the
+        stopping with it.
+      </p>
+    );
+  }
+  const actions: Action[] = [
+    {
+      id: 'stop',
+      label: record.running ? 'stop' : 'start',
+      description: record.running
+        ? 'Stop the component. Its heartbeats cease, so its node goes dark — and what its neighbours say about themselves changes, which is the thing worth watching.'
+        : 'Start the component again. It is rebuilt from its configuration document, so a tuning published to it before it stopped does not come back with it.',
+      attributes: { 'data-testid': 'drawer-stop' },
+      run: () =>
+        command(`${config.endpoints.component_command}/${node.id}/${record.running ? 'stop' : 'start'}`),
+    },
+    {
+      id: 'restart',
+      label: 'restart',
+      description:
+        'Stop it and start it in one command. The component comes back built from its configuration document by the same factory that built the first one, which is why a tuning does not outlive a restart.',
+      attributes: { 'data-testid': 'drawer-restart' },
+      run: () => command(`${config.endpoints.component_command}/${node.id}/restart`),
+    },
+  ];
+  return <Actions heading="stop and start it" actions={actions} testId="lifecycle-control" />;
 }

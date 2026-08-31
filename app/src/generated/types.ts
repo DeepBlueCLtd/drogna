@@ -697,6 +697,7 @@ export type ConfigShell = {
     "platform_demand": ConfigCommonRelativePath;
     "sensorthings": ConfigCommonRelativePath;
     "edr": ConfigCommonRelativePath;
+    "undeclared_probe": ConfigCommonRelativePath;
     "features": ConfigCommonRelativePath;
     "query_subsets": ConfigCommonRelativePath;
     "operator_controls": ConfigCommonRelativePath;

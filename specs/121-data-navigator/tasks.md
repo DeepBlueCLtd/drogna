@@ -1,0 +1,231 @@
+# Feature 121 — tasks
+
+One feature, one pull request, on the author's decision recorded in `spec.md`. Ticked as
+they were done, with the reasons written at the moment they were taken (CLAUDE.md,
+lesson 1).
+
+## The departure era
+
+- [x] T001 `coverage-holding.schema.json`: append `departure` to the era enumeration, in
+      the reader's order, between the archive and the now-cast. Amended surgically — the
+      first attempt round-tripped the document through a JSON formatter and rewrote 57
+      lines to change two, which is exactly what "a master is amended, never casually
+      rewritten" forbids.
+- [x] T002 `config.env-generator.schema.json` and `run.json`: a `departure` block, its
+      grid and its validity window. Required rather than optional: a run with no brief is
+      a run whose Data tab has an empty branch and no reason for it.
+- [x] T003 `pnpm generate`, and commit the output. The topology artefact moves too — the
+      line numbers its constants are cited at shift when `run.json` grows.
+- [x] T004 `generator.ts`: `publishDeparture()` at provisioning, beside the archive and
+      the first now-cast, through the store's one write seam like everything else.
+- [x] T005 The persistence mode: `evaluateAndPublish` takes `{ persistence: true }` and
+      evaluates every step at the origin's instant. This is the whole feature of the era
+      — the generator evaluates the *true* ocean, so a brief evaluated step by step would
+      be a perfect forecast, which is not a forecast.
+- [x] T006 The manifest records the derivation as its composition rule, in those words, so
+      no reader mistakes the brief for a model run.
+- [x] T007 `store.ts`: an era pointer and `departureHolding()`. The head comment said
+      "three eras" and now says five — the record is a claim about the tree.
+- [x] T008 `edr.ts`: the collection description. Nothing else — FR-29 means the brief
+      becomes servable by being published, and T012 is the test that says so rather than
+      the code that makes it so.
+- [x] T009 `check-truth-initialisation`: the gate learns the second accessor, and its
+      message names *which* holding leaked, because a message that always said "now-cast"
+      would send a reader to the wrong one.
+- [x] T010 **Watched failing**: a planted `departure-initialisation.ts` fixture, and the
+      gate regex reverted to `currentNowcast` alone. The fixture went uncaught and the
+      gate test failed. Reverted, and said so in the commit message.
+- [x] T011 `departure.test.ts`: the brief exists at provisioning, is master-valid, names
+      persistence, and **every step of its field is identical to the first** — the
+      property, checked, rather than the descriptor, asserted. A third test probes a late
+      step against the analytic form re-evaluated at the origin, so "held constant" is
+      held to the ocean and not only to itself.
+- [x] T012 `query.test.ts`: the collections list carries `departure` with no query
+      configuration edited, and a position query answers the same value at every instant
+      in the validity window — through the wire, not off the bytes.
+- [x] T013 The analyst's background era, narrowed rather than the message's enum widened.
+      An analysis stands on the forecast or on the now-cast at cold start; a third era
+      arriving there would be feature 116's leak coming back through a different door, so
+      it is refused by name.
+
+## The tab
+
+- [x] T014 `run.json` and the registry: the `holdings` view becomes `data`, labelled
+      "Data", in the same slot.
+- [x] T015 `git mv` the panel directory. A `holdings/` directory with no Holdings tab is
+      the divergence this repository exists to end; the modules keep their names because
+      the specs and ADRs cite them.
+- [x] T016 `tree.ts`: the seven branches, the coverage ones derived from the master. Pure,
+      and tested against the master rather than against itself.
+- [x] T017 `address.ts`: `<branch>/<node>`, the node kept whole. A miss is carried through
+      rather than absorbed — Background resolves an unknown remainder to its first step
+      and is right to, because its remainder is a position in a course that always exists;
+      this one names something the store either holds or does not.
+- [x] T018 `read.ts`: every fetch the tab makes, in one place, each validated against the
+      master the backend's own tests hold that response to. Returns a value **or a
+      refusal**, never `undefined` for both — a branch is required to say why it is empty,
+      and a function that answers `undefined` for "holds none" and for "would not answer"
+      has thrown that distinction away before the panel can draw it.
+- [x] T019 `DataPanel.tsx`: the tree, the detail region, and one subscription per store.
+      Nothing on a timer.
+- [x] T020 `CoverageBranch.tsx`: Holdings' timeline, manifest and comparison, re-homed
+      whole. The comparison keeps its three URLs.
+- [x] T021 `Measurements.tsx` and `series.ts`: Thing → Datastream → chart, the geometry
+      pure so the scaling is checked against values rather than against a picture.
+- [x] T022 `ShoreUpdates.tsx` and `advisories.ts`: the regions, coloured by kind, lapsed
+      ones drawn spent.
+- [x] T023 `Volume.tsx` and `volume.ts`: the fourth axis, fetched lazily and cached. The
+      cache answers *absent* rather than *nearest*, which is the only version of this that
+      can be told apart from the wrong one by looking.
+- [x] T024 `lazy.tsx`: the two WebGL surfaces code-split. Found while wiring, not
+      specified: importing them directly would have pulled a third of the bundle into the
+      first load through the door the map's deferral was built to close.
+- [x] T025 The tour becomes the Data tour and grows to the tab's seven regions.
+- [x] T026 The stylesheet: the tree, the chart, the canvases, and the narrow presentation
+      where the tree is a strip above the branch rather than a column beside it.
+
+## What the tests found
+
+- [x] T027 The lane list was three literals and feature 116's `analysis` era had never
+      reached it, so an analysis holding was drawn on no lane and nothing said so. Fixed
+      by reading the eras from the master; **watched failing** with the literals restored,
+      which named both missing eras.
+- [x] T028 The panel wrote its default branch into the address on mount, so crossing the
+      width threshold rewrote the reader's URL. Caught by feature 112's SC-005. Selecting
+      writes the address now; mounting does not.
+- [x] T029 Observations were fetched with the datastream id percent-encoded, and the query
+      component refused a form it serves. The slash in `<thing>/<datastream>` is part of
+      the id.
+- [x] T030 The refusal a reader sees is the release gate's own — it names the path it
+      would not clear, which is more use than the status code the old assertion looked
+      for. Both tests now require the named refusal.
+- [x] T031 The absorbed parity check walks the branches rather than counting bars on one
+      timeline, so "every holding the store reports is reachable" survives the move.
+      Weakening it to the era that happened to be open was the easy edit and would have
+      retired the check while leaving it green.
+- [x] T032 `data.test.tsx` primes the code-split module before asserting on the branch.
+      Without it the assertions measure the Suspense fallback — the same fault the
+      `panel-arriving` marker was added for on the map.
+- [x] T033 A test binds `Volume.tsx`'s collection-id convention to the served collections
+      list. The rule is the query component's and lives on the other side of the seam
+      where it cannot be imported, so the two are held together by a check instead.
+
+## Reported against the built tab, and fixed
+
+- [x] T037 **The open chart never refetched.** Its effect was keyed on the datastream
+      alone, so it fetched once and held that picture for the life of the selection.
+      Reproduced against the built page at ×600: sixty-six points, and still sixty-six
+      twenty-six simulated minutes later. **Watched failing** with the dependency removed
+      again after the fix, which reported one point where two were held.
+- [x] T038 **And the tab refetched the wrong thing constantly.** The observation
+      subscription refetched the platform list and the datastream list on *every* sample —
+      two requests each, for a list that changes when a sensor first reports and never
+      after. The tab was busiest exactly when it looked most static.
+- [x] T039 Arrivals are counted rather than acted on; the head states how many are waiting
+      and a refresh applies them, the open chart included. The author's own framing —
+      refreshing on every update would be jittery — is the requirement now, and FR-97
+      carries the reversal with its reason.
+- [x] T040 The count is part of the control, not decoration: "three waiting" and "nothing
+      waiting" are different facts about how old the picture is, and a button whose effect
+      a reader can only discover by pressing it has stopped saying anything (feature 117's
+      rule about the walk arrows, applied here).
+- [x] T041 `readAt` is recorded *before* the fetch, not after. An observation arriving
+      while the two requests are in flight is one that read may not carry, and counting it
+      as read would lose it silently; erring the other way costs a press and no
+      information.
+- [x] T042 SC-005 restated. It asserted that observation announcements grew the request
+      count, which is the behaviour this reverses — so it now says what is true: the
+      coverage branches move on their announcement, the measurements do not, and the two
+      tests above cover the control.
+
+- [x] T043b **The measurements branch counted datastreams.** Reported: it should count
+      measurements. It now shows what the observation store reports it holds, asked for
+      with `$top=0` so the server answers with its count and no page — the shell should
+      not fetch thousands of entities to call `.length` on them, and the store's own
+      figure cannot drift from the store. **Watched failing**: with the count back to
+      datastreams it reported 7 where 17 were held.
+- [x] T044 **The shore canvas drew regions on nothing.** Reported: no vector data on a
+      map. The run's reference geometry — the domain as a surface, the loiter region
+      outlined — now goes beneath them, over a locally generated one-degree graticule,
+      with a caption naming each. Same Features service, one collection along, through the
+      seam like everything else.
+- [x] T045 The fit is `WebMercatorViewport.fitBounds` against the measured canvas. The
+      arithmetic it replaced got the horizontal roughly right and clipped the domain top
+      and bottom: four degrees of latitude at 46°N occupy about half as much again on a
+      Mercator as four degrees of longitude do. A projection's own viewport knows that; a
+      log2 does not.
+- [x] T046 The view is **controlled**. `initialViewState` is read once, before the canvas
+      has been measured, so the fit never reached the picture — and the second look found
+      the domain still at two fifths of the height, after the first fix had apparently
+      made it right.
+- [x] T047 The canvas is measured by a **callback ref**, not by an effect over
+      `ref.current`. The canvas is only in the document once an advisory exists, so a
+      mount-time effect observed nothing and never ran again. Three passes on one picture,
+      each of which looked right in code and was wrong on screen; only the screenshots
+      told them apart.
+- [x] T048 The loiter outline is drawn **above** the advisory fill. Beneath a translucent
+      fill a two-pixel outline is not context, it is a rumour of one — and the advisories
+      sit over that region more often than not, which is the whole reason to draw it.
+
+- [x] T049 **The measurements had no table.** Reported by the reader, who wanted the
+      figures rather than the line — and FR-99 had said "with the observation table beside
+      it" since the specification was written, which is this repository's first lesson
+      with the roles the usual way round: the record claimed a table and the tree, which
+      is the authority, had a chart only. `table.ts` orders the rows, `Measurements.tsx`
+      offers chart and table as two tabs over one history.
+- [x] T050 **The fetch sits above both presentations.** Switching asks the store nothing.
+      Two reads could land either side of a publication and hand a reader two accounts of
+      one datastream that disagree, and the reader would have no way to tell which was the
+      store's. **Watched failing** with `presentation` added to the fetch's dependencies:
+      three requests where two were expected.
+- [x] T051 The table keeps an observation whose instant will not parse, marked and last.
+      The chart has no choice but to drop it — there is no position on a time axis for an
+      instant that is not one — and a table that dropped it too would leave two views
+      agreeing by having both looked away from the same row. **Watched failing** with the
+      row dropped as the chart drops it.
+- [x] T052 The presentation is **not in the address** (FR-98), and the choice survives a
+      change of datastream. A reader who came for numbers keeps them as they walk the
+      platforms; a reader following someone's link to a datastream gets that datastream
+      and not the linker's opinion about how to look at it. The stated cost: it does not
+      survive the width threshold, because crossing it remounts the panel and the choice
+      is React state. The datastream does survive, being addressed.
+- [x] T054 The table draws a **stated window**, five hundred rows of the recent end, where
+      the fetch's twenty-thousand ceiling would otherwise put sixty thousand cells in the
+      document. Found by driving the built page, where the value column read well and the
+      arithmetic of a long run did not. **Watched failing** with the window taken from the
+      earliest end instead.
+- [x] T055 The integration test drives the store to **five observations before it reads**.
+      Its first draft picked a datastream holding one, which cannot be out of order: it
+      passed with `observationRows` sorting newest-first, which is a check that has never
+      been seen to fail, and it was found by planting exactly that. It fails on the plant
+      now.
+
+## The record
+
+- [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,
+      FR-70 and FR-75 re-homed, and §5.19 appended as FR-93 to FR-103.
+- [x] T035 The view-id gate named the links a search by hand would have missed: three in
+      the Intro tab, one Background explainer, the demo index and a published blog entry.
+      All updated.
+- [x] T036 The blog entry, within the 300-word budget, with a motion capture.
+- [x] T043 SRD: FR-97 rewritten as the reversal above, with what it got wrong and why.
+- [x] T053 SRD: FR-99 amended for the table — two presentations of one fetch, what the
+      table shows that the chart cannot, and the presentation kept out of the address.
+
+## Not done, and why
+
+- **No cross-tab wiring.** No "show this on the map", no filtering of the Messages traffic
+  from a selected datastream. Both were offered in the interview and declined: the address
+  of FR-98 is the linkage this feature builds, and anything more is a second feature's
+  worth of coupling between four panels.
+- **The chart shows one datastream, not a residual.** Drawing a measurement against the
+  forecast it was scored on needs an EDR position query per observation, and the monitor
+  already computes that residual where the Operator tab already draws it.
+- **The volume does not step across forecast instances.** Watching successive forecasts of
+  one instant change as assimilation bites is a comparison, and FR-70 is where comparisons
+  live.
+- **The departure forecast is not climatology.** A seasonal mean from the archive would
+  contrast more sharply with the now-cast, and nothing in the tree computes a mean across
+  archive months. Persistence costs nothing new and is already a named reference here.
+- **The tree does not name the standard that answers each branch.** The cost of a
+  kind-first spine, taken deliberately and recorded in `spec.md` and in FR-93.

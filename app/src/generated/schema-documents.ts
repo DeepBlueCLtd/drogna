@@ -1036,6 +1036,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "domain",
       "nowcast",
       "archive",
+      "departure",
       "background",
       "features",
       "timescale",
@@ -1113,6 +1114,29 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "interval_ticks": {
             "type": "integer",
             "exclusiveMinimum": 0
+          },
+          "time_steps": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "step_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "departure": {
+        "type": "object",
+        "required": [
+          "grid",
+          "time_steps",
+          "step_seconds"
+        ],
+        "additionalProperties": false,
+        "description": "The forecast the vessel was issued at the quay-side (feature 121): authored once at provisioning, valid forward from the scenario origin, and never refreshed. It is a persistence forecast — the true field at the origin held constant across every step — because this component evaluates the true ocean, and a brief evaluated from truth at each step would be right about the future, which no forecast is. Its error grows on its own as the world moves away from it.",
+        "properties": {
+          "grid": {
+            "$ref": "#/$defs/grid_counts"
           },
           "time_steps": {
             "type": "integer",
@@ -4265,7 +4289,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/coverage-holding.schema.json",
     "title": "drogna coverage holding",
-    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. Three eras (SRD-v2 FR-21): the historic archive authored at provisioning, the now-cast replaced on its cadence, and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
+    "description": "One holding in the coverage store (V2-C08): the descriptor a reader catalogues it by, with the ground-truth manifest that produced it embedded whole. The eras (SRD-v2 FR-21): the historic archive authored at provisioning; the departure forecast issued at the scenario origin and never refreshed — authored as persistence, because a forecast evaluated from the true field at each of its steps would be a perfect forecast and so not a forecast at all (feature 121); the now-cast replaced on its cadence; the analysis an assimilation cycle publishes; and the forecast instances that accumulate once the loop turns — an instance's manifest names the model runner as its generator, and the run-level facts (validity, cause, ensemble) travel in the run-published announcement rather than a second descriptor (V1's coverage-run-manifest, retired with the reason in feature 105's record). The field digest is what publication was checked against (FR-13): a staged holding whose bytes do not match it was refused with the mismatch named and never became one of these.",
     "type": "object",
     "required": [
       "schema_version",
@@ -4291,6 +4315,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "string",
         "enum": [
           "archive",
+          "departure",
           "nowcast",
           "analysis",
           "instance"

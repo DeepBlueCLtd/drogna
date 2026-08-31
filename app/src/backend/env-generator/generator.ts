@@ -7,9 +7,9 @@
  * truth — are recorded in each holding's manifest together with the draw order,
  * which is what keeps the manifest sufficient on its own (Constitution IX).
  *
- * Provisioning goes through the components' own paths (FR-11): the archive and the
- * first now-cast are staged and published through the coverage store's one write
- * seam, digest-checked like everything after them. The now-cast is regenerated on
+ * Provisioning goes through the components' own paths (FR-11): the archive, the
+ * departure brief and the first now-cast are staged and published through the coverage
+ * store's one write seam, digest-checked like everything after them. The now-cast is regenerated on
  * its configured cadence, driven by received clock ticks, and its manifest records
  * the derivation each time.
  *
@@ -217,6 +217,10 @@ export class EnvGenerator {
     // What is wanted here is a publication instant, which is a fact about the inventory.
     const standing = this.store.holdings();
     if (!standing.some((holding) => holding.era === 'archive')) this.publishArchive();
+    // The brief is issued once at the quay-side and never refreshed, so a run that
+    // resumes keeps the one it sailed with. Issuing a second on resumption would be a
+    // vessel handed a fresh forecast without having returned to harbour for it.
+    if (!standing.some((holding) => holding.era === 'departure')) this.publishDeparture();
     const nowcast = standing.find((holding) => holding.era === 'nowcast');
     if (nowcast === undefined) {
       this.publishNowcast();
@@ -230,6 +234,36 @@ export class EnvGenerator {
     if (this.simTime.tick - this.lastNowcastTick >= this.config.nowcast.interval_ticks) {
       this.publishNowcast();
     }
+  }
+
+  /**
+   * The forecast the vessel was issued at the quay-side (feature 121, FR-18): authored
+   * once here, valid forward from the scenario origin, and never touched again.
+   *
+   * It is a **persistence** forecast, and the reason is the trap this component sits
+   * over. This generator evaluates the true ocean, so a brief whose every step was
+   * evaluated at that step's own instant would be right about the future — which is
+   * exactly what a forecast is not. Holding the origin's field constant across the
+   * whole validity window makes it wrong in the way a real brief is wrong: it is
+   * correct at the moment of issue and its error grows on its own, from nothing but
+   * the world moving away from it.
+   */
+  private publishDeparture(): void {
+    const { domain, departure } = this.config;
+    const grid: GridSpec = {
+      longitude: axis(domain.longitude.minimum, domain.longitude.maximum, departure.grid.longitude, 'degrees_east', 'east'),
+      latitude: axis(domain.latitude.minimum, domain.latitude.maximum, departure.grid.latitude, 'degrees_north', 'north'),
+      depth: axis(domain.depth.minimum, domain.depth.maximum, departure.grid.depth, 'm', 'down'),
+      time: {
+        origin_sim_time: this.simTime.value,
+        // Valid forward from the origin: the vessel sails with it.
+        start_offset_seconds: 0,
+        step_seconds: departure.step_seconds,
+        count: departure.time_steps,
+        units: 'seconds since the origin sim time',
+      },
+    };
+    this.evaluateAndPublish('departure', grid, { persistence: true });
   }
 
   private publishArchive(): void {
@@ -270,7 +304,12 @@ export class EnvGenerator {
     this.evaluateAndPublish('nowcast', grid);
   }
 
-  private evaluateAndPublish(era: 'archive' | 'nowcast', grid: GridSpec): void {
+  private evaluateAndPublish(
+    era: 'archive' | 'nowcast' | 'departure',
+    grid: GridSpec,
+    options: { persistence?: boolean } = {},
+  ): void {
+    const persistence = options.persistence === true;
     const lons = axisValues(grid.longitude);
     const lats = axisValues(grid.latitude);
     const depths = axisValues(grid.depth);
@@ -283,7 +322,12 @@ export class EnvGenerator {
     let maxAbsS = 0;
     let index = 0;
     for (let t = 0; t < grid.time.count; t++) {
-      const seconds = grid.time.start_offset_seconds + t * grid.time.step_seconds;
+      // A persistence holding evaluates every step at the instant it was issued: the
+      // axis runs forward and the values do not. That is what makes it a forecast
+      // rather than a snapshot of each step's truth.
+      const seconds = persistence
+        ? grid.time.start_offset_seconds
+        : grid.time.start_offset_seconds + t * grid.time.step_seconds;
       for (const depth of depths) {
         for (const lat of lats) {
           for (const lon of lons) {
@@ -356,10 +400,16 @@ export class EnvGenerator {
         validity: { ...SOUND_SPEED.validity },
         outside_validity: { count: outsideValidity, first_point: firstOutside },
       },
-      composition: {
-        rule: COMPOSITION_RULE,
-        description: 'each feature’s anomaly is added to the background; no feature masks another',
-      },
+      composition: persistence
+        ? {
+            rule: 'persistence',
+            description:
+              'the true field evaluated once at the scenario origin and held constant across every step of the validity window — the forecast issued at the quay-side, never refreshed; at that one instant each feature’s anomaly is added to the background as elsewhere',
+          }
+        : {
+            rule: COMPOSITION_RULE,
+            description: 'each feature’s anomaly is added to the background; no feature masks another',
+          },
       features: this.groundTruthFeatures(grid),
       timescale: {
         background_seconds: this.config.timescale.background_seconds,

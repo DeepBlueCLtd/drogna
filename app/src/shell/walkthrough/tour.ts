@@ -317,7 +317,15 @@ export function messagesTour(): Tour {
 /** The Messages tour's steps, for the completeness check. */
 export const MESSAGES_TOUR_STEPS: readonly SubjectStep[] = MESSAGES_STEPS;
 
-const HOLDINGS_STEPS: SubjectStep[] = [
+const DATA_STEPS: SubjectStep[] = [
+  {
+    subject: 'tree',
+    element: '[data-region="tree"]',
+    title: 'Everything the system holds',
+    what: 'Three stores answer here through three standard interfaces, and the tree gathers them by *kind* rather than by standard: what the sensors measured, the five eras of gridded field, and what shore has sent. The count beside each branch is what that store reports, not what this tab has drawn.',
+    panel: 'Choosing a branch changes the address, so any node in this tab can be linked to directly. Nothing here polls: a branch refreshes when its store announces a publication, which is why a count can sit still while the clock runs.',
+  },
+
   {
     subject: 'timeline',
     element: '[data-region="timeline"]',
@@ -339,15 +347,36 @@ const HOLDINGS_STEPS: SubjectStep[] = [
     what: 'For an instance whose validity has elapsed, the truth for the instant it forecast has since been published — so the two can be differenced. Beside that difference goes a third: the forecast’s own initial field held constant, which is what doing nothing would have produced. A picture of forecast error alone is a skill claim, and no skill claim is admitted here without that reference.',
     panel: 'Both differences are drawn on one shared scale, so they are comparable by eye, and the panel says plainly which is closer — including when it is the reference. The three requests it made are on screen and copyable: a figure this page computed and you cannot re-derive is an assertion.',
   },
+  {
+    subject: 'volume',
+    element: '[data-region="volume"]',
+    title: 'The field as a volume, through its own time',
+    what: 'Longitude, latitude and depth, drawn as a rotating stack — each level a genuine EDR area query against this holding — and a fourth axis stepping the time values the holding’s own manifest declares. Months for the archive, hours for a forecast run.',
+    panel: 'Steps are fetched as they are asked for and kept. Nothing is ever drawn that was not fetched: scrub to a step that has not arrived and it says so, rather than showing you a neighbour’s field at an instant nobody asked the store about.',
+  },
+  {
+    subject: 'chart',
+    element: '[data-region="chart"]',
+    title: 'What an instrument reported',
+    what: 'A platform carries datastreams and a datastream carries observations — SensorThings’ own grouping, kept rather than regrouped. What is drawn is that datastream’s whole history, paged out of the store until it is exhausted.',
+    panel: 'The axes come from the observations and from nothing else: a chart drawn to a configured expectation would look the same whether an instrument had behaved or failed high. Two tabs turn the same fetched history around — the chart for what an instrument has been doing, the table for exactly what it said and when.',
+  },
+  {
+    subject: 'advisories',
+    element: '[data-region="advisories"]',
+    title: 'What shore has sent',
+    what: 'Advisories carry a kind, a region and a window of validity, and no free text anywhere — every field is an enum, a bounded pattern or a timestamp. So they are drawn: the advised region, coloured by kind.',
+    panel: 'An advisory whose validity has lapsed stays on the canvas, drawn spent. Removing it would answer “has anything been advised here?” with “no”, when the truth is “yes, and it has expired”. Watch them accumulate as the clock runs.',
+  },
 ];
 
-/** The Holdings tour, held to the panel's own declared region list. */
-export function holdingsTour(): Tour {
-  return surfaceTour('holdings', 'holdings', 'The Holdings tab, region by region', HOLDINGS_STEPS);
+/** The Data tour, held to the panel's own declared region list. */
+export function dataTour(): Tour {
+  return surfaceTour('data', 'data', 'The Data tab, region by region', DATA_STEPS);
 }
 
-/** The Holdings tour's steps, for the completeness check. */
-export const HOLDINGS_TOUR_STEPS: readonly SubjectStep[] = HOLDINGS_STEPS;
+/** The Data tour's steps, for the completeness check. */
+export const DATA_TOUR_STEPS: readonly SubjectStep[] = DATA_STEPS;
 
 const MAP_STEPS: SubjectStep[] = [
   {
@@ -429,5 +458,5 @@ export const MAP_TOUR_STEPS: readonly SubjectStep[] = MAP_STEPS;
  * a tour no rule covered, which is the failure mode the list exists against.
  */
 export function allTours(shell: ConfigShell): readonly Tour[] {
-  return [componentTour(shell), mapTour(), holdingsTour(), messagesTour()];
+  return [componentTour(shell), mapTour(), dataTour(), messagesTour()];
 }

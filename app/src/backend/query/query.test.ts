@@ -51,7 +51,7 @@ describe('the query seam (feature 104)', () => {
     expect(collections.status).toBe(200);
     expect(validator.validate('edr-collections#collections', collections.body).refusals).toEqual([]);
     const list = collections.body as { collections: { id: string; extent: { temporal: { interval: string[][] } } }[] };
-    expect(list.collections.map((collection) => collection.id).sort()).toEqual(['archive', 'nowcast']);
+    expect(list.collections.map((collection) => collection.id).sort()).toEqual(['archive', 'departure', 'nowcast']);
     // The stated extent is the store's, not a wish: verified against the holding.
     const nowcast = runtime.store.currentNowcast();
     if (!nowcast) throw new Error('no nowcast');
@@ -68,6 +68,41 @@ describe('the query seam (feature 104)', () => {
     expect(coverage.ranges.temperature.values).toHaveLength(1);
     expect(coverage.ranges.temperature.values[0]).toBeGreaterThan(-2);
     expect(coverage.ranges.temperature.values[0]).toBeLessThan(35);
+  });
+
+  it('serves the departure brief by convention, and it is the same field at every instant it is valid for (SC-008)', async () => {
+    // FR-29's claim, tested rather than asserted: nothing in the query component's
+    // configuration names an era, so a holding published under a new one becomes
+    // servable by being published. Nothing below was edited to make this pass.
+    const document = await get('/api/edr/collections/departure');
+    expect(document.status).toBe(200);
+    expect(validator.validate('edr-collections#collection', document.body).refusals).toEqual([]);
+
+    const brief = runtime.store.departureHolding();
+    if (!brief) throw new Error('no departure holding');
+    const time = brief.descriptor.manifest.grid.time;
+    const origin = timeAxisPosixOrigin(brief.descriptor.manifest);
+    const at = async (seconds: number) => {
+      const iso = new Date((origin + seconds) * 1000).toISOString();
+      const response = await get(
+        `/api/edr/collections/departure/position?coords=POINT(-11.2 46.1)&z=100&datetime=${encodeURIComponent(iso)}`,
+      );
+      expect(response.status).toBe(200);
+      const coverage = response.body as { ranges: Record<string, { values: number[] }> };
+      return coverage.ranges.temperature.values[0];
+    };
+
+    const issued = await at(0);
+    expect(issued).toBeGreaterThan(-2);
+    expect(issued).toBeLessThan(35);
+    // Every step of the validity window, through the wire rather than off the bytes.
+    for (let step = 1; step < time.count; step++) {
+      expect(await at(step * time.step_seconds)).toBe(issued);
+    }
+    // And the now-cast at the same place does move, so the test above is a property of
+    // the brief rather than of the query path.
+    const nowcastEarly = await get('/api/edr/collections/nowcast/position?coords=POINT(-11.2 46.1)&z=100');
+    expect(nowcastEarly.status).toBe(200);
   });
 
   it('AT-01: a trajectory through the seam returns values verified against the ground-truth manifest, within its recorded tolerance', async () => {
@@ -125,7 +160,7 @@ describe('the query seam (feature 104)', () => {
 
     const noCollection = await get('/api/edr/collections/mystery');
     expect(noCollection.status).toBe(404);
-    expect((noCollection.body as { refused: string }).refused).toMatch(/no collection named 'mystery'; served: archive, nowcast/);
+    expect((noCollection.body as { refused: string }).refused).toMatch(/no collection named 'mystery'; served: archive, departure, nowcast/);
   });
 
   it('serves SensorThings over the store, read-only, master-valid, with honest paging', async () => {

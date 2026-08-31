@@ -228,18 +228,45 @@ body,
   color: var(--shell-dim);
 }
 
+/* Three regions across one row, and the shares between them are the point (feature 115,
+   and the fault this rewrite answers). The first draft made the list and the inspector
+   `flex: 1` apiece: at 1440px that left the inspector 532 pixels, of which its own label
+   column took 301, and a `datastream_id` of thirty-four characters was rendered down a
+   73-pixel column one syllable to a line. Measured, not guessed — at 1100px the same
+   column was fourteen pixels wide, which is one character.
+
+   The list does not want the width and the inspector does: a list cell is already
+   truncated at 28em with an ellipsis, so anything past that is spent on white space,
+   while the inspector is the only surface here anybody reads a value *in*. So the
+   inspector takes the larger share of what the tree leaves, and the tracks carry
+   `minmax(0, …)` because a `1fr` track's automatic minimum is its content's min-content
+   width — a monospace list would otherwise refuse to shrink and push the grid past the
+   panel, which is the same fault the traffic lanes recorded two hundred lines above. */
 .messages-split {
-  display: flex;
+  display: grid;
+  grid-template-columns: fit-content(min(26em, 28%)) minmax(0, 1fr) minmax(0, 1.7fr);
+  grid-template-areas: 'tree list inspector';
   flex: 1;
   gap: 1em;
   min-height: 0;
+}
+
+.messages-split > .messages-tree-region {
+  grid-area: tree;
+}
+
+.messages-split > .messages-list-scroll {
+  grid-area: list;
+}
+
+.messages-split > .message-detail {
+  grid-area: inspector;
 }
 
 /* The list's own scroll container (feature 112): wide it is the flex child the table
    used to be, narrow it is what keeps the list's scroll position while the detail
    covers it. */
 .messages-list-scroll {
-  flex: 1;
   min-width: 0;
   overflow: auto;
 }
@@ -278,6 +305,11 @@ body,
   min-width: 0;
   overflow: auto;
 }
+
+/* Holdings puts a `.message-detail` inside a flex container of its own, so the shared
+   rule keeps its `flex`; in the Messages grid the track does the sizing and the flex
+   value is inert. Named here so the next reader does not delete one and break the
+   other. */
 
 .message-detail pre {
   font-size: 0.85em;
@@ -611,16 +643,26 @@ body,
   /* A list beside a detail becomes a list with the detail over it (FR-016). The split is
      the positioned ancestor and does not itself scroll: the list scrolls inside its own
      wrapper, which stays mounted under the detail, so going back goes back to the list
-     where it was left rather than to the top of a different one. */
+     where it was left rather than to the top of a different one.
+
+     The detail is either `display: none` or absolutely positioned at this width, so it
+     takes no track; the grid is one column of two rows and the areas say so. */
   .messages-split {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'tree'
+      'list';
     gap: 0.4em;
     position: relative;
     overflow: hidden;
   }
 
+  .messages-split > .message-detail {
+    grid-area: auto;
+  }
+
   .messages-list-scroll {
-    flex: 1;
     min-height: 0;
     overflow: auto;
   }

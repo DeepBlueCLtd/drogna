@@ -1,0 +1,701 @@
+/**
+ * The Data tab's own stylesheet (feature 115 for the timeline and the comparison, 118 for
+ * the tree, the chart, the volume and the shore canvas). The tab shares the split, the
+ * detail pane and the counters line with Messages — those rules are in `shell.css`, where
+ * three features left them.
+ *
+ * The fourth kind of figure is declared here rather than in `operator.css`, because it
+ * arrived with feature 115; the other three stay where 113 put them and are unchanged.
+ */
+
+.data-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The timeline takes the whole width: an axis carrying twenty years wants it, and the
+   first capture of this display had the instances a few pixels wide because the panel
+   was sharing a row with the manifest. */
+.data-primary {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* The detail scrolls in its own container so the page never does (FR-017). */
+.data-detail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: auto;
+}
+
+/* ------------------------------------------------------------- the timeline --- */
+
+.holdings-timeline {
+  margin: 0 0 0.8em;
+}
+
+.timeline-lanes {
+  display: grid;
+  /* `minmax(0, 1fr)`, for the reason recorded on the traffic display's own grid. */
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 5px 0.7em;
+  align-items: center;
+}
+
+/* Each row groups a name and a lane for reading; it is not a box of its own. Without
+   this the wrapper is itself one grid item and two lanes land on every line. */
+.timeline-row {
+  display: contents;
+}
+
+.timeline-lane-name {
+  color: var(--shell-dim);
+  font-family: monospace;
+  font-size: 0.85em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* `border-box` for the same reason the traffic lane carries it: this is the `1fr`
+   column, and a content-box border overflows the viewport by its own width. */
+.timeline-lane {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 26px;
+  background: #0b1016;
+  border: 1px solid #232c36;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 3px;
+  height: 18px;
+  min-width: 3px;
+  display: block;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 2px;
+  padding: 0 0.3em;
+  font: inherit;
+  font-size: 0.7em;
+  line-height: 18px;
+  color: #08111a;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  /* The same grey the palettes carried, copied here as a fill. It gave the bar's own
+     label 4.16:1 against it — a bar a reader is meant to read an identifier off. Moved
+     with the palettes, to 8.52:1. The era lanes below override this fill and keep this
+     label colour, which is why they are measured against it too. */
+  background: #9fb0bd;
+}
+
+/* The label is clamped to the bar, and clamping is not clipping: `overflow: hidden`
+   hides what does not fit but still *reports* it, so a bar narrower than its own
+   identifier is an element that scrolls sideways however it is painted. The
+   narrow-presentation proof said so at 129px of content in 103px, and said it again
+   after the first fix. What it takes is not rendering the text — see the container
+   query at the foot of this file, where it goes away entirely at a phone's width. */
+.timeline-bar > span {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-lane[data-era-lane='nowcast'] .timeline-bar {
+  background: #5fb8ac;
+}
+
+.timeline-lane[data-era-lane='instance'] .timeline-bar {
+  background: #9c8fd1;
+}
+
+.timeline-bar-selected,
+.timeline-bar:focus-visible {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: 1px;
+}
+
+/* The axis labels the instants the mapping actually falls on, so a reader converts by
+   reading rather than by trusting the shape of a non-linear scale. */
+.timeline-axis {
+  grid-column: 2;
+  position: relative;
+  display: block;
+  height: 1.4em;
+  font-size: 0.7em;
+  color: var(--shell-dim);
+}
+
+.timeline-axis i {
+  position: absolute;
+  transform: translateX(-50%);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.timeline-axis i:first-child {
+  transform: none;
+}
+
+.timeline-axis i:last-child {
+  transform: translateX(-100%);
+}
+
+.timeline-unplaced-list {
+  margin: 0.3em 0 0;
+  padding-left: 1.2em;
+  font-size: 0.85em;
+}
+
+/* ------------------------------------------------------------- the manifest --- */
+
+.holding-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1em 0.8em;
+  margin: 0.4em 0;
+  font-size: 0.85em;
+}
+
+.holding-facts > div {
+  display: contents;
+}
+
+.holding-facts dt {
+  color: var(--shell-dim);
+}
+
+.holding-facts dd {
+  margin: 0;
+  font-family: monospace;
+  word-break: break-word;
+}
+
+/* ------------------------------------------------------------ the comparison --- */
+
+.comparison {
+  border-top: 1px solid #232c36;
+  padding-top: 0.6em;
+  margin-bottom: 0.8em;
+}
+
+.comparison h4 {
+  margin: 0 0 0.2em;
+}
+
+.comparison-controls {
+  display: flex;
+  gap: 0.9em;
+  align-items: center;
+  margin: 0.5em 0;
+  flex-wrap: wrap;
+}
+
+.comparison-fields {
+  display: flex;
+  gap: 1.4em;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.difference-plot {
+  margin: 0;
+}
+
+.difference-plot figcaption {
+  color: var(--shell-dim);
+  font-size: 0.8em;
+  margin-bottom: 0.3em;
+}
+
+.difference-grid {
+  display: grid;
+  gap: 1px;
+  width: 190px;
+}
+
+.difference-grid span {
+  aspect-ratio: 1;
+  display: block;
+}
+
+.comparison-figures {
+  flex: 1;
+  min-width: 18em;
+}
+
+.comparison-verdict {
+  margin: 0.6em 0;
+}
+
+/* Where the model is not earning its compute, the display says so — and says it in the
+   colour a refusal is said in, because a comfortable-looking sentence saying the
+   uncomfortable thing is how an unflattering finding gets skimmed past. */
+.comparison-verdict-unflattering {
+  color: var(--shell-refused);
+}
+
+.comparison-telemetry {
+  margin: 0.6em 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.comparison-telemetry-statement {
+  font-style: italic;
+}
+
+.comparison-urls {
+  margin-top: 0.8em;
+}
+
+.comparison-urls ul {
+  margin: 0.3em 0 0;
+  padding-left: 1.2em;
+  font-size: 0.85em;
+}
+
+.comparison-urls li {
+  margin-bottom: 0.4em;
+}
+
+.comparison-urls code {
+  word-break: break-all;
+  color: var(--shell-accent);
+}
+
+/**
+ * The fourth kind of figure (ADR-0036): one the shell computed from documents that
+ * crossed the seam. Dashed rather than solid, and in its own hue, so it cannot be read
+ * as any of the three that came before it — declared is boxed, reported has a solid left
+ * rule, observed is underlined with dots.
+ */
+.flow-figure-derived {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+  margin-right: 0.8em;
+}
+
+.flow-figure-derived .flow-figure-value {
+  border: 1px dashed #d9b3ff;
+  color: #d9b3ff;
+  padding: 0 0.3em;
+}
+
+.flow-figure-caption {
+  color: var(--shell-dim);
+  font-size: 0.8em;
+}
+
+@container (max-width: 720px) {
+  /* The timeline keeps all three era lanes at every width: folding one would be the
+     narrow presentation changing whether an era is drawn, which FR-50 forbids. What
+     changes is where the manifest and the comparison are — over the timeline rather than
+     beside it — which is what FR-50 is for. */
+  .holdings-primary {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .comparison-fields {
+    gap: 0.8em;
+  }
+
+  .difference-grid {
+    width: 140px;
+  }
+
+  .timeline-axis i {
+    font-size: 0.9em;
+  }
+
+  /* No bar is wide enough at a phone's width to hold a holding identifier, and a label
+     that does not fit is one that scrolls sideways whatever `overflow` says. It is the
+     only thing dropped, and nothing is lost with it: the identifier is in the bar's
+     accessible name, which is what a screen reader hears at every width, and in the
+     facts list under the selected holding. FR-50 governs where a region is, and this is
+     a redundant painting of a fact stated twice elsewhere rather than a region. */
+  .timeline-bar > span {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------- the tree (118) --- */
+
+.data-body {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.data-tree {
+  flex: 0 0 190px;
+  min-width: 0;
+  overflow-y: auto;
+  border-right: 1px solid #232c36;
+  padding-right: 8px;
+}
+
+.data-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.data-branch-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.data-branch-button:hover {
+  background: #161d26;
+}
+
+.data-branch-button[aria-current='true'] {
+  background: #1b2530;
+  border-color: #232c36;
+}
+
+.branch-count {
+  color: var(--shell-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+}
+
+.data-branch-region {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.data-branch-head h3 {
+  margin: 0 0 2px;
+}
+
+/* A phone has vertical space and no horizontal space: the tree becomes a strip above
+   the branch rather than a 190px column beside it (feature 112's rule, one breakpoint). */
+.data-panel[data-narrow='true'] .data-body {
+  flex-direction: column;
+}
+
+.data-panel[data-narrow='true'] .data-tree {
+  flex: 0 0 auto;
+  border-right: none;
+  border-bottom: 1px solid #232c36;
+  padding-right: 0;
+  padding-bottom: 6px;
+}
+
+/* The branches **wrap**; they do not scroll sideways. Seven short labels are exactly the
+   case the narrow presentation is supposed to fold, and the mobile proof is right to
+   refuse a row that ran 842px wide in a 373px screen: the containers allowed to scroll
+   are the ones that genuinely cannot fold — a diagram at its own minimum, a document —
+   and a list of seven words is not one of them. Each button sizes to its own label
+   instead of filling the row, so the count stays beside the name it counts. */
+.data-panel[data-narrow='true'] .data-tree ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.data-panel[data-narrow='true'] .data-branch-button {
+  width: auto;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------- measurements and the chart --- */
+
+.measurement-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.measurement-platform {
+  min-width: 200px;
+}
+
+.measurement-platform h4 {
+  margin: 0 0 2px;
+}
+
+.measurement-streams {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.measurement-streams button,
+.analysis-cycle button {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.measurement-streams button[aria-pressed='true'],
+.analysis-cycle button[aria-pressed='true'] {
+  background: #1b2530;
+}
+
+.stream-unit {
+  color: var(--shell-dim);
+}
+
+.data-chart {
+  margin-top: 12px;
+}
+
+/* Two tabs over one history (FR-99). The strip is the shell's own idiom at a smaller
+   scale: buttons in a tablist, the selected one filled rather than merely outlined,
+   because "which of these two am I looking at" has to survive a greyscale capture. */
+.history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.history-tabs button {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.history-tabs button[aria-selected='true'] {
+  background: #1b2530;
+  border-color: var(--shell-accent);
+}
+
+/* A table is the one thing that will not fold, so it scrolls inside `.table-scroll`
+   (shell.css) and the page does not. `min-width: max-content` keeps the columns at their
+   own width inside that container rather than crushing them.
+
+   The vertical cap is the same argument turned ninety degrees: the table draws up to
+   five hundred rows, and a reader who had to scroll past all of them to reach the
+   platform buttons again would be paying for the table on every other move. */
+.data-table-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.data-table {
+  border-collapse: collapse;
+  font-size: 0.88em;
+  width: 100%;
+  min-width: max-content;
+}
+
+.data-table th {
+  color: var(--shell-dim);
+  font-weight: 600;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid #232c36;
+  padding: 0.25em 0.6em;
+  text-align: left;
+}
+
+/* Figures line up under each other so a column of them can be read down, which is the
+   whole reason a reader asked for the table rather than the chart. */
+.data-table .table-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.data-table .table-id {
+  color: var(--shell-dim);
+}
+
+.table-unreadable {
+  color: var(--shell-refused);
+}
+
+.series-chart {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+}
+
+.series-line {
+  fill: none;
+  stroke: var(--shell-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.series-gridline {
+  stroke: #232c36;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.series-tick {
+  fill: var(--shell-dim);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------- the volume and shore --- */
+
+.data-volume h4,
+.advisory-detail h4 {
+  margin: 12px 0 4px;
+}
+
+.volume-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.volume-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shell-dim);
+}
+
+.volume-instant {
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-canvas,
+.advisory-canvas {
+  position: relative;
+  height: 320px;
+  margin-top: 8px;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.advisory-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advisory-list button {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.advisory-list button[aria-pressed='true'] {
+  background: #1b2530;
+}
+
+/* Standing is carried in the canvas by alpha; in the list it is carried by the text,
+   because a list row has no fill a reader can compare against its neighbours. */
+.advisory-list button[data-standing='lapsed'] {
+  color: var(--shell-dim);
+}
+
+.advisory-standing,
+.advisory-window {
+  color: var(--shell-dim);
+}
+
+.analysis-cycles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.analysis-cycle ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.analysis-cycle h4 {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------- the refresh control --- */
+
+.data-head-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* The backlog is quiet text, not an alert: it is a fact about how old the picture is,
+   and a reader who does not care should be able to ignore it. */
+.data-waiting {
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
+.data-refresh {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.data-refresh:hover {
+  background: #1b2530;
+}
+
+/* A phone has no room for the sentence beside the button; the button keeps its own
+   accessible name, which carries the same count. */
+.data-panel[data-narrow='true'] .data-waiting {
+  display: none;
+}

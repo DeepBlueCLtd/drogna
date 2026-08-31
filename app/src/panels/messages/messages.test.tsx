@@ -221,6 +221,27 @@ describe('the Messages tab (feature 115)', { timeout: 120_000 }, () => {
     expect(screen.getByTestId('inspect-raw').textContent).toContain('"not"');
   });
 
+  it('FR-73: a field-level refusal is drawn in the cell of the value it is about', () => {
+    // The fault used to have a fourth column to itself, which was empty on every
+    // well-formed message and charged for on all of them — and it charged the value
+    // column, which is the one a reader came to read. It sits under its value now, and
+    // this is what would notice it moving back out: the assertion is that the fault text
+    // is *inside* the value cell, not merely somewhere in the row.
+    render(<MessagesPanel {...panelProps()} />);
+    const rogue = runtime.transport.connect('rogue', 'sensors');
+    // A tick is declared an integer. Everything else about this payload is wrong too,
+    // and those refusals are about the document; this one is about a field, and Ajv
+    // names it: `/tick`.
+    act(() => rogue.publish('obs/platform-a/temperature-200m', { tick: 'six' }));
+    const row = document.querySelector<HTMLElement>('.messages-list tbody tr');
+    if (!row) throw new Error('the rogue message did not reach the list');
+    act(() => fireEvent.click(row));
+    const field = document.querySelector('[data-field="/tick"]');
+    expect(field?.getAttribute('data-refused')).toBe('true');
+    const fault = field?.querySelector('.inspect-value .inspect-fault');
+    expect(fault?.textContent).toMatch(/integer/);
+  });
+
   it('FR-75: the tour covers every region the panel declares, and no region it does not', () => {
     // The bound is the panel's own declared region list, read from the module rather
     // than typed here: a fifth region cannot arrive unstepped.

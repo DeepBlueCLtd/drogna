@@ -164,15 +164,15 @@ describe('the stack keeps the tabs (FR-004, FR-005)', () => {
   it('writes the address when a tab is chosen', async () => {
     const { done } = await shellAt('#/view/intro', 390);
     try {
-      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="holdings"]');
+      const tab = document.querySelector<HTMLElement>('.stack-tabs [data-view="data"]');
       await act(async () => {
         tab?.click();
         await Promise.resolve();
       });
-      expect(window.location.hash).toBe('#/view/holdings');
+      expect(window.location.hash).toBe('#/view/data');
       expect(
         document.querySelector('.stack-view:not([hidden])')?.getAttribute('data-view'),
-      ).toBe('holdings');
+      ).toBe('data');
     } finally {
       done();
     }
@@ -185,9 +185,9 @@ describe('crossing the threshold (FR-006, SC-005)', () => {
       [390, 1440],
       [1440, 390],
     ]) {
-      const { view, done } = await shellAt('#/view/holdings', from);
+      const { view, done } = await shellAt('#/view/data', from);
       try {
-        expect(window.location.hash).toBe('#/view/holdings');
+        expect(window.location.hash).toBe('#/view/data');
         widthOf(to);
         await act(async () => {
           window.dispatchEvent(new Event('resize'));
@@ -195,7 +195,7 @@ describe('crossing the threshold (FR-006, SC-005)', () => {
           await Promise.resolve();
         });
         // The address is what survives a crossing — the view a link promised.
-        expect(window.location.hash).toBe('#/view/holdings');
+        expect(window.location.hash).toBe('#/view/data');
       } finally {
         done();
         cleanup();

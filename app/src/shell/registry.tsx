@@ -29,7 +29,7 @@ import type { SeamClient } from '../seam/transport.js';
 import type { SeamValidator } from '../seam/validate.js';
 import type { PanelAddress } from './views.js';
 import { IntroPanel } from '../panels/intro/IntroPanel.js';
-import { HoldingsPanel } from '../panels/holdings/HoldingsPanel.js';
+import { DataPanel } from '../panels/data/DataPanel.js';
 import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
@@ -93,7 +93,7 @@ export const DEFERRED_VIEWS: ReadonlySet<string> = new Set(['map']);
 export const panelComponents: Record<string, React.FunctionComponent<PanelProps>> = {
   intro: IntroPanel,
   background: BackgroundPanel,
-  holdings: HoldingsPanel,
+  data: DataPanel,
   operator: OperatorPanel,
   map: MapPanel,
   messages: MessagesPanel,

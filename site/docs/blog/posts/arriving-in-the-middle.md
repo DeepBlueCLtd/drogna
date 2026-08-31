@@ -52,5 +52,5 @@ It compresses to 0.43 MB, and the situations open in 1.5 to 5 seconds.
 quay-side** with **Returning to quay-side** in the same tab — same code, same ocean, a
 different amount of it having happened:
 
-[Holdings, arriving on task](../../instances/main/?start=arriving#/view/holdings) ·
-[Holdings, on the way home](../../instances/main/?start=returning#/view/holdings)
+[Data, arriving on task](../../instances/main/?start=arriving#/view/data/nowcast) ·
+[Data, on the way home](../../instances/main/?start=returning#/view/data/nowcast)

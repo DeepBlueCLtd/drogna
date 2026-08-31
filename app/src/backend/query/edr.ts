@@ -137,9 +137,11 @@ export class EdrComponent {
       description:
         descriptor.era === 'archive'
           ? 'The multi-decade monthly historic archive, authored at provisioning through the publication seam.'
-          : descriptor.era === 'nowcast'
-            ? 'The rolling now-cast, replaced on its configured cadence.'
-            : 'A forecast run instance.',
+          : descriptor.era === 'departure'
+            ? 'The forecast the vessel was issued at the quay-side: persistence from the scenario origin, valid forward from it, never refreshed.'
+            : descriptor.era === 'nowcast'
+              ? 'The rolling now-cast, replaced on its configured cadence.'
+              : 'A forecast run instance.',
       links: [{ href: `${prefix}/collections/${id}`, rel: 'self', type: 'application/json' }],
       extent: {
         spatial: {

@@ -1,5 +1,5 @@
 /**
- * The coverage store (V2-C08): gridded holdings across three eras behind a store
+ * The coverage store (V2-C08): gridded holdings across five eras behind a store
  * interface, in memory today, an engine in V3 (Constitution VI).
  *
  * The store semantics that carried from V1 (SRD-v2 FR-12, FR-13):
@@ -168,6 +168,11 @@ export class CoverageStore {
       if (previous !== undefined && previous !== descriptor.holding_id) this.holdingsById.delete(previous);
       this.eraPointers.set('nowcast', descriptor.holding_id);
     }
+    if (descriptor.era === 'departure') {
+      // Authored once at provisioning and never replaced (feature 121). The pointer
+      // exists so a reader can ask for the brief by era, as it asks for the now-cast.
+      this.eraPointers.set('departure', descriptor.holding_id);
+    }
     if (descriptor.era === 'instance') {
       // Instances accumulate as holdings (FR-30); the pointer names the current one.
       this.eraPointers.set('instance', descriptor.holding_id);
@@ -186,6 +191,20 @@ export class CoverageStore {
 
   currentNowcast(): { descriptor: CoverageHolding; bytes: Uint8Array } | undefined {
     const id = this.eraPointers.get('nowcast');
+    return id === undefined ? undefined : this.holdingsById.get(id);
+  }
+
+  /**
+   * The departure forecast: the brief the vessel sailed with, held constant across its
+   * validity window and never refreshed (feature 121).
+   *
+   * Truth-derived, like the now-cast, and so guarded like it: the truth-initialisation
+   * gate names this accessor beside `currentNowcast()`. A forecast initialised from a
+   * field the generator evaluated is the leak that gate exists to stop, and a second
+   * truth-derived accessor is a second easiest field to reach for.
+   */
+  departureHolding(): { descriptor: CoverageHolding; bytes: Uint8Array } | undefined {
+    const id = this.eraPointers.get('departure');
     return id === undefined ? undefined : this.holdingsById.get(id);
   }
 

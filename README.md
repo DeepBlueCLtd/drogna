@@ -87,6 +87,24 @@ statement is kept in step with the code.
 | `site/` | The published gh-pages site source: docs, standards primers, demos, blog, archive. |
 | `specs/0NN-*/`, `docs/adr/0001–0026`, `spikes/`, `harness-srd.md` | The V1 record, archived in place. |
 
+## The gh-pages estate
+
+The `gh-pages` branch has two tenants; the boundary is the design.
+
+- **The site** owns the root. Published by `site.yml` running `pnpm site:publish`; the
+  source is `site/`, built by `pnpm site:build`. The build exits nonzero if any
+  internal link, anchor, or asset reference fails to resolve.
+- **`instances/`** is owned by `instances.yml`, one subtree per branch, retained after
+  the pull request closes. An index is regenerated from whatever the estate holds.
+  Each instance is reachable at
+  `https://deepbluecltd.github.io/drogna/instances/<branch-with-slashes-as-hyphens>/`.
+
+Neither tenant may write into the other's ground; `scripts/publish-site.ts` refuses
+even if a manifest asks it to. Four gates — `check-site-links`,
+`check-site-resources`, `check-site-publication`, `check-site-disclosure` — run in
+`pnpm check` and in CI, not only in the publishing workflow (the V1 lesson: gates that
+live only in the workflow stop running when the workflow is deleted).
+
 ## Development
 
 Feature development follows [spec-kit](https://github.com/github/spec-kit):

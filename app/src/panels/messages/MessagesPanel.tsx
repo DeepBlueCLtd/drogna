@@ -300,6 +300,18 @@ function Inspector({
       )}
       {schema && !showRaw ? (
         <table className="inspect-fields" data-testid="inspect-fields">
+          {/* The shares are declared here rather than left to the browser, and that is
+              the whole of the fix. Under automatic layout the name column — `nowrap`,
+              and holding the longest label in the document — took 301 of the table's
+              532 pixels and the value column was left 73, so a thirty-four-character
+              identifier came out as six lines of four characters. Fixed layout with
+              three declared columns gives the value the largest share of whatever the
+              table has, at every width, and the name column wraps instead of bidding. */}
+          <colgroup>
+            <col className="inspect-col-name" />
+            <col className="inspect-col-value" />
+            <col className="inspect-col-declared" />
+          </colgroup>
           <tbody>
             {fields.map((field) => (
               <tr
@@ -323,11 +335,19 @@ function Inspector({
                       {field.unit && <i className="inspect-unit">{field.unit}</i>}
                     </>
                   )}
+                  {/* The refusal sits under the value it is about, rather than in a
+                      fourth column that is empty on every well-formed message and
+                      charged for on all of them. This module's own argument for
+                      marking the field rather than printing the fault above the
+                      document applies one step further in: the reader's eye is already
+                      on the value, which is the thing the master refused. */}
+                  {field.faults.length > 0 && (
+                    <span className="inspect-fault">{field.faults.join('; ')}</span>
+                  )}
                 </td>
                 <td className="inspect-declared">
                   {field.undescribed ? 'not described by this master' : field.declared}
                 </td>
-                <td className="inspect-fault">{field.faults.join('; ')}</td>
               </tr>
             ))}
           </tbody>

@@ -113,7 +113,15 @@
 .messages-tree-region {
   flex: 0 0 auto;
   max-width: 26em;
-  min-width: 0;
+  /* `min-content` rather than 0, and it is the narrow-presentation proof that says so.
+     The wide row caps this track at a proportion of the panel so the inspector is not
+     starved between a phone and a desktop; with a floor of 0 that cap went on squeezing
+     past the point the tree could wrap, and at a phone held sideways — 844px, which is
+     above the shell's one threshold, so the wide row is what a landscape phone gets —
+     the proof reported 236px of tree in a 232px box, scrolling sideways. The floor is
+     what the content needs and the cap is what the panel can spare; between them the
+     tree yields and does not overflow. */
+  min-width: min-content;
   overflow: auto;
 }
 
@@ -137,10 +145,37 @@
 
 /* -------------------------------------------------------------- the inspector --- */
 
+/* `table-layout: fixed` and three declared columns, because automatic layout gave this
+   table away to the column that bid loudest. The name column was `nowrap` and holds the
+   longest label in the document, so it took 301 pixels of a 532-pixel table and left the
+   value 73 — and a `datastream_id` came out down a four-character column. Measured at
+   1440px; at 1100px the same column was fourteen pixels, which is one character, and is
+   the picture this rewrite answers.
+
+   Fixed layout means the widths below are the widths, whatever any one message happens
+   to carry: the value column gets the largest share of the table at every width, and a
+   long label wraps in its own column rather than bidding for someone else's. */
 .inspect-fields {
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.85em;
   width: 100%;
+}
+
+/* The value gets the most because it is the thing a reader opened the inspector to
+   read; the name gets enough to hold `feature_of_interest_id` on two lines at the
+   narrowest the inspector is ever drawn; what the master says the field is comes last
+   because it is the same handful of words on most rows and is scanned, not read. */
+.inspect-col-name {
+  width: 28%;
+}
+
+.inspect-col-value {
+  width: 50%;
+}
+
+.inspect-col-declared {
+  width: 22%;
 }
 
 .inspect-fields th {
@@ -149,7 +184,10 @@
   color: var(--shell-dim);
   vertical-align: top;
   padding: 0.15em 0.6em 0.15em 0;
-  white-space: nowrap;
+  /* It was `nowrap`, which under automatic layout was this table's whole problem: a
+     label that will not wrap is a column that will not yield. It wraps now, and the
+     column it wraps inside is declared above. */
+  overflow-wrap: break-word;
 }
 
 .inspect-fields td {
@@ -193,7 +231,12 @@
   color: var(--shell-refused);
 }
 
+/* Under the value it is about rather than beside it: the fault shares the value's cell
+   now, so it needs its own line and gets one. */
 .inspect-fault {
+  display: block;
+  margin-top: 0.15em;
+  font-family: initial;
   color: var(--shell-refused);
 }
 

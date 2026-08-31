@@ -15,6 +15,7 @@
     "capture:background": "tsx scripts/capture/background.ts",
     "capture:messages": "tsx scripts/capture/messages.ts",
     "capture:map": "tsx scripts/capture/map.ts",
+    "capture:inspector": "tsx scripts/capture/inspector.ts",
     "capture:mobile": "tsx scripts/capture/mobile.ts",
     "capture:consumers": "tsx scripts/capture/consumers.ts",
     "capture:motion": "tsx scripts/capture/motion.ts",

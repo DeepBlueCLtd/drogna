@@ -4,7 +4,7 @@
   "title": "drogna platform configuration (V2-C21)",
   "description": "The platform component's configuration document (SRD-v2 FR-52, FR-53): the motion simulator's initial state, the limits it integrates under, the demand topic it listens on, and the SensorThings identity its ownship observations carry. Before feature 113 the platform was a closed-form loiter evaluated inside the sensors, which is why it could not be commanded and held no state between ticks. It is a component now: it can be stopped, and when it is, the sensors have no position and say so.",
   "type": "object",
-  "required": ["id", "stream", "topics", "heartbeat", "initial", "limits", "instruments", "thing", "fault_event"],
+  "required": ["id", "stream", "topics", "heartbeat", "initial", "limits", "instruments", "thing", "fault_event", "report_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
@@ -86,6 +86,11 @@
         "acceleration_m_per_s2": { "type": "number", "exclusiveMinimum": 0 },
         "dive_rate_m_per_s": { "type": "number", "exclusiveMinimum": 0 }
       }
+    },
+    "report_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks the platform to report where it is now, outside its reporting interval (SRD-v2 FR-65). The report is the ordinary one, from the same navigation instruments under the same declared noise; only its timing is asked for. It is the other half of the sensors' prompted sample: instruments starved of a fresh position are waiting on exactly this message, and this is how a reader supplies it without changing either cadence."
     },
     "report_interval_ticks": {
       "type": "integer",

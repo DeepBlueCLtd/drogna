@@ -4,19 +4,23 @@
   "title": "drogna telemetry configuration (V2-C15)",
   "description": "The telemetry component (SRD-v2 FR-35): aggregates the residual samples the monitor reports, computes running statistics and forecast skill against a persistence reference — saying plainly when the model is not earning its compute — counts throughput per simulation second, and serves the current account on its seam path. Skill's persistence baseline holds the forecast run's initial step constant across its validity; the formula is stated in every message.",
   "type": "object",
-  "required": ["id", "topics", "http", "heartbeat", "cadence_ticks", "staleness_window_seconds", "minimum_skill_samples", "regions"],
+  "required": ["id", "topics", "http", "heartbeat", "cadence_ticks", "staleness_window_seconds", "minimum_skill_samples", "regions", "skill_event", "statistics_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
     "topics": {
       "type": "object",
-      "required": ["clock", "telemetry", "run_published", "observations"],
+      "required": ["clock", "telemetry", "run_published", "observations", "command"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
         "telemetry": { "$ref": "config.common.schema.json#/$defs/topic" },
         "run_published": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "observations": { "$ref": "config.common.schema.json#/$defs/topic_filter" }
+        "observations": { "$ref": "config.common.schema.json#/$defs/topic_filter" },
+        "command": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Operator commands (operator-command.schema.json). Telemetry acts on the two publication prompts addressed to it and ignores everything else on the topic."
+        }
       }
     },
     "http": {
@@ -35,6 +39,16 @@
       "description": "A figure not updated within this much simulation time says stale and keeps saying its last update time — it does not go on presenting its last value as current."
     },
     "minimum_skill_samples": { "type": "integer", "minimum": 2 },
+    "skill_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks telemetry to publish its skill statement now rather than at its cadence (SRD-v2 FR-65). The statement is recomputed from the residuals folded so far and says exactly what a statement on cadence says, including that there are too few samples to score."
+    },
+    "statistics_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks telemetry to publish its residual statistics now rather than at its cadence (SRD-v2 FR-65). With nothing folded it publishes the state it would publish on cadence \u2014 a named absence, never a zero."
+    },
     "regions": {
       "type": "object",
       "required": ["rows", "columns", "minimum_samples"],

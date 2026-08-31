@@ -80,6 +80,8 @@ export class Platform {
   demandsHeard = 0;
   /** Deliberately faulty readings published on request. Counted and reported. */
   faultsPublished = 0;
+  /** Reports made on an operator prompt rather than on the reporting interval (FR-65). */
+  private promptedReports = 0;
   /** The reporting interval in force, where the operator plane has changed it. */
   private tunedReportInterval: number | undefined;
 
@@ -114,6 +116,9 @@ export class Platform {
           ...(this.faultsPublished === 0
             ? []
             : [{ key: 'faults', value: this.faultsPublished, label: 'faults on request' }]),
+          ...(this.promptedReports === 0
+            ? []
+            : [{ key: 'prompted', value: this.promptedReports, label: 'reported on request' }]),
         ],
       }),
       runId,
@@ -169,6 +174,10 @@ export class Platform {
       if (command.target !== this.config.id) return;
       if (command.kind === 'tuning') {
         if (command.setting === 'report_interval_ticks') this.tunedReportInterval = command.value;
+        return;
+      }
+      if (command.event === this.config.report_event) {
+        this.reportOnRequest();
         return;
       }
       if (command.event !== this.config.fault_event) return;
@@ -251,6 +260,26 @@ export class Platform {
     const moved = step(this.current, demand, this.config.limits, seconds);
     this.current = moved.next;
     this.binding = this.demanded ? moved.binding : 'none';
+  }
+
+  /**
+   * Where it is, now, outside the reporting interval (FR-65).
+   *
+   * The other half of the sensors' prompted sample: instruments quiet for want of a
+   * fresh position are waiting on exactly this message, and this is how a reader
+   * supplies one without changing either cadence.
+   *
+   * An observation's id is a function of its tick, so a prompt at a tick already
+   * reported produces the *same* measurement with the same id, and the store treats it
+   * as the redelivery it is rather than as a second row. That is the at-least-once
+   * property working, not a special case: the report is counted as prompted either way,
+   * because what a reader asked for is a fact about the run whether or not it added a
+   * row.
+   */
+  private reportOnRequest(): void {
+    if (this.simTime.value === '') return;
+    this.report(this.simTime.tick, this.simTime.value);
+    this.promptedReports += 1;
   }
 
   /** Ownship state, as measurements, on the ordinary observation namespace. */

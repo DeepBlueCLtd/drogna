@@ -4,7 +4,7 @@
   "title": "drogna sensors configuration (V2-C04)",
   "description": "The sensors component's configuration document (SRD-v2 FR-22, amended by FR-55): instruments that sample the true field on a tick cadence, add their declared seeded noise, and publish observations of observation.schema.json shape on obs/<thing_id>/<datastream_id>. Until feature 113 this document also carried a loiter, and the sensors evaluated the platform's position from it in closed form. That block is gone: position now comes from the platform component, over the broker, and no component computes it twice. Sensors read the clock and the ownship datastreams, and nothing else (ADR-0012, widened by FR-55 and stated rather than assumed \u2014 sampling now depends on delivery order, which is deterministic in lockstep and is named in AT-04's boundary).",
   "type": "object",
-  "required": ["id", "stream", "topics", "heartbeat", "platform", "sample_interval_ticks", "instruments", "fault_event"],
+  "required": ["id", "stream", "topics", "heartbeat", "platform", "sample_interval_ticks", "instruments", "fault_event", "sample_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
@@ -46,6 +46,11 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$",
       "description": "Which operator event id asks this component to publish ONE deliberately faulty message (SRD-v2 FR-67). The fault originates here, in the component a real one would come from, rather than being published into this namespace by a control plane that does not own it: what a reader then watches refuse it is the genuine seam doing its genuine work. The component counts what it was asked to produce and reports the count, so a faulty message is never mistaken for a component that has started lying on its own account. The fault here is a sample that fails the observation master, so the ingestion seam refuses it and names the fault."
+    },
+    "sample_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks these instruments to sample once now, outside their cadence (SRD-v2 FR-65). The sample is taken by the sampling path that takes every other one, at the position the platform last reported, and is refused by the component itself when that position is stale \u2014 a prompt does not buy an instrument a place to have been. The count of prompted samples is reported as its own figure, so a sample taken on request is never mistaken for the cadence quickening."
     },
     "sample_interval_ticks": { "type": "integer", "exclusiveMinimum": 0 },
     "instruments": {

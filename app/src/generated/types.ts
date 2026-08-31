@@ -214,11 +214,13 @@ export type ConfigCoverageStore = {
   "topics": {
     "clock": ConfigCommonTopic;
     "published": ConfigCommonTopic;
+    "command": ConfigCommonTopic;
   };
   "http": {
     "holdings_path": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
+  "announce_event": string;
 };
 
 /** drogna environment generator configuration (V2-C02) — from config.env-generator.schema.json */
@@ -541,6 +543,7 @@ export type ConfigPlatform = {
     "acceleration_m_per_s2": number;
     "dive_rate_m_per_s": number;
   };
+  "report_event": string;
   "report_interval_ticks"?: number;
   "instruments": {
     "sensor_id": string;
@@ -635,6 +638,7 @@ export type ConfigSensors = {
     "description": string;
   };
   "fault_event": string;
+  "sample_event": string;
   "sample_interval_ticks": number;
   "instruments": {
     "sensor_id": string;
@@ -870,6 +874,7 @@ export type ConfigTelemetry = {
     "telemetry": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
     "observations": ConfigCommonTopicFilter;
+    "command": ConfigCommonTopic;
   };
   "http": {
     "report_path": ConfigCommonRelativePath;
@@ -878,6 +883,8 @@ export type ConfigTelemetry = {
   "cadence_ticks": number;
   "staleness_window_seconds": number;
   "minimum_skill_samples": number;
+  "skill_event": string;
+  "statistics_event": string;
   "regions": {
     "rows": number;
     "columns": number;

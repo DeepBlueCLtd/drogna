@@ -358,8 +358,8 @@ const DATA_STEPS: SubjectStep[] = [
     subject: 'chart',
     element: '[data-region="chart"]',
     title: 'What an instrument reported',
-    what: 'A platform carries datastreams and a datastream carries observations — SensorThings’ own grouping, kept rather than regrouped. The chart is that datastream’s whole history, paged out of the store until it is exhausted.',
-    panel: 'The axes come from the observations and from nothing else. A chart drawn to a configured expectation would look the same whether an instrument had behaved or failed high, which is the one thing plotting a measurement is for.',
+    what: 'A platform carries datastreams and a datastream carries observations — SensorThings’ own grouping, kept rather than regrouped. What is drawn is that datastream’s whole history, paged out of the store until it is exhausted.',
+    panel: 'The axes come from the observations and from nothing else: a chart drawn to a configured expectation would look the same whether an instrument had behaved or failed high. Two tabs turn the same fetched history around — the chart for what an instrument has been doing, the table for exactly what it said and when.',
   },
   {
     subject: 'advisories',

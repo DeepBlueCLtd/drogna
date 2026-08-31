@@ -1080,6 +1080,27 @@ three browsable from one place.
   expectation looks the same whether an instrument behaved or failed high, which is the
   one thing plotting a measurement is for. A datastream with no observations shall say so
   rather than draw empty axes.
+  **Amended by feature 121**, on the reader's report that there was no table: the clause
+  above had asked for one from the start and the branch shipped a chart alone, which is
+  this repository's first lesson with the roles the usual way round — the record claimed a
+  table and the tree, which is the authority, had none. The chart and the table are
+  **two presentations of one fetched history**, offered as two tabs, and the fetch sits
+  above both: switching between them shall ask the store nothing, because two reads could
+  land either side of a publication and show a reader two accounts of one datastream that
+  disagree. The chart answers what an instrument has been doing; the table answers what it
+  said and when, at the precision the store served, which is the question a reader
+  checking a figure is actually asking. The table shall show **every observation the store
+  returned**, an observation whose instant will not parse included, marked and placed last
+  — the chart has no choice but to drop that row, having nowhere on a time axis to put it,
+  and a table that dropped it too would leave the reader two views agreeing by having both
+  looked away. The presentation is **not part of the address** (FR-98): the address names
+  the node a link is about, and a reader following a link to a datastream is owed that
+  datastream and not the linker's opinion about how to look at it.
+  The table shall draw a **stated window** of the recent end where the history is longer
+  than it — the fetch's own ceiling is twenty thousand observations, which the chart
+  absorbs as one polyline and a table cannot — and shall say so, naming the window and the
+  store's count both. The recent end because that is the end a reader who opened the table
+  is standing at; the chart is the presentation that carries the whole shape.
 - **FR-100** The analysis branch shall present **cycles, not fields**: a cycle publishes the
   corrected field, the error it left and the per-cell provenance together, and they are
   three views of one publication. Naming them by era alone collapses three fields onto one

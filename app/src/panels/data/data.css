@@ -474,6 +474,77 @@
   margin-top: 12px;
 }
 
+/* Two tabs over one history (FR-99). The strip is the shell's own idiom at a smaller
+   scale: buttons in a tablist, the selected one filled rather than merely outlined,
+   because "which of these two am I looking at" has to survive a greyscale capture. */
+.history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.history-tabs button {
+  background: none;
+  border: 1px solid #232c36;
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.history-tabs button[aria-selected='true'] {
+  background: #1b2530;
+  border-color: var(--shell-accent);
+}
+
+/* A table is the one thing that will not fold, so it scrolls inside `.table-scroll`
+   (shell.css) and the page does not. `min-width: max-content` keeps the columns at their
+   own width inside that container rather than crushing them.
+
+   The vertical cap is the same argument turned ninety degrees: the table draws up to
+   five hundred rows, and a reader who had to scroll past all of them to reach the
+   platform buttons again would be paying for the table on every other move. */
+.data-table-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.data-table {
+  border-collapse: collapse;
+  font-size: 0.88em;
+  width: 100%;
+  min-width: max-content;
+}
+
+.data-table th {
+  color: var(--shell-dim);
+  font-weight: 600;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid #232c36;
+  padding: 0.25em 0.6em;
+  text-align: left;
+}
+
+/* Figures line up under each other so a column of them can be read down, which is the
+   whole reason a reader asked for the table rather than the chart. */
+.data-table .table-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.data-table .table-id {
+  color: var(--shell-dim);
+}
+
+.table-unreadable {
+  color: var(--shell-refused);
+}
+
 .series-chart {
   width: 100%;
   height: auto;

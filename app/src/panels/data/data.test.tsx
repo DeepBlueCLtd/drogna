@@ -25,6 +25,7 @@ import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime
 import type { PanelParams } from '../../shell/Shell.js';
 import { DataPanel } from './DataPanel.js';
 import { BRANCHES } from './tree.js';
+import { TABLE_ROWS } from './table.js';
 
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
@@ -348,6 +349,80 @@ describe('the Data tab (feature 121)', { timeout: 180_000 }, () => {
     const held = runtime.observationStore.byDatastream(thingId, streamId).length;
     expect(plotted).toBe(held);
     expect(screen.getByTestId('chart-summary').textContent).toContain(String(held));
+  });
+
+  it('the same history reads as a table, from the one fetch that drew the chart (reported)', async () => {
+    // Asked for against the built tab: a chart answers "what has this instrument been
+    // doing", and the reader wanted the other question — exactly what it said, and when.
+    // The claim under test is not that a table appears. It is that switching to it asks
+    // the store *nothing*: two presentations of one fetched history cannot disagree,
+    // where two fetches could land either side of a publication and would.
+    await mounted();
+    await openBranch('measurements');
+    await act(async () => {
+      await driveUntil(runtime.clock, () => document.querySelector('[data-datastream]') !== null, 2000);
+      await settle(() => document.querySelector('[data-datastream]') !== null);
+    });
+    const stream = document.querySelector<HTMLElement>('[data-datastream]');
+    if (!stream) throw new Error('no datastream reached the tab');
+    const datastreamId = stream.getAttribute('data-datastream') ?? '';
+    const [thingId, streamId] = datastreamId.split('/');
+    // A history of one observation cannot be out of order, and a check that cannot fail
+    // is worth nothing: the first draft of this test asserted a row order against a
+    // single row and passed with the ordering deliberately reversed. So the store is
+    // driven until this datastream has a history worth ordering, and only then read.
+    await act(async () => {
+      await driveUntil(
+        runtime.clock,
+        () => runtime.observationStore.byDatastream(thingId, streamId).length >= 5,
+        4000,
+      );
+    });
+    expect(runtime.observationStore.byDatastream(thingId, streamId).length).toBeGreaterThanOrEqual(5);
+    await act(async () => {
+      fireEvent.click(stream);
+      await settle(() => screen.queryByTestId('datastream-chart') !== null, 8000);
+    });
+    const historyRequests = () => asked.filter((path) => path.includes('/Observations')).length;
+    const fetchedFor = historyRequests();
+    expect(fetchedFor).toBeGreaterThan(0);
+
+    const tableTab = document.querySelector<HTMLElement>('[role="tab"][data-presentation="table"]');
+    if (!tableTab) throw new Error('the history offers no table');
+    await act(async () => {
+      fireEvent.click(tableTab);
+      await settle(() => screen.queryByTestId('datastream-table') !== null, 8000);
+    });
+    expect(historyRequests()).toBe(fetchedFor);
+    expect(screen.queryByTestId('datastream-chart')).toBeNull();
+
+    // One row per observation the store holds, and the values are the store's own —
+    // bounds read back through the store rather than typed here. The window is the
+    // module's own ceiling for the same reason: a history longer than the table draws its
+    // recent end, and a number typed here would stop being the one the table uses.
+    const held = runtime.observationStore.byDatastream(thingId, streamId);
+    const expected = Math.min(held.length, TABLE_ROWS);
+    const rows = [...document.querySelectorAll('[data-observation]')];
+    expect(rows.length).toBe(expected);
+    // `byDatastream` is already ordered on phenomenon time, so the window is the tail of
+    // it — sliced by *time* and then compared row for row, which is the claim the table
+    // makes. Comparing sorted values instead would pass for any 500 observations.
+    const shown = rows.map((row) => Number(row.querySelector('.table-value')?.textContent ?? 'x'));
+    expect(shown).toEqual(held.slice(held.length - expected).map((observation) => observation.result));
+    expect(screen.getByTestId('table-summary').textContent).toContain(String(held.length));
+
+    // And back, still on the one fetch: the chart the reader left is the chart they get.
+    const chartTab = document.querySelector<HTMLElement>('[role="tab"][data-presentation="chart"]');
+    if (!chartTab) throw new Error('the history offers no chart');
+    await act(async () => {
+      fireEvent.click(chartTab);
+      await settle(() => screen.queryByTestId('datastream-chart') !== null, 8000);
+    });
+    expect(historyRequests()).toBe(fetchedFor);
+    const plotted = (document.querySelector('.series-line')?.getAttribute('points') ?? '')
+      .split(' ')
+      .filter((pair) => pair !== '').length;
+    expect(plotted).toBe(held.length);
   });
 
   it('SC-011: every advisory the collection returned is drawn, lapsed ones included', async () => {

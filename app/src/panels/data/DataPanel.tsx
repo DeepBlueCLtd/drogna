@@ -67,7 +67,7 @@ export const DATA_REGIONS = [
   { id: 'manifest', label: 'the ground-truth manifest', element: '[data-region="manifest"]' },
   { id: 'comparison', label: 'forecast against truth', element: '[data-region="comparison"]' },
   { id: 'volume', label: 'the field as a volume', element: '[data-region="volume"]' },
-  { id: 'chart', label: 'a datastream against time', element: '[data-region="chart"]' },
+  { id: 'chart', label: 'a datastream’s history, charted and tabulated', element: '[data-region="chart"]' },
   { id: 'advisories', label: 'what shore has sent', element: '[data-region="advisories"]' },
 ] as const;
 

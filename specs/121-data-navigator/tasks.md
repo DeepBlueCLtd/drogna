@@ -167,6 +167,39 @@ lesson 1).
       fill a two-pixel outline is not context, it is a rumour of one — and the advisories
       sit over that region more often than not, which is the whole reason to draw it.
 
+- [x] T049 **The measurements had no table.** Reported by the reader, who wanted the
+      figures rather than the line — and FR-99 had said "with the observation table beside
+      it" since the specification was written, which is this repository's first lesson
+      with the roles the usual way round: the record claimed a table and the tree, which
+      is the authority, had a chart only. `table.ts` orders the rows, `Measurements.tsx`
+      offers chart and table as two tabs over one history.
+- [x] T050 **The fetch sits above both presentations.** Switching asks the store nothing.
+      Two reads could land either side of a publication and hand a reader two accounts of
+      one datastream that disagree, and the reader would have no way to tell which was the
+      store's. **Watched failing** with `presentation` added to the fetch's dependencies:
+      three requests where two were expected.
+- [x] T051 The table keeps an observation whose instant will not parse, marked and last.
+      The chart has no choice but to drop it — there is no position on a time axis for an
+      instant that is not one — and a table that dropped it too would leave two views
+      agreeing by having both looked away from the same row. **Watched failing** with the
+      row dropped as the chart drops it.
+- [x] T052 The presentation is **not in the address** (FR-98), and the choice survives a
+      change of datastream. A reader who came for numbers keeps them as they walk the
+      platforms; a reader following someone's link to a datastream gets that datastream
+      and not the linker's opinion about how to look at it. The stated cost: it does not
+      survive the width threshold, because crossing it remounts the panel and the choice
+      is React state. The datastream does survive, being addressed.
+- [x] T054 The table draws a **stated window**, five hundred rows of the recent end, where
+      the fetch's twenty-thousand ceiling would otherwise put sixty thousand cells in the
+      document. Found by driving the built page, where the value column read well and the
+      arithmetic of a long run did not. **Watched failing** with the window taken from the
+      earliest end instead.
+- [x] T055 The integration test drives the store to **five observations before it reads**.
+      Its first draft picked a datastream holding one, which cannot be out of order: it
+      passed with `observationRows` sorting newest-first, which is a check that has never
+      been seen to fail, and it was found by planting exactly that. It fails on the plant
+      now.
+
 ## The record
 
 - [x] T034 SRD amendments: FR-14 (the tab list), FR-21 (the fifth era), FR-46, FR-69,
@@ -176,6 +209,8 @@ lesson 1).
       All updated.
 - [x] T036 The blog entry, within the 300-word budget, with a motion capture.
 - [x] T043 SRD: FR-97 rewritten as the reversal above, with what it got wrong and why.
+- [x] T053 SRD: FR-99 amended for the table — two presentations of one fetch, what the
+      table shows that the chart cannot, and the presentation kept out of the address.
 
 ## Not done, and why
 

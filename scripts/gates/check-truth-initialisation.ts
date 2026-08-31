@@ -21,8 +21,17 @@
 import { join, relative } from 'node:path';
 import { walk, readLines, isTestFile, type Finding, REPO_ROOT } from './lib.js';
 
-/** The accessor that hands back a truth-derived field with its bytes. */
-const TRUTH_ACCESSOR = /\bcurrentNowcast\s*\(/;
+/**
+ * The accessors that hand back a truth-derived field with its bytes.
+ *
+ * `departureHolding` joined the list with feature 121. The departure brief is the true
+ * field held constant from the scenario origin, which makes it exactly as tempting and
+ * exactly as poisonous to initialise from as the now-cast: a run that started from it
+ * would be a run no measurement had changed, and the loop would converge on truth that
+ * leaked in at provisioning. One accessor guarded and the other open would have left
+ * the gate reporting clean on the same fault it was written for.
+ */
+const TRUTH_ACCESSOR = /\b(?:currentNowcast|departureHolding)\s*\(/;
 
 /**
  * Who may call it, by the directory the call lives in, and why.
@@ -43,11 +52,16 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
     const component = relative(backendRoot, file).split('/')[0];
     if (PERMITTED.has(component)) continue;
     readLines(file).forEach((line, index) => {
-      if (!TRUTH_ACCESSOR.test(line)) return;
+      const match = TRUTH_ACCESSOR.exec(line);
+      if (!match) return;
+      // The accessor is named because there are two of them: a message that always
+      // said "now-cast" would misreport a departure-brief leak as a now-cast one, and
+      // send the reader to the wrong holding.
+      const held = match[0].startsWith('departureHolding') ? 'departure brief' : 'now-cast';
       findings.push({
         file: relative(root, file),
         line: index + 1,
-        message: `'${component}' may not read the truth-derived now-cast: a forecast initialises from the analysis, never from the true field (feature 116)`,
+        message: `'${component}' may not read the truth-derived ${held}: a forecast initialises from the analysis, never from the true field (feature 116, extended by 118)`,
       });
     });
   }

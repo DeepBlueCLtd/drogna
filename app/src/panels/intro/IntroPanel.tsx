@@ -245,7 +245,7 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
         <p>
           The drawing is a schematic; the system is the rest of the shell. Watch the
           machinery light and interrupt it in <a href={hashForView('operator')}>Operator</a>,
-          read the store filling up in <a href={hashForView('holdings')}>Holdings</a>, watch
+          read what the run holds in <a href={hashForView('data')}>Data</a>, watch
           the traffic argue with its masters in{' '}
           <a href={hashForView('messages')}>Messages</a>, and see the whole loop at once on
           the <a href={hashForView('map')}>Map</a>. For why any of this is standards-based

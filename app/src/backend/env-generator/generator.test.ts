@@ -38,10 +38,10 @@ function worldFromManifest(manifest: Manifest): WorldParameters {
 }
 
 describe('the synthetic ocean (feature 102)', () => {
-  it('provisions archive and now-cast through the publication seam at tick 0', () => {
+  it('provisions archive, departure brief and now-cast through the publication seam at tick 0', () => {
     const runtime = buildBackend(lockstepConfig(), options, validator);
     const eras = runtime.store.holdings().map((holding) => holding.era).sort();
-    expect(eras).toEqual(['archive', 'nowcast']);
+    expect(eras).toEqual(['archive', 'departure', 'nowcast']);
     runtime.stop();
   });
 
@@ -116,8 +116,14 @@ describe('the synthetic ocean (feature 102)', () => {
     for (let i = 0; i < config.env_generator.nowcast.interval_ticks; i++) runtime.clock.tickOnce();
     const second = runtime.store.currentNowcast()?.descriptor.holding_id;
     expect(second).not.toBe(first);
-    // The archive stays; the old now-cast was replaced, not accumulated.
-    expect(runtime.store.holdings()).toHaveLength(2);
+    // The archive and the departure brief stay; the old now-cast was replaced, not
+    // accumulated. The brief being here after a cadence turn is the point of it: it is
+    // issued once and never refreshed (feature 121).
+    expect(runtime.store.holdings().map((holding) => holding.era).sort()).toEqual([
+      'archive',
+      'departure',
+      'nowcast',
+    ]);
     expect(announcements).toEqual([
       { era: 'nowcast', tick: config.env_generator.nowcast.interval_ticks },
     ]);

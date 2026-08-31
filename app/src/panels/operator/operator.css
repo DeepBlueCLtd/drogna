@@ -802,6 +802,10 @@
 }
 
 .flow-demand-fields input {
+  /* Content-box, with padding and a border on top of a width, is how a control set to
+     fill its column ends up wider than the column: the range input stretched to 280px
+     and then drew 13px of padding and border outside it. */
+  box-sizing: border-box;
   width: 5em;
   background: #10151b;
   color: var(--flow-fg);
@@ -810,6 +814,18 @@
   padding: 0.15em 0.4em;
   font: inherit;
   font-size: 0.85rem;
+}
+
+/* A range input has no text to inset and no box a border helps read, so both go — and
+   it is left a little short of its column besides. Chromium reports a couple of pixels
+   of scroll width on a slider that a slider has no content in; that is the browser's own
+   drawing of the track, but every container it sits in inherits the overflow and reports
+   it as content the viewer must scroll to. Four pixels of room is cheaper than teaching
+   the narrow proof to disbelieve a whole class of element. */
+.flow-demand-fields input[type='range'] {
+  padding: 0;
+  border: none;
+  max-width: calc(100% - 4px);
 }
 
 .flow-demand-said {
@@ -1243,6 +1259,18 @@
     padding: 0.35em 0.3em;
   }
 
+  /* The demand's three fields sat side by side and wrapped between themselves but not
+     inside one: each label carries a caption and the value in force, and at a phone's
+     width that ran past the end of the field. One field per row. */
+  .flow-demand-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .flow-demand-fields label {
+    width: 100%;
+  }
+
   /* A slider capped at 36em is not capped at all in a 390px column, and the send
      button beside it had nowhere to sit: the entry and its button stack. */
   .flow-tuner {
@@ -1257,7 +1285,53 @@
   /* The region table is six columns of numbers; inside its disclosure it scrolls in
      its own box rather than widening the page (the panel body may never scroll
      sideways). */
-  .operator-regions .disclosure-body {
+  .operator-regions .table-scroll {
     overflow-x: auto;
   }
+}
+
+/* ---- what the open account's own geometry was doing (feature 121) ----
+
+   Found by the narrow proof once it started opening accounts rather than measuring a
+   closed chart: three overflows that had been there since the card was introduced and
+   that nothing was in a position to see. None is large and all three lose content —
+   which is the whole of what the sideways rule is about. */
+
+/* The card is given a width by its slot and then drew a border outside it, so every
+   open node was two pixels wider than the box it was placed in. */
+.flow-node-open {
+  box-sizing: border-box;
+}
+
+/* Three faces set their label column to a fixed em width, and at their own font size
+   several labels are wider than it: the platform's tape clipped 'speed' and 'depth',
+   the ingest lanes clipped 'refused', 'flagged' and 'absorbed', and the instrument rows
+   clipped the longer instrument names. All of it had been true at every width since the
+   faces were drawn, and nothing was in a position to see it — the narrow proof measured
+   a chart with every card shut, and a shut card's face is a different face.
+
+   `minmax(<the old width>, max-content)` is still one column and still aligns every row
+   with every other, which is what made a fixed width worth having; it costs the track a
+   few pixels rather than costing the label its last two letters. */
+.face-tape {
+  grid-template-columns: minmax(2.6em, max-content) 1fr;
+}
+
+.face-lane {
+  grid-template-columns: minmax(3.6em, max-content) 1fr auto;
+}
+
+.face-instrument {
+  grid-template-columns: minmax(7.4em, max-content) 1fr auto;
+}
+
+/* A stat is an inline-flex of a number, a unit and a label, and it did not wrap: a long
+   label ran past the end of its own box rather than onto a second line. The row wrapped
+   between stats and never inside one. */
+.flow-drawer-face .face-stat {
+  flex-wrap: wrap;
+}
+
+.flow-drawer-face .face-big {
+  flex-wrap: wrap;
 }

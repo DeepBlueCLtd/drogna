@@ -1150,6 +1150,10 @@ function Drawer({
                 present with zeroes
               </span>
             ) : (
+              // Six columns of numbers in a 280px card: it scrolls in its own box
+              // rather than widening the page, in the container the narrow proof
+              // already declares for exactly this (`.table-scroll`).
+              <div className="table-scroll">
               <table data-testid="region-statistics">
                 <thead>
                   <tr>
@@ -1178,6 +1182,7 @@ function Drawer({
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             </div>
           </details>

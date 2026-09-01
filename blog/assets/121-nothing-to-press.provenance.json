@@ -1,0 +1,23 @@
+{
+  "image": "121-nothing-to-press.png",
+  "run_id": "loiter-arriving-pahu",
+  "view": "operator",
+  "sim_time": "2026-01-01T01:41:25Z",
+  "clock_pinned": "rate 0",
+  "lit_components": "not readable from this view",
+  "controls": [
+    {
+      "click": "[data-flow-node=\"sensors\"]"
+    }
+  ],
+  "warmed": "run at rate 60 for 4000 ms of host time before the clock was pinned",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The sensors component open at a phone width: the prompts and the lifecycle buttons directly under the state line, above the instrument."
+}

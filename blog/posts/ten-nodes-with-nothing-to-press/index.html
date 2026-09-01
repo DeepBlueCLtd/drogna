@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="The Operator tab's controls were correct, and they were at the bottom of a card several screens long. Ten of its twenty-two components had no control at all — and for half of those, the honest fix was not a button.">
+<title>Ten nodes with nothing to press — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="ten-nodes-with-nothing-to-press">Ten nodes with nothing to press</h1>
+<p><img src="../../assets/121-nothing-to-press.png" alt="The sensors component open on a 390-pixel-wide screen. Under the title and the status
+line — ok, heard at 01:41:25Z, 908 observations published from 4 instruments — two
+full-width buttons headed ASK IT TO ACT NOW read &quot;publish a faulty sample&quot; and &quot;sample
+now&quot;, then a collapsed &quot;what these do&quot;, then two more headed STOP AND START IT reading
+&quot;stop&quot; and &quot;restart&quot;. The component's sparkline instrument begins below all of
+them."></p>
+<h2 id="the-background">The background</h2>
+<p>A control plane drawn as a diagram has to put the controls somewhere. The obvious answer
+is inside the part they act on, under what that part says about itself. It reads well on a
+laptop.</p>
+<p>On a phone it makes the button the last thing in a card several screens long, at a
+browser's default height: a cursor's target, a thumb's coin toss.</p>
+<h2 id="the-requirement">The requirement</h2>
+<p>What a reader can do to a component should be the first thing they meet on opening it, at
+a size a thumb can hit. And every part should offer something: opening one and finding
+nothing teaches a reader the diagram is a picture rather than a plane.</p>
+<p>Ten of the twenty-two offered nothing — protected from being stopped, and no control
+declared.</p>
+<h2 id="the-options-considered">The options considered</h2>
+<p>A button on each of the ten survives as far as the first one you try to write. The stores
+are written through one interface and read by somebody else; the broker and the gate act
+on no schedule anyone could bring forward. A button making one produce a message would be
+the display inventing traffic — the failure the tab exists against.</p>
+<p>So three answers. Five got a real prompt. Six requests went to the components that
+<em>serve</em>, two existing to be refused. Three stores got a sentence saying they answer
+nothing, and a button opening the node that does.</p>
+<h2 id="the-demo">The demo</h2>
+<p>Try the refusals. Open <code>boundary</code> and ask for a path the gate will not serve; open
+<code>broker</code> and publish on the clock topic, which the shell reads and may never write. Both
+refuse and name the rule; the first turns up on Messages as a denial.</p>
+<p>Then open <code>sensors</code> and press <em>sample now</em>.</p>
+<p><a href="../../../instances/main/#/view/operator">Open it at the Operator tab</a></p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

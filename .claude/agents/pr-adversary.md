@@ -20,6 +20,10 @@ is a report.
    (an unmarked exemption, a shape hand-written on the far side of the seam).
 2. Read the diff you were given, whole, before opening any file it touches.
 3. Then read each touched file at its head state — the diff hides what surrounds it.
+4. Run the existing tests that already cover the touched files — the narrowest
+   `pnpm -C app test` you can aim, and `pnpm gates` if the diff plausibly trips one. An
+   existing test that goes red is the strongest evidence a finding can carry, and it
+   costs one command; reasoning about the same fault is a claim about it.
 
 ## What to produce
 

@@ -23,6 +23,7 @@ import { BANDS, buildFlow } from './graph.js';
 import { inReadingOrder } from './layout.js';
 import { edgesCarrying, lingerSweeps } from './pulse.js';
 import { componentsWithoutFaces } from './faces.js';
+import { DEFERRALS, PROBES } from './probes.js';
 
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
@@ -819,18 +820,59 @@ describe('the Operator flow chart (feature 113)', () => {
       const marked = [...document.querySelectorAll('[data-has-controls]')]
         .map((mark) => mark.getAttribute('data-has-controls'))
         .sort();
-      // The set is the surface's, not this panel's: the same declarations it enforces
-      // against, fetched over the seam.
+      // The set is the surface's and the probe table's, not this panel's: the same
+      // declarations the surface enforces against, fetched over the seam, plus the
+      // probes `probes.ts` declares — which are the shell's own requests and so are the
+      // shell's own to know about. Neither list is retyped here.
       const offered = [
         ...new Set([
           config.operator.demand.target,
           ...config.operator.tunables.map((tunable) => tunable.target),
           ...config.operator.events.map((event) => event.target),
+          ...PROBES.map((probe) => probe.target),
+          ...DEFERRALS.map((deferral) => deferral.target),
         ]),
       ].sort();
       expect(marked).toEqual(offered);
       expect(marked.length).toBeGreaterThan(0);
-      expect(screen.getByText(new RegExp(`${offered.length} components take controls`))).toBeTruthy();
+    });
+
+    /**
+     * The claim feature 121 makes, counted rather than asserted (SC: every node offers
+     * something).
+     *
+     * Ten of the twenty-two components were protected AND took no control, so opening
+     * one gave a face, a wire list and no button at all. The three sources are read
+     * here — the surface's controls, the probe table, and the plane's own report of
+     * what is stoppable — because a figure typed into this test would be the display
+     * marking its own homework, which is the failure mode this whole tab exists against.
+     */
+    it('every component the chart draws offers something a reader can do', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const flow = buildFlow(config.shell, topology);
+      const controlled = new Set([
+        config.operator.demand.target,
+        ...config.operator.tunables.map((tunable) => tunable.target),
+        ...config.operator.events.map((event) => event.target),
+      ]);
+      const probed = new Set([
+        ...PROBES.map((probe) => probe.target),
+        ...DEFERRALS.map((deferral) => deferral.target),
+      ]);
+      const stoppable = new Set(
+        config.shell.components.map((component) => component.id).filter((id) => !config.operator.protected.includes(id)),
+      );
+      const barren = flow.nodes
+        .map((node) => node.id)
+        .filter((id) => !controlled.has(id) && !probed.has(id) && !stoppable.has(id));
+      expect(barren).toEqual([]);
+      // And the panel says so, from the same three sources rather than from a number.
+      expect(
+        screen.getByText(new RegExp(`${flow.nodes.length} of ${flow.nodes.length} components offer something to do`)),
+      ).toBeTruthy();
     });
 
     it('a tuning set here changes what the monitor reports it is scoring against', async () => {
@@ -1034,16 +1076,211 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(document.querySelector('[data-flow-node="ingest"]')?.textContent).toContain('refused');
     });
 
-    it('the burst step advances the clock by the number the surface declared', async () => {
+
+    /**
+     * What the drawer is *shaped* like since feature 121, which is the half of that
+     * feature a capture cannot assert.
+     *
+     * The complaint the feature answers was not that a control was missing but that it
+     * was last: the prompts sat under the instrument and the stop and start under the
+     * wire list, at the bottom of a card that on a phone is several screens long. So
+     * document order is the assertion, and it is read out of the DOM rather than
+     * eyeballed in a screenshot.
+     */
+    it('puts everything a reader can press above the account it acts on', async () => {
       render(<OperatorPanel {...panelProps(config, runtime)} />);
       await act(async () => {
         vi.advanceTimersByTime(2100);
       });
+      const drawer = await drawerFor('sensors');
+      const positionOf = (selector: string) => {
+        const element = drawer.querySelector(selector);
+        expect(element, selector).toBeTruthy();
+        return [...drawer.querySelectorAll('*')].indexOf(element as Element);
+      };
+      // The prompts, the lifecycle, then the instrument, then the wires.
+      const prompts = positionOf('[data-testid="event-control"]');
+      const lifecycle = positionOf('[data-testid="lifecycle-control"]');
+      const face = positionOf('.flow-drawer-face');
+      const wires = positionOf('[data-testid="flow-wires-disclosure"]');
+      expect(prompts).toBeLessThan(face);
+      expect(lifecycle).toBeLessThan(face);
+      expect(face).toBeLessThan(wires);
+    });
+
+    /**
+     * Nothing was removed, which is the rule a disclosure lives under (FR-011 to
+     * FR-014): the wires are still every wire, and the prose that explains a control is
+     * still every word of it. Asserted against the graph the chart is drawn from, so a
+     * wire quietly dropped from the list fails here rather than being noticed later.
+     */
+    it('discloses the wires without losing one, at every width', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('sensors');
+      const disclosure = drawer.querySelector('[data-testid="flow-wires-disclosure"]') as HTMLDetailsElement;
+      // A `details` at every width, not only narrow: this is a decision about the
+      // content and not about the viewport, and jsdom lays nothing out anyway.
+      expect(disclosure.tagName.toLowerCase()).toBe('details');
+      expect(disclosure.open).toBe(false);
+      const flow = buildFlow(config.shell, topology);
+      const expected = flow.edges.filter((edge) => edge.from === 'sensors' || edge.to === 'sensors').length;
+      expect(disclosure.querySelectorAll('.flow-wires li').length).toBe(expected);
+      expect(disclosure.querySelector('summary')?.textContent).toMatch(/wires/);
+    });
+
+    /**
+     * Every action carries its description, and the description is reachable. A row of
+     * unexplained buttons would be a worse tab than the one this replaced: the point of
+     * moving the prose was that it stopped burying the buttons, not that it stopped
+     * being required.
+     */
+    it('keeps every action’s description, one gesture from the button', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('sensors');
+      const prompts = config.operator.events.filter((event) => event.target === 'sensors');
+      expect(prompts.length).toBeGreaterThan(0);
+      for (const event of prompts) {
+        expect(drawer.querySelector(`[data-event-send="${event.id}"]`)).toBeTruthy();
+        // The surface's own words, not a paraphrase held here.
+        const note = drawer.querySelector(`[data-action-note="${event.id}"] dd`);
+        expect(note?.textContent).toBe(event.description);
+      }
+    });
+
+    /**
+     * The two refusals, which are the point of the probes rather than a failure of them
+     * (feature 121). Both are genuine: the gate really refuses a path it is configured
+     * not to serve, and the broker really refuses a role with no publish rule for the
+     * topic. Neither is raised on the panel's refusal line, which is for a command the
+     * surface would not carry out.
+     */
+    it('the release gate refuses the path it is configured not to serve, and names the rule', async () => {
+      // The path is declared, and it is declared to be outside every cleared prefix:
+      // an allow_prefixes change that swallowed it would turn the demonstration into a
+      // request that quietly succeeded, and this is what stops that landing unnoticed.
+      expect(config.shell.endpoints.undeclared_probe.startsWith(config.boundary.api_prefix)).toBe(true);
+      for (const prefix of config.boundary.allow_prefixes) {
+        expect(config.shell.endpoints.undeclared_probe.startsWith(prefix)).toBe(false);
+      }
+
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // What the gate published, heard the way anything hears it. The panel's own
+      // sentence is not evidence that a refusal happened — a display can compose one
+      // about a request it never made — so the assertion is the gate's own message,
+      // read off the broker and validated against its committed master.
+      const denials: unknown[] = [];
+      runtime.transport
+        .connect('denial-watch', config.shell.role)
+        .subscribe(config.shell.topics.all, (message) => {
+          if (message.topic === config.boundary.topics.denial) denials.push(message.payload);
+        });
+
+      const drawer = await drawerFor('boundary');
+      await act(async () => {
+        fireEvent.click(within(drawer).getByTestId('refused-request'));
+      });
+      const said = drawer.querySelector('[data-action-said="refused-request"]');
+      expect(said?.getAttribute('data-action-refused')).toBe('true');
+      expect(said?.textContent).toMatch(/default deny at the boundary/);
+      expect(denials.length).toBe(1);
+      expect(validator.validate('boundary-denial', denials[0]).refusals).toEqual([]);
+      expect((denials[0] as { path: string }).path).toBe(config.shell.endpoints.undeclared_probe);
+      // And not on the panel's refusal line: this refusal is the outcome the button
+      // exists to produce, not a command the surface would not carry out.
+      expect(screen.queryByTestId('command-refusal')).toBeNull();
+    });
+
+    it('the broker refuses the shell’s publish, and names the role and the topic', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('broker');
+      await act(async () => {
+        fireEvent.click(within(drawer).getByTestId('refused-publish'));
+      });
+      const said = drawer.querySelector('[data-action-said="refused-publish"]');
+      expect(said?.getAttribute('data-action-refused')).toBe('true');
+      expect(said?.textContent).toContain(config.shell.role);
+      expect(said?.textContent).toContain(config.shell.topics.clock);
+      // The shell's role really does carry no publish rule: read out of the broker's
+      // own document rather than assumed from the refusal that was just drawn.
+      const role = config.broker.roles.find((entry) => entry.role === config.shell.role);
+      expect(role?.publish).toEqual([]);
+    });
+
+    it('the query component answers a genuine EDR request from its own drawer', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('query');
+      await act(async () => {
+        fireEvent.click(within(drawer).getByTestId('sample-query'));
+      });
+      const said = drawer.querySelector('[data-action-said="sample-query"]');
+      expect(said?.getAttribute('data-action-refused')).toBe('false');
+      // The count is what was served, checked against the same request made directly:
+      // a display that knew how many collections there were would be a second source.
+      const response = await fetch(`${config.shell.endpoints.edr}/collections`);
+      const body = (await response.json()) as { collections: unknown[] };
+      expect(said?.textContent).toContain(`${body.collections.length} collection(s)`);
+    });
+
+    /**
+     * A node that answers nothing says why, and offers the way on (feature 121).
+     *
+     * The observation store is written to by the ingestion seam and read through the
+     * query component: it publishes nothing and serves no path, so a button here would
+     * be a request answered elsewhere claiming to be answered here. What it gets
+     * instead is the reason and a way to the node that does answer — which is the thing
+     * an empty drawer never gave.
+     */
+    it('a node that answers nothing names the node that answers for it, and opens it', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      const drawer = await drawerFor('observation-store');
+      const deferral = within(drawer).getByTestId('deferral');
+      const answeredBy = deferral.getAttribute('data-deferred-to') as string;
+      // It names a component the chart genuinely draws: a deferral to a node that does
+      // not exist is a dead end dressed as a way on.
+      expect(buildFlow(config.shell, topology).nodes.map((node) => node.id)).toContain(answeredBy);
+      await act(async () => {
+        fireEvent.click(deferral.querySelector(`[data-deferral-open="${answeredBy}"]`) as HTMLElement);
+      });
+      expect(screen.getByTestId('flow-drawer').getAttribute('data-drawer-component')).toBe(answeredBy);
+    });
+
+    it('the burst step advances the clock by the number the surface declared, in the clock’s own drawer', async () => {
+      render(<OperatorPanel {...panelProps(config, runtime)} />);
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      // Feature 121 moved the two step commands out of the panel header and into the
+      // node that answers them, on this tab's own rule: a cause is applied where its
+      // consequence shows, and what the header had was a global button above a chart.
+      expect(screen.queryByTestId('clock-burst')).toBeNull();
+      const drawer = await drawerFor('clock');
       const before = runtime.clock.currentTick();
       await act(async () => {
-        fireEvent.click(screen.getByTestId('step-burst-button'));
+        fireEvent.click(within(drawer).getByTestId('clock-burst'));
       });
       expect(runtime.clock.currentTick()).toBe(before + config.operator.step.maximum_ticks);
+      await act(async () => {
+        fireEvent.click(within(drawer).getByTestId('clock-step'));
+      });
+      expect(runtime.clock.currentTick()).toBe(before + config.operator.step.maximum_ticks + 1);
     });
   });
 

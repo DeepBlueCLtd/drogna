@@ -90,6 +90,10 @@ export class Sensors {
   private tunedInterval: number | undefined;
   /** Deliberately faulty samples published on request. Counted and reported. */
   private faultsPublished = 0;
+  /** Samples taken on an operator prompt rather than on the cadence (FR-65). */
+  private promptedSamples = 0;
+  /** Prompts that found no fresh position to sample at, and so took nothing. */
+  private promptsDeclined = 0;
 
   constructor(
     private readonly config: ConfigSensors,
@@ -124,6 +128,14 @@ export class Sensors {
           ...(this.faultsPublished === 0
             ? []
             : [{ key: 'faults', value: this.faultsPublished, label: 'faults on request' }]),
+          // Absent until one has been asked for, on the same rule as the faults above:
+          // 'nobody has pressed it' is not a measurement of anything.
+          ...(this.promptedSamples === 0
+            ? []
+            : [{ key: 'prompted', value: this.promptedSamples, label: 'sampled on request' }]),
+          ...(this.promptsDeclined === 0
+            ? []
+            : [{ key: 'prompts_declined', value: this.promptsDeclined, label: 'prompts declined' }]),
           ...(this.heardPosition
             ? [
                 {
@@ -172,11 +184,21 @@ export class Sensors {
       this.faultsPublished === 0
         ? ''
         : `; ${this.faultsPublished} deliberately faulty sample(s) published on request, each refused at the ingestion seam`;
+    // Two footnotes for the same reason the skip count is one: what the instruments are
+    // doing now leads, and what was asked of them follows.
+    const prompted =
+      this.promptedSamples === 0
+        ? ''
+        : `; ${this.promptedSamples} sample(s) taken on request, outside the cadence`;
+    const declined =
+      this.promptsDeclined === 0
+        ? ''
+        : `; ${this.promptsDeclined} request(s) to sample declined for want of a fresh position`;
     const age = this.simTime.tick - this.heardPosition.tick;
     if (age > this.sampleInterval()) {
-      return `${published}; quiet: the last ownship position is ${age} ticks old, beyond the ${this.sampleInterval()}-tick sampling interval — where the platform is now is not something anything has reported${skipped}${faults}`;
+      return `${published}; quiet: the last ownship position is ${age} ticks old, beyond the ${this.sampleInterval()}-tick sampling interval — where the platform is now is not something anything has reported${skipped}${faults}${prompted}${declined}`;
     }
-    return `${published}; sampling where ownship reported at tick ${this.heardPosition.tick}${skipped}${faults}`;
+    return `${published}; sampling where ownship reported at tick ${this.heardPosition.tick}${skipped}${faults}${prompted}${declined}`;
   }
 
   /** The last ownship position heard, for the tests and the runtime to read. */
@@ -204,7 +226,10 @@ export class Sensors {
       // draws nothing and publishes nothing.
       if (sample.tick % this.sampleInterval() === 0 && sample.tick !== this.lastSampledTick) {
         this.lastSampledTick = sample.tick;
-        this.sampleAll(sample.tick, sample.sim_time);
+        // A sampling tick that finds no fresh position is a skipped sampling tick, and
+        // that is this caller's fact rather than the sampling path's: a prompted sample
+        // that finds the same absence has not skipped a tick, because no tick was due.
+        if (!this.sampleAll(sample.tick, sample.sim_time)) this.skippedForNoPosition += 1;
       }
     });
     this.client.subscribe(this.config.topics.command, (message) => {
@@ -217,15 +242,18 @@ export class Sensors {
     this.heartbeat.stop();
   }
 
-  private sampleAll(tick: number, simTime: string): void {
+  /**
+   * One sample from every instrument, or nothing and why. Returns whether it sampled,
+   * so each caller can account for a refusal in its own terms.
+   */
+  private sampleAll(tick: number, simTime: string): boolean {
     const position = this.heardPosition;
     // A position is current for exactly as long as one sampling interval: the freshest
     // one a sampling tick can hold was reported an interval ago, because the platform's
     // report for this tick is still queued behind the clock sample being handled. Older
     // than that and the platform has stopped saying where it is.
     if (!position || tick - position.tick > this.sampleInterval()) {
-      this.skippedForNoPosition += 1;
-      return;
+      return false;
     }
     for (const instrument of this.config.instruments) {
       const truth =
@@ -241,6 +269,7 @@ export class Sensors {
       );
       this.publishedCount += 1;
     }
+    return true;
   }
 
   /**
@@ -253,8 +282,31 @@ export class Sensors {
       if (command.setting === 'sample_interval_ticks') this.tunedInterval = command.value;
       return;
     }
+    if (command.event === this.config.sample_event) {
+      this.sampleOnRequest();
+      return;
+    }
     if (command.event !== this.config.fault_event) return;
     this.publishFaultySample();
+  }
+
+  /**
+   * One sample now, outside the cadence (FR-65).
+   *
+   * It is the sampling path every other sample takes, at the position the platform last
+   * reported, under the same declared noise — only the timing was asked for. A prompt
+   * does not buy an instrument a place to have been, so where the position is stale the
+   * refusal is the sampling path's own and is counted as a refusal rather than passed
+   * off as a sample; the platform's own prompt, one node along, is how a reader supplies
+   * what is missing.
+   *
+   * The prompted count is its own figure. Folding it into `published` would make a
+   * reader pressing a button indistinguishable from a cadence that had quickened.
+   */
+  private sampleOnRequest(): void {
+    if (this.simTime.value === '') return;
+    if (this.sampleAll(this.simTime.tick, this.simTime.value)) this.promptedSamples += 1;
+    else this.promptsDeclined += 1;
   }
 
   /**

@@ -204,6 +204,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/clock"
         ]
       },
@@ -247,6 +248,7 @@
           "ctl/heartbeat"
         ],
         "subscribe": [
+          "ctl/operator/command",
           "ctl/telemetry",
           "ctl/run/published",
           "obs/#",
@@ -435,7 +437,8 @@
     "id": "coverage-store",
     "topics": {
       "clock": "ctl/clock",
-      "published": "cov/holdings"
+      "published": "cov/holdings",
+      "command": "ctl/operator/command"
     },
     "http": {
       "holdings_path": "/api/ctl/holdings"
@@ -444,7 +447,8 @@
       "topic": "ctl/heartbeat",
       "interval_seconds": 2,
       "liveness_window_seconds": 6
-    }
+    },
+    "announce_event": "announce-holdings"
   },
   "platform": {
     "id": "platform",
@@ -516,7 +520,8 @@
         }
       }
     ],
-    "fault_event": "fault-depth"
+    "fault_event": "fault-depth",
+    "report_event": "report-now"
   },
   "sensors": {
     "id": "sensors",
@@ -588,7 +593,8 @@
         }
       }
     ],
-    "fault_event": "fault-sample"
+    "fault_event": "fault-sample",
+    "sample_event": "sample-now"
   },
   "ingest": {
     "id": "ingest",
@@ -792,7 +798,8 @@
       "clock": "ctl/clock",
       "telemetry": "ctl/telemetry",
       "run_published": "ctl/run/published",
-      "observations": "obs/#"
+      "observations": "obs/#",
+      "command": "ctl/operator/command"
     },
     "http": {
       "report_path": "/api/ctl/telemetry"
@@ -809,7 +816,9 @@
       "rows": 2,
       "columns": 3,
       "minimum_samples": 3
-    }
+    },
+    "skill_event": "skill-now",
+    "statistics_event": "statistics-now"
   },
   "operator": {
     "id": "operator",
@@ -985,6 +994,36 @@
         "target": "platform",
         "label": "report an impossible depth",
         "description": "Ask the platform to report one depth beyond the maximum it declares it can reach. The ingestion seam flags it against the platform’s own limits and names the bound; the platform counts what it was asked to produce and says so."
+      },
+      {
+        "id": "sample-now",
+        "target": "sensors",
+        "label": "sample now",
+        "description": "Ask the instruments to take one sample now rather than at their cadence. It is the ordinary sampling path under the ordinary declared noise; only the timing is asked for. With no fresh ownship position there is nothing to sample at, and the instruments say so rather than inventing a place to have been."
+      },
+      {
+        "id": "report-now",
+        "target": "platform",
+        "label": "report position now",
+        "description": "Ask the platform to report where it is now rather than at its reporting interval. The other half of the sample prompt: instruments quiet for want of a fresh position are waiting on exactly this message. An observation's id is a function of its tick, so a prompt at a tick already reported is the same measurement and the store treats it as the redelivery it is."
+      },
+      {
+        "id": "announce-holdings",
+        "target": "coverage-store",
+        "label": "announce holdings",
+        "description": "Ask the store to announce its current era pointers again. Nothing is published and nothing changes — the announcement names holdings that already exist, over the same bytes and the same digests. With none published the store says so rather than announcing an absence."
+      },
+      {
+        "id": "skill-now",
+        "target": "telemetry",
+        "label": "publish the skill statement",
+        "description": "Ask telemetry to publish its forecast-skill statement now rather than at its cadence. It says what a statement on cadence says, including that there are too few samples to score."
+      },
+      {
+        "id": "statistics-now",
+        "target": "telemetry",
+        "label": "publish residual statistics",
+        "description": "Ask telemetry to publish its residual statistics now rather than at its cadence. With nothing folded it publishes the named absence it would publish anyway, never a zero."
       }
     ]
   },
@@ -1441,7 +1480,8 @@
       "sensorthings": "/api/st/v1.1",
       "operator_controls": "/api/ctl/controls",
       "operator_tuning": "/api/ctl/tuning",
-      "operator_event": "/api/ctl/events"
+      "operator_event": "/api/ctl/events",
+      "undeclared_probe": "/api/nothing-is-declared-here"
     },
     "flow": {
       "suppressed_filters": [

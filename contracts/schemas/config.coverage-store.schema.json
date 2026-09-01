@@ -4,17 +4,21 @@
   "title": "drogna coverage store configuration (V2-C08)",
   "description": "The coverage store's configuration document. The store holds gridded fields across three eras behind a store interface, admits writes only through its staged-publication seam with the digest check of SRD-v2 FR-13, announces each publication on its declared topic, and serves its inventory on its declared seam path.",
   "type": "object",
-  "required": ["id", "topics", "http", "heartbeat"],
+  "required": ["id", "topics", "http", "heartbeat", "announce_event"],
   "additionalProperties": false,
   "properties": {
     "id": { "$ref": "config.common.schema.json#/$defs/component_id" },
     "topics": {
       "type": "object",
-      "required": ["clock", "published"],
+      "required": ["clock", "published", "command"],
       "additionalProperties": false,
       "properties": {
         "clock": { "$ref": "config.common.schema.json#/$defs/topic" },
-        "published": { "$ref": "config.common.schema.json#/$defs/topic" }
+        "published": { "$ref": "config.common.schema.json#/$defs/topic" },
+        "command": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Operator commands (operator-command.schema.json). The store acts on an announcement prompt addressed to it and ignores everything else on the topic."
+        }
       }
     },
     "http": {
@@ -25,6 +29,11 @@
         "holdings_path": { "$ref": "config.common.schema.json#/$defs/relative_path" }
       }
     },
-    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" }
+    "heartbeat": { "$ref": "config.common.schema.json#/$defs/heartbeat" },
+    "announce_event": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Which operator event id asks the store to announce its current era pointers again (SRD-v2 FR-65). It publishes no holding and changes none: the announcement names holdings that are already published, so consumers that missed the first one \u2014 or a reader who wants to watch the announcement cross \u2014 get the same message about the same bytes. With nothing published there is nothing to announce, and the store says so rather than announcing an absence."
+    }
   }
 }

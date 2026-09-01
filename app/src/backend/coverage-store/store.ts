@@ -18,7 +18,7 @@
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type { SeamHttpResponse } from '../../seam/http.js';
-import type { ConfigCoverageStore, CoverageHolding } from '../../generated/types.js';
+import type { ConfigCoverageStore, CoverageHolding, OperatorCommand } from '../../generated/types.js';
 import { sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { configDigest } from '../lib/sha256.js';
@@ -55,6 +55,8 @@ export class CoverageStore {
   private readonly eraPointers = new Map<string, string>();
   readonly heartbeat: HeartbeatEmitter;
   private simTime = { value: '', tick: null as number | null };
+  /** Holdings re-announced on an operator prompt rather than on publication (FR-65). */
+  private announcementsOnRequest = 0;
 
   constructor(
     private readonly config: ConfigCoverageStore,
@@ -65,6 +67,12 @@ export class CoverageStore {
     client.subscribe(config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+    });
+    client.subscribe(config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== config.id) return;
+      if (command.kind !== 'event' || command.event !== config.announce_event) return;
+      this.announceOnRequest();
     });
     router.register('GET', config.http.holdings_path, () => this.handleInventoryRequest());
     this.heartbeat = new HeartbeatEmitter(
@@ -79,11 +87,56 @@ export class CoverageStore {
         figures: [
           { key: 'holdings', value: this.holdingsById.size, label: 'holdings' },
           { key: 'bytes', value: this.totalBytes(), unit: 'B', label: 'stored' },
+          // Absent until one has been asked for: 'nobody has pressed it' is not a
+          // measurement of anything (FR-58).
+          ...(this.announcementsOnRequest === 0
+            ? []
+            : [{ key: 'announced', value: this.announcementsOnRequest, label: 'announced on request' }]),
         ],
       }),
       runId,
       configDigest(config),
     );
+  }
+
+  /**
+   * Announce the current era pointers again, on an operator prompt (FR-65).
+   *
+   * Nothing is published and nothing changes: the announcements name holdings that are
+   * already in the store, carrying the same digests over the same bytes. That is the
+   * whole of what this offers, and it is the reason the button is honest — a store
+   * whose prompt manufactured a holding would be a store inventing data on request.
+   *
+   * With nothing published there is nothing to announce, and the count stays where it
+   * is rather than recording an announcement of an absence: the era pointers are what
+   * this component has to say, and having nothing to say is not saying it.
+   */
+  private announceOnRequest(): void {
+    let announced = 0;
+    for (const holdingId of this.eraPointers.values()) {
+      const held = this.holdingsById.get(holdingId);
+      if (!held) continue;
+      this.announce(held.descriptor);
+      announced += 1;
+    }
+    if (announced > 0) this.announcementsOnRequest += announced;
+  }
+
+  /**
+   * One announcement of one holding, on the store's declared topic. Written once and
+   * called from both the write path and the prompt, so a re-announcement cannot become
+   * a second, differently-shaped message about the same bytes.
+   */
+  private announce(descriptor: CoverageHolding): void {
+    this.client.publish(this.config.topics.published, {
+      component: this.config.id,
+      holding_id: descriptor.holding_id,
+      era: descriptor.era,
+      run_id: descriptor.run_id,
+      sim_time: descriptor.published_at.sim_time,
+      tick: descriptor.published_at.tick,
+      field_sha256: descriptor.field.sha256,
+    });
   }
 
   /**
@@ -124,15 +177,7 @@ export class CoverageStore {
       // Instances accumulate as holdings (FR-30); the pointer names the current one.
       this.eraPointers.set('instance', descriptor.holding_id);
     }
-    this.client.publish(this.config.topics.published, {
-      component: this.config.id,
-      holding_id: descriptor.holding_id,
-      era: descriptor.era,
-      run_id: descriptor.run_id,
-      sim_time: descriptor.published_at.sim_time,
-      tick: descriptor.published_at.tick,
-      field_sha256: descriptor.field.sha256,
-    });
+    this.announce(descriptor);
     return { published: true };
   }
 

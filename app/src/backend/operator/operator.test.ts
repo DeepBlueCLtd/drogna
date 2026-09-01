@@ -360,10 +360,22 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       // sides naming the same event, as two components name the same topic — read
       // out of the configuration document rather than listed here, so an event
       // offered to nobody fails this however many there come to be.
+      //
+      // *Which key* declares an answer is read out too. This test used to name
+      // `prompt_event` and `fault_event`, which made it a list after all: the first
+      // component to declare its answer under a third name would have been reported as
+      // waiting for a prompt nobody offers. The convention the masters hold is the
+      // suffix, so that is what is read — and the run that introduced sample_event,
+      // report_event, announce_event, skill_event and statistics_event is the run that
+      // found it, which is the only reason this paragraph can be trusted.
       const answered = new Set(
-        Object.values(config as unknown as Record<string, { prompt_event?: string; fault_event?: string }>)
+        Object.values(config as unknown as Record<string, Record<string, unknown>>)
           .filter((component) => typeof component === 'object' && component !== null)
-          .flatMap((component) => [component.prompt_event, component.fault_event])
+          .flatMap((component) =>
+            Object.entries(component)
+              .filter(([key]) => key.endsWith('_event'))
+              .map(([, event]) => event),
+          )
           .filter((event): event is string => typeof event === 'string'),
       );
       expect(answered.size).toBeGreaterThan(0);
@@ -861,6 +873,175 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       // assume the configured one.
       expect(plans.at(-1)?.projection.usable_threshold).toBe(0.5);
       expect(runtime.planner.usableThreshold()).toBe(0.5);
+      runtime.stop();
+    });
+
+
+    /**
+     * The prompts a reader can reach on a node that had nothing (feature 121).
+     *
+     * Ten of the twenty-two components were protected AND took no control, so opening
+     * one gave a face, a wire list and no button at all. These five are what those
+     * nodes now offer, and every one of them is a prompt in the sense the plane has
+     * always meant: the component decides, and a decline is as complete an outcome as
+     * an action. Nothing here manufactures data on request — that is the line each of
+     * these was designed against, and each test asserts the component's own account
+     * rather than the surface's acknowledgement.
+     */
+    it('a prompted sample is the ordinary sampling path, and is declined where there is no position to sample at', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      const prompt = `${config.operator.http.event_prefix}/${config.sensors.sample_event}`;
+
+      // Far enough in that the platform has reported and the instruments have sampled.
+      for (let i = 0; i < 90; i++) runtime.clock.tickOnce();
+      vi.advanceTimersByTime(2500);
+      const skippedBefore = figureOf(heard, 'sensors', 'skipped');
+
+      // Tick 90 is a sampling tick, and an observation's id is a function of its tick,
+      // so a prompt here carries the ids the cadence has just published: the store sees
+      // the redelivery it was built to absorb and holds the same rows. The sample was
+      // still genuinely taken, and is counted as one — what a reader asked for is a
+      // fact about the run whether or not it added a row.
+      const rowsAtSampledTick = runtime.observationStore.all().length;
+      await post(runtime, prompt);
+      expect(runtime.observationStore.all().length).toBe(rowsAtSampledTick);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'sensors', 'prompted')).toBe(1);
+
+      // A tick the cadence has not brought round is new rows: genuine observations,
+      // through the genuine ingestion seam, one per instrument.
+      runtime.clock.tickOnce();
+      const rowsBefore = runtime.observationStore.all().length;
+      await post(runtime, prompt);
+      expect(runtime.observationStore.all().length).toBe(rowsBefore + config.sensors.instruments.length);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'sensors', 'prompted')).toBe(2);
+      // And the sampling-tick skip count is untouched by the prompt: a sample taken on
+      // request has not skipped a sampling tick, because no tick was due. The count
+      // moving here would be the display telling a reader their own button press was
+      // the cadence starving.
+      expect(figureOf(heard, 'sensors', 'skipped')).toBe(skippedBefore);
+      expect(runtime.sensors.detail()).toMatch(/taken on request/);
+
+      // Now take the position away and ask again. Stopping the platform is how a run
+      // genuinely reaches this state — the first draft of this test asked before the
+      // first tick, and the pre-roll had already supplied a position, so it asserted
+      // a decline that never happened. An instrument with nowhere to have been
+      // publishes nothing rather than inventing the place.
+      //
+      // "Nothing published" alone would be satisfied by a handler that threw, and the
+      // broker would swallow the throw, so what is asserted is the instruments' own
+      // count of declines — which an exception cannot produce — and the fault count.
+      await post(runtime, `${config.operator.http.command_prefix}/${config.platform.id}/stop`);
+      for (let i = 0; i < 20; i++) runtime.clock.tickOnce();
+      const rowsStarved = runtime.observationStore.all().length;
+      await post(runtime, prompt);
+      expect(runtime.observationStore.all().length).toBe(rowsStarved);
+      expect(runtime.broker.deliveryFaults).toBe(0);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'sensors', 'prompts_declined')).toBe(1);
+      expect(figureOf(heard, 'sensors', 'prompted')).toBe(2);
+      expect(runtime.sensors.detail()).toMatch(/declined for want of a fresh position/);
+      runtime.stop();
+    });
+
+    it('a prompted position report is the ordinary report, and the store deduplicates one asked for twice', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      const prompt = `${config.operator.http.event_prefix}/${config.platform.report_event}`;
+      for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+
+      const ownship = () =>
+        runtime.observationStore.all().filter((row) => row.thing_id === config.platform.thing.thing_id);
+      const before = ownship().length;
+      await post(runtime, prompt);
+      // An observation's id is a function of its tick, so a prompt at a tick the
+      // platform has already reported carries the same ids: the store sees the
+      // redelivery it was built to absorb and holds the same rows. That is the
+      // at-least-once property working rather than a special case, and it is asserted
+      // here so a later change that made a prompt mint fresh ids has to argue with it.
+      expect(ownship().length).toBe(before);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'platform', 'prompted')).toBe(1);
+
+      // At a tick the interval has not brought round, the report is new rows.
+      runtime.clock.tickOnce();
+      const unreported = ownship().length;
+      await post(runtime, prompt);
+      expect(ownship().length).toBeGreaterThan(unreported);
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'platform', 'prompted')).toBe(2);
+      runtime.stop();
+    });
+
+    it('a prompted announcement names holdings that already exist, and publishes none', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      const shell = runtime.transport.connect('holding-watch', config.shell.role);
+      const announced: { holding_id: string; era: string }[] = [];
+      shell.subscribe(config.shell.topics.holdings, (message) =>
+        announced.push(message.payload as { holding_id: string; era: string }),
+      );
+      const prompt = `${config.operator.http.event_prefix}/${config.coverage_store.announce_event}`;
+
+      runtime.clock.tickOnce();
+      const held = runtime.store.holdings().length;
+      const heardFirst = announced.length;
+      expect(held).toBeGreaterThan(0);
+
+      await post(runtime, prompt);
+      expect(runtime.broker.deliveryFaults).toBe(0);
+      // Every announcement names a holding that is in the store, and the store holds
+      // exactly what it held: an announcement is a message about bytes, and a store
+      // whose prompt manufactured a holding would be one inventing data on request.
+      expect(announced.length).toBeGreaterThan(heardFirst);
+      expect(runtime.store.holdings().length).toBe(held);
+      for (const entry of announced.slice(heardFirst)) {
+        expect(runtime.store.holding(entry.holding_id)).toBeDefined();
+      }
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'coverage-store', 'announced')).toBe(announced.length - heardFirst);
+      runtime.stop();
+    });
+
+    it('telemetry publishes its two accounts on request, and the named absence is one of them', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      const heard = watchHeartbeats(runtime, config);
+      const shell = runtime.transport.connect('telemetry-watch', config.shell.role);
+      const said: { kind?: string }[] = [];
+      shell.subscribe(config.shell.topics.telemetry, (message) => said.push(message.payload as { kind?: string }));
+      const of = (kind: string) => said.filter((entry) => entry.kind === kind);
+
+      // Before anything has been folded, both prompts publish what the cadence would
+      // publish: an account that names its own emptiness. A component that stayed
+      // silent here would leave a reader unable to tell 'nothing to say' from 'button
+      // does nothing', which is the failure the whole tab is a correction to.
+      runtime.clock.tickOnce();
+      const skillBefore = of('forecast-skill').length;
+      const statisticsBefore = of('residual-statistics').length;
+      await post(runtime, `${config.operator.http.event_prefix}/${config.telemetry.skill_event}`);
+      await post(runtime, `${config.operator.http.event_prefix}/${config.telemetry.statistics_event}`);
+      const skill = of('forecast-skill');
+      const statistics = of('residual-statistics');
+      expect(skill.length).toBe(skillBefore + 1);
+      expect(statistics.length).toBeGreaterThan(statisticsBefore);
+      // Master-valid, on the same topic and in the same shape as one on cadence: a
+      // prompt is a different moment, never a different message.
+      expect(validator.validate('telemetry', skill.at(-1)).refusals).toEqual([]);
+      expect(validator.validate('telemetry', statistics.at(-1)).refusals).toEqual([]);
+      // Which absence it is depends on how far the loop has got; that it names one
+      // rather than reporting a score is the point, and 'beating-persistence' one tick
+      // in would be a figure invented for the occasion.
+      expect(['no-forecast', 'insufficient-samples']).toContain(
+        (skill.at(-1) as TelemetryForecastSkill).state,
+      );
+      vi.advanceTimersByTime(2500);
+      expect(figureOf(heard, 'telemetry', 'prompted')).toBe(2);
       runtime.stop();
     });
 

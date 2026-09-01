@@ -213,6 +213,13 @@ async function measure(page: Page): Promise<{
       // already measured, properly, against the viewBox — by the Background proof
       // (`capture/background.ts`), which is where that check belongs.
       .filter((element) => element.namespaceURI === 'http://www.w3.org/1999/xhtml')
+      // Form controls are excluded for the same reason SVG is: their scroll metrics do
+      // not mean what this rule means by them. A range input reports two pixels of
+      // scroll width it has no content in — the browser's own rendering of the track —
+      // and a text field scrolls its *value*, which is how every text field in every
+      // browser works and is not the viewer being asked to push the page sideways.
+      // Their boxes are still measured, through the containers they sit in.
+      .filter((element) => !['input', 'select', 'textarea'].includes(element.tagName.toLowerCase()))
       .filter((element) => element.clientWidth > 0 && element.scrollWidth > element.clientWidth + 1)
       .filter((element) => !allowed.some((selector) => element.matches(selector)))
       .map((element) => ({
@@ -376,6 +383,87 @@ try {
         );
       } else {
         console.log(`mobile: ${panned} background step(s) drew a diagram wider than the screen, panned rather than withheld`);
+      }
+
+      /*
+       * SC-001 and SC-002 again, with an Operator node *open* (feature 121).
+       *
+       * The pass above measures each view in the state it opens in, and for the
+       * Operator tab that is the chart with every card shut — which is precisely the
+       * state the card's own contents cannot be measured in. What that pass proved
+       * about this tab, before this block, was that a closed chart fits.
+       *
+       * So every node is opened in turn at a phone's width and measured again. The
+       * account is where the six-column region table is, where the wire list is, and
+       * where every button a reader came to press is; a drawer that pushes the page
+       * sideways is the failure this feature is most likely to have introduced, and
+       * a 24-pixel button is the one it exists to have fixed.
+       */
+      await page.goto(`${base}#/view/operator`);
+      await page.locator('[data-testid="operator-components"], .flow-canvas').first().waitFor({ timeout: SHELL_TIMEOUT });
+      const nodes = await page.evaluate(() =>
+        [...document.querySelectorAll('[data-flow-node]')].map((node) => node.getAttribute('data-flow-node') ?? ''),
+      );
+      if (nodes.length === 0) failures.push('phone-portrait operator: the chart drew no nodes to open');
+      let measured = 0;
+      let smallest = Number.POSITIVE_INFINITY;
+      for (const id of nodes) {
+        await page.locator(`[data-flow-node="${id}"]`).click();
+        await page.locator(`[data-drawer-component="${id}"]`).waitFor({ timeout: SHELL_TIMEOUT });
+        // Wait for the chart to stop moving before measuring it. The card grows into
+        // its open size over a 200ms tween (`FlowCanvas`), and the first version of
+        // this block measured the frame after the click: it reported 209 overflows on a
+        // layout that has none, because a card two thirds of the way to 312px really is
+        // narrower than its contents. Settling is watched rather than slept through —
+        // two readings of the same width, polled — because a sleep long enough for a
+        // slow CI runner is a sleep repeated twenty-two times.
+        await page.waitForFunction(
+          () => {
+            const slot = document.querySelector('.flow-node-slot[data-expanded="true"]');
+            if (!slot) return true;
+            const width = slot.getBoundingClientRect().width;
+            const previous = (window as unknown as { __settling?: number }).__settling;
+            (window as unknown as { __settling?: number }).__settling = width;
+            return previous !== undefined && Math.abs(previous - width) < 0.5;
+          },
+          undefined,
+          { polling: 100, timeout: SHELL_TIMEOUT },
+        );
+        const open = await measure(page);
+        for (const scroller of open.sidewaysScrollers) {
+          failures.push(
+            `phone-portrait operator/${id} open: ${scroller.what} scrolls sideways — ${scroller.content}px of content in ${scroller.box}px, and it is not a container declared to scroll`,
+          );
+        }
+        // Every button in an open account is something a reader on a phone came here
+        // to press. The disclosure summaries are controls too, and are held to it.
+        const shortest = await page.evaluate(
+          (component) =>
+            [
+              ...document.querySelectorAll<HTMLElement>(
+                `[data-drawer-component="${component}"] .flow-action, [data-drawer-component="${component}"] summary`,
+              ),
+            ]
+              .map((control) => control.getBoundingClientRect().height)
+              .filter((height) => height > 0),
+          id,
+        );
+        if (shortest.length > 0) smallest = Math.min(smallest, ...shortest);
+        measured += 1;
+        await page.locator(`[data-drawer-component="${id}"] [data-testid="drawer-close"]`).click();
+      }
+      if (smallest < TAP_TARGET) {
+        failures.push(
+          `phone-portrait operator: a control in an open account is ${Math.round(smallest)}px high; a thumb needs ${TAP_TARGET}px`,
+        );
+      }
+      // A proof that opened nothing has proved nothing about an open card.
+      if (measured === 0) {
+        failures.push('phone-portrait operator: no account was opened, so this proof did not exercise one');
+      } else {
+        console.log(
+          `mobile: ${measured} operator account(s) opened at a phone's width; smallest control ${Math.round(smallest)}px`,
+        );
       }
     }
 

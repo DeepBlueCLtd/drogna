@@ -971,7 +971,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "id",
       "topics",
       "http",
-      "heartbeat"
+      "heartbeat",
+      "announce_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -982,7 +983,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "object",
         "required": [
           "clock",
-          "published"
+          "published",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -991,6 +993,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "published": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). The store acts on an announcement prompt addressed to it and ignores everything else on the topic."
           }
         }
       },
@@ -1008,6 +1014,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "heartbeat": {
         "$ref": "config.common.schema.json#/$defs/heartbeat"
+      },
+      "announce_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the store to announce its current era pointers again (SRD-v2 FR-65). It publishes no holding and changes none: the announcement names holdings that are already published, so consumers that missed the first one — or a reader who wants to watch the announcement cross — get the same message about the same bytes. With nothing published there is nothing to announce, and the store says so rather than announcing an absence."
       }
     }
   },
@@ -2355,7 +2366,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "limits",
       "instruments",
       "thing",
-      "fault_event"
+      "fault_event",
+      "report_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2502,6 +2514,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "exclusiveMinimum": 0
           }
         }
+      },
+      "report_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks the platform to report where it is now, outside its reporting interval (SRD-v2 FR-65). The report is the ordinary one, from the same navigation instruments under the same declared noise; only its timing is asked for. It is the other half of the sensors' prompted sample: instruments starved of a fresh position are waiting on exactly this message, and this is how a reader supplies it without changing either cadence."
       },
       "report_interval_ticks": {
         "type": "integer",
@@ -2841,7 +2858,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "platform",
       "sample_interval_ticks",
       "instruments",
-      "fault_event"
+      "fault_event",
+      "sample_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2912,6 +2930,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "string",
         "pattern": "^[a-z][a-z0-9-]*$",
         "description": "Which operator event id asks this component to publish ONE deliberately faulty message (SRD-v2 FR-67). The fault originates here, in the component a real one would come from, rather than being published into this namespace by a control plane that does not own it: what a reader then watches refuse it is the genuine seam doing its genuine work. The component counts what it was asked to produce and reports the count, so a faulty message is never mistaken for a component that has started lying on its own account. The fault here is a sample that fails the observation master, so the ingestion seam refuses it and names the fault."
+      },
+      "sample_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks these instruments to sample once now, outside their cadence (SRD-v2 FR-65). The sample is taken by the sampling path that takes every other one, at the position the platform last reported, and is refused by the component itself when that position is stale — a prompt does not buy an instrument a place to have been. The count of prompted samples is reported as its own figure, so a sample taken on request is never mistaken for the cadence quickening."
       },
       "sample_interval_ticks": {
         "type": "integer",
@@ -3183,7 +3206,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "query_subsets",
           "operator_controls",
           "operator_tuning",
-          "operator_event"
+          "operator_event",
+          "undeclared_probe"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -3217,6 +3241,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "edr": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
             "description": "The EDR prefix the Map panel and the composer issue genuine GETs against."
+          },
+          "undeclared_probe": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "A seam path the release gate is expected to refuse, so the Operator tab can demonstrate default-deny by asking for it. It is declared here rather than typed into the panel for the ordinary reason every path is (Constitution IV), and because 'a path nothing serves' is a fact about the boundary's configuration and not about the shell: it must sit under the api prefix and outside every one of the gate's allow_prefixes, and the operator panel's test asserts exactly that against the boundary's own document. A change to allow_prefixes that swallowed this path would turn the demonstration into a request that quietly succeeded, and the assertion is what stops that landing unnoticed."
           },
           "features": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
@@ -4152,7 +4180,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "cadence_ticks",
       "staleness_window_seconds",
       "minimum_skill_samples",
-      "regions"
+      "regions",
+      "skill_event",
+      "statistics_event"
     ],
     "additionalProperties": false,
     "properties": {
@@ -4165,7 +4195,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "clock",
           "telemetry",
           "run_published",
-          "observations"
+          "observations",
+          "command"
         ],
         "additionalProperties": false,
         "properties": {
@@ -4180,6 +4211,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "observations": {
             "$ref": "config.common.schema.json#/$defs/topic_filter"
+          },
+          "command": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Operator commands (operator-command.schema.json). Telemetry acts on the two publication prompts addressed to it and ignores everything else on the topic."
           }
         }
       },
@@ -4210,6 +4245,16 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "minimum_skill_samples": {
         "type": "integer",
         "minimum": 2
+      },
+      "skill_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks telemetry to publish its skill statement now rather than at its cadence (SRD-v2 FR-65). The statement is recomputed from the residuals folded so far and says exactly what a statement on cadence says, including that there are too few samples to score."
+      },
+      "statistics_event": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Which operator event id asks telemetry to publish its residual statistics now rather than at its cadence (SRD-v2 FR-65). With nothing folded it publishes the state it would publish on cadence — a named absence, never a zero."
       },
       "regions": {
         "type": "object",

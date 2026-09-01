@@ -25,6 +25,7 @@ import type { SeamHttpResponse } from '../../seam/http.js';
 import type {
   ConfigTelemetry,
   CoverageHolding,
+  OperatorCommand,
   RunPublished,
   TelemetryForecastSkill,
   TelemetryResidualSampleReport,
@@ -72,6 +73,8 @@ export class Telemetry {
   private windowStartTick = 0;
   lastStatistics: TelemetryResidualStatistics | null = null;
   lastSkill: TelemetryForecastSkill | null = null;
+  /** Publications made on an operator prompt rather than on the cadence (FR-65). */
+  private promptedPublications = 0;
 
   constructor(
     private readonly config: ConfigTelemetry,
@@ -91,6 +94,16 @@ export class Telemetry {
         tick: this.simTime.tick,
         status: 'ok',
         detail: this.lastSkill?.statement ?? 'no skill figure yet: the loop has not produced enough scored samples',
+        // Absent until one has been asked for, on the rule every other component's
+        // prompt figure follows: 'nobody has pressed it' is not a measurement, and an
+        // unprompted run publishes exactly the heartbeat it published before (FR-58).
+        ...(this.promptedPublications === 0
+          ? {}
+          : {
+              figures: [
+                { key: 'prompted', value: this.promptedPublications, label: 'published on request' },
+              ],
+            }),
       }),
       runId,
       configDigest(config),
@@ -109,6 +122,24 @@ export class Telemetry {
     });
     this.client.subscribe(this.config.topics.observations, () => {
       this.observationCount += 1;
+    });
+    // The two publication prompts (FR-65). Neither changes what is aggregated: each
+    // publishes now what the cadence would have published next, computed from the
+    // residuals folded so far — including the named absence a cadence publishes when
+    // nothing has been folded. A prompt that quietly recomputed differently would make
+    // the button a second source for the same figures.
+    this.client.subscribe(this.config.topics.command, (message) => {
+      const command = message.payload as OperatorCommand;
+      if (command.target !== this.config.id || command.kind !== 'event') return;
+      if (command.event === this.config.skill_event) {
+        this.publishSkill();
+        this.promptedPublications += 1;
+        return;
+      }
+      if (command.event === this.config.statistics_event) {
+        this.publishStatistics();
+        this.promptedPublications += 1;
+      }
     });
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;

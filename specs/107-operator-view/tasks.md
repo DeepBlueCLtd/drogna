@@ -19,8 +19,9 @@
       statement it prints before it runs. The packaging was incomplete until now: the
       script named the generator's byte-identity test in its header and excluded it by
       its selector. Selection is now by marker rather than by test name, with the marked
-      set read off disk and every marked test required to have run and passed. See
-      `specs/101-foundations-shell/tasks.md` T037 for the three watched failures.*
+      set read off disk, every marked test required to have run and passed, and a sweep
+      that refuses a determinism-shaped test carrying no marker either way. See
+      `specs/101-foundations-shell/tasks.md` T037 for the five watched failures.*
 - [x] T608 Per-region residual statistics and end-to-end latency (issue #61). The
       region grid comes from the telemetry component's own configuration (rows,
       columns, minimum samples) and is laid over the scored holding's extent, so the

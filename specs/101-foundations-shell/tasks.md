@@ -67,8 +67,16 @@ moment a task is declined, never reconstructed later.
       byte-identity test nor its `describe`, so the one test this line was originally
       deferred *for* was the one the proof skipped — seven ran, 623 were skipped, and it
       printed "held". The proof now derives its expected set from `AT-04: byte-identity`
-      markers in the tree and requires every marked test to have run and passed. Watched
-      failing three ways before the fix was trusted: no marker anywhere (the floor a name
-      filter never had — `vitest run -t <unmatched>` skips everything and exits 0), a
-      marker not above an `it(`, and a planted per-run drift in the generator's draw path
-      that took six of the seven down, the generator's named among them.*
+      markers in the tree, requires every marked test to have run and passed — matched by
+      file as well as by name, so a pass in one file cannot stand in for a skip in another
+      — and sweeps for tests that read as a determinism claim and carry neither that marker
+      nor `AT-04: not byte-identity` with a reason. The sweep is the half a marker alone
+      does not give: it found this line's own other half, `runtime.test.ts`'s "the same
+      seed provisions the same manifest", and the planner's "one seed, one plan, twice",
+      both outside the proof under the old selector and under the first marking. Nine
+      tests are marked and two excluded by name. Watched failing five ways before the fix
+      was trusted, each reverted: no marker anywhere (the floor a name filter never had —
+      `vitest run -t <unmatched>` skips everything and exits 0); a marker not above an
+      `it(`; a marked test skipped; a byte-identity test whose marker was forgotten, which
+      the sweep names; and a planted per-run drift in the generator's draw path, which took
+      six down with the generator's named among them.*

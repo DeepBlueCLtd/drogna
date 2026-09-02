@@ -25,5 +25,6 @@
       that stepped the clock or stopped a component would have to undo what it did, or
       leave the harness changed by having been explained.*
 - [x] T010 SRD requirement for the walkthrough. *On `main`: `srd.md` §5.13, "The
-      walkthrough (feature 110)", carries FR-61 at line 653 and FR-62 at line 664,
-      written from the feature as built.*
+      walkthrough (feature 110)", carries FR-61 and FR-62, written from the feature as
+      built. Cited by anchor rather than by line: line numbers in `srd.md` move under a
+      citation the next time a requirement above it is amended.*

@@ -20,8 +20,11 @@
       guide a trajectory, saying why
 - [x] T806 Intro grown by 109 and closed as the walkthrough script (FR-42)
 - [x] T807 `pnpm replay-proof` (T607's long-deferred close-out): states the claim
-      and its boundary, runs every replay test, propagates the verdict — watched
-      failing against a planted Math.random() in the advisory source
+      and its boundary, runs the byte-identity tests, propagates the verdict — watched
+      failing against a planted Math.random() in the advisory source. *"Every replay
+      test" was what this line said until 101 T037's close-out, and it was not true:
+      the selector was `-t replay`, which excluded the generator's own byte-identity
+      test. Selection is now by marker, and the claim here is narrowed to match.*
 - [x] T808 Tests: area query agreement with position query, builder boundaries
       (validity plant watched failing), composer URLs and three-fact
       classification, panel against the live backend with WebGL absent

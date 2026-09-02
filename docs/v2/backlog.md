@@ -94,24 +94,34 @@ by its selector, and the excluded one is the test `101 T037` was originally defe
 A name filter has no floor either: `vitest run -t <anything unmatched>` skips every test and
 exits 0.
 
-Selection is now derived from the tree. Each byte-identity test carries an `AT-04:
-byte-identity` marker on the line above it; the script reads the markers off disk, runs the
-files that carry them, and requires every marked test to have run and passed. A rename cannot
-shrink the proof, because the marker travels with the test and the expected name is read from
-the same line that defines it. Seven tests are marked, and the eighth match the old selector
-picked up — `the manifest does not carry the demand…` — was a boundary test rather than a
-byte-identity one, covered incidentally because its `describe` matched.
+Selection is now derived from the tree, and the derivation is checked both ways. Each
+byte-identity test carries an `AT-04: byte-identity` marker on the line above it; the script
+reads the markers off disk, runs the files carrying them, and requires every marked test to
+have run and passed — matched by file as well as by name, so a pass in one file cannot stand
+in for a skip in another.
 
-**Watched failing three ways before the fix was trusted**, then reverted: no marker anywhere
+A marker alone would only have moved the hole: a byte-identity test written *without* one
+would sit outside the proof exactly as the generator's did. So a second marker,
+`AT-04: not byte-identity`, records a considered exclusion, and the script sweeps for tests
+whose names read as a determinism claim and carry neither. That sweep immediately found two
+tests outside the proof under both the old selector and the first marking — `runtime.test.ts`'s
+*is deterministic: the same seed provisions the same manifest*, which is the very half
+`101 T037`'s original deferral text named as already tested, and the planner's *recommends
+deterministically: one seed, one plan, twice*. **Nine tests are marked**, two are excluded by
+name with their reasons, and the boundary test the old selector caught incidentally — *the
+manifest does not carry the demand…* — is neither.
+
+**Watched failing five ways before the fix was trusted**, each reverted: no marker anywhere
 (the floor — the script refuses rather than proving nothing); a marker not sitting above an
-`it(`, which the script names by file and line rather than guessing; and a planted per-run
-drift in the generator's draw path, which took six of the seven down with the generator's
-named among them. On the clean tree it reports all seven ran and held.
+`it(`, named by file and line rather than guessed; a marked test skipped; a byte-identity test
+whose marker was forgotten, which the sweep names; and a planted per-run drift in the
+generator's draw path, which took six down with the generator's named among them. On the clean
+tree it reports all nine ran and held.
 
 ### 113 T006 — the section number was wrong, and one amendment was missing
 
 The line promised "new §5.11 with FR-52 to FR-60". Those requirements are on `main` at
-`srd.md:583-641` and V2-C21 is at `:173`, but under **§5.12** — §5.11 is feature 112, which
+`srd.md` under **§5.12**, with V2-C21 in §4's component table — §5.11 is feature 112, which
 took that number while 113 was being written. `spec.md:58` already said §5.12; `tasks.md:48`
 and `specs/113-operator-flowchart/plan.md:61` did not, and both now do. `docs/v2/plan.md` also
 mentions §5.11, at line 178, and that mention is *correct* — it was left alone.
@@ -119,12 +129,12 @@ mentions §5.11, at line 178, and that mention is *correct* — it was left alon
 The line's second half was three-quarters done: FR-22, FR-36 and FR-40 carried their *Amended
 by feature 113* markers and FR-35 did not, though `spec.md:312` maps it. FR-35 now carries the
 same pointer to §5.12 for presentation. Check such markers by reading the requirements rather
-than grepping for "feature 113": FR-36's wraps across `srd.md:417-418`, so a grep finds three
-of the four that are there.
+than grepping for "feature 113": FR-35's and FR-36's both wrap across a line break after
+"**Amended by feature", so that grep finds two of the four that are there.
 
 ### 110 T010 and 113 T007 — ticked
 
-`srd.md` §5.13 carries FR-61 at `:653` and FR-62 at `:664`; `docs/v2/plan.md` §5 discusses
+`srd.md` §5.13 carries FR-61 and FR-62; `docs/v2/plan.md` §5 discusses
 feature 113 from line 188. Both were work already on disk.
 
 ### Issue #54 — still open, and deliberately
@@ -149,10 +159,10 @@ rows below and stay open.
 The largest piece of real work, and the only one with a written specification waiting for it.
 35 task lines, and the only row that needs #107 merged first.
 
-SRD-v2 §5.20, *The forward step, its cost, and what made the field* (`srd.md:1158`, spanning
+SRD-v2 §5.20, *The forward step, its cost, and what made the field* (spanning
 FR-106 to FR-140, of which roughly FR-120 onward is this feature's half) says plainly which
 half of itself feature 123 built. Of the two it names — the forward step, and the surface
-showing what a cell's value was made from — `srd.md:1171-1172` reads: *"The second is the
+showing what a cell's value was made from — §5.20 reads: *"The second is the
 deliverable. The first exists because a surface explaining a forecast needs a forecast to
 explain."* Its tasks run in seven phases: the analyst's substrate, the volume and its grid,
 the rays, the profile, the right region and its ghost, the constraints held rather than
@@ -198,9 +208,9 @@ releases are identical value for value, so there is no mask at all; with the noi
 is the whole domain and scores at chance — a pass earned by noise rather than by mitigation.
 
 The first two facts are held unconditionally by
-`app/src/backend/advisories/advisories.test.ts:305`, which is the right holding action but is
+`advisories.test.ts`'s *scores its own successive releases…*, the right holding action but not
 not a gate. The third is weaker than it looks: its assertions sit inside
-`if (noisyFirst && noisySecond)` at `:369`, so if either holding lookup misses, the fact goes
+`if (noisyFirst && noisySecond)`, so if either holding lookup misses, the fact goes
 unasserted and the test still passes. A gate needs a scoring configuration whose sampling spans more than the radius
 it is released under, and whose successive releases differ.
 
@@ -250,7 +260,7 @@ before committing it.
 
 ### NetCDF export
 
-The feature's input names it, but SRD-v2 FR-39 (`srd.md:444-451`) holds offload to
+The feature's input names it, but SRD-v2 FR-39 holds offload to
 announcement-only in V2, and feature 120 deliberately made that path *reachable* — `returning`
 arrives with a package staged and its measurement geometry beside it — rather than widening
 the requirement. `specs/120-start-conditions/spec.md:270-277` records the reasoning and assigns

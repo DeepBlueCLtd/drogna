@@ -2,11 +2,11 @@
   "image": "123-affordable-when-you-do-not-need-it-yet.png",
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
-  "sim_time": "2026-01-01T01:41:30Z",
+  "sim_time": "2026-01-01T01:43:04Z",
   "clock_pinned": "rate 0",
   "lit_components": "not readable from this view",
   "controls": "none: the view is as it opens",
-  "warmed": "run at rate 3600 for 4000 ms of host time before the clock was pinned",
+  "warmed": "run at rate 3600 for 6000 ms of host time before the clock was pinned",
   "viewport": {
     "width": 1440,
     "height": 900

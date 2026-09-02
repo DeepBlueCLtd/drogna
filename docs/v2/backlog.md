@@ -3,225 +3,260 @@
 *Read against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.*
 
 Seventy unticked task lines sit across the V2 feature specs. Read against the tree rather
-than the record, they resolve to nine genuinely owed items, one feature ready to start, and
-a long tail that was declined on purpose and should stay declined. This document is the
-triage; it is a claim about the tree at a moment, and where the two disagree the tree wins.
+than the record, most of them are not work: over half belong to a feature that is complete
+on an open pull request, and twenty were declined on purpose and should stay declined.
 
-A published version of this page, laid out for reading, is at
-<https://claude.ai/code/artifact/42d31978-962d-42fc-a303-e63b0b8ae86b>.
+**This file is a dated snapshot, and the task lines are the authority.** Where the two
+disagree, the lines win and this file is wrong. It carries no gate — no check in
+`scripts/gates.registry` reads `docs/v2/` — so it will drift, and the counts below are
+already false the moment #107 merges: the 70, the −37, P0 in its entirety, and feature 124's
+"unstarted" all die with that merge. Regenerate the counts with
+`grep -cE '^- \[ \] ' specs/1*/tasks.md` rather than trusting the table.
 
 ## What the seventy lines actually are
 
 | | |
 |---:|---|
 | **70** | Unticked lines in `specs/1NN-*/tasks.md` on `main` |
-| −37 | Feature 123, the forward step — complete on PR #107, where all 79 of its lines are ticked |
-| −20 | Declined or deliberately not done, each carrying its reason in the line (CLAUDE.md lesson 1) |
-| −4 | Done in the tree, unticked in the record — the record is a claim, and the tree disagrees with it |
-| **9** | **Genuinely owed** |
-| +35 | Feature 124, specified on PR #107, unstarted |
+| −37 | Feature 123, the forward step — complete on PR #107 |
+| −20 | Declined or deliberately not done, each carrying its reason in the line |
+| −2 | Done in the tree, unticked in the record: `110 T010`, `113 T007` |
+| **11** | **Work**, below — of which one is not a developer's to action |
 
-The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines. That directory is the
-archived record and is not live work; leave it alone.
+The eleven are two lines whose proof has a hole in it (`101 T037`, `107 T607`), one line whose
+record needs correcting and whose promise is one amendment short (`113 T006`), and eight owed
+items. The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
+archived record and is not live work.
+
+Feature 124 is specified on PR #107 and unstarted, at 35 task lines. It is not in the seventy
+because its file is not on `main` yet.
 
 ---
 
 ## P0 — Land what is already built
 
-One merge. Everything below either depends on it or is measured against it.
-
 ### PR #107 — review and merge the forward-step implementation
 
 Branch `claude/srd-model-forecast-specs-ws9x3d`: the two-layer kernel, run cost expressed in
 simulation time, the scheduler's `held-for-cost` decision, and the left region and timeline
-of `#/view/forecast` — plus the feature 124 specification. All 79 of feature 123's task
-lines are ticked on the branch and none on `main`, so the 37 that look outstanding are an
-artefact of where you are standing.
+of `#/view/forecast` — plus the feature 124 specification. Feature 123's task lines are all
+ticked on the branch (83 at the current tip; 11 of them are already ticked on `main`, from the
+record-reconciliation phase that merged as `cd938b1`).
 
-**Done when** #107 is merged and `pnpm check` is green on `main`. Give the snapshot diff
-from `pnpm snapshots` a real read during review — the kernel change moves the analytic form,
-which is exactly the case ADR-0041's gate exists to catch.
+Only P2 below waits on this merge. Within `specs/`, #107 touches `123-forward-step` and
+`124-forecast-illustration` and nothing else, so P1's record work and everything from P3 down
+can proceed in parallel.
+
+**Do not expect a snapshot diff.** The committed artefacts hold only the `archive` and
+`nowcast` eras, both authored by `env-generator` (`app/config/run.json:2302-2307`, and every
+condition's `snapshot_eras`), so no model-runner output reaches them and no kernel change can
+move them. This was checked rather than assumed: a planted kernel fault shifting every
+forecast temperature by 5 °C and tripling its spread leaves `check-snapshot-drift` exiting 0,
+while the kernel is confirmed to run 125 times during the pre-rolls and have its output
+discarded by the era filter. **The forecast kernel has no snapshot regression cover at all**,
+which is the deliberate consequence of the P5 item below, and is worth knowing before you
+lean on the gate during review.
+
+**Done when** #107 is merged and `pnpm check` is green on `main`.
 
 ---
 
-## P1 — Reconcile the record with the tree
+## P1 — The replay proof, and the record
 
-Four lines describe work that is on disk. Half a day, and it removes the largest source of
-false backlog. One of the four must be corrected before it is ticked, not ticked as written.
+### 101 T037 and 107 T607 — fix the replay proof before ticking either line
 
-### 101 T037 and 107 T607 — the AT-04 replay proof exists; tick both lines
+Both records defer the AT-04 one-command proof, and `scripts/replay-proof.ts` exists on `main`
+with `package.json:22` wiring `pnpm replay-proof`. It states the claim's boundary carefully
+and propagates exit status. But its header asserts it "runs every byte-identity test in the
+suite — the generator's, the whole loop's, and the advisories-and-bundles one", and it selects
+them by name:
 
-Deferred from 105 to 102, then to 107, and built at the arc's close-out.
-`scripts/replay-proof.ts` is on `main` — it states the claim's boundary, runs every
-byte-identity test, and propagates exit status — and `package.json:22` wires
-`pnpm replay-proof`. Two feature records still say it is owed.
+```ts
+spawnSync('pnpm', ['exec', 'vitest', 'run', '-t', 'replay'], …)
+```
 
-**Done when** both lines are ticked, each naming the script and the beat it actually landed
-at.
+The generator's byte-identity test is `AT-04 seed: two runs from one root seed are
+byte-identical across every holding and every seam message`, inside `describe('the synthetic
+ocean (feature 102)')` (`app/src/backend/env-generator/generator.test.ts:242`, `:40`). Neither
+string contains "replay". Running that selection gives 7 tests passed and 623 skipped, and the
+generator's is among the skipped. Break the generator's seed derivation and the one-command
+proof prints *replay proof held* and exits 0.
 
-### 110 T010 — the walkthrough's SRD requirement is on `main`
+`pnpm check` still catches it, because the test runs under the full suite. What is broken is
+the artefact both task lines are about.
 
-The line says "tick when that amendment is on `main`". `srd.md` §5.13, *The walkthrough
-(feature 110)*, carries FR-61 and FR-62 at lines 653 and 664.
+**Done when** the selection covers what the header claims — an explicit file list, or a tag
+the generator's test carries — the hole has been watched failing before the fix goes in, and
+only then are both lines ticked. Ticking them as they stand records a guarantee the proof does
+not give.
 
-**Done when** T010 is ticked.
+### 113 T006 — correct the section number, and record the one amendment still missing
 
-### 113 T007 — feature 113 is noted in the plan, and the numbering is reconciled
+The line promises "new §5.11 with FR-52 to FR-60". Those requirements are on `main` at
+`srd.md:583-641`, and V2-C21 Platform is in §4's component table at `:173` — but under
+**§5.12, *The platform, and the operator's flow (feature 113)***. §5.11 is feature 112, the
+shell at a phone's width. `specs/113-operator-flowchart/spec.md:58` already says §5.12, so
+only `tasks.md:48` and `docs/v2/plan.md:61` carry the stale number.
 
-`docs/v2/plan.md` §5 discusses 113 from line 188, including the renumber it settled and the
-collision it met. The line is drafted-and-waiting; the draft landed.
+The line's second half — FR-22, FR-35, FR-36 and FR-40 amended in place — is three-quarters
+done. FR-22 (`srd.md:319`), FR-36 (`:417`) and FR-40 (`:476`) each carry an *Amended by
+feature 113* marker; **FR-35 (`srd.md:407`) carries none, and no §5.12 pointer**, though
+`spec.md:312` maps it. `grep 'feature 113' srd.md` returns four hits and FR-35 is not among
+them. The omission is editorial rather than behavioural — FR-36 carries the substantive
+presentation pointer — but it is the residue.
 
-**Done when** T007 is ticked.
+**Done when** the two stale §5.11 references read §5.12, FR-35 carries its marker, and the
+line is then ticked.
 
-### 113 T006 — correct the section number, then tick
+### 110 T010 and 113 T007 — two lines to tick
 
-The line promises "new §5.11 with FR-52 to FR-60". FR-52 to FR-60 are on `main` at `srd.md`
-lines 583–641, and V2-C21 Platform is in §4's component table at line 173 — but they live
-under **§5.12, *The platform, and the operator's flow (feature 113)***. §5.11 is feature 112,
-the shell at a phone's width. The amendment landed; the task line names the wrong section.
+`110 T010` says "tick when that amendment is on `main`": `srd.md` §5.13, *The walkthrough
+(feature 110)*, carries FR-61 at `:653` and FR-62 at `:664`. `113 T007` asks for feature 113 to
+be noted in `docs/v2/plan.md` §5; it is discussed there from line 188, including the renumber
+it settled. Both are simply owed a tick.
 
-**Done when** the line reads §5.12, the second half of its promise — FR-22, FR-35, FR-36 and
-FR-40 amended in place — has been checked citation by citation rather than assumed, and it
-is then ticked. If any of those four is unamended, that is the residue and it stays open with
-the reason written in.
-
-### Issues #54 and #61 — two open issues look discharged
+### Issue #54 — verify and close, or state the residue
 
 Six issues are open. **#54** (the Background tab) tracks feature 111, whose 41 done lines
-leave only three declined ones. **#61** (telemetry deferrals from 107) is cited by 107 T608,
-which is ticked. Verify each against the tree and close it, or say in the issue what is still
-owed. The other four — #55, #56, #57, #62 — map to rows below and stay open.
+leave three unticked, all declined — including `T070`, which the tree declines with a reason
+deliberately rewritten once the content existed. Verify against the tree and close it, or say
+in the issue what is still owed.
+
+**#61** is the one to be careful with: its title names three deferrals — per-region statistics,
+**failure kinds**, latency — and `107 T608` discharges two. `run_failed` and
+`publication_refused` stay unproduced, and `specs/107-operator-view/spec.md:59-64` records that
+"issue #61 leaves this half open". The issue itself conditions those on a producer V2 does not
+have. Leave it open, or close it with that residue written down. #55, #56, #57 and #62 map to
+rows below and stay open.
 
 ---
 
 ## P2 — Feature 124, the illustration surface
 
 The largest piece of real work, and the only one with a written specification waiting for it.
-35 tasks, and it needs #107 merged first.
+35 task lines, and the only row that needs #107 merged first.
 
-SRD-v2 §5.20 (FR-120 to FR-140) says plainly which half of itself feature 123 built: *the
-surface is the deliverable, and the forward step exists because a surface explaining a
-forecast needs a forecast to explain.* The specification is written and its tasks run in
-seven phases — the analyst's substrate, the volume and its grid, the rays, the profile, the
-right region and its ghost, the constraints held rather than asserted, and the record.
+SRD-v2 §5.20, *The forward step, its cost, and what made the field* (`srd.md:1158`, spanning
+FR-106 to FR-140, of which roughly FR-120 onward is this feature's half), says plainly which
+half of itself feature 123 built: *the surface is the deliverable, and the forward step exists
+because a surface explaining a forecast needs a forecast to explain.* Its tasks run in seven
+phases — the analyst's substrate, the volume and its grid, the rays, the profile, the right
+region and its ghost, the constraints held rather than asserted, and the record.
 
-This is time-sensitive in a way the other rows are not: the centre and right regions of
-`#/view/forecast` currently render text stating they are not built and naming feature 124.
-That was an accepted cost at 123, but it is a view announcing its own incompleteness to every
-visitor until this lands.
+This is time-sensitive in a way the other rows are not: `#/view/forecast` currently discloses
+its own incompleteness to every visitor, naming feature 124 as the thing that is not built
+(`app/src/panels/forecast/FeatureTracks.tsx:351`). That was an accepted cost at 123, but it is
+a cost that runs until this lands.
 
-**Done when** the 35 lines are ticked as the work is taken, with reasons written at the
-moment of each decision; the pull request links its own instance opened at `#/view/forecast`;
-and the blog entry ships in the same pull request with a motion capture, inside the 300-word
-budget `check-blog-length` enforces.
+**Done when** the 35 lines are ticked as the work is taken, with reasons written at the moment
+of each decision; the pull request links its own instance opened at `#/view/forecast`; and the
+blog entry ships in the same pull request with a motion capture, inside the 300-word budget
+`check-blog-length` enforces.
 
 ---
 
 ## P3 — The one unfulfilled constitutional obligation
 
-Principle IX requires a beat's acceptance to be watched happening in the shell and captured,
-never inferred from green tests alone. Feature 113 owes two.
-
 ### 113 T049 — capture the watched turns, SC-001 and SC-002
 
-SC-001 is stopping the platform; SC-002 is turning it. Both are scenarios the operator flow
-chart exists to make visible, and both are currently evidenced by tests rather than by a
-capture of the full path — generator to pixel — through the seam. The capture tooling is
-already in the repository, so this is a session at the shell, not new machinery.
+Principle IX requires a beat's acceptance to be watched happening in the shell across the full
+path through the seam — generator to pixel — and captured, never inferred from green tests
+alone. SC-001 is stopping the platform; SC-002 is turning it. Both are currently evidenced by
+tests rather than by a capture. The capture tooling is already in the repository, so this is a
+session at the shell, not new machinery.
 
 **Done when** both turns are captured and the capture is linked from the record. It is the
-cheapest of the genuinely owed items and the only one a principle names, which is why it
-sits above the two gates below despite them being worth more.
+cheapest of the owed items and the only one a principle names.
 
 ---
 
-## P4 — Two gates that do not exist
-
-CLAUDE.md's second lesson is that a check never seen to fail is worth nothing. These are the
-inverse: checks nobody has written, where the failure mode is silence.
+## P4 — The leakage-mask gate
 
 ### 108 T712 (issue #57) — leakage mask scoring as a gate
 
-Not a kernel change, which is what the open question originally assumed. Measured against
-this harness's own releases: the loiter scenario's measurements span 3.9 km inside a release
-interval against a 60 km identification radius, so the buffer is a single blob that V1's
-FR-017 calls inconclusive whatever the kernel does; with per-cell noise suppressed two
-successive releases are identical value for value, so there is no mask at all; with the noise
-on the mask is the whole domain and scores at chance — a pass earned by noise rather than by
-mitigation.
+Not a kernel change, which is what the open question originally assumed. Measured against this
+harness's own releases: the loiter scenario's measurements span 3.9 km inside a release
+interval against a 60 km identification radius, so the buffer is a single blob that V1's FR-017
+calls inconclusive whatever the kernel does; with per-cell noise suppressed two successive
+releases are identical value for value, so there is no mask at all; with the noise on the mask
+is the whole domain and scores at chance — a pass earned by noise rather than by mitigation.
 
-All three facts are held by a test that fails the day any stops being true, which is the
-right holding action but is not a gate. A gate needs a scoring configuration whose sampling
-spans more than the radius it is released under, and whose successive releases differ.
+All three facts are held by a test that fails the day any stops being true
+(`app/src/backend/advisories/advisories.test.ts:330`), which is the right holding action but
+is not a gate. A gate needs a scoring configuration whose sampling spans more than the radius
+it is released under, and whose successive releases differ.
 
 **Done when** that scenario and its release terms exist, the gate is appended as one line to
-`scripts/gates.registry`, and a planted violation has been seen to fail it before the fix
-goes in.
+`scripts/gates.registry`, and a planted violation has been seen to fail it before the fix goes
+in.
 
-### 111 T070 — check Background's drogna-specific claims against the tree
-
-The Background tab explains eight standards and makes claims about this harness while doing
-it. Nothing checks those claims against the code, so the failure mode is prose drifting
-quietly out of true — the same class of fault as the opening paragraph of CLAUDE.md, which
-was wrong until somebody looked. Q1 in `specs/111-background-tab/spec.md` remains open and
-the standing decline was rewritten once the content existed.
-
-**Done when** either the gate exists and has been watched failing on a planted stale claim,
-or Q1 is closed with the reason a gate is not the answer. Lower than 108's only because
-Background is explanatory rather than load-bearing.
+*Feature 111's `T070` is not a companion to this and is not owed.* The tree declines it, with
+the reason rewritten once the explainers existed: FR-005 confines a drogna-specific claim to
+prose and a link, so the honest checks are weak ones, and two narrower checks were built
+instead — one asserting no drawn URL is pasteable, one asserting every `liveView` names a view
+the shell serves, watched failing on `expected 'mqtt/6 → no-such-view'`. The unmechanisable
+part of Q1 stays open and is recorded as open.
 
 ---
 
 ## P5 — Feature 120's three deferrals
 
-Start conditions shipped with three things named and not done. Ordered here by cost, which is
-the reverse of how they appear in the record.
+Ordered by cost, which is the reverse of how they appear in the record.
 
 ### A plan waiting on the Operator tab when the console opens
 
 The planner is held back through every pre-roll and replans within 600 ticks of the shell
-mounting. It recommends and changes nothing a start-condition card promises, so the whole
-cost is a plan arriving a moment later — live, where a reader can watch it happen. Arguably
-that is the better demo and the deferral should become a decline; make that call explicitly
-rather than leaving it as an open line.
+mounting. It recommends and changes nothing a start-condition card promises, so the whole cost
+is a plan arriving a moment later — live, where a reader can watch it happen. Arguably that is
+the better demo and the deferral should become a decline; make that call explicitly rather
+than leaving it as an open line.
 
 **Done when** the plan is present on open, or the line is closed as declined with that
 argument written in it.
 
 ### The forecast eras in the artefacts
 
-The other 10.9 MB and the other 2.1 seconds. Blocked on the scheduler's run identifiers,
-which reset on restart: holding the loop back for a pre-roll means restarting it, and the
-first live cycle would republish under the artefact's first cycle's holding identifiers and
-silently replace them. A test already refuses the declaration with that explanation, so the
-tempting one-line edit fails loudly instead of losing holdings a minute after the console
-opens.
+The other 10.9 MB and the other 2.1 seconds. Blocked on the scheduler's run identifiers, which
+reset on restart: holding the loop back for a pre-roll means restarting it, and the first live
+cycle would republish under the artefact's first cycle's holding identifiers and silently
+replace them. `app/src/bootstrap/start-condition.test.ts:228` refuses the declaration in those
+words, so the tempting one-line edit fails loudly instead of losing holdings a minute after the
+console opens.
 
-**Done when** run identifiers survive a restart — or are namespaced by era — the refusing
-test is retired with its reason, and the artefacts carry the eras. Read the `pnpm snapshots`
-diff before committing it.
+This is also what leaves the forecast kernel with no snapshot regression cover, as P0 notes.
+Whoever takes this row should say in it whether that cover is a reason to do the work sooner.
+
+**Done when** run identifiers survive a restart — or are namespaced by era — the refusing test
+is retired with its reason, and the artefacts carry the eras. Read the `pnpm snapshots` diff
+before committing it.
 
 ### NetCDF export
 
-The feature's input names it, but SRD-v2 FR-39 holds offload to announcement-only in V2, and
-feature 120 deliberately made that path *reachable* — `returning` arrives with a package
-staged and its measurement geometry beside it — rather than widening the requirement. Issue
-#62 already scopes real transfer, receipts and verified-receipt eviction to V3.
+The feature's input names it, but SRD-v2 FR-39 (`srd.md:444-451`) holds offload to
+announcement-only in V2, and feature 120 deliberately made that path *reachable* — `returning`
+arrives with a package staged and its measurement geometry beside it — rather than widening
+the requirement. `specs/120-start-conditions/spec.md:270-277` records the reasoning and assigns
+the question to its own feature.
 
-**Done when** a decision is recorded: either FR-39 is amended with an ADR arguing the
-widening, or this line is closed as V3 work and folded into #62. Do not implement it against
-the requirement as it stands.
+Neither disposition exists yet. No ADR amends FR-39 (`docs/adr/` runs to 0043 and none concerns
+offload format), and issue #62 scopes real *transfer*, receipts and verified-receipt eviction —
+not format — so folding this line into #62 means widening that issue, not merely closing this
+one.
+
+**Done when** one of the two is done: FR-39 amended by an ADR arguing the widening, or the line
+closed and #62 widened to carry the format question. Do not implement it against the
+requirement as it stands.
 
 ---
 
-## P6 — Outside the repository, or its own workstream
+## P6 — A decision, and two things outside the code
 
 ### 113 T003 — settle the flow chart's density question against a real screen
 
 The expanded faces are designed at 240×168 and twenty of them do not fit a laptop viewport
-beside the drawer. The compact face is designed, but the switch between them is manual.
-Decide whether compact becomes automatic below a width threshold, as feature 111's rail is,
-or stays a control — and record which, with the reason.
+beside the drawer. The compact face is designed, but the switch between them is manual. Decide
+whether compact becomes automatic below a width threshold, as feature 111's rail is, or stays a
+control — and record which, with the reason.
 
 **Done when** the behaviour matches the decision and the decision is written down.
 
@@ -236,9 +271,8 @@ meanwhile. Schedule it rather than carrying it as a task line under feature 101.
 
 ### 101 T003 (issue #56) — decommission the V1 droplet
 
-An infrastructure action on the author's own account, not a repository change. It has been
-flagged in a pull request already and is tracked by issue #56. Nothing a developer can
-action; it is listed here only so it stops reading as unfinished engineering.
+An infrastructure action on the author's own account, not a repository change, and the one
+item here no developer can pick up. Listed only so it stops reading as unfinished engineering.
 
 **Done when** the author actions it and closes #56.
 
@@ -247,20 +281,22 @@ action; it is listed here only so it stops reading as unfinished engineering.
 ## Not backlog: declined, with the reason recorded
 
 Twenty lines. Each was decided against at the moment it came up and carries its argument in
-the line, which is the part that cannot be reconstructed later. Do not re-open one without
-new evidence; if you do, replace the reason rather than deleting it.
+the line, which is the part that cannot be reconstructed later. **The line is the reason; the
+column below is a gloss of it, and where they differ the line is right.** Do not re-open one
+without new evidence; if you do, replace the reason rather than deleting it.
 
 | Line | Not doing | Because |
 |---|---|---|
 | 101 T027 | Persist panel arrangement per viewer | Presentation-only convenience (FR-14); revisit only if reviewers ask |
 | 102 T107 | Seasonal signal in the archive | Adds a parameter the demo does not read; revisit if the map or a post wants visible seasonality |
-| 103 T208 | Message-rate ripple tuning | Smoothing constants are display-only and best judged against 107's rate controls |
-| 104 T307 | `application/prs.coverage+json` content type | The OpenAPI records the intended media type; a one-line switch, best made with the first consumer that cares |
+| 103 T208 | Message-rate ripple tuning | Smoothing constants are display-only. The line says "revisit at the operator's-view beat", and that beat has passed — but 107 delivered no rate control (the only one, `ClockStrip.tsx`, arrived with 101), so nothing it was waiting on appeared. The wording is stale; the decline is not |
+| 104 T307 | `application/prs.coverage+json` content type | Waits on the first consumer that inspects the media type. 109's composer landed and does not: `ComposerPane.tsx:74` fetches with no `Accept` header and reads only status and body. Still a one-line switch when a consumer cares |
 | 105 T407 | A dedicated Runs view | The System detail column and Messages carry the loop's story; the operator view is the natural home |
 | 106 T506 | Optimality-gap measurement in TS | The V1 measurement stands for the same formulation; the harness's own claim is already tested |
 | 106 T507 | Wrong-implementation companion test | The spread model grows with lead, so the naive figure published in every message *is* the visible gap |
 | 110 T008 | A tour for another tab | The mechanism repeats; a tour nobody asked for is copy without a reader |
 | 110 T009 | A tour that operates the controls | It would have to undo what it did, or leave the harness changed by having been explained |
+| 111 T070 | A gate over Background's drogna-specific claims | FR-005 confines such a claim to prose and a link, so the honest checks are weak. Two narrower ones were built and watched instead; the unmechanisable part of Q1 stays open |
 | 111 T071 | Remember a viewer's place in the course | FR-015 forbids it; addable later without changing what any component does |
 | 111 T072 | Deep links into Background | Out of scope by the spec; the anchors exist, and who uses them is another feature's business |
 | 113 T060 | A manual "request a forecast run" | It would let the operator manufacture the loop's cause; the demo's claim is that the loop turns because the world diverged |
@@ -274,13 +310,18 @@ new evidence; if you do, replace the reason rather than deleting it.
 
 ---
 
-## Two habits this list depends on
+## Two habits, and what this triage cost when it forgot them
 
-**Tick as you go, and write the reason at the moment you decide not to do something.** Four
-of the seventy lines were work already on disk, and one of those four described it wrongly.
-That is a small error rate for a record this size, but it is the error that makes a backlog
-unreadable — and the reason for a decline is the only part nobody can reconstruct afterwards.
+**Tick as you go, and write the reason at the moment you decide not to do something.** Two
+of the seventy lines were work already on disk, and a third was three-quarters of the way
+there and named the wrong section. The reason for a decline is the only part
+nobody can reconstruct afterwards — and it is load-bearing: an earlier draft of this file
+listed `111 T070` as an unwritten gate, having read the checkbox and not the paragraph under
+it that records two checks built and one watched failing.
 
-**Plant the violation before you trust the check.** Both P4 rows are gates that do not exist.
-When you write one, see it fail on a deliberate breach, revert, and say so in the commit
-message. Two of V1's original four gates reported a file of intentional violations as clean.
+**Plant the violation before you trust the check.** The P4 row is a gate that does not exist,
+and both P0 and P1 exist because a check was trusted without being watched fail. `pnpm
+replay-proof` names the generator's byte-identity test in its header and excludes it by its
+selector. `check-snapshot-drift` covers no forecast-kernel output, which a planted 5 °C shift
+confirmed by passing clean. Neither was found by reading; both were found by trying to break
+them.

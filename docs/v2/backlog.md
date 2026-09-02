@@ -9,9 +9,11 @@ on an open pull request, and twenty were declined on purpose and should stay dec
 **This file is a dated snapshot, and the task lines are the authority.** Where the two
 disagree, the lines win and this file is wrong. It carries no gate — no check in
 `scripts/gates.registry` reads `docs/v2/` — so it will drift, and the counts below are
-already false the moment #107 merges: the 70, the −37, P0 in its entirety, and feature 124's
-"unstarted" all die with that merge. Regenerate the counts with
-`grep -cE '^- \[ \] ' specs/1*/tasks.md` rather than trusting the table.
+already false the moment #107 merges: the 70, the −37, P0 in its entirety, and the note that
+feature 124's file is not yet on `main` all die with that merge. (Feature 124 stays unstarted
+— the merge ticks none of its 35 lines.) Regenerate the counts with
+`grep -hcE '^- \[ \] ' specs/1*/tasks.md | paste -sd+ | bc` rather than trusting the table —
+`grep -c` over several files reports per file and never prints the total.
 
 ## What the seventy lines actually are
 
@@ -43,12 +45,17 @@ of `#/view/forecast` — plus the feature 124 specification. Feature 123's task 
 ticked on the branch (83 at the current tip; 11 of them are already ticked on `main`, from the
 record-reconciliation phase that merged as `cd938b1`).
 
-Only P2 below waits on this merge. Within `specs/`, #107 touches `123-forward-step` and
-`124-forecast-illustration` and nothing else, so P1's record work and everything from P3 down
-can proceed in parallel.
+Only P2 below waits on this merge for its *specification*: within `specs/`, #107 touches
+`123-forward-step` and `124-forecast-illustration` and nothing else, so P1's record work, P3's
+captures, P4's gate and P6 can all proceed in parallel.
+
+One row below is entangled with #107 in code even though it is not in `specs/`: P5's forecast
+eras is discharged by changing run-identifier derivation in
+`app/src/backend/scheduler/scheduler.ts`, and #107 adds 251 lines to that same file for the
+cost-hold state machine. Take that row after the merge, not beside it.
 
 **Do not expect a snapshot diff.** The committed artefacts hold only the `archive` and
-`nowcast` eras, both authored by `env-generator` (`app/config/run.json:2302-2307`, and every
+`nowcast` eras, both authored by `env-generator` (`app/config/run.json:2305-2310`, and every
 condition's `snapshot_eras`), so no model-runner output reaches them and no kernel change can
 move them. This was checked rather than assumed: a planted kernel fault shifting every
 forecast temperature by 5 °C and tripling its spread leaves `check-snapshot-drift` exiting 0,
@@ -85,10 +92,15 @@ proof prints *replay proof held* and exits 0.
 `pnpm check` still catches it, because the test runs under the full suite. What is broken is
 the artefact both task lines are about.
 
-**Done when** the selection covers what the header claims — an explicit file list, or a tag
-the generator's test carries — the hole has been watched failing before the fix goes in, and
-only then are both lines ticked. Ticking them as they stand records a guarantee the proof does
-not give.
+A name filter is the wrong mechanism here, and a tag would be too: **vitest exits 0 when the
+selector matches nothing.** Checked — `vitest run -t zzz-no-such-test-name` skips all 630
+tests and exits 0 — so a renamed or dropped tag degrades the proof to zero tests and it still
+prints *replay proof held*. The proof needs a floor.
+
+**Done when** the script names the test files explicitly, asserts that the number of tests
+actually run is the number expected, the hole has been watched failing before the fix goes in,
+and only then are both lines ticked. Ticking them as they stand records a guarantee the proof
+does not give.
 
 ### 113 T006 — correct the section number, and record the one amendment still missing
 
@@ -96,14 +108,19 @@ The line promises "new §5.11 with FR-52 to FR-60". Those requirements are on `m
 `srd.md:583-641`, and V2-C21 Platform is in §4's component table at `:173` — but under
 **§5.12, *The platform, and the operator's flow (feature 113)***. §5.11 is feature 112, the
 shell at a phone's width. `specs/113-operator-flowchart/spec.md:58` already says §5.12, so
-only `tasks.md:48` and `docs/v2/plan.md:61` carry the stale number.
+only `specs/113-operator-flowchart/tasks.md:48` and
+`specs/113-operator-flowchart/plan.md:61` carry the stale number. Note the second path:
+`docs/v2/plan.md` also mentions §5.11, at line 178, and that mention is **correct** —
+feature 112 did take §5.11. Do not touch it.
 
 The line's second half — FR-22, FR-35, FR-36 and FR-40 amended in place — is three-quarters
 done. FR-22 (`srd.md:319`), FR-36 (`:417`) and FR-40 (`:476`) each carry an *Amended by
 feature 113* marker; **FR-35 (`srd.md:407`) carries none, and no §5.12 pointer**, though
-`spec.md:312` maps it. `grep 'feature 113' srd.md` returns four hits and FR-35 is not among
-them. The omission is editorial rather than behavioural — FR-36 carries the substantive
-presentation pointer — but it is the residue.
+`spec.md:312` maps it. The omission is editorial rather than behavioural — FR-36 carries
+the substantive presentation pointer — but it is the residue. Check the markers by reading
+the four requirements, not by grepping for "feature 113": FR-36's marker wraps across
+`srd.md:417-418`, so a grep finds three of the four that are there and invites the
+conclusion that two are missing.
 
 **Done when** the two stale §5.11 references read §5.12, FR-35 carries its marker, and the
 line is then ticked.
@@ -137,16 +154,17 @@ The largest piece of real work, and the only one with a written specification wa
 35 task lines, and the only row that needs #107 merged first.
 
 SRD-v2 §5.20, *The forward step, its cost, and what made the field* (`srd.md:1158`, spanning
-FR-106 to FR-140, of which roughly FR-120 onward is this feature's half), says plainly which
-half of itself feature 123 built: *the surface is the deliverable, and the forward step exists
-because a surface explaining a forecast needs a forecast to explain.* Its tasks run in seven
-phases — the analyst's substrate, the volume and its grid, the rays, the profile, the right
+FR-106 to FR-140, of which roughly FR-120 onward is this feature's half), says plainly which half of itself feature 123 built. Of the two
+halves it names — the forward step, and the surface showing what a cell's value was made from
+— `srd.md:1171-1172` reads: *"The second is the deliverable. The first exists because a
+surface explaining a forecast needs a forecast to explain."* Its tasks run in seven phases — the analyst's substrate, the volume and its grid, the rays, the profile, the right
 region and its ghost, the constraints held rather than asserted, and the record.
 
-This is time-sensitive in a way the other rows are not: `#/view/forecast` currently discloses
-its own incompleteness to every visitor, naming feature 124 as the thing that is not built
-(`app/src/panels/forecast/FeatureTracks.tsx:351`). That was an accepted cost at 123, but it is
-a cost that runs until this lands.
+This is time-sensitive in a way the other rows are not. `#/view/forecast` does not exist on
+`main` — it arrives with #107 — and when it does it discloses its own incompleteness to every
+visitor, naming feature 124 as the thing that is not built
+(`app/src/panels/forecast/FeatureTracks.tsx:351` on the branch). That was an accepted cost at
+123, and it starts being paid at the merge, not now.
 
 **Done when** the 35 lines are ticked as the work is taken, with reasons written at the moment
 of each decision; the pull request links its own instance opened at `#/view/forecast`; and the
@@ -181,9 +199,11 @@ calls inconclusive whatever the kernel does; with per-cell noise suppressed two 
 releases are identical value for value, so there is no mask at all; with the noise on the mask
 is the whole domain and scores at chance — a pass earned by noise rather than by mitigation.
 
-All three facts are held by a test that fails the day any stops being true
-(`app/src/backend/advisories/advisories.test.ts:330`), which is the right holding action but
-is not a gate. A gate needs a scoring configuration whose sampling spans more than the radius
+The first two facts are held unconditionally by
+`app/src/backend/advisories/advisories.test.ts:305`, which is the right holding action but is
+not a gate. The third is weaker than it looks: its assertions sit inside
+`if (noisyFirst && noisySecond)` at `:369`, so if either holding lookup misses, the fact goes
+unasserted and the test still passes. A gate needs a scoring configuration whose sampling spans more than the radius
 it is released under, and whose successive releases differ.
 
 **Done when** that scenario and its release terms exist, the gate is appended as one line to
@@ -253,12 +273,21 @@ requirement as it stands.
 
 ### 113 T003 — settle the flow chart's density question against a real screen
 
-The expanded faces are designed at 240×168 and twenty of them do not fit a laptop viewport
-beside the drawer. The compact face is designed, but the switch between them is manual. Decide
-whether compact becomes automatic below a width threshold, as feature 111's rail is, or stays a
-control — and record which, with the reason.
+Twenty expanded faces do not fit a laptop viewport beside the drawer. The compact face is
+designed, but the switch between them is manual. Decide whether compact becomes automatic
+below a width threshold, as feature 111's rail is, or stays a control — and record which,
+with the reason.
 
-**Done when** the behaviour matches the decision and the decision is written down.
+**First, get the numbers off disk.** The task line says the expanded faces are designed at
+240×168, and that figure appears nowhere in the tree: `app/src/panels/operator/layout.ts:73-86`
+sets `NODE_WIDTH = 208`, `NODE_HEIGHT = 116`, and derives the expanded face as
+`NODE_WIDTH * 2 + COLUMN_GAP` by `NODE_HEIGHT * 4` — **450×464**, nearly a viewport's height
+for one card. Deciding density against 240×168 decides it against an area roughly four times
+too small. CLAUDE.md's rule applies to the density threshold too: prefer a bound derived from
+something on disk over a number typed into a record.
+
+**Done when** the behaviour matches the decision, the decision is written down, and the task
+line's stale dimensions are corrected or dropped.
 
 ### 101 T036 (issue #55) — site rebuild: V2 as the published demo, V1 as the archive section
 
@@ -292,8 +321,8 @@ without new evidence; if you do, replace the reason rather than deleting it.
 | 103 T208 | Message-rate ripple tuning | Smoothing constants are display-only. The line says "revisit at the operator's-view beat", and that beat has passed — but 107 delivered no rate control (the only one, `ClockStrip.tsx`, arrived with 101), so nothing it was waiting on appeared. The wording is stale; the decline is not |
 | 104 T307 | `application/prs.coverage+json` content type | Waits on the first consumer that inspects the media type. 109's composer landed and does not: `ComposerPane.tsx:74` fetches with no `Accept` header and reads only status and body. Still a one-line switch when a consumer cares |
 | 105 T407 | A dedicated Runs view | The System detail column and Messages carry the loop's story; the operator view is the natural home |
-| 106 T506 | Optimality-gap measurement in TS | The V1 measurement stands for the same formulation; the harness's own claim is already tested |
-| 106 T507 | Wrong-implementation companion test | The spread model grows with lead, so the naive figure published in every message *is* the visible gap |
+| 106 T506 | Optimality-gap measurement in TS | The V1 measurement stands for the same formulation and the harness's own claim is already tested. **Its own trigger: "worth doing when a blog post wants the figure"** — and 106 is *told only* on the blog coverage table, so whoever writes that entry should read the line, not this row |
+| 106 T507 | Wrong-implementation companion test | The spread model grows with lead, so the naive figure published in every message *is* the visible gap. **Its own trigger: revisit if the spread model ever stops growing with lead** |
 | 110 T008 | A tour for another tab | The mechanism repeats; a tour nobody asked for is copy without a reader |
 | 110 T009 | A tour that operates the controls | It would have to undo what it did, or leave the harness changed by having been explained |
 | 111 T070 | A gate over Background's drogna-specific claims | FR-005 confines such a claim to prose and a link, so the honest checks are weak. Two narrower ones were built and watched instead; the unmechanisable part of Q1 stays open |
@@ -322,6 +351,13 @@ it that records two checks built and one watched failing.
 **Plant the violation before you trust the check.** The P4 row is a gate that does not exist,
 and both P0 and P1 exist because a check was trusted without being watched fail. `pnpm
 replay-proof` names the generator's byte-identity test in its header and excludes it by its
-selector. `check-snapshot-drift` covers no forecast-kernel output, which a planted 5 °C shift
+selector — and would still print *held* over zero tests, because vitest exits 0 on an empty
+selection. `check-snapshot-drift` covers no forecast-kernel output, which a planted 5 °C shift
 confirmed by passing clean. Neither was found by reading; both were found by trying to break
 them.
+
+**And check the checker.** Two rounds of adversarial review produced four findings that did
+not survive verification, two of them here: that `ClockStrip.tsx` arrived with feature 105
+rather than 101 — an artefact of a shallow clone, where `4dd407c` is a graft boundary and
+`git log --diff-filter=A` misattributes every file it touches — and that this document had
+declared issue #61 discharged, which it never did. A finding is a claim about the tree too.

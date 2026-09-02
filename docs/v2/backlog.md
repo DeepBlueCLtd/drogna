@@ -53,7 +53,7 @@ gate and P6 can all proceed in parallel. (P1 already did, and is discharged.)
 
 One row below is entangled with #107 in code even though it is not in `specs/`: P5's forecast
 eras is discharged by changing run-identifier derivation in
-`app/src/backend/scheduler/scheduler.ts`, and #107 adds 251 lines to that same file for the
+`app/src/backend/scheduler/scheduler.ts`, and #107 adds 244 lines to that same file for the
 cost-hold state machine. Take that row after the merge, not beside it.
 
 **Do not expect a snapshot diff.** The committed artefacts hold only the `archive` and
@@ -122,7 +122,9 @@ tree it reports all nine ran and held.
 because nothing ran it: it was in no workflow, no gate and not in `pnpm check`. The sweep is
 split out as `check-replay-markers`, appended to `scripts/gates.registry` — so the cheap half,
 that every determinism-shaped test says whether it is in the proof, fires on every change at no
-test-time cost, with its own planted-violation test beside the other 21. The half that runs the
+test-time cost, with its own planted-violation tests. (Beside 18 of the other 21, not all:
+`check-schema-masters` and `check-snapshot-drift` have no planted-violation test, which is
+worth knowing in a document whose closing section is about exactly that.) The half that runs the
 tests is a CI step of its own, about two minutes, paid deliberately.
 
 ### 113 T006 — the section number was wrong, and one amendment was missing

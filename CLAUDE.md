@@ -38,7 +38,8 @@ containers, no daemon (SRD-v2 NFR-01).
 
 ```sh
 pnpm install
-pnpm check        # typecheck, lint, unit tests, gates — what CI runs
+pnpm check        # typecheck, lint, unit tests, gates — most of what CI runs
+pnpm replay-proof # AT-04: the byte-identity tests, their claim and its boundary
 pnpm gates        # the constitution gates alone (scripts/gates.registry)
 pnpm generate     # regenerate app/src/generated/ from contracts/ masters
 pnpm snapshots    # regenerate app/public/snapshots/ by running the components (ADR-0041)
@@ -47,6 +48,11 @@ pnpm -C app build # the static site V2 delivers
 pnpm site:build   # the published site, into site/build/ (ADR-0031)
 pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped labels
 ```
+
+CI runs `pnpm check` **and** `pnpm replay-proof`, which is not reachable from it: the proof
+re-runs the marked tests' files, and paying that twice locally would make `pnpm check` a
+command nobody runs. The cheap half of it — that every determinism-shaped test declares
+whether it is in the proof — is `check-replay-markers` and *is* in `pnpm gates`.
 
 `pnpm gates` runs the gates listed in `scripts/gates.registry`, one per line. **A new
 gate is a line appended to that registry.** Never edit the runner — it names no gate,

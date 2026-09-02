@@ -59,24 +59,53 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     // different mistakes to make.
     const unreadable = replayMarkers(join(fixtures, 'replay-unreadable'));
     expect(unreadable.map((f) => f.message)).toEqual([
-      expect.stringMatching(/is not directly above an it\(\.\.\.\) with a single-line name/),
+      expect.stringMatching(/is neither on nor directly above a test declaration/),
       expect.stringMatching(/reads as a determinism or replay claim and carries neither marker/),
     ]);
 
     expect(replayMarkers(REPO_ROOT)).toEqual([]);
   });
 
-  it('replay-markers: the real tree marks byte-identity tests, and the proof has something to prove', () => {
-    // A bound derived from the tree rather than typed in: the gate reports clean above,
-    // and what it found must be a non-empty set of marked tests in real files. The
-    // count is deliberately not asserted — that would be a number to edit rather than
-    // a property to hold — but an empty set would mean `pnpm replay-proof` asserts
-    // nothing, which is the state the old selector could reach and pass.
-    const { marked } = scan(REPO_ROOT);
-    expect(marked.length).toBeGreaterThan(0);
-    expect(marked.every((test) => test.file.endsWith('.test.ts'))).toBe(true);
-    // The test the old `-t replay` selector skipped, and the reason this gate exists.
-    expect(marked.some((test) => test.name.startsWith('AT-04 seed:'))).toBe(true);
+  it('replay-markers: a trailing marker marks its own test, not the next one', () => {
+    // The fault the first version of this gate had, and the original fault's exact
+    // shape: reading only the line *below* a marker meant a marker written as a
+    // trailing comment marked the following test and let its own drop out of the
+    // sweep unreported. Both halves failed at once, and silently.
+    const root = join(fixtures, 'replay-trailing');
+    expect(replayMarkers(root)).toEqual([]);
+    const { marked } = scan(root);
+    expect(marked.map((test) => test.name)).toEqual([
+      'replays byte-identically: one seed, one run, twice',
+    ]);
+  });
+
+  it('replay-markers: test() and a name on the next line are both swept', () => {
+    // vitest exports `test` as well as `it`, and a multi-line call is ordinary
+    // formatting. A per-line /\bit\(/ saw neither, so a byte-identity test written
+    // either way sat outside the proof with nothing said — the silent direction.
+    const found = replayMarkers(join(fixtures, 'replay-spellings'));
+    expect(found).toHaveLength(2);
+    expect(found[0].message).toContain('replays byte-identically via test()');
+    expect(found[1].message).toContain('with the name on the next line');
+  });
+
+  it('replay-markers: prose quoting a test name is not a test', () => {
+    // This repository's docblocks quote test names as a habit — check-replay-markers'
+    // own header does. Reported as violations, the only escapes were to reword the
+    // prose or to mark it, and marking it adds a test that does not exist to the
+    // proof's expected set, which then fails for the wrong reason.
+    expect(replayMarkers(join(fixtures, 'replay-prose'))).toEqual([]);
+    expect(scan(join(fixtures, 'replay-prose')).marked).toEqual([]);
+  });
+
+  it('replay-markers: two marked tests sharing a name in one file is refused', () => {
+    // The proof keys a pass by (file, leaf title) because vitest's title carries no
+    // ancestor describe. Two marked tests with one title in one file would make a
+    // pass for either indistinguishable from a skip of the other.
+    const found = replayMarkers(join(fixtures, 'replay-duplicate'));
+    expect(found.map((f) => f.message)).toEqual([
+      expect.stringMatching(/both called "replays byte-identically"/),
+    ]);
   });
 
   it('truth-initialisation: a component reaching for the true field fails; the real tree passes', () => {

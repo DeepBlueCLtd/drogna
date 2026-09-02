@@ -28,10 +28,11 @@
  */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { MARKER, scan } from './gates/check-replay-markers.js';
+import { missingFrom, type Report } from './replay-verify.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const appDir = join(repoRoot, 'app');
@@ -81,10 +82,10 @@ if (marked.length === 0) {
   process.exit(1);
 }
 
-const files = [...new Set(marked.map((test) => test.file))].sort();
+const files = [...new Set(marked.map((test) => test.absolutePath))].sort();
 console.log(
   `Proving ${marked.length} marked byte-identity test(s) across ${files.length} file(s):\n  ` +
-    marked.map((test) => `${relative(repoRoot, test.file)} → ${test.name}`).join('\n  ') +
+    marked.map((test) => `${relative(repoRoot, test.absolutePath)} → ${test.name}`).join('\n  ') +
     '\n',
 );
 
@@ -108,9 +109,6 @@ const result = spawnSync(
   { cwd: appDir, stdio: 'inherit' },
 );
 
-type Assertion = { title?: string; status?: string };
-type Report = { testResults?: { name?: string; assertionResults?: Assertion[] }[] };
-
 let report: Report | undefined;
 try {
   report = JSON.parse(readFileSync(reportPath, 'utf8')) as Report;
@@ -127,27 +125,14 @@ if (report === undefined) {
   process.exit(result.status === 0 ? 1 : (result.status ?? 1));
 }
 
-// Passes are keyed by file as well as by name. A flat set of titles would let a
-// passing test in one file satisfy a marked test that was skipped in another —
-// the same shape of hole this script exists to close.
-const passed = new Set<string>();
-for (const file of report.testResults ?? []) {
-  if (file.name === undefined) continue;
-  for (const assertion of file.assertionResults ?? []) {
-    if (assertion.status === 'passed' && assertion.title !== undefined) {
-      passed.add(`${resolve(file.name)}\0${assertion.title}`);
-    }
-  }
-}
-
-const missing = marked.filter((test) => !passed.has(`${resolve(test.file)}\0${test.name}`));
+const missing = missingFrom(report, marked);
 
 if (missing.length > 0) {
   console.error(
     `replay proof FAILED: ${missing.length} of ${marked.length} marked byte-identity test(s)\n` +
       'did not run and pass — the proof asserts less than it claims. Each was skipped,\n' +
       'renamed away from its marker, never collected, or failed (the run above says which):\n  ' +
-      missing.map((test) => `${relative(repoRoot, test.file)} → ${test.name}`).join('\n  '),
+      missing.map((test) => `${relative(repoRoot, test.absolutePath)} → ${test.name}`).join('\n  '),
   );
   process.exit(1);
 }

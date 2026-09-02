@@ -717,3 +717,45 @@ found more than a missing drawing.
       and would not have failed this. The floor is a claim about thumbs rather than about
       which selectors a check walks, so the chooser came down to six columns by four until the
       squares clear 44px at the narrowest width the shell supports.
+
+
+## The ninth round: a field, not a list
+
+The centre region's first build answered "what is a cell's value made from" with a grid of
+grey buttons over a list of four percentages. It was honest and it was dull, and dull was a
+correctness problem rather than a taste one: **the interesting fact in the provenance field is
+spatial.** The measurement share is a footprint — bright where a sensor reached, dark where the
+analysis had only its background — and it shrinks with depth. Four numbers for one column
+cannot show a footprint.
+
+- [x] T090 The region reads a **slab** through an EDR *area* query and draws it as a map, with
+      a source selector, a depth control, a hover-and-keyboard readout, and a cell that opens
+      into the water column beneath it. One area query for a field is the query the standard
+      has for exactly this; the old version issued six position queries to answer about one
+      column and never asked about anywhere else.
+- [x] T091 The palette is computed rather than chosen. Four sources, fixed order, never
+      cycled, validated against this shell's own surface `#10151b`: lightness band, chroma
+      floor, CVD separation, normal-vision floor and contrast all pass, with the worst adjacent
+      pair at **ΔE 8.4 under protanopia** — over the floor, and close enough to it that
+      secondary encoding is obligatory rather than optional. Hence the per-source hatch, the
+      legend, the readout in words, and the printed percentages: with the colour removed the
+      region still reads.
+- [x] T092 The hatch was coarser than the data and had to be re-cut. Tiled at four user units
+      in a coordinate system where one unit is one cell, each tile spanned four cells, so the
+      map came out scratched with long diagonals crossing cell boundaries — a picture of the
+      pattern rather than of the data. At 0.5 units each cell carries two strokes of its own,
+      and each tile now holds a wash of the hue as well as a line, so a cell reads as a solid
+      block at a glance and as a direction on inspection.
+- [x] T093 It opens on the strongest source rather than on the measurement share. Every cell
+      has a strongest source, so the field arrives full; opening on `measurement` showed one
+      bright patch in a black rectangle, which is a true picture and a poor invitation. The
+      footprint is one click away and reads far better once a reader has seen what it is a
+      footprint against.
+- [x] T094 Two checks, each watched failing. The field is asserted to **vary** — planted
+      against a slab read off a fixed index, so every cell resolved to one value: "every cell
+      in the field was drawn at one value: expected 1 to be greater than 1". And the depth
+      control is asserted to **re-read**, planted by dropping the depth from the effect's
+      dependencies: "changing depth asked the query layer nothing: expected 1 to be greater
+      than 1". The second assertion compares the `z` of the first and last area query rather
+      than counting them, because a control that re-rendered without re-reading would grow the
+      count while fetching the same slab for ever.

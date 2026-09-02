@@ -122,7 +122,7 @@ const NO_TEXT_ON: Record<string, string> = {
   '.intro-mark.is-res': 'the same mark, carrying a query or its answer',
   '.welcome-progress-fill': 'the fill inside the welcome page’s progress track; the figure is written under it',
   '.forecast-gauge-fill': 'the fill inside the Forecast gauge’s bar; both the value and the threshold are written beside it, which is what makes the region legible in greyscale',
-  '.forecast-column-bar': 'a share’s bar in the column readout, an empty span with its percentage printed beside it and its name before that; the figure is the claim and the bar is the illustration, which is why the reading survives with the bars removed altogether',
+  '.forecast-column-segment': 'one source’s slice of a level’s 100% stacked bar, an empty span; the four percentages are printed beneath it and the legend names every source, so the stack is the illustration and the figures are the claim',
   '.walkthrough-button:hover': 'the help button under the pointer; its own rule sets the text colour',
   '.driver-popover.walkthrough-popover button:hover': 'a popover button under the pointer; its own rule sets the text colour',
 };

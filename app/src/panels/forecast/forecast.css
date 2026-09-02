@@ -343,12 +343,18 @@
 /* ------------------------------------------- what a cell's value was made from --- */
 
 /**
- * The column chooser and its readout. A grid of ordinary buttons, not a picture: while
- * there is no volume to carry it, a chooser that looked like a rendering of data would be
- * claiming to show a field it has not fetched.
+ * The share field, its controls and the column it opens into.
  *
- * **Nothing here animates**, and the selected square is marked by a glyph and a border as
- * well as a tone, so the selection survives greyscale (FR-138).
+ * **Nothing here animates**, for the same reason nothing else in this file does: a transition
+ * is motion the markup cannot see. The map redraws when a reader changes a control, and at no
+ * other time.
+ *
+ * **Colour is never the only carrier** (FR-138). The four sources are a validated categorical
+ * palette for this shell's own surface, and the worst adjacent pair sits at ΔE 8.4 under
+ * protanopia — over the floor, but close enough that secondary encoding is required rather
+ * than optional. So the strongest-source view is drawn in hatches rather than flat fills, the
+ * legend names every source, the readout states the cell in words, and the column profile
+ * prints its percentages beside the bar. With the colour removed the region still reads.
  */
 .forecast-column {
   display: flex;
@@ -365,42 +371,144 @@
   color: var(--shell-dim);
 }
 
-.forecast-column-chooser {
-  display: grid;
-  gap: 2px;
-  /* The tracks are `1fr` of whatever the region gives it, so the chooser narrows with the
-     panel instead of demanding a width — the fault that cost eleven proofs on the timeline. */
-  width: 100%;
+/* The filters, in one row above the chart. */
+.forecast-column-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
 }
 
-.forecast-column-square {
-  /* **44px, which is feature 112's stated floor for a control a thumb hits.** The proof
-     enforces that floor on the tab strip and on an open operator account, and would not have
-     failed this at 28px — but the number is a claim about thumbs, not about which selectors
-     the check happens to walk, and a chooser square is exactly a thing a thumb hits. At a
-     360px width the squares come out roughly square at this height. */
+.forecast-column-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+.forecast-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  /* Feature 112's floor for a control a thumb hits. The proof enforces it on the tab strip and
+     on an open operator account and would not fail these, but the number is a claim about
+     thumbs rather than about which selectors a check walks. */
+  /* Both dimensions, because a tap target is the smaller of the two and the narrowest chip
+     here reads "0 m": at min-height alone it measured 39px wide inside a 360px phone. */
   min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+  padding: 0 0.6em;
   border: 1px solid #232c36;
   background: none;
   color: var(--shell-dim);
   font: inherit;
-  font-size: 0.75em;
-  line-height: 1;
+  font-size: 0.8em;
   cursor: pointer;
-  padding: 0;
 }
 
-.forecast-column-square:hover,
-.forecast-column-square:focus-visible {
+.forecast-chip:hover,
+.forecast-chip:focus-visible {
   border-color: var(--shell-fg);
   color: var(--shell-fg);
 }
 
-.forecast-column-square.is-selected {
+/* Selected by a border and by weight as well as by tone, so the state survives greyscale. */
+.forecast-chip.is-on {
   border-color: var(--shell-fg);
   color: var(--shell-fg);
   font-weight: 700;
 }
+
+.forecast-chip-swatch,
+.forecast-share-swatch {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border: 1px solid #232c36;
+}
+
+/* ---------------------------------------------------------------- the field --- */
+
+.forecast-share-map {
+  /* Scales with the region and never sets a width of its own: a fixed width is what makes a
+     panel scroll sideways on a phone, which capture:mobile fails the build over.
+
+     `border-box`, and the two pixels are not a rounding error: `width: 100%` with a 1px border
+     under content-box is 100% + 2px, which is precisely what the region overflowed by at both
+     phone widths — 354px of content in 352px, and 324px in 322px. */
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #232c36;
+  background: var(--shell-bg);
+  cursor: crosshair;
+}
+
+.forecast-share-map:focus-visible {
+  outline: 2px solid var(--shell-fg);
+  outline-offset: 1px;
+}
+
+/* A cell's own edge, so squares read as squares at any drawn resolution. */
+.share-cell {
+  shape-rendering: crispEdges;
+}
+
+/* A negative share is real — the gain extrapolating, not a fault — and is marked rather than
+   floored: the cell is outlined, and the figure beside it carries the sign. */
+.share-cell.is-negative {
+  stroke: var(--shell-fg);
+  stroke-width: 0.06;
+}
+
+/* The cursor is a ring, not a fill, so it never hides the value underneath it. */
+.share-cursor {
+  fill: none;
+  stroke: var(--shell-fg);
+  stroke-width: 0.12;
+}
+
+.forecast-share-readout {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15em 0.7em;
+  font-size: 0.8em;
+  /* Text wears text tokens, never a series colour; the swatch beside it carries identity. */
+  color: var(--shell-fg);
+  /* Two lines' worth, held open, so the map does not jump as a reader moves across it. */
+  min-height: 2.4em;
+}
+
+.forecast-share-where {
+  color: var(--shell-dim);
+  overflow-wrap: anywhere;
+}
+
+.forecast-share-figure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-family: monospace;
+}
+
+.forecast-share-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.8em;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-share-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+/* --------------------------------------------------------------- the column --- */
 
 .forecast-column-levels {
   list-style: none;
@@ -425,51 +533,32 @@
   color: var(--shell-fg);
 }
 
-.forecast-column-shares {
+.forecast-column-stack {
   display: flex;
-  flex-direction: column;
-  gap: 0.1em;
+  height: 0.7em;
+  width: 100%;
+  /* The gap between segments is the surface itself, so adjacent fills never touch and a
+     boundary is never a third colour. */
+  gap: 2px;
 }
 
-.forecast-column-share {
-  display: grid;
-  /* Shrinkable tracks, for the reason the timeline's own row records: a bare `max-content`
-     track cannot fold, and this region has to fit 320px. */
-  grid-template-columns: minmax(0, 7em) minmax(0, 1fr) minmax(0, 4em);
-  align-items: center;
-  gap: 0 0.4em;
+.forecast-column-segment {
+  display: block;
+  min-width: 0;
 }
 
-.forecast-column-share-name {
+.forecast-column-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.7em;
+  font-family: monospace;
   color: var(--shell-dim);
   overflow-wrap: anywhere;
 }
 
-.forecast-column-share-value {
-  font-family: monospace;
-  text-align: right;
-}
-
-.forecast-column-bar {
-  display: block;
-  height: 0.5em;
-  background: var(--shell-dim);
-  /* A share may exceed one where the gain extrapolates, so the bar is capped and the printed
-     figure beside it is not: the number is the claim, the bar is the illustration. */
-  max-width: 100%;
-}
-
-/* A negative share is drawn hatched and right-aligned, so the sign survives greyscale and a
-   monochrome print — and the figure beside it carries the minus regardless. */
-.forecast-column-bar.is-negative {
-  margin-left: auto;
-  background: repeating-linear-gradient(
-    45deg,
-    var(--shell-dim),
-    var(--shell-dim) 2px,
-    transparent 2px,
-    transparent 4px
-  );
+.forecast-column-figures .is-negative {
+  color: var(--shell-fg);
+  font-weight: 700;
 }
 
 .forecast-column-refused {

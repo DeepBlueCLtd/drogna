@@ -184,150 +184,88 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(document.querySelector('[data-region="volume"]')?.textContent).toMatch(/rays/);
   });
 
-  it('reads a water column through EDR when a reader picks a square, and not before', async () => {
-    // **The region this replaces was a stub naming feature 124 for all of itself, and most of
-    // it did not need to be.** The analyst has published a full-grid provenance field since
-    // feature 116 — four shares per cell, every depth, summing to one — under its own EDR
-    // collection. Only FR-122's per-source rays are blocked, because the kernel reports the
-    // gain's row sum and discards its columns.
+  it('draws the share field as a map, and opens a column from it', async () => {
+    // **The region this replaces was a stub, and then a grid of grey buttons over a list of
+    // percentages.** Neither showed the thing: the interesting fact in the provenance field is
+    // spatial — the measurement share is a footprint, bright where a sensor reached — and a
+    // list of four numbers for one column cannot show a footprint.
     render(<ForecastPanel {...panelProps()} />);
     await act(async () => {
       for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
         runtime.clock.tickOnce();
-        if (document.querySelector('.forecast-column-square')) break;
+        if (document.querySelector('.forecast-share-map')) break;
       }
-    });
-    const squares = [...document.querySelectorAll('.forecast-column-square')];
-    expect(squares.length, 'the chooser drew no squares after an analysis was announced').toBeGreaterThan(0);
-
-    // **Nothing has been fetched for it yet.** The announcement names the collections; it does
-    // not read them. A region that fetched on announcement would be doing work on a tick.
-    const beforePick = fetched.filter((url) => url.includes('/collections/')).length;
-    expect(beforePick, 'the region fetched a column nobody asked for').toBe(0);
-
-    const square = squares[Math.floor(squares.length / 2)];
-    if (!square) throw new Error('no square to pick');
-    await act(async () => {
-      fireEvent.click(square);
     });
     await act(async () => {
       await Promise.resolve();
     });
 
-    // The reader's pick went to the query layer, through the same EDR path an external client
-    // takes — one position query per depth, against the collection the analysis named.
-    const edrCalls = fetched.filter((url) => url.includes('/position?'));
-    expect(edrCalls.length, 'picking a square asked the query layer nothing').toBeGreaterThan(0);
-    expect(edrCalls.some((url) => url.includes('-provenance'))).toBe(true);
+    const map = document.querySelector('svg.forecast-share-map');
+    expect(map, 'no share field was drawn after an analysis was announced').toBeTruthy();
+    const cells = map?.querySelectorAll('rect.share-cell') ?? [];
+    expect(cells.length, 'the field was drawn with no cells in it').toBeGreaterThan(50);
 
-    const readout = document.querySelector('.forecast-column-readout');
-    expect(readout, 'the column was fetched and nothing was drawn from it').toBeTruthy();
-    // Each share is named and printed as a figure, so the reading survives greyscale and is
-    // legible with the bars removed altogether.
-    expect(readout?.textContent).toMatch(/measurement|archive|model|departure/);
-    expect(readout?.querySelectorAll('.forecast-column-share').length).toBeGreaterThan(0);
-    expect(readout?.textContent).toMatch(/%/);
+    // **The field varies.** A map whose cells all carry the same value is a map of nothing —
+    // which is what a broken parameter match, or a slab read off the wrong axis, would produce.
+    const opacities = new Set([...cells].map((cell) => cell.getAttribute('fill-opacity')));
+    expect(opacities.size, 'every cell in the field was drawn at one value').toBeGreaterThan(1);
+
+    // It was read through the query layer, by the query the standard has for a field.
+    expect(fetched.some((url) => url.includes('/area?') && url.includes('-provenance'))).toBe(true);
+
+    // The legend is always present, because identity is never colour alone.
+    const legend = document.querySelectorAll('.forecast-share-legend li');
+    expect(legend.length).toBe(4);
+
+    // Clicking a cell opens its water column, read one position query per depth.
+    await act(async () => {
+      fireEvent.click(cells[Math.floor(cells.length / 2)]);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const profile = screen.getByTestId('column-profile');
+    expect(profile.querySelectorAll('.forecast-column-segment').length, 'the column drew no stack').toBeGreaterThan(0);
+    // And the same claim is printed, so the profile reads with the colour removed.
+    expect(profile.textContent).toMatch(/measurement/);
+    expect(profile.textContent).toMatch(/%/);
+    expect(fetched.some((url) => url.includes('/position?') && url.includes('-provenance'))).toBe(true);
   });
 
-  it('draws the forecast’s own features across the lead, with an uncertainty that grows', async () => {
-    // **The gap this closes.** `ctl/forecast/features` was published on every run from
-    // feature 123 and read by nothing: a loop test validated its shape against its master and
-    // then dropped it, so the product of FR-113 had no surface at all and the Forecast tab
-    // could say why a run happened, what it cost and when, but nothing about what it said.
+  it('changes depth on a reader’s word, and asks the query layer again for it', async () => {
+    // The footprint is a claim about depth as well as position — a sensor reaches the surface
+    // and not the bottom — so the depth control has to actually re-read the field, and the
+    // proof of that is a second area query naming the second depth.
     render(<ForecastPanel {...panelProps()} />);
-    await act(async () => {
-      runtime.clock.tickOnce();
-    });
-    // Before a run has been announced the absence is stated. An empty set of axes would say
-    // the forecast has no features, which is a different claim from having heard none.
-    expect(screen.getByTestId('features-absent')).toBeTruthy();
-    expect(screen.queryByTestId('feature-tracks')).toBeNull();
-
     await act(async () => {
       for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
         runtime.clock.tickOnce();
-        if (document.querySelector('[data-testid="feature-tracks"]')) break;
+        if (document.querySelector('.forecast-share-map')) break;
       }
     });
-    const tracks = screen.getByTestId('feature-tracks');
-    // The drawing is there, and it is an SVG rather than a canvas: a canvas would put the
-    // claim somewhere neither a test nor a screen reader can read it.
-    const plot = tracks.querySelector('svg.forecast-tracks-plot');
-    expect(plot, 'no plan view was drawn for a run that published features').toBeTruthy();
-    expect(tracks.querySelector('canvas')).toBeNull();
-
-    // **The uncertainty grows with lead, and the drawing carries that rather than asserting
-    // it in prose.** A forecast whose claim does not widen is a stronger claim than the model
-    // can support, so the rings are read off the drawing and compared.
-    //
-    // **Within one feature, across its lead steps** — which is the axis the claim is about,
-    // and not the one the first draft measured. That draft gathered every ring in the plot
-    // and asserted the largest exceeded the smallest, which is true of any two *different*
-    // features at the same lead: an eddy and a front have different uncertainties because
-    // they have different strengths. Planted against a carry whose uncertainty does not grow
-    // at all, it passed. A check that cannot fail is worth nothing (CLAUDE.md, lesson 2).
-    const groups = [...tracks.querySelectorAll('g.tracks-feature')];
-    expect(groups.length, 'no feature was drawn').toBeGreaterThan(0);
-    let compared = 0;
-    for (const group of groups) {
-      const rings = [...group.querySelectorAll('circle.tracks-uncertainty')].map((c) =>
-        Number(c.getAttribute('r')),
-      );
-      if (rings.length < 2) continue;
-      const first = rings[0];
-      const last = rings[rings.length - 1];
-      expect(
-        last,
-        `${group.getAttribute('class')}: the ring at the last lead is not wider than at the first`,
-      ).toBeGreaterThan(first);
-      compared += 1;
-    }
-    expect(compared, 'no feature carried more than one lead step, so nothing was compared').toBeGreaterThan(0);
-
-    // And the same claim is readable without the picture, which is what makes it legible in
-    // greyscale, on a phone, and to a reader who cannot see it at all.
-    const figures = tracks.querySelector('.forecast-tracks-figures');
-    expect(figures?.textContent).toMatch(/km/);
-    expect(figures?.textContent).toMatch(/uncertain by/);
-  });
-
-  it('a console that opens after a run still learns what that run said', async () => {
-    // **Why the runner restates.** The features were published on the run and on nothing
-    // else, so a console mounting afterwards had nothing to draw — and every console mounts
-    // afterwards, because the shell opens after the pre-roll. At the shipped cadence and the
-    // default rate the wait for the next run is 1800 ticks: half an hour of a surface saying
-    // the forecast has not spoken. A standing forecast's features are a standing fact, not an
-    // event, which is the same argument the cost statement already makes for itself.
-    //
-    // So: drive until a run has published with the panel NOT mounted, then mount, then allow
-    // the restatement cadence to come round once.
     await act(async () => {
-      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
-        runtime.clock.tickOnce();
-        if (runtime.store.currentInstance() !== undefined) break;
-      }
+      await Promise.resolve();
     });
-    expect(runtime.store.currentInstance(), 'no run published before the console opened').toBeDefined();
+    const areasBefore = fetched.filter((url) => url.includes('/area?')).length;
+    expect(areasBefore).toBeGreaterThan(0);
 
-    render(<ForecastPanel {...panelProps()} />);
+    const depthChips = [...document.querySelectorAll('[aria-label="depth"] .forecast-chip')];
+    expect(depthChips.length, 'the depth control offered no levels').toBeGreaterThan(1);
     await act(async () => {
-      runtime.clock.tickOnce();
+      fireEvent.click(depthChips[depthChips.length - 1]);
     });
-    // Nothing yet: the run's own announcement was made before this panel existed.
-    expect(screen.queryByTestId('feature-tracks')).toBeNull();
-
     await act(async () => {
-      for (let i = 0; i < config.model_runner.cost.restate_every_ticks + 2; i++) runtime.clock.tickOnce();
+      await Promise.resolve();
     });
-    const tracks = screen.getByTestId('feature-tracks');
-    expect(tracks.querySelector('svg.forecast-tracks-plot')).toBeTruthy();
-    // And it is the run that already happened, restated — not a second run, and not a second
-    // opinion about the first. The identifier on the drawing is the one the timeline already
-    // carries for that run, so the two regions are talking about the same thing.
-    const timeline = document.querySelector('[data-region="timeline"]')?.textContent ?? '';
-    const runId = tracks.querySelector('code')?.textContent ?? '';
-    expect(runId.length, 'the drawing named no run').toBeGreaterThan(0);
-    expect(timeline.length, 'the timeline was empty, so nothing corroborates the run id').toBeGreaterThan(0);
+    const areas = fetched.filter((url) => url.includes('/area?'));
+    expect(areas.length, 'changing depth asked the query layer nothing').toBeGreaterThan(areasBefore);
+    // **And it asked for a different depth**, which is the part that could quietly not happen:
+    // a control that re-renders without re-reading would grow the count and fetch the same
+    // slab for ever, and the map would sit still while the label above it changed.
+    const zOf = (url: string) => /[?&]z=([^&]+)/.exec(url)?.[1];
+    expect(zOf(areas[areas.length - 1]), 'the second read asked for the depth it already had').not.toBe(
+      zOf(areas[0]),
+    );
   });
 
   it('a console that opens after an analysis can still read a column from it', async () => {
@@ -353,13 +291,18 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       runtime.clock.tickOnce();
     });
     // Nothing yet: the cycle's announcement was made before this panel existed.
-    expect(document.querySelector('.forecast-column-square')).toBeNull();
+    expect(document.querySelector('.forecast-share-map')).toBeNull();
 
     await act(async () => {
       for (let i = 0; i < config.analyst.restate_every_ticks + 2; i++) runtime.clock.tickOnce();
     });
-    const squares = document.querySelectorAll('.forecast-column-square');
-    expect(squares.length, 'the analysis was never restated, so the chooser stayed undrawn').toBeGreaterThan(0);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(
+      document.querySelector('.forecast-share-map'),
+      'the analysis was never restated, so the field stayed undrawn',
+    ).toBeTruthy();
   });
 
   it('states a feature it could not recover rather than leaving it out of the drawing', async () => {

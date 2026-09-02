@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0043: a run costs simulation time, and the loop is not becalmed by it — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0043-a-run-costs-simulation-time-and-the-loop-is-not-becalmed-by-it">ADR-0043: a run costs simulation time, and the loop is not becalmed by it</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 2 September 2026
+<strong>Feature:</strong> 123 (the forward step, and what a run costs)
+<strong>Requirements:</strong> SRD-v2 FR-114, FR-115, FR-116; answers the companion document's Q2
+<strong>Engages:</strong> Constitution I (no wall-clock time — a third exemption declined); Constitution
+II and AT-04 (byte-identical replay); SRD-v2 FR-31 (the loop shall not be permanently
+becalmable) and FR-32 (three facts, never one appearance); ADR-0006 and ADR-0007, the two
+exemptions that stand</p>
+<h2 id="context">Context</h2>
+<p>The insight the companion requirements document exists for is that <strong>a forecast that takes
+minutes is not an engineering embarrassment to be optimised away; it is a planning problem
+the operator owns.</strong> The vessel chooses when to spend the compute — on passage, in quiet
+water, before a decision point — and the system's job is to make need and cost legible
+together.</p>
+<p>Two questions follow, and the document left both open. What is the cost figure made of? And
+what does the scheduler do with it?</p>
+<p>The first is constitutional. Principle I permits exactly two wall-clock exemptions —
+heartbeat liveness (ADR-0006) and render-path interpolation (ADR-0007) — and says a third
+&quot;must be argued on its own merits, never by analogy&quot;. The document's FI-09 asked for one:
+let the kernel report the wall-clock duration a run actually took, because &quot;a forecast that
+is expensive in the real system and free in the harness would teach the wrong lesson&quot;.</p>
+<h2 id="decision">Decision</h2>
+<h3 id="the-exemption-is-declined-and-cost-is-simulation-time">The exemption is declined, and cost is simulation time</h3>
+<p><strong>No third exemption.</strong> A host-clock duration is a fact about the machine the tab happens to
+be open on. Admitting one puts a figure inside a run that differs between two replays of the
+same manifest, and AT-04's byte-identical claim in its strong form — components in lockstep,
+byte-for-byte across every store and every seam crossing — is the one property that cannot
+be retrofitted at acceptable cost. Principle I stays at two.</p>
+<p>Instead: the kernel reports the <strong>work</strong> a run covers, configuration declares a <strong>rate</strong>, and
+the cost is their quotient, in ticks. Deterministic, replayable, and a property of the run
+rather than of the machine.</p>
+<p>What is given up is stated rather than glossed: the magnitude is a declared rate and not a
+measurement. §8 of the companion document had already conceded exactly this — the harness
+demonstrates that cost is <em>in the domain model</em>, and the magnitude is a matter for the afloat
+appliance.</p>
+<h3 id="a-run-occupies-the-ticks">A run occupies the ticks</h3>
+<p>The alternative was to state the cost beside a run that remains instant. It was rejected
+because it makes a run held for cost impossible to believe in: if nothing is ever actually
+occupied, the hold is a label on a fiction, and FI-09's own words forbid a cost &quot;hidden
+behind a spinner&quot;. So the runner announces the start, integrates, and publishes when the
+ticks are spent.</p>
+<h3 id="one-publisher">One publisher</h3>
+<p>The model runner is the sole publisher of a run's cost. A figure in the scheduler's
+configuration would be a second copy of something the runner owns, able to disagree with it —
+the fault class this repository keeps finding, most recently in the timeline's hand-written
+lane list that feature 116's new era never reached. A gate holds it: no component but the
+runner declares a cost, watched failing against a planted figure.</p>
+<h3 id="the-hold-runs-the-opposite-way-to-the-obvious-reading">The hold runs the opposite way to the obvious reading</h3>
+<p><strong>This is the part worth keeping.</strong> The first formulation was: a run is affordable when it
+fits inside the standing forecast's remaining validity. It was accepted in the interview and
+is wrong, and reading it against FR-31 is what showed why.</p>
+<p>The cadence floor fires <strong>precisely when</strong> the current run's validity has lapsed. At that
+instant the remaining validity is zero, so no run of any cost fits inside it, so no run is
+ever affordable, so nothing ever runs again — the permanently becalmed loop FR-31 was written
+to forbid, and which <code>spikes/watched-turn/FINDING.md</code> has already watched happen once for a
+different reason.</p>
+<p>Inverted, the same figure is a real planning behaviour. <strong>A warranted run is held while the
+standing forecast still has more life than the run costs</strong> — there is no need to spend the
+compute yet — and is released when the remaining validity falls to the cost plus a declared
+margin, so the new run lands as the old one lapses. The hold cannot becalm the loop: it
+releases as validity decays, and the cadence floor still backstops it.</p>
+<h3 id="a-divergence-is-never-held">A divergence is never held</h3>
+<p>A hold is a bet that the standing forecast is still worth something. A divergence is the
+world saying it is not: the observations have contradicted it, and its nominal remaining
+validity is worthless. Scheduled runs and reader prompts wait; a divergence does not.</p>
+<p>A reader's prompt being held is not an oversight but the demonstration — FR-116 has the
+operator committing a run <em>against the stated cost</em>, and a prompt that is held is the surface
+saying what that cost buys and when.</p>
+<h2 id="consequences">Consequences</h2>
+<p><strong>Four facts where FR-32 asked for three.</strong> Held for cost joins declined by the minimum
+interval, declined as a duplicate, and nothing requested — each with its own appearance and
+the shortfall in ticks named, never one appearance for two states.</p>
+<p><strong>The becalm test is not optional.</strong> A test plants a held run, advances the clock past the
+standing forecast's validity, and asserts the run is requested. Written because the design
+almost shipped with the fault, not because the fault was hypothetical.</p>
+<p><strong>The pre-roll and the snapshots move.</strong> A run occupying ticks changes what a start
+condition's legs leave behind; the feature-120 test that holds each card's prose to its legs
+is the one that will say so.</p>
+<p><strong>Cost realism is still not claimed.</strong> The rate is declared. Anyone reading the number as a
+prediction of what the afloat appliance will take is reading it wrongly, and the surface says
+so where a reader meets it (FR-106).</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

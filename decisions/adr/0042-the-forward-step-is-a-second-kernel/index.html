@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The site is public but unadvertised (SRD-v2 PR-01). It declines indexing here and
+     in robots.txt, because a reader arriving from a search engine has arrived without
+     the sentence that says the numbers are invented. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A demonstration harness with deliberately fake numerics.">
+<title>ADR-0042: the forward step is a second kernel, and it becomes the default — drogna</title>
+<link rel="stylesheet" href="../../../assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="../../../">drogna</a>
+  <p class="caveat">A demonstration harness. Every number in it is invented.</p>
+</header>
+<div class="frame">
+  <nav class="sidebar" aria-label="Site">
+<ul><li><a href="../../../">Home</a></li><li><a href="../../../demo/">The demo</a></li><li><a href="../../../architecture/">The architecture</a></li><li><a href="../../../components/">The component reference</a></li><li><a href="../../../standards/">Standards primers</a><ul><li><a href="../../../standards/cf-conventions/">CF conventions</a></li><li><a href="../../../standards/coveragejson/">CoverageJSON</a></li><li><a href="../../../standards/ogc-api-edr/">OGC API-EDR</a></li><li><a href="../../../standards/sensorthings/">SensorThings</a></li></ul></li><li><a href="../../../algorithms/">Algorithm derivations</a><ul><li><a href="../../../algorithms/advection/">Advection</a></li><li><a href="../../../algorithms/ensemble-spread/">Ensemble spread</a></li><li><a href="../../../algorithms/informative-path-planning/">Informative path planning</a></li></ul></li><li><a href="../../../glossary/">Glossary</a></li><li><a href="../../../blog/">The blog</a></li><li><a href="../../../decisions/">The decision records</a></li><li><a href="../../../archive/">The Version 1 archive</a></li></ul>
+  </nav>
+  <main id="content" class="content">
+<h1 id="adr-0042-the-forward-step-is-a-second-kernel-and-it-becomes-the-default">ADR-0042: the forward step is a second kernel, and it becomes the default</h1>
+<p><strong>Status:</strong> Accepted
+<strong>Date:</strong> 2 September 2026
+<strong>Feature:</strong> 123 (the forward step, and what a run costs)
+<strong>Requirements:</strong> SRD-v2 FR-109, FR-112, FR-113; §2.2's kernel port
+<strong>Engages:</strong> Constitution VI (honest ports); Constitution II and AT-04 (byte-identical
+replay); ADR-0040 (a run arrives by having run); the feature-116 rule that a run
+initialises from the analysis and never from the true field</p>
+<h2 id="context">Context</h2>
+<p>§2.2 has listed the <strong>model kernel</strong> among drogna's genuine ports since V2 began —
+&quot;initialisation state in, gridded field out&quot;, with more than one conceivable
+implementation. There has only ever been one: <code>shift-advect-v1</code>, which displaces the whole
+field rigidly at a configured velocity, samples the initial state at the displaced cell
+with edge clamping, and adds per-cell noise whose deviation grows as the root of the lead.</p>
+<p>Constitution VI says the documentation claims exactly the pluggability that exists. On the
+letter of it the port was honest — the interface is narrow, the runner holds only the
+interface, and a V3 numerical model plugs into it. On the spirit of it the claim was
+untested: no second implementation had ever been written against that interface, so nobody
+knew whether it was a port or a description of the one function behind it.</p>
+<p>There is a second problem, and it is the one the companion requirements document names.
+Advection is not a forecast. It slides a field sideways rather than propagating a state:
+the field at lead six is the field at lead zero, moved and blurred. Every requirement above
+that says &quot;forecast&quot; has been doing more work than the code beneath it, and the harness
+cannot demonstrate the mechanism an operator most needs explained.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>A shallow two-layer advection–diffusion step is written as a second implementation behind
+the unchanged port, and becomes the configured kernel. <code>shift-advect-v1</code> stays registered
+and stays tested.</strong></p>
+<p>Three parts, each of which was arguable.</p>
+<h3 id="it-goes-behind-the-existing-port-and-the-port-does-not-move">It goes behind the existing port, and the port does not move</h3>
+<p>The port is not redesigned to accommodate it. The new kernel's parameters arrive in an
+<strong>optional</strong> block on <code>KernelParameters</code>, and the kernel refuses by name when that block is
+absent — the idiom the runner already uses when it is handed a kernel name it does not
+know. <code>shiftAdvectKernel</code> is not edited at all.</p>
+<p>This is the test, and it is deliberately a strict one: <strong>if the interface has to be bent to
+fit the newcomer, that is the finding.</strong> A port that needs widening for its second
+implementation was a description of its first, and Constitution VI would then require the
+documentation to say so rather than the interface to be quietly reshaped.</p>
+<h3 id="the-new-kernel-becomes-the-default-rather-than-an-alternative">The new kernel becomes the default rather than an alternative</h3>
+<p>The three options were: default, chosen per start condition, or tunable from the operator
+plane. The last two both put two kernels in one run history, and every comparison feature
+124's surface will draw — this run against the last, this source's contribution then and
+now — would carry an invisible extra variable. One forecast in the harness, and it is the
+honest one.</p>
+<p><code>shift-advect-v1</code> is nonetheless <strong>not retired</strong>. Two reasons, and the second is the one
+that matters. It is the demonstration that the port is real: a port with one implementation
+is a claim about pluggability, a port with two is a fact about it. And its tests are the
+ones that catch the port's interface being bent — they are written against the interface as
+it was, and they fail if it changes underneath them.</p>
+<h3 id="the-features-are-forecast-as-features-from-the-analysis">The features are forecast as features, from the analysis</h3>
+<p>The seeded eddy, front, thermocline and drifting feature are published with their
+parameters and a growing uncertainty, per forecast step, and scored against the manifest's
+ground truth. A forecast that publishes only a field makes no falsifiable claim about next
+week; it draws a picture of it.</p>
+<p>Their parameters are <strong>estimated from the analysis the run initialises from</strong>, and from
+nothing else. Reading them out of the manifest would be a forecast made from the truth —
+the exact fault feature 116 found and fixed, when the runner initialised from a now-cast
+the generator had evaluated from the true ocean and nothing the platform measured ever
+reached a forecast. That fault is recorded in the runner's own head comment and in a blog
+entry, and it is the one this decision is most at risk of reintroducing.</p>
+<h2 id="consequences">Consequences</h2>
+<p><strong>Every published field changes.</strong> The committed snapshots regenerate and
+<code>check-snapshot-drift</code> fails until they do. That is the gate working, and the diff is read
+before it is committed rather than accepted as churn (ADR-0041).</p>
+<p><strong>Replay must survive it.</strong> The kernel is a pure function of state, parameters and its
+seeded stream, so AT-04's byte-identical claim holds by construction — and is checked by
+<code>pnpm replay-proof</code> rather than argued.</p>
+<p><strong>The estimators are the risk, and it is a real one.</strong> Four estimators over a noisy ensemble
+mean at a coarse grid is signal processing, not plumbing; the front and the thermocline are
+the two expected to be difficult. The discipline is stated in advance because it is easy to
+break under pressure: an estimator that will not score honestly is <strong>reported as not done</strong>,
+never rescued by widening its bound until it passes (Constitution IX).</p>
+<p><strong>A V3 numerical model now has a worked example of the seam it plugs into</strong>, which is the
+thing the port was declared for and had not yet been asked to do.</p>
+
+  </main>
+</div>
+<footer class="footer">
+  <p>drogna is a learning harness. Its data is synthetic and its numerics are deliberately
+  fake. Nothing it produces is a measurement of anything real.</p>
+  <p>This site loads nothing from another origin: no fonts, no scripts, no analytics.</p>
+</footer>
+</body>
+</html>

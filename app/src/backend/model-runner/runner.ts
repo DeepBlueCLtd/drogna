@@ -258,7 +258,7 @@ export class ModelRunner {
    * a run occupied anything, the whole chain — request, analysis, started, published —
    * completed inside one tick, so there was no interval in which this component could be
    * stopped with work outstanding. There is now one on every run, exactly as long as the
-   * cost, and the Forecast tab advertises it by drawing "occupying 12 tick(s)".
+   * cost, and the Forecast tab advertises it by drawing what the run is occupying.
    *
    * Stopping the runner in that window discards the staged closure. The scheduler clears
    * its outstanding run only on a publication, so it would wait for one that is never
@@ -289,14 +289,41 @@ export class ModelRunner {
   }
 
   private run(request: AnalysisPublished): void {
-    // Refused before any work, not after it. The scheduler allows one request in flight at
-    // a time, so this cannot be reached from the shipped loop; it is refused here rather
-    // than at the point of staging so that a second analysis could never announce a run and
-    // burn an ensemble on its way to being told no.
+    // Refused before any work, not after it: a second analysis must never announce a run
+    // and burn an ensemble on its way to being told no.
+    //
+    // **This branch said "cannot be reached from the shipped loop", and it was wrong.**
+    // Restarting the scheduler — an ordinary Operator verb — inside the window a run
+    // occupies is enough: the fresh scheduler has no `inFlight` and no validity to hold
+    // against, so its cadence floor fires at once, the analyst obliges, and a second
+    // analysis lands here while the first run is still spending its cost. Measured on the
+    // shipped configuration at `loitering`, seed 4242, with the restart at tick 4420:
+    // twenty thousand ticks and eleven cadence floors afterwards with nothing requested,
+    // started or published.
+    //
+    // The becalm was not the refusal; it was that the refusal was a `throw`. This runs
+    // inside a broker subscription handler, and the broker catches handler faults and
+    // increments `deliveryFaults` — so the scheduler was never told, went on waiting for a
+    // publication that had been refused, and no surface said anything. A refusal whose
+    // only consumer is a counter is not a refusal anybody hears.
+    //
+    // So it is answered the way the stopped-runner case is answered, on the same branch:
+    // `run-failed` for the run being refused, which is the run the scheduler is holding.
+    // The occupying run is untouched and publishes when its cost is spent.
     if (this.occupying) {
-      throw new Error(
-        `run ${request.run_id} arrived while ${this.occupying.runIdentifier} is still occupying its cost; the scheduler allows one request in flight at a time and this runner does not silently drop either`,
-      );
+      this.client.publish(this.config.topics.telemetry, {
+        component: this.config.id,
+        scenario_run_id: this.runId,
+        sim_time: this.simTime.value,
+        tick: this.simTime.tick,
+        kind: 'run-failed',
+        run_id: request.run_id,
+        detail:
+          `run ${request.run_id} arrived while ${this.occupying.runIdentifier} is still occupying its cost ` +
+          `(${this.simTime.tick - this.occupying.startedAtTick} of ${this.costTicks()} tick(s) spent); the runner takes ` +
+          'one run at a time and refuses this one rather than dropping either silently',
+      } satisfies TelemetryRunFailed);
+      return;
     }
     const analysis = this.store.holding(request.collections.analysis);
     if (!analysis) {
@@ -420,6 +447,7 @@ export class ModelRunner {
       featureGrid,
       parameters,
       errorSum / Math.max(errorTemperature.length, 1),
+      this.kernel,
     );
 
     const forecastId = request.run_id;

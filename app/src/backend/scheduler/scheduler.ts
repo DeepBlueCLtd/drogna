@@ -77,8 +77,17 @@ export class Scheduler {
    */
   private tickSeconds: number | undefined;
   private lastSample: { tick: number; millis: number } | undefined;
-  /** The cause currently being held, so the hold is reported once and not on every tick. */
-  private holding: RunRequest['cause'] | undefined;
+  /**
+   * Which causes have already reported the hold they are in, so a hold is stated once per
+   * episode and not on every tick.
+   *
+   * A **set**, not a single cause. It was one field, and a reader's prompt overwrote it —
+   * so the next clock sample found the cadence floor's cause missing and republished a
+   * fact that had not changed, once per press. The field was named for the state and used
+   * as a marker for the report, and the two are not the same thing: two causes can be held
+   * at one instant, and each owes the reader exactly one sentence about it.
+   */
+  private readonly reportedHolds = new Set<RunRequest['cause']>();
   /**
    * A reader's prompt that was held, still owed a run.
    *
@@ -263,7 +272,7 @@ export class Scheduler {
       this.hold('operator', shortfall, 'a reader prompted a run', true);
       return;
     }
-    this.holding = undefined;
+    this.reportedHolds.clear();
     const runIdentifier = this.request('operator', undefined);
     this.reportDecision(null, 'accepted', `requested ${runIdentifier} on an operator prompt`, runIdentifier);
   }
@@ -285,7 +294,7 @@ export class Scheduler {
     // (ADR-0043). A hold is a bet that the standing forecast is still worth something; a
     // divergence is the world saying it is not, so its nominal remaining validity is worth
     // nothing and there is nothing to wait for.
-    this.holding = undefined;
+    this.reportedHolds.clear();
     this.request('divergence', divergence);
   }
 
@@ -379,7 +388,7 @@ export class Scheduler {
       this.hold('scheduled', shortfall, 'the cadence floor has come due');
       return;
     }
-    this.holding = undefined;
+    this.reportedHolds.clear();
     this.request('scheduled', undefined);
   }
 
@@ -393,7 +402,7 @@ export class Scheduler {
   private releaseHeldPrompt(): void {
     if (!this.promptHeld || this.inFlight !== undefined || this.holdShortfall() > 0) return;
     this.promptHeld = false;
-    this.holding = undefined;
+    this.reportedHolds.clear();
     if (this.lastRequestTick !== undefined && this.simTime.tick - this.lastRequestTick < this.minimumInterval()) {
       // The world moved while the prompt waited. It is declined by the rule that declines
       // it, not silently forgotten: a commitment that expires without a word is the fault
@@ -422,8 +431,8 @@ export class Scheduler {
     // The cadence floor is considered on every tick and would republish an unchanged fact
     // for as long as the hold lasted, so it is reported once per episode. A reader's prompt
     // is not on a cadence: it is asked, and it is answered, every time.
-    if (!always && this.holding === cause) return;
-    this.holding = cause;
+    if (!always && this.reportedHolds.has(cause)) return;
+    this.reportedHolds.add(cause);
     this.heldForCost += 1;
     this.lastDecision =
       `held for cost: ${why}, but the standing forecast has ${this.remainingValidityTicks()} tick(s) of validity left ` +

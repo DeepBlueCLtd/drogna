@@ -235,8 +235,11 @@ deliverable the author asked for and the code is the second half.
 - **SC-009** With the indicator topic silent, the left region states the absence and draws no
   gauge; with the monitor's residual published, the gauge names what it is showing (AT-10).
 - **SC-010** Nothing in the view polls. Held by a test that advances the clock with no
-  announcement published and asserts no fetch was made, then publishes one and asserts the
-  view refetched.
+  announcement published and asserts no fetch was made — neither a redraw nor a request.
+  *Amended:* the second half of this, "then publishes one and asserts the view refetched",
+  describes a surface that fetches on announcement. This one does not: it makes a single
+  request on mount, for the history that had already happened, and everything after it
+  arrives as a message. There is no refetch to assert.
 - **SC-011** The committed snapshots regenerate clean under `check-snapshot-drift` after the
   kernel change, and the diff is read and explained rather than accepted.
 - **SC-012** Every acceptance above is **watched happening in the shell** across the full path

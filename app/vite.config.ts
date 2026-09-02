@@ -61,6 +61,23 @@ export default defineConfig({
     // which is what stops five drives being paid for where one would do. The hook then
     // carries the cost the tests used to, and vitest budgets hooks separately — at ten
     // seconds by default, which is under what one drive costs even here.
-    hookTimeout: 60_000,
+    //
+    // Raised again at feature 123, for the third time and by the same argument, because
+    // that feature made the drive dearer in *simulation* time and the budget is in host
+    // time. A run now occupies the ticks it costs, and the scheduler holds a warranted run
+    // while the standing forecast still outlives it — so the second cycle no longer arrives
+    // on the cadence floor. Measured, driving to the second publication:
+    //
+    //     shipped release_margin_ticks: 30   4429 ticks   38.7s standalone
+    //     margin raised so no hold fires     3609 ticks   28.0s standalone
+    //
+    // — 23% more ticks and 38% more host time, in a hook that was already the longest in
+    // the suite. It walked into this ceiling one commit at a time: 52.8s, 57.5s, 59.96s,
+    // and then a timeout, the third of those passing by 36 milliseconds. A bound a run
+    // clears by 0.06% is not a bound, and the run that cleared it was on this machine —
+    // the comment above records CI taking roughly twice as long. 120s is that measurement
+    // doubled for a CI runner and rounded up, and it is the number to re-derive the next
+    // time the loop gets dearer rather than the number to nudge.
+    hookTimeout: 120_000,
   },
 });

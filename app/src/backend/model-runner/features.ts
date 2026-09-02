@@ -27,7 +27,7 @@
  * carrying the spacing it was resolved at.
  */
 import { KM_PER_DEGREE_LATITUDE, kmOffsets } from '../env-generator/analytic.js';
-import type { KernelParameters } from './kernel.js';
+import type { KernelParameters, ModelKernel } from './kernel.js';
 
 export interface FeatureGrid {
   readonly longitudes: readonly number[];
@@ -576,12 +576,18 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
  * first draft took a depth argument and every call site passed zero, which is the same
  * behaviour with a parameter in front of it pretending otherwise.
  */
-function carryVelocity(parameters: KernelParameters): { eastKmPerDay: number; northKmPerDay: number } {
-  const two = parameters.twoLayer;
-  if (!two) {
-    return { eastKmPerDay: parameters.advectionEastKmPerDay, northKmPerDay: parameters.advectionNorthKmPerDay };
-  }
-  return { eastKmPerDay: two.upper.eastKmPerDay, northKmPerDay: two.upper.northKmPerDay };
+function carryVelocity(kernel: ModelKernel, parameters: KernelParameters): { eastKmPerDay: number; northKmPerDay: number } {
+  // The kernel is asked, never inferred. This function used to read
+  // `parameters.twoLayer !== undefined` as "the two-layer kernel is configured", and the
+  // runner sets that block whichever kernel is configured — so the two-layer branch was
+  // taken always, and with `shift-advect-v1` selected the features drifted at 7 and 3
+  // km/day while the field moved at 4 and 2. The unreachable branch was not a dead line;
+  // it was the correct behaviour, never run.
+  const declared = kernel.carryVelocity?.(parameters);
+  if (declared) return declared;
+  // A kernel that declares none is carried at the configured advection, which is what an
+  // undeclared field does.
+  return { eastKmPerDay: parameters.advectionEastKmPerDay, northKmPerDay: parameters.advectionNorthKmPerDay };
 }
 
 /** A position carried forward by a velocity over a lead, about a reference latitude. */
@@ -655,7 +661,10 @@ export function carryFeatures(
   grid: FeatureGrid,
   parameters: KernelParameters,
   analysisErrorC: number,
+  /** The kernel the field is being carried by, which is the one asked for the velocity. */
+  kernel: ModelKernel,
 ): readonly CarriedFeatures[] {
+  const velocity = carryVelocity(kernel, parameters);
   const carried: CarriedFeatures[] = [];
   const depthSpacing = grid.depthsM.length > 1 ? grid.depthsM[1] - grid.depthsM[0] : 0;
   for (let step = 0; step < parameters.steps; step++) {
@@ -706,7 +715,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.eddy.centreLongitude,
               estimate.eddy.centreLatitude,
-              carryVelocity(parameters),
+              velocity,
               leadSeconds,
               grid.referenceLatitude,
             );
@@ -721,7 +730,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.moving.centreLongitude,
               estimate.moving.centreLatitude,
-              carryVelocity(parameters),
+              velocity,
               leadSeconds,
               grid.referenceLatitude,
             );
@@ -736,7 +745,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.front.anchorLongitude,
               estimate.front.anchorLatitude,
-              carryVelocity(parameters),
+              velocity,
               leadSeconds,
               grid.referenceLatitude,
             );

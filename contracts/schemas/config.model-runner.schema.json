@@ -171,8 +171,7 @@
         "restate_every_ticks": {
           "type": "integer",
           "exclusiveMinimum": 0,
-          "description": "How often the cost statement is repeated, in ticks of simulation time. A cost is a DECLARATION rather than an event: every restatement carries the same figures, so repeating it tells a listener that arrived late what the first statement said and tells one that heard it nothing new. Without it the figure would be published once, before the shell had mounted, and the surface that must state cost beside need (FR-118) could never have heard it. Measured in ticks and driven by the clock subscription this component already holds, so the repetition is deterministic and replays identically \u2014 it is a publication on the component's own clock and not a poll.",
-          "default": 60
+          "description": "How often the cost statement is repeated, in ticks of simulation time. A cost is a DECLARATION rather than an event: every restatement carries the same figures, so repeating it tells a listener that arrived late what the first statement said and tells one that heard it nothing new. Without it the figure would be published once, before the shell had mounted, and the surface that must state cost beside need (FR-118) could never have heard it. Measured in ticks and driven by the clock subscription this component already holds, so the repetition is deterministic and replays identically \u2014 it is a publication on the component's own clock and not a poll. No default: it is required, so a default here would be a value nothing can ever read."
         },
         "nominal_cell_km": {
           "type": "number",

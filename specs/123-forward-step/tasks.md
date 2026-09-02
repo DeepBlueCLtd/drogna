@@ -5,11 +5,15 @@ implementation second.** The first carried the requirements and the decision rec
 changed no code; the second is the implementation, and it ticks the rest with the reasons
 written at the moment they were taken (CLAUDE.md, lesson 1).
 
-Four of them found something the plan did not have, and those four are worth reading before
-the rest: **T024** (what the estimators actually recover, and the two things that had to be
-got right for them to), **T042** (the snapshots did not move, and why the task expected them
-to), **T043** (one start condition's legs, and only one), and **T045** (what a run occupying
-its cost did to five existing suites).
+**Where to start.** The plan's own tasks run to T048; T049 onwards are what four rounds of
+adversarial review found, and those are the ones worth reading first. In rough order of what
+they cost to be wrong: **T049** (stopping the runner mid-cost becalmed the loop for ever),
+**T056** (every forecast step served one step off the label on it), **T068** (a mask claimed
+in three documents and applied in one place of two), **T051** and **T053** (magnitudes
+published at sixteen times their own uncertainty; a feature located 213 km from where it was
+authored, at one seed in five), and **T065**, **T071** and **T073** (three checks this
+feature added that could not fail — in the branch that quotes the lesson about exactly that).
+Of the plan's own, **T024**, **T042**, **T043** and **T045** found things it did not have.
 
 ## The record — done on this branch
 
@@ -293,7 +297,7 @@ Two independent passes read the diff without having seen it written
 are the kind that only an outsider finds — the author had already decided each was fine.
 
 - [x] T049 **Stopping the model runner mid-cost becalmed the loop for ever.** A run now
-      occupies twelve ticks between its announcement and its publication, and the scheduler
+      occupies the ticks it costs between its announcement and its publication, and the scheduler
       clears its outstanding run on a publication and on nothing else — so a stop landing in
       that window meant no cadence floor and no divergence would ever be acted on again,
       reached through an ordinary operator verb. It had been recorded here as "widened, not
@@ -379,7 +383,7 @@ mislabelled every forecast the harness ever served.
       got an unchanged screen and a button that looked broken. A prompt is answered every
       time it is asked.
 - [x] T059 **The Operator's ensemble face drew five empty pips for the whole visible duration
-      of a run.** `members_done` was set at publication, and a run now waits twelve ticks
+      of a run.** `members_done` was set at publication, and a run waits out the ticks it costs
       after computing every member — so the one figure that exists to show an ensemble
       filling rather than spinning was reporting less work than had been done. It is set
       when the members exist, which is when it became true.
@@ -472,7 +476,7 @@ mislabelled every forecast the harness ever served.
       the declared cost was also the occupied one — and wrong by a third as a *statement*, in
       a `basis` string whose whole purpose is that a reader who disagrees with the cost can
       see which assumption to argue with. A run now costs 9 ticks and says why.
-- [x] T070 **An abandoned run said "occupying 12 tick(s)" for ever.** T049 gave the runner a
+- [x] T070 **An abandoned run went on saying it was occupying its cost for ever.** T049 gave the runner a
       way to say it had given a run up and the scheduler a way to hear it; the Forecast tab
       receives the same message on the same topic and dropped it. So the surface built to
       make an occupancy visible went on asserting work in progress that the component owing
@@ -489,6 +493,31 @@ mislabelled every forecast the harness ever served.
       carried `divergence_id`, which is null for every hold by construction, so two holds at
       one tick collided (it now carries what the scheduler said); and the blog capture and
       its alt text stated a nominal cell of 11 km after T063 moved it to 5.
+
+### The fifth round, and the third check that could not fail
+
+- [x] T073 **"Reported once per episode" was true by construction of the test's own stopping
+      condition.** The drive stopped on the tick that published the first hold, so the count
+      was one whatever the scheduler did — and deleting the dedupe outright left all seven
+      tests in the file green. It now drives past the hold and counts again: 201 against 1
+      with the guard removed. That is the third check this feature added that could not fail,
+      in a branch that quotes the lesson about exactly that, and the pattern is worth naming
+      because all three took the same shape — an assertion placed where the thing it tests
+      cannot yet have gone wrong.
+- [x] T074 **And the check that could not fail was hiding a real fault.** The hold marker was
+      one field, named for the cause being held and used as the marker for having reported
+      it. A reader's prompt overwrote it, so the next clock sample found the cadence floor's
+      cause missing and republished a fact that had not changed — a spurious row on the
+      Forecast timeline and a wrong figure on the scheduler's face, once per press. It is a
+      set now: two causes can be held at one instant, and each owes the reader exactly one
+      sentence. Held by a bench test that plants the floor holding and then presses twice.
+- [x] T075 The record: `restate_every_ticks` carried the same unreachable `default` beside
+      `required` that T067 had just removed from its sibling; SC-010's second clause
+      described a refetch this surface does not do and no test holds; four statements still
+      said a run occupies twelve ticks after T069 made it nine; the SRD amendment to FR-113
+      had split the requirement mid-paragraph, leaving its closing sentences and its citation
+      inside the amendment note; and this file's own opening index still pointed at four
+      tasks from the plan after four review rounds had found larger things.
 
 Two of their observations were recorded rather than acted on. The sub-stepping machinery
 never engages at the shipped grid (one sub-step at both the nominal and the real cell size,
@@ -511,3 +540,70 @@ message against its master so the shape cannot rot in the meantime.
       here rather than left as an unexplained still.
 - [x] T048 Tick the tasks above as they are done, and write the reason at the moment a task
       is declined. The reason is the part that cannot be reconstructed later.
+
+## The sixth round: what CI saw and the local check did not
+
+The three below were all found after the branch was believed finished, and the first is the
+one worth reading. `pnpm check` had reported green on every commit of this branch while
+**every CI run on the pull request failed** — seven of them, from the first push onwards.
+The check the repository runs locally and the check CI runs are not the same check, and
+nothing said so.
+
+- [x] T076 The Forecast tab did not fit a phone, and `pnpm check` cannot see that. The
+      capture proofs (`capture:mobile`, feature 112's SC-001) run in CI and not in `check`,
+      and they failed eleven times on this panel: `.forecast-run` was a grid of three
+      `max-content` columns and a `minmax(0, 1fr)`, which cannot fold. At 360px the button
+      laid out 351px wide inside 320px and pushed the `li`, the `ol`, the region and the
+      whole panel past the viewport with it. Now a wrapping flex row — no breakpoint, so it
+      folds wherever the content stops fitting — and `.forecast-run-detail` breaks inside a
+      word, because a flex item's floor is its longest word and "published:" is 70px at this
+      size, which is what the proof measured inside a 35px track. Reproduced locally at
+      eleven failures, fixed, re-run at zero.
+- [x] T077 **The refusal nobody heard.** T049 answered one entrance to the cost window —
+      the runner stopped mid-occupancy — and asserted the other could not be reached: "the
+      scheduler allows one request in flight at a time, so this cannot be reached from the
+      shipped loop". Restarting the *scheduler* reaches it. A fresh scheduler has no run in
+      flight and no standing validity to hold against, so its cadence floor fires at once,
+      the analyst obliges, and a second analysis arrives at a still-occupied runner. The
+      runner refused it by `throw`ing — inside a broker subscription handler, which catches
+      handler faults and increments a counter. So the scheduler was never told, went on
+      waiting for a publication that had been refused before any work was done, and no
+      surface said anything. Measured at `loitering`, seed 4242, restart at tick 4420:
+      twenty thousand ticks and eleven cadence floors with nothing requested, started or
+      published. It now publishes `run-failed` for the run it refuses, on the branch the
+      stopped-runner case already uses.
+
+      Two drafts of the test were too weak to keep, and both are worth recording because
+      they are the same mistake in different clothes. The first restarted the scheduler
+      during the *first* run — and a restarted scheduler counts run ids from zero again, so
+      it asked for the same `…-run-0` that was already occupying, and the occupying run's
+      publication cleared the new scheduler's outstanding run by an id collision rather than
+      by anything being right. The second asserted "a request followed the restart", which
+      the becalmed loop also does: it makes exactly one. What separates the two cases is a
+      *second* request, and the test now waits four cadence intervals for it. Watched
+      failing against the restored `throw`: "expected 3 to be greater than 3".
+- [x] T078 A feature was carried at a velocity the field is not. `carryVelocity` read
+      `parameters.twoLayer !== undefined` as "the two-layer kernel is configured", and the
+      runner populates that block whichever kernel is configured — deliberately, and it says
+      so. So the branch was taken always: with `shift-advect-v1` selected the published
+      features drifted at 7 and 3 km/day while the field was translated at the configured 4
+      and 2, which on the shipped grid rounds to no displacement at all. Two forecasts in
+      one message, which is what that function's own comment forbids. The unreachable branch
+      was not a dead line — it was the correct behaviour, never run.
+
+      The kernel is now asked rather than inferred: `ModelKernel.carryVelocity?`, optional
+      like `subStepsPerStep` and for the same reason. No check could have caught this,
+      because every carry test used the two-layer kernel, where the wrong branch and the
+      right branch agree. The new one runs the same estimate under both kernels and reads
+      the velocity off the resulting track. Its first draft asserted to a tolerance of
+      0.0005 km/day and failed on the lat/lon round-trip (7.0028 for 7) while the planted
+      fault went unremarked — a check failing for the wrong reason, which is no better than
+      one that cannot fail. At a tolerance of 0.05, against kernels 3 km/day apart, it
+      failed as it should: "expected 7.0028 to be close to 4".
+- [x] T079 The analyst's hook budget, raised on a measurement rather than nudged. Feature
+      123 made the drive dearer in simulation time — the hold moves the second cycle off the
+      cadence floor, 3609 ticks to 4429, 28.0s to 38.7s standalone — and the budget is in
+      host time. It walked into the ceiling one commit at a time: 52.8s, 57.5s, 59.96s, then
+      a timeout. The third of those passed by 36 milliseconds, and a bound cleared by 0.06%
+      is not a bound. 120s is the measurement doubled for a CI runner, which is the ratio
+      `vite.config.ts` already records.

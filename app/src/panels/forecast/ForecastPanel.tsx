@@ -233,7 +233,7 @@ export function ForecastPanel({ params }: PanelProps) {
         if (!drawable(message.topic, message.payload)) return;
         const report = message.payload as { kind?: string };
         // A run the runner gave up on. **The panel used to receive this and drop it**, so a
-        // run stopped mid-cost read "occupying 12 tick(s)" for the rest of the session — a
+        // run stopped mid-cost read as still occupying its cost for the rest of the session — a
         // surface built to make an occupancy visible saying work is in progress that the
         // component owing it had already said would never finish, with the contradicting
         // message delivered and discarded.

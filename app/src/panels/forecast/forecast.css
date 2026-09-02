@@ -131,10 +131,23 @@
   gap: 2px;
 }
 
+/**
+ * **A wrapping flex row, not a track list.** The first version was a grid of three
+ * `max-content` columns and a `minmax(0, 1fr)`, which cannot fold: at a phone's width the
+ * three fixed tracks still demanded their content's width, so the button laid out 351px
+ * wide inside 320px and pushed the `li`, the `ol`, the region and the whole panel past the
+ * viewport with it — eleven of `capture:mobile`'s narrow-presentation proofs, from this one
+ * declaration. `pnpm check` does not run those proofs and reported the panel green; CI ran
+ * them and did not.
+ *
+ * Flex with `wrap` folds at whatever width the content stops fitting, which is why there is
+ * no breakpoint here: the row is one line where one line fits and two where it does not, at
+ * 320px and at 3200px alike, without a number that has to be right.
+ */
 .forecast-run {
-  display: grid;
-  grid-template-columns: max-content max-content max-content minmax(0, 1fr);
-  gap: 0 0.6em;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.6em;
   align-items: baseline;
   width: 100%;
   text-align: left;
@@ -166,6 +179,14 @@
 
 .forecast-run-detail {
   color: var(--shell-dim);
+  /* Takes the rest of the line, and may be squeezed to nothing before the row wraps. */
+  flex: 1 1 auto;
+  /* `min-width: 0` alone is not enough: a flex item's floor is its longest word, and
+     "published:" is 70px at this size — which is what the proof measured inside a 35px
+     track. Breaking inside a word is the last resort and the only one that holds at an
+     arbitrary width. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .forecast-run-held .forecast-run-cause {

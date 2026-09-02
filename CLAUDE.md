@@ -38,7 +38,7 @@ containers, no daemon (SRD-v2 NFR-01).
 
 ```sh
 pnpm install
-pnpm check        # typecheck, lint, unit tests, gates — what CI runs
+pnpm check        # typecheck, lint, unit tests, gates — NOT all of what CI runs
 pnpm gates        # the constitution gates alone (scripts/gates.registry)
 pnpm generate     # regenerate app/src/generated/ from contracts/ masters
 pnpm snapshots    # regenerate app/public/snapshots/ by running the components (ADR-0041)
@@ -46,6 +46,19 @@ pnpm -C app dev   # the shell, live, at a local URL
 pnpm -C app build # the static site V2 delivers
 pnpm site:build   # the published site, into site/build/ (ADR-0031)
 pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped labels
+```
+
+**`pnpm check` is not the build.** This line read "what CI runs" until a branch shipped
+seven consecutive red CI runs while `pnpm check` reported green on every commit of it. CI
+runs six capture proofs after the checks above — `capture:glance operator`,
+`capture:background`, `capture:messages`, `capture:map`, `capture:mobile` and
+`capture:consumers` — and they need a build and a browser, which is why they are not in
+`check`. They are also the only thing that reads the shell as a *rendered page*: the eleven
+failures that branch collected were a new panel that did not fit a phone, which no unit test
+can see. Before pushing anything with a face, build and run the proof for it:
+
+```sh
+pnpm -C app build && pnpm run capture:mobile   # and the others CI runs, listed above
 ```
 
 `pnpm gates` runs the gates listed in `scripts/gates.registry`, one per line. **A new

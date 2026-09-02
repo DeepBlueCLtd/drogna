@@ -27,6 +27,7 @@ import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend } from '../runtime/runtime.js';
 import { KM_PER_DEGREE_LATITUDE, kmOffsets, frontSignedDistanceKm } from '../env-generator/analytic.js';
 import { estimateFeatures, carryFeatures, type FeatureGrid } from './features.js';
+import { shallowTwoLayerKernel, shiftAdvectKernel, type KernelParameters } from './kernel.js';
 
 const validator = createSeamValidator();
 
@@ -89,6 +90,30 @@ function truth(manifest: Manifest, kind: string): Record<string, number> {
   if (!feature) throw new Error(`no ${kind} in the manifest`);
   return feature.parameters as unknown as Record<string, number>;
 }
+
+/**
+ * One set of kernel parameters for the carry tests, with **both** velocity blocks
+ * populated — which is exactly what the runner does, and exactly what made the fault
+ * below invisible. A fixture that set only the block belonging to the kernel under test
+ * would have agreed with the broken code.
+ */
+const CARRY_PARAMETERS: KernelParameters = {
+  steps: 4,
+  stepSeconds: 900,
+  advectionEastKmPerDay: 4,
+  advectionNorthKmPerDay: 2,
+  noiseStdTemperature: 0.35,
+  noiseStdSalinity: 0.03,
+  twoLayer: {
+    interfaceDepthM: 250,
+    upper: { eastKmPerDay: 7, northKmPerDay: 3 },
+    lower: { eastKmPerDay: -2, northKmPerDay: 1 },
+    horizontalDiffusivityM2PerS: 45,
+    interfacialExchangePerDay: 0.06,
+    maxCourant: 0.4,
+    maxSubSteps: 64,
+  },
+};
 
 describe('the four features, estimated from a gridded field and scored against the manifest', () => {
   it.each(SEEDS)('AT-06 descendant: the eddy centre is recovered inside the eddy the field carries (seed %i)', (rootSeed) => {
@@ -227,23 +252,7 @@ describe('the four features, estimated from a gridded field and scored against t
   it('carries the features forward with an uncertainty that grows, and declines nothing silently', () => {
     const { temperature, grid } = fixture();
     const estimate = estimateFeatures(temperature, grid);
-    const carried = carryFeatures(estimate, grid, {
-      steps: 4,
-      stepSeconds: 900,
-      advectionEastKmPerDay: 4,
-      advectionNorthKmPerDay: 2,
-      noiseStdTemperature: 0.35,
-      noiseStdSalinity: 0.03,
-      twoLayer: {
-        interfaceDepthM: 250,
-        upper: { eastKmPerDay: 7, northKmPerDay: 3 },
-        lower: { eastKmPerDay: -2, northKmPerDay: 1 },
-        horizontalDiffusivityM2PerS: 45,
-        interfacialExchangePerDay: 0.06,
-        maxCourant: 0.4,
-        maxSubSteps: 64,
-      },
-    }, 0.2);
+    const carried = carryFeatures(estimate, grid, CARRY_PARAMETERS, 0.2, shallowTwoLayerKernel);
     expect(carried).toHaveLength(4);
     // A forecast that does not widen with lead is making a stronger claim than it can
     // support; a depth that widens is making one the physics does not make, since this
@@ -287,5 +296,61 @@ describe('the four features, estimated from a gridded field and scored against t
       // And never both, which would be a feature published and disowned in one message.
       expect(estimated[kind] && wholeFeature.has(kind), `${kind} is both estimated and declined`).toBe(false);
     }
+  });
+
+  it('carries a feature at the configured kernel’s own velocity, and not at another kernel’s', () => {
+    // **The check the fault got past.** `carryVelocity` selected the two-layer velocity on
+    // `parameters.twoLayer !== undefined`, and the runner populates that block whichever
+    // kernel is configured — so with `shift-advect-v1` selected, the published features
+    // drifted at the two-layer upper velocity while the field they describe was translated
+    // at the configured advection. A feature carried at a speed the field is not carried at
+    // is two forecasts in one message, which is what the module forbids in its own words.
+    //
+    // Nothing scored here could see it: every carry test used the two-layer kernel, so the
+    // wrong branch and the right branch agreed. What separates them is running the same
+    // estimate under both kernels and reading the displacement each produces.
+    const { temperature, grid } = fixture();
+    const estimate = estimateFeatures(temperature, grid);
+    const start = estimate.eddy;
+    if (!start) throw new Error('no eddy to carry');
+
+    // Kilometres per day implied by the displacement over the whole carry, which is the
+    // quantity the message claims — never the velocity read back out of the parameters.
+    const impliedKmPerDay = (kernel: typeof shiftAdvectKernel) => {
+      const carried = carryFeatures(estimate, grid, CARRY_PARAMETERS, 0.2, kernel);
+      const last = carried[carried.length - 1]?.eddy;
+      const first = carried[0]?.eddy;
+      if (!first || !last) throw new Error('the carry dropped the eddy it was handed');
+      const { eastKm, northKm } = kmOffsets(
+        last.centreLongitude,
+        last.centreLatitude,
+        first.centreLongitude,
+        first.centreLatitude,
+        first.centreLatitude,
+      );
+      const days = ((CARRY_PARAMETERS.steps - 1) * CARRY_PARAMETERS.stepSeconds) / 86400;
+      return { east: eastKm / days, north: northKm / days };
+    };
+
+    const twoLayer = impliedKmPerDay(shallowTwoLayerKernel);
+    const shift = impliedKmPerDay(shiftAdvectKernel);
+    const upper = CARRY_PARAMETERS.twoLayer;
+    if (!upper) throw new Error('the fixture lost its two-layer block');
+
+    // Each kernel carries at what it declares, read off the track rather than the config.
+    //
+    // Tolerance 1 — 0.05 km/day — and not tighter: the track is measured by converting a
+    // velocity into degrees and back through a cosine of latitude, which returns 7.0028 for
+    // 7. Written at tolerance 3 this failed on that round-trip while the planted fault went
+    // unremarked, which is a check failing for the wrong reason and no better than one that
+    // cannot fail at all. The two kernels are 3 km/day apart on the east axis, so 0.05
+    // still separates them by sixty times the tolerance.
+    expect(twoLayer.east).toBeCloseTo(upper.upper.eastKmPerDay, 1);
+    expect(twoLayer.north).toBeCloseTo(upper.upper.northKmPerDay, 1);
+    expect(shift.east).toBeCloseTo(CARRY_PARAMETERS.advectionEastKmPerDay, 1);
+    expect(shift.north).toBeCloseTo(CARRY_PARAMETERS.advectionNorthKmPerDay, 1);
+    // And they disagree, which is what makes the four assertions above a distinction rather
+    // than the same number written twice.
+    expect(shift.east).not.toBeCloseTo(twoLayer.east, 1);
   });
 });

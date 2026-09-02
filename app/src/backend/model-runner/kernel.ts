@@ -79,6 +79,23 @@ export interface ModelKernel {
    * run that would then be refused.
    */
   subStepsPerStep?(parameters: KernelParameters, cellKmEast: number, cellKmNorth: number): number;
+  /**
+   * The velocity this kernel carries a feature at, so that a feature's forecast track and
+   * the field's own motion are one claim rather than two.
+   *
+   * **A kernel answers for its own velocity because inferring it does not work.** The
+   * inference was `parameters.twoLayer !== undefined`, on the reasoning that only the
+   * two-layer kernel would be handed a two-layer block. The runner populates that block
+   * unconditionally and on purpose, so the test was always true: with `shift-advect-v1`
+   * configured, the published features drifted at the two-layer upper velocity — measured
+   * at 7 and 3 km/day — while the field they describe was translated at the configured 4
+   * and 2, which on the shipped grid rounds to no displacement at all. Two forecasts in
+   * one message, which is what `carryVelocity`'s own comment forbids.
+   *
+   * Optional, like `subStepsPerStep`, and for the same reason: a kernel that does not
+   * declare one is carried at the configured advection, which is what the field does.
+   */
+  carryVelocity?(parameters: KernelParameters): { eastKmPerDay: number; northKmPerDay: number };
   memberField(initial: KernelInitialState, parameters: KernelParameters, rng: Rng): KernelMemberField;
 }
 
@@ -90,6 +107,11 @@ export interface ModelKernel {
  */
 export const shiftAdvectKernel: ModelKernel = {
   name: 'shift-advect-v1',
+  // The whole field moves at the configured advection, so a feature in it does too.
+  carryVelocity: (parameters) => ({
+    eastKmPerDay: parameters.advectionEastKmPerDay,
+    northKmPerDay: parameters.advectionNorthKmPerDay,
+  }),
   memberField(initial, parameters, rng) {
     const { lonCount, latCount, depthCount, cellKmEast, cellKmNorth } = initial.grid;
     const cellsPerStep = depthCount * latCount * lonCount;
@@ -225,6 +247,24 @@ export const shallowTwoLayerKernel: ModelKernel = {
 
   subStepsPerStep(parameters, cellKmEast, cellKmNorth) {
     return twoLayerStability(parameters, cellKmEast, cellKmNorth).subSteps;
+  },
+
+  /**
+   * The upper layer, for every feature, and that is a stated limitation rather than an
+   * oversight: choosing a layer needs the feature's depth, and no estimator recovers one —
+   * the blobs are found in a depth-averaged anomaly and the front in its gradient.
+   *
+   * It refuses a missing block for the same reason `memberField` does. A default velocity
+   * here would be a physics nobody configured, published as a feature's track.
+   */
+  carryVelocity(parameters) {
+    const two = parameters.twoLayer;
+    if (!two) {
+      throw new Error(
+        "shallow-two-layer-v1 was asked what velocity it carries a feature at with no 'two_layer' parameters; the kernel refuses rather than defaulting",
+      );
+    }
+    return { eastKmPerDay: two.upper.eastKmPerDay, northKmPerDay: two.upper.northKmPerDay };
   },
 
   memberField(initial, parameters, rng) {

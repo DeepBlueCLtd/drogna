@@ -40,10 +40,13 @@ interface Watch {
   requests: RunRequest[];
   decisions: TelemetrySchedulerDecision[];
   costTicks: number | undefined;
+  /** Run ids announced, and run ids published: a run between the two is occupying its cost. */
+  started: string[];
+  published: string[];
 }
 
 function watch(runtime: BackendRuntime, config: ConfigRun): Watch {
-  const seen: Watch = { requests: [], decisions: [], costTicks: undefined };
+  const seen: Watch = { requests: [], decisions: [], costTicks: undefined, started: [], published: [] };
   const shell = runtime.transport.connect(`scheduler-test-${Math.random()}`, 'shell');
   shell.subscribe(config.scheduler.topics.run_request, (message) => {
     seen.requests.push(message.payload as RunRequest);
@@ -57,6 +60,15 @@ function watch(runtime: BackendRuntime, config: ConfigRun): Watch {
   shell.subscribe(config.model_runner.topics.run_cost, (message) => {
     expect(validator.validate('run-cost', message.payload).refusals).toEqual([]);
     seen.costTicks = (message.payload as { cost_ticks: number }).cost_ticks;
+  });
+  // Announced and published are separate events now that a run occupies the ticks between
+  // them, and "a run is occupying its cost" is `started > published` — the only way a test
+  // can aim at that window rather than guess a tick.
+  shell.subscribe(config.model_runner.topics.run_started, (message) => {
+    seen.started.push((message.payload as { run_id: string }).run_id);
+  });
+  shell.subscribe(config.model_runner.topics.run_published, (message) => {
+    seen.published.push((message.payload as { run_id: string }).run_id);
   });
   return seen;
 }
@@ -233,9 +245,18 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     expect(held?.run_id).toBeNull();
     expect(held?.shortfall_ticks ?? 0).toBeGreaterThan(0);
     expect(held?.detail).toMatch(/released as that headroom decays/);
-    // Reported once per episode: a hold that republished on every tick would drown the
-    // branch in a fact that has not changed.
+    // **Reported once per episode — and driven past the hold to find out.** The first
+    // version of this assertion counted the holds at the instant the drive stopped, and the
+    // drive stopped *on* the tick that published the first one, so the count was 1 by
+    // construction of the stopping condition and not by anything the scheduler did. Deleting
+    // the dedupe outright left all seven tests in this file green. A check that cannot fail
+    // is worth nothing (CLAUDE.md, lesson 2), and this is the second one this feature has
+    // had to fix.
+    const heldAtFirstReport = seen.decisions.filter((decision) => decision.decision === 'held-for-cost').length;
+    expect(heldAtFirstReport).toBe(1);
+    await driveTicks(runtime.clock, 200);
     expect(seen.decisions.filter((decision) => decision.decision === 'held-for-cost').length).toBe(1);
+
     runtime.stop();
   });
 
@@ -351,6 +372,129 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     );
     expect(seen.requests.length).toBeGreaterThan(requestsBefore);
     runtime.stop();
+  });
+
+  it('restarting the scheduler inside a run’s cost does not becalm the loop', async () => {
+    // **The second entrance to the same window, and it was open.** The test above answers
+    // the model runner being stopped mid-occupancy. This answers the other side: restarting
+    // *this* component while a run is spending its cost. A fresh scheduler has no run in
+    // flight and no standing validity to hold against, so its cadence floor fires at once,
+    // the analyst obliges, and a second analysis reaches a runner that is still occupied.
+    //
+    // The runner refused it — correctly — by throwing. But this runs inside a broker
+    // subscription handler, and the broker catches handler faults and increments a counter,
+    // so nothing was ever told: the scheduler went on waiting for a publication that had
+    // been refused before any work was done. Measured before the fix, at `loitering` seed
+    // 4242 with the restart at tick 4420: twenty thousand ticks and eleven cadence floors
+    // afterwards with nothing requested, started or published. The comment on that branch
+    // said it "cannot be reached from the shipped loop"; it is reached by pressing a button.
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+    // **The second run, not the first, and the difference is not incidental.** A restarted
+    // scheduler counts run ids from zero again, so a restart during the *first* run has the
+    // new scheduler asking for the same `…-run-0` that is already occupying — and the
+    // occupying run's publication then clears the new scheduler's outstanding run by an id
+    // collision rather than by anything being right. The first draft of this test restarted
+    // during run 0, was rescued by that collision, and passed against the unfixed code on
+    // every assertion but one. The window this is about is the second run occupying while
+    // the restarted scheduler asks for the first id again.
+    await driveUntil(
+      runtime.clock,
+      () => seen.started.length >= 2 && seen.published.length < seen.started.length,
+      config.scheduler.max_interval_ticks * 6,
+    );
+    expect(seen.started.length, 'the loop never reached a second run').toBeGreaterThanOrEqual(2);
+    expect(seen.published.length, 'the second run was not still occupying its cost').toBeLessThan(seen.started.length);
+    const requestsBefore = seen.requests.length;
+
+    // The Operator tab's own verbs, on the scheduler rather than the runner.
+    runtime.control.stop(config.scheduler.id);
+    runtime.control.start(config.scheduler.id);
+
+    // The restarted scheduler's first floor fires at once — it has nothing to hold against.
+    // That request is the one the occupied runner refuses.
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > requestsBefore,
+      config.scheduler.max_interval_ticks * 2,
+    );
+    const afterRestart = seen.requests.length;
+
+    // **This is the assertion that sees the becalm, and the reason the first draft of this
+    // test was too weak to keep.** Neither "a forecast eventually appeared" nor "a request
+    // followed the restart" separates the two cases: the run that was already occupying its
+    // cost publishes either way, and the restarted scheduler makes its first request either
+    // way. What only the fixed loop does is make a *second* one — because the refusal is
+    // heard, the outstanding run is cleared, and the next floor is free to fire. Held for
+    // four cadence intervals, so the failure is a silence rather than a near miss.
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > afterRestart,
+      config.scheduler.max_interval_ticks * 4,
+    );
+    expect(
+      seen.requests.length,
+      'nothing was requested for four cadence intervals: the refused run is still held in flight',
+    ).toBeGreaterThan(afterRestart);
+    // And the refusal was heard rather than swallowed. A broker delivery fault here means
+    // the runner threw into a handler that catches — the shape of the fault, not of the fix.
+    expect(runtime.broker.deliveryFaults, 'the refusal was thrown into a handler that swallowed it').toBe(0);
+    runtime.stop();
+  });
+
+  it('a reader’s prompt does not make the cadence floor repeat itself', () => {
+    // Planted on the bench, because the state is exact: the floor holding, and a prompt
+    // arriving inside that hold. The hold marker was a single field named for the cause
+    // being held and used as the marker for having reported it — so a prompt overwrote the
+    // floor's cause, and the next clock sample found it missing and republished a fact that
+    // had not changed. One spurious row on the Forecast timeline and one wrong figure on the
+    // scheduler's face, per press.
+    const config = lockstepConfig();
+    const bench = new Bench();
+    const scheduler = new Scheduler(config.scheduler, bench.client, 'prompt-episode');
+    scheduler.start();
+    bench.deliver(config.model_runner.topics.run_cost, { cost_ticks: 9 });
+    bench.tick(config, 0);
+    bench.tick(config, 1);
+    bench.deliver(config.scheduler.topics.run_published, {
+      run_id: 'standing',
+      current: true,
+      valid_time: { start_sim_time: bench.simTimeAt(0), end_sim_time: bench.simTimeAt(7200) },
+    });
+
+    const floorHolds = () =>
+      bench.decisions.filter(
+        (decision) => decision.decision === 'held-for-cost' && decision.detail.includes('cadence floor'),
+      ).length;
+    const promptHolds = () =>
+      bench.decisions.filter(
+        (decision) => decision.decision === 'held-for-cost' && decision.detail.includes('reader prompted'),
+      ).length;
+
+    bench.tick(config, config.scheduler.max_interval_ticks);
+    expect(floorHolds()).toBe(1);
+
+    // A reader presses the button twice while the floor is holding. Each press is answered —
+    // a prompt is a discrete act and a button that says nothing looks broken — and neither
+    // press makes the floor say its piece again.
+    bench.deliver(config.scheduler.topics.command, {
+      target: config.scheduler.id,
+      kind: 'event',
+      event: config.scheduler.prompt_event,
+    });
+    bench.tick(config, config.scheduler.max_interval_ticks + 1);
+    bench.deliver(config.scheduler.topics.command, {
+      target: config.scheduler.id,
+      kind: 'event',
+      event: config.scheduler.prompt_event,
+    });
+    bench.tick(config, config.scheduler.max_interval_ticks + 2);
+
+    expect(promptHolds()).toBe(2);
+    expect(floorHolds()).toBe(1);
+    expect(bench.requests).toHaveLength(0);
+    scheduler.stop();
   });
 
   it('SC-007: a divergence is never held, at a tick where a scheduled run would be', async () => {

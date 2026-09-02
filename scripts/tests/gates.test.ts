@@ -30,12 +30,55 @@ import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
 import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
 import { runGate as blogLength } from '../gates/check-blog-length.js';
+import { runGate as replayMarkers, scan } from '../gates/check-replay-markers.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
 const clean = join(fixtures, 'clean');
 
 describe('each gate catches its planted violation and passes a clean tree', () => {
+  it('replay-markers: an unmarked byte-identity test and a marker adrift both fail; the real tree passes', () => {
+    // The fault this gate exists against, in the shape it actually took: `pnpm
+    // replay-proof` selected with `-t replay`, the generator's byte-identity test
+    // matched neither its own name nor its describe, and the proof printed "held"
+    // over it. Selection by marker closes that; what it cannot close is a
+    // byte-identity test written with no marker at all, which is planted here.
+    const unclassified = replayMarkers(join(fixtures, 'replay-unclassified'));
+    expect(unclassified.map((f) => f.message)).toEqual([
+      expect.stringMatching(/reads as a determinism or replay claim and carries neither marker/),
+    ]);
+    expect(unclassified[0].message).toContain('replays byte-identically: one seed, one run, twice');
+    // The exclusion marker is an answer, not a silence: the sibling carrying it is
+    // not reported, and neither is the test whose name makes no such claim.
+    expect(unclassified).toHaveLength(1);
+
+    // The other half: a marker that has drifted off its test. The proof cannot say
+    // which test it expects, so it refuses rather than guessing. Both facts are
+    // reported, and deliberately: the marker is adrift *and* the test below it is
+    // left unclassified, which are two different things to fix and would be two
+    // different mistakes to make.
+    const unreadable = replayMarkers(join(fixtures, 'replay-unreadable'));
+    expect(unreadable.map((f) => f.message)).toEqual([
+      expect.stringMatching(/is not directly above an it\(\.\.\.\) with a single-line name/),
+      expect.stringMatching(/reads as a determinism or replay claim and carries neither marker/),
+    ]);
+
+    expect(replayMarkers(REPO_ROOT)).toEqual([]);
+  });
+
+  it('replay-markers: the real tree marks byte-identity tests, and the proof has something to prove', () => {
+    // A bound derived from the tree rather than typed in: the gate reports clean above,
+    // and what it found must be a non-empty set of marked tests in real files. The
+    // count is deliberately not asserted — that would be a number to edit rather than
+    // a property to hold — but an empty set would mean `pnpm replay-proof` asserts
+    // nothing, which is the state the old selector could reach and pass.
+    const { marked } = scan(REPO_ROOT);
+    expect(marked.length).toBeGreaterThan(0);
+    expect(marked.every((test) => test.file.endsWith('.test.ts'))).toBe(true);
+    // The test the old `-t replay` selector skipped, and the reason this gate exists.
+    expect(marked.some((test) => test.name.startsWith('AT-04 seed:'))).toBe(true);
+  });
+
   it('truth-initialisation: a component reaching for the true field fails; the real tree passes', () => {
     // The leak this feature closed: for nine features the model runner initialised
     // from a now-cast evaluated from the true ocean, so nothing the platform measured

@@ -118,6 +118,13 @@ whose marker was forgotten, which the sweep names; and a planted per-run drift i
 generator's draw path, which took six down with the generator's named among them. On the clean
 tree it reports all nine ran and held.
 
+**And it now runs.** The proof had been wrong since the 101–109 close-out and nothing noticed,
+because nothing ran it: it was in no workflow, no gate and not in `pnpm check`. The sweep is
+split out as `check-replay-markers`, appended to `scripts/gates.registry` — so the cheap half,
+that every determinism-shaped test says whether it is in the proof, fires on every change at no
+test-time cost, with its own planted-violation test beside the other 21. The half that runs the
+tests is a CI step of its own, about two minutes, paid deliberately.
+
 ### 113 T006 — the section number was wrong, and one amendment was missing
 
 The line promised "new §5.11 with FR-52 to FR-60". Those requirements are on `main` at

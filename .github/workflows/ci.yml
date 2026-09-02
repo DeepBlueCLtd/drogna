@@ -57,6 +57,17 @@ jobs:
       - name: Gates (Constitution I, II, III, IV, V, XI)
         run: pnpm run gates
 
+      # AT-04's one-command proof, run here because it was not: it had reported
+      # "held" over a test it never ran since the 101-109 close-out, and nothing
+      # noticed, because nothing ran it. The cheap half — that every
+      # determinism-shaped test says whether it is in the proof — is
+      # check-replay-markers in the step above and costs no test time. This is the
+      # other half, and it re-runs the marked tests' files: about two minutes, paid
+      # deliberately, because a proof of byte-identical replay that nobody executes
+      # is exactly the check CLAUDE.md's second lesson is about.
+      - name: 'AT-04 replay proof (byte-identical replay, its claim and its boundary)'
+        run: pnpm run replay-proof
+
       - name: Build
         run: pnpm -C app run build
 

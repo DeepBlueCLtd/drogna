@@ -1,0 +1,448 @@
+/**
+ * The Forecast tab (feature 123, SRD-v2 §5.20): why now, and what it costs.
+ *
+ * §5.20 specifies one view, three regions and a timeline, left to right in time — why now,
+ * what changed, what next. **This feature builds the left region and the timeline only.**
+ * They are the two that FR-115's four scheduler facts need in order to be visible at all: a
+ * run held for cost has to be visible somewhere, or the hold is a behaviour nothing can
+ * see. The centre and right regions — the volume, the clickable column grid, the rays, the
+ * depth profile and the ghost layer — are feature 124's, and until they exist this view says
+ * so where they will be. An empty canvas is a claim the shell is not entitled to make.
+ *
+ * **The gauge is reported, never derived from a configured expectation** (FR-119). What it
+ * draws is whatever is published on the declared indicator topic, and it names which
+ * indicator that is; with the topic silent it states the absence and draws no gauge, because
+ * an empty gauge and an unheard indicator are different facts. The indicator itself is
+ * environmental science and belongs to the environmental-indicators workstream (FR-117);
+ * drogna's own residual statistic is wired into the socket as the reference implementation,
+ * published by the monitor, which already holds both the residual and the threshold in force.
+ *
+ * **Need and cost are read together or the region has not done its job** (FR-118), so the
+ * cost of a run is stated beneath the gauge in the same frame — from the model runner's own
+ * statement, the only component entitled to make one.
+ *
+ * **Each run on the timeline is labelled by cause**, and the cause is read from the run
+ * request, which is where the scheduler declares it. It is not inferred from a decision's
+ * prose: a display that parses a sentence is a display inventing figures.
+ *
+ * Nothing here polls (FR-136). Every figure arrives on an announcement, validated against
+ * the master its topic declares before it is drawn; what is refused is counted and stated
+ * rather than silently discarded.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PanelProps } from '../../shell/registry.js';
+import type {
+  ForecastIndicator,
+  HoldingsInventory,
+  RunCost,
+  RunPublished,
+  RunRequest,
+  RunStarted,
+  TelemetrySchedulerDecision,
+} from '../../generated/types.js';
+import { topicMatchesFilter } from '../messages/topic-match.js';
+import { displayInstant } from '../../shell/display.js';
+import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
+import { forecastTour } from '../../shell/walkthrough/tour.js';
+import './forecast.css';
+
+/**
+ * The regions this surface offers, on disk, so a region gaining a feature and not a help
+ * step is reported by name rather than noticed by somebody re-reading the tour (FR-140).
+ * The two feature 124 will fill are listed here already: they are regions of this view now,
+ * and what they say is part of what the view says.
+ */
+export const FORECAST_REGIONS = [
+  { id: 'indicator', label: 'why a run is warranted, and what one costs', element: '[data-region="indicator"]' },
+  { id: 'volume', label: 'what a cell’s value was made from', element: '[data-region="volume"]' },
+  { id: 'ahead', label: 'the spread ahead', element: '[data-region="ahead"]' },
+  { id: 'timeline', label: 'the runs, in simulation time, labelled by cause', element: '[data-region="timeline"]' },
+] as const;
+
+/** How a cause is said to a reader. Four causes, four labels, never one appearance. */
+const CAUSE_LABEL: Record<string, string> = {
+  scheduled: 'scheduled',
+  divergence: 'divergence-triggered',
+  operator: 'reader-requested',
+};
+
+/** One entry on the timeline: a run, or a hold that produced no run. */
+interface Entry {
+  readonly key: string;
+  readonly kind: 'run' | 'held';
+  readonly tick: number;
+  readonly simTime: string;
+  readonly cause: string;
+  /** For a run: the cost it announced, and whether it has published yet. */
+  readonly costTicks?: number;
+  readonly subStepsPerStep?: number;
+  readonly publishedAtTick?: number;
+  readonly runId?: string;
+  /** For a hold: how much validity must still decay before it is released. */
+  readonly shortfallTicks?: number;
+  readonly detail?: string;
+}
+
+/**
+ * The instances the coverage store already holds, as timeline entries.
+ *
+ * A console opens after the run has been provisioned and pre-rolled, so every run the
+ * situation began with is in the past and no announcement of it is coming. A timeline that
+ * showed none of them would say "no run has been announced yet" about a system that has
+ * published four, which is the display inventing a silence — the exact fault the Operator
+ * tab's own head comment records being found by looking at the running page.
+ *
+ * **What is not claimed is as important as what is.** A holding says when it was published
+ * and nothing about what asked for it: the cause lives in the run request, which happened
+ * before anyone was listening and is not recoverable from the store. So these entries say
+ * so, in those words, rather than guessing a cause or borrowing the commonest one. Nor do
+ * they claim a cost: the cost of a run is what its own start announcement carried, and this
+ * is a holding, not a run announcement.
+ *
+ * One fetch, on mount. Nothing after it: live runs arrive by announcement (FR-136).
+ */
+function entriesFromInventory(inventory: HoldingsInventory): Entry[] {
+  return inventory.holdings
+    .filter((holding) => holding.era === 'instance' && !holding.holding_id.endsWith('-spread'))
+    .map((holding) => ({
+      key: `held-instance:${holding.holding_id}`,
+      kind: 'run' as const,
+      tick: holding.published_at.tick,
+      simTime: holding.published_at.sim_time,
+      cause: 'before this console opened',
+      runId: holding.holding_id,
+      publishedAtTick: holding.published_at.tick,
+    }));
+}
+
+export function ForecastPanel({ params }: PanelProps) {
+  const { config, client, validator, address } = params;
+  const [indicator, setIndicator] = useState<ForecastIndicator | undefined>();
+  const [cost, setCost] = useState<RunCost | undefined>();
+  const [entries, setEntries] = useState<readonly Entry[]>([]);
+  const [selected, setSelected] = useState<string | undefined>(() => address.current());
+  const refusedRef = useRef(0);
+  const [refused, setRefused] = useState(0);
+  /** Causes heard, by run id, so a started run can be labelled with what asked for it. */
+  const causesRef = useRef(new Map<string, string>());
+
+  /**
+   * A payload is drawn only if the master its topic declares accepts it. The mapping is the
+   * shell's own `message_schemas` list, so this panel holds no second opinion about which
+   * master governs which topic (Constitution IV).
+   */
+  const drawable = useCallback(
+    (topic: string, payload: unknown): boolean => {
+      const mapping = config.message_schemas.find((entry) => topicMatchesFilter(entry.filter, topic));
+      const ok = mapping !== undefined && validator.validate(mapping.schema, payload).ok;
+      if (!ok) {
+        refusedRef.current += 1;
+        setRefused(refusedRef.current);
+      }
+      return ok;
+    },
+    [config.message_schemas, validator],
+  );
+
+  useEffect(() => {
+    // No clock subscription, deliberately. Everything this panel draws arrives on an
+    // announcement, so a tick that announced nothing must change nothing here — and a
+    // clock reading rendered in this panel would make that untestable as well as
+    // duplicating the strip at the top of the shell.
+    const stops: (() => void)[] = [];
+    stops.push(
+      client.subscribe(config.topics.forecast_indicator, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        setIndicator(message.payload as ForecastIndicator);
+      }),
+    );
+    stops.push(
+      client.subscribe(config.topics.run_cost, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        setCost(message.payload as RunCost);
+      }),
+    );
+    stops.push(
+      client.subscribe(config.topics.run_request, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        const request = message.payload as RunRequest;
+        causesRef.current.set(request.run_id, request.cause);
+      }),
+    );
+    stops.push(
+      client.subscribe(config.topics.run_started, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        const started = message.payload as RunStarted;
+        setEntries((previous) => [
+          ...previous,
+          {
+            key: `run:${started.run_id}`,
+            kind: 'run',
+            tick: started.tick,
+            simTime: started.sim_time,
+            cause: causesRef.current.get(started.run_id) ?? 'unlabelled',
+            costTicks: started.cost_ticks,
+            subStepsPerStep: started.sub_steps_per_step,
+            runId: started.run_id,
+          },
+        ]);
+      }),
+    );
+    stops.push(
+      client.subscribe(config.topics.run_published, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        const published = message.payload as RunPublished;
+        setEntries((previous) =>
+          previous.map((entry) =>
+            entry.runId === published.run_id ? { ...entry, publishedAtTick: published.tick } : entry,
+          ),
+        );
+      }),
+    );
+    stops.push(
+      client.subscribe(config.topics.telemetry, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        const report = message.payload as { kind?: string };
+        if (report.kind !== 'scheduler-decision') return;
+        const decision = message.payload as TelemetrySchedulerDecision;
+        if (decision.decision !== 'held-for-cost') return;
+        setEntries((previous) => [
+          ...previous,
+          {
+            // Keyed by position as well as tick: a scheduled run and a reader's prompt can
+            // both be held at the same tick, and two entries sharing a key is one entry.
+            key: `held:${decision.tick}:${previous.length}`,
+            kind: 'held',
+            tick: decision.tick,
+            simTime: decision.sim_time,
+            cause: 'held for cost',
+            shortfallTicks: decision.shortfall_ticks ?? undefined,
+            detail: decision.detail,
+          },
+        ]);
+      }),
+    );
+    return () => {
+      for (const stop of stops) stop();
+    };
+  }, [client, config.topics, drawable]);
+
+  // The store's own inventory, once, on mount. Everything after it arrives on an
+  // announcement; this is the history that had already happened when the console opened.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      let body: unknown;
+      try {
+        const response = await fetch(config.endpoints.holdings);
+        if (!response.ok) return;
+        body = await response.json();
+      } catch {
+        // A history that could not be fetched is a history the panel does not draw. It says
+        // nothing about it rather than showing an empty list as if it were the answer: the
+        // timeline's own sentence already distinguishes 'nothing announced' from 'nothing
+        // fetched' only when something arrives, so the honest move here is silence.
+        return;
+      }
+      if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
+      const seeded = entriesFromInventory(body as HoldingsInventory);
+      setEntries((previous) => {
+        const known = new Set(previous.map((entry) => entry.runId));
+        return [...seeded.filter((entry) => !known.has(entry.runId)), ...previous];
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [config.endpoints.holdings, validator]);
+
+  // The address names a run, so a link opens this view at the run being discussed
+  // (ADR-0032). The remainder is this panel's vocabulary and the shell never parses it.
+  useEffect(() => address.onChange((rest) => setSelected(rest)), [address]);
+  const select = useCallback(
+    (key: string | undefined) => {
+      setSelected(key);
+      address.write(key);
+    },
+    [address],
+  );
+
+  const ordered = useMemo(() => [...entries].sort((a, b) => a.tick - b.tick), [entries]);
+  const chosen = ordered.find((entry) => entry.key === selected);
+
+  return (
+    <div className="panel forecast-panel">
+      <header className="forecast-header">
+        <h2 className="forecast-title">Forecast</h2>
+        <p className="forecast-disclosure">
+          The physics is a teaching approximation and the data is synthetic. The forward step is a shallow two-layer
+          advection–diffusion scheme standing in for the real thing — NEMO, ROMS, MITgcm, PDAF, DART, OceanVar, OpenDA —
+          and claims no kinship with any of them beyond structure. What a run costs here is a declared rate, not a
+          measurement.
+        </p>
+        <HelpButton tour={forecastTour()} />
+      </header>
+
+      <div className="forecast-regions">
+        <section className="forecast-region" data-region="indicator" aria-label="why a run is warranted, and what one costs">
+          <h3>Why now</h3>
+          {indicator === undefined ? (
+            // FR-119: the absence is stated and no gauge is drawn. An empty gauge would say
+            // "the figure is zero", which is a different claim from "nobody has published one".
+            <p className="not-landed" data-testid="indicator-absent">
+              nothing has been published on <code>{config.topics.forecast_indicator}</code>, the declared indicator
+              topic. The indicator that re-forecasting is becoming valuable is environmental science and belongs to the
+              environmental-indicators workstream; this is the socket it publishes into, and it is empty rather than
+              zero.
+            </p>
+          ) : (
+            <Gauge indicator={indicator} />
+          )}
+          <p className="forecast-cost" data-testid="run-cost">
+            {cost === undefined ? (
+              <>the model runner has not stated what a run costs yet; no other component may state it</>
+            ) : (
+              <>
+                A run costs <strong>{cost.cost_ticks}</strong> tick{cost.cost_ticks === 1 ? '' : 's'} of simulation
+                time — <span className="forecast-basis">{cost.basis}</span>. Stated by <code>{cost.component}</code>,
+                which is the component that will spend it.
+              </>
+            )}
+          </p>
+        </section>
+
+        <section className="forecast-region forecast-region-empty" data-region="volume" aria-label="what a cell’s value was made from">
+          <h3>What it is made from</h3>
+          <p className="not-landed">
+            The volume, the clickable column grid, the rays to each contributing source and the depth profile are{' '}
+            <strong>feature 124</strong>, and are not built. This region says so rather than drawing an empty canvas:
+            what a cell’s value was made from is the deliverable §5.20 exists for, and a picture of it that showed
+            nothing would be a claim this shell is not entitled to make.
+          </p>
+        </section>
+
+        <section className="forecast-region forecast-region-empty" data-region="ahead" aria-label="the spread ahead">
+          <h3>What next</h3>
+          <p className="not-landed">
+            The ensemble spread ahead, along the planned route, is <strong>feature 124</strong>, and is not built. The
+            spread itself is published and the Map draws it today; what is missing is this region, not the figure.
+          </p>
+        </section>
+      </div>
+
+      <section className="forecast-region" data-region="timeline" aria-label="the runs, in simulation time, labelled by cause">
+        <h3>Runs, in simulation time</h3>
+        {ordered.length === 0 ? (
+          <p className="not-landed">
+            no run has been announced yet. Nothing here is drawn from a configured expectation: this list is what
+            arrived.
+          </p>
+        ) : (
+          <ol className="forecast-timeline">
+            {ordered.map((entry) => (
+              <li key={entry.key}>
+                <button
+                  type="button"
+                  className={`forecast-run forecast-run-${entry.kind}${entry.key === selected ? ' is-selected' : ''}`}
+                  aria-pressed={entry.key === selected}
+                  onClick={() => select(entry.key === selected ? undefined : entry.key)}
+                >
+                  <span className="forecast-run-tick">tick {entry.tick}</span>
+                  {/* The mark is a shape as well as a colour: colour alone would not
+                      survive greyscale, and the cause is the fact this list is for. */}
+                  <span className={`forecast-run-mark forecast-mark-${entry.kind}`} aria-hidden="true">
+                    {entry.kind === 'held' ? '⌛' : '▶'}
+                  </span>
+                  <span className="forecast-run-cause">{CAUSE_LABEL[entry.cause] ?? entry.cause}</span>
+                  <span className="forecast-run-detail">
+                    {entry.kind === 'held'
+                      ? `${entry.shortfallTicks ?? 0} tick(s) of validity still to decay`
+                      : entry.costTicks === undefined
+                        ? 'in the store; what asked for it is not recoverable from a holding'
+                        : entry.publishedAtTick === undefined
+                          ? `occupying ${entry.costTicks} tick(s)`
+                          : `published at tick ${entry.publishedAtTick}, ${
+                              entry.publishedAtTick - entry.tick
+                            } tick(s) after it began`}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+        {chosen && (
+          <p className="forecast-selected" data-testid="forecast-selected">
+            {chosen.kind === 'held' ? (
+              <>{chosen.detail}</>
+            ) : (
+              chosen.costTicks === undefined ? (
+              <>
+                Run <code>{chosen.runId}</code> was published at {displayInstant(chosen.simTime)}, before this console
+                opened. It is in the store and it can be queried; what asked for it, and what it cost, were said on the
+                wire at the time and are not recoverable from the holding.
+              </>
+            ) : (
+              <>
+                Run <code>{chosen.runId}</code>, announced at {displayInstant(chosen.simTime)}. It declared a cost of{' '}
+                {chosen.costTicks} tick(s) and the grid it was handed required {chosen.subStepsPerStep} integration
+                sub-step(s) per forecast step — a declared figure and a reported one, and they are not the same kind of
+                claim.
+              </>
+            )
+            )}
+          </p>
+        )}
+        {refused > 0 && (
+          <p className="forecast-refused">
+            {refused} message(s) were refused by their masters and are not drawn. Counted rather than discarded: a
+            display quietly dropping traffic is the other way to lie.
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/**
+ * The gauge: a vertical bar with the threshold marked across it.
+ *
+ * Vertical because FR-118 asks for one, and because the cost sits beneath it in the same
+ * frame — need above, cost below, read together. The fill is a proportion of twice the
+ * threshold, so the threshold always sits at the middle of the bar and a reader learns one
+ * position rather than re-reading a scale each time. Both numbers are printed as well as
+ * drawn, which is what makes the region legible in greyscale.
+ */
+function Gauge({ indicator }: { indicator: ForecastIndicator }) {
+  const span = Math.max(indicator.threshold * 2, Math.abs(indicator.value), 1e-9);
+  const fill = Math.min(100, (Math.abs(indicator.value) / span) * 100);
+  const mark = Math.min(100, (indicator.threshold / span) * 100);
+  const breaching = Math.abs(indicator.value) > indicator.threshold;
+  return (
+    <div className="forecast-gauge" data-testid="indicator-gauge">
+      <div
+        className="forecast-gauge-bar"
+        role="meter"
+        aria-valuenow={indicator.value}
+        aria-valuemin={0}
+        aria-valuemax={span}
+        aria-label={`${indicator.label}: ${indicator.value.toFixed(2)} ${indicator.unit}, threshold ${indicator.threshold} ${indicator.unit}`}
+      >
+        <div className={`forecast-gauge-fill${breaching ? ' is-breaching' : ''}`} style={{ height: `${fill}%` }} />
+        <div className="forecast-gauge-threshold" style={{ bottom: `${mark}%` }} />
+      </div>
+      <div className="forecast-gauge-legend">
+        <p className="forecast-gauge-value">
+          {indicator.value.toFixed(2)} {indicator.unit}
+          {breaching ? ' — past the threshold' : ''}
+        </p>
+        <p className="forecast-gauge-threshold-value">
+          threshold {indicator.threshold} {indicator.unit}, streak {indicator.streak.count} of {indicator.streak.of}
+        </p>
+        <p className="forecast-gauge-name">
+          showing <strong>{indicator.label}</strong>, published by <code>{indicator.component}</code> as{' '}
+          <code>{indicator.indicator}</code>
+        </p>
+      </div>
+    </div>
+  );
+}

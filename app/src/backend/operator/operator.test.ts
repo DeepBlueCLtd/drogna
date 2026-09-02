@@ -532,7 +532,7 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       runtime.stop();
     });
 
-    it('declines a prompt inside the minimum interval, and accepts once it is tuned away', async () => {
+    it('declines a prompt inside the minimum interval, and holds it for cost once that is tuned away', async () => {
       const config = lockstepConfig();
       const runtime = buildBackend(config, options, validator);
       const shell = runtime.transport.connect('interval-watch', config.shell.role);
@@ -547,25 +547,47 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       });
       const prompt = `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`;
       await post(runtime, prompt);
-      // Let the requested run be published, so what declines the next prompt is the
-      // minimum interval rather than an outstanding run.
+      // The first prompt is accepted: nothing has run, so there is no standing forecast
+      // whose remaining life could be worth waiting out.
+      expect(requests.length).toBe(1);
+      expect(requests[0].cause).toBe('operator');
+      expect(decisions.at(-1)?.decision).toBe('accepted');
+
+      // Let the requested run be published, so what answers the next prompt is a rule
+      // rather than an outstanding run. A run now occupies the ticks it costs, so this
+      // waits for the publication as well as for the elapsed ticks the tuning below is
+      // about (T045).
       for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
+      for (let i = 0; i < 400 && runtime.store.currentInstance() === undefined; i++) runtime.clock.tickOnce();
+      expect(runtime.store.currentInstance()).toBeDefined();
       await post(runtime, prompt);
       expect(requests.length).toBe(1);
       expect(decisions.at(-1)?.decision).toBe('minimum-interval');
 
-      // Now shorten the interval below what has already elapsed, and ask again. The
-      // rule did not change; the number it is applied to did, and the scheduler is
-      // the thing that applied it.
+      // Now shorten the interval below what has already elapsed, and ask again. The rule
+      // did not change; the number it is applied to did, and the scheduler is the thing
+      // that applied it — so the minimum interval stops being the answer.
+      //
+      // What answers instead is feature 123's second dimension: the run is *held for
+      // cost*. There is a standing forecast with most of its validity still to run, so
+      // there is no need to spend the compute yet, and the hold releases as that headroom
+      // decays to the run's cost plus the declared margin (FR-115, ADR-0043). A prompt
+      // being held is not an oversight — FR-116 has the reader committing a run against
+      // the stated cost, and the hold is the surface saying what that cost buys and when.
       await post(runtime, config.operator.http.tuning_path, {
         target: 'scheduler',
         setting: 'min_interval_ticks',
         value: 30,
       });
       await post(runtime, prompt);
-      expect(requests.length).toBe(2);
-      expect(requests[1].cause).toBe('operator');
-      expect(decisions.at(-1)?.decision).toBe('accepted');
+      expect(requests.length).toBe(1);
+      const held = decisions.at(-1);
+      expect(held?.decision).toBe('held-for-cost');
+      // The shortfall is named in the units the hold is measured in, so a reader need not
+      // subtract two instants to learn how long. Held against the runner's own declared
+      // cost, never a figure this test typed.
+      expect(held?.shortfall_ticks ?? 0).toBeGreaterThan(0);
+      expect(held?.detail).toMatch(/held for cost/);
       runtime.stop();
     });
 
@@ -714,6 +736,10 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       // tick zero there is nothing in the interval to score it against.
       for (let i = 0; i < 60; i++) runtime.clock.tickOnce();
       await post(runtime, `${config.operator.http.event_prefix}/${config.scheduler.prompt_event}`);
+      // The run occupies the ticks it costs before it publishes, and the packager stages
+      // over a *published* forecast — so this waits for the publication rather than
+      // assuming the run was instant (T045).
+      for (let i = 0; i < 400 && runtime.store.currentInstance() === undefined; i++) runtime.clock.tickOnce();
       const staged = runtime.offload.staged().length;
       expect(staged).toBeGreaterThan(0);
 

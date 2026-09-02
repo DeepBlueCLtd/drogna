@@ -297,10 +297,16 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
    * The updated-region leakage comparison, pointed at this harness's own releases
    * (issue #57, T708). The comparison machinery, and the case where a known leak
    * must be caught, live in
-   * `offload/leakage.test.ts`; what is held here is why it cannot yet return a
-   * conclusive verdict about *these* releases, measured rather than asserted — so
-   * that the day the harness changes enough for a verdict to be possible, this test
-   * fails and somebody has to look at it.
+   * `offload/leakage.test.ts`; what is held here is why a verdict about *these* releases
+   * still says nothing useful, measured rather than asserted — so that the day the harness
+   * changes enough for that to move, this test fails and somebody has to look at it.
+   *
+   * It did, at feature 123. The second reason used to be that two noise-free releases were
+   * identical and produced no mask at all; with a kernel that propagates a state rather
+   * than translating a field they differ everywhere instead, and the mask is now the whole
+   * domain. Different reason, same conclusion: a mask that covers everything discriminates
+   * nothing, and the verdict is a pass earned by the kernel's reach rather than by
+   * mitigation. #57 stays open and this stays not a gate.
    */
   it('scores its own successive releases, and names why the comparison is inconclusive (#57)', async () => {
     // The scoring run the open question proposed: the same kernel with its per-cell
@@ -334,10 +340,17 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(span).toBeLessThan(geometry.identification_radius_m);
     expect(verdict).toMatchObject({ conclusive: false, reason: 'measurements-within-radius' });
 
-    // Reason two, which only shows once the first is out of the way: with the noise
-    // suppressed, two successive releases initialised from the same now-cast are
-    // identical value for value, so there is no mask at all. Scored against a
-    // geometry that does span the radius, the same pair reports exactly that.
+    // Reason two, which only shows once the first is out of the way, and **it changed
+    // with feature 123.** It used to be that with the per-cell noise suppressed two
+    // successive releases were identical value for value, so there was no mask at all and
+    // the verdict came back `empty-mask`. That was a property of `shift-advect-v1`: it
+    // translated a field, so two runs from nearly identical analyses produced nearly
+    // identical output. `shallow-two-layer-v1` propagates a state, and two runs
+    // initialised from analyses that differ anywhere diverge everywhere — so with the
+    // noise off the mask is now the *whole domain*, which discriminates nothing for the
+    // opposite reason. This test exists to fail on exactly that kind of change and it
+    // did; the numbers below are what the verdict now is, read and recorded rather than
+    // adjusted until they were green.
     const spanning = {
       ...geometry,
       measurements: [
@@ -348,10 +361,17 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(measurementSpanMetres(spanning.measurements)).toBeGreaterThan(
       geometry.identification_radius_m,
     );
-    expect(scoreUpdatedRegion(before, after, spanning)).toMatchObject({
-      conclusive: false,
-      reason: 'empty-mask',
-    });
+    const spanningVerdict = scoreUpdatedRegion(before, after, spanning);
+    expect(spanningVerdict.conclusive).toBe(true);
+    if (spanningVerdict.conclusive) {
+      // Every cell changed, so the "updated region" is the domain and the buffer around
+      // the measurements recovers exactly its own share of it — chance, to the last
+      // decimal. Reported clear, and it is a pass earned by the kernel's reach rather
+      // than by mitigation, which is why #57 stays open and this stays not a gate.
+      expect(spanningVerdict.worst.changedCells).toBe(spanningVerdict.worst.totalCells);
+      expect(spanningVerdict.worst.recovery).toBeCloseTo(spanningVerdict.worst.chanceRate, 10);
+      expect(spanningVerdict.leaking).toBe(false);
+    }
 
     // And with the noise left on — the harness as it ships — the mask is the whole
     // domain, which is the reason the open question recorded. It scores at chance

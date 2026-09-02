@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/forecast-features.schema.json",
+  "title": "drogna forecast features",
+  "description": "The seeded features forecast AS FEATURES rather than merely carried in the field (SRD-v2 FR-113): the eddy's centre, radius and strength; the front's position and orientation; the thermocline's depth and gradient; and the drifting feature's track — each published per forecast step with an uncertainty that grows with lead, so that a forecast makes a falsifiable claim about next week rather than a picture of it.\n\n**The parameters are estimated from the analysis the run initialises from, and from nothing else.** A run never reads the true field. That is feature 116's lesson — before it, the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so nothing the platform measured ever reached a forecast — and it is why the runner subscribes to the analysis announcement rather than to the run request.\n\nProperty names follow `manifest.schema.json`'s own `eddy_parameters`, `front_parameters`, `thermocline_parameters` and `moving_parameters`, in the subset an estimator over a gridded field can honestly recover, so a scoring test compares like with like against the ground-truth manifest rather than against a translation. The bound such a test holds to is derived from the authoring jitter on disk and never typed into the test (AT-03, AT-06; Constitution IX).",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "run_id",
+    "kernel",
+    "initialisation_sim_time",
+    "step_seconds",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+    "scenario_run_id": { "type": "string", "minLength": 1 },
+    "sim_time": { "type": "string" },
+    "tick": { "type": "integer", "minimum": 0 },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The model run these features belong to, the same identifier the forecast holding carries."
+    },
+    "kernel": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The kernel that carried them forward. A tracked feature is a claim about a propagation, so which propagation is not optional."
+    },
+    "initialisation_sim_time": { "type": "string" },
+    "step_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per forecast step, in lead order.",
+      "items": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": ["step", "lead_seconds", "features"],
+      "additionalProperties": false,
+      "properties": {
+        "step": { "type": "integer", "minimum": 0 },
+        "lead_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Simulation seconds from initialisation. Lead, never host elapsed time."
+        },
+        "features": {
+          "type": "array",
+          "description": "The features this step could be estimated for. A feature an estimator could not recover honestly is ABSENT with its reason in `not_estimated`, never present with a widened uncertainty — softening a bound until it passes is the failure mode this document exists to make visible.",
+          "items": { "$ref": "#/$defs/feature" }
+        },
+        "not_estimated": {
+          "type": "array",
+          "description": "Features this step carries no estimate for, each with the reason in the runner's own words. Absent, null and declined are three different facts (FR-41).",
+          "items": {
+            "type": "object",
+            "required": ["kind", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "$ref": "#/$defs/kind" },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["eddy", "front", "thermocline", "moving"],
+      "description": "The four seeded features of SRD-v2 FR-03, named as the ground-truth manifest names them."
+    },
+    "feature": {
+      "type": "object",
+      "required": ["id", "kind", "parameters", "uncertainty"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "parameters": { "type": "object" },
+        "uncertainty": { "type": "object" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": { "const": "eddy" },
+            "parameters": { "$ref": "#/$defs/eddy_parameters" },
+            "uncertainty": { "$ref": "#/$defs/positional_uncertainty" }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "front" },
+            "parameters": { "$ref": "#/$defs/front_parameters" },
+            "uncertainty": { "$ref": "#/$defs/front_uncertainty" }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "thermocline" },
+            "parameters": { "$ref": "#/$defs/thermocline_parameters" },
+            "uncertainty": { "$ref": "#/$defs/thermocline_uncertainty" }
+          }
+        },
+        {
+          "properties": {
+            "kind": { "const": "moving" },
+            "parameters": { "$ref": "#/$defs/moving_parameters" },
+            "uncertainty": { "$ref": "#/$defs/positional_uncertainty" }
+          }
+        }
+      ]
+    },
+    "eddy_parameters": {
+      "type": "object",
+      "required": ["centre_latitude", "centre_longitude", "radius_km", "strength_c"],
+      "additionalProperties": false,
+      "description": "The subset of the manifest's eddy_parameters an estimator over a gridded analysis can recover: where the anomaly is, how far it reaches, and how strong it is. The authored depth structure and salinity strength are deliberately absent — an estimate nobody can make honestly is worse than none.",
+      "properties": {
+        "centre_latitude": { "type": "number" },
+        "centre_longitude": { "type": "number" },
+        "radius_km": { "type": "number", "exclusiveMinimum": 0 },
+        "strength_c": { "type": "number" }
+      }
+    },
+    "front_parameters": {
+      "type": "object",
+      "required": ["anchor_latitude", "anchor_longitude", "bearing_degrees", "amplitude_c"],
+      "additionalProperties": false,
+      "description": "The front's position and orientation, named as the manifest names them. The anchor is where the horizontal gradient is strongest; the bearing is the direction the gradient runs along.",
+      "properties": {
+        "anchor_latitude": { "type": "number" },
+        "anchor_longitude": { "type": "number" },
+        "bearing_degrees": { "type": "number" },
+        "amplitude_c": { "type": "number" }
+      }
+    },
+    "thermocline_parameters": {
+      "type": "object",
+      "required": ["depth_m", "thickness_m", "temperature_drop_c"],
+      "additionalProperties": false,
+      "description": "The thermocline's depth and the gradient across it, named as the manifest names them. Depth is where the vertical temperature gradient is steepest; thickness is the span the drop is taken over.",
+      "properties": {
+        "depth_m": { "type": "number", "minimum": 0 },
+        "thickness_m": { "type": "number", "exclusiveMinimum": 0 },
+        "temperature_drop_c": { "type": "number" }
+      }
+    },
+    "moving_parameters": {
+      "type": "object",
+      "required": ["centre_latitude", "centre_longitude", "radius_km", "strength_c"],
+      "additionalProperties": false,
+      "description": "The drifting feature's track: its position at this step, with the same recoverable subset the eddy carries. The drift velocity is not restated — it is what the succession of positions across the steps IS, and a velocity published beside them would be a second claim free to disagree.",
+      "properties": {
+        "centre_latitude": { "type": "number" },
+        "centre_longitude": { "type": "number" },
+        "radius_km": { "type": "number", "exclusiveMinimum": 0 },
+        "strength_c": { "type": "number" }
+      }
+    },
+    "positional_uncertainty": {
+      "type": "object",
+      "required": ["centre_km", "radius_km", "strength_c"],
+      "additionalProperties": false,
+      "description": "One standard deviation on each estimated quantity, growing with lead. Derived from the analysis error the run initialised from and the root of the lead, so a longer forecast makes a weaker claim — which is what an uncertainty is for.",
+      "properties": {
+        "centre_km": { "type": "number", "minimum": 0 },
+        "radius_km": { "type": "number", "minimum": 0 },
+        "strength_c": { "type": "number", "minimum": 0 }
+      }
+    },
+    "front_uncertainty": {
+      "type": "object",
+      "required": ["anchor_km", "bearing_degrees", "amplitude_c"],
+      "additionalProperties": false,
+      "properties": {
+        "anchor_km": { "type": "number", "minimum": 0 },
+        "bearing_degrees": { "type": "number", "minimum": 0 },
+        "amplitude_c": { "type": "number", "minimum": 0 }
+      }
+    },
+    "thermocline_uncertainty": {
+      "type": "object",
+      "required": ["depth_m", "temperature_drop_c"],
+      "additionalProperties": false,
+      "properties": {
+        "depth_m": { "type": "number", "minimum": 0 },
+        "temperature_drop_c": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -74,6 +74,11 @@
       "type": "integer",
       "minimum": 2
     },
+    "run_cost_ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The planted violation this fixture exists for: a run's cost, declared by a component that does not spend it. The scheduler could then hold a run against one number while the run occupied another, and neither document would be wrong on its own terms."
+    },
     "release_margin_ticks": {
       "type": "integer",
       "minimum": 0,

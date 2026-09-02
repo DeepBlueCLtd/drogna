@@ -18,12 +18,32 @@
  * Both intervals are tunable from that plane (FR-64). The configured values stay what
  * they were and a restart returns to them; the values in force are reported in the
  * heartbeat, which is where a display reads them from.
+ *
+ * From feature 123 the scheduler carries a second dimension beside *is a run warranted*:
+ * **can a run be afforded now** (FR-115, ADR-0043). A run has a declared duration, published
+ * by the model runner and by no other component; this one subscribes to that statement and
+ * holds no cost figure of its own.
+ *
+ * **The rule runs the opposite way to the obvious reading, and the reason is the finding.**
+ * Read naively — a run is affordable when it fits inside the standing forecast's remaining
+ * validity — the loop becalms permanently: the cadence floor fires *precisely when* validity
+ * has lapsed, at which point the headroom is zero, no run of any cost is ever affordable
+ * again, and nothing runs. That is the exact fault FR-31 exists to forbid, and
+ * `spikes/watched-turn/FINDING.md` has already watched it happen once for a different
+ * reason. So a warranted run is **held while the standing forecast still has more life than
+ * the run costs**, and released as the remaining validity falls to the cost plus a declared
+ * margin, so the new run lands as the old one lapses. The hold cannot becalm the loop,
+ * because it releases as validity decays and the cadence floor still backstops it.
+ *
+ * **A divergence is never held.** A hold is a bet that the standing forecast is still worth
+ * something; a divergence is the world saying it is not.
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
   ConfigScheduler,
   Divergence,
   OperatorCommand,
+  RunCost,
   RunPublished,
   RunRequest,
 } from '../../generated/types.js';
@@ -38,7 +58,25 @@ export class Scheduler {
   private inFlight: string | undefined;
   private validityEnd: string | undefined;
   declinedByPolicy = 0;
+  heldForCost = 0;
   requested: { run_id: string; cause: RunRequest['cause'] }[] = [];
+  /**
+   * What a run costs, in ticks, as the model runner stated it. Undefined until it has: a
+   * scheduler that assumed a cost would be holding runs against a number nobody published,
+   * and the component that will spend the compute is the only one entitled to declare it.
+   */
+  private runCostTicks: number | undefined;
+  /**
+   * Seconds of simulation time per tick, derived from consecutive clock samples rather than
+   * configured. The clock publishes an instant and an index and not its own interval, and a
+   * second copy of that interval in this document would be free to disagree with the clock.
+   * Undefined until two samples have arrived, and while it is undefined nothing is held —
+   * a hold whose duration cannot be measured is a hold that cannot be released.
+   */
+  private tickSeconds: number | undefined;
+  private lastSample: { tick: number; millis: number } | undefined;
+  /** The cause currently being held, so the hold is reported once and not on every tick. */
+  private holding: RunRequest['cause'] | undefined;
   /** Intervals in force, where the operator plane has changed one from configuration. */
   private tunedMinimum: number | undefined;
   private tunedMaximum: number | undefined;
@@ -79,10 +117,14 @@ export class Scheduler {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `${this.lastDecision}; ${this.requested.length} run(s) requested, ${this.declinedByPolicy} declined by policy`,
+        detail: `${this.lastDecision}; ${this.requested.length} run(s) requested, ${this.declinedByPolicy} declined by policy, ${this.heldForCost} held for cost`,
         figures: [
           { key: 'requested', value: this.requested.length, label: 'requested' },
           { key: 'declined', value: this.declinedByPolicy, label: 'declined' },
+          { key: 'held_for_cost', value: this.heldForCost, label: 'held for cost' },
+          // Reported as the runner stated it, never as a figure this component holds.
+          { key: 'run_cost', value: this.runCostTicks ?? 0, unit: 'ticks', label: 'a run costs' },
+          { key: 'release_margin', value: this.config.release_margin_ticks, unit: 'ticks', label: 'release margin' },
           {
             key: 'ticks_to_minimum',
             value: this.ticksToMinimumInterval(),
@@ -102,8 +144,17 @@ export class Scheduler {
   start(): void {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
+      const millis = Date.parse(sample.sim_time.slice(0, 23) + 'Z');
+      if (this.lastSample && sample.tick > this.lastSample.tick) {
+        const seconds = (millis - this.lastSample.millis) / 1000 / (sample.tick - this.lastSample.tick);
+        if (seconds > 0) this.tickSeconds = seconds;
+      }
+      this.lastSample = { tick: sample.tick, millis };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
       this.considerCadenceFloor();
+    });
+    this.client.subscribe(this.config.topics.run_cost, (message) => {
+      this.runCostTicks = (message.payload as RunCost).cost_ticks;
     });
     this.client.subscribe(this.config.topics.divergence, (message) => {
       this.considerDivergence(message.payload as Divergence);
@@ -157,6 +208,15 @@ export class Scheduler {
       this.reportDecision(null, 'minimum-interval', this.lastDecision, null);
       return;
     }
+    // FR-116: a reader commits a run against the stated cost, and is weighed under exactly
+    // the policy a divergence is weighed under — which includes being held. A prompt that is
+    // held is not an oversight: it is the surface saying what the cost buys and when.
+    const shortfall = this.holdShortfall();
+    if (shortfall > 0) {
+      this.hold('operator', null, shortfall, 'a reader prompted a run');
+      return;
+    }
+    this.holding = undefined;
     const runIdentifier = this.request('operator', undefined);
     this.reportDecision(null, 'accepted', `requested ${runIdentifier} on an operator prompt`, runIdentifier);
   }
@@ -174,15 +234,27 @@ export class Scheduler {
       this.reportDecision(divergence.divergence_id, 'minimum-interval', this.lastDecision, null);
       return;
     }
+    // No affordability test here, and the omission is deliberate rather than an oversight
+    // (ADR-0043). A hold is a bet that the standing forecast is still worth something; a
+    // divergence is the world saying it is not, so its nominal remaining validity is worth
+    // nothing and there is nothing to wait for.
+    this.holding = undefined;
     this.request('divergence', divergence);
   }
 
-  /** Every decision on a divergence is a telemetry fact, not only the accepted ones. */
+  /**
+   * Every decision on a divergence is a telemetry fact, not only the accepted ones — and
+   * from feature 123 there are four of them where FR-32 asked for three. `held-for-cost` is
+   * not a decline: the run is warranted and affordable later, and the shortfall says how
+   * much of the standing forecast's validity must still decay before it is released. Four
+   * facts, four appearances (FR-115).
+   */
   private reportDecision(
     divergenceId: string | null,
-    decision: 'accepted' | 'minimum-interval' | 'duplicate-outstanding',
+    decision: 'accepted' | 'minimum-interval' | 'duplicate-outstanding' | 'held-for-cost',
     detail: string,
     runIdentifier: string | null,
+    shortfallTicks: number | null = null,
   ): void {
     this.client.publish(this.config.topics.telemetry, {
       component: this.config.id,
@@ -194,18 +266,80 @@ export class Scheduler {
       decision,
       detail,
       run_id: runIdentifier,
+      shortfall_ticks: shortfallTicks,
     });
   }
 
-  /** FR-31: the loop cannot be permanently becalmed. */
+  /**
+   * Ticks of the standing forecast's validity still to run, or zero where there is no
+   * standing forecast, where its validity has lapsed, or where the tick length has not yet
+   * been observed. Zero always means "nothing to wait for", which is what makes the hold
+   * below fail open: a scheduler that cannot measure the headroom requests rather than
+   * waits, and the loop is never becalmed by the absence of a figure.
+   */
+  private remainingValidityTicks(): number {
+    if (this.validityEnd === undefined || this.tickSeconds === undefined) return 0;
+    const seconds =
+      (Date.parse(this.validityEnd.slice(0, 23) + 'Z') - Date.parse(this.simTime.value.slice(0, 23) + 'Z')) / 1000;
+    return Math.max(0, Math.floor(seconds / this.tickSeconds));
+  }
+
+  /**
+   * How many ticks a warranted run must still wait, or zero to release it now.
+   *
+   * The rule is inverted on purpose (ADR-0043): a run is held **while** the standing
+   * forecast has more life left than the run costs plus the declared margin, and released as
+   * that headroom decays — never "held until it fits inside the remaining validity", which
+   * is the formulation that becalms the loop for good.
+   */
+  private holdShortfall(): number {
+    const cost = this.runCostTicks;
+    if (cost === undefined || cost <= 0) return 0;
+    const threshold = cost + this.config.release_margin_ticks;
+    return Math.max(0, this.remainingValidityTicks() - threshold);
+  }
+
+  /**
+   * FR-31: the loop cannot be permanently becalmed — and FR-115's hold is applied here
+   * rather than beside it.
+   *
+   * Before feature 123 this returned while the standing forecast's validity had not lapsed,
+   * so a run was warranted exactly at the lapse. The hold replaces that test with a
+   * quantitative one: while the headroom exceeds the cost plus the margin there is no need
+   * to spend the compute yet, and it releases as the headroom decays so the new run lands as
+   * the old one lapses. The lapse case is unchanged — with validity spent the headroom is
+   * zero, the shortfall is zero and the run is requested — which is why FR-31 still holds by
+   * construction rather than by argument.
+   */
   private considerCadenceFloor(): void {
     if (this.inFlight !== undefined) return;
     const sinceLast = this.lastRequestTick === undefined ? Number.POSITIVE_INFINITY : this.simTime.tick - this.lastRequestTick;
     if (sinceLast < this.maximumInterval()) return;
     if (this.simTime.tick < this.maximumInterval()) return; // give the loop its first interval
-    const validityLapsed = this.validityEnd === undefined || this.validityEnd <= this.simTime.value;
-    if (!validityLapsed) return;
+    const shortfall = this.holdShortfall();
+    if (shortfall > 0) {
+      this.hold('scheduled', null, shortfall, 'the cadence floor has come due');
+      return;
+    }
+    this.holding = undefined;
     this.request('scheduled', undefined);
+  }
+
+  /**
+   * Record a hold, once per episode. Reported every tick it persisted it would drown the
+   * telemetry branch in a fact that has not changed; reported never, a run held for a
+   * thousand ticks would be indistinguishable from a run nothing asked for, which is
+   * precisely the confusion FR-115 forbids.
+   */
+  private hold(cause: RunRequest['cause'], divergenceId: string | null, shortfall: number, why: string): void {
+    if (this.holding === cause) return;
+    this.holding = cause;
+    this.heldForCost += 1;
+    this.lastDecision =
+      `held for cost: ${why}, but the standing forecast has ${this.remainingValidityTicks()} tick(s) of validity left ` +
+      `against a run costing ${this.runCostTicks ?? 0} plus a ${this.config.release_margin_ticks}-tick margin — ` +
+      `${shortfall} tick(s) to go, and it is released as that headroom decays`;
+    this.reportDecision(divergenceId, 'held-for-cost', this.lastDecision, null, shortfall);
   }
 
   private request(cause: RunRequest['cause'], divergence: Divergence | undefined): string {

@@ -4,13 +4,27 @@
  * kernel port, and publishes the ensemble mean as the forecast with the spread as
  * the uncertainty field — both staged through the coverage store's digest-checked
  * seam and announced on the control namespace. Consumers subscribe; nothing polls.
+ *
+ * From feature 123 a run **occupies** what it costs (FR-114, ADR-0043). The runner is the
+ * sole publisher of that figure: it states the cost on its declared topic, announces the
+ * start, integrates, and then holds the publication until the ticks the cost comes to have
+ * been spent on the clock it already subscribes to. Nothing is smoothed, hidden behind a
+ * spinner, or amortised across ticks — a forecast that is expensive in the real system and
+ * free in the harness would teach the wrong lesson. The cost is simulation time, never host
+ * time: a host-clock duration is a fact about the machine the tab happens to be open on, and
+ * admitting one would put a figure inside a run that differs between two replays of the same
+ * manifest (AT-04).
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
   AnalysisPublished,
   ConfigModelRunner,
   CoverageHolding,
+  ForecastFeatures,
+  ForecastFeaturesFeature,
+  ForecastFeaturesStep,
   Manifest,
+  RunCost,
   RunPublished,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
@@ -18,10 +32,18 @@ import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
 import type { CoverageStore } from '../coverage-store/store.js';
-import { shiftAdvectKernel, type ModelKernel } from './kernel.js';
+import { shallowTwoLayerKernel, shiftAdvectKernel, type KernelParameters, type ModelKernel } from './kernel.js';
+import { carryFeatures, estimateFeatures, type FeatureGrid } from './features.js';
 
+/**
+ * The implementations behind the port (Constitution VI). Two of them, which is the whole
+ * difference between a claim about pluggability and a fact about it: `shift-advect-v1`
+ * stays registered and stays tested precisely so that a change bending the interface to
+ * fit the newcomer is caught by tests written against the interface as it was (ADR-0042).
+ */
 const KERNELS: Record<string, ModelKernel> = {
   [shiftAdvectKernel.name]: shiftAdvectKernel,
+  [shallowTwoLayerKernel.name]: shallowTwoLayerKernel,
 };
 
 export class ModelRunner {
@@ -36,6 +58,22 @@ export class ModelRunner {
   membersDone = 0;
   ensembleSize = 0;
   runsCompleted = 0;
+  /**
+   * A run that has been computed and is waiting out the ticks it costs. One at a time,
+   * because the scheduler allows one request in flight at a time; a second arriving while
+   * one is occupied would mean the loop's own policy had been bypassed, and it throws
+   * rather than quietly replacing the first.
+   */
+  private occupying:
+    | { runIdentifier: string; publishAtTick: number; startedAtTick: number; emit: () => void }
+    | undefined;
+  /**
+   * The tick the cost was last stated at. It waits for a clock sample — a component that
+   * dated a message before simulation time existed would be claiming a time it had not
+   * heard — and is restated on the cadence configuration declares, because a declaration
+   * published once, before the shell had mounted, is a fact no listener can learn.
+   */
+  private costStatedAtTick: number | undefined;
 
   constructor(
     private readonly config: ConfigModelRunner,
@@ -57,9 +95,14 @@ export class ModelRunner {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `${this.runsCompleted} run(s) completed; kernel ${this.kernel.name}, ${this.config.steps} step(s)`,
+        detail: this.occupying
+          ? `run ${this.occupying.runIdentifier} is occupying its cost: ${
+              this.simTime.tick - this.occupying.startedAtTick
+            } of ${this.costTicks()} tick(s) spent, and it publishes when they are`
+          : `${this.runsCompleted} run(s) completed; kernel ${this.kernel.name}, ${this.config.steps} step(s), a run costs ${this.costTicks()} tick(s)`,
         figures: [
           { key: 'runs_completed', value: this.runsCompleted, label: 'runs' },
+          { key: 'cost_ticks', value: this.costTicks(), unit: 'ticks', label: 'a run costs' },
           {
             key: 'members_done',
             value: this.membersDone,
@@ -74,10 +117,107 @@ export class ModelRunner {
     );
   }
 
+  /**
+   * The kernel parameters this configuration produces, in one place. The two-layer block
+   * is passed whether or not the configured kernel wants it: `shift-advect-v1` ignores it,
+   * and a runner that decided which kernel gets which parameters would be holding a second
+   * copy of the knowledge each kernel already has about itself.
+   */
+  private kernelParameters(): KernelParameters {
+    return {
+      steps: this.config.steps,
+      stepSeconds: this.config.step_seconds,
+      advectionEastKmPerDay: this.config.advection.east_km_per_day,
+      advectionNorthKmPerDay: this.config.advection.north_km_per_day,
+      noiseStdTemperature: this.config.noise_std.temperature,
+      noiseStdSalinity: this.config.noise_std.salinity,
+      twoLayer: {
+        interfaceDepthM: this.config.two_layer.interface_depth_m,
+        upper: {
+          eastKmPerDay: this.config.two_layer.upper.east_km_per_day,
+          northKmPerDay: this.config.two_layer.upper.north_km_per_day,
+        },
+        lower: {
+          eastKmPerDay: this.config.two_layer.lower.east_km_per_day,
+          northKmPerDay: this.config.two_layer.lower.north_km_per_day,
+        },
+        horizontalDiffusivityM2PerS: this.config.two_layer.horizontal_diffusivity_m2_per_s,
+        interfacialExchangePerDay: this.config.two_layer.interfacial_exchange_per_day,
+        maxCourant: this.config.two_layer.max_courant,
+        maxSubSteps: this.config.two_layer.max_sub_steps,
+      },
+    };
+  }
+
+  /**
+   * Sub-steps per forecast step at a given horizontal cell size, or zero where the
+   * configured kernel declares no work. Zero is a true statement about a kernel that
+   * translates a field rather than integrating a state, and it is said plainly rather than
+   * dressed up as a nominal figure.
+   */
+  private subStepsAt(cellKmEast: number, cellKmNorth: number): number {
+    return this.kernel.subStepsPerStep?.(this.kernelParameters(), cellKmEast, cellKmNorth) ?? 0;
+  }
+
+  /**
+   * What a run costs, in ticks. **This component is the only one entitled to answer**
+   * (FR-115, ADR-0043): the thing that will spend the compute is the thing that declares
+   * what it comes to, and `check-declared-cost` fails the build if a cost figure appears in
+   * any other component's configuration master.
+   *
+   * The declaration is made against the nominal cell size configuration names, because a
+   * cost has to be stateable before any analysis has arrived for the scheduler to weigh it.
+   * What actually ran is reported separately, on the run-started message, as the sub-step
+   * count the grid the run was handed required — a declared figure and a reported one, never
+   * the same figure twice (ADR-0036).
+   */
+  costTicks(): number {
+    return Math.ceil(this.workUnits() / this.config.cost.rate_work_per_tick);
+  }
+
+  private workUnits(): number {
+    const nominal = this.config.cost.nominal_cell_km;
+    return this.config.steps * this.subStepsAt(nominal, nominal) * this.config.cost.work_per_sub_step;
+  }
+
+  private stateCost(): void {
+    const nominal = this.config.cost.nominal_cell_km;
+    const subSteps = this.subStepsAt(nominal, nominal);
+    this.client.publish(this.config.topics.run_cost, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      kernel: this.kernel.name,
+      cost_ticks: this.costTicks(),
+      work_units: this.workUnits(),
+      rate_work_per_tick: this.config.cost.rate_work_per_tick,
+      basis:
+        subSteps === 0
+          ? `${this.kernel.name} declares no work, so a run costs nothing and is never held for cost`
+          : `${this.config.steps} step(s) x ${subSteps} sub-step(s) x ${this.config.cost.work_per_sub_step} work unit(s), ` +
+            `declared against a nominal cell of ${nominal} km; the rate is a declaration about an afloat appliance nobody here has measured`,
+    } satisfies RunCost);
+    this.costStatedAtTick = this.simTime.tick;
+  }
+
   start(): void {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      // The cost is stated once simulation time exists, and before any run could be
+      // warranted: the scheduler holds a run against this figure, so a figure that arrived
+      // after the first decision would have been a decision made in its absence. It is then
+      // restated on the declared cadence, so a listener that arrived later — the shell,
+      // which mounts after the backend is built and pre-rolled — learns the same figure
+      // rather than waiting for the first run to imply it.
+      if (
+        this.costStatedAtTick === undefined ||
+        this.simTime.tick - this.costStatedAtTick >= this.config.cost.restate_every_ticks
+      ) {
+        this.stateCost();
+      }
+      this.releaseIfSpent();
     });
     // Feature 116: the runner waits for the analysis, not for the request. Until then
     // it subscribed to the request directly and initialised from a now-cast the
@@ -109,18 +249,6 @@ export class ModelRunner {
     const grid = baseManifest.grid;
     const cellsPerStep = grid.depth.count * grid.latitude.count * grid.longitude.count;
 
-    this.client.publish(this.config.topics.run_started, {
-      component: this.config.id,
-      scenario_run_id: this.runId,
-      sim_time: this.simTime.value,
-      tick: this.simTime.tick,
-      run_id: request.run_id,
-      divergence_id: null,
-      member_count: request.ensemble_size,
-      kernel: this.kernel.name,
-      initialisation_sim_time: request.initialisation_sim_time,
-    });
-
     // Initial state: the analysis, through the store interface. It carries one instant,
     // so a variable's field is one stride of cells rather than a slice out of a series.
     const analysisView = new Float32Array(analysis.bytes.buffer, analysis.bytes.byteOffset, analysis.bytes.byteLength / 4);
@@ -132,19 +260,31 @@ export class ModelRunner {
       depthCount: grid.depth.count,
       cellKmEast: grid.longitude.spacing * KM_PER_DEGREE_LATITUDE * Math.cos((midLatitude * Math.PI) / 180),
       cellKmNorth: grid.latitude.spacing * KM_PER_DEGREE_LATITUDE,
+      depthsM: Array.from({ length: grid.depth.count }, (_, index) => grid.depth.minimum + index * grid.depth.spacing),
     };
     const analysedTemperature = analysisView.slice(0, cellsPerStep);
     const analysedSalinity = analysisView.slice(cellsPerStep, 2 * cellsPerStep);
     const errorTemperature = errorView.slice(0, cellsPerStep);
     const errorSalinity = errorView.slice(cellsPerStep, 2 * cellsPerStep);
-    const parameters = {
-      steps: this.config.steps,
-      stepSeconds: this.config.step_seconds,
-      advectionEastKmPerDay: this.config.advection.east_km_per_day,
-      advectionNorthKmPerDay: this.config.advection.north_km_per_day,
-      noiseStdTemperature: this.config.noise_std.temperature,
-      noiseStdSalinity: this.config.noise_std.salinity,
-    };
+    const parameters = this.kernelParameters();
+
+    // Announced before anything is computed, so that a run which then fails is still
+    // visible as a run that was attempted — and now carrying both the cost it will occupy
+    // and the sub-steps the grid it was actually handed requires.
+    const subStepsPerStep = Math.max(1, this.subStepsAt(kernelGrid.cellKmEast, kernelGrid.cellKmNorth));
+    this.client.publish(this.config.topics.run_started, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      run_id: request.run_id,
+      divergence_id: null,
+      member_count: request.ensemble_size,
+      kernel: this.kernel.name,
+      initialisation_sim_time: request.initialisation_sim_time,
+      cost_ticks: this.costTicks(),
+      sub_steps_per_step: subStepsPerStep,
+    });
 
     const drawOrder: string[] = [];
     this.ensembleSize = request.ensemble_size;
@@ -185,37 +325,178 @@ export class ModelRunner {
       }
     }
 
+    // The features, estimated from the analysis this run initialises from and from nothing
+    // else, then carried forward by the kernel's own layer velocity (FR-113). The mean
+    // analysis error is what the uncertainty grows from, so a forecast made from a
+    // well-known state claims more than one made from a poorly known one.
+    const featureGrid: FeatureGrid = {
+      longitudes: Array.from({ length: grid.longitude.count }, (_, i) => grid.longitude.minimum + i * grid.longitude.spacing),
+      latitudes: Array.from({ length: grid.latitude.count }, (_, i) => grid.latitude.minimum + i * grid.latitude.spacing),
+      depthsM: kernelGrid.depthsM,
+      cellKmEast: kernelGrid.cellKmEast,
+      cellKmNorth: kernelGrid.cellKmNorth,
+      referenceLatitude: midLatitude,
+    };
+    let errorSum = 0;
+    for (const value of errorTemperature) errorSum += value;
+    const carried = carryFeatures(
+      estimateFeatures(analysedTemperature, featureGrid),
+      featureGrid,
+      parameters,
+      errorSum / Math.max(errorTemperature.length, 1),
+    );
+
     const forecastId = request.run_id;
     const spreadId = `${request.run_id}-spread`;
-    // Spread first, forecast second: the store's instance pointer names the most
-    // recent publication, and the monitor scores against the forecast.
-    const spreadDigest = this.publishInstance(spreadId, request, baseManifest, spread.temperature, spread.salinity, drawOrder, true);
-    const forecastDigest = this.publishInstance(forecastId, request, baseManifest, mean.temperature, mean.salinity, drawOrder, false);
-
     const validityEnd = this.isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
-    this.client.publish(this.config.topics.run_published, {
-      component: this.config.id,
-      scenario_run_id: this.runId,
-      sim_time: this.simTime.value,
-      tick: this.simTime.tick,
-      run_id: request.run_id,
-      current: true,
-      valid_time: { start_sim_time: request.initialisation_sim_time, end_sim_time: validityEnd },
-      grid_bounds: {
-        minimum_latitude: grid.latitude.minimum,
-        maximum_latitude: grid.latitude.maximum,
-        minimum_longitude: grid.longitude.minimum,
-        maximum_longitude: grid.longitude.maximum,
-        minimum_depth_m: grid.depth.minimum,
-        maximum_depth_m: grid.depth.maximum,
-      },
-      collections: { forecast: forecastId, uncertainty: spreadId },
-      digests: { forecast: forecastDigest, uncertainty: spreadDigest },
-    } satisfies RunPublished);
-    // The run finished, so every member it asked for was produced: reported from the
-    // run that happened rather than counted up by the display.
-    this.membersDone = this.ensembleSize;
-    this.runsCompleted += 1;
+
+    // Everything above has been computed. Nothing below has happened yet: the publication
+    // waits out the ticks the run costs (ADR-0043), released by the clock subscription this
+    // component already holds. Staging it as a closure rather than recomputing later is
+    // what makes the wait a wait and not a second run.
+    const emit = (): void => {
+      // Spread first, forecast second: the store's instance pointer names the most
+      // recent publication, and the monitor scores against the forecast.
+      const spreadDigest = this.publishInstance(spreadId, request, baseManifest, spread.temperature, spread.salinity, drawOrder, true);
+      const forecastDigest = this.publishInstance(forecastId, request, baseManifest, mean.temperature, mean.salinity, drawOrder, false);
+      this.client.publish(this.config.topics.forecast_features, {
+        component: this.config.id,
+        scenario_run_id: this.runId,
+        sim_time: this.simTime.value,
+        tick: this.simTime.tick,
+        run_id: request.run_id,
+        kernel: this.kernel.name,
+        initialisation_sim_time: request.initialisation_sim_time,
+        step_seconds: this.config.step_seconds,
+        steps: carried.map((entry) => this.featureStep(entry)),
+      } satisfies ForecastFeatures);
+      this.client.publish(this.config.topics.run_published, {
+        component: this.config.id,
+        scenario_run_id: this.runId,
+        sim_time: this.simTime.value,
+        tick: this.simTime.tick,
+        run_id: request.run_id,
+        current: true,
+        valid_time: { start_sim_time: request.initialisation_sim_time, end_sim_time: validityEnd },
+        grid_bounds: {
+          minimum_latitude: grid.latitude.minimum,
+          maximum_latitude: grid.latitude.maximum,
+          minimum_longitude: grid.longitude.minimum,
+          maximum_longitude: grid.longitude.maximum,
+          minimum_depth_m: grid.depth.minimum,
+          maximum_depth_m: grid.depth.maximum,
+        },
+        collections: { forecast: forecastId, uncertainty: spreadId },
+        digests: { forecast: forecastDigest, uncertainty: spreadDigest },
+      } satisfies RunPublished);
+      // The run finished, so every member it asked for was produced: reported from the
+      // run that happened rather than counted up by the display.
+      this.membersDone = this.ensembleSize;
+      this.runsCompleted += 1;
+    };
+
+    const cost = this.costTicks();
+    if (cost <= 0) {
+      emit();
+      return;
+    }
+    if (this.occupying) {
+      throw new Error(
+        `run ${request.run_id} arrived while ${this.occupying.runIdentifier} is still occupying its cost; the scheduler allows one request in flight at a time and this runner does not silently drop either`,
+      );
+    }
+    this.occupying = {
+      runIdentifier: request.run_id,
+      startedAtTick: this.simTime.tick,
+      publishAtTick: this.simTime.tick + cost,
+      emit,
+    };
+  }
+
+  /** The staged publication, once the ticks it costs have been spent and not before. */
+  private releaseIfSpent(): void {
+    const waiting = this.occupying;
+    if (!waiting || this.simTime.tick < waiting.publishAtTick) return;
+    this.occupying = undefined;
+    waiting.emit();
+  }
+
+  /**
+   * One step's features in the published shape. A feature the estimator declined is absent
+   * with its reason in `not_estimated`, never present with a widened uncertainty: softening
+   * a bound until it passes is the failure mode this shape exists to make visible
+   * (Constitution IX).
+   */
+  private featureStep(entry: ReturnType<typeof carryFeatures>[number]): ForecastFeaturesStep {
+    const features: ForecastFeaturesFeature[] = [];
+    if (entry.eddy) {
+      features.push({
+        id: 'eddy',
+        kind: 'eddy',
+        parameters: {
+          centre_latitude: entry.eddy.centreLatitude,
+          centre_longitude: entry.eddy.centreLongitude,
+          radius_km: entry.eddy.radiusKm,
+          strength_c: entry.eddy.strengthC,
+        },
+        uncertainty: {
+          centre_km: entry.uncertainty.positionKm,
+          radius_km: entry.uncertainty.radiusKm,
+          strength_c: entry.uncertainty.strengthC,
+        },
+      } as ForecastFeaturesFeature);
+    }
+    if (entry.moving) {
+      features.push({
+        id: 'moving',
+        kind: 'moving',
+        parameters: {
+          centre_latitude: entry.moving.centreLatitude,
+          centre_longitude: entry.moving.centreLongitude,
+          radius_km: entry.moving.radiusKm,
+          strength_c: entry.moving.strengthC,
+        },
+        uncertainty: {
+          centre_km: entry.uncertainty.positionKm,
+          radius_km: entry.uncertainty.radiusKm,
+          strength_c: entry.uncertainty.strengthC,
+        },
+      } as ForecastFeaturesFeature);
+    }
+    if (entry.front) {
+      features.push({
+        id: 'front',
+        kind: 'front',
+        parameters: {
+          anchor_latitude: entry.front.anchorLatitude,
+          anchor_longitude: entry.front.anchorLongitude,
+          bearing_degrees: entry.front.bearingDegrees,
+          amplitude_c: entry.front.amplitudeC,
+        },
+        uncertainty: {
+          anchor_km: entry.uncertainty.positionKm,
+          bearing_degrees: entry.uncertainty.bearingDegrees,
+          amplitude_c: entry.uncertainty.strengthC,
+        },
+      } as ForecastFeaturesFeature);
+    }
+    if (entry.thermocline) {
+      features.push({
+        id: 'thermocline',
+        kind: 'thermocline',
+        parameters: {
+          depth_m: entry.thermocline.depthM,
+          thickness_m: entry.thermocline.thicknessM,
+          temperature_drop_c: entry.thermocline.temperatureDropC,
+        },
+        uncertainty: {
+          depth_m: entry.uncertainty.depthM,
+          temperature_drop_c: entry.uncertainty.strengthC,
+        },
+      } as ForecastFeaturesFeature);
+    }
+    const step: ForecastFeaturesStep = { step: entry.step, lead_seconds: entry.leadSeconds, features };
+    return entry.declined.length === 0 ? step : { ...step, not_estimated: [...entry.declined] };
   }
 
   private publishInstance(

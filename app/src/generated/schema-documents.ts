@@ -1744,7 +1744,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "steps",
       "step_seconds",
       "advection",
-      "noise_std"
+      "noise_std",
+      "two_layer",
+      "cost"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1762,7 +1764,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_request",
           "analysis_published",
           "run_started",
-          "run_published"
+          "run_published",
+          "run_cost",
+          "forecast_features"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1781,6 +1785,14 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "run_published": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "run_cost": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where this component states what a run costs, in ticks of simulation time. It is the sole publisher of that figure (SRD-v2 FR-115): the scheduler subscribes here rather than holding a second copy, and check-declared-cost fails the build if any other component's configuration declares one."
+          },
+          "forecast_features": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the run announces the seeded features it forecast as features (SRD-v2 FR-113) — the eddy, the front, the thermocline and the drifting feature, each with an uncertainty growing with lead."
           }
         }
       },
@@ -1817,6 +1829,88 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           }
         }
       },
+      "two_layer": {
+        "type": "object",
+        "required": [
+          "interface_depth_m",
+          "upper",
+          "lower",
+          "horizontal_diffusivity_m2_per_s",
+          "interfacial_exchange_per_day",
+          "max_courant",
+          "max_sub_steps"
+        ],
+        "additionalProperties": false,
+        "description": "The shallow two-layer advection–diffusion step (SRD-v2 FR-112). Deliberately impoverished physics that nonetheless propagates state forward rather than sliding a field sideways: upwind advection and explicit horizontal diffusion within each layer, and an interfacial exchange between them. It is not an implementation of, port of, or wrapper around NEMO, ROMS, MITgcm, PDAF, DART, OceanVar or OpenDA (FR-107); those are named in the explainer as what the real thing is.",
+        "properties": {
+          "interface_depth_m": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Depth of the interface splitting the upper layer from the lower. A cell is in whichever layer its depth falls in; the interface is a modelling assumption and deliberately not the analysed thermocline, so a forecast that puts the thermocline somewhere else is saying something."
+          },
+          "upper": {
+            "$ref": "#/$defs/layer_velocity"
+          },
+          "lower": {
+            "$ref": "#/$defs/layer_velocity"
+          },
+          "horizontal_diffusivity_m2_per_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Explicit horizontal diffusivity, applied per layer. Bounded by the kernel's own stability condition: a configuration that violates it is refused with the numbers named, never integrated."
+          },
+          "interfacial_exchange_per_day": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Rate at which the two layers exchange, per day. Zero makes the layers independent, which is a legitimate configuration and says so."
+          },
+          "max_courant": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1,
+            "description": "The Courant number the kernel sub-steps to stay under. The sub-step count is derived from this, the grid and the velocities — never configured, because a configured count is a number that can disagree with the grid it runs on."
+          },
+          "max_sub_steps": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "The ceiling on sub-steps per forecast step. Reaching it is a REFUSAL and not a clamp: the kernel names the Courant number, the diffusion number, the exchange number, the sub-steps they require and this ceiling, and integrates nothing. Clamping instead would integrate unstably and publish the result as a forecast, which is the fault this bound exists to make impossible."
+          }
+        }
+      },
+      "cost": {
+        "type": "object",
+        "required": [
+          "work_per_sub_step",
+          "rate_work_per_tick",
+          "nominal_cell_km",
+          "restate_every_ticks"
+        ],
+        "additionalProperties": false,
+        "description": "What a run costs, as simulation time (SRD-v2 FR-114, ADR-0043). The magnitude is a declared rate and not a measurement — a host-clock duration is a fact about the machine the tab is open on, and admitting one would put a figure inside a run that differs between two replays of the same manifest (AT-04). What is kept is that the cost is spent rather than merely stated: the run occupies the ticks it comes to.",
+        "properties": {
+          "work_per_sub_step": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Declared work one integration sub-step covers, in work units. A declaration, not a measurement."
+          },
+          "rate_work_per_tick": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Work units one tick of simulation time buys. Cost in ticks is the work the run covers divided by this, rounded up."
+          },
+          "restate_every_ticks": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "How often the cost statement is repeated, in ticks of simulation time. A cost is a DECLARATION rather than an event: every restatement carries the same figures, so repeating it tells a listener that arrived late what the first statement said and tells one that heard it nothing new. Without it the figure would be published once, before the shell had mounted, and the surface that must state cost beside need (FR-118) could never have heard it. Measured in ticks and driven by the clock subscription this component already holds, so the repetition is deterministic and replays identically — it is a publication on the component's own clock and not a poll.",
+            "default": 60
+          },
+          "nominal_cell_km": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran — a declared figure and a reported one, never the same figure twice (ADR-0036)."
+          }
+        }
+      },
       "noise_std": {
         "type": "object",
         "required": [
@@ -1833,6 +1927,25 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "salinity": {
             "type": "number",
             "minimum": 0
+          }
+        }
+      }
+    },
+    "$defs": {
+      "layer_velocity": {
+        "type": "object",
+        "required": [
+          "east_km_per_day",
+          "north_km_per_day"
+        ],
+        "additionalProperties": false,
+        "description": "One layer's advecting velocity. Two layers moving differently is the whole of what makes this a propagation rather than a translation: the field shears, and the shear is what the old kernel could not produce.",
+        "properties": {
+          "east_km_per_day": {
+            "type": "number"
+          },
+          "north_km_per_day": {
+            "type": "number"
           }
         }
       }
@@ -1865,7 +1978,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "observations",
           "divergence",
           "telemetry",
-          "command"
+          "command",
+          "indicator"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1884,6 +1998,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "command": {
             "$ref": "config.common.schema.json#/$defs/topic",
             "description": "Operator commands. The monitor acts on a tuning addressed to it and ignores the rest."
+          },
+          "indicator": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "The declared topic an indicator that re-forecasting is becoming valuable publishes on (SRD-v2 FR-117). The indicator itself is environmental science and belongs to the environmental-indicators workstream; what drogna provides is this socket, a gauge that renders whatever is published here, and a refusal that names the absence when nothing is. Drogna's own residual statistic is wired in as the reference implementation, published by this component because it already holds both the running residual and the threshold in force — any other publisher would hold a second copy of the threshold, and the mark on the gauge could then disagree with the rule that fires a run."
           }
         }
       },
@@ -2780,7 +2898,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "min_interval_ticks",
       "max_interval_ticks",
       "ensemble_size",
-      "prompt_event"
+      "prompt_event",
+      "release_margin_ticks"
     ],
     "additionalProperties": false,
     "properties": {
@@ -2795,7 +2914,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_request",
           "run_published",
           "telemetry",
-          "command"
+          "command",
+          "run_cost"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2817,6 +2937,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "command": {
             "$ref": "config.common.schema.json#/$defs/topic",
             "description": "Operator commands: tuning of the two intervals, and a prompt to consider a run now."
+          },
+          "run_cost": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the model runner states what a run costs, in ticks. This scheduler subscribes and holds no cost figure of its own — the component that will spend the compute is the one that declares it (SRD-v2 FR-115), and check-declared-cost fails the build if a cost appears in this document."
           }
         }
       },
@@ -2836,6 +2960,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "ensemble_size": {
         "type": "integer",
         "minimum": 2
+      },
+      "release_margin_ticks": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "How far ahead of the standing forecast's lapse a held run is released, in ticks. A warranted scheduled or prompted run is HELD while the standing forecast has more life left than the run costs plus this margin, and released as that headroom decays, so the new run lands as the old one lapses (SRD-v2 FR-115). The rule runs the opposite way to the obvious reading on purpose: 'affordable when the run fits inside the remaining validity' becalms the loop permanently, because the cadence floor fires precisely when validity has lapsed and there is then no headroom at all. This is a margin and never a cost — the cost arrives on the run_cost topic from the component that will spend it.",
+        "default": 0
       },
       "prompt_event": {
         "type": "string",
@@ -3123,7 +3253,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "advisories",
           "platform_state",
           "observations",
-          "telemetry"
+          "telemetry",
+          "run_started",
+          "run_request",
+          "run_cost",
+          "forecast_features",
+          "forecast_indicator"
         ],
         "additionalProperties": false,
         "properties": {
@@ -3164,6 +3299,26 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "observations": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
             "description": "The observation namespace, for the sensors' and stores' faces to count what genuinely crossed the broker. Counted here and marked as counted here, never presented as a figure a component reported (FR-008)."
+          },
+          "run_request": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "Where the scheduler asks for a run, and the one place a run's CAUSE is declared — scheduled, divergence, or operator. The Forecast tab's timeline labels each run by cause (FR-132) and reads it from here rather than inferring it from a decision's prose, because a display that parses a sentence is a display inventing figures."
+          },
+          "run_started": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "Where the model runner announces a run before it computes anything (SRD-v2 FR-114). The Forecast tab's timeline needs the announcement and not only the publication, because the whole of what feature 123 added is the interval between them: a run that occupies its cost is visible only if its start is heard."
+          },
+          "run_cost": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "The model runner's cost statement (FR-115). The gauge states the cost beneath the need, in the same frame, from the figure the runner published — never from a configured expectation."
+          },
+          "forecast_features": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "The seeded features forecast as features (FR-113). Read by the Forecast tab's centre region, which feature 124 builds."
+          },
+          "forecast_indicator": {
+            "$ref": "config.common.schema.json#/$defs/topic_filter",
+            "description": "The declared socket an indicator that re-forecasting is becoming valuable publishes on (FR-117). The gauge renders whatever is published here and names what it is showing; with the topic silent it states the absence and draws no gauge. An empty gauge and an unheard indicator are different facts (FR-119)."
           }
         }
       },
@@ -5284,6 +5439,452 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "title": {
             "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "forecast-features": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/forecast-features.schema.json",
+    "title": "drogna forecast features",
+    "description": "The seeded features forecast AS FEATURES rather than merely carried in the field (SRD-v2 FR-113): the eddy's centre, radius and strength; the front's position and orientation; the thermocline's depth and gradient; and the drifting feature's track — each published per forecast step with an uncertainty that grows with lead, so that a forecast makes a falsifiable claim about next week rather than a picture of it.\n\n**The parameters are estimated from the analysis the run initialises from, and from nothing else.** A run never reads the true field. That is feature 116's lesson — before it, the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so nothing the platform measured ever reached a forecast — and it is why the runner subscribes to the analysis announcement rather than to the run request.\n\nProperty names follow `manifest.schema.json`'s own `eddy_parameters`, `front_parameters`, `thermocline_parameters` and `moving_parameters`, in the subset an estimator over a gridded field can honestly recover, so a scoring test compares like with like against the ground-truth manifest rather than against a translation. The bound such a test holds to is derived from the authoring jitter on disk and never typed into the test (AT-03, AT-06; Constitution IX).",
+    "type": "object",
+    "required": [
+      "component",
+      "scenario_run_id",
+      "sim_time",
+      "tick",
+      "run_id",
+      "kernel",
+      "initialisation_sim_time",
+      "step_seconds",
+      "steps"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "component": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "scenario_run_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sim_time": {
+        "type": "string"
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "run_id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The model run these features belong to, the same identifier the forecast holding carries."
+      },
+      "kernel": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "The kernel that carried them forward. A tracked feature is a claim about a propagation, so which propagation is not optional."
+      },
+      "initialisation_sim_time": {
+        "type": "string"
+      },
+      "step_seconds": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "steps": {
+        "type": "array",
+        "minItems": 1,
+        "description": "One entry per forecast step, in lead order.",
+        "items": {
+          "$ref": "#/$defs/step"
+        }
+      }
+    },
+    "$defs": {
+      "step": {
+        "type": "object",
+        "required": [
+          "step",
+          "lead_seconds",
+          "features"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lead_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Simulation seconds from initialisation. Lead, never host elapsed time."
+          },
+          "features": {
+            "type": "array",
+            "description": "The features this step could be estimated for. A feature an estimator could not recover honestly is ABSENT with its reason in `not_estimated`, never present with a widened uncertainty — softening a bound until it passes is the failure mode this document exists to make visible.",
+            "items": {
+              "$ref": "#/$defs/feature"
+            }
+          },
+          "not_estimated": {
+            "type": "array",
+            "description": "Features this step carries no estimate for, each with the reason in the runner's own words. Absent, null and declined are three different facts (FR-41).",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "reason"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "$ref": "#/$defs/kind"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "eddy",
+          "front",
+          "thermocline",
+          "moving"
+        ],
+        "description": "The four seeded features of SRD-v2 FR-03, named as the ground-truth manifest names them."
+      },
+      "feature": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "parameters",
+          "uncertainty"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "kind": {
+            "$ref": "#/$defs/kind"
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "uncertainty": {
+            "type": "object"
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "kind": {
+                "const": "eddy"
+              },
+              "parameters": {
+                "$ref": "#/$defs/eddy_parameters"
+              },
+              "uncertainty": {
+                "$ref": "#/$defs/positional_uncertainty"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "front"
+              },
+              "parameters": {
+                "$ref": "#/$defs/front_parameters"
+              },
+              "uncertainty": {
+                "$ref": "#/$defs/front_uncertainty"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "thermocline"
+              },
+              "parameters": {
+                "$ref": "#/$defs/thermocline_parameters"
+              },
+              "uncertainty": {
+                "$ref": "#/$defs/thermocline_uncertainty"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "moving"
+              },
+              "parameters": {
+                "$ref": "#/$defs/moving_parameters"
+              },
+              "uncertainty": {
+                "$ref": "#/$defs/positional_uncertainty"
+              }
+            }
+          }
+        ]
+      },
+      "eddy_parameters": {
+        "type": "object",
+        "required": [
+          "centre_latitude",
+          "centre_longitude",
+          "radius_km",
+          "strength_c"
+        ],
+        "additionalProperties": false,
+        "description": "The subset of the manifest's eddy_parameters an estimator over a gridded analysis can recover: where the anomaly is, how far it reaches, and how strong it is. The authored depth structure and salinity strength are deliberately absent — an estimate nobody can make honestly is worse than none.",
+        "properties": {
+          "centre_latitude": {
+            "type": "number"
+          },
+          "centre_longitude": {
+            "type": "number"
+          },
+          "radius_km": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "strength_c": {
+            "type": "number"
+          }
+        }
+      },
+      "front_parameters": {
+        "type": "object",
+        "required": [
+          "anchor_latitude",
+          "anchor_longitude",
+          "bearing_degrees",
+          "amplitude_c"
+        ],
+        "additionalProperties": false,
+        "description": "The front's position and orientation, named as the manifest names them. The anchor is where the horizontal gradient is strongest; the bearing is the direction the gradient runs along.",
+        "properties": {
+          "anchor_latitude": {
+            "type": "number"
+          },
+          "anchor_longitude": {
+            "type": "number"
+          },
+          "bearing_degrees": {
+            "type": "number"
+          },
+          "amplitude_c": {
+            "type": "number"
+          }
+        }
+      },
+      "thermocline_parameters": {
+        "type": "object",
+        "required": [
+          "depth_m",
+          "thickness_m",
+          "temperature_drop_c"
+        ],
+        "additionalProperties": false,
+        "description": "The thermocline's depth and the gradient across it, named as the manifest names them. Depth is where the vertical temperature gradient is steepest; thickness is the span the drop is taken over.",
+        "properties": {
+          "depth_m": {
+            "type": "number",
+            "minimum": 0
+          },
+          "thickness_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "temperature_drop_c": {
+            "type": "number"
+          }
+        }
+      },
+      "moving_parameters": {
+        "type": "object",
+        "required": [
+          "centre_latitude",
+          "centre_longitude",
+          "radius_km",
+          "strength_c"
+        ],
+        "additionalProperties": false,
+        "description": "The drifting feature's track: its position at this step, with the same recoverable subset the eddy carries. The drift velocity is not restated — it is what the succession of positions across the steps IS, and a velocity published beside them would be a second claim free to disagree.",
+        "properties": {
+          "centre_latitude": {
+            "type": "number"
+          },
+          "centre_longitude": {
+            "type": "number"
+          },
+          "radius_km": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "strength_c": {
+            "type": "number"
+          }
+        }
+      },
+      "positional_uncertainty": {
+        "type": "object",
+        "required": [
+          "centre_km",
+          "radius_km",
+          "strength_c"
+        ],
+        "additionalProperties": false,
+        "description": "One standard deviation on each estimated quantity, growing with lead. Derived from the analysis error the run initialised from and the root of the lead, so a longer forecast makes a weaker claim — which is what an uncertainty is for.",
+        "properties": {
+          "centre_km": {
+            "type": "number",
+            "minimum": 0
+          },
+          "radius_km": {
+            "type": "number",
+            "minimum": 0
+          },
+          "strength_c": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "front_uncertainty": {
+        "type": "object",
+        "required": [
+          "anchor_km",
+          "bearing_degrees",
+          "amplitude_c"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "anchor_km": {
+            "type": "number",
+            "minimum": 0
+          },
+          "bearing_degrees": {
+            "type": "number",
+            "minimum": 0
+          },
+          "amplitude_c": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "thermocline_uncertainty": {
+        "type": "object",
+        "required": [
+          "depth_m",
+          "temperature_drop_c"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "depth_m": {
+            "type": "number",
+            "minimum": 0
+          },
+          "temperature_drop_c": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "forecast-indicator": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/forecast-indicator.schema.json",
+    "title": "drogna re-forecast indicator",
+    "description": "The message on the declared indicator topic (SRD-v2 FR-117): a figure saying that re-forecasting is becoming valuable, the threshold at which it becomes warranted, and what the figure actually is.\n\n**This is a socket, not science.** The indicator that re-forecasting is becoming valuable is environmental science and belongs to the environmental-indicators workstream. What drogna provides is this declared shape, a gauge that renders whatever is published on the topic, and a refusal that names the absence when nothing is — an empty gauge and an unheard indicator are different facts and are drawn differently (FR-119).\n\nDrogna's own residual statistic is wired in as the reference implementation, published by the monitor because it already holds both the running residual and the threshold in force. Any other publisher would hold a second copy of the threshold, and the mark on the gauge could then disagree with the rule that fires a run — which is the fault class this repository keeps finding.",
+    "type": "object",
+    "required": [
+      "component",
+      "scenario_run_id",
+      "sim_time",
+      "tick",
+      "indicator",
+      "label",
+      "value",
+      "threshold",
+      "unit",
+      "streak"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "component": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "Whoever published it, matching config /component/id. The gauge names this, so a reader can see which indicator they are looking at rather than assuming the one they expected."
+      },
+      "scenario_run_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sim_time": {
+        "type": "string",
+        "description": "Simulation time at which the figure was current, ISO-8601 UTC with microsecond precision."
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "indicator": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "A stable identifier for which indicator this is. The surface states it: a gauge that does not say what it is showing is a number with a shape around it."
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "description": "What a reader is told the figure is, in the publisher's own words."
+      },
+      "value": {
+        "type": "number",
+        "description": "The figure. Reported, never derived by the surface from a configured expectation (FR-119)."
+      },
+      "threshold": {
+        "type": "number",
+        "description": "The value at which a run becomes warranted, in the same unit, as the publisher holds it. Marked on the gauge, and read from the same place the rule that fires a run reads it."
+      },
+      "unit": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The unit both figures are in."
+      },
+      "streak": {
+        "type": "object",
+        "required": [
+          "count",
+          "of"
+        ],
+        "additionalProperties": false,
+        "description": "How close the publisher is to acting on the figure, in its own counting. A consumer that recomputed this from the samples it happened to receive would be a second implementation of the rule, free to disagree about whether the loop is about to turn (FR-58).",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "of": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }
@@ -8541,6 +9142,71 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "run-cost": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/run-cost.schema.json",
+    "title": "drogna model run cost statement",
+    "description": "What a forecast run costs, in ticks of simulation time (SRD-v2 FR-114, FR-115; ADR-0043). Published by the model runner and by no other component: the thing that will spend the compute is the thing that declares what it comes to, so the figure the scheduler holds a run against and the figure the run actually occupies cannot disagree. `scripts/gates/check-declared-cost.ts` fails the build if any other component's configuration master declares one.\n\nThe cost is simulation time and never host time. A host-clock duration is a fact about the machine the tab happens to be open on, and admitting one would put a figure inside a run that differs between two replays of the same manifest — AT-04's byte-identical claim is the property that cannot be retrofitted at acceptable cost. What is given up is stated rather than glossed: the magnitude is a declared rate and not a measurement. What is kept is that the cost is spent rather than merely stated.",
+    "type": "object",
+    "required": [
+      "component",
+      "scenario_run_id",
+      "sim_time",
+      "tick",
+      "kernel",
+      "cost_ticks",
+      "work_units",
+      "rate_work_per_tick",
+      "basis"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "component": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "The model runner, matching config /component/id. The only component entitled to publish this message."
+      },
+      "scenario_run_id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The scenario run this statement belongs to."
+      },
+      "sim_time": {
+        "type": "string",
+        "description": "Simulation time at which the statement was made, ISO-8601 UTC with microsecond precision."
+      },
+      "tick": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "The tick index the runner had observed."
+      },
+      "kernel": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "The kernel behind the port whose work this states. A cost is a fact about an implementation, not about the port."
+      },
+      "cost_ticks": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Ticks of simulation time a run will occupy. Zero where the configured kernel declares no work — true of a kernel that translates a field rather than propagating a state, and said plainly rather than hidden behind a nominal figure."
+      },
+      "work_units": {
+        "type": "number",
+        "minimum": 0,
+        "description": "Work the run covers, in the declared units the rate below is expressed in. Carried so the arithmetic that produced cost_ticks is readable rather than trusted."
+      },
+      "rate_work_per_tick": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "Work units one tick buys, from configuration. A declaration about an afloat appliance nobody here has measured."
+      },
+      "basis": {
+        "type": "string",
+        "minLength": 1,
+        "description": "How the work was arrived at, in the runner's own words, including the nominal cell size the declaration assumed. A reader who disagrees with the cost should be able to see which assumption to argue with."
+      }
+    }
+  },
   "run-manifest": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-manifest.schema.json",
@@ -9097,7 +9763,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "divergence_id",
       "member_count",
       "kernel",
-      "initialisation_sim_time"
+      "initialisation_sim_time",
+      "cost_ticks",
+      "sub_steps_per_step"
     ],
     "additionalProperties": false,
     "properties": {
@@ -9143,6 +9811,16 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "initialisation_sim_time": {
         "type": "string",
         "description": "The simulation instant the run initialises from, echoed from the request."
+      },
+      "cost_ticks": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Ticks of simulation time this run will occupy before it publishes (SRD-v2 FR-114). Zero where the configured kernel declares no work, which is a true statement about a kernel that only translates a field and is drawn as such rather than hidden."
+      },
+      "sub_steps_per_step": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036)."
       }
     }
   },
@@ -9939,7 +10617,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "divergence_id",
           "decision",
           "detail",
-          "run_id"
+          "run_id",
+          "shortfall_ticks"
         ],
         "additionalProperties": false,
         "properties": {
@@ -9970,9 +10649,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "enum": [
               "accepted",
               "minimum-interval",
-              "duplicate-outstanding"
+              "duplicate-outstanding",
+              "held-for-cost"
             ],
-            "description": "accepted means a run was requested. The other two name the rule that declined it, rather than collapsing every refusal into one word."
+            "description": "accepted means a run was requested. The other three name the rule that held or declined it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held — the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing."
           },
           "detail": {
             "type": "string",
@@ -9984,6 +10664,13 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "null"
             ],
             "description": "The run requested, or null when the divergence was declined. Null rather than an empty string, because a declined divergence has no run and should not appear to name one."
+          },
+          "shortfall_ticks": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "For held-for-cost, how many ticks of the standing forecast's validity must still decay before the run is released — the hold said in the units the hold is measured in, so a reader need not subtract two instants to learn how long. Null for every other decision, because they have no shortfall and a zero would read as one that had just expired."
           }
         }
       },

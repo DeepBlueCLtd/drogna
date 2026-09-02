@@ -18,6 +18,17 @@
  * reached the streak rule but not the sample report would have the monitor disagreeing
  * with itself about what it is doing.
  *
+ * From feature 123 the monitor also publishes the **re-forecast indicator** (FR-117) on a
+ * declared topic beside its divergence events. That indicator is a socket and not science:
+ * whether re-forecasting is becoming valuable is environmental science and belongs to the
+ * environmental-indicators workstream, and what drogna provides is the declared shape, a
+ * gauge that renders whatever is published there, and a refusal that names the absence when
+ * nothing is. Drogna's own residual statistic is wired in as the reference implementation,
+ * and it is published *here* rather than by the telemetry component for the reason the rest
+ * of this comment keeps making: this component already holds both the running residual and
+ * the threshold in force, so the mark on the gauge and the rule that fires a run cannot
+ * disagree. Any other publisher would hold a second copy of the threshold.
+ *
  * An ownship observation is not a sample of the ocean (FR-56), and the monitor needs
  * no rule to say so: `pairs` names the thing and the two datastreams it scores, so an
  * observation it did not ask for informs nothing. That is an allowlist, and it is
@@ -30,6 +41,7 @@ import type { SeamClient } from '../../seam/transport.js';
 import type {
   ConfigMonitor,
   Divergence,
+  ForecastIndicator,
   Observation,
   OperatorCommand,
 } from '../../generated/types.js';
@@ -239,6 +251,25 @@ export class Monitor {
         persistence_count: this.persistence(),
       },
     });
+
+    // The indicator, on the declared socket (FR-117). Published beside the residual sample
+    // and from the same two readers — `this.threshold()` and the streak this component
+    // keeps — so the mark a gauge draws and the rule that fires a run are the same numbers.
+    this.client.publish(this.config.topics.indicator, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      indicator: 'sound-speed-residual',
+      label: 'sound-speed residual against the standing forecast',
+      value: Math.abs(residual),
+      threshold: this.threshold(),
+      unit: 'm/s',
+      streak: {
+        count: Math.abs(residual) > this.threshold() ? this.breaches.length + 1 : 0,
+        of: this.persistence(),
+      },
+    } satisfies ForecastIndicator);
 
     if (Math.abs(residual) > this.threshold()) {
       this.breaches.push({

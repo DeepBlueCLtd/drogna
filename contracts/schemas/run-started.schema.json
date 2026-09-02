@@ -13,7 +13,9 @@
     "divergence_id",
     "member_count",
     "kernel",
-    "initialisation_sim_time"
+    "initialisation_sim_time",
+    "cost_ticks",
+    "sub_steps_per_step"
   ],
   "additionalProperties": false,
   "properties": {
@@ -59,6 +61,16 @@
     "initialisation_sim_time": {
       "type": "string",
       "description": "The simulation instant the run initialises from, echoed from the request."
+    },
+    "cost_ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Ticks of simulation time this run will occupy before it publishes (SRD-v2 FR-114). Zero where the configured kernel declares no work, which is a true statement about a kernel that only translates a field and is drawn as such rather than hidden."
+    },
+    "sub_steps_per_step": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036)."
     }
   }
 }

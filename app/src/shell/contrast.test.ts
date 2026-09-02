@@ -121,6 +121,7 @@ const NO_TEXT_ON: Record<string, string> = {
   '.intro-mark.is-ann': 'the same mark, carrying an event rather than an observation',
   '.intro-mark.is-res': 'the same mark, carrying a query or its answer',
   '.welcome-progress-fill': 'the fill inside the welcome page’s progress track; the figure is written under it',
+  '.forecast-gauge-fill': 'the fill inside the Forecast gauge’s bar; both the value and the threshold are written beside it, which is what makes the region legible in greyscale',
   '.walkthrough-button:hover': 'the help button under the pointer; its own rule sets the text colour',
   '.driver-popover.walkthrough-popover button:hover': 'a popover button under the pointer; its own rule sets the text colour',
 };

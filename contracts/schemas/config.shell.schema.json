@@ -110,7 +110,12 @@
         "advisories",
         "platform_state",
         "observations",
-        "telemetry"
+        "telemetry",
+        "run_started",
+        "run_request",
+        "run_cost",
+        "forecast_features",
+        "forecast_indicator"
       ],
       "additionalProperties": false,
       "properties": {
@@ -151,6 +156,26 @@
         "observations": {
           "$ref": "config.common.schema.json#/$defs/topic_filter",
           "description": "The observation namespace, for the sensors' and stores' faces to count what genuinely crossed the broker. Counted here and marked as counted here, never presented as a figure a component reported (FR-008)."
+        },
+        "run_request": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "Where the scheduler asks for a run, and the one place a run's CAUSE is declared \u2014 scheduled, divergence, or operator. The Forecast tab's timeline labels each run by cause (FR-132) and reads it from here rather than inferring it from a decision's prose, because a display that parses a sentence is a display inventing figures."
+        },
+        "run_started": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "Where the model runner announces a run before it computes anything (SRD-v2 FR-114). The Forecast tab's timeline needs the announcement and not only the publication, because the whole of what feature 123 added is the interval between them: a run that occupies its cost is visible only if its start is heard."
+        },
+        "run_cost": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The model runner's cost statement (FR-115). The gauge states the cost beneath the need, in the same frame, from the figure the runner published \u2014 never from a configured expectation."
+        },
+        "forecast_features": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The seeded features forecast as features (FR-113). Read by the Forecast tab's centre region, which feature 124 builds."
+        },
+        "forecast_indicator": {
+          "$ref": "config.common.schema.json#/$defs/topic_filter",
+          "description": "The declared socket an indicator that re-forecasting is becoming valuable publishes on (FR-117). The gauge renders whatever is published here and names what it is showing; with the topic silent it states the absence and draws no gauge. An empty gauge and an unheard indicator are different facts (FR-119)."
         }
       }
     },

@@ -30,6 +30,7 @@ import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
 import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
 import { runGate as blogLength } from '../gates/check-blog-length.js';
+import { runGate as declaredCost } from '../gates/check-declared-cost.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
 const violations = join(fixtures, 'violations');
@@ -54,6 +55,21 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     );
     expect(found.some((f) => f.file.includes('departure-initialisation'))).toBe(true);
     expect(truthInitialisation(clean)).toEqual([]);
+  });
+
+  it('declared-cost: a cost figure in another component’s document fails; the real tree passes', () => {
+    // The fault class this repository keeps finding, in its newest form: a second copy of
+    // a figure one component owns. A `run_cost_ticks` beside `min_interval_ticks` would let
+    // the scheduler hold a run against one number while the run occupied another, and
+    // neither document would be wrong on its own terms (FR-115, ADR-0043).
+    const found = declaredCost(join(fixtures, 'declared-cost'));
+    expect(found.map((finding) => finding.message)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/declares 'run_cost_ticks'/)]),
+    );
+    expect(found.some((finding) => finding.file.includes('config.scheduler'))).toBe(true);
+    // A topic naming where the cost is published is not a declaration of it: the scheduler
+    // subscribes to `run_cost` in the real tree, and that is the design working.
+    expect(declaredCost()).toEqual([]);
   });
 
   it('wallclock', () => {

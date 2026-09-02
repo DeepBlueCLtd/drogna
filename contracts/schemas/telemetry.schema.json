@@ -235,7 +235,8 @@
         "divergence_id",
         "decision",
         "detail",
-        "run_id"
+        "run_id",
+        "shortfall_ticks"
       ],
       "additionalProperties": false,
       "properties": {
@@ -247,13 +248,17 @@
         "divergence_id": { "type": ["string", "null"], "description": "The divergence this decision was about, or null where the scheduler was deciding on an operator prompt rather than on a divergence." },
         "decision": {
           "type": "string",
-          "enum": ["accepted", "minimum-interval", "duplicate-outstanding"],
-          "description": "accepted means a run was requested. The other two name the rule that declined it, rather than collapsing every refusal into one word."
+          "enum": ["accepted", "minimum-interval", "duplicate-outstanding", "held-for-cost"],
+          "description": "accepted means a run was requested. The other three name the rule that held or declined it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held \u2014 the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing."
         },
         "detail": { "type": "string", "description": "Enough of why for the record to stand alone." },
         "run_id": {
           "type": ["string", "null"],
           "description": "The run requested, or null when the divergence was declined. Null rather than an empty string, because a declined divergence has no run and should not appear to name one."
+        },
+        "shortfall_ticks": {
+          "type": ["integer", "null"],
+          "description": "For held-for-cost, how many ticks of the standing forecast's validity must still decay before the run is released \u2014 the hold said in the units the hold is measured in, so a reader need not subtract two instants to learn how long. Null for every other decision, because they have no shortfall and a zero would read as one that had just expired."
         }
       }
     },

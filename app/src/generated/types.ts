@@ -389,6 +389,8 @@ export type ConfigModelRunner = {
     "analysis_published": ConfigCommonTopic;
     "run_started": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
+    "run_cost": ConfigCommonTopic;
+    "forecast_features": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "kernel": string;
@@ -398,10 +400,31 @@ export type ConfigModelRunner = {
     "east_km_per_day": number;
     "north_km_per_day": number;
   };
+  "two_layer": {
+    "interface_depth_m": number;
+    "upper": ConfigModelRunnerLayerVelocity;
+    "lower": ConfigModelRunnerLayerVelocity;
+    "horizontal_diffusivity_m2_per_s": number;
+    "interfacial_exchange_per_day": number;
+    "max_courant": number;
+    "max_sub_steps": number;
+  };
+  "cost": {
+    "work_per_sub_step": number;
+    "rate_work_per_tick": number;
+    "restate_every_ticks": number;
+    "nominal_cell_km": number;
+  };
   "noise_std": {
     "temperature": number;
     "salinity": number;
   };
+};
+
+/** config.model-runner.schema.json #/$defs/layer_velocity */
+export type ConfigModelRunnerLayerVelocity = {
+  "east_km_per_day": number;
+  "north_km_per_day": number;
 };
 
 /** drogna monitor configuration (V2-C11) — from config.monitor.schema.json */
@@ -413,6 +436,7 @@ export type ConfigMonitor = {
     "divergence": ConfigCommonTopic;
     "telemetry": ConfigCommonTopic;
     "command": ConfigCommonTopic;
+    "indicator": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "pairs": {
@@ -618,11 +642,13 @@ export type ConfigScheduler = {
     "run_published": ConfigCommonTopic;
     "telemetry": ConfigCommonTopic;
     "command": ConfigCommonTopic;
+    "run_cost": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "min_interval_ticks": number;
   "max_interval_ticks": number;
   "ensemble_size": number;
+  "release_margin_ticks": number;
   "prompt_event": string;
 };
 
@@ -687,6 +713,11 @@ export type ConfigShell = {
     "platform_state": ConfigCommonTopicFilter;
     "telemetry": ConfigCommonTopicFilter;
     "observations": ConfigCommonTopicFilter;
+    "run_request": ConfigCommonTopicFilter;
+    "run_started": ConfigCommonTopicFilter;
+    "run_cost": ConfigCommonTopicFilter;
+    "forecast_features": ConfigCommonTopicFilter;
+    "forecast_indicator": ConfigCommonTopicFilter;
   };
   "message_schemas": {
     "filter": ConfigCommonTopicFilter;
@@ -1111,6 +1142,129 @@ export type FeaturesResponseLink = {
   "rel": string;
   "type"?: string;
   "title"?: string;
+};
+
+/** drogna forecast features — from forecast-features.schema.json */
+export type ForecastFeatures = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "run_id": string;
+  "kernel": string;
+  "initialisation_sim_time": string;
+  "step_seconds": number;
+  "steps": ForecastFeaturesStep[];
+};
+
+/** forecast-features.schema.json #/$defs/step */
+export type ForecastFeaturesStep = {
+  "step": number;
+  "lead_seconds": number;
+  "features": ForecastFeaturesFeature[];
+  "not_estimated"?: {
+    "kind": ForecastFeaturesKind;
+    "reason": string;
+  }[];
+};
+
+/** forecast-features.schema.json #/$defs/kind */
+export type ForecastFeaturesKind = "eddy" | "front" | "thermocline" | "moving";
+
+/** forecast-features.schema.json #/$defs/feature */
+export type ForecastFeaturesFeature = ({
+  "id": string;
+  "kind": ForecastFeaturesKind;
+  "parameters": {
+    [key: string]: unknown;
+  };
+  "uncertainty": {
+    [key: string]: unknown;
+  };
+}) & (({
+  "kind"?: "eddy";
+  "parameters"?: ForecastFeaturesEddyParameters;
+  "uncertainty"?: ForecastFeaturesPositionalUncertainty;
+}) | ({
+  "kind"?: "front";
+  "parameters"?: ForecastFeaturesFrontParameters;
+  "uncertainty"?: ForecastFeaturesFrontUncertainty;
+}) | ({
+  "kind"?: "thermocline";
+  "parameters"?: ForecastFeaturesThermoclineParameters;
+  "uncertainty"?: ForecastFeaturesThermoclineUncertainty;
+}) | ({
+  "kind"?: "moving";
+  "parameters"?: ForecastFeaturesMovingParameters;
+  "uncertainty"?: ForecastFeaturesPositionalUncertainty;
+}));
+
+/** forecast-features.schema.json #/$defs/eddy_parameters */
+export type ForecastFeaturesEddyParameters = {
+  "centre_latitude": number;
+  "centre_longitude": number;
+  "radius_km": number;
+  "strength_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/front_parameters */
+export type ForecastFeaturesFrontParameters = {
+  "anchor_latitude": number;
+  "anchor_longitude": number;
+  "bearing_degrees": number;
+  "amplitude_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/thermocline_parameters */
+export type ForecastFeaturesThermoclineParameters = {
+  "depth_m": number;
+  "thickness_m": number;
+  "temperature_drop_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/moving_parameters */
+export type ForecastFeaturesMovingParameters = {
+  "centre_latitude": number;
+  "centre_longitude": number;
+  "radius_km": number;
+  "strength_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/positional_uncertainty */
+export type ForecastFeaturesPositionalUncertainty = {
+  "centre_km": number;
+  "radius_km": number;
+  "strength_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/front_uncertainty */
+export type ForecastFeaturesFrontUncertainty = {
+  "anchor_km": number;
+  "bearing_degrees": number;
+  "amplitude_c": number;
+};
+
+/** forecast-features.schema.json #/$defs/thermocline_uncertainty */
+export type ForecastFeaturesThermoclineUncertainty = {
+  "depth_m": number;
+  "temperature_drop_c": number;
+};
+
+/** drogna re-forecast indicator — from forecast-indicator.schema.json */
+export type ForecastIndicator = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "indicator": string;
+  "label": string;
+  "value": number;
+  "threshold": number;
+  "unit": string;
+  "streak": {
+    "count": number;
+    "of": number;
+  };
 };
 
 /** drogna component heartbeat — from heartbeat.schema.json */
@@ -1771,6 +1925,19 @@ export type QuerySubsets = {
   };
 };
 
+/** drogna model run cost statement — from run-cost.schema.json */
+export type RunCost = {
+  "component": string;
+  "scenario_run_id": string;
+  "sim_time": string;
+  "tick": number;
+  "kernel": string;
+  "cost_ticks": number;
+  "work_units": number;
+  "rate_work_per_tick": number;
+  "basis": string;
+};
+
 /** drogna run manifest — from run-manifest.schema.json */
 export type RunManifest = {
   "schema_version": 1;
@@ -1892,6 +2059,8 @@ export type RunStarted = {
   "member_count": number;
   "kernel": string;
   "initialisation_sim_time": string;
+  "cost_ticks": number;
+  "sub_steps_per_step": number;
 };
 
 /** drogna SensorThings subset responses — from sensorthings-subset.schema.json */
@@ -2095,9 +2264,10 @@ export type TelemetrySchedulerDecision = {
   "tick": TelemetryTickIndex;
   "kind": "scheduler-decision";
   "divergence_id": string | null;
-  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding";
+  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding" | "held-for-cost";
   "detail": string;
   "run_id": string | null;
+  "shortfall_ticks": number | null;
 };
 
 /** telemetry.schema.json #/$defs/run_failed */

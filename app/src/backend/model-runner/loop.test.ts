@@ -89,10 +89,18 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     // tick count that happened to cover them. Feature 116 pushed the first divergence of
     // a scenario out to tick 6540 — a forecast corrected by what was measured takes far
     // longer to drift into a breach — and 6000 had been just enough before it.
+    // The condition is a divergence-triggered run *published*, not merely requested.
+    // Feature 123 put a cost between the two: a run announces its start, occupies the
+    // ticks it comes to, and publishes when they are spent, so a drive that stopped at
+    // the request would stop with the last run still integrating and then find one more
+    // request than publication. Re-derived from the behaviour rather than by adding a
+    // tick count generous enough to cover it (T045).
     const record = await recordUntil(
       runtime,
       config,
-      (seen) => seen.requests.some((request) => request.cause === 'divergence'),
+      (seen) =>
+        seen.requests.some((request) => request.cause === 'divergence') &&
+        seen.published.length === seen.requests.length,
       12000,
     );
 
@@ -151,7 +159,12 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     // produces.
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    const record = await drive(runtime, config, config.scheduler.max_interval_ticks + 1);
+    // Driven until that scheduled run has *published*, not merely been requested. A run
+    // now occupies the ticks it costs, so a divergence raised while it is still
+    // integrating is declined as a duplicate — a true and different fact from the one
+    // this test is about. Stated as the event rather than as a tick count for exactly the
+    // reason `recordUntil` exists (T045).
+    const record = await recordUntil(runtime, config, (seen) => seen.published.length >= 1, config.scheduler.max_interval_ticks * 2);
     expect(record.requests.length).toBeGreaterThanOrEqual(1);
     expect(record.requests[0].cause).toBe('scheduled');
     const declinedBefore = runtime.scheduler.declinedByPolicy;

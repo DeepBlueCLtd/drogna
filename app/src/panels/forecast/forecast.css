@@ -1,0 +1,183 @@
+/**
+ * The Forecast tab's stylesheet (feature 123).
+ *
+ * One rule governs the file: **nothing here animates or transitions.** FR-137 admits motion
+ * only where the system moved or where the motion is declared as illustration, and a CSS
+ * animation is motion the markup cannot see — a check that watched the DOM would pass while
+ * the page pulsed at a stopped harness. The gauge fills by changing a height on an
+ * announcement and by nothing else.
+ *
+ * Colour is never the only carrier (FR-138). The timeline marks a held entry with a
+ * different glyph as well as a different tone, and the gauge prints both its value and its
+ * threshold beside the bar, so the region reads in greyscale without inference.
+ */
+
+.forecast-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  overflow: auto;
+}
+
+.forecast-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6em;
+}
+
+.forecast-title {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.forecast-disclosure {
+  margin: 0;
+  flex: 1 1 20em;
+  color: var(--shell-dim);
+  font-size: 0.85em;
+}
+
+.forecast-regions {
+  display: grid;
+  /* `minmax(0, 1fr)`, never `1fr`: a track's automatic minimum is its content's
+     min-content width, and a long basis sentence would otherwise push the grid past the
+     panel rather than wrapping inside it. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18em), 1fr));
+  gap: 0.8em;
+}
+
+.forecast-region {
+  border: 1px solid #232c36;
+  padding: 0.6em 0.7em;
+}
+
+.forecast-region h3 {
+  margin: 0 0 0.5em;
+  font-size: 0.95em;
+}
+
+.forecast-region-empty {
+  border-style: dashed;
+}
+
+/* -------------------------------------------------------------- the gauge --- */
+
+.forecast-gauge {
+  display: flex;
+  align-items: stretch;
+  gap: 0.7em;
+}
+
+.forecast-gauge-bar {
+  position: relative;
+  width: 2.2em;
+  min-height: 7em;
+  border: 1px solid #232c36;
+}
+
+.forecast-gauge-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: var(--shell-dim);
+}
+
+/* Past the threshold the fill is hatched as well as darker, so the state survives
+   greyscale and a monochrome print alike. */
+.forecast-gauge-fill.is-breaching {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--shell-fg),
+    var(--shell-fg) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.forecast-gauge-threshold {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  height: 0;
+  border-top: 2px dashed var(--shell-fg);
+}
+
+.forecast-gauge-legend p {
+  margin: 0 0 0.3em;
+  font-size: 0.85em;
+}
+
+.forecast-gauge-value {
+  font-weight: 600;
+}
+
+.forecast-cost {
+  margin: 0.6em 0 0;
+  font-size: 0.85em;
+}
+
+.forecast-basis {
+  color: var(--shell-dim);
+}
+
+/* ----------------------------------------------------------- the timeline --- */
+
+.forecast-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.forecast-run {
+  display: grid;
+  grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+  gap: 0 0.6em;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  padding: 0.15em 0.3em;
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.forecast-run:hover,
+.forecast-run:focus-visible {
+  border-color: #232c36;
+}
+
+.forecast-run.is-selected {
+  border-color: var(--shell-fg);
+}
+
+.forecast-run-tick {
+  font-family: monospace;
+  color: var(--shell-dim);
+}
+
+.forecast-run-cause {
+  font-weight: 600;
+}
+
+.forecast-run-detail {
+  color: var(--shell-dim);
+}
+
+.forecast-run-held .forecast-run-cause {
+  font-style: italic;
+}
+
+.forecast-selected,
+.forecast-refused {
+  margin: 0.5em 0 0;
+  font-size: 0.85em;
+}
+
+.forecast-refused {
+  color: var(--shell-dim);
+}

@@ -79,6 +79,18 @@ export class Scheduler {
   private lastSample: { tick: number; millis: number } | undefined;
   /** The cause currently being held, so the hold is reported once and not on every tick. */
   private holding: RunRequest['cause'] | undefined;
+  /**
+   * A reader's prompt that was held, still owed a run.
+   *
+   * **Without this the hold was a promise the scheduler never kept.** A held prompt used to
+   * be reported and then dropped: nothing remembered it, and the only path that requests
+   * again is the cadence floor, which fires on its own schedule and labels its run
+   * `scheduled`. So a reader pressed the button, was told "released as that headroom
+   * decays", and got no run — while FR-115, FR-116, this feature's own spec and ADR-0043
+   * all said prompts wait and are released. A prompt is a reader committing a run against
+   * the stated cost (FR-116), and the commitment outlives the tick it was made in.
+   */
+  private promptHeld = false;
   /** Intervals in force, where the operator plane has changed one from configuration. */
   private tunedMinimum: number | undefined;
   private tunedMaximum: number | undefined;
@@ -125,15 +137,19 @@ export class Scheduler {
           { key: 'declined', value: this.declinedByPolicy, label: 'declined' },
           { key: 'held_for_cost', value: this.heldForCost, label: 'held for cost' },
           { key: 'abandoned', value: this.abandoned, label: 'released unfinished' },
-          // Reported as the runner stated it, never as a figure this component holds.
+          // What a run costs, as the model runner stated it — reported, never a figure this
+          // component holds. It goes here because a face showing how many runs were held
+          // for cost, without showing what a run costs, is showing half a sentence.
           //
-          // The release margin is deliberately **not** among these. `heartbeat.schema.json`
-          // caps a component at eight figures — a face has room to draw eight and a ninth
-          // is a face inventing space — and this feature wanted four where there was room
-          // for three. The margin is the one that goes: it is a configured constant that
-          // never moves, it is named in the held-for-cost decision every time a hold is
-          // reported, and a display drawing it would be drawing configuration back at the
-          // reader. The other three each move while the run is going.
+          // `heartbeat.schema.json` caps a component at eight figures: a face has room to
+          // draw eight, and a ninth is a face inventing space. This feature wanted four
+          // more where there was room for three, and it is the **release margin** that goes
+          // — the one figure of the four that is a configured constant this component owns,
+          // named in every held-for-cost decision anyway, and drawing it would be drawing
+          // configuration back at a reader who set it. That leaves the array exactly at the
+          // cap, so the next figure anyone adds has to displace one of these and argue for
+          // it, which is what a cap is for.
+          { key: 'run_cost', value: this.runCostTicks ?? 0, unit: 'ticks', label: 'a run costs' },
           {
             key: 'ticks_to_minimum',
             value: this.ticksToMinimumInterval(),
@@ -160,6 +176,7 @@ export class Scheduler {
       }
       this.lastSample = { tick: sample.tick, millis };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      this.releaseHeldPrompt();
       this.considerCadenceFloor();
     });
     this.client.subscribe(this.config.topics.run_cost, (message) => {
@@ -239,7 +256,11 @@ export class Scheduler {
     // held is not an oversight: it is the surface saying what the cost buys and when.
     const shortfall = this.holdShortfall();
     if (shortfall > 0) {
-      this.hold('operator', null, shortfall, 'a reader prompted a run');
+      // Remembered, not merely reported. And reported every time it is asked, because a
+      // prompt is a discrete act by a reader and a button that answers nothing the second
+      // time it is pressed is a button that looks broken.
+      this.promptHeld = true;
+      this.hold('operator', null, shortfall, 'a reader prompted a run', true);
       return;
     }
     this.holding = undefined;
@@ -363,13 +384,51 @@ export class Scheduler {
   }
 
   /**
+   * The reader's held prompt, released when the headroom it was waiting on has decayed.
+   *
+   * Considered before the cadence floor on each sample, because a reader who asked for a
+   * run should get the run they asked for, labelled as theirs, rather than have the floor's
+   * own run arrive first and reset the interval under them.
+   */
+  private releaseHeldPrompt(): void {
+    if (!this.promptHeld || this.inFlight !== undefined || this.holdShortfall() > 0) return;
+    this.promptHeld = false;
+    this.holding = undefined;
+    if (this.lastRequestTick !== undefined && this.simTime.tick - this.lastRequestTick < this.minimumInterval()) {
+      // The world moved while the prompt waited. It is declined by the rule that declines
+      // it, not silently forgotten: a commitment that expires without a word is the fault
+      // the hold was introduced to avoid.
+      this.declinedByPolicy += 1;
+      this.lastDecision = `declined by policy: the held prompt came due at tick ${this.simTime.tick}, inside the minimum interval (${this.minimumInterval()} ticks since tick ${this.lastRequestTick})`;
+      this.reportDecision(null, 'minimum-interval', this.lastDecision, null);
+      return;
+    }
+    const runIdentifier = this.request('operator', undefined);
+    this.reportDecision(
+      null,
+      'accepted',
+      `requested ${runIdentifier}: the reader's held prompt, released as the standing forecast's headroom decayed`,
+      runIdentifier,
+    );
+  }
+
+  /**
    * Record a hold, once per episode. Reported every tick it persisted it would drown the
    * telemetry branch in a fact that has not changed; reported never, a run held for a
    * thousand ticks would be indistinguishable from a run nothing asked for, which is
    * precisely the confusion FR-115 forbids.
    */
-  private hold(cause: RunRequest['cause'], divergenceId: string | null, shortfall: number, why: string): void {
-    if (this.holding === cause) return;
+  private hold(
+    cause: RunRequest['cause'],
+    divergenceId: string | null,
+    shortfall: number,
+    why: string,
+    always = false,
+  ): void {
+    // The cadence floor is considered on every tick and would republish an unchanged fact
+    // for as long as the hold lasted, so it is reported once per episode. A reader's prompt
+    // is not on a cadence: it is asked, and it is answered, every time.
+    if (!always && this.holding === cause) return;
     this.holding = cause;
     this.heldForCost += 1;
     this.lastDecision =

@@ -38,6 +38,11 @@
       "minItems": 1,
       "description": "One entry per forecast step, in lead order.",
       "items": { "$ref": "#/$defs/step" }
+    },
+    "not_estimated": {
+      "type": "array",
+      "description": "What this run could not estimate, and why, in the runner's own words. Absent, null and declined are three different facts (FR-41).\n\nOn the message rather than on each step, because it is a property of the ESTIMATE and not of the lead: the features are estimated once, from the analysis the run initialises from, and carried forward — so nothing about what could not be recovered can differ between step 0 and step 3. It was per-step first, which put the same few hundred words of reasoning in the document four times over and left four copies that had to agree.",
+      "items": { "$ref": "#/$defs/not_estimated_entry" }
     }
   },
   "$defs": {
@@ -56,25 +61,21 @@
           "type": "array",
           "description": "The features this step could be estimated for. A feature an estimator could not recover honestly is ABSENT with its reason in `not_estimated`, never present with a widened uncertainty — softening a bound until it passes is the failure mode this document exists to make visible.",
           "items": { "$ref": "#/$defs/feature" }
-        },
-        "not_estimated": {
-          "type": "array",
-          "description": "Features this step carries no estimate for, each with the reason in the runner's own words. Absent, null and declined are three different facts (FR-41).",
-          "items": {
-            "type": "object",
-            "required": ["kind", "reason"],
-            "additionalProperties": false,
-            "properties": {
-              "kind": { "$ref": "#/$defs/kind" },
-              "quantity": {
-                "type": "string",
-                "minLength": 1,
-                "description": "The single quantity not recovered, named as the ground-truth manifest names it. Absent means the whole feature was not estimated. Two different facts: a thermocline nobody could place, and a thermocline placed to the grid's resolution whose authored temperature drop is finer than the grid can see."
-              },
-              "reason": { "type": "string", "minLength": 1 }
-            }
-          }
         }
+      }
+    },
+    "not_estimated_entry": {
+      "type": "object",
+      "required": ["kind", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "$ref": "#/$defs/kind" },
+        "quantity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The single quantity not recovered, named as the ground-truth manifest names it. Absent means the whole feature was not estimated. Two different facts: a thermocline nobody could place, and a thermocline placed to the grid's resolution whose authored temperature drop is finer than the grid can see."
+        },
+        "reason": { "type": "string", "minLength": 1 }
       }
     },
     "kind": {

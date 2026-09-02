@@ -737,7 +737,7 @@
     "cost": {
       "work_per_sub_step": 3,
       "rate_work_per_tick": 1,
-      "nominal_cell_km": 11,
+      "nominal_cell_km": 5,
       "restate_every_ticks": 60
     },
     "noise_std": {

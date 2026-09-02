@@ -182,7 +182,7 @@ function highPass(anomaly: Float64Array, lonCount: number, latCount: number): Fl
 }
 
 /**
- * One signed blob: the extremum of the high-passed anomaly, and the centroid of the region
+ * One signed blob in an already high-passed field: its extremum, and the centroid of the region
  * **connected to it** above half that extremum.
  *
  * Connected, and not simply "everything above half the peak": a global threshold admits any
@@ -196,14 +196,13 @@ function highPass(anomaly: Float64Array, lonCount: number, latCount: number): Fl
  * radius and is not scored as if it were not.
  */
 function blob(
-  anomaly: Float64Array,
+  field: Float64Array,
   grid: FeatureGrid,
   sign: 1 | -1,
   keepOut?: (longitude: number, latitude: number) => boolean,
 ): BlobEstimate | undefined {
   const lonCount = grid.longitudes.length;
   const latCount = grid.latitudes.length;
-  const field = highPass(anomaly, lonCount, latCount);
   /*
    * A blob already found is excluded, out to the width of the high pass itself — and this
    * is the second finding in this module, caught by scoring every start condition's seed
@@ -467,9 +466,13 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
    * that made it. Derived from the grid, like the window.
    */
   const ringKm = highPassWindow(lonCount, latCount) * Math.max(grid.cellKmEast, grid.cellKmNorth);
+  // Filtered once, for both searches. The summed-area table exists because thirteen million
+  // reads inside a browser tab is the naive way round, and computing it twice would be the
+  // naive way round twice — and would leave two callers free to disagree about the window.
+  const passed = highPass(anomaly, lonCount, latCount);
   const declined: Declined[] = [];
 
-  const eddy = blob(anomaly, grid, 1);
+  const eddy = blob(passed, grid, 1);
   if (!eddy) {
     declined.push({
       kind: 'eddy',
@@ -491,7 +494,7 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
     const { eastKm, northKm } = kmOffsets(longitude, latitude, eddy.centreLongitude, eddy.centreLatitude, grid.referenceLatitude);
     return Math.hypot(eastKm, northKm) < ringKm;
   };
-  const moving = blob(anomaly, grid, -1, nearEddy);
+  const moving = blob(passed, grid, -1, nearEddy);
   if (!moving) {
     declined.push({
       kind: 'moving',
@@ -585,6 +588,27 @@ function advance(
   };
 }
 
+/**
+ * One standard deviation on each quantity, for **one** feature.
+ *
+ * Per feature and not per step, which was the first shape and was wrong: a single block
+ * computed from the eddy's own peak and radius was attached to the drifting feature and the
+ * front as well. The drifting feature is authored weaker and smaller than the eddy, so the
+ * uncertainty published beside its position was systematically derived from a different
+ * feature's magnitudes — on a message whose whole purpose is that a forecast makes a
+ * falsifiable claim, and in a module whose own comment names "a position published with a
+ * few kilometres of uncertainty beside it" as the failure it exists against.
+ */
+export interface FeatureUncertainty {
+  /** One standard deviation on a horizontal position, in km. */
+  readonly positionKm: number;
+  readonly radiusKm: number;
+  /** One standard deviation on the anomaly magnitudes this module publishes. */
+  readonly anomalyC: number;
+  readonly bearingDegrees: number;
+  readonly depthM: number;
+}
+
 export interface CarriedFeatures {
   readonly step: number;
   readonly leadSeconds: number;
@@ -592,14 +616,12 @@ export interface CarriedFeatures {
   readonly moving?: BlobEstimate;
   readonly front?: FrontEstimate;
   readonly thermocline?: ThermoclineEstimate;
+  /** Keyed by feature, because each is estimated from its own signal at its own scale. */
   readonly uncertainty: {
-    /** One standard deviation on a horizontal position, in km. */
-    readonly positionKm: number;
-    readonly radiusKm: number;
-    /** One standard deviation on the anomaly magnitudes this module publishes. */
-    readonly anomalyC: number;
-    readonly bearingDegrees: number;
-    readonly depthM: number;
+    readonly eddy: FeatureUncertainty;
+    readonly moving: FeatureUncertainty;
+    readonly front: FeatureUncertainty;
+    readonly thermocline: FeatureUncertainty;
   };
   readonly declined: readonly Declined[];
 }
@@ -628,19 +650,40 @@ export function carryFeatures(
     // The analysis error is a temperature; a position uncertainty in kilometres is that
     // error read against the anomaly's own gradient — how far the centre could move
     // before the field would have looked different. Stated in the message as derived.
-    const peak = estimate.eddy?.anomalyPeakC ?? 1;
-    const radius = estimate.eddy?.radiusKm ?? Math.max(grid.cellKmEast, grid.cellKmNorth);
-    const relativeError = analysisErrorC / Math.max(peak, 1e-6);
-    const positionKm = Math.min(radius, relativeError * radius) * root;
+    /**
+     * The uncertainty a feature of a given strength and scale carries at this lead.
+     *
+     * How far a centre could move before the field would have looked different: the
+     * analysis error read against the feature's own peak, over its own radius. A weak,
+     * small feature is therefore less well located than a strong, broad one — which is
+     * true, and was not said while one block computed from the eddy was handed to all four.
+     */
+    const uncertaintyFor = (peakC: number, radiusKm: number): FeatureUncertainty => {
+      const relativeError = analysisErrorC / Math.max(peakC, 1e-6);
+      const positionKm = Math.min(radiusKm, relativeError * radiusKm) * root;
+      return {
+        positionKm,
+        radiusKm: relativeError * radiusKm * root,
+        anomalyC: analysisErrorC * root,
+        // How far a direction could turn if its anchor moved by the position uncertainty
+        // over the feature's own scale. `atan2` of two non-negative arguments cannot exceed
+        // a quarter turn, so no clamp is reached and none is written.
+        bearingDegrees: (Math.atan2(positionKm, Math.max(radiusKm, 1e-6)) * 180) / Math.PI,
+        depthM: depthSpacing / 2,
+      };
+    };
+    const cellKm = Math.max(grid.cellKmEast, grid.cellKmNorth);
+    // A feature the estimator declined has no uncertainty of its own to compute one from,
+    // so its block is built at the grid's own scale and is never published: `not_estimated`
+    // carries the absence instead.
     const uncertainty = {
-      positionKm,
-      radiusKm: relativeError * radius * root,
-      anomalyC: analysisErrorC * root,
-      // How far the front's direction could turn if its anchor moved by the position
-      // uncertainty over the feature's own scale. `atan2` of two non-negative arguments
-      // cannot exceed a quarter turn, so no clamp is reached and none is written.
-      bearingDegrees: (Math.atan2(positionKm, Math.max(radius, 1e-6)) * 180) / Math.PI,
-      depthM: depthSpacing / 2,
+      eddy: uncertaintyFor(estimate.eddy?.anomalyPeakC ?? 1, estimate.eddy?.radiusKm ?? cellKm),
+      moving: uncertaintyFor(estimate.moving?.anomalyPeakC ?? 1, estimate.moving?.radiusKm ?? cellKm),
+      // The front has no radius; its scale is the width over which its own step is taken,
+      // which the estimator does not recover, so the grid's cell is the honest stand-in and
+      // it makes the bearing uncertainty a per-cell figure rather than an eddy-sized one.
+      front: uncertaintyFor(estimate.front?.anomalyStepC ?? 1, cellKm),
+      thermocline: uncertaintyFor(estimate.thermocline?.layerDropC ?? 1, cellKm),
     };
     const eddy = estimate.eddy
       ? {

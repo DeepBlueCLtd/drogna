@@ -79,7 +79,8 @@ interface Entry {
   readonly cause: string;
   /** For a run: the cost it announced, and whether it has published yet. */
   readonly costTicks?: number;
-  readonly subStepsPerStep?: number;
+  /** Null where the configured kernel integrates nothing, which is not the same as one. */
+  readonly subStepsPerStep?: number | null;
   readonly publishedAtTick?: number;
   readonly runId?: string;
   /** For a hold: how much validity must still decay before it is released. */
@@ -115,7 +116,11 @@ function entriesFromInventory(inventory: HoldingsInventory): Entry[] {
     // performed. `composition.rule` is on the same object and is governed by a master.
     .filter((holding) => holding.era === 'instance' && holding.manifest.composition.rule !== 'ensemble-spread')
     .map((holding) => ({
-      key: `held-instance:${holding.holding_id}`,
+      // Keyed as a run, because it is one. A holding published by a run carries the run's
+      // own id, so the live announcement and the store's record of the same run must key
+      // alike or an address written while the run was live stops resolving the moment the
+      // panel remounts and the run has become history — which is every reload.
+      key: `run:${holding.holding_id}`,
       kind: 'run' as const,
       tick: holding.published_at.tick,
       simTime: holding.published_at.sim_time,
@@ -219,9 +224,11 @@ export function ForecastPanel({ params }: PanelProps) {
         setEntries((previous) => [
           ...previous,
           {
-            // Keyed by position as well as tick: a scheduled run and a reader's prompt can
-            // both be held at the same tick, and two entries sharing a key is one entry.
-            key: `held:${decision.tick}:${previous.length}`,
+            // Keyed by the tick and what was held, not by position in the list: a
+            // scheduled run and a reader's prompt can both be held at the same tick and
+            // must not share a key, but an index assigned at insertion differs on every
+            // mount, which would make a hold unaddressable.
+            key: `held:${decision.tick}:${decision.divergence_id ?? 'none'}:${decision.shortfall_ticks ?? 0}`,
             kind: 'held',
             tick: decision.tick,
             simTime: decision.sim_time,
@@ -394,9 +401,11 @@ export function ForecastPanel({ params }: PanelProps) {
             ) : (
               <>
                 Run <code>{chosen.runId}</code>, announced at {displayInstant(chosen.simTime)}. It declared a cost of{' '}
-                {chosen.costTicks} tick(s) and the grid it was handed required {chosen.subStepsPerStep} integration
-                sub-step(s) per forecast step — a declared figure and a reported one, and they are not the same kind of
-                claim.
+                {chosen.costTicks} tick(s), and{' '}
+                {chosen.subStepsPerStep === null || chosen.subStepsPerStep === undefined
+                  ? 'the kernel that ran integrates nothing, so it reported no sub-steps at all — a different answer from one'
+                  : `the grid it was handed required ${chosen.subStepsPerStep} integration sub-step(s) per forecast step`}
+                . A declared figure and a reported one, and they are not the same kind of claim.
               </>
             )
             )}

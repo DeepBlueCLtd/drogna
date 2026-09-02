@@ -88,6 +88,25 @@ describe('shallow-two-layer-v1', () => {
     expect(new Uint8Array(first.temperature.buffer)).not.toEqual(new Uint8Array(other.temperature.buffer));
   });
 
+  it('writes the initialisation state at step 0, on the lead convention the manifest declares', () => {
+    // The run's holding declares `start_offset_seconds: 0`, so index k is lead k x
+    // stepSeconds and index 0 is the instant the run initialises from. Integrating before
+    // the first write put every served instant one step out of register with its own label
+    // — and put the field's step 0 one step ahead of the features published for the same
+    // run on the same tick. Held against both kernels, because the convention belongs to
+    // the port and not to either of them.
+    const quiet = parameters({ noiseStdTemperature: 0, noiseStdSalinity: 0 });
+    const initial = initialState();
+    for (const kernel of [shallowTwoLayerKernel, shiftAdvectKernel]) {
+      const out = kernel.memberField(initial, quiet, new Rng(3, 'model-runner:test'));
+      let worst = 0;
+      for (let cell = 0; cell < initial.temperature.length; cell++) {
+        worst = Math.max(worst, Math.abs(out.temperature[cell] - initial.temperature[cell]));
+      }
+      expect(worst, `${kernel.name} step 0`).toBe(0);
+    }
+  });
+
   it('propagates a state rather than translating a field — the two layers shear apart', () => {
     // The distinguishing property, and the reason this kernel exists. `shift-advect-v1`
     // displaces every level by the same whole number of cells, so the difference between

@@ -111,11 +111,18 @@ its cost did to five existing suites).
       a declared topic.
 - [x] T023 `features.test.ts`: **scored**, against the manifest's ground truth, with the
       bound read from the authoring jitter on disk. Never a number typed into the test.
-- [x] T024 **All four score, and none needed a widened bound.** Errors at the shipped grid,
-      each against a bound read from disk: eddy centre 7.0 km (bound 69.5 km, its own
-      authored radius); drifting feature 7.2 km (bound 40 km, its own radius); front 3.3 km
-      across the authored line (bound 30 km, its own sharpness) with the bearing recovered
-      to 9.3°; thermocline 9 m (bound 200 m, the grid's own depth spacing).
+- [x] T024 **The numbers below were the first draft's, measured at one seed, and T052 and
+      T053 replace them.** They are left standing because striking them would erase what the
+      estimator looked like when it was believed to be finished, which is the part that
+      cannot be reconstructed later — but nothing in this paragraph is the current claim.
+      Read T052 and T053 for what the tree does now: four seeds recover the drifting feature
+      and the fifth declines it, the bearing is 0.2° to 0.6° rather than the 9.3° recorded
+      here, and "all four score" was true of one seed and not of five.
+      *(First draft, superseded:)* errors at the shipped grid, each against a bound read from
+      disk: eddy centre 7.0 km (bound 69.5 km, its own authored radius); drifting feature
+      7.2 km (bound 40 km, its own radius); front 3.3 km across the authored line (bound
+      30 km, its own sharpness) with the bearing recovered to 9.3°; thermocline 9 m (bound
+      200 m, the grid's own depth spacing).
       **Two things had to be got right and both were found by measuring, not by reasoning.**
       The first estimator took the extremum of the depth-averaged anomaly and recovered the
       eddy 164 km out — twice its radius. The cause was the *front*: it saturates, so its
@@ -223,9 +230,14 @@ its cost did to five existing suites).
       glyph as well as a different tone, and every entry is a `button`, so the whole surface
       is reachable from the keyboard. `forecast.css` carries no `animation` and no
       `transition` at all, which is the strongest form of honouring
-      `prefers-reduced-motion`: there is nothing to suppress. Held by
-      `forecast.test.tsx` and by `contrast.test.ts`, which named the gauge's fill the moment
-      it was written.
+      `prefers-reduced-motion`: there is nothing to suppress. Keyboard traversal is held by
+      `forecast.test.tsx`.
+      **The greyscale legibility is not held by an automated check, and saying it was would
+      be the claim this repository exists to avoid.** What `contrast.test.ts` gained is an
+      entry in its *exemption* list — the gauge's fill carries no text — so what it holds is
+      that the exemption has a reason beside it. The legibility itself rests on the hatch and
+      the printed figures, and on a reader looking. Feature 124's Q-01 is the same question
+      asked of the depth profile, and it is answered there by a capture for the same reason.
 
 ## The ripple
 
@@ -258,12 +270,21 @@ its cost did to five existing suites).
       Two changed for reasons that are not tick counts and are recorded rather than
       absorbed. A **prompted run is now held for cost** where it used to be accepted — which
       is FR-116 working, not a regression, so the operator test asserts the hold and names
-      the shortfall, and its title says so. And `advisories.test.ts`'s second reason for an
-      inconclusive leakage verdict **changed with the kernel**: two noise-free releases used
-      to be identical value for value, because `shift-advect-v1` translated a field; a kernel
-      that propagates a state diverges everywhere instead, so the mask is now the whole
-      domain rather than empty. Different reason, same conclusion, and the test says which —
-      which is precisely what that test was written to do.
+      the shortfall, and its title says so.
+      And `advisories.test.ts`'s leakage tripwire **fired twice in this one branch, in both
+      directions**, which is the best evidence in the feature that it is a real check. Two
+      noise-free releases used to be identical value for value, because `shift-advect-v1`
+      translated a field; a kernel that propagates a state diverged everywhere instead, so
+      the mask became the whole domain. Correcting that kernel's lead convention (T056) made
+      them identical again — and the reason is measured, not assumed: the two runs are made
+      from byte-identical analyses, digest for digest, so with the model noise off they
+      cannot differ. Why the assimilation left the field unchanged across a cycle in that
+      zero-noise configuration is **not settled**, and the test says so rather than
+      explaining it away; it now asserts the digests as the evidence for its own paragraph,
+      so a future change that makes the analyses differ fails there instead of leaving a
+      stale explanation standing. The conclusion never moved: an empty mask and a mask
+      covering everything both discriminate nothing, #57 stays open, and this stays not a
+      gate.
 
 ## What the adversarial review found, and what it changed
 
@@ -322,9 +343,83 @@ are the kind that only an outsider finds — the author had already decided each
       scheduler a ninth heartbeat figure, and `heartbeat.schema.json` caps a component at
       eight — a face has room for eight and a ninth is a face inventing space. Four tests
       went red at once and named it: the scheduler simply stopped being heard from. The
-      release margin is the figure that goes, because it is a configured constant that never
-      moves and is named in every held-for-cost decision anyway; the three that stay each
-      change while the run is going. A cap in a master, doing exactly what a cap is for.
+      release margin is the figure that goes, because it is a configured constant this
+      component owns, is named in every held-for-cost decision anyway, and drawing it would
+      be drawing configuration back at the reader who set it. The array now sits exactly at
+      the cap, so the next figure has to displace one of these and argue for it — which is
+      what a cap is for. (Momentarily two were dropped rather than one, leaving a comment
+      describing a run-cost figure that was no longer there; the second round of review
+      caught the comment, and the figure is back.)
+
+### The second round, against the fixed tree
+
+The skill's guard is keyed to the commit, so the fixes were reviewed too — and the second
+pass found more than the first, including the one fault in this feature that would have
+mislabelled every forecast the harness ever served.
+
+- [x] T056 **The new kernel's output was one forecast step ahead of the time axis the runner
+      labels it with.** `shift-advect-v1` writes step 0 undisplaced; the two-layer kernel
+      wrote each step *after* integrating it, while the manifest went on declaring
+      `start_offset_seconds: 0`. So an EDR query at the initialisation instant was answered
+      with the field 900 seconds later, the last step was served 900 seconds early, and the
+      instant a collection claimed to start at was one its field never contained — and the
+      run's own features, published on the same tick, used the other convention. Step 0 is
+      now the state the run initialises from, and a test holds **both** kernels to it,
+      because the convention belongs to the port rather than to either of them.
+- [x] T057 **A held reader's prompt was reported and then dropped.** Nothing remembered it,
+      and the only path that requests again is the cadence floor, which fires on its own
+      schedule and labels its run `scheduled` — so a reader was told "released as that
+      headroom decays" and got no run, while FR-115, FR-116, this feature's spec, ADR-0043
+      and the scheduler's own published sentence all said prompts are released. The prompt
+      is now held as a commitment and released when the headroom decays, or declined by the
+      rule that declines it if the world moved while it waited. Nothing expires in silence.
+- [x] T058 **Pressing the button a second time during a hold published nothing at all.** The
+      once-per-episode guard is right for the cadence floor, which is considered every tick
+      and would republish an unchanged fact; it is wrong for a discrete act by a reader, who
+      got an unchanged screen and a button that looked broken. A prompt is answered every
+      time it is asked.
+- [x] T059 **The Operator's ensemble face drew five empty pips for the whole visible duration
+      of a run.** `members_done` was set at publication, and a run now waits twelve ticks
+      after computing every member — so the one figure that exists to show an ensemble
+      filling rather than spinning was reporting less work than had been done. It is set
+      when the members exist, which is when it became true.
+- [x] T060 **`sub_steps_per_step` reported one sub-step for a kernel that declares no work.**
+      A zero clamped to one had the same component saying "declares no work, so a run costs
+      nothing" on the cost topic and "took one integration sub-step" on the run-started
+      message, about the same run. The master now admits null and the runner publishes it —
+      absent is not zero and neither is one, which is the distinction the indicator socket
+      already makes correctly two files away.
+- [x] T061 **One uncertainty block, computed from the eddy, was attached to all four
+      features.** The drifting feature is authored weaker and smaller, so the uncertainty
+      published beside its position came from a different feature's magnitudes — on a message
+      whose entire purpose is that a forecast makes a falsifiable claim, and in a module
+      whose own comment names that failure. Each feature now carries an uncertainty derived
+      from its own peak and its own scale, and a test asserts two of them cannot be equal.
+
+- [x] T062 **The Forecast tab's own deep link did not survive a reload.** A run heard live
+      was keyed `run:<id>` and the same run read back from the store was keyed
+      `held-instance:<id>` — and a holding published by a run carries that run's id, so the
+      two were the same run under two names. An address written while the run was live
+      selected nothing the moment the panel remounted and the run had become history, which
+      is every reload; and the tour promises the opposite in so many words. A hold was worse:
+      its key embedded its position in the list at insertion, so it was never addressable at
+      all. Both now key on what the entry is. A test writes an address, remounts, and
+      requires the selection to come back.
+- [x] T063 **The cost was declared against a cell more than twice the size of the one the
+      run is handed.** The declaration exists so a cost can be stated before any analysis
+      arrives; it is only the same work as the occupancy while the two agree on the sub-step
+      count, and nothing related them. At 11 km against a real 4.9 by 5.6 km that agreement
+      was luck — both round to one sub-step at this step length — and would end at the first
+      refined grid. The nominal is now 5 km and a test compares the declared count against
+      the one the run reports.
+- [x] T064 The smaller ones from the second round: the scheduler's heartbeat carried a
+      comment justifying a run-cost figure that had been dropped along with the margin (the
+      figure is back and the array sits at the cap); `not_estimated` was repeated verbatim in
+      every step of every message, though it is a property of the estimate and cannot differ
+      by lead, and is now published once; the high-passed field was computed twice per
+      estimate in a function whose own comment argues against doing it the expensive way; a
+      dead `scheduler` parameter in the test bench was silenced with `void` rather than
+      removed; and T024 stood beside T052 and T053 carrying the numbers they replace.
 
 Two of their observations were recorded rather than acted on. The sub-stepping machinery
 never engages at the shipped grid (one sub-step at both the nominal and the real cell size,

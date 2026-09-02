@@ -319,7 +319,13 @@ export class ModelRunner {
     // Announced before anything is computed, so that a run which then fails is still
     // visible as a run that was attempted — and now carrying both the cost it will occupy
     // and the sub-steps the grid it was actually handed requires.
-    const subStepsPerStep = Math.max(1, this.subStepsAt(kernelGrid.cellKmEast, kernelGrid.cellKmNorth));
+    // Null, not one, where the kernel declares no work. `shift-advect-v1` translates a
+    // field and integrates nothing, and clamping its zero to one had the same component
+    // publishing "declares no work, so a run costs nothing" on one topic and "took one
+    // integration sub-step" on another, about the same run. Absent and zero are different
+    // facts here exactly as they are on the indicator socket.
+    const declared = this.subStepsAt(kernelGrid.cellKmEast, kernelGrid.cellKmNorth);
+    const subStepsPerStep = declared > 0 ? declared : null;
     this.client.publish(this.config.topics.run_started, {
       component: this.config.id,
       scenario_run_id: this.runId,
@@ -356,6 +362,13 @@ export class ModelRunner {
       }
       return this.kernel.memberField({ grid: kernelGrid, temperature, salinity }, parameters, rng);
     });
+
+    // Every member the run asked for has been produced. Reported here rather than at
+    // publication, because that is when it became true: the run then waits out the ticks it
+    // costs, and a face drawing five empty pips through the whole visible duration of a run
+    // whose ensemble is complete is a display claiming less work than has been done — on
+    // the one figure that exists so the ensemble can be seen filling rather than spinning.
+    this.membersDone = this.ensembleSize;
 
     // Ensemble mean and spread, per variable per cell.
     const totalCells = this.config.steps * cellsPerStep;
@@ -417,6 +430,9 @@ export class ModelRunner {
         initialisation_sim_time: request.initialisation_sim_time,
         step_seconds: this.config.step_seconds,
         steps: carried.map((entry) => this.featureStep(entry)),
+        // On the message, once: what could not be estimated is a property of the estimate,
+        // which is made from the analysis and carried forward, so it cannot differ by lead.
+        ...(carried[0]?.declined.length ? { not_estimated: [...carried[0].declined] } : {}),
       } satisfies ForecastFeatures);
       this.client.publish(this.config.topics.run_published, {
         component: this.config.id,
@@ -437,9 +453,6 @@ export class ModelRunner {
         collections: { forecast: forecastId, uncertainty: spreadId },
         digests: { forecast: forecastDigest, uncertainty: spreadDigest },
       } satisfies RunPublished);
-      // The run finished, so every member it asked for was produced: reported from the
-      // run that happened rather than counted up by the display.
-      this.membersDone = this.ensembleSize;
       this.runsCompleted += 1;
     };
 
@@ -466,9 +479,9 @@ export class ModelRunner {
 
   /**
    * One step's features in the published shape. A feature the estimator declined is absent
-   * with its reason in `not_estimated`, never present with a widened uncertainty: softening
-   * a bound until it passes is the failure mode this shape exists to make visible
-   * (Constitution IX).
+   * here, with its reason in the message's own `not_estimated` list, never present with a
+   * widened uncertainty: softening a bound until it passes is the failure mode this shape
+   * exists to make visible (Constitution IX).
    */
   private featureStep(entry: ReturnType<typeof carryFeatures>[number]): ForecastFeaturesStep {
     const features: ForecastFeaturesFeature[] = [];
@@ -483,9 +496,9 @@ export class ModelRunner {
           anomaly_peak_c: entry.eddy.anomalyPeakC,
         },
         uncertainty: {
-          centre_km: entry.uncertainty.positionKm,
-          radius_km: entry.uncertainty.radiusKm,
-          anomaly_peak_c: entry.uncertainty.anomalyC,
+          centre_km: entry.uncertainty.eddy.positionKm,
+          radius_km: entry.uncertainty.eddy.radiusKm,
+          anomaly_peak_c: entry.uncertainty.eddy.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -500,9 +513,9 @@ export class ModelRunner {
           anomaly_peak_c: entry.moving.anomalyPeakC,
         },
         uncertainty: {
-          centre_km: entry.uncertainty.positionKm,
-          radius_km: entry.uncertainty.radiusKm,
-          anomaly_peak_c: entry.uncertainty.anomalyC,
+          centre_km: entry.uncertainty.moving.positionKm,
+          radius_km: entry.uncertainty.moving.radiusKm,
+          anomaly_peak_c: entry.uncertainty.moving.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -517,9 +530,9 @@ export class ModelRunner {
           anomaly_step_c: entry.front.anomalyStepC,
         },
         uncertainty: {
-          anchor_km: entry.uncertainty.positionKm,
-          bearing_degrees: entry.uncertainty.bearingDegrees,
-          anomaly_step_c: entry.uncertainty.anomalyC,
+          anchor_km: entry.uncertainty.front.positionKm,
+          bearing_degrees: entry.uncertainty.front.bearingDegrees,
+          anomaly_step_c: entry.uncertainty.front.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -533,13 +546,12 @@ export class ModelRunner {
           layer_drop_c: entry.thermocline.layerDropC,
         },
         uncertainty: {
-          depth_m: entry.uncertainty.depthM,
-          layer_drop_c: entry.uncertainty.anomalyC,
+          depth_m: entry.uncertainty.thermocline.depthM,
+          layer_drop_c: entry.uncertainty.thermocline.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
-    const step: ForecastFeaturesStep = { step: entry.step, lead_seconds: entry.leadSeconds, features };
-    return entry.declined.length === 0 ? step : { ...step, not_estimated: [...entry.declined] };
+    return { step: entry.step, lead_seconds: entry.leadSeconds, features };
   }
 
   private publishInstance(

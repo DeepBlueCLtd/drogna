@@ -289,7 +289,21 @@ export const shallowTwoLayerKernel: ModelKernel = {
     const clampLat = (la: number): number => Math.min(Math.max(la, 0), latCount - 1);
     const clampLon = (lo: number): number => Math.min(Math.max(lo, 0), lonCount - 1);
 
-    for (let step = 0; step < parameters.steps; step++) {
+    /*
+     * **Step 0 is the state the run initialises from, not one step past it.**
+     *
+     * The manifest this run's holding carries declares `start_offset_seconds: 0`, so the
+     * field at index k is the field at lead k x stepSeconds, and index 0 is the
+     * initialisation instant itself — which is what `shift-advect-v1` has always written
+     * and what the query layer's sampler assumes when it maps an instant to an index.
+     * Integrating before the first write would put every served instant of every forecast
+     * one step out of register with the label on it, and would put the field's own step 0
+     * one step ahead of the features published for the same run on the same tick. Small at
+     * the shipped velocities, wrong at any of them.
+     */
+    out.temperature.set(state.temperature, 0);
+    out.salinity.set(state.salinity, 0);
+    for (let step = 1; step < parameters.steps; step++) {
       for (let sub = 0; sub < subSteps; sub++) {
         for (const variable of ['temperature', 'salinity'] as const) {
           const from = state[variable];

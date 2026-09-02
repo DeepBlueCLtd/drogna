@@ -177,7 +177,7 @@
         "nominal_cell_km": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran \u2014 a declared figure and a reported one, never the same figure twice (ADR-0036)."
+          "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran \u2014 a declared figure and a reported one, never the same figure twice (ADR-0036).\n\n**Keep it near the grid the run is actually handed, and a test says so.** The declaration and the occupancy are only the same amount of work while the two agree on the sub-step count. It was first set to 11 km against a now-cast whose cells are about 4.9 by 5.6 km at this domain's latitude \u2014 a factor of two, invisible only because both round to one sub-step at this step length. `features`-adjacent tests compare the two, so a grid refined past where the nominal stops being representative fails rather than quietly making FR-114's 'the run occupies the ticks its cost comes to' untrue."
         }
       }
     },

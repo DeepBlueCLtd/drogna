@@ -301,12 +301,12 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
    * still says nothing useful, measured rather than asserted — so that the day the harness
    * changes enough for that to move, this test fails and somebody has to look at it.
    *
-   * It did, at feature 123. The second reason used to be that two noise-free releases were
-   * identical and produced no mask at all; with a kernel that propagates a state rather
-   * than translating a field they differ everywhere instead, and the mask is now the whole
-   * domain. Different reason, same conclusion: a mask that covers everything discriminates
-   * nothing, and the verdict is a pass earned by the kernel's reach rather than by
-   * mitigation. #57 stays open and this stays not a gate.
+   * It did, at feature 123 — twice, in the same branch, in both directions. The second
+   * reason (two noise-free releases identical, so no mask at all) became "they differ
+   * everywhere, so the mask is the whole domain" when the kernel began propagating a state,
+   * and then became identical again when that kernel's lead convention was corrected. The
+   * conclusion never moved: a mask that is empty and a mask that covers everything both
+   * discriminate nothing. #57 stays open and this stays not a gate.
    */
   it('scores its own successive releases, and names why the comparison is inconclusive (#57)', async () => {
     // The scoring run the open question proposed: the same kernel with its per-cell
@@ -340,17 +340,27 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(span).toBeLessThan(geometry.identification_radius_m);
     expect(verdict).toMatchObject({ conclusive: false, reason: 'measurements-within-radius' });
 
-    // Reason two, which only shows once the first is out of the way, and **it changed
-    // with feature 123.** It used to be that with the per-cell noise suppressed two
-    // successive releases were identical value for value, so there was no mask at all and
-    // the verdict came back `empty-mask`. That was a property of `shift-advect-v1`: it
-    // translated a field, so two runs from nearly identical analyses produced nearly
-    // identical output. `shallow-two-layer-v1` propagates a state, and two runs
-    // initialised from analyses that differ anywhere diverge everywhere — so with the
-    // noise off the mask is now the *whole domain*, which discriminates nothing for the
-    // opposite reason. This test exists to fail on exactly that kind of change and it
-    // did; the numbers below are what the verdict now is, read and recorded rather than
-    // adjusted until they were green.
+    // Reason two, which only shows once the first is out of the way. **This test fired
+    // twice in one branch, for two different reasons, and both are recorded because the
+    // second is the more interesting.**
+    //
+    // It began as: with the per-cell noise suppressed, two successive releases are
+    // identical value for value, so there is no mask to score. Introducing a kernel that
+    // propagates a state rather than translating a field flipped it — two runs from
+    // analyses differing anywhere then diverged everywhere, and the mask became the whole
+    // domain, which discriminates nothing for the opposite reason. Then correcting the new
+    // kernel's lead convention (step 0 is the state the run initialises from) flipped it
+    // back, and the reason is measured rather than assumed: at this configuration the two
+    // runs are made from **byte-identical analyses** — `analysis.…run-0` and
+    // `analysis.…run-1` carry the same digest, as do their error and provenance fields — so
+    // with the model noise off the two forecasts cannot differ.
+    //
+    // Why the assimilation left the field unchanged across a cycle here is not settled, and
+    // this test does not pretend to settle it: it is a property of the zero-noise
+    // configuration this test constructs and not of the shipped one, where `analyst.test.ts`
+    // holds the analysis to moving the field where a measurement reached. What is held here
+    // is what the comparison says and why it says nothing useful, which is what keeps #57
+    // open and keeps this from being a gate.
     const spanning = {
       ...geometry,
       measurements: [
@@ -362,16 +372,19 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
       geometry.identification_radius_m,
     );
     const spanningVerdict = scoreUpdatedRegion(before, after, spanning);
-    expect(spanningVerdict.conclusive).toBe(true);
-    if (spanningVerdict.conclusive) {
-      // Every cell changed, so the "updated region" is the domain and the buffer around
-      // the measurements recovers exactly its own share of it — chance, to the last
-      // decimal. Reported clear, and it is a pass earned by the kernel's reach rather
-      // than by mitigation, which is why #57 stays open and this stays not a gate.
-      expect(spanningVerdict.worst.changedCells).toBe(spanningVerdict.worst.totalCells);
-      expect(spanningVerdict.worst.recovery).toBeCloseTo(spanningVerdict.worst.chanceRate, 10);
-      expect(spanningVerdict.leaking).toBe(false);
-    }
+    expect(spanningVerdict).toMatchObject({ conclusive: false, reason: 'empty-mask' });
+    // Asserted alongside it, because the reason above is a claim about the two products and
+    // this is the evidence for it: the two runs carry the same forecast digest, and the two
+    // analyses they were made from carry the same digest too. If a future change makes the
+    // analyses differ, this fails here rather than leaving the paragraph above standing as
+    // an explanation of something that has stopped being true.
+    expect(record.published[1].digests.forecast).toBe(record.published[0].digests.forecast);
+    const analysisDigests = runtime.store
+      .holdings()
+      .filter((holding) => holding.era === 'analysis' && !/-(error|provenance)$/.test(holding.holding_id))
+      .map((holding) => holding.field.sha256);
+    expect(analysisDigests.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(analysisDigests).size).toBe(1);
 
     // And with the noise left on — the harness as it ships — the mask is the whole
     // domain, which is the reason the open question recorded. It scores at chance

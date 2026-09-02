@@ -248,8 +248,16 @@ describe('the four features, estimated from a gridded field and scored against t
     // A forecast that does not widen with lead is making a stronger claim than it can
     // support; a depth that widens is making one the physics does not make, since this
     // kernel has no vertical velocity.
-    expect(carried[3].uncertainty.positionKm).toBeGreaterThan(carried[0].uncertainty.positionKm);
-    expect(carried[3].uncertainty.depthM).toBe(carried[0].uncertainty.depthM);
+    expect(carried[3].uncertainty.eddy.positionKm).toBeGreaterThan(carried[0].uncertainty.eddy.positionKm);
+    expect(carried[3].uncertainty.thermocline.depthM).toBe(carried[0].uncertainty.thermocline.depthM);
+    // Each feature's uncertainty comes from its own signal. The drifting feature is
+    // authored weaker and smaller than the eddy, so a block computed from the eddy and
+    // handed to both would make the two identical — which is what happened, and what this
+    // asserts cannot happen again.
+    const atLeadZero = carried[0];
+    if (atLeadZero.eddy && atLeadZero.moving) {
+      expect(atLeadZero.uncertainty.moving.positionKm).not.toBeCloseTo(atLeadZero.uncertainty.eddy.positionKm, 6);
+    }
     // The eddy has moved east: the upper layer's velocity is eastward, and a feature that
     // did not move would mean the carry was a copy.
     const first = carried[0].eddy;

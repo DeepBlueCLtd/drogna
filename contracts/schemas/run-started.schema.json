@@ -68,9 +68,9 @@
       "description": "Ticks of simulation time this run will occupy before it publishes (SRD-v2 FR-114). Zero where the configured kernel declares no work, which is a true statement about a kernel that only translates a field and is drawn as such rather than hidden."
     },
     "sub_steps_per_step": {
-      "type": "integer",
+      "type": ["integer", "null"],
       "minimum": 1,
-      "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036)."
+      "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036).\n\nNull where the configured kernel integrates nothing — `shift-advect-v1` translates a field, and reporting one sub-step for it would have the same component saying it did no work on the cost topic and one step of work here, about the same run. Absent is not zero and neither is one."
     }
   }
 }

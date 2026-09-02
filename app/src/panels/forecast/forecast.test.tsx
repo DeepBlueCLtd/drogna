@@ -17,7 +17,7 @@
  * be distinguishable on the surface without reading a log** (AT-08) — which is a claim
  * about the DOM and not about the scheduler, so it is checked here.
  */
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
@@ -51,13 +51,13 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
   let runtime: BackendRuntime;
   let fetched: string[];
 
-  function panelProps() {
+  function panelProps(address: PanelParams['address'] = noAddress) {
     const params: PanelParams = {
       config: config.shell,
       client: runtime.transport.connect(`forecast-test-${Math.random()}`, config.shell.role),
       validator,
       manifest: runtime.manifest,
-      address: noAddress,
+      address,
     };
     return { params } as unknown as IDockviewPanelProps<PanelParams>;
   }
@@ -207,6 +207,44 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     const text = entries.map((entry) => entry.textContent ?? '');
     expect(text.some((line) => /before this console opened/.test(line))).toBe(true);
     expect(text.some((line) => /not recoverable from a holding/.test(line))).toBe(true);
+  });
+
+  it('a link to a run resolves after a remount, when the run has become history', async () => {
+    // The tour promises this in so many words — "select an entry and the address names it,
+    // so a link opens this view at the run being discussed" — and it did not hold. A run
+    // heard live was keyed `run:<id>` and the same run read back from the store was keyed
+    // `held-instance:<id>`, so an address written while the run was live silently selected
+    // nothing the moment the panel remounted and the run had become history. Which is every
+    // reload.
+    let written: string | undefined;
+    const address: PanelParams['address'] = {
+      names: () => true,
+      current: () => written,
+      write: (rest) => {
+        written = rest;
+      },
+      onChange: () => () => {},
+    };
+    render(<ForecastPanel {...panelProps(address)} />);
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+    });
+    const live = document.querySelector('.forecast-run') as HTMLElement;
+    await act(async () => {
+      fireEvent.click(live);
+    });
+    expect(written).toMatch(/^run:/);
+    expect(screen.getByTestId('forecast-selected')).toBeDefined();
+
+    // Remount: the run is now in the store rather than on the wire, and the address is the
+    // one that was written.
+    cleanup();
+    render(<ForecastPanel {...panelProps(address)} />);
+    await act(async () => {
+      for (let i = 0; i < 200; i++) await Promise.resolve();
+    });
+    expect(screen.getByTestId('forecast-selected')).toBeDefined();
+    expect(document.querySelector('.forecast-run.is-selected')).not.toBeNull();
   });
 
   it('FR-140: every region the surface offers has a step in the tour, and no step invents one', () => {

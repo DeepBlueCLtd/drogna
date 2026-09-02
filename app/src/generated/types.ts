@@ -1156,6 +1156,7 @@ export type ForecastFeatures = {
   "initialisation_sim_time": string;
   "step_seconds": number;
   "steps": ForecastFeaturesStep[];
+  "not_estimated"?: ForecastFeaturesNotEstimatedEntry[];
 };
 
 /** forecast-features.schema.json #/$defs/step */
@@ -1163,11 +1164,13 @@ export type ForecastFeaturesStep = {
   "step": number;
   "lead_seconds": number;
   "features": ForecastFeaturesFeature[];
-  "not_estimated"?: {
-    "kind": ForecastFeaturesKind;
-    "quantity"?: string;
-    "reason": string;
-  }[];
+};
+
+/** forecast-features.schema.json #/$defs/not_estimated_entry */
+export type ForecastFeaturesNotEstimatedEntry = {
+  "kind": ForecastFeaturesKind;
+  "quantity"?: string;
+  "reason": string;
 };
 
 /** forecast-features.schema.json #/$defs/kind */
@@ -2062,7 +2065,7 @@ export type RunStarted = {
   "kernel": string;
   "initialisation_sim_time": string;
   "cost_ticks": number;
-  "sub_steps_per_step": number;
+  "sub_steps_per_step": number | null;
 };
 
 /** drogna SensorThings subset responses — from sensorthings-subset.schema.json */

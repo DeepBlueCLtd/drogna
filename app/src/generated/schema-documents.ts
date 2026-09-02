@@ -1912,7 +1912,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "nominal_cell_km": {
             "type": "number",
             "exclusiveMinimum": 0,
-            "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran — a declared figure and a reported one, never the same figure twice (ADR-0036)."
+            "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran — a declared figure and a reported one, never the same figure twice (ADR-0036).\n\n**Keep it near the grid the run is actually handed, and a test says so.** The declaration and the occupancy are only the same amount of work while the two agree on the sub-step count. It was first set to 11 km against a now-cast whose cells are about 4.9 by 5.6 km at this domain's latitude — a factor of two, invisible only because both round to one sub-step at this step length. `features`-adjacent tests compare the two, so a grid refined past where the nominal stops being representative fails rather than quietly making FR-114's 'the run occupies the ticks its cost comes to' untrue."
           }
         }
       },
@@ -5507,6 +5507,13 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "items": {
           "$ref": "#/$defs/step"
         }
+      },
+      "not_estimated": {
+        "type": "array",
+        "description": "What this run could not estimate, and why, in the runner's own words. Absent, null and declined are three different facts (FR-41).\n\nOn the message rather than on each step, because it is a property of the ESTIMATE and not of the lead: the features are estimated once, from the analysis the run initialises from, and carried forward — so nothing about what could not be recovered can differ between step 0 and step 3. It was per-step first, which put the same few hundred words of reasoning in the document four times over and left four copies that had to agree.",
+        "items": {
+          "$ref": "#/$defs/not_estimated_entry"
+        }
       }
     },
     "$defs": {
@@ -5534,32 +5541,28 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "items": {
               "$ref": "#/$defs/feature"
             }
+          }
+        }
+      },
+      "not_estimated_entry": {
+        "type": "object",
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/kind"
           },
-          "not_estimated": {
-            "type": "array",
-            "description": "Features this step carries no estimate for, each with the reason in the runner's own words. Absent, null and declined are three different facts (FR-41).",
-            "items": {
-              "type": "object",
-              "required": [
-                "kind",
-                "reason"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "kind": {
-                  "$ref": "#/$defs/kind"
-                },
-                "quantity": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "The single quantity not recovered, named as the ground-truth manifest names it. Absent means the whole feature was not estimated. Two different facts: a thermocline nobody could place, and a thermocline placed to the grid's resolution whose authored temperature drop is finer than the grid can see."
-                },
-                "reason": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
-            }
+          "quantity": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The single quantity not recovered, named as the ground-truth manifest names it. Absent means the whole feature was not estimated. Two different facts: a thermocline nobody could place, and a thermocline placed to the grid's resolution whose authored temperature drop is finer than the grid can see."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },
@@ -9841,9 +9844,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "description": "Ticks of simulation time this run will occupy before it publishes (SRD-v2 FR-114). Zero where the configured kernel declares no work, which is a true statement about a kernel that only translates a field and is drawn as such rather than hidden."
       },
       "sub_steps_per_step": {
-        "type": "integer",
+        "type": [
+          "integer",
+          "null"
+        ],
         "minimum": 1,
-        "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036)."
+        "description": "Integration sub-steps the kernel took per forecast step on the grid it was actually handed, reported rather than declared. The cost above is a declaration made against a nominal cell size before any analysis arrived; this is what ran. Two different kinds of figure, never collapsed into one (ADR-0036).\n\nNull where the configured kernel integrates nothing — `shift-advect-v1` translates a field, and reporting one sub-step for it would have the same component saying it did no work on the cost topic and one step of work here, about the same run. Absent is not zero and neither is one."
       }
     }
   },

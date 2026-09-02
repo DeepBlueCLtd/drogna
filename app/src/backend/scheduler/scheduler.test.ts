@@ -20,6 +20,7 @@ import type { ConfigRun, Divergence, RunRequest, TelemetrySchedulerDecision } fr
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { Scheduler } from './scheduler.js';
+import { twoLayerStability } from '../model-runner/kernel.js';
 import type { SeamClient, SeamMessage } from '../../seam/transport.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
 import { SOUND_SPEED } from '../env-generator/analytic.js';
@@ -129,8 +130,7 @@ class Bench {
     return `${new Date(Date.UTC(2026, 0, 1) + tick * 1000).toISOString().slice(0, 19)}.000000Z`;
   }
 
-  tick(scheduler: Scheduler, config: ConfigRun, at: number): void {
-    void scheduler;
+  tick(config: ConfigRun, at: number): void {
     this.deliver(config.scheduler.topics.clock, { sim_time: this.simTimeAt(at), tick: at });
   }
 
@@ -161,6 +161,57 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     // stops a second copy appearing in any other component's configuration.
     expect(seen.costTicks).toBeDefined();
     expect(seen.costTicks).toBeGreaterThan(0);
+    runtime.stop();
+  });
+
+  it('declares its cost against a cell size the run is actually handed', async () => {
+    // **The declaration and the occupancy are the same work only while the two agree on the
+    // sub-step count.** The cost is stated before any analysis arrives, so it is computed at
+    // a nominal cell from configuration; the run then integrates on whatever grid it is
+    // handed and reports what that took. Nothing related the two, and the nominal was set at
+    // more than twice the real cell — invisible because both round to one sub-step at this
+    // step length, and untrue the moment a grid is refined past that.
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const started: { sub_steps_per_step: number | null; cost_ticks: number }[] = [];
+    const shell = runtime.transport.connect(`cost-basis-${Math.random()}`, 'shell');
+    shell.subscribe(config.model_runner.topics.run_started, (message) => {
+      started.push(message.payload as { sub_steps_per_step: number | null; cost_ticks: number });
+    });
+    await driveUntil(runtime.clock, () => started.length > 0, config.scheduler.max_interval_ticks * 3);
+    expect(started.length).toBeGreaterThan(0);
+    // The declared figure, recomputed from configuration exactly as the runner declares it.
+    const nominal = config.model_runner.cost.nominal_cell_km;
+    const declaredSubSteps = twoLayerStability(
+      {
+        steps: config.model_runner.steps,
+        stepSeconds: config.model_runner.step_seconds,
+        advectionEastKmPerDay: config.model_runner.advection.east_km_per_day,
+        advectionNorthKmPerDay: config.model_runner.advection.north_km_per_day,
+        noiseStdTemperature: config.model_runner.noise_std.temperature,
+        noiseStdSalinity: config.model_runner.noise_std.salinity,
+        twoLayer: {
+          interfaceDepthM: config.model_runner.two_layer.interface_depth_m,
+          upper: {
+            eastKmPerDay: config.model_runner.two_layer.upper.east_km_per_day,
+            northKmPerDay: config.model_runner.two_layer.upper.north_km_per_day,
+          },
+          lower: {
+            eastKmPerDay: config.model_runner.two_layer.lower.east_km_per_day,
+            northKmPerDay: config.model_runner.two_layer.lower.north_km_per_day,
+          },
+          horizontalDiffusivityM2PerS: config.model_runner.two_layer.horizontal_diffusivity_m2_per_s,
+          interfacialExchangePerDay: config.model_runner.two_layer.interfacial_exchange_per_day,
+          maxCourant: config.model_runner.two_layer.max_courant,
+          maxSubSteps: config.model_runner.two_layer.max_sub_steps,
+        },
+      },
+      nominal,
+      nominal,
+    ).subSteps;
+    // The reported figure, from the run that happened. They are two kinds of claim and they
+    // are allowed to differ — but not silently, and not by a factor.
+    expect(started[0].sub_steps_per_step).toBe(declaredSubSteps);
     runtime.stop();
   });
 
@@ -207,8 +258,8 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
 
     // Two samples so the tick length is derived, then a standing forecast valid for an
     // hour of simulation time, then the cadence floor's due tick.
-    bench.tick(scheduler, config, 0);
-    bench.tick(scheduler, config, 1);
+    bench.tick(config, 0);
+    bench.tick(config, 1);
     bench.deliver(config.scheduler.topics.run_published, {
       run_id: 'standing',
       current: true,
@@ -217,7 +268,7 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
 
     // The floor comes due with plenty of headroom: held, not requested, and the shortfall
     // says how much validity must still decay.
-    bench.tick(scheduler, config, config.scheduler.max_interval_ticks);
+    bench.tick(config, config.scheduler.max_interval_ticks);
     expect(bench.requests).toHaveLength(0);
     const held = bench.decisions.at(-1);
     expect(held?.decision).toBe('held-for-cost');
@@ -229,8 +280,8 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     // here and nothing is ever affordable again. Under the rule as written the hold
     // released before this — the run lands as the old one lapses — so by now it has been
     // requested.
-    bench.tick(scheduler, config, config.scheduler.max_interval_ticks + shortfall);
-    bench.tick(scheduler, config, 3600);
+    bench.tick(config, config.scheduler.max_interval_ticks + shortfall);
+    bench.tick(config, 3600);
     expect(bench.requests.length).toBeGreaterThan(0);
     expect(bench.requests[0].cause).toBe('scheduled');
     // And it was released *before* the lapse, by the declared margin, so the new run has
@@ -250,15 +301,15 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     const scheduler = new Scheduler(config.scheduler, bench.client, 'becalm-instant');
     scheduler.start();
     bench.deliver(config.model_runner.topics.run_cost, { cost_ticks: 12 });
-    bench.tick(scheduler, config, 0);
-    bench.tick(scheduler, config, 1);
+    bench.tick(config, 0);
+    bench.tick(config, 1);
     // A forecast whose validity ends well before the floor comes due.
     bench.deliver(config.scheduler.topics.run_published, {
       run_id: 'lapsed',
       current: true,
       valid_time: { start_sim_time: bench.simTimeAt(0), end_sim_time: bench.simTimeAt(600) },
     });
-    bench.tick(scheduler, config, config.scheduler.max_interval_ticks);
+    bench.tick(config, config.scheduler.max_interval_ticks);
     expect(bench.decisions.some((decision) => decision.decision === 'held-for-cost')).toBe(false);
     expect(bench.requests).toHaveLength(1);
     expect(bench.requests[0].cause).toBe('scheduled');

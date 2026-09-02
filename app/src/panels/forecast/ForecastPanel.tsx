@@ -59,7 +59,11 @@ export const FORECAST_REGIONS = [
   { id: 'timeline', label: 'the runs, in simulation time, labelled by cause', element: '[data-region="timeline"]' },
 ] as const;
 
-/** How a cause is said to a reader. Four causes, four labels, never one appearance. */
+/**
+ * How a cause is said to a reader. Three causes — the scheduler declares them on the run
+ * request — and a hold, which is not a cause but a decision, drawn as its own kind of entry
+ * below. FR-32's four facts are four *decisions*, not four causes.
+ */
 const CAUSE_LABEL: Record<string, string> = {
   scheduled: 'scheduled',
   divergence: 'divergence-triggered',
@@ -103,7 +107,13 @@ interface Entry {
  */
 function entriesFromInventory(inventory: HoldingsInventory): Entry[] {
   return inventory.holdings
-    .filter((holding) => holding.era === 'instance' && !holding.holding_id.endsWith('-spread'))
+    // Separated from its uncertainty sibling by what the manifest DECLARES the holding is,
+    // not by the shape of its id. The runner happens to name the spread `<run>-spread`, but
+    // no master says so: `coverage-holding.schema.json`'s id pattern admits `spread-x`
+    // equally, so a rename in the backend would have put every ensemble-spread field on
+    // this timeline as a second run at the same tick — a display asserting a run nothing
+    // performed. `composition.rule` is on the same object and is governed by a master.
+    .filter((holding) => holding.era === 'instance' && holding.manifest.composition.rule !== 'ensemble-spread')
     .map((holding) => ({
       key: `held-instance:${holding.holding_id}`,
       kind: 'run' as const,
@@ -407,10 +417,16 @@ export function ForecastPanel({ params }: PanelProps) {
  * The gauge: a vertical bar with the threshold marked across it.
  *
  * Vertical because FR-118 asks for one, and because the cost sits beneath it in the same
- * frame — need above, cost below, read together. The fill is a proportion of twice the
- * threshold, so the threshold always sits at the middle of the bar and a reader learns one
- * position rather than re-reading a scale each time. Both numbers are printed as well as
- * drawn, which is what makes the region legible in greyscale.
+ * frame — need above, cost below, read together.
+ *
+ * The span is twice the threshold, so the threshold mark sits at the middle of the bar and
+ * a reader learns one position instead of re-reading a scale — **until the figure passes
+ * twice the threshold**, when the span becomes the figure and the mark slides down. That is
+ * the alarming case, and it is the case where a fixed scale would have nothing left to
+ * show: a bar pinned at full for every value above 2.4 m/s says the same thing at three as
+ * at thirty. The mark moving is the price of the bar going on meaning something, and it is
+ * why both numbers are printed beside it — which is also what makes the region legible in
+ * greyscale.
  */
 function Gauge({ indicator }: { indicator: ForecastIndicator }) {
   const span = Math.max(indicator.threshold * 2, Math.abs(indicator.value), 1e-9);

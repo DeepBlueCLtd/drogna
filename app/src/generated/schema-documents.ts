@@ -1766,7 +1766,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_started",
           "run_published",
           "run_cost",
-          "forecast_features"
+          "forecast_features",
+          "telemetry"
         ],
         "additionalProperties": false,
         "properties": {
@@ -1789,6 +1790,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_cost": {
             "$ref": "config.common.schema.json#/$defs/topic",
             "description": "Where this component states what a run costs, in ticks of simulation time. It is the sole publisher of that figure (SRD-v2 FR-115): the scheduler subscribes here rather than holding a second copy, and check-declared-cost fails the build if any other component's configuration declares one."
+          },
+          "telemetry": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where this component reports a run it did not finish. A run occupies the ticks it costs before it publishes (FR-114), so there is now an interval in which the runner can be stopped with a run staged and unpublished. A run that leaves no trace is a run the scheduler waits on for ever — the permanently becalmed loop FR-31 forbids — so the runner says so on its way out, and the scheduler releases what it was holding."
           },
           "forecast_features": {
             "$ref": "config.common.schema.json#/$defs/topic",
@@ -2889,7 +2894,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
     "title": "drogna scheduler configuration (V2-C12)",
-    "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
+    "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it, a run is warranted on schedule alone, labelled 'scheduled'. From feature 123 that warrant is then weighed for affordability rather than gated on the lapse: the run is HELD while the standing forecast has more life left than the run costs plus release_margin_ticks, and released as that headroom decays, so it lands as the old one lapses. A zero cost is still weighed — the margin alone is a validity rule — so a kernel that declares no work does not lose the gate. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
     "type": "object",
     "required": [
       "id",
@@ -2955,7 +2960,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "max_interval_ticks": {
         "type": "integer",
         "exclusiveMinimum": 0,
-        "description": "The cadence floor (FR-31): the interval after which, with the current run's validity lapsed (or no run at all), a run is warranted on schedule alone."
+        "description": "The cadence floor (FR-31): the interval after which a run is warranted on schedule alone, whatever the water has done. Whether it is requested at once or held is then decided by release_margin_ticks against the cost the model runner published — never here."
       },
       "ensemble_size": {
         "type": "integer",
@@ -5448,7 +5453,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/forecast-features.schema.json",
     "title": "drogna forecast features",
-    "description": "The seeded features forecast AS FEATURES rather than merely carried in the field (SRD-v2 FR-113): the eddy's centre, radius and strength; the front's position and orientation; the thermocline's depth and gradient; and the drifting feature's track — each published per forecast step with an uncertainty that grows with lead, so that a forecast makes a falsifiable claim about next week rather than a picture of it.\n\n**The parameters are estimated from the analysis the run initialises from, and from nothing else.** A run never reads the true field. That is feature 116's lesson — before it, the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so nothing the platform measured ever reached a forecast — and it is why the runner subscribes to the analysis announcement rather than to the run request.\n\nProperty names follow `manifest.schema.json`'s own `eddy_parameters`, `front_parameters`, `thermocline_parameters` and `moving_parameters`, in the subset an estimator over a gridded field can honestly recover, so a scoring test compares like with like against the ground-truth manifest rather than against a translation. The bound such a test holds to is derived from the authoring jitter on disk and never typed into the test (AT-03, AT-06; Constitution IX).",
+    "description": "The seeded features forecast AS FEATURES rather than merely carried in the field (SRD-v2 FR-113): the eddy's centre, radius and strength; the front's position and orientation; the thermocline's depth and gradient; and the drifting feature's track — each published per forecast step with an uncertainty that grows with lead, so that a forecast makes a falsifiable claim about next week rather than a picture of it.\n\n**The parameters are estimated from the analysis the run initialises from, and from nothing else.** A run never reads the true field. That is feature 116's lesson — before it, the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so nothing the platform measured ever reached a forecast — and it is why the runner subscribes to the analysis announcement rather than to the run request.\n\nProperty names follow `manifest.schema.json`'s own `eddy_parameters`, `front_parameters`, `thermocline_parameters` and `moving_parameters` **only where the quantity is the same quantity**, so a scoring test compares like with like against the ground-truth manifest rather than against a translation. The bound such a test holds to is derived from the authoring jitter or the grid's own resolution, read on disk, and never typed into the test (AT-03, AT-06; Constitution IX).\n\n**Where the quantity is not the same, the name is not the same either, and the difference is declared.** The magnitudes a horizontal estimator over a coarse grid produces — an anomaly peak, a step across a front, a drop across a grid interval — are not the authored three-dimensional amplitudes, and cannot be converted into them without depth structure no estimator here recovers. They are published under names of their own (`anomaly_peak_c`, `anomaly_step_c`, `layer_drop_c`), and the authored quantity they resemble is named in `not_estimated` with the reason. The first draft published them under the manifest's names at up to sixteen times the uncertainty it declared for them, which is what this separation exists to prevent.",
     "type": "object",
     "required": [
       "component",
@@ -5543,6 +5548,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "properties": {
                 "kind": {
                   "$ref": "#/$defs/kind"
+                },
+                "quantity": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The single quantity not recovered, named as the ground-truth manifest names it. Absent means the whole feature was not estimated. Two different facts: a thermocline nobody could place, and a thermocline placed to the grid's resolution whose authored temperature drop is finer than the grid can see."
                 },
                 "reason": {
                   "type": "string",
@@ -5648,23 +5658,27 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "centre_latitude",
           "centre_longitude",
           "radius_km",
-          "strength_c"
+          "anomaly_peak_c"
         ],
         "additionalProperties": false,
-        "description": "The subset of the manifest's eddy_parameters an estimator over a gridded analysis can recover: where the anomaly is, how far it reaches, and how strong it is. The authored depth structure and salinity strength are deliberately absent — an estimate nobody can make honestly is worse than none.",
+        "description": "What an estimator over a gridded analysis can recover of the eddy: where the anomaly is, how far it reaches, and how strong the anomaly it left in a depth-averaged field is. The authored depth structure and salinity strength are deliberately absent — an estimate nobody can make honestly is worse than none.",
         "properties": {
           "centre_latitude": {
-            "type": "number"
+            "type": "number",
+            "description": "Scorable against the manifest's own centre_latitude."
           },
           "centre_longitude": {
-            "type": "number"
+            "type": "number",
+            "description": "Scorable against the manifest's own centre_longitude."
           },
           "radius_km": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "The equivalent radius of the region still above the anomaly peak over e, after the high pass that separates the blob from the front's plateau. Smaller than the authored radius, because the high pass shrinks it — published because the surface needs a scale to draw, and not scored as if it were the authored figure."
           },
-          "strength_c": {
-            "type": "number"
+          "anomaly_peak_c": {
+            "type": "number",
+            "description": "The peak of the high-passed, depth-averaged temperature anomaly. NOT the manifest's strength_c, which is a three-dimensional amplitude at the feature's own depth; see not_estimated."
           }
         }
       },
@@ -5674,10 +5688,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "anchor_latitude",
           "anchor_longitude",
           "bearing_degrees",
-          "amplitude_c"
+          "anomaly_step_c"
         ],
         "additionalProperties": false,
-        "description": "The front's position and orientation, named as the manifest names them. The anchor is where the horizontal gradient is strongest; the bearing is the direction the gradient runs along.",
+        "description": "The front's position and orientation. The anchor is a point ON the line — where the horizontal gradient is steepest outside both blobs — and is scored as a perpendicular distance to the authored front, never as a distance between two anchors: a line has no distinguished point.",
         "properties": {
           "anchor_latitude": {
             "type": "number"
@@ -5686,10 +5700,14 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "number"
           },
           "bearing_degrees": {
-            "type": "number"
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMaximum": 180,
+            "description": "The direction the front runs, in the manifest's own convention, folded into a half turn because a front and its reverse are the same line. Averaged in doubled angles over every cell within half the peak gradient and weighted by it — one cell of a noisy field is one sample, and taking the steepest cell alone was wrong by up to 39 degrees. Scorable against the manifest's bearing_degrees, folded the same way."
           },
-          "amplitude_c": {
-            "type": "number"
+          "anomaly_step_c": {
+            "type": "number",
+            "description": "Half the range of the depth-averaged anomaly across the front, outside both blobs. NOT the manifest's amplitude_c, which is a surface figure decaying with depth on a scale this estimator does not recover; see not_estimated."
           }
         }
       },
@@ -5698,21 +5716,24 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "depth_m",
           "thickness_m",
-          "temperature_drop_c"
+          "layer_drop_c"
         ],
         "additionalProperties": false,
-        "description": "The thermocline's depth and the gradient across it, named as the manifest names them. Depth is where the vertical temperature gradient is steepest; thickness is the span the drop is taken over.",
+        "description": "Where the domain-mean profile falls fastest, and by how much over the interval it was measured on. Depth is the midpoint of the steepest level pair and is scorable against the manifest's depth_m to the grid's own depth spacing and no finer.",
         "properties": {
           "depth_m": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Scorable against the manifest's depth_m, to a bound that is the grid's depth spacing."
           },
           "thickness_m": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "The grid interval the drop was taken over — the resolution of the claim, carried with it rather than left to be looked up."
           },
-          "temperature_drop_c": {
-            "type": "number"
+          "layer_drop_c": {
+            "type": "number",
+            "description": "The domain-mean temperature drop across that interval. NOT the manifest's temperature_drop_c, which is taken across a thermocline an order of magnitude thinner; see not_estimated."
           }
         }
       },
@@ -5722,10 +5743,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "centre_latitude",
           "centre_longitude",
           "radius_km",
-          "strength_c"
+          "anomaly_peak_c"
         ],
         "additionalProperties": false,
-        "description": "The drifting feature's track: its position at this step, with the same recoverable subset the eddy carries. The drift velocity is not restated — it is what the succession of positions across the steps IS, and a velocity published beside them would be a second claim free to disagree.",
+        "description": "The drifting feature's track: its position at this step, with the same recoverable subset the eddy carries, separated from the eddy by the sign of its anomaly rather than by a hint from the manifest. The drift velocity is not restated — it is what the succession of positions across the steps IS, and a velocity published beside them would be a second claim free to disagree.",
         "properties": {
           "centre_latitude": {
             "type": "number"
@@ -5737,8 +5758,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "number",
             "exclusiveMinimum": 0
           },
-          "strength_c": {
-            "type": "number"
+          "anomaly_peak_c": {
+            "type": "number",
+            "description": "As the eddy's, and not the manifest's strength_c; see not_estimated."
           }
         }
       },
@@ -5747,10 +5769,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "centre_km",
           "radius_km",
-          "strength_c"
+          "anomaly_peak_c"
         ],
         "additionalProperties": false,
-        "description": "One standard deviation on each estimated quantity, growing with lead. Derived from the analysis error the run initialised from and the root of the lead, so a longer forecast makes a weaker claim — which is what an uncertainty is for.",
+        "description": "One standard deviation on each quantity beside it, growing with lead. Derived from the analysis error the run initialised from and the root of the lead, so a longer forecast makes a weaker claim — which is what an uncertainty is for. It covers the figures actually published; a quantity in not_estimated has no uncertainty here, because an uncertainty on a figure nobody produced would be the emptiest claim in the document.",
         "properties": {
           "centre_km": {
             "type": "number",
@@ -5760,7 +5782,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "number",
             "minimum": 0
           },
-          "strength_c": {
+          "anomaly_peak_c": {
             "type": "number",
             "minimum": 0
           }
@@ -5771,7 +5793,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "anchor_km",
           "bearing_degrees",
-          "amplitude_c"
+          "anomaly_step_c"
         ],
         "additionalProperties": false,
         "properties": {
@@ -5783,7 +5805,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "number",
             "minimum": 0
           },
-          "amplitude_c": {
+          "anomaly_step_c": {
             "type": "number",
             "minimum": 0
           }
@@ -5793,15 +5815,16 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "type": "object",
         "required": [
           "depth_m",
-          "temperature_drop_c"
+          "layer_drop_c"
         ],
         "additionalProperties": false,
         "properties": {
           "depth_m": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Half the grid's depth spacing — the nearest a level-pair midpoint can be wrong. It does not grow with lead: this kernel has no vertical velocity, so a widening claim about the depth would be a claim the physics does not make."
           },
-          "temperature_drop_c": {
+          "layer_drop_c": {
             "type": "number",
             "minimum": 0
           }

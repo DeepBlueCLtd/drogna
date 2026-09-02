@@ -265,6 +265,43 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     scheduler.stop();
   });
 
+  it('releases an outstanding run the runner says it will not publish, rather than waiting for ever', async () => {
+    // **The fault a cost introduced, and the reason this test is not optional.** A run now
+    // occupies the ticks it costs, so there is an interval on every run in which the model
+    // runner can be stopped with the publication staged and undelivered. This component
+    // clears its outstanding run on a publication and on nothing else, so before the runner
+    // learned to say so, stopping it in that window meant no cadence floor and no
+    // divergence would ever be acted on again — a permanently becalmed loop reached through
+    // an ordinary operator verb, which is what FR-31 forbids.
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+    // Turn the loop until a run has been announced and is occupying its cost.
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > 0 && runtime.store.currentInstance() === undefined,
+      config.scheduler.max_interval_ticks * 3,
+    );
+    expect(seen.requests.length).toBeGreaterThan(0);
+    expect(runtime.store.currentInstance()).toBeUndefined();
+    const requestsBefore = seen.requests.length;
+
+    // Stopped mid-occupancy, exactly as the Operator tab's stop control does it.
+    runtime.control.stop(config.model_runner.id);
+    expect(runtime.scheduler.abandoned).toBe(1);
+
+    // And the loop turns again: with the runner restarted, the next cadence floor is acted
+    // on rather than declined against a run that is never coming.
+    runtime.control.start(config.model_runner.id);
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > requestsBefore,
+      config.scheduler.max_interval_ticks * 4,
+    );
+    expect(seen.requests.length).toBeGreaterThan(requestsBefore);
+    runtime.stop();
+  });
+
   it('SC-007: a divergence is never held, at a tick where a scheduled run would be', async () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);

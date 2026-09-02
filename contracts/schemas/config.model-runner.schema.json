@@ -35,7 +35,8 @@
         "run_started",
         "run_published",
         "run_cost",
-        "forecast_features"
+        "forecast_features",
+        "telemetry"
       ],
       "additionalProperties": false,
       "properties": {
@@ -58,6 +59,10 @@
         "run_cost": {
           "$ref": "config.common.schema.json#/$defs/topic",
           "description": "Where this component states what a run costs, in ticks of simulation time. It is the sole publisher of that figure (SRD-v2 FR-115): the scheduler subscribes here rather than holding a second copy, and check-declared-cost fails the build if any other component's configuration declares one."
+        },
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where this component reports a run it did not finish. A run occupies the ticks it costs before it publishes (FR-114), so there is now an interval in which the runner can be stopped with a run staged and unpublished. A run that leaves no trace is a run the scheduler waits on for ever \u2014 the permanently becalmed loop FR-31 forbids \u2014 so the runner says so on its way out, and the scheduler releases what it was holding."
         },
         "forecast_features": {
           "$ref": "config.common.schema.json#/$defs/topic",

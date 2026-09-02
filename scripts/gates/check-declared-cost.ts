@@ -21,6 +21,14 @@
  * `run_cost` and the shell reads it; that is the design working. Property names inside a
  * `topics` object are therefore exempt, and only there — a `run_cost_ticks` beside
  * `min_interval_ticks` is exactly what this gate exists to catch.
+ *
+ * **What it does not cover, said plainly, because the sentence above is broader than the
+ * code beneath it.** This reads configuration: the masters components are built from, and
+ * the document they are built from. A cost typed into a component's *source* — `const
+ * RUN_COST_TICKS = 12` in the scheduler — passes it clean, and so does one added to a
+ * message master rather than a configuration one. Those are worth catching and this does
+ * not catch them; the fault ADR-0043 names is a second copy of the figure in a document
+ * somebody would edit to change it, and that is the fault this holds.
  */
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';

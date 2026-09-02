@@ -390,6 +390,7 @@ export type ConfigModelRunner = {
     "run_started": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
     "run_cost": ConfigCommonTopic;
+    "telemetry": ConfigCommonTopic;
     "forecast_features": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
@@ -1164,6 +1165,7 @@ export type ForecastFeaturesStep = {
   "features": ForecastFeaturesFeature[];
   "not_estimated"?: {
     "kind": ForecastFeaturesKind;
+    "quantity"?: string;
     "reason": string;
   }[];
 };
@@ -1204,7 +1206,7 @@ export type ForecastFeaturesEddyParameters = {
   "centre_latitude": number;
   "centre_longitude": number;
   "radius_km": number;
-  "strength_c": number;
+  "anomaly_peak_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/front_parameters */
@@ -1212,14 +1214,14 @@ export type ForecastFeaturesFrontParameters = {
   "anchor_latitude": number;
   "anchor_longitude": number;
   "bearing_degrees": number;
-  "amplitude_c": number;
+  "anomaly_step_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/thermocline_parameters */
 export type ForecastFeaturesThermoclineParameters = {
   "depth_m": number;
   "thickness_m": number;
-  "temperature_drop_c": number;
+  "layer_drop_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/moving_parameters */
@@ -1227,27 +1229,27 @@ export type ForecastFeaturesMovingParameters = {
   "centre_latitude": number;
   "centre_longitude": number;
   "radius_km": number;
-  "strength_c": number;
+  "anomaly_peak_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/positional_uncertainty */
 export type ForecastFeaturesPositionalUncertainty = {
   "centre_km": number;
   "radius_km": number;
-  "strength_c": number;
+  "anomaly_peak_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/front_uncertainty */
 export type ForecastFeaturesFrontUncertainty = {
   "anchor_km": number;
   "bearing_degrees": number;
-  "amplitude_c": number;
+  "anomaly_step_c": number;
 };
 
 /** forecast-features.schema.json #/$defs/thermocline_uncertainty */
 export type ForecastFeaturesThermoclineUncertainty = {
   "depth_m": number;
-  "temperature_drop_c": number;
+  "layer_drop_c": number;
 };
 
 /** drogna re-forecast indicator — from forecast-indicator.schema.json */

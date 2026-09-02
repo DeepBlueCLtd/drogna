@@ -138,8 +138,15 @@ its cost did to five existing suites).
 ## Cost
 
 - [x] T025 `run-cost.schema.json`, and the runner as its **sole** publisher: work implied by
-      the configuration over the declared rate, in ticks, published at start-up and whenever
-      a tuning changes it.
+      the configuration over the declared rate, in ticks.
+      **Not "published at start-up and whenever a tuning changes it", which is what this task
+      said and is wrong twice.** No operator tunable targets the model runner, so the cost is
+      a pure function of a document that is never mutated and there is no tuning to change
+      it. And a figure published once, at start-up, is a figure the shell can never learn:
+      the console mounts after the backend is built and pre-rolled, so the first statement
+      goes out before anything is listening. It is restated on a declared cadence in ticks
+      instead — a publication on the component's own clock, not a poll, and deterministic
+      because it is driven by the clock subscription the runner already holds.
 - [x] T026 `run-started.schema.json` gains `cost_ticks`.
 - [x] T027 `runner.ts`: `run()` splits into compute-on-announcement and publish-when-spent,
       released on the clock subscription it already holds. The staged publication waits;
@@ -240,13 +247,14 @@ its cost did to five existing suites).
 - [x] T044 `pnpm replay-proof` — byte-identical replay surviving the second kernel and the
       held publication (SC-002).
 - [x] T045 The existing suites that build a backend and turn the loop: **nine tests across
-      five files**, each re-derived from the behaviour rather than adjusted until it passed.
+      six files**, each re-derived from the behaviour rather than adjusted until it passed.
       The shape of every one is the same — a drive that stopped when a run was *requested*
       now stops with that run still integrating — so each waits for the publication instead:
       `loop.test.ts` (the end-to-end turn, and the minimum-interval decline),
       `analyst.test.ts` (one analysis per run, both counted), `operator.test.ts` (the prompt
       and the prompted offload), `operator-panel.test.tsx` (the same prompt in the drawer),
-      `preroll.test.ts` (T043).
+      `preroll.test.ts` (which needed no test edit at all — the fix was the leg length in
+      `run.json`, per T043) and `advisories.test.ts`, whose reason is below.
       Two changed for reasons that are not tick counts and are recorded rather than
       absorbed. A **prompted run is now held for cost** where it used to be accepted — which
       is FR-116 working, not a regression, so the operator test asserts the hold and names
@@ -256,6 +264,74 @@ its cost did to five existing suites).
       that propagates a state diverges everywhere instead, so the mask is now the whole
       domain rather than empty. Different reason, same conclusion, and the test says which —
       which is precisely what that test was written to do.
+
+## What the adversarial review found, and what it changed
+
+Two independent passes read the diff without having seen it written
+(`.claude/skills/adversarial-review`). Six of their findings were real, and three of the six
+are the kind that only an outsider finds — the author had already decided each was fine.
+
+- [x] T049 **Stopping the model runner mid-cost becalmed the loop for ever.** A run now
+      occupies twelve ticks between its announcement and its publication, and the scheduler
+      clears its outstanding run on a publication and on nothing else — so a stop landing in
+      that window meant no cadence floor and no divergence would ever be acted on again,
+      reached through an ordinary operator verb. It had been recorded here as "widened, not
+      introduced" and left; that was wrong, because the window was zero ticks before and is
+      now on every run. A run that will not finish now says so on the telemetry branch as it
+      is stopped, and the scheduler releases what it was holding. Watched failing with the
+      release removed: "expected +0 to be 1".
+- [x] T050 **With a zero-cost kernel the standing-forecast gate had disappeared.** Replacing
+      the cadence floor's validity test with "is the hold shortfall positive", and then
+      short-circuiting the shortfall to zero whenever the cost was, deleted the gate
+      outright for `shift-advect-v1` — the kernel ADR-0042 keeps registered precisely so the
+      port stays real. The short-circuit is gone: a zero cost is still weighed, because the
+      release margin alone is a validity rule. The scheduler's own master had gone on
+      describing the old behaviour and now describes this one.
+- [x] T051 **Three magnitudes were published under the manifest's names and were wrong by up
+      to sixteen times the uncertainty beside them.** A blob's strength, a front's amplitude
+      and a thermocline's temperature drop are quantities a horizontal estimator over a
+      200 m depth grid cannot see. What is measured is now published as `anomaly_peak_c`,
+      `anomaly_step_c` and `layer_drop_c` — names that do not invite the comparison — and
+      the authored quantity each resembles is named in `not_estimated` with its reason.
+- [x] T052 **The front's bearing was printed and never asserted, and the 9.3° this record
+      quoted was one kind seed.** At the seed the console opens on, the same estimator was
+      39.6° out, which for a folded bearing is barely distinguishable from chance. It is now
+      averaged in doubled angles over every cell within half the peak gradient, weighted by
+      it, and **asserted** against the authoring jitter read from configuration: 0.2° to
+      0.6° across every seed the start conditions use.
+- [x] T053 **Scoring every seed rather than one found two more faults.** The drifting
+      feature came back 213 km from where it was authored at one of five seeds, because
+      high-passing a warm blob leaves a cold ring around it and at that seed the ring — and
+      then the front's own cold side — was deeper than the drifter. The ring is now excluded
+      out to the width of the filter that made it, from the region as well as from its peak;
+      and a peak that does not stand two standard deviations above the field's own scatter
+      is **declined with its reason** rather than published. Four seeds recover it to 5–23
+      km; the fifth says it could not.
+- [x] T054 The smaller ones, each confirmed against the code: the Forecast timeline
+      separated a forecast from its uncertainty sibling by the string `-spread` that no
+      master declares, and now reads `manifest.composition.rule`; the monitor computed the
+      same streak expression twice twenty lines apart, in the very function whose comment
+      argues the gauge and the rule must read one figure; the gate's fixture was a 204-line
+      copy of the owner master that had already drifted within this branch, and is a stub
+      that cannot; the gate's `run.json` arm had never been planted against, and is; four
+      comments said things the code did not do — a threshold "always" at mid-bar, "four
+      causes" over three, no-flux boundaries that advect outward, a depth uncertainty of a
+      spacing that is half of one — and each now says what happens.
+
+- [x] T055 And one the review did not find, because the suite did. Fixing T049 gave the
+      scheduler a ninth heartbeat figure, and `heartbeat.schema.json` caps a component at
+      eight — a face has room for eight and a ninth is a face inventing space. Four tests
+      went red at once and named it: the scheduler simply stopped being heard from. The
+      release margin is the figure that goes, because it is a configured constant that never
+      moves and is named in every held-for-cost decision anyway; the three that stay each
+      change while the run is going. A cap in a master, doing exactly what a cap is for.
+
+Two of their observations were recorded rather than acted on. The sub-stepping machinery
+never engages at the shipped grid (one sub-step at both the nominal and the real cell size,
+because a 900-second step on 5 km cells is nowhere near the stability limit) — it is
+headroom, reachable by configuration and tested there. And `ctl/forecast/features` has no
+consumer: it is feature 124's to read, which is stated, and a loop test now validates the
+message against its master so the shape cannot rot in the meantime.
 
 ## The record, second half
 

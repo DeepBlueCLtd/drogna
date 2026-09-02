@@ -26,6 +26,7 @@ import type {
   Manifest,
   RunCost,
   RunPublished,
+  TelemetryRunFailed,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
@@ -231,10 +232,57 @@ export class ModelRunner {
   }
 
   stop(): void {
+    this.abandonOccupyingRun();
     this.heartbeat.stop();
   }
 
+  /**
+   * A run staged and not yet published, given up on out loud.
+   *
+   * **This is the fault a cost introduced, and it is the one worth understanding.** Before
+   * a run occupied anything, the whole chain — request, analysis, started, published —
+   * completed inside one tick, so there was no interval in which this component could be
+   * stopped with work outstanding. There is now one on every run, exactly as long as the
+   * cost, and the Forecast tab advertises it by drawing "occupying 12 tick(s)".
+   *
+   * Stopping the runner in that window discards the staged closure. The scheduler clears
+   * its outstanding run only on a publication, so it would wait for one that is never
+   * coming: no cadence floor, no divergence, nothing, for the rest of the run. That is the
+   * permanently becalmed loop FR-31 forbids, arriving silently — and it would arrive
+   * through an ordinary operator verb that this feature made dangerous.
+   *
+   * So a run that will not finish says so, on the branch the loop already reports failures
+   * on, and the scheduler releases what it was holding. `control.stop` calls this before it
+   * disconnects the client, which is what makes the last message possible.
+   */
+  private abandonOccupyingRun(): void {
+    const abandoned = this.occupying;
+    if (!abandoned) return;
+    this.occupying = undefined;
+    this.client.publish(this.config.topics.telemetry, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+      kind: 'run-failed',
+      run_id: abandoned.runIdentifier,
+      detail:
+        `the model runner was stopped at tick ${this.simTime.tick} with run ${abandoned.runIdentifier} ` +
+        `${this.simTime.tick - abandoned.startedAtTick} of ${abandoned.publishAtTick - abandoned.startedAtTick} tick(s) ` +
+        'through the cost it was occupying; the staged publication is discarded and this run will not be published',
+    } satisfies TelemetryRunFailed);
+  }
+
   private run(request: AnalysisPublished): void {
+    // Refused before any work, not after it. The scheduler allows one request in flight at
+    // a time, so this cannot be reached from the shipped loop; it is refused here rather
+    // than at the point of staging so that a second analysis could never announce a run and
+    // burn an ensemble on its way to being told no.
+    if (this.occupying) {
+      throw new Error(
+        `run ${request.run_id} arrived while ${this.occupying.runIdentifier} is still occupying its cost; the scheduler allows one request in flight at a time and this runner does not silently drop either`,
+      );
+    }
     const analysis = this.store.holding(request.collections.analysis);
     if (!analysis) {
       throw new Error(
@@ -400,11 +448,6 @@ export class ModelRunner {
       emit();
       return;
     }
-    if (this.occupying) {
-      throw new Error(
-        `run ${request.run_id} arrived while ${this.occupying.runIdentifier} is still occupying its cost; the scheduler allows one request in flight at a time and this runner does not silently drop either`,
-      );
-    }
     this.occupying = {
       runIdentifier: request.run_id,
       startedAtTick: this.simTime.tick,
@@ -437,12 +480,12 @@ export class ModelRunner {
           centre_latitude: entry.eddy.centreLatitude,
           centre_longitude: entry.eddy.centreLongitude,
           radius_km: entry.eddy.radiusKm,
-          strength_c: entry.eddy.strengthC,
+          anomaly_peak_c: entry.eddy.anomalyPeakC,
         },
         uncertainty: {
           centre_km: entry.uncertainty.positionKm,
           radius_km: entry.uncertainty.radiusKm,
-          strength_c: entry.uncertainty.strengthC,
+          anomaly_peak_c: entry.uncertainty.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -454,12 +497,12 @@ export class ModelRunner {
           centre_latitude: entry.moving.centreLatitude,
           centre_longitude: entry.moving.centreLongitude,
           radius_km: entry.moving.radiusKm,
-          strength_c: entry.moving.strengthC,
+          anomaly_peak_c: entry.moving.anomalyPeakC,
         },
         uncertainty: {
           centre_km: entry.uncertainty.positionKm,
           radius_km: entry.uncertainty.radiusKm,
-          strength_c: entry.uncertainty.strengthC,
+          anomaly_peak_c: entry.uncertainty.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -471,12 +514,12 @@ export class ModelRunner {
           anchor_latitude: entry.front.anchorLatitude,
           anchor_longitude: entry.front.anchorLongitude,
           bearing_degrees: entry.front.bearingDegrees,
-          amplitude_c: entry.front.amplitudeC,
+          anomaly_step_c: entry.front.anomalyStepC,
         },
         uncertainty: {
           anchor_km: entry.uncertainty.positionKm,
           bearing_degrees: entry.uncertainty.bearingDegrees,
-          amplitude_c: entry.uncertainty.strengthC,
+          anomaly_step_c: entry.uncertainty.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }
@@ -487,11 +530,11 @@ export class ModelRunner {
         parameters: {
           depth_m: entry.thermocline.depthM,
           thickness_m: entry.thermocline.thicknessM,
-          temperature_drop_c: entry.thermocline.temperatureDropC,
+          layer_drop_c: entry.thermocline.layerDropC,
         },
         uncertainty: {
           depth_m: entry.uncertainty.depthM,
-          temperature_drop_c: entry.uncertainty.strengthC,
+          layer_drop_c: entry.uncertainty.anomalyC,
         },
       } as ForecastFeaturesFeature);
     }

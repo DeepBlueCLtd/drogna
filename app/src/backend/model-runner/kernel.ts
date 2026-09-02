@@ -211,8 +211,14 @@ export function twoLayerStability(
  * as what the real thing is, and nothing here claims kinship with them beyond structure
  * (FR-107). The numerics are fake and the data is synthetic.
  *
- * Boundaries are no-flux: the domain edge is where the harness stopped authoring a field,
- * not where the ocean stops, so nothing is advected in from outside and nothing leaves.
+ * Boundaries are zero-gradient, which is not quite the same as no-flux and the difference
+ * is worth stating. Diffusion across the edge is nil, because the gradient is taken against
+ * a clamped neighbour. Advection is not: upwind differencing at a downstream edge computes
+ * the difference against the cell behind it, so material does leave the domain there — and
+ * nothing enters, because there is no upstream cell to bring anything in. The domain edge
+ * is where the harness stopped authoring a field, not where the ocean stops, so a field
+ * that slowly drains at the downwind margin is the honest consequence of that and not a
+ * fault to be papered over with a wrap-around nobody's ocean has.
  */
 export const shallowTwoLayerKernel: ModelKernel = {
   name: 'shallow-two-layer-v1',

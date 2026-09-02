@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
   "title": "drogna scheduler configuration (V2-C12)",
-  "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
+  "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it, a run is warranted on schedule alone, labelled 'scheduled'. From feature 123 that warrant is then weighed for affordability rather than gated on the lapse: the run is HELD while the standing forecast has more life left than the run costs plus release_margin_ticks, and released as that headroom decays, so it lands as the old one lapses. A zero cost is still weighed — the margin alone is a validity rule — so a kernel that declares no work does not lose the gate. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
   "type": "object",
   "required": [
     "id",
@@ -68,7 +68,7 @@
     "max_interval_ticks": {
       "type": "integer",
       "exclusiveMinimum": 0,
-      "description": "The cadence floor (FR-31): the interval after which, with the current run's validity lapsed (or no run at all), a run is warranted on schedule alone."
+      "description": "The cadence floor (FR-31): the interval after which a run is warranted on schedule alone, whatever the water has done. Whether it is requested at once or held is then decided by release_margin_ticks against the cost the model runner published — never here."
     },
     "ensemble_size": {
       "type": "integer",

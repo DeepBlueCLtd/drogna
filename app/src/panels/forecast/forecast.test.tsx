@@ -6,6 +6,11 @@
  * and publishes, the monitor scores real residuals and publishes the indicator on the
  * declared socket, and the panel draws what crossed the broker.
  *
+ * FR numbers below with no prefix are the SRD's. A bare `123 FR-nn` is feature 123's own
+ * local numbering from `specs/123-forward-step/spec.md`, prefixed because the repository
+ * has already paid once for a number that meant two things (the constitution went to 2.1.1
+ * over FR-91).
+ *
  * Two claims are the reason this file exists. **An empty gauge and an unheard indicator
  * are different facts** (FR-119), and the panel has to say which it is looking at. And
  * **a run held for cost, a run declined by the minimum interval, and no run requested must
@@ -151,7 +156,7 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(entries.every((entry) => entry.tagName === 'BUTTON')).toBe(true);
   });
 
-  it('FR-17: the centre and right regions state that they are not built, and name feature 124', async () => {
+  it('123 FR-17: the centre and right regions state that they are not built, and name feature 124', async () => {
     render(<ForecastPanel {...panelProps()} />);
     await act(async () => {
       runtime.clock.tickOnce();

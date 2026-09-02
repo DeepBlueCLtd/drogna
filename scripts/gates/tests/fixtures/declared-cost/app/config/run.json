@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "model_runner": {
+    "id": "model-runner",
+    "cost": {
+      "work_per_sub_step": 3
+    }
+  },
+  "planner": {
+    "id": "planner",
+    "topics": {
+      "run_cost": "ctl/run/cost"
+    },
+    "run_cost_ticks": 12
+  }
+}

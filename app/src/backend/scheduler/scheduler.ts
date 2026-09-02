@@ -59,6 +59,8 @@ export class Scheduler {
   private validityEnd: string | undefined;
   declinedByPolicy = 0;
   heldForCost = 0;
+  /** Outstanding runs released because the component that owed them said it would not. */
+  abandoned = 0;
   requested: { run_id: string; cause: RunRequest['cause'] }[] = [];
   /**
    * What a run costs, in ticks, as the model runner stated it. Undefined until it has: a
@@ -122,9 +124,16 @@ export class Scheduler {
           { key: 'requested', value: this.requested.length, label: 'requested' },
           { key: 'declined', value: this.declinedByPolicy, label: 'declined' },
           { key: 'held_for_cost', value: this.heldForCost, label: 'held for cost' },
+          { key: 'abandoned', value: this.abandoned, label: 'released unfinished' },
           // Reported as the runner stated it, never as a figure this component holds.
-          { key: 'run_cost', value: this.runCostTicks ?? 0, unit: 'ticks', label: 'a run costs' },
-          { key: 'release_margin', value: this.config.release_margin_ticks, unit: 'ticks', label: 'release margin' },
+          //
+          // The release margin is deliberately **not** among these. `heartbeat.schema.json`
+          // caps a component at eight figures — a face has room to draw eight and a ninth
+          // is a face inventing space — and this feature wanted four where there was room
+          // for three. The margin is the one that goes: it is a configured constant that
+          // never moves, it is named in the held-for-cost decision every time a hold is
+          // reported, and a display drawing it would be drawing configuration back at the
+          // reader. The other three each move while the run is going.
           {
             key: 'ticks_to_minimum',
             value: this.ticksToMinimumInterval(),
@@ -155,6 +164,23 @@ export class Scheduler {
     });
     this.client.subscribe(this.config.topics.run_cost, (message) => {
       this.runCostTicks = (message.payload as RunCost).cost_ticks;
+    });
+    // A run that will not be published, released rather than waited on for ever.
+    //
+    // The outstanding-run guard clears on a publication and on nothing else, which was
+    // safe while a run published in the tick it was requested. A run now occupies the
+    // ticks it costs, so there is an interval in which the runner can be stopped with the
+    // publication staged and undelivered — and this component would then decline every
+    // divergence and every cadence floor for the rest of the run, waiting on a message
+    // nobody is going to send. That is the permanently becalmed loop FR-31 forbids, and
+    // it is reachable through an ordinary operator verb. The runner says so on its way
+    // out; this is the other half of that sentence.
+    this.client.subscribe(this.config.topics.telemetry, (message) => {
+      const report = message.payload as { kind?: string; run_id?: string; detail?: string };
+      if (report.kind !== 'run-failed' || report.run_id !== this.inFlight) return;
+      this.inFlight = undefined;
+      this.lastDecision = `released run ${report.run_id}, which will not be published: ${report.detail ?? 'no reason given'}`;
+      this.abandoned += 1;
     });
     this.client.subscribe(this.config.topics.divergence, (message) => {
       this.considerDivergence(message.payload as Divergence);
@@ -293,8 +319,19 @@ export class Scheduler {
    * is the formulation that becalms the loop for good.
    */
   private holdShortfall(): number {
-    const cost = this.runCostTicks;
-    if (cost === undefined || cost <= 0) return 0;
+    // An unstated cost is treated as nothing, and a kernel that declares no work costs
+    // nothing — but neither is a reason to stop looking at the standing forecast.
+    //
+    // This is subtler than it looks, and getting it wrong was a real regression. The old
+    // cadence floor returned early while the standing forecast's validity had not lapsed.
+    // Replacing that test with "is the shortfall positive" and then short-circuiting the
+    // shortfall to zero whenever the cost was zero deleted the validity gate outright: with
+    // `shift-advect-v1` configured — which ADR-0042 keeps registered precisely so it stays
+    // a real second implementation, and which declares no work — every cadence floor would
+    // have fired on a forecast with most of its life still to run. The margin alone is
+    // still a validity rule, so a zero cost holds while more than the margin is left, which
+    // is the old behaviour with a declared lead time in front of it.
+    const cost = this.runCostTicks ?? 0;
     const threshold = cost + this.config.release_margin_ticks;
     return Math.max(0, this.remainingValidityTicks() - threshold);
   }
@@ -370,7 +407,7 @@ export class Scheduler {
         ? `requested ${runIdentifier} for divergence ${divergence?.divergence_id ?? '?'}`
         : cause === 'operator'
           ? `requested ${runIdentifier} on an operator prompt`
-          : `requested ${runIdentifier} on the cadence floor alone (no run within ${this.maximumInterval()} ticks and validity lapsed)`;
+          : `requested ${runIdentifier} on the cadence floor alone (no run within ${this.maximumInterval()} ticks, and the standing forecast is down to its last ${this.remainingValidityTicks()} tick(s) of validity)`;
     return runIdentifier;
   }
 }

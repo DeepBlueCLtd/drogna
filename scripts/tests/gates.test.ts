@@ -66,7 +66,12 @@ describe('each gate catches its planted violation and passes a clean tree', () =
     expect(found.map((finding) => finding.message)).toEqual(
       expect.arrayContaining([expect.stringMatching(/declares 'run_cost_ticks'/)]),
     );
+    // Both arms. The gate walks the configuration masters and the run document, and only
+    // the first was planted against when it was written — the second's "no such file"
+    // branch returns the findings it has, which is the shape that reports clean on a
+    // missing bound. A cost in a component's own configuration is caught too.
     expect(found.some((finding) => finding.file.includes('config.scheduler'))).toBe(true);
+    expect(found.some((finding) => finding.file.includes('run.json') && finding.message.includes("'planner'"))).toBe(true);
     // A topic naming where the cost is published is not a declaration of it: the scheduler
     // subscribes to `run_cost` in the real tree, and that is the design working.
     expect(declaredCost()).toEqual([]);

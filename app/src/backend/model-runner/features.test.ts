@@ -37,7 +37,21 @@ function lockstepConfig(): ConfigRun {
   return config;
 }
 
-const options = { rootSeed: 1234, startCondition: 'loitering', revision: 'test', dirty: false };
+/**
+ * Every seed the shipped start conditions run under, plus the one this file began with.
+ *
+ * **Scored at every one of them, and that is the point.** The first draft scored a single
+ * seed, printed the front's bearing error without asserting it, and the record quoted the
+ * 9.3 degrees that seed happened to give. At the seed the console actually opens on, the
+ * same estimator was 39.6 degrees out — for a bearing folded into a half turn, barely
+ * distinguishable from a coin flip. An estimator is not a thing you sample once. The list
+ * is read from the configuration rather than typed, so a fifth start condition is scored
+ * without anybody remembering to add it.
+ */
+const SEEDS = [
+  1234,
+  ...(runConfigDocument as ConfigRun).start_conditions.conditions.map((condition) => condition.root_seed),
+];
 
 interface Fixture {
   readonly manifest: Manifest;
@@ -45,7 +59,8 @@ interface Fixture {
   readonly grid: FeatureGrid;
 }
 
-function fixture(): Fixture {
+function fixture(rootSeed = 1234): Fixture {
+  const options = { rootSeed, startCondition: 'loitering', revision: 'test', dirty: false };
   const runtime = buildBackend(lockstepConfig(), options, validator);
   const nowcast = runtime.store.currentNowcast();
   if (!nowcast) throw new Error('no now-cast to estimate from');
@@ -76,8 +91,8 @@ function truth(manifest: Manifest, kind: string): Record<string, number> {
 }
 
 describe('the four features, estimated from a gridded field and scored against the manifest', () => {
-  it('AT-06 descendant: the eddy centre is recovered inside the eddy the field carries', () => {
-    const { manifest, temperature, grid } = fixture();
+  it.each(SEEDS)('AT-06 descendant: the eddy centre is recovered inside the eddy the field carries (seed %i)', (rootSeed) => {
+    const { manifest, temperature, grid } = fixture(rootSeed);
     const { eddy } = estimateFeatures(temperature, grid);
     if (!eddy) throw new Error('no eddy estimated from the field');
     const authored = truth(manifest, 'eddy');
@@ -94,19 +109,32 @@ describe('the four features, estimated from a gridded field and scored against t
     // field falls inside the eddy the field carries. Two grid cells was a claim about what
     // a grid can resolve being read as a ceiling on an estimator's error.
     const boundKm = authored.radius_km;
-    console.log(`AT-06: eddy centre recovered with error ${errorKm.toFixed(1)} km (bound ${boundKm.toFixed(1)} km, the eddy's own radius)`);
+    console.log(`AT-06 seed ${rootSeed}: eddy centre recovered with error ${errorKm.toFixed(1)} km (bound ${boundKm.toFixed(1)} km, the eddy's own radius)`);
     expect(errorKm).toBeLessThanOrEqual(boundKm);
   });
 
-  it('the drifting feature is separated from the eddy by the sign of its anomaly, not by a hint', () => {
-    const { manifest, temperature, grid } = fixture();
-    const { moving } = estimateFeatures(temperature, grid);
-    if (!moving) throw new Error('no drifting feature estimated from the field');
+  it.each(SEEDS)('the drifting feature is separated from the eddy by the sign of its anomaly, not by a hint (seed %i)', (rootSeed) => {
+    const { manifest, temperature, grid } = fixture(rootSeed);
+    const estimate = estimateFeatures(temperature, grid);
+    const { moving } = estimate;
     const authored = truth(manifest, 'moving');
     // The manifest's moving feature is authored cold (sign −1) and the eddy warm; the
     // estimator knows only the field. If this ever fails because the two were swapped, the
     // estimator has stopped separating them and is finding one blob twice.
     expect(authored.sign).toBe(-1);
+
+    // **Two outcomes are acceptable and a third is not.** Either the feature is found, and
+    // then it must fall inside its own authored radius; or it is declined, and then the
+    // reason must be on the wire. What is forbidden is the third: a position published with
+    // a few kilometres of uncertainty beside it that is a couple of hundred kilometres from
+    // the truth, which is what one of these five seeds produced before the estimator held
+    // its peak against the field's own scatter.
+    if (!moving) {
+      const reason = estimate.declined.find((entry) => entry.kind === 'moving' && entry.quantity === undefined);
+      console.log(`AT-06 seed ${rootSeed}: drifting feature not estimated — ${reason?.reason ?? 'NO REASON GIVEN'}`);
+      expect(reason?.reason ?? '').toMatch(/standard deviations/);
+      return;
+    }
     const { eastKm, northKm } = kmOffsets(
       moving.centreLongitude,
       moving.centreLatitude,
@@ -116,12 +144,12 @@ describe('the four features, estimated from a gridded field and scored against t
     );
     const errorKm = Math.hypot(eastKm, northKm);
     const boundKm = authored.radius_km;
-    console.log(`AT-06: drifting feature recovered with error ${errorKm.toFixed(1)} km (bound ${boundKm.toFixed(1)} km, its own radius)`);
+    console.log(`AT-06 seed ${rootSeed}: drifting feature recovered with error ${errorKm.toFixed(1)} km (bound ${boundKm.toFixed(1)} km, its own radius)`);
     expect(errorKm).toBeLessThanOrEqual(boundKm);
   });
 
-  it('the front is found as a line: the anchor lies on it, and the bearing is recovered', () => {
-    const { manifest, temperature, grid } = fixture();
+  it.each(SEEDS)('the front is found as a line: the anchor lies on it, and the bearing is scored (seed %i)', (rootSeed) => {
+    const { manifest, temperature, grid } = fixture(rootSeed);
     const { front } = estimateFeatures(temperature, grid);
     if (!front) throw new Error('no front estimated from the field');
     const authored = truth(manifest, 'front') as unknown as Parameters<typeof frontSignedDistanceKm>[0];
@@ -139,14 +167,23 @@ describe('the four features, estimated from a gridded field and scored against t
       180 - Math.abs(front.bearingDegrees - foldedTruth),
     );
     console.log(
-      `AT-06: front found ${acrossKm.toFixed(1)} km across the authored line (bound ${boundKm.toFixed(1)} km, its own sharpness); ` +
-        `bearing ${front.bearingDegrees.toFixed(1)}° against ${foldedTruth.toFixed(1)}°, error ${bearingError.toFixed(1)}°`,
+      `AT-06 seed ${rootSeed}: front found ${acrossKm.toFixed(1)} km across the authored line (bound ${boundKm.toFixed(1)} km, its own sharpness); ` +
+        `bearing ${front.bearingDegrees.toFixed(1)}° against ${foldedTruth.toFixed(1)}°, error ${bearingError.toFixed(1)}° ` +
+        `(bound ${runConfigDocument.env_generator.features.front.jitter.bearing_degrees}°, the authoring jitter)`,
     );
     expect(acrossKm).toBeLessThanOrEqual(boundKm);
+    // **The bearing is asserted, not merely printed.** It was printed and not asserted in
+    // the first draft, and the 9.3° the record quoted turned out to be one kind seed: at the
+    // shipped default the same estimator was 39.6° out, which for a folded bearing is barely
+    // distinguishable from a coin flip. An estimator returning a constant would have passed.
+    // The bound is the authoring jitter on the bearing, read from the configuration that
+    // produced the manifest, and never a number typed here.
+    const bearingJitter = runConfigDocument.env_generator.features.front.jitter.bearing_degrees;
+    expect(bearingError).toBeLessThanOrEqual(bearingJitter);
   });
 
-  it('the thermocline is placed to the grid’s own depth resolution and to nothing finer', () => {
-    const { manifest, temperature, grid } = fixture();
+  it.each(SEEDS)('the thermocline is placed to the grid’s own depth resolution and to nothing finer (seed %i)', (rootSeed) => {
+    const { manifest, temperature, grid } = fixture(rootSeed);
     const { thermocline } = estimateFeatures(temperature, grid);
     if (!thermocline) throw new Error('no thermocline estimated from the field');
     const authored = truth(manifest, 'thermocline');
@@ -157,10 +194,34 @@ describe('the four features, estimated from a gridded field and scored against t
     // the estimator. Stated here rather than discovered later, per T024.
     const boundM = manifest.grid.depth.spacing;
     console.log(
-      `AT-06: thermocline placed at ${thermocline.depthM.toFixed(0)} m against an authored ${authored.depth_m.toFixed(0)} m, ` +
+      `AT-06 seed ${rootSeed}: thermocline placed at ${thermocline.depthM.toFixed(0)} m against an authored ${authored.depth_m.toFixed(0)} m, ` +
         `error ${errorM.toFixed(0)} m (bound ${boundM.toFixed(0)} m, the grid's own depth spacing)`,
     );
     expect(errorM).toBeLessThanOrEqual(boundM);
+  });
+
+  it('names the magnitudes it cannot recover, rather than publishing them under the manifest’s names', () => {
+    // The finding this test exists for. The first draft published the blob strengths, the
+    // front amplitude and the thermocline's temperature drop under the manifest's own
+    // property names — where a scoring test compares like with like — and they were out by
+    // up to sixteen times the uncertainty declared beside them. They are quantities a
+    // horizontal estimator over a 200 m depth grid cannot see, so each is named as not
+    // recovered, with its reason, and what WAS measured is published under a name of its
+    // own. Softening a bound until the first version passed is the failure mode this
+    // replaces.
+    const { temperature, grid } = fixture();
+    const estimate = estimateFeatures(temperature, grid);
+    const declined = estimate.declined.map((entry) => `${entry.kind}.${entry.quantity ?? '*'}`);
+    expect(declined).toEqual(
+      expect.arrayContaining(['eddy.strength_c', 'moving.strength_c', 'front.amplitude_c', 'thermocline.temperature_drop_c']),
+    );
+    for (const entry of estimate.declined) expect(entry.reason.length).toBeGreaterThan(40);
+    // And the quantities that ARE published do not carry the manifest's names for the
+    // quantities that are not: a reader comparing `anomaly_peak_c` with `strength_c` has
+    // been told, by the name alone, that they are different things.
+    expect(Object.keys(estimate.eddy ?? {})).toContain('anomalyPeakC');
+    expect(Object.keys(estimate.front ?? {})).toContain('anomalyStepC');
+    expect(Object.keys(estimate.thermocline ?? {})).toContain('layerDropC');
   });
 
   it('carries the features forward with an uncertainty that grows, and declines nothing silently', () => {

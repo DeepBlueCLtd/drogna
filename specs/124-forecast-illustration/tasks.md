@@ -99,7 +99,10 @@ published today.
       Not separable: group sources — measured by platform, modelled by origin — and record the
       grouping here as the answer, with the capture that forced it. Then strike Q-01 from
       `srd.md` §10 with the answer in the requirement it lands in.
-- [ ] T031 The help tour gains its steps for the two new regions, from the same list on disk.
+- [ ] T031 The help tour's steps for the two regions this feature fills are **rewritten**,
+      not gained: feature 123 wrote a step for each saying the region is not built and naming
+      this feature, and `forecast.test.tsx` already holds every region to having one. What
+      changes is what they say.
 
 ## The record
 

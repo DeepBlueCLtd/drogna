@@ -27,7 +27,7 @@
  * carrying the spacing it was resolved at.
  */
 import { KM_PER_DEGREE_LATITUDE, kmOffsets } from '../env-generator/analytic.js';
-import type { KernelGrid, KernelParameters } from './kernel.js';
+import type { KernelParameters } from './kernel.js';
 
 export interface FeatureGrid {
   readonly longitudes: readonly number[];
@@ -43,24 +43,50 @@ export interface BlobEstimate {
   readonly centreLatitude: number;
   readonly centreLongitude: number;
   readonly radiusKm: number;
-  readonly strengthC: number;
+  /**
+   * The peak of the high-passed, depth-averaged anomaly. **Not the feature's authored
+   * strength**, and named so it cannot be mistaken for it: the authored figure is a
+   * three-dimensional amplitude at the blob's own depth, and this is that amplitude
+   * flattened down the column and then shrunk again by the high pass. Recovering the
+   * authored one needs the depth structure, which no estimator here reads.
+   */
+  readonly anomalyPeakC: number;
 }
 
 export interface FrontEstimate {
   readonly anchorLatitude: number;
   readonly anchorLongitude: number;
   readonly bearingDegrees: number;
-  readonly amplitudeC: number;
+  /**
+   * Half the depth-averaged anomaly's range across the front, outside both blobs. **Not
+   * the authored amplitude**: that is a surface figure decaying with depth on a scale this
+   * estimator does not recover, so the two differ by a factor nobody here can compute.
+   */
+  readonly anomalyStepC: number;
 }
 
 export interface ThermoclineEstimate {
   readonly depthM: number;
+  /** The grid interval the drop below was taken over — the resolution, carried with it. */
   readonly thicknessM: number;
-  readonly temperatureDropC: number;
+  /**
+   * The domain-mean temperature drop across that grid interval. **Not the authored
+   * temperature drop**, which is taken across a thermocline an order of magnitude thinner
+   * than the interval: a 200 m grid cannot see a 30 m layer, so the two are different
+   * quantities and the gradients they imply differ by the same factor.
+   */
+  readonly layerDropC: number;
 }
 
 export interface Declined {
   readonly kind: 'eddy' | 'front' | 'thermocline' | 'moving';
+  /**
+   * The quantity not recovered, where the rest of the feature was. Absent means the whole
+   * feature. Named because "the thermocline was not estimated" and "its gradient was not"
+   * are different facts, and a forecast that published the second as the first would be
+   * throwing away a depth it did recover.
+   */
+  readonly quantity?: string;
   readonly reason: string;
 }
 
@@ -122,8 +148,12 @@ function depthAveragedAnomaly(temperature: Float32Array, grid: FeatureGrid): Flo
  * one window per cell: a run happens inside a browser tab, and a 96 x 80 grid with a 41-cell
  * window is thirteen million reads done the naive way.
  */
+function highPassWindow(lonCount: number, latCount: number): number {
+  return Math.max(1, Math.floor(Math.min(lonCount, latCount) / 4));
+}
+
 function highPass(anomaly: Float64Array, lonCount: number, latCount: number): Float64Array {
-  const window = Math.max(1, Math.floor(Math.min(lonCount, latCount) / 4));
+  const window = highPassWindow(lonCount, latCount);
   const width = lonCount + 1;
   const sums = new Float64Array(width * (latCount + 1));
   for (let la = 0; la < latCount; la++) {
@@ -165,19 +195,75 @@ function highPass(anomaly: Float64Array, lonCount: number, latCount: number): Fl
  * read the crossing off. High-passing shrinks it — the estimate is smaller than the authored
  * radius and is not scored as if it were not.
  */
-function blob(anomaly: Float64Array, grid: FeatureGrid, sign: 1 | -1): BlobEstimate | undefined {
+function blob(
+  anomaly: Float64Array,
+  grid: FeatureGrid,
+  sign: 1 | -1,
+  keepOut?: (longitude: number, latitude: number) => boolean,
+): BlobEstimate | undefined {
   const lonCount = grid.longitudes.length;
   const latCount = grid.latitudes.length;
   const field = highPass(anomaly, lonCount, latCount);
+  /*
+   * A blob already found is excluded, out to the width of the high pass itself — and this
+   * is the second finding in this module, caught by scoring every start condition's seed
+   * rather than one.
+   *
+   * Subtracting a box mean from a warm blob leaves a **cold ring** around it: that is what
+   * a high pass does, and the ring is an artefact of the filter and not a feature of the
+   * ocean. At four of the five seeds the drifting feature's own anomaly was the deeper of
+   * the two and the estimator found it. At the fifth the ring won, and the drifting feature
+   * was reported 213 km from where it was authored — the width of the domain — with an
+   * uncertainty of a few kilometres beside it. A single-seed test called that a pass.
+   *
+   * The ring cannot reach further than the window that made it, so the window is the
+   * exclusion radius: derived from the grid, like the window itself, and never a distance
+   * typed here. A drifting feature genuinely inside that radius is not found at all, and is
+   * reported as not estimated with the reason — which is the right answer, because at that
+   * separation the filter cannot tell the two apart.
+   */
+  const excluded = (cell: number): boolean => {
+    if (!keepOut) return false;
+    const la = Math.floor(cell / lonCount);
+    const lo = cell % lonCount;
+    return keepOut(grid.longitudes[lo], grid.latitudes[la]);
+  };
   let peak = 0;
   let peakIndex = -1;
+  let sum = 0;
+  let sumSquares = 0;
   for (let cell = 0; cell < field.length; cell++) {
+    sum += field[cell];
+    sumSquares += field[cell] * field[cell];
+    if (excluded(cell)) continue;
     if (sign * field[cell] > peak) {
       peak = sign * field[cell];
       peakIndex = cell;
     }
   }
   if (peak <= 0 || peakIndex < 0) return undefined;
+  /*
+   * A peak that does not stand above the field's own scatter is not a feature.
+   *
+   * **This is the third finding in this module, and the one a single seed hid completely.**
+   * Scored at one seed the drifting feature came back a few kilometres from where it was
+   * authored; scored at every seed the start conditions run under, one of the five put it
+   * 213 km away — the estimator had found the front's cold side, because at that seed the
+   * drifting feature's own anomaly was the weaker of the two. Publishing that with an
+   * uncertainty of a few kilometres beside it is exactly the failure Constitution IX
+   * forbids, and widening the bound until it passed would have been the other one.
+   *
+   * So the peak is held against the standard deviation of the high-passed field it was
+   * found in. Two standard deviations is a convention rather than a fit — it is the
+   * ordinary 95% line, stated here as a rule and not chosen to make a number pass — and it
+   * is measured on the field rather than against the truth, so the estimator can apply it
+   * without knowing the answer. At the shipped seeds the four sound estimates stand at 2.9
+   * to 4.4 sigma and the wrong one at 1.9. A future seed that puts a real feature below the
+   * line loses that estimate rather than misreporting it, which is the direction to fail in.
+   */
+  const mean = sum / field.length;
+  const deviation = Math.sqrt(Math.max(0, sumSquares / field.length - mean * mean));
+  if (deviation > 0 && peak < 2 * deviation) return undefined;
   const half = 0.5 * peak;
   const crossing = peak / Math.E;
   const seen = new Uint8Array(field.length);
@@ -206,7 +292,11 @@ function blob(anomaly: Float64Array, grid: FeatureGrid, sign: 1 | -1): BlobEstim
       const nextLat = la + stepLat;
       if (nextLon < 0 || nextLat < 0 || nextLon >= lonCount || nextLat >= latCount) continue;
       const next = nextLat * lonCount + nextLon;
-      if (seen[next] === 1 || sign * field[next] <= half) continue;
+      // The exclusion holds for the region as well as for its peak. Guarding only the peak
+      // left the flood fill free to grow back into the ring, and the centroid of a region
+      // half of which is an artefact is a place the feature is not: at one seed the peak
+      // was outside the ring and the centroid came back inside it, 213 km from the truth.
+      if (seen[next] === 1 || sign * field[next] <= half || excluded(next)) continue;
       seen[next] = 1;
       stack.push(next);
     }
@@ -217,7 +307,7 @@ function blob(anomaly: Float64Array, grid: FeatureGrid, sign: 1 | -1): BlobEstim
     centreLongitude: lonSum / weight,
     centreLatitude: latSum / weight,
     radiusKm: Math.sqrt((aboveCrossing * cellAreaKm2) / Math.PI),
-    strengthC: peak,
+    anomalyPeakC: peak,
   };
 }
 
@@ -236,46 +326,84 @@ function blob(anomaly: Float64Array, grid: FeatureGrid, sign: 1 | -1): BlobEstim
 function front(anomaly: Float64Array, grid: FeatureGrid, blobs: readonly BlobEstimate[]): FrontEstimate | undefined {
   const lonCount = grid.longitudes.length;
   const latCount = grid.latitudes.length;
-  let best: { magnitude: number; east: number; north: number; la: number; lo: number } | undefined;
+  const outsideBlobs = (lo: number, la: number): boolean =>
+    !blobs.some((feature) => {
+      const { eastKm, northKm } = kmOffsets(
+        grid.longitudes[lo],
+        grid.latitudes[la],
+        feature.centreLongitude,
+        feature.centreLatitude,
+        grid.referenceLatitude,
+      );
+      return Math.hypot(eastKm, northKm) < 1.5 * feature.radiusKm;
+    });
+
+  interface Sample {
+    readonly magnitude: number;
+    readonly east: number;
+    readonly north: number;
+    readonly lo: number;
+    readonly la: number;
+  }
+  const samples: Sample[] = [];
+  let peak = 0;
+  let low = Number.POSITIVE_INFINITY;
+  let high = Number.NEGATIVE_INFINITY;
   for (let la = 1; la < latCount - 1; la++) {
     for (let lo = 1; lo < lonCount - 1; lo++) {
-      const masked = blobs.some((feature) => {
-        const { eastKm, northKm } = kmOffsets(
-          grid.longitudes[lo],
-          grid.latitudes[la],
-          feature.centreLongitude,
-          feature.centreLatitude,
-          grid.referenceLatitude,
-        );
-        return Math.hypot(eastKm, northKm) < 1.5 * feature.radiusKm;
-      });
-      if (masked) continue;
+      if (!outsideBlobs(lo, la)) continue;
+      const value = anomaly[la * lonCount + lo];
+      if (value < low) low = value;
+      if (value > high) high = value;
       const east = (anomaly[la * lonCount + lo + 1] - anomaly[la * lonCount + lo - 1]) / (2 * grid.cellKmEast);
       const north = (anomaly[(la + 1) * lonCount + lo] - anomaly[(la - 1) * lonCount + lo]) / (2 * grid.cellKmNorth);
       const magnitude = Math.hypot(east, north);
-      if (!best || magnitude > best.magnitude) best = { magnitude, east, north, la, lo };
+      samples.push({ magnitude, east, north, lo, la });
+      if (magnitude > peak) peak = magnitude;
     }
   }
-  if (!best) return undefined;
-  let bearing = (Math.atan2(-best.north, best.east) * 180) / Math.PI;
-  // The manifest's bearings are authored in [0, 360); a front and its reverse are the same
-  // line, so the estimate is folded into the same half-turn rather than reported as the
-  // opposite direction of the identical geometry.
+  if (samples.length === 0 || peak <= 0) return undefined;
+
+  /*
+   * The bearing, averaged over the front rather than read off one cell.
+   *
+   * **This is a finding and the numbers are worth keeping.** Taking the direction of the
+   * single steepest gradient gave errors of 0.5 to 39.6 degrees across seven seeds — at 39
+   * degrees a folded bearing is barely distinguishable from chance, and the 9.3 degrees the
+   * first record quoted was one seed being kind. One cell of a noisy field is one sample.
+   *
+   * Averaging has to be done in doubled angles: a front and its reverse are the same line,
+   * so 179 degrees and 1 degree are two degrees apart and a naive mean of them is 90 — the
+   * answer perpendicular to both. Doubling maps the two onto the same direction, the mean
+   * is taken there, and halving brings it back. Weighted by gradient magnitude, over every
+   * cell within half the peak, this gives 0.5 to 2.2 degrees across the same seven seeds.
+   */
+  let doubledEast = 0;
+  let doubledNorth = 0;
+  for (const sample of samples) {
+    if (sample.magnitude < 0.5 * peak) continue;
+    // The cross-front direction is (cos B, -sin B) in (east, north), which is the manifest's
+    // own convention, so B is atan2(-north, east) of the gradient.
+    const angle = Math.atan2(-sample.north, sample.east);
+    doubledEast += sample.magnitude * Math.cos(2 * angle);
+    doubledNorth += sample.magnitude * Math.sin(2 * angle);
+  }
+  let bearing = ((Math.atan2(doubledNorth, doubledEast) / 2) * 180) / Math.PI;
   while (bearing < 0) bearing += 180;
   while (bearing >= 180) bearing -= 180;
-  let low = Number.POSITIVE_INFINITY;
-  let high = Number.NEGATIVE_INFINITY;
-  for (const value of anomaly) {
-    if (value < low) low = value;
-    if (value > high) high = value;
-  }
+
+  // The anchor is the steepest cell: a point on the line, and scored as a perpendicular
+  // distance to the authored line rather than as a distance to the authored anchor, because
+  // a line has no distinguished point.
+  const steepest = samples.reduce((best, sample) => (sample.magnitude > best.magnitude ? sample : best), samples[0]);
   return {
-    anchorLongitude: grid.longitudes[best.lo],
-    anchorLatitude: grid.latitudes[best.la],
+    anchorLongitude: grid.longitudes[steepest.lo],
+    anchorLatitude: grid.latitudes[steepest.la],
     bearingDegrees: bearing,
-    // Half the peak-to-trough range of the anomaly, which is what a tanh front's amplitude
-    // is: the anomaly runs from −amplitude to +amplitude across it.
-    amplitudeC: (high - low) / 2,
+    // Half the range **outside the blobs**. Taking it over the whole field measured the
+    // blobs instead: the gradient search masks them and this did not, which made the figure
+    // a property of the eddy at every seed where the eddy was the stronger anomaly.
+    anomalyStepC: (high - low) / 2,
   };
 }
 
@@ -313,45 +441,130 @@ function thermocline(temperature: Float32Array, grid: FeatureGrid): ThermoclineE
   return {
     depthM: (grid.depthsM[best] + grid.depthsM[best + 1]) / 2,
     thicknessM: grid.depthsM[best + 1] - grid.depthsM[best],
-    temperatureDropC: means[best] - means[best + 1],
+    layerDropC: means[best] - means[best + 1],
   };
 }
 
-/** Every estimate this field supports, and a named reason for each it does not. */
+/**
+ * Every estimate this field supports, and a named reason for each it does not.
+ *
+ * **The order is the argument.** The warm blob is found first, because it is the strongest
+ * compact anomaly. The front is found next, outside the warm blob, because an unmasked
+ * gradient maximum finds whichever of the two happens to be steeper at this seed. The cold
+ * blob is found last, outside **both** — and that is what four of the five start-condition
+ * seeds did not need and the fifth did: with only the warm blob excluded, the deepest cold
+ * anomaly left was the front's own cold side, and the drifting feature was reported 213 km
+ * from where it was authored. Each mask is a scale derived from the grid or from the
+ * feature it excludes, and none is a distance typed here.
+ */
 export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): EstimatedFeatures {
   const anomaly = depthAveragedAnomaly(temperature, grid);
-  const eddy = blob(anomaly, grid, 1);
-  const moving = blob(anomaly, grid, -1);
+  const lonCount = grid.longitudes.length;
+  const latCount = grid.latitudes.length;
+  /**
+   * How far the high pass's own artefacts reach: subtracting a box mean from a blob leaves
+   * a ring of the opposite sign around it, and the ring cannot be wider than the window
+   * that made it. Derived from the grid, like the window.
+   */
+  const ringKm = highPassWindow(lonCount, latCount) * Math.max(grid.cellKmEast, grid.cellKmNorth);
   const declined: Declined[] = [];
-  if (!eddy) declined.push({ kind: 'eddy', reason: 'no positive horizontal anomaly in the analysis to estimate a warm feature from' });
-  if (!moving) declined.push({ kind: 'moving', reason: 'no negative horizontal anomaly in the analysis to estimate a cold drifting feature from' });
-  const blobs = [eddy, moving].filter((entry): entry is BlobEstimate => entry !== undefined);
-  const frontEstimate = front(anomaly, grid, blobs);
+
+  const eddy = blob(anomaly, grid, 1);
+  if (!eddy) {
+    declined.push({
+      kind: 'eddy',
+      reason:
+        'no positive horizontal anomaly in the analysis standing two standard deviations above the high-passed field’s own scatter — a peak that does not clear that line is not distinguishable from the filter’s noise',
+    });
+  }
+
+  const frontEstimate = front(anomaly, grid, eddy ? [eddy] : []);
   if (!frontEstimate) {
     declined.push({
       kind: 'front',
-      reason: 'every cell of the analysis lies inside a blob’s neighbourhood, so no gradient outside them could be measured',
+      reason: 'every cell of the analysis lies inside the warm feature’s neighbourhood, so no gradient outside it could be measured',
+    });
+  }
+
+  const nearEddy = (longitude: number, latitude: number): boolean => {
+    if (!eddy) return false;
+    const { eastKm, northKm } = kmOffsets(longitude, latitude, eddy.centreLongitude, eddy.centreLatitude, grid.referenceLatitude);
+    return Math.hypot(eastKm, northKm) < ringKm;
+  };
+  const moving = blob(anomaly, grid, -1, nearEddy);
+  if (!moving) {
+    declined.push({
+      kind: 'moving',
+      reason:
+        'no negative horizontal anomaly outside the warm feature’s high-pass ring standing two standard deviations above the field’s own scatter. At one of the shipped start conditions this is the honest answer: the drifting feature’s anomaly there is weaker than the front’s cold side, and an estimate would have been the front reported as a drifting feature 213 km from where it was authored',
     });
   }
   const thermoclineEstimate = thermocline(temperature, grid);
   if (!thermoclineEstimate) {
     declined.push({ kind: 'thermocline', reason: 'the domain-mean profile does not fall with depth anywhere, so there is no thermocline to place' });
   }
+  /*
+   * The magnitudes that are **not** recovered, named every time rather than left to be
+   * inferred from what is absent (FR-41; Constitution IX).
+   *
+   * Each of the three has a specific reason and none of them is "the estimator is weak".
+   * They are quantities a horizontal estimator over a coarse grid cannot see, and the first
+   * draft of this module published them under the manifest's own property names — where a
+   * scoring test compares like with like — at up to sixteen times the uncertainty it
+   * declared for them. Softening a bound until that passes is the failure mode this list
+   * exists instead of.
+   */
+  if (eddy) {
+    declined.push({
+      kind: 'eddy',
+      quantity: 'strength_c',
+      reason:
+        'the authored strength is a three-dimensional amplitude at the feature’s own depth; what a horizontal estimator sees is that amplitude averaged down the column and shrunk again by the high pass, and converting between them needs the depth structure no estimator here recovers. The peak that was measured is published as anomaly_peak_c, which does not claim to be it',
+    });
+  }
+  if (moving) {
+    declined.push({
+      kind: 'moving',
+      quantity: 'strength_c',
+      reason: 'as the eddy’s: a depth-averaged anomaly peak is not the authored three-dimensional amplitude, and is published as anomaly_peak_c instead',
+    });
+  }
+  if (frontEstimate) {
+    declined.push({
+      kind: 'front',
+      quantity: 'amplitude_c',
+      reason:
+        'the authored amplitude is a surface figure decaying with depth on a scale this estimator does not recover, so the depth-averaged step across the front differs from it by a factor nobody here can compute. The step that was measured is published as anomaly_step_c',
+    });
+  }
+  if (thermoclineEstimate) {
+    declined.push({
+      kind: 'thermocline',
+      quantity: 'temperature_drop_c',
+      reason:
+        'the authored drop is taken across a layer some tens of metres thick and the grid resolves hundreds, so the drop across a grid interval is a different quantity and the gradients they imply differ by that ratio. The drop that was measured is published as layer_drop_c beside the thickness_m it was taken over',
+    });
+  }
   return { eddy, moving, front: frontEstimate, thermocline: thermoclineEstimate, declined };
 }
 
 /**
- * Which layer a depth is in, and the velocity that layer moves at, in km per day. The
- * kernel's own velocity and not a second copy: a feature carried forward at a speed the
- * field is not carried forward at would be two forecasts in one message.
+ * The velocity every estimated feature is carried at: the kernel's own upper-layer
+ * velocity, and not a second copy of it — a feature carried at a speed the field is not
+ * carried at would be two forecasts in one message.
+ *
+ * **The upper layer for all four, and that is a stated limitation rather than an
+ * oversight.** Choosing a layer needs the feature's depth, and no estimator here recovers
+ * one: the blobs are found in a depth-averaged anomaly and the front in its gradient. The
+ * first draft took a depth argument and every call site passed zero, which is the same
+ * behaviour with a parameter in front of it pretending otherwise.
  */
-function layerVelocity(parameters: KernelParameters, depthM: number): { eastKmPerDay: number; northKmPerDay: number } {
+function carryVelocity(parameters: KernelParameters): { eastKmPerDay: number; northKmPerDay: number } {
   const two = parameters.twoLayer;
   if (!two) {
     return { eastKmPerDay: parameters.advectionEastKmPerDay, northKmPerDay: parameters.advectionNorthKmPerDay };
   }
-  const layer = depthM < two.interfaceDepthM ? two.upper : two.lower;
-  return { eastKmPerDay: layer.eastKmPerDay, northKmPerDay: layer.northKmPerDay };
+  return { eastKmPerDay: two.upper.eastKmPerDay, northKmPerDay: two.upper.northKmPerDay };
 }
 
 /** A position carried forward by a velocity over a lead, about a reference latitude. */
@@ -383,7 +596,8 @@ export interface CarriedFeatures {
     /** One standard deviation on a horizontal position, in km. */
     readonly positionKm: number;
     readonly radiusKm: number;
-    readonly strengthC: number;
+    /** One standard deviation on the anomaly magnitudes this module publishes. */
+    readonly anomalyC: number;
     readonly bearingDegrees: number;
     readonly depthM: number;
   };
@@ -396,9 +610,9 @@ export interface CarriedFeatures {
  * The uncertainty grows as the analysis error times the root of the lead — a random walk,
  * which is the honest shape for a model whose error is drawn independently per sub-step
  * and is exactly how the kernel's own model error accumulates. The depth uncertainty is
- * the grid's own depth spacing and does not grow: the thermocline is not advected
- * vertically by this kernel, so a growing claim about its depth would be a claim the
- * physics does not make.
+ * half the grid's own depth spacing — the nearest a level-pair midpoint can be wrong — and
+ * does not grow: this kernel has no vertical velocity, so a widening claim about the
+ * thermocline's depth would be a claim the physics does not make.
  */
 export function carryFeatures(
   estimate: EstimatedFeatures,
@@ -414,14 +628,18 @@ export function carryFeatures(
     // The analysis error is a temperature; a position uncertainty in kilometres is that
     // error read against the anomaly's own gradient — how far the centre could move
     // before the field would have looked different. Stated in the message as derived.
-    const strength = estimate.eddy?.strengthC ?? 1;
+    const peak = estimate.eddy?.anomalyPeakC ?? 1;
     const radius = estimate.eddy?.radiusKm ?? Math.max(grid.cellKmEast, grid.cellKmNorth);
-    const positionKm = Math.min(radius, (analysisErrorC / Math.max(strength, 1e-6)) * radius) * root;
+    const relativeError = analysisErrorC / Math.max(peak, 1e-6);
+    const positionKm = Math.min(radius, relativeError * radius) * root;
     const uncertainty = {
       positionKm,
-      radiusKm: (analysisErrorC / Math.max(strength, 1e-6)) * radius * root,
-      strengthC: analysisErrorC * root,
-      bearingDegrees: Math.min(90, (Math.atan2(positionKm, Math.max(radius, 1e-6)) * 180) / Math.PI),
+      radiusKm: relativeError * radius * root,
+      anomalyC: analysisErrorC * root,
+      // How far the front's direction could turn if its anchor moved by the position
+      // uncertainty over the feature's own scale. `atan2` of two non-negative arguments
+      // cannot exceed a quarter turn, so no clamp is reached and none is written.
+      bearingDegrees: (Math.atan2(positionKm, Math.max(radius, 1e-6)) * 180) / Math.PI,
       depthM: depthSpacing / 2,
     };
     const eddy = estimate.eddy
@@ -431,7 +649,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.eddy.centreLongitude,
               estimate.eddy.centreLatitude,
-              layerVelocity(parameters, 0),
+              carryVelocity(parameters),
               leadSeconds,
               grid.referenceLatitude,
             );
@@ -446,7 +664,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.moving.centreLongitude,
               estimate.moving.centreLatitude,
-              layerVelocity(parameters, 0),
+              carryVelocity(parameters),
               leadSeconds,
               grid.referenceLatitude,
             );
@@ -461,7 +679,7 @@ export function carryFeatures(
             const moved = advance(
               estimate.front.anchorLongitude,
               estimate.front.anchorLatitude,
-              layerVelocity(parameters, 0),
+              carryVelocity(parameters),
               leadSeconds,
               grid.referenceLatitude,
             );
@@ -483,21 +701,4 @@ export function carryFeatures(
     });
   }
   return carried;
-}
-
-/** The estimator's view of a kernel grid: the axes it needs, from the axes the kernel has. */
-export function featureGridFrom(
-  grid: KernelGrid,
-  longitudes: readonly number[],
-  latitudes: readonly number[],
-  referenceLatitude: number,
-): FeatureGrid {
-  return {
-    longitudes,
-    latitudes,
-    depthsM: grid.depthsM,
-    cellKmEast: grid.cellKmEast,
-    cellKmNorth: grid.cellKmNorth,
-    referenceLatitude,
-  };
 }

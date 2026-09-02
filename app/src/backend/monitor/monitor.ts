@@ -217,6 +217,12 @@ export class Monitor {
     this.residualCount += 1;
     this.lastResidual = residual;
 
+    // How far the streak has got, computed once. Both the telemetry sample and the
+    // indicator carry it, and the whole argument for publishing the indicator from this
+    // component is that the mark on a gauge and the rule that fires a run cannot disagree —
+    // which is a reason to read the figure from one place, not to write it out twice.
+    const streak = Math.abs(residual) > this.threshold() ? this.breaches.length + 1 : 0;
+
     // Every scored sample is reported on the telemetry topic (FR-35): the monitor
     // is the one producer of residuals, and telemetry aggregates rather than
     // recomputing them.
@@ -247,7 +253,7 @@ export class Monitor {
       // monitor about whether the loop is about to turn (FR-58).
       breach: {
         threshold_m_per_s: this.threshold(),
-        streak: Math.abs(residual) > this.threshold() ? this.breaches.length + 1 : 0,
+        streak,
         persistence_count: this.persistence(),
       },
     });
@@ -265,10 +271,7 @@ export class Monitor {
       value: Math.abs(residual),
       threshold: this.threshold(),
       unit: 'm/s',
-      streak: {
-        count: Math.abs(residual) > this.threshold() ? this.breaches.length + 1 : 0,
-        of: this.persistence(),
-      },
+      streak: { count: streak, of: this.persistence() },
     } satisfies ForecastIndicator);
 
     if (Math.abs(residual) > this.threshold()) {

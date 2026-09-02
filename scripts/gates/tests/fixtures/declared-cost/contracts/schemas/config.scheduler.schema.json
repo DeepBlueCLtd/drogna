@@ -1,94 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
-  "title": "drogna scheduler configuration (V2-C12)",
-  "description": "The scheduler (SRD-v2 FR-30 to FR-32): decides whether a run is warranted. A divergence inside the minimum interval is declined by policy, observably; the cadence floor — the maximum interval — means the loop cannot be permanently becalmed (E1, resolved plan §9.7): when no run has been requested within it and the current run's validity has lapsed, a run is warranted on schedule alone, labelled 'scheduled'. One request may be in flight at a time; duplicates are declined by name. Both intervals are tunable from the operator plane while the run is going, and a run may be prompted from there: a prompt is considered under exactly the policy a divergence is, so it can be declined by the minimum interval or by a run already outstanding, and the decline is recorded like any other.",
+  "title": "a scheduler that declares what a run costs",
+  "description": "The planted violation: a run's cost in the document of a component that will not spend it. The scheduler could then hold a run against one number while the run occupied another, and neither document would be wrong on its own terms.",
   "type": "object",
-  "required": [
-    "id",
-    "topics",
-    "heartbeat",
-    "min_interval_ticks",
-    "max_interval_ticks",
-    "ensemble_size",
-    "prompt_event",
-    "release_margin_ticks"
-  ],
-  "additionalProperties": false,
   "properties": {
-    "id": {
-      "$ref": "config.common.schema.json#/$defs/component_id"
-    },
     "topics": {
       "type": "object",
-      "required": [
-        "clock",
-        "divergence",
-        "run_request",
-        "run_published",
-        "telemetry",
-        "command",
-        "run_cost"
-      ],
-      "additionalProperties": false,
+      "description": "A topic naming where the cost is published is NOT a declaration of it \u2014 the scheduler subscribes here in the real tree, and the gate must not read that as the fault. Present so the exemption is exercised rather than assumed.",
       "properties": {
-        "clock": {
-          "$ref": "config.common.schema.json#/$defs/topic"
-        },
-        "divergence": {
-          "$ref": "config.common.schema.json#/$defs/topic"
-        },
-        "run_request": {
-          "$ref": "config.common.schema.json#/$defs/topic"
-        },
-        "run_published": {
-          "$ref": "config.common.schema.json#/$defs/topic"
-        },
-        "telemetry": {
-          "$ref": "config.common.schema.json#/$defs/topic"
-        },
-        "command": {
-          "$ref": "config.common.schema.json#/$defs/topic",
-          "description": "Operator commands: tuning of the two intervals, and a prompt to consider a run now."
-        },
         "run_cost": {
-          "$ref": "config.common.schema.json#/$defs/topic",
-          "description": "Where the model runner states what a run costs, in ticks. This scheduler subscribes and holds no cost figure of its own \u2014 the component that will spend the compute is the one that declares it (SRD-v2 FR-115), and check-declared-cost fails the build if a cost appears in this document."
+          "type": "string"
         }
       }
     },
-    "heartbeat": {
-      "$ref": "config.common.schema.json#/$defs/heartbeat"
-    },
     "min_interval_ticks": {
-      "type": "integer",
-      "exclusiveMinimum": 0,
-      "description": "No two runs closer than this; a breach inside it is declined by policy, and the decline is legible (FR-32)."
-    },
-    "max_interval_ticks": {
-      "type": "integer",
-      "exclusiveMinimum": 0,
-      "description": "The cadence floor (FR-31): the interval after which, with the current run's validity lapsed (or no run at all), a run is warranted on schedule alone."
-    },
-    "ensemble_size": {
-      "type": "integer",
-      "minimum": 2
+      "type": "integer"
     },
     "run_cost_ticks": {
       "type": "integer",
-      "minimum": 0,
-      "description": "The planted violation this fixture exists for: a run's cost, declared by a component that does not spend it. The scheduler could then hold a run against one number while the run occupied another, and neither document would be wrong on its own terms."
-    },
-    "release_margin_ticks": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "How far ahead of the standing forecast's lapse a held run is released, in ticks. A warranted scheduled or prompted run is HELD while the standing forecast has more life left than the run costs plus this margin, and released as that headroom decays, so the new run lands as the old one lapses (SRD-v2 FR-115). The rule runs the opposite way to the obvious reading on purpose: 'affordable when the run fits inside the remaining validity' becalms the loop permanently, because the cadence floor fires precisely when validity has lapsed and there is then no headroom at all. This is a margin and never a cost \u2014 the cost arrives on the run_cost topic from the component that will spend it.",
-      "default": 0
-    },
-    "prompt_event": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Which operator event id this scheduler answers to (operator-command.schema.json). Named on both sides — here and in the operator surface's declared events — as a topic is, rather than compiled into either component."
+      "description": "The fault."
     }
   }
 }

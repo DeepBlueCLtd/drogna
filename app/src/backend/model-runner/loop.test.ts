@@ -45,6 +45,15 @@ async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number):
     expect(validator.validate('run-published', message.payload).refusals).toEqual([]);
     record.published.push(message.payload as RunPublished);
   });
+  // The two messages feature 123 added, validated as they cross. Nothing consumes the
+  // forecast features yet — that surface is feature 124's — and a master with a publisher
+  // and no reader is a shape free to rot until somebody builds against it.
+  shell.subscribe(config.model_runner.topics.forecast_features, (message) => {
+    expect(validator.validate('forecast-features', message.payload).refusals).toEqual([]);
+  });
+  shell.subscribe(config.model_runner.topics.run_cost, (message) => {
+    expect(validator.validate('run-cost', message.payload).refusals).toEqual([]);
+  });
   await driveTicks(runtime.clock, ticks);
   return record;
 }

@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 30 August 2026
 **Feature:** 120 (start conditions, chosen on a welcome page)
-**Requirements:** SRD-v2 FR-92; amends FR-11's application; Constitution 2.1.0 (Data)
+**Requirements:** SRD-v2 FR-105 (FR-92 when this was written; see §5.18); amends FR-11's application; Constitution 2.1.0 (Data)
 **Engages:** ADR-0040 (a run arrives by having run); Constitution II (seeded randomness),
 III (the drift-check discipline), VII (liveness, not configuration)
 

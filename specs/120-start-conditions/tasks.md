@@ -4,7 +4,8 @@ Ticked as they were done, with the reasons written at the moment they were taken
 (CLAUDE.md, lesson 1).
 
 Built as 118 and renumbered to 120 when features 118 and 119 reached `main` first. The
-requirements moved with it (FR-76/77 to FR-91/92) and so did the decision records
+requirements moved with it (FR-76/77 to FR-91/92, and to FR-104/105 at feature 123 when
+the FR-91/92 collision with feature 118 was found) and so did the decision records
 (ADR-0039/0040 to ADR-0040/0041); the work did not.
 
 Features 101 (addressable views), 113/114 (the operator plane's controls, and the events
@@ -189,7 +190,9 @@ but those controls, driven from a script.
 ## What merging `main` forced
 
 - [x] T043 Renumbered to 120 when features 118 and 119 merged first; FR-76/77 to FR-91/92,
-      ADR-0039/0040 to ADR-0040/0041. Recorded rather than done silently.
+      ADR-0039/0040 to ADR-0040/0041. Recorded rather than done silently. Renumbered once
+      more at feature 123, to FR-104/105: feature 118 had taken FR-91/92 on the other
+      branch and both landed, so the SRD defined each number twice.
 - [x] T044 The Intro tab was rewritten wholesale on `main` as a moving drawing. Main's
       version is taken whole and this branch's two edits re-applied to its footer.
 - [x] T045 A mechanical both-sides resolution of `shell.css` split main's last rule from

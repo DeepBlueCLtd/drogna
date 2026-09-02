@@ -39,9 +39,12 @@ And `app/src/panels/operator/operator.css` carried no narrow rule whatsoever. Fe
 put one breakpoint in the estate and `NARROW_METRICS` changed the node geometry; nothing
 changed what was inside the node.
 
-**Feature number.** 121. Like 111 to 120 it sits outside the arc — with one exception,
+**Feature number.** 122. Like 111 to 121 it sits outside the arc — with one exception,
 recorded below: five components gained a prompt, which is behaviour under the seam rather
-than presentation over it.
+than presentation over it. *Specified and built as 121, and renumbered here: the Data tab
+landed on the same number from the other branch and holds it in the SRD (§5.19, FR-93 to
+FR-103), where this feature amended nothing. The commit subjects and the issue reference
+keep the number they were written with.*
 
 ## What had to become true
 

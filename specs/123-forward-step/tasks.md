@@ -607,3 +607,53 @@ nothing said so.
       a timeout. The third of those passed by 36 milliseconds, and a bound cleared by 0.06%
       is not a bound. 120s is the measurement doubled for a CI runner, which is the ratio
       `vite.config.ts` already records.
+
+## The seventh round: the forecast had no picture
+
+Raised by a reader looking at the tab and asking the obvious question — where are the
+results? — which no review pass had asked, because every pass read the diff rather than the
+surface.
+
+- [x] T080 The Forecast tab drew nothing of the forecast. It had a gauge about the run loop,
+      a cost, a list of runs and two paragraphs naming feature 124. Meanwhile
+      `ctl/forecast/features` — FR-05's entire product, four features per lead step, each with
+      an uncertainty that grows — was published on every run and read by **nothing**: a loop
+      test validated its shape against its master and dropped it. So the feature's output was
+      unverifiable by anything a reader could open, and would have stayed so until 124 landed,
+      which is itself blocked on an analyst change. `FeatureTracks.tsx` is its first consumer:
+      a plan view in the right region, needing neither the volume nor that change.
+- [x] T081 A standing forecast is restated, because a console mounts after the pre-roll. The
+      features were published on the run alone, so a reader opening the tab waited for the
+      next one — 1800 ticks, half an hour at the default rate, looking at a surface saying the
+      forecast had not spoken. The runner now republishes the last statement on the cadence it
+      already restates cost on, which is the same argument the cost's own docstring makes:
+      "a declaration published once, before the shell had mounted, is a fact no listener can
+      learn." Nothing is recomputed — a restatement that re-estimated would be one component
+      holding two opinions about one run.
+- [x] T082 **A fifth check that could not fail, caught before it was trusted.** The first
+      version of the uncertainty-growth assertion gathered every ring in the plot and required
+      the largest to exceed the smallest. That is true of any two *different* features at the
+      same lead — an eddy and a front have different uncertainties because they have different
+      strengths — so it measured the wrong axis. Planted against a carry whose uncertainty does
+      not grow at all (`root = 1`), it **passed**. Rewritten to compare within one feature
+      across its own lead steps, the same plant failed: "tracks-feature tracks-eddy: the ring
+      at the last lead is not wider than at the first: expected 9.733489576996817 to be greater
+      than 9.733489576996817".
+- [x] T083 **`capture:mobile` cannot see any layout that only exists once the loop has run**,
+      and that is how a real fault survived. The proof pins the clock to rate 0 before it
+      measures anything, so every surface drawn from an announcement — the gauge, the tracks,
+      anything a run produces — is absent from every picture it takes. Claiming "the narrow
+      presentation holds" for this drawing on the strength of that proof would have been an
+      empty claim, since the drawing was never rendered in it.
+
+      Measured properly, with the loop warmed and then pinned at 390px and 360px: the new
+      drawing folds cleanly, and **`.forecast-gauge-bar` scrolled sideways — 17px of content
+      in a 14px box** — and had done since the day it was written. The threshold mark was
+      inset `-3px` on both edges to read as a tick against the bar, which is 6px of content
+      hanging out of a 14px box. It is inside the bar now and keeps its emphasis from being
+      thicker and dashed.
+
+      The gap itself is not closed. A proof that warmed the loop before measuring would catch
+      this class, and would have caught the gauge three weeks ago; it is reported rather than
+      built, because it changes a shared capture script every view depends on and belongs in a
+      change of its own.

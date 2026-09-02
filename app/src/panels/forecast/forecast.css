@@ -94,10 +94,23 @@
   );
 }
 
+/**
+ * The threshold mark, inside the bar rather than hanging over both its edges.
+ *
+ * It was `left: -3px; right: -3px`, to make the mark read as a tick against the bar — and
+ * that put 6px of content in a 14px box, so the gauge scrolled sideways at every phone width
+ * from the day it was written. `capture:mobile` never saw it: the proof pins the clock to
+ * rate 0 before it measures, the gauge is only drawn once an indicator has been published,
+ * and at rate 0 none ever is. A whole class of layout — anything that exists only after the
+ * loop has produced something — is invisible to that check, which is how this survived.
+ *
+ * The mark keeps its emphasis from being thicker and dashed against a plain fill, which
+ * needs no overhang.
+ */
 .forecast-gauge-threshold {
   position: absolute;
-  left: -3px;
-  right: -3px;
+  left: 0;
+  right: 0;
   height: 0;
   border-top: 2px dashed var(--shell-fg);
 }
@@ -205,4 +218,124 @@
 
 .forecast-refused {
   color: var(--shell-dim);
+}
+
+/* ------------------------------------------------- the forecast's features --- */
+
+/**
+ * The plan view of what a run says will happen. Nothing here animates, for the same reason
+ * nothing else in this file does: a transition is motion the markup cannot see.
+ *
+ * **Every kind is told apart by line style and by a text label, never by colour alone**
+ * (FR-138). The uncertainty ring is dashed and its radius is also printed in the figures
+ * beneath, the front is the only straight line, and the drifting feature's extent is dashed
+ * where the eddy's is solid. Read in greyscale, the drawing loses nothing it was carrying.
+ */
+.forecast-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.forecast-tracks-caption,
+.forecast-tracks-basis {
+  margin: 0;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+/* The drawing scales with the region and never sets a width of its own: a fixed width is
+   what makes a panel scroll sideways on a phone, which `capture:mobile` fails the build
+   over. `height: auto` with the viewBox's own aspect keeps the circles circular. */
+.forecast-tracks-plot {
+  width: 100%;
+  height: auto;
+  max-height: 15em;
+}
+
+.tracks-frame {
+  fill: none;
+  stroke: #232c36;
+  stroke-width: 1;
+}
+
+.tracks-axis {
+  stroke: #232c36;
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.tracks-compass {
+  fill: var(--shell-dim);
+  font-size: 9px;
+}
+
+.tracks-path {
+  fill: none;
+  stroke: var(--shell-fg);
+  stroke-width: 1.2;
+}
+
+.tracks-centre {
+  fill: var(--shell-fg);
+}
+
+.tracks-extent {
+  fill: none;
+  stroke: var(--shell-fg);
+  stroke-width: 1;
+}
+
+/* The drifting feature is dashed where the eddy is solid, so the two are distinguishable
+   with the colour removed and with the labels covered. */
+.tracks-moving .tracks-extent,
+.tracks-moving .tracks-path {
+  stroke-dasharray: 5 3;
+}
+
+.tracks-front-line {
+  stroke: var(--shell-fg);
+  stroke-width: 1;
+  stroke-dasharray: 1 3;
+}
+
+/* The claim that grows. Dashed and lighter than the feature itself, because it is the part
+   a reader must not mistake for the thing. */
+.tracks-uncertainty {
+  fill: none;
+  stroke: var(--shell-dim);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tracks-label {
+  fill: var(--shell-fg);
+  font-size: 9px;
+}
+
+.forecast-tracks-figures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+
+.tracks-figure-kind {
+  font-weight: 600;
+}
+
+.forecast-tracks-declined {
+  font-size: 0.85em;
+  color: var(--shell-dim);
+}
+
+.forecast-tracks-declined ul {
+  margin: 0.3em 0 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
 }

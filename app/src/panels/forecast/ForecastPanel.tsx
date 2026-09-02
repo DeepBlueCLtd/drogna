@@ -2,7 +2,15 @@
  * The Forecast tab (feature 123, SRD-v2 §5.20): why now, and what it costs.
  *
  * §5.20 specifies one view, three regions and a timeline, left to right in time — why now,
- * what changed, what next. **This feature builds the left region and the timeline only.**
+ * what changed, what next. **This feature builds the left region, the timeline, and the plan
+ * view of the forecast's own features in the right one.**
+ *
+ * That last one was added after the tab was first built, because the tab had no graphic of
+ * the forecast at all: a gauge about the run loop, a cost, and a list of runs. Meanwhile
+ * `ctl/forecast/features` — the eddy, the drifting feature, the front and the thermocline,
+ * per lead step, each with an uncertainty that grows — was published on every run and read by
+ * nothing. Feature 124 claims those features for its volume, but the volume waits on an
+ * analyst change 124 is itself blocked on, and a plan view needs neither.
  * They are the two that FR-115's four scheduler facts need in order to be visible at all: a
  * run held for cost has to be visible somewhere, or the hold is a behaviour nothing can
  * see. The centre and right regions — the volume, the clickable column grid, the rays, the
@@ -32,6 +40,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import type {
+  ForecastFeatures,
   ForecastIndicator,
   HoldingsInventory,
   RunCost,
@@ -45,6 +54,7 @@ import { topicMatchesFilter } from '../messages/topic-match.js';
 import { displayInstant } from '../../shell/display.js';
 import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
 import { forecastTour } from '../../shell/walkthrough/tour.js';
+import { FeatureTracks } from './FeatureTracks.js';
 import './forecast.css';
 
 /**
@@ -150,6 +160,7 @@ export function ForecastPanel({ params }: PanelProps) {
   const { config, client, validator, address } = params;
   const [indicator, setIndicator] = useState<ForecastIndicator | undefined>();
   const [cost, setCost] = useState<RunCost | undefined>();
+  const [features, setFeatures] = useState<ForecastFeatures | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
   const [refused, setRefused] = useState(0);
@@ -189,6 +200,15 @@ export function ForecastPanel({ params }: PanelProps) {
       client.subscribe(config.topics.run_cost, (message) => {
         if (!drawable(message.topic, message.payload)) return;
         setCost(message.payload as RunCost);
+      }),
+    );
+    stops.push(
+      // The forecast's own product. Published on every run since feature 123 and read by
+      // nothing until now: the message was validated against its master by a loop test and
+      // then dropped, so what the run actually said had no surface at all.
+      client.subscribe(config.topics.forecast_features, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        setFeatures(message.payload as ForecastFeatures);
       }),
     );
     stops.push(
@@ -367,8 +387,9 @@ export function ForecastPanel({ params }: PanelProps) {
           </p>
         </section>
 
-        <section className="forecast-region forecast-region-empty" data-region="ahead" aria-label="the spread ahead">
+        <section className="forecast-region" data-region="ahead" aria-label="the spread ahead">
           <h3>What next</h3>
+          <FeatureTracks features={features} />
           <p className="not-landed">
             The ensemble spread ahead, along the planned route, is <strong>feature 124</strong>, and is not built. The
             spread itself is published and the Map draws it today; what is missing is this region, not the figure.

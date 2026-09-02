@@ -75,6 +75,23 @@ export class ModelRunner {
    * published once, before the shell had mounted, is a fact no listener can learn.
    */
   private costStatedAtTick: number | undefined;
+  /**
+   * The standing forecast's features, and when they were last said out loud.
+   *
+   * **The same argument as the cost above, about a different declaration.** A run's features
+   * are a standing fact about the forecast that is current, not an event that happened once:
+   * the eddy is still where the run said it would be until another run says otherwise. They
+   * were published on the run alone, so a console that mounted afterwards — which every
+   * console does, since the shell opens after the pre-roll — had nothing to draw and waited
+   * for the next run. At the shipped cadence and the default rate that is 1800 ticks, half an
+   * hour of a reader looking at a surface that says the forecast has not spoken yet.
+   *
+   * So the last statement is kept and restated on the cadence the cost already declares. It
+   * carries the same `run_id`, so a listener can tell a restatement from a new run; what
+   * changes is `sim_time` and `tick`, which say when it was said, not when it was made.
+   */
+  private lastFeatures: ForecastFeatures | undefined;
+  private featuresStatedAtTick: number | undefined;
 
   constructor(
     private readonly config: ConfigModelRunner,
@@ -217,6 +234,31 @@ export class ModelRunner {
     this.costStatedAtTick = this.simTime.tick;
   }
 
+  /**
+   * The standing forecast's features, said again for a listener that was not there.
+   *
+   * Nothing is recomputed: the message published on the run is republished with the instant
+   * it is being said at. A restatement that re-estimated would be a second opinion about the
+   * same run, and two components — or one component twice — disagreeing about where the eddy
+   * is, is the fault the one-publisher rule exists against.
+   */
+  private restateFeatures(): void {
+    const standing = this.lastFeatures;
+    if (!standing) return;
+    if (
+      this.featuresStatedAtTick !== undefined &&
+      this.simTime.tick - this.featuresStatedAtTick < this.config.cost.restate_every_ticks
+    ) {
+      return;
+    }
+    this.client.publish(this.config.topics.forecast_features, {
+      ...standing,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+    } satisfies ForecastFeatures);
+    this.featuresStatedAtTick = this.simTime.tick;
+  }
+
   start(): void {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
@@ -233,6 +275,7 @@ export class ModelRunner {
       ) {
         this.stateCost();
       }
+      this.restateFeatures();
       this.releaseIfSpent();
     });
     // Feature 116: the runner waits for the analysis, not for the request. Until then
@@ -463,7 +506,7 @@ export class ModelRunner {
       // recent publication, and the monitor scores against the forecast.
       const spreadDigest = this.publishInstance(spreadId, request, baseManifest, spread.temperature, spread.salinity, drawOrder, true);
       const forecastDigest = this.publishInstance(forecastId, request, baseManifest, mean.temperature, mean.salinity, drawOrder, false);
-      this.client.publish(this.config.topics.forecast_features, {
+      const features: ForecastFeatures = {
         component: this.config.id,
         scenario_run_id: this.runId,
         sim_time: this.simTime.value,
@@ -476,7 +519,11 @@ export class ModelRunner {
         // On the message, once: what could not be estimated is a property of the estimate,
         // which is made from the analysis and carried forward, so it cannot differ by lead.
         ...(carried[0]?.declined.length ? { not_estimated: [...carried[0].declined] } : {}),
-      } satisfies ForecastFeatures);
+      };
+      this.client.publish(this.config.topics.forecast_features, features);
+      // Kept so a console that mounts after this run still learns what it said.
+      this.lastFeatures = features;
+      this.featuresStatedAtTick = this.simTime.tick;
       this.client.publish(this.config.topics.run_published, {
         component: this.config.id,
         scenario_run_id: this.runId,

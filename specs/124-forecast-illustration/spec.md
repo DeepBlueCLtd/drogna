@@ -115,6 +115,13 @@ Numbered locally; the mapping onto the SRD's global numbers is in *Traceability*
   thermocline as a surface through it, the surface's own appearance carrying its strength.
   The eddy, front and drifting feature — forecast as features by feature 123 — are drawn as
   tracked features with their uncertainty, not as texture.
+
+  *Amended before this feature started:* **the plan view of those tracks landed in feature
+  123**, in the right region, because the tab otherwise had no graphic of a forecast at all
+  and `ctl/forecast/features` had no consumer while this feature waited on the analyst change
+  §"The finding" records. What remains here is the part that genuinely needs the volume: the
+  same features carried **with depth**, against the field they are in. This feature adds a
+  dimension to a drawing that exists; it does not introduce it.
 - **FR-06** A clickable grid is carried on the surface plane above the volume. Selection is
   by grid square and yields a water column. Nothing inside the volume is clickable.
 - **FR-07** A parameter control and a depth control sit beside the volume. The parameter

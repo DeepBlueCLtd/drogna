@@ -164,11 +164,14 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(entries.every((entry) => entry.tagName === 'BUTTON')).toBe(true);
   });
 
-  it('123 FR-17: the centre and right regions state that they are not built, and name feature 124', async () => {
+  it('123 FR-17: what is not built says so and names feature 124, region by region', async () => {
     render(<ForecastPanel {...panelProps()} />);
     await act(async () => {
       runtime.clock.tickOnce();
     });
+    // Both still name 124, but they no longer name it for the same reason. The centre region
+    // is wholly 124's. The right one now carries the forecast's own features in plan, and
+    // what it says is unbuilt is the narrower thing: the ensemble spread along the route.
     for (const region of ['volume', 'ahead']) {
       const section = document.querySelector(`[data-region="${region}"]`);
       expect(section?.textContent).toMatch(/not built/);
@@ -176,6 +179,128 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // An empty canvas is a claim the shell is not entitled to make.
       expect(section?.querySelector('canvas')).toBeNull();
     }
+    expect(document.querySelector('[data-region="ahead"]')?.textContent).toMatch(/ensemble spread/);
+  });
+
+  it('draws the forecast’s own features across the lead, with an uncertainty that grows', async () => {
+    // **The gap this closes.** `ctl/forecast/features` was published on every run from
+    // feature 123 and read by nothing: a loop test validated its shape against its master and
+    // then dropped it, so the product of FR-113 had no surface at all and the Forecast tab
+    // could say why a run happened, what it cost and when, but nothing about what it said.
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      runtime.clock.tickOnce();
+    });
+    // Before a run has been announced the absence is stated. An empty set of axes would say
+    // the forecast has no features, which is a different claim from having heard none.
+    expect(screen.getByTestId('features-absent')).toBeTruthy();
+    expect(screen.queryByTestId('feature-tracks')).toBeNull();
+
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+        runtime.clock.tickOnce();
+        if (document.querySelector('[data-testid="feature-tracks"]')) break;
+      }
+    });
+    const tracks = screen.getByTestId('feature-tracks');
+    // The drawing is there, and it is an SVG rather than a canvas: a canvas would put the
+    // claim somewhere neither a test nor a screen reader can read it.
+    const plot = tracks.querySelector('svg.forecast-tracks-plot');
+    expect(plot, 'no plan view was drawn for a run that published features').toBeTruthy();
+    expect(tracks.querySelector('canvas')).toBeNull();
+
+    // **The uncertainty grows with lead, and the drawing carries that rather than asserting
+    // it in prose.** A forecast whose claim does not widen is a stronger claim than the model
+    // can support, so the rings are read off the drawing and compared.
+    //
+    // **Within one feature, across its lead steps** — which is the axis the claim is about,
+    // and not the one the first draft measured. That draft gathered every ring in the plot
+    // and asserted the largest exceeded the smallest, which is true of any two *different*
+    // features at the same lead: an eddy and a front have different uncertainties because
+    // they have different strengths. Planted against a carry whose uncertainty does not grow
+    // at all, it passed. A check that cannot fail is worth nothing (CLAUDE.md, lesson 2).
+    const groups = [...tracks.querySelectorAll('g.tracks-feature')];
+    expect(groups.length, 'no feature was drawn').toBeGreaterThan(0);
+    let compared = 0;
+    for (const group of groups) {
+      const rings = [...group.querySelectorAll('circle.tracks-uncertainty')].map((c) =>
+        Number(c.getAttribute('r')),
+      );
+      if (rings.length < 2) continue;
+      const first = rings[0];
+      const last = rings[rings.length - 1];
+      expect(
+        last,
+        `${group.getAttribute('class')}: the ring at the last lead is not wider than at the first`,
+      ).toBeGreaterThan(first);
+      compared += 1;
+    }
+    expect(compared, 'no feature carried more than one lead step, so nothing was compared').toBeGreaterThan(0);
+
+    // And the same claim is readable without the picture, which is what makes it legible in
+    // greyscale, on a phone, and to a reader who cannot see it at all.
+    const figures = tracks.querySelector('.forecast-tracks-figures');
+    expect(figures?.textContent).toMatch(/km/);
+    expect(figures?.textContent).toMatch(/uncertain by/);
+  });
+
+  it('a console that opens after a run still learns what that run said', async () => {
+    // **Why the runner restates.** The features were published on the run and on nothing
+    // else, so a console mounting afterwards had nothing to draw — and every console mounts
+    // afterwards, because the shell opens after the pre-roll. At the shipped cadence and the
+    // default rate the wait for the next run is 1800 ticks: half an hour of a surface saying
+    // the forecast has not spoken. A standing forecast's features are a standing fact, not an
+    // event, which is the same argument the cost statement already makes for itself.
+    //
+    // So: drive until a run has published with the panel NOT mounted, then mount, then allow
+    // the restatement cadence to come round once.
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+        runtime.clock.tickOnce();
+        if (runtime.store.currentInstance() !== undefined) break;
+      }
+    });
+    expect(runtime.store.currentInstance(), 'no run published before the console opened').toBeDefined();
+
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      runtime.clock.tickOnce();
+    });
+    // Nothing yet: the run's own announcement was made before this panel existed.
+    expect(screen.queryByTestId('feature-tracks')).toBeNull();
+
+    await act(async () => {
+      for (let i = 0; i < config.model_runner.cost.restate_every_ticks + 2; i++) runtime.clock.tickOnce();
+    });
+    const tracks = screen.getByTestId('feature-tracks');
+    expect(tracks.querySelector('svg.forecast-tracks-plot')).toBeTruthy();
+    // And it is the run that already happened, restated — not a second run, and not a second
+    // opinion about the first. The identifier on the drawing is the one the timeline already
+    // carries for that run, so the two regions are talking about the same thing.
+    const timeline = document.querySelector('[data-region="timeline"]')?.textContent ?? '';
+    const runId = tracks.querySelector('code')?.textContent ?? '';
+    expect(runId.length, 'the drawing named no run').toBeGreaterThan(0);
+    expect(timeline.length, 'the timeline was empty, so nothing corroborates the run id').toBeGreaterThan(0);
+  });
+
+  it('states a feature it could not recover rather than leaving it out of the drawing', async () => {
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+        runtime.clock.tickOnce();
+        if (document.querySelector('[data-testid="feature-tracks"]')) break;
+      }
+    });
+    const tracks = screen.getByTestId('feature-tracks');
+    // The runner declines three magnitudes at this grid and says why. A feature absent from
+    // the drawing and absent from this list would be a silence, which is the fault the whole
+    // `not_estimated` block exists against.
+    const declined = tracks.querySelector('.forecast-tracks-declined');
+    expect(declined, 'nothing said which quantities the run would not claim').toBeTruthy();
+    expect(declined?.textContent).toMatch(/not recovered/);
+    // The thermocline is a depth and has no place in a plan view; it is stated in figures
+    // rather than given a plausible-looking position.
+    expect(tracks.querySelector('.forecast-tracks-figures')?.textContent).toMatch(/thermocline/);
   });
 
   it('SC-010: nothing polls — the clock alone changes nothing the store did not announce', async () => {

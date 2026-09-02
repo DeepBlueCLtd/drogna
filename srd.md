@@ -7,6 +7,12 @@ questions (§9) and the third-round process decisions (D15–D17). Supersedes
 `harness-srd.md`, which is archived in place as the V1 record.
 **Author:** Doc
 **Date:** 29 August 2026
+**Amended:** 2 September 2026 (feature 123) — §5.20 folds in the *Forecast illustration
+tool* companion document of 1 September 2026, archived at
+`docs/v2/forecast-illustration-srd.md`; its FI- requirements land as FR-106 to FR-140 and
+its FA- criteria as AT-06 to AT-11. §5.18's FR-91 and FR-92 renumber to FR-104 and FR-105,
+which they should have been: feature 118 had taken those two numbers on another branch and
+both landed.
 
 Requirements carry fresh numbers. Where a requirement descends from Version 1, the
 provenance is cited as *(v1 FR-nn)*; where it was learned from an open pull request's
@@ -95,7 +101,9 @@ publish cycle drives forecast regeneration.
 The port inventory is rewritten around the seam. Genuine ports, each with more than one
 conceivable implementation: the **seam transports** (HTTP interception and the broker
 transport — in-browser today, network in V3), the **clock**, the **RNG**, the **model
-kernel** (initialisation state in, gridded field out), and the **store interfaces**
+kernel** (initialisation state in, gridded field out — two implementations from feature 123,
+the advection kernel and the forward step, so the port's pluggability is demonstrated rather
+than asserted), and the **store interfaces**
 (in-memory today, engines in V3 — a port now precisely because V3 is planned, where in
 V1 "Postgres is not being swapped" was the honest statement). Nothing else is dressed
 as a port, and the documentation claims exactly the pluggability that exists.
@@ -152,9 +160,9 @@ mode; the ancestry column is the map back into the archived record.
 | V2-C08 | Coverage store | Gridded fields; instances, archive and now-cast; atomic, digest-checked publication | C-08, C-14 |
 | V2-C09 | Query components | SensorThings + EDR over the stores, through the seam | C-09 |
 | V2-C10 | Release gate | Default-deny path policy at the seam | C-10 |
-| V2-C11 | Monitor | Sound-speed residuals; divergence events; never a single spike | C-11 |
+| V2-C11 | Monitor | Sound-speed residuals; divergence events; never a single spike; the indicator socket's reference publisher (FR-117) | C-11 |
 | V2-C12 | Scheduler | Whether a run is warranted; minimum interval, cadence floor; no duplicates | C-12 |
-| V2-C13 | Model runner | Analytic advection + noise; small ensemble; behind the kernel port | C-13 |
+| V2-C13 | Model runner | A shallow two-layer forward step behind the kernel port; small ensemble; a run occupies its declared cost (FR-112, FR-114) | C-13 |
 | V2-C14 | Planner | Adaptive sampling recommendations, and only recommendations | C-15 |
 | V2-C15 | Telemetry | Health, throughput per simulation second, skill vs persistence | C-16, part C-21 |
 | V2-C16 | Shore advisory source | Deterministic advisory authoring; the advisory ingestion seam | C-19 |
@@ -970,7 +978,9 @@ both landed; for a while the document defined FR-91 and FR-92 twice each, which 
 citation of them ambiguous. §5.16 keeps the numbers because its citations are the older
 ones; these move to the end of the space, appended rather than inserted. Citations updated
 with them: ADR-0041, the constitution's Data constraint, `specs/120-start-conditions/` and
-the welcome page's own head comment.
+the welcome page's own head comment. FR-76 and FR-77, which these two were before the first
+renumber, stay vacant — a number is never reused, which is the rule that makes a citation
+mean one thing.
 
 - **FR-104** A visit shall begin in a **start condition** chosen on a **welcome page** shown
   before the shell (ADR-0040). The conditions are declared in configuration
@@ -1145,6 +1155,259 @@ three browsable from one place.
   map's deferral was built to close. The tree, the timelines, the tables and the chart are
   markup and SVG and cost nothing.
 
+### 5.20 The forward step, its cost, and what made the field (features 123, 124)
+
+drogna assimilates but does not forecast. The analyst corrects a standing field by optimal
+interpolation and publishes the analysis, its error and its per-cell provenance (FR-30);
+the model runner then advects that analytically with noise. Advection is not a forecast —
+it slides a field sideways rather than propagating a state — and the distinction matters
+because the thing an operator most needs explained is the one thing the harness could not
+show.
+
+Two beats close that gap, and the pairing is the point. A **forward step** thin enough to
+run in a browser tab and honest enough to be called a forecast rather than a translation;
+and an **illustration surface** that makes the mechanics of assimilation visible —
+specifically, what a given cell's value was made from and in what proportion. The second is
+the deliverable. The first exists because a surface explaining a forecast needs a forecast
+to explain.
+
+This section folds in the companion requirements document of 1 September 2026, archived at
+`docs/v2/forecast-illustration-srd.md`. That document numbered its requirements in an
+**FI-** space because a second live document writing into this one's FR- space would
+collide on the next feature; folded in, that reason is spent, and each requirement below
+cites its origin as *(FI-nn)*. Three questions the document raised open are answered here
+and struck from §10; the third stays open, because it has no picture to be checked against
+yet.
+
+**What this is not**, before anything else, because this is the kind of surface that tempts
+an exception:
+
+- **FR-106** The numerics remain deliberately fake and the data synthetic (FR-01). This work
+  models no third-party entity, holds no track, and does not become a candidate system by
+  acquiring a forward step. The surface shall state, where a reader meets it, that the
+  physics is a teaching approximation, and shall name the real schemes it stands in for
+  *(FI-01; Constitution V)*.
+- **FR-107** This is **not** an implementation of, port of, or wrapper around an operational
+  assimilation system. NEMO, ROMS, MITgcm, PDAF, DART, OceanVar and OpenDA are named in the
+  explainer as what the real thing is, and nothing here claims kinship with them beyond
+  structure. Neither Pyodide nor transpiled Fortran enters the application: NFR-01's
+  one-codebase-one-browser constraint is not spent on this *(FI-02)*.
+- **FR-108** The tool does not decide. It shows what a re-forecast would cost and what the
+  standing one is worth; the operator chooses *(FI-03; FR-34, Constitution VIII)*.
+
+**Where it lands.** Nothing here is a new architecture; three requirements say so, because
+a surface of this size invites one.
+
+- **FR-109** The forward step lands **behind the existing model kernel port** (§2.2) as a
+  second implementation. No component outside the port learns that it changed. This is the
+  port doing the work it was declared for rather than a new abstraction, and the decision
+  record says so plainly *(FI-04; Constitution VI)*.
+- **FR-110** The illustration surface is a **panel of the shell** reached through the seam
+  and nowhere else: relative-path GETs against configured prefixes, validated against the
+  master the response declares before anything is drawn. It imports no backend module
+  *(FI-05; FR-02, FR-96, Constitution XI)*.
+- **FR-111** Every figure the surface shows shall already be published by an existing
+  component, or be **derived by the shell and labelled as derived** — the fourth kind of
+  figure beside declared, reported and observed (ADR-0036, FR-70). The per-cell provenance
+  the analyst already publishes is the substrate for the whole of the centre and the depth
+  profile; if a contribution cannot be read from what was published, it is not drawn
+  *(FI-06)*.
+
+**The forward step itself.**
+
+- **FR-112** The kernel shall integrate a **shallow two-layer advection–diffusion step**
+  over the coarse grid: real physics, deliberately impoverished physics, propagating state
+  forward rather than translating a field. It shall be a pure function of its initialisation
+  state, the clock and its own seed stream, and shall replay byte-identically *(FI-07;
+  Constitution I, II; AT-04)*. It becomes the configured kernel; the advection kernel
+  remains registered and tested, which is what makes the port's second implementation a
+  demonstration rather than a claim.
+- **FR-113** The seeded features shall be **forecast as features**, not merely carried in
+  the field: the eddy's centre, radius and strength; the front's position and orientation;
+  the thermocline's depth and gradient; the drifting feature's track. Each shall be
+  published with a growing uncertainty, so that a forecast makes a falsifiable claim about
+  next week rather than a picture of it. The manifest's ground truth is what scores it, and
+  the bound is derived from the authoring jitter on disk rather than typed into the test
+  *(FI-08; FR-06, AT-03, Constitution IX)*. The parameters are estimated from **the analysis
+  the run initialises from** and from nothing else: a run never reads the true field, which
+  is feature 116's lesson and the reason the runner subscribes to the analysis announcement.
+- **FR-114** The step's **cost shall be declared and real**, and the figure shall be
+  **simulation time**. The kernel reports the work a run covers; configuration declares a
+  rate; the run then **occupies** the ticks its cost comes to, publishing when they are
+  spent. The duration is not smoothed, hidden behind a spinner, or amortised across ticks: a
+  forecast that is expensive in the real system and free in the harness would teach the
+  wrong lesson *(FI-09)*.
+
+  *The companion document raised, as its Q2, whether this needs a bounded wall-clock
+  exemption in the constitution. It does not, and the request is declined rather than
+  deferred.* A host-clock duration is a fact about the machine the tab happens to be open
+  on, and admitting one would put a figure inside the run that differs between two replays
+  of the same manifest — AT-04's byte-identical claim is the property that cannot be
+  retrofitted at acceptable cost. Principle I stays at two exemptions. What is given up is
+  stated rather than glossed: the magnitude of the cost is a declared rate and not a
+  measurement, which §8's exclusion already conceded, and what is kept is that the cost is
+  spent rather than merely stated.
+
+**Cost as a domain fact.** A forecast that takes minutes is not an engineering
+embarrassment to be optimised away; it is a planning problem the operator owns. The vessel
+chooses when to spend the compute — on passage, in quiet water, before a decision point —
+and the system's job is to make need and cost legible together.
+
+- **FR-115** The scheduler shall carry a second dimension beside *is a run warranted*
+  (FR-31): **can a run be afforded now**. A run has a declared duration, published by the
+  component that will spend it and by no other; the scheduler may hold a warranted run
+  pending an affordable window; and a run held for cost is labelled distinctly from a run
+  declined by the minimum interval and from a run nothing has requested. Four facts, never
+  one appearance *(FI-10; FR-32)*.
+
+  *The rule runs the opposite way to the obvious reading, and the reason is kept because it
+  is the part that cannot be reconstructed later.* Read naively — a run is affordable when
+  it fits inside the standing forecast's remaining validity — the loop becalms permanently:
+  the cadence floor fires **precisely when** validity has lapsed, at which point there is no
+  headroom and no run is ever affordable again, which is the fault FR-31 exists to forbid
+  and which `spikes/watched-turn/FINDING.md` has already watched happen once. So a warranted
+  run is held **while the standing forecast still has more life than the run costs** — there
+  is no need to spend the compute yet — and is released when the remaining validity falls to
+  the cost plus a declared margin, so the new run lands as the old one lapses. The hold
+  cannot becalm the loop, because it releases as validity decays and the cadence floor still
+  backstops it. **A divergence is never held**: the world has already contradicted the
+  standing forecast, so its nominal remaining validity is worth nothing. Scheduled runs and
+  reader prompts are the two that wait.
+- **FR-116** The operator may **commit a run against the stated cost** (FR-65). A run
+  accepted from that prompt is labelled as reader-requested in its request, is weighed under
+  exactly the policy a divergence is weighed under, and may be declined or held — the
+  control plane dispatches, the scheduler decides *(FI-11; FR-63)*.
+- **FR-117** **The indicator is a socket, not science.** The indicator that re-forecasting is
+  becoming valuable is environmental science and belongs to the environmental-indicators
+  workstream. What drogna provides is a **declared topic** on which such an indicator
+  publishes, a gauge that renders whatever is published there, and a refusal that names the
+  absence when nothing is. Drogna's own residual statistic is wired into that socket as the
+  reference implementation — published by the monitor, which already holds both the running
+  residual and the threshold in force, so the mark on the gauge and the rule that fires a run
+  cannot disagree — and the surface says which indicator it is showing. System health is a
+  separate concern already drawn by the Operator tab (FR-57) and is not duplicated here
+  *(FI-12)*.
+
+**The illustration surface.** One view, three regions and a timeline. Left to right is
+time: why now, what changed, what next. The left region and the timeline land with the
+forward step, because a run held for cost has to be visible somewhere for FR-115 to mean
+anything; the centre and the right regions are feature 124's, and until they exist the view
+says so where they will be rather than drawing an empty canvas.
+
+- **FR-118** A **vertical gauge** shall show the accumulating disagreement between what has
+  been measured and what the standing forecast said, with the threshold at which a run
+  becomes warranted marked on it, and the **cost of a run stated beneath it in the same
+  frame**. Need and cost are read together or the region has not done its job *(FI-13)*.
+- **FR-119** The gauge shall be **reported where the figure is published** and
+  derived-and-labelled where it is not; it shall never be drawn from a configured
+  expectation. An empty gauge and an unheard indicator are different facts and are drawn
+  differently *(FI-14; Constitution VII, FR-117)*.
+- **FR-120** The field shall be presented as a **semi-transparent volume** with the
+  **thermocline drawn as a surface through it**, its strength carried by the surface's own
+  appearance. A surface is required rather than a depth slice because the thermocline domes,
+  tilts and breaks, and shape is the answer a sonar user is asking for. The eddy, front and
+  drifting feature (FR-113) are drawn as tracked features with their uncertainty, not merely
+  as texture in the field *(FI-15)*.
+- **FR-121** A **clickable grid shall be carried on the surface plane** above the volume, and
+  selection is by grid square — a **water column**, not a point. Picking inside translucent
+  geometry is unreliable, and the observations that matter most are columns rather than
+  points, so the column is both the tractable selection and the honest one *(FI-16)*.
+- **FR-122** Selecting a column shall draw **rays on the surface plane** from the selected
+  square to each contributing source, **width proportional to that source's contribution** to
+  the column. Rays are drawn on the surface plane only and **never descend into the volume**:
+  depth is answered by the profile, and a ray sorted against translucent geometry is a
+  rendering problem bought for no explanatory gain *(FI-17)*.
+- **FR-123** Sources shall be positioned by kind. **Spatial sources** — the vessel's own casts
+  and drops — are drawn where they physically are. **Non-spatial sources** — the archive
+  eras, climatology, the shore broadcast — are **docked as fixed nodes at the margin of the
+  surface plane**, labelled, in stable positions across selections, so a reader learns where
+  to look. The margin position is an admission that those sources have no geometry, not a
+  substitute for one *(FI-18)*.
+- **FR-124** Sources shall be grouped and marked as **measured** (the vessel's own sensing)
+  or **modelled** (climatology, the archive eras, the shore broadcast). The shore broadcast is
+  modelled: it is another party's forecast and is drawn as such *(FI-19)*.
+- **FR-125** The **standing forecast is not a contributing source and shall not be drawn as a
+  ray.** It is the background — the baseline the corrections sit on — and is drawn as the
+  baseline of the stack in the depth profile. This distinction is the grammar of assimilation
+  and the surface shall not blur it for visual convenience *(FI-20)*.
+
+  *The companion document's Q1 asked whether the shore broadcast enters as background or as
+  an observation, and referred it to the scientific lead. It enters as **background**.* It is
+  a model output that has already assimilated far more than the vessel will ever see, and
+  admitting it as an observation would double-count what is already inside it — which makes
+  the vessel's job local correction rather than forecasting from scratch, and that is the
+  honest description of what a vessel does.
+- **FR-126** A **parameter control and a depth control** shall sit beside the volume. The
+  parameter shall default to **sound speed**, being both the quantity the reader cares about
+  and a derived one — which states, without a caption, that the system computes rather than
+  stores *(FI-21; FR-05, ADR-0005)*.
+- **FR-127** Beside the volume, a **profile with depth running down the vertical axis** shall
+  show, for the selected column, the **composition of each depth level** as bands sized by
+  contribution and coloured by source, with the background as the baseline band (FR-125). The
+  expected reading — an XBT dominating the upper water column, an archive taking over below
+  where nothing sampled — is the thing this region exists to make obvious *(FI-22)*.
+- **FR-128** Selecting a level in the profile shall **re-weight the rays** to that level's
+  contributions. It shall not move them, redraw their origins, or introduce a second
+  geometry: same origin, same sources, different widths. The volume carries *which sources*;
+  the profile carries *where they mattered*; neither is read through the other *(FI-23)*.
+- **FR-129** A level with **no contribution from any observation** shall say so, and shall not
+  be drawn as a background-only band indistinguishable from a level nobody sampled by
+  coincidence. Absent, null and declined are three different facts *(FI-24; FR-41)*.
+- **FR-130** Weights shall be **explicable, not merely shown**. For any contribution the
+  surface shall be able to state the two numbers that produced it — the separation, and the
+  declared error of that source against the background's — because the weighting is the part
+  every reader assumes is magic, and it is arithmetic already in the published provenance
+  *(FI-25)*.
+- **FR-131** The right region shall draw the **ensemble spread ahead**, along the planned
+  route where one exists, widening where confidence decays against tau (FR-33). Where the
+  displayed instant lies outside the holding's time axis the region says so rather than
+  implying the forecast extends there *(FI-26; FR-40)*.
+- **FR-132** Along the foot of the view, a **timeline of runs in simulation time**, each
+  **labelled by cause** — scheduled, divergence-triggered, reader-requested, held for cost.
+  Selecting a run sets what the other three regions show *(FI-27; FR-31, FR-115, FR-116)*.
+- **FR-133** The previous forecast shall be shown as a **ghost layer drawn simultaneously**
+  with the current one — ghosted values **and ghosted rays at their own widths** — rather than
+  reached by a scrubber between two states. Both present at once is what makes the change
+  readable; a slider asks the reader to hold one state in memory while looking at the other
+  *(FI-28)*.
+
+  *This reversed the design as first sketched, which had a scrubber in the centre region, and
+  the reason is kept:* the ghosted **rays** are the finding. A source that dominated the last
+  run and barely matters now is an insight no comparison of output fields can carry.
+- **FR-134** The ghost layer shall be **toggleable and closed at rest**, so a reader meets the
+  current forecast first and asks for the comparison rather than having to unpick it from a
+  crowded canvas *(FI-29)*.
+
+**Inherited constraints**, each called out because this surface is the kind that tempts an
+exception:
+
+- **FR-135** **Nothing shall be drawn that was not fetched** (FR-101). Scrubbing the timeline
+  to a run whose fields have not been fetched shows that run arriving, never a neighbouring
+  run's field *(FI-30)*.
+- **FR-136** **No polling** (FR-97). The surface refreshes on the store's announcement of a
+  publication and at no other time; observation arrivals are counted and applied by an
+  explicit control *(FI-31)*.
+- **FR-137** **Motion comes from the system or is declared as illustration** (FR-71, FR-90).
+  No animation runs while nothing is arriving. Where this surface animates to explain rather
+  than to report — the growth of an uncertainty ellipse, say — it is expressed without reading
+  the host clock and is stated as illustration where the reader meets it *(FI-32)*.
+- **FR-138** **Legible in greyscale, keyboard-traversable, and honouring
+  `prefers-reduced-motion`** (FR-45, FR-59). Colour carries source identity in the depth
+  profile, which makes greyscale legibility a real constraint rather than a courtesy: a
+  redundant encoding is required *(FI-33)*.
+- **FR-139** **Code-split** from the shell, as the map and the Data tab's WebGL surfaces are,
+  and for the same measured reason *(FI-34; FR-103)*.
+- **FR-140** A **help tour** carried by the panel itself (FR-75), held to a list on disk so a
+  region gaining a feature and not a step is reported by name *(FI-35)*.
+
+**Deliberately not done**, carried across from the companion document so none of it is
+rediscovered as an idea later. **Cost realism**: the harness cannot demonstrate the real
+system's compute profile and shall not pretend to; it demonstrates that cost is *in the
+domain model*, and the magnitude is a matter for the afloat appliance. **A real assimilation
+scheme**: 3D-Var, EnKF and their relatives are named in the explainer and implemented
+nowhere (FR-107). **The indicator itself**: FR-117, socket and not science. **Clicking into
+the volume**: ruled out at FR-121, with the reason recorded.
+
 ---
 
 ## 6. Interfaces and shared types
@@ -1220,15 +1483,35 @@ three browsable from one place.
 | AT-03 | The seeded eddy is recoverable from the stored data with a known and reported error, the bound derived from the authoring jitter on disk, never typed into the test | v1 AT-03 |
 | AT-04 | The whole scenario replays byte-identically from its exported manifest, in the strong form: the components replay in lockstep, the claim is byte-for-byte across every store and every seam crossing, and a one-command replay proof runs it — watched failing against planted violations before it is trusted | v1 AT-04, upgraded per E10 |
 | AT-05 | A recorded corpus of seam traffic — requests, responses, published messages — validates against the committed masters, and the suite that replays it is runnable against a remote base URL unchanged | new: the V3 contract |
+| AT-06 | A forecast run initialised from a published analysis propagates the seeded eddy, and the forecast position is scored against the manifest's ground truth with the error reported, not asserted | FI/FA-01 |
+| AT-07 | The contributions drawn for a selected column sum to the published value of that column, cell by cell, within a stated tolerance — the picture is checked against the provenance rather than trusted | FI/FA-02 |
+| AT-08 | A run held for cost, a run declined by minimum interval, and no run requested are distinguishable on the surface without reading a log | FI/FA-03 |
+| AT-09 | The whole scenario including a forecast run replays byte-identically from its manifest, AT-04's claim surviving both the second kernel and the held publication | FI/FA-04 |
+| AT-10 | With the indicator topic silent, the left region states the absence and draws no gauge; with drogna's own residual wired to it, the gauge names what it is showing | FI/FA-05 |
+| AT-11 | Every acceptance above is watched happening in the shell across the full path through the seam and captured, never inferred from green tests | FI/FA-06; PR-06 |
 
 ## 10. Open questions and delegated decisions
 
-No question is currently open to the author: the plan's §9 resolved the seven that
-were, and D15 delegates implementation decisions — among them whether in-browser
-components run as Web Workers or as scheduled modules (feature 101's seam spike
-decides, with an ADR), and the layout-library choice (FR-14) — to the developers.
-Questions are raised here as they arise and struck when answered, with the answer
-landing in a requirement rather than staying here.
+D15 delegates implementation decisions — among them whether in-browser components run as
+Web Workers or as scheduled modules (feature 101's seam spike decided, with an ADR), and
+the layout-library choice (FR-14) — to the developers. Questions are raised here as they
+arise and struck when answered, with the answer landing in a requirement rather than
+staying here.
+
+**Open.** One, from the companion document folded in at §5.20:
+
+- **Q-01** Whether the depth profile's source colouring survives greyscale (FR-138) beyond
+  about five distinct sources, or whether sources must be grouped at that point. It stays
+  open because it cannot be settled on paper: it needs the profile drawn and the capture
+  taken. Feature 124 answers it *(the companion document's Q3)*.
+
+**Struck, with the answers in the requirements they landed in:**
+
+- The companion document's **Q1** — does the shore broadcast enter as background or as an
+  observation? **Background**, answered by the scientific lead and recorded at FR-125.
+- The companion document's **Q2** — does the reported run duration need a constitutional
+  wall-clock exemption? **No**, declined rather than deferred, and recorded at FR-114. Cost
+  is carried as simulation time and Principle I stays at two exemptions.
 
 ## 11. Deliberate retirements
 

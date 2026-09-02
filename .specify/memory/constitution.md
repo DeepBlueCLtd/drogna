@@ -274,7 +274,7 @@ plan proposing a new top-level directory must say why.
   is the same world every time it is opened. What is not given up is the guard — a
   fixture nobody can check is still forbidden, and a snapshot that has drifted from its
   generator fails the build rather than opening a console over data no component would
-  have produced. ADR-0041 carries the reasoning and SRD-v2 FR-92 the requirement.
+  have produced. ADR-0041 carries the reasoning and SRD-v2 FR-105 the requirement.
 - The feature store is read-only during a scenario run, provisioned at scenario start.
 
 ---
@@ -354,10 +354,15 @@ and a version bump here. Every plan carries a Constitution Check section. Violat
 that are genuinely necessary are recorded in the plan's Complexity Tracking table with
 the simpler alternative and why it was rejected; an unrecorded violation is a defect.
 
-**Version**: 2.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-30
+**Version**: 2.1.1 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-09-02
 
 ### Version log
 
+- **2.1.1** (2026-09-02, feature 123) — **editorial only.** No principle, constraint or
+  gate is changed. The Data constraint's closing citation follows SRD-v2's renumbering of
+  the requirement it names: FR-92 became FR-105 when the document was found to define
+  FR-91 and FR-92 twice each, features 118 and 120 having taken the same two numbers from
+  parallel branches. The rule the citation points at is untouched.
 - **2.1.0** (2026-08-30, feature 120) — the Data constraint is amended to admit
   ahead-of-time production of seed data under a drift gate and through the store's own
   publication seam. No principle is retired or weakened: II is strengthened, since a

@@ -1,7 +1,7 @@
 ---
 title: Ten nodes with nothing to press
 date: 2026-08-31
-feature: specs/121-operator-actions
+feature: specs/122-operator-actions
 description: >-
   The Operator tab's controls were correct, and they were at the bottom of a card several
   screens long. Ten of its twenty-two components had no control at all — and for half of

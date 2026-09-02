@@ -964,7 +964,15 @@ there is data to work on could be reached only by leaving the page running. A vi
 begins in a situation the reader picks, and each situation is made true by the run having
 actually reached it.
 
-- **FR-91** A visit shall begin in a **start condition** chosen on a **welcome page** shown
+*These two requirements were written as FR-91 and FR-92 and are renumbered here to FR-104
+and FR-105.* Feature 118's §5.16 had taken those two numbers from the other branch, and
+both landed; for a while the document defined FR-91 and FR-92 twice each, which makes every
+citation of them ambiguous. §5.16 keeps the numbers because its citations are the older
+ones; these move to the end of the space, appended rather than inserted. Citations updated
+with them: ADR-0041, the constitution's Data constraint, `specs/120-start-conditions/` and
+the welcome page's own head comment.
+
+- **FR-104** A visit shall begin in a **start condition** chosen on a **welcome page** shown
   before the shell (ADR-0040). The conditions are declared in configuration
   (`config.start-conditions.schema.json`) and each names the platform's initial state and a
   **pre-roll**: an ordered script of legs the composition root drives through the operator
@@ -982,7 +990,7 @@ actually reached it.
   ticks, the pre-roll is inside AT-04's claim rather than outside it with a reader's
   commands. The four conditions are *leaving quay-side*, *arriving in the work area*
   (the default), *loitering in the work area* and *returning to quay-side*.
-- **FR-92** A start condition's coverage eras may be **produced ahead of time and
+- **FR-105** A start condition's coverage eras may be **produced ahead of time and
   committed** as a build artefact (ADR-0041; Constitution 2.1.0's amended Data
   constraint), on three conditions that hold together. The artefact is produced by the
   same components the running system uses, by constructing the backend and driving that

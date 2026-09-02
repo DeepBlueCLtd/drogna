@@ -29,9 +29,12 @@ browsable, one is queryable by an expert, and one is invisible. This feature mak
 three browsable from one place, organised the way a reader thinks about the data rather
 than the way it happens to be served.
 
-**Feature number.** 118. Like 111 to 117 it sits outside the arc: it adds one component
+**Feature number.** 121. Like 111 to 120 it sits outside the arc: it adds one component
 behaviour to the ocean (§ the departure era, below) and otherwise changes no simulation,
-moves nothing new across the seam, and asserts nothing new about the world.
+moves nothing new across the seam, and asserts nothing new about the world. *Specified as
+118, renumbered to 120 and then to 121 as features landed from other branches ahead of it;
+this line said 118 for both renumbers, which is the record disagreeing with the tree —
+`tasks.md`, the SRD's §5.19 and the directory name all say 121.*
 
 ### What the interview settled, and what it cost
 

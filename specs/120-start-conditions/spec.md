@@ -41,7 +41,9 @@ first, and this branch renumbered when it merged them in — as 115 and 117 did 
 for the same reason: a number taken by whichever branch merges first is a fact about merge
 order and not about the work, and the branch still open is the one that moves. The
 requirements moved with it, FR-76 and FR-77 becoming FR-91 and FR-92, and the decision
-records with them, ADR-0039 and ADR-0040 becoming ADR-0040 and ADR-0041.
+records with them, ADR-0039 and ADR-0040 becoming ADR-0040 and ADR-0041. *They moved a
+second time at feature 123, to FR-104 and FR-105: feature 118 had taken FR-91 and FR-92 on
+its own branch and both landed, leaving the SRD defining each number twice.*
 
 Like 111 to 119 it sits outside the arc: it adds no component to the arc,
 authors no new kind of data, and asserts nothing new about the ocean. What it adds is a

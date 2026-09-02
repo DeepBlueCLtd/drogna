@@ -132,22 +132,29 @@
 }
 
 /**
- * **A wrapping flex row, not a track list.** The first version was a grid of three
- * `max-content` columns and a `minmax(0, 1fr)`, which cannot fold: at a phone's width the
- * three fixed tracks still demanded their content's width, so the button laid out 351px
- * wide inside 320px and pushed the `li`, the `ol`, the region and the whole panel past the
- * viewport with it — eleven of `capture:mobile`'s narrow-presentation proofs, from this one
- * declaration. `pnpm check` does not run those proofs and reported the panel green; CI ran
- * them and did not.
+ * **Still a track list, but one whose tracks may shrink.** The first version wrote three
+ * `max-content` columns and a `minmax(0, 1fr)`, and a bare `max-content` track cannot fold:
+ * at a phone's width the three of them still demanded their content's full width, so the
+ * button laid out 351px wide inside 320px and pushed the `li`, the `ol`, the region and the
+ * whole panel past the viewport with it — eleven of `capture:mobile`'s narrow-presentation
+ * proofs, all from this one declaration. `pnpm check` does not run those proofs and reported
+ * the panel green; CI ran them and did not.
  *
- * Flex with `wrap` folds at whatever width the content stops fitting, which is why there is
- * no breakpoint here: the row is one line where one line fits and two where it does not, at
- * 320px and at 3200px alike, without a number that has to be right.
+ * `minmax(0, max-content)` keeps the column: every row's tick starts at the same x, every
+ * cause at the same x, which is what makes a list of runs scannable and is the whole reason
+ * this is a grid rather than a line of spans. It just stops the track claiming its content's
+ * width as a floor, so at 320px the columns narrow and their text wraps inside them.
+ *
+ * A wrapping flex row was tried first and folds just as well, but it aligns each row's
+ * detail against its own cause instead of a shared column, so the timeline goes ragged at
+ * every width to fix a fault that only appears at one. There is no breakpoint here either
+ * way: the row narrows wherever the content stops fitting.
  */
 .forecast-run {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0.6em;
+  display: grid;
+  grid-template-columns:
+    minmax(0, max-content) minmax(0, max-content) minmax(0, max-content) minmax(0, 1fr);
+  gap: 0 0.6em;
   align-items: baseline;
   width: 100%;
   text-align: left;
@@ -179,13 +186,10 @@
 
 .forecast-run-detail {
   color: var(--shell-dim);
-  /* Takes the rest of the line, and may be squeezed to nothing before the row wraps. */
-  flex: 1 1 auto;
-  /* `min-width: 0` alone is not enough: a flex item's floor is its longest word, and
-     "published:" is 70px at this size — which is what the proof measured inside a 35px
-     track. Breaking inside a word is the last resort and the only one that holds at an
-     arbitrary width. */
-  min-width: 0;
+  /* A shrinkable track is not enough on its own: the floor of a cell whose text cannot
+     break is its longest word, and "published:" is 70px at this size — which is exactly
+     what the proof measured inside a 35px track. Breaking inside a word is the last resort
+     and the only thing that holds at an arbitrary width. */
   overflow-wrap: anywhere;
 }
 

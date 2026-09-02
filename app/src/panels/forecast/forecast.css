@@ -339,3 +339,141 @@
   flex-direction: column;
   gap: 0.3em;
 }
+
+/* ------------------------------------------- what a cell's value was made from --- */
+
+/**
+ * The column chooser and its readout. A grid of ordinary buttons, not a picture: while
+ * there is no volume to carry it, a chooser that looked like a rendering of data would be
+ * claiming to show a field it has not fetched.
+ *
+ * **Nothing here animates**, and the selected square is marked by a glyph and a border as
+ * well as a tone, so the selection survives greyscale (FR-138).
+ */
+.forecast-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.forecast-column-caption,
+.forecast-column-basis,
+.forecast-column-where,
+.forecast-column-busy {
+  margin: 0;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-column-chooser {
+  display: grid;
+  gap: 2px;
+  /* The tracks are `1fr` of whatever the region gives it, so the chooser narrows with the
+     panel instead of demanding a width — the fault that cost eleven proofs on the timeline. */
+  width: 100%;
+}
+
+.forecast-column-square {
+  /* **44px, which is feature 112's stated floor for a control a thumb hits.** The proof
+     enforces that floor on the tab strip and on an open operator account, and would not have
+     failed this at 28px — but the number is a claim about thumbs, not about which selectors
+     the check happens to walk, and a chooser square is exactly a thing a thumb hits. At a
+     360px width the squares come out roughly square at this height. */
+  min-height: 44px;
+  border: 1px solid #232c36;
+  background: none;
+  color: var(--shell-dim);
+  font: inherit;
+  font-size: 0.75em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.forecast-column-square:hover,
+.forecast-column-square:focus-visible {
+  border-color: var(--shell-fg);
+  color: var(--shell-fg);
+}
+
+.forecast-column-square.is-selected {
+  border-color: var(--shell-fg);
+  color: var(--shell-fg);
+  font-weight: 700;
+}
+
+.forecast-column-levels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  font-size: 0.8em;
+}
+
+.forecast-column-levels > li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  border-top: 1px solid #232c36;
+  padding-top: 0.3em;
+}
+
+.forecast-column-depth {
+  font-family: monospace;
+  color: var(--shell-fg);
+}
+
+.forecast-column-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.forecast-column-share {
+  display: grid;
+  /* Shrinkable tracks, for the reason the timeline's own row records: a bare `max-content`
+     track cannot fold, and this region has to fit 320px. */
+  grid-template-columns: minmax(0, 7em) minmax(0, 1fr) minmax(0, 4em);
+  align-items: center;
+  gap: 0 0.4em;
+}
+
+.forecast-column-share-name {
+  color: var(--shell-dim);
+  overflow-wrap: anywhere;
+}
+
+.forecast-column-share-value {
+  font-family: monospace;
+  text-align: right;
+}
+
+.forecast-column-bar {
+  display: block;
+  height: 0.5em;
+  background: var(--shell-dim);
+  /* A share may exceed one where the gain extrapolates, so the bar is capped and the printed
+     figure beside it is not: the number is the claim, the bar is the illustration. */
+  max-width: 100%;
+}
+
+/* A negative share is drawn hatched and right-aligned, so the sign survives greyscale and a
+   monochrome print — and the figure beside it carries the minus regardless. */
+.forecast-column-bar.is-negative {
+  margin-left: auto;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--shell-dim),
+    var(--shell-dim) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+.forecast-column-refused {
+  margin: 0;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}

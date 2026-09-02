@@ -40,6 +40,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PanelProps } from '../../shell/registry.js';
 import type {
+  AnalysisPublished,
+  CoverageHolding,
   ForecastFeatures,
   ForecastIndicator,
   HoldingsInventory,
@@ -55,6 +57,7 @@ import { displayInstant } from '../../shell/display.js';
 import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
 import { forecastTour } from '../../shell/walkthrough/tour.js';
 import { FeatureTracks } from './FeatureTracks.js';
+import { ColumnProvenance, columnGridOf, type ColumnGrid } from './ColumnProvenance.js';
 import './forecast.css';
 
 /**
@@ -161,6 +164,8 @@ export function ForecastPanel({ params }: PanelProps) {
   const [indicator, setIndicator] = useState<ForecastIndicator | undefined>();
   const [cost, setCost] = useState<RunCost | undefined>();
   const [features, setFeatures] = useState<ForecastFeatures | undefined>();
+  const [analysis, setAnalysis] = useState<AnalysisPublished | undefined>();
+  const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
   const [refused, setRefused] = useState(0);
@@ -209,6 +214,45 @@ export function ForecastPanel({ params }: PanelProps) {
       client.subscribe(config.topics.forecast_features, (message) => {
         if (!drawable(message.topic, message.payload)) return;
         setFeatures(message.payload as ForecastFeatures);
+      }),
+    );
+    stops.push(
+      // **A second chance at the grid, and only while there is not one.** It was read from
+      // the inventory on mount and nowhere else, so a console that mounted while the store
+      // was still empty — which a browser does, since the page loads before the pre-roll
+      // finishes — never got one, and the centre region said "no analysis yet" for the rest
+      // of the session however many analyses arrived. Measured that way in a built instance
+      // before this: the chooser drew no squares at all.
+      //
+      // This is not a poll and cannot become one: it is driven by an announcement, and the
+      // guard means it can fire at most once in the life of the panel.
+      client.subscribe(config.topics.holdings, () => {
+        if (!gridWantedRef.current) return;
+        gridWantedRef.current = false;
+        void (async () => {
+          try {
+            const response = await fetch(config.endpoints.holdings);
+            if (!response.ok) return;
+            const body: unknown = await response.json();
+            if (!validator.validate('holdings-inventory', body).ok) return;
+            const grid = columnGridOf((body as HoldingsInventory).holdings[0] as CoverageHolding | undefined);
+            if (grid) setColumnGrid(grid);
+            else gridWantedRef.current = true;
+          } catch {
+            gridWantedRef.current = true;
+          }
+        })();
+      }),
+    );
+    stops.push(
+      // Which analysis the centre region reads from — the *standing* declaration, not the
+      // announcement. They carry the same message under the same master, and the difference
+      // is what listens: the announcement is what the model runner starts a forecast on, so
+      // a component repeating it repeats the work. This panel wants the fact, not the event.
+      // Nothing is fetched here, and nothing is fetched until a reader picks a square.
+      client.subscribe(config.topics.analysis_standing, (message) => {
+        if (!drawable(message.topic, message.payload)) return;
+        setAnalysis(message.payload as AnalysisPublished);
       }),
     );
     stops.push(
@@ -291,7 +335,12 @@ export function ForecastPanel({ params }: PanelProps) {
     return () => {
       for (const stop of stops) stop();
     };
-  }, [client, config.topics, drawable]);
+  }, [client, config.topics, config.endpoints.holdings, drawable, validator]);
+
+  // Whether the centre region's grid is still unknown, read inside a subscription without
+  // making the subscription depend on it — a dependency there would tear down and rebuild
+  // every subscription the moment the grid arrived.
+  const gridWantedRef = useRef(true);
 
   // The store's own inventory, once, on mount. Everything after it arrives on an
   // announcement; this is the history that had already happened when the console opened.
@@ -311,7 +360,17 @@ export function ForecastPanel({ params }: PanelProps) {
         return;
       }
       if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
-      const seeded = entriesFromInventory(body as HoldingsInventory);
+      const inventory = body as HoldingsInventory;
+      // The grid the centre region's chooser spans, read off a holding's own manifest rather
+      // than from configuration: a chooser laid over a domain the store does not hold would
+      // offer squares that resolve to nothing. Any holding will do — every era shares the
+      // one grid — so the first is taken, and its absence leaves the chooser undrawn.
+      const grid = columnGridOf(inventory.holdings[0] as CoverageHolding | undefined);
+      if (grid) {
+        setColumnGrid(grid);
+        gridWantedRef.current = false;
+      }
+      const seeded = entriesFromInventory(inventory);
       setEntries((previous) => {
         const known = new Set(previous.map((entry) => entry.runId));
         return [...seeded.filter((entry) => !known.has(entry.runId)), ...previous];
@@ -377,14 +436,13 @@ export function ForecastPanel({ params }: PanelProps) {
           </p>
         </section>
 
-        <section className="forecast-region forecast-region-empty" data-region="volume" aria-label="what a cell’s value was made from">
+        <section className="forecast-region" data-region="volume" aria-label="what a cell’s value was made from">
           <h3>What it is made from</h3>
-          <p className="not-landed">
-            The volume, the clickable column grid, the rays to each contributing source and the depth profile are{' '}
-            <strong>feature 124</strong>, and are not built. This region says so rather than drawing an empty canvas:
-            what a cell’s value was made from is the deliverable §5.20 exists for, and a picture of it that showed
-            nothing would be a claim this shell is not entitled to make.
-          </p>
+          {/* The stub this replaces named the whole region as feature 124's. Most of it was
+              not: the analyst has published the per-cell shares since feature 116, and only
+              the per-source rays are blocked. What is still 124's is said inside the region,
+              beneath the reading, where a reader meets it after the thing that does work. */}
+          <ColumnProvenance analysis={analysis} grid={columnGrid} edrPrefix={config.endpoints.edr} />
         </section>
 
         <section className="forecast-region" data-region="ahead" aria-label="the spread ahead">

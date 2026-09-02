@@ -169,9 +169,10 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     await act(async () => {
       runtime.clock.tickOnce();
     });
-    // Both still name 124, but they no longer name it for the same reason. The centre region
-    // is wholly 124's. The right one now carries the forecast's own features in plan, and
-    // what it says is unbuilt is the narrower thing: the ensemble spread along the route.
+    // Both still name 124, but neither names it for the whole region any more, and what each
+    // says is unbuilt has narrowed to something specific. The centre region reads the shares
+    // the analyst already publishes and names 124 for the rays alone; the right one draws the
+    // forecast's features and names 124 for the ensemble spread along the route.
     for (const region of ['volume', 'ahead']) {
       const section = document.querySelector(`[data-region="${region}"]`);
       expect(section?.textContent).toMatch(/not built/);
@@ -180,6 +181,52 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(section?.querySelector('canvas')).toBeNull();
     }
     expect(document.querySelector('[data-region="ahead"]')?.textContent).toMatch(/ensemble spread/);
+    expect(document.querySelector('[data-region="volume"]')?.textContent).toMatch(/rays/);
+  });
+
+  it('reads a water column through EDR when a reader picks a square, and not before', async () => {
+    // **The region this replaces was a stub naming feature 124 for all of itself, and most of
+    // it did not need to be.** The analyst has published a full-grid provenance field since
+    // feature 116 — four shares per cell, every depth, summing to one — under its own EDR
+    // collection. Only FR-122's per-source rays are blocked, because the kernel reports the
+    // gain's row sum and discards its columns.
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+        runtime.clock.tickOnce();
+        if (document.querySelector('.forecast-column-square')) break;
+      }
+    });
+    const squares = [...document.querySelectorAll('.forecast-column-square')];
+    expect(squares.length, 'the chooser drew no squares after an analysis was announced').toBeGreaterThan(0);
+
+    // **Nothing has been fetched for it yet.** The announcement names the collections; it does
+    // not read them. A region that fetched on announcement would be doing work on a tick.
+    const beforePick = fetched.filter((url) => url.includes('/collections/')).length;
+    expect(beforePick, 'the region fetched a column nobody asked for').toBe(0);
+
+    const square = squares[Math.floor(squares.length / 2)];
+    if (!square) throw new Error('no square to pick');
+    await act(async () => {
+      fireEvent.click(square);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // The reader's pick went to the query layer, through the same EDR path an external client
+    // takes — one position query per depth, against the collection the analysis named.
+    const edrCalls = fetched.filter((url) => url.includes('/position?'));
+    expect(edrCalls.length, 'picking a square asked the query layer nothing').toBeGreaterThan(0);
+    expect(edrCalls.some((url) => url.includes('-provenance'))).toBe(true);
+
+    const readout = document.querySelector('.forecast-column-readout');
+    expect(readout, 'the column was fetched and nothing was drawn from it').toBeTruthy();
+    // Each share is named and printed as a figure, so the reading survives greyscale and is
+    // legible with the bars removed altogether.
+    expect(readout?.textContent).toMatch(/measurement|archive|model|departure/);
+    expect(readout?.querySelectorAll('.forecast-column-share').length).toBeGreaterThan(0);
+    expect(readout?.textContent).toMatch(/%/);
   });
 
   it('draws the forecast’s own features across the lead, with an uncertainty that grows', async () => {
@@ -281,6 +328,38 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     const runId = tracks.querySelector('code')?.textContent ?? '';
     expect(runId.length, 'the drawing named no run').toBeGreaterThan(0);
     expect(timeline.length, 'the timeline was empty, so nothing corroborates the run id').toBeGreaterThan(0);
+  });
+
+  it('a console that opens after an analysis can still read a column from it', async () => {
+    // **The centre region's version of the same fault the features had.** An analysis cycle's
+    // collections are a standing fact — the provenance of a cell is what the current analysis
+    // made it until another cycle replaces it — but they were announced on the cycle alone.
+    // A console mounting afterwards had no collection to name and said so, for up to a whole
+    // cadence: 1800 ticks, half an hour at the default rate, on the region whose entire
+    // subject is what a cell's value was made from.
+    //
+    // Measured in a built instance before the fix: three cadences of warming and the chooser
+    // never drew a square.
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+        runtime.clock.tickOnce();
+        if (runtime.store.currentInstance() !== undefined) break;
+      }
+    });
+    expect(runtime.store.currentInstance(), 'no cycle completed before the console opened').toBeDefined();
+
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      runtime.clock.tickOnce();
+    });
+    // Nothing yet: the cycle's announcement was made before this panel existed.
+    expect(document.querySelector('.forecast-column-square')).toBeNull();
+
+    await act(async () => {
+      for (let i = 0; i < config.analyst.restate_every_ticks + 2; i++) runtime.clock.tickOnce();
+    });
+    const squares = document.querySelectorAll('.forecast-column-square');
+    expect(squares.length, 'the analysis was never restated, so the chooser stayed undrawn').toBeGreaterThan(0);
   });
 
   it('states a feature it could not recover rather than leaving it out of the drawing', async () => {

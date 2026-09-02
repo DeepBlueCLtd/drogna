@@ -134,6 +134,7 @@ export type ConfigAnalyst = {
     "run_request": ConfigCommonTopic;
     "run_published": ConfigCommonTopic;
     "analysis_published": ConfigCommonTopic;
+    "analysis_standing": ConfigCommonTopic;
   };
   "heartbeat": ConfigCommonHeartbeat;
   "correlation": {
@@ -147,6 +148,7 @@ export type ConfigAnalyst = {
     "measurement": string;
     "model": string;
   };
+  "restate_every_ticks": number;
 };
 
 /** drogna release-gate configuration (V2-C10) — from config.boundary.schema.json */
@@ -719,6 +721,7 @@ export type ConfigShell = {
     "run_cost": ConfigCommonTopicFilter;
     "forecast_features": ConfigCommonTopicFilter;
     "forecast_indicator": ConfigCommonTopicFilter;
+    "analysis_standing": ConfigCommonTopic;
   };
   "message_schemas": {
     "filter": ConfigCommonTopicFilter;

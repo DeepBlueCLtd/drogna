@@ -657,3 +657,63 @@ surface.
       this class, and would have caught the gauge three weeks ago; it is reported rather than
       built, because it changes a shared capture script every view depends on and belongs in a
       change of its own.
+
+## The eighth round: the centre band, and two announcements nobody could hear
+
+Raised the same way as the seventh — a reader looking at the tab, not at the diff — and it
+found more than a missing drawing.
+
+- [x] T084 The centre region was a stub naming feature 124 for the whole of itself, and most
+      of it did not need to be. The analyst has published a full-grid provenance field since
+      feature 116: four shares per cell (archive, departure, measurement, model), at every
+      depth, summing to one, in the store under its own EDR collection — which is exactly the
+      substrate FR-111 names for this region and the depth profile. What is genuinely blocked
+      is narrower: FR-122's per-*source* rays, because the analysis kernel computes the
+      per-observation gain row by row and reports only its row sum. `ColumnProvenance.tsx`
+      reads a column the reader picks, one EDR position query per depth, through the same path
+      an external client takes. What is still 124's is said inside the region, beneath the
+      reading, and no longer stands in for it.
+- [x] T085 **The shell had no master for `ctl/analysis/published` at all.** Not a mapping that
+      was wrong — an absence: the topic appeared in no entry of `shell.message_schemas`, so
+      `drawable` refused every analysis announcement the shell ever received. The config
+      master's own description says what that means: "A received message whose topic matches
+      no entry is itself counted refused: every crossing has a master or is a finding." It was
+      a finding, and nothing had been reading the topic to notice.
+- [x] T086 The analyst declares its standing analysis, for the same reason the runner restates
+      cost and features. A cycle's collections are a standing fact — the provenance of a cell
+      is what the current analysis made it until another cycle replaces it — but they were
+      announced on the cycle alone, so a console mounting afterwards had no collection to name
+      for up to a whole cadence and said so, on the region whose entire subject is what a
+      cell's value was made from. Measured in a built instance before the fix: three cadences
+      of warming and the chooser never drew a square. Watched failing with the declaration
+      removed: "the analysis was never restated, so the chooser stayed undrawn".
+
+      **The first attempt at this was wrong, and the way it was wrong is the finding.** It
+      restated `analysis_published` itself — which looks like an announcement and is a
+      *trigger*: the model runner starts a forecast on it, which is feature 116's whole design,
+      and the planner re-plans on it. Repeating it repeated the work. The suite said so at
+      once and said it loudly: **ten tests failed across seven files**, replay determinism
+      among them, two of them timing out with the runner refusing runs it had just been asked
+      to repeat. Nothing in the code marked that topic as a command; it was learned by
+      breaking it.
+
+      A declaration commands nothing, so it has its own topic — `ctl/analysis/standing`, the
+      same message under the same master, with no subscriber that acts. That is the separation
+      the model runner already keeps between `run_started`, which reports an event, and
+      `run_cost`, which declares a standing figure and is restated for exactly this reason.
+      The panel reads the declaration; a surface has no business listening to a command.
+- [x] T087 Two absences were reported as one. The region said "no analysis has been announced
+      yet" whether it lacked the analysis or lacked the grid its squares would span — so while
+      the real cause was the second, the surface asserted the first and sent the reading in the
+      wrong direction for two rounds of measurement. A surface that states the wrong reason is
+      worse than one that states none. They are separate sentences now.
+- [x] T088 The grid was read from the store's inventory once, on mount, and nowhere else — so
+      a console that mounted while the store was still empty, which a browser does because the
+      page loads before the pre-roll finishes, never got one. It has a second chance now, on a
+      holding announcement, guarded so it can fire at most once and can never become a poll.
+- [x] T089 The chooser's squares were 38px wide inside a 360px phone. The height was 44 and
+      the *width* was the constraint, since a tap target is the smaller of the two;
+      `capture:mobile` enforces that floor on the tab strip and on an open operator account
+      and would not have failed this. The floor is a claim about thumbs rather than about
+      which selectors a check walks, so the chooser came down to six columns by four until the
+      squares clear 44px at the narrowest width the shell supports.

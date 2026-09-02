@@ -179,6 +179,7 @@
         "role": "analyst",
         "publish": [
           "ctl/analysis/published",
+          "ctl/analysis/standing",
           "ctl/heartbeat"
         ],
         "subscribe": [
@@ -748,12 +749,14 @@
   "analyst": {
     "id": "analyst",
     "stream": "analyst-perturbations",
+    "restate_every_ticks": 60,
     "topics": {
       "clock": "ctl/clock",
       "observations": "obs/#",
       "run_request": "ctl/run/request",
       "run_published": "ctl/run/published",
-      "analysis_published": "ctl/analysis/published"
+      "analysis_published": "ctl/analysis/published",
+      "analysis_standing": "ctl/analysis/standing"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -1440,7 +1443,8 @@
       "run_request": "ctl/run/request",
       "run_cost": "ctl/run/cost",
       "forecast_features": "ctl/forecast/features",
-      "forecast_indicator": "ctl/forecast/indicator"
+      "forecast_indicator": "ctl/forecast/indicator",
+      "analysis_standing": "ctl/analysis/standing"
     },
     "message_schemas": [
       {
@@ -1466,6 +1470,14 @@
       {
         "filter": "ctl/divergence",
         "schema": "divergence"
+      },
+      {
+        "filter": "ctl/analysis/published",
+        "schema": "analysis-published"
+      },
+      {
+        "filter": "ctl/analysis/standing",
+        "schema": "analysis-published"
       },
       {
         "filter": "ctl/run/request",

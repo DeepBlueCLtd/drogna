@@ -624,7 +624,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "heartbeat",
       "correlation",
       "excluded_datastreams",
-      "shares"
+      "shares",
+      "restate_every_ticks"
     ],
     "additionalProperties": false,
     "properties": {
@@ -643,7 +644,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "observations",
           "run_request",
           "run_published",
-          "analysis_published"
+          "analysis_published",
+          "analysis_standing"
         ],
         "additionalProperties": false,
         "properties": {
@@ -661,6 +663,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "analysis_published": {
             "$ref": "config.common.schema.json#/$defs/topic"
+          },
+          "analysis_standing": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the standing analysis is DECLARED, which is deliberately not where it is ANNOUNCED. `analysis_published` is a trigger: the model runner starts a forecast on it (feature 116) and the planner re-plans on it, so repeating it repeats the work — measured, when it was tried: ten tests across seven files, replay determinism among them. A declaration carries the same message and commands nothing, which is the same separation the model runner already keeps between `run_started` and `run_cost`. It is published beside each cycle and restated on the cadence, so a console that mounts after a cycle can still name the collections it should read."
           }
         }
       },
@@ -722,6 +728,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "minLength": 1
           }
         }
+      },
+      "restate_every_ticks": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "description": "How often the last analysis announcement is repeated, in ticks of simulation time. An analysis cycle's collections are a STANDING fact about the analysis that is current, not an event that happened once: the provenance of a cell is still what it was until another cycle replaces it. Announced on the cycle alone, a console that mounted afterwards — which every console does, since the shell opens after the pre-roll — had no way to name the collections it should read, and the surface that shows what a cell's value was made from said so for up to a whole cadence. The same argument the model runner's cost and feature statements already make for themselves. Nothing is recomputed: the message published on the cycle is republished with the instant it is said at, so no component ever holds two opinions about one analysis. It is a publication on the component's own clock and not a poll."
       }
     }
   },
@@ -3261,7 +3272,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "run_request",
           "run_cost",
           "forecast_features",
-          "forecast_indicator"
+          "forecast_indicator",
+          "analysis_standing"
         ],
         "additionalProperties": false,
         "properties": {
@@ -3322,6 +3334,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "forecast_indicator": {
             "$ref": "config.common.schema.json#/$defs/topic_filter",
             "description": "The declared socket an indicator that re-forecasting is becoming valuable publishes on (FR-117). The gauge renders whatever is published here and names what it is showing; with the topic silent it states the absence and draws no gauge. An empty gauge and an unheard indicator are different facts (FR-119)."
+          },
+          "analysis_standing": {
+            "$ref": "config.common.schema.json#/$defs/topic",
+            "description": "Where the standing analysis is declared. The Forecast tab's centre region reads the collection names from here rather than from `analysis_published`, because that topic is the model runner's trigger and a surface has no business listening to a command."
           }
         }
       },

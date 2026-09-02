@@ -76,6 +76,19 @@ export class Analyst {
   cyclesCompleted = 0;
   lastAssimilated = 0;
   lastClamped = 0;
+  /**
+   * The last announcement, and the tick it was last said at.
+   *
+   * **A cycle's collections are a standing fact, not an event.** The provenance of a cell is
+   * still what the current analysis made it until another cycle replaces it, and a surface
+   * showing what a cell's value was made from needs those collection names to ask for it at
+   * all. Announced on the cycle alone, a console mounting afterwards — which every console
+   * does, since the shell opens after the pre-roll — had nothing to name for up to a whole
+   * cadence, and said so where the reading should have been. This is the same argument the
+   * model runner's cost and feature statements already make for themselves.
+   */
+  private lastAnnouncement: AnalysisPublished | undefined;
+  private announcedAtTick: number | undefined;
 
   constructor(
     private readonly config: ConfigAnalyst,
@@ -116,6 +129,7 @@ export class Analyst {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      this.restateLastAnalysis();
     });
     this.client.subscribe(this.config.topics.observations, (message) => {
       const observation = message.payload as Observation;
@@ -275,7 +289,7 @@ export class Analyst {
     }
     const provenanceDigest = this.publish(provenanceId, 'analysis', request, manifest, provenanceValues, provenanceNames, `Where each cell's value came from. Because H selects a cell, xᵃ = (I − KH)xᵇ + Ky exactly, so these shares are read off the gain rather than approximated, and they sum to one. A share may be negative: where a cell's background error greatly exceeds the observed cell's, the gain extrapolates, ω passes one, and that is optimal interpolation behaving correctly rather than a fault to clamp away.`);
 
-    this.client.publish(this.config.topics.analysis_published, {
+    const announcement: AnalysisPublished = {
       component: this.config.id,
       scenario_run_id: this.runId,
       sim_time: this.simTime.value,
@@ -287,8 +301,59 @@ export class Analyst {
       collections: { analysis: analysisId, error: errorId, provenance: provenanceId },
       digests: { analysis: analysisDigest, error: errorDigest, provenance: provenanceDigest },
       observations: { assimilated, clamped, worst_displacement_km: worstDisplacementKm },
-    } satisfies AnalysisPublished);
+    };
+    this.client.publish(this.config.topics.analysis_published, announcement);
+    // Declared beside the announcement, so a console already listening does not wait out the
+    // restatement cadence to learn what it could have been told at once.
+    this.declareStanding(announcement);
+    // Kept so a console that mounts after this cycle still learns what to read.
+    this.lastAnnouncement = announcement;
+    this.announcedAtTick = this.simTime.tick;
     this.cyclesCompleted += 1;
+  }
+
+  /**
+   * The standing analysis, named again for a listener that was not there.
+   *
+   * Nothing is recomputed and no field is re-published: the announcement made on the cycle is
+   * republished with the instant it is being said at. A restatement that re-analysed would be
+   * a second opinion about one cycle, which is the fault the one-publisher rule exists
+   * against — and it would burn a full analysis to answer a question already answered.
+   */
+  private restateLastAnalysis(): void {
+    const standing = this.lastAnnouncement;
+    if (!standing) return;
+    if (
+      this.announcedAtTick !== undefined &&
+      this.simTime.tick - this.announcedAtTick < this.config.restate_every_ticks
+    ) {
+      return;
+    }
+    this.declareStanding(standing);
+    this.announcedAtTick = this.simTime.tick;
+  }
+
+  /**
+   * The standing analysis, on the topic that declares rather than the one that commands.
+   *
+   * **This is the whole of what the first attempt got wrong, and it is worth stating.**
+   * `analysis_published` looks like an announcement and is a trigger: the model runner starts
+   * a forecast on it — that is feature 116's design, the reason the runner waits for the
+   * analysis rather than the request — and the planner re-plans on it. Restating it therefore
+   * re-ran the loop. Measured: ten tests failed across seven files, replay determinism among
+   * them, and two timed out with the runner refusing runs it had just been asked to repeat.
+   *
+   * A declaration commands nothing. It carries the same message, governed by the same master,
+   * and its topic has no subscriber that acts — the same separation the model runner already
+   * keeps between `run_started`, which reports an event, and `run_cost`, which declares a
+   * standing figure and is restated for exactly this reason.
+   */
+  private declareStanding(announcement: AnalysisPublished): void {
+    this.client.publish(this.config.topics.analysis_standing, {
+      ...announcement,
+      sim_time: this.simTime.value,
+      tick: this.simTime.tick,
+    } satisfies AnalysisPublished);
   }
 
   /** The cycle's observations of one variable, with each instrument's declared error. */

@@ -302,6 +302,10 @@ export const topology: Topology = {
         },
         {
           "access": "write",
+          "filter": "ctl/analysis/standing"
+        },
+        {
+          "access": "write",
           "filter": "ctl/heartbeat"
         },
         {
@@ -644,19 +648,19 @@ export const topology: Topology = {
         {
           "component": "advisory-source",
           "path": "app/config/run.json",
-          "line": 1068,
+          "line": 1071,
           "constant": "/advisory_source/topics/advisory"
         },
         {
           "component": "advisory-store",
           "path": "app/config/run.json",
-          "line": 1068,
+          "line": 1071,
           "constant": "/advisory_store/topics/advisory"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1434,
+          "line": 1437,
           "constant": "/shell/topics/advisories"
         }
       ]
@@ -675,13 +679,13 @@ export const topology: Topology = {
         {
           "component": "coverage-store",
           "path": "app/config/run.json",
-          "line": 446,
+          "line": 447,
           "constant": "/coverage_store/topics/published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1430,
+          "line": 1433,
           "constant": "/shell/topics/holdings"
         }
       ]
@@ -689,7 +693,7 @@ export const topology: Topology = {
     {
       "topic": "ctl/analysis/published",
       "namespace": "ctl",
-      "schema": null,
+      "schema": "contracts/schemas/analysis-published.schema.json",
       "publishers": [
         "analyst"
       ],
@@ -702,20 +706,45 @@ export const topology: Topology = {
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 703,
+          "line": 704,
           "constant": "/model_runner/topics/analysis_published"
         },
         {
           "component": "analyst",
           "path": "app/config/run.json",
-          "line": 703,
+          "line": 704,
           "constant": "/analyst/topics/analysis_published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 703,
+          "line": 704,
           "constant": "/shell/topics/analysis_published"
+        }
+      ]
+    },
+    {
+      "topic": "ctl/analysis/standing",
+      "namespace": "ctl",
+      "schema": "contracts/schemas/analysis-published.schema.json",
+      "publishers": [
+        "analyst"
+      ],
+      "subscribers": [
+        "shell"
+      ],
+      "named_by": [
+        {
+          "component": "analyst",
+          "path": "app/config/run.json",
+          "line": 759,
+          "constant": "/analyst/topics/analysis_standing"
+        },
+        {
+          "component": "shell",
+          "path": "app/config/run.json",
+          "line": 759,
+          "constant": "/shell/topics/analysis_standing"
         }
       ]
     },
@@ -733,7 +762,7 @@ export const topology: Topology = {
         {
           "component": "boundary",
           "path": "app/config/run.json",
-          "line": 300,
+          "line": 301,
           "constant": "/boundary/topics/denial"
         }
       ]
@@ -913,13 +942,13 @@ export const topology: Topology = {
         {
           "component": "monitor",
           "path": "app/config/run.json",
-          "line": 650,
+          "line": 651,
           "constant": "/monitor/topics/divergence"
         },
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 650,
+          "line": 651,
           "constant": "/scheduler/topics/divergence"
         }
       ]
@@ -938,13 +967,13 @@ export const topology: Topology = {
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 707,
+          "line": 708,
           "constant": "/model_runner/topics/forecast_features"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 707,
+          "line": 708,
           "constant": "/shell/topics/forecast_features"
         }
       ]
@@ -963,13 +992,13 @@ export const topology: Topology = {
         {
           "component": "monitor",
           "path": "app/config/run.json",
-          "line": 653,
+          "line": 654,
           "constant": "/monitor/topics/indicator"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1443,
+          "line": 1446,
           "constant": "/shell/topics/forecast_indicator"
         }
       ]
@@ -1010,13 +1039,13 @@ export const topology: Topology = {
         {
           "component": "operator",
           "path": "app/config/run.json",
-          "line": 860,
+          "line": 863,
           "constant": "/operator/topics/heartbeat"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 860,
+          "line": 863,
           "constant": "/shell/topics/heartbeat"
         }
       ]
@@ -1035,7 +1064,7 @@ export const topology: Topology = {
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 1101,
+          "line": 1104,
           "constant": "/offload/topics/offload"
         }
       ]
@@ -1064,67 +1093,67 @@ export const topology: Topology = {
         {
           "component": "env-generator",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/env_generator/topics/command"
         },
         {
           "component": "coverage-store",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/coverage_store/topics/command"
         },
         {
           "component": "platform",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/platform/topics/command"
         },
         {
           "component": "sensors",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/sensors/topics/command"
         },
         {
           "component": "monitor",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/monitor/topics/command"
         },
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/scheduler/topics/command"
         },
         {
           "component": "planner",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/planner/topics/command"
         },
         {
           "component": "telemetry",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/telemetry/topics/command"
         },
         {
           "component": "operator",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/operator/topics/command"
         },
         {
           "component": "advisory-source",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/advisory_source/topics/command"
         },
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 313,
+          "line": 314,
           "constant": "/offload/topics/command"
         }
       ]
@@ -1143,13 +1172,13 @@ export const topology: Topology = {
         {
           "component": "planner",
           "path": "app/config/run.json",
-          "line": 786,
+          "line": 789,
           "constant": "/planner/topics/plan"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 786,
+          "line": 789,
           "constant": "/shell/topics/plan"
         }
       ]
@@ -1169,13 +1198,13 @@ export const topology: Topology = {
         {
           "component": "platform",
           "path": "app/config/run.json",
-          "line": 464,
+          "line": 465,
           "constant": "/platform/topics/demand"
         },
         {
           "component": "operator",
           "path": "app/config/run.json",
-          "line": 861,
+          "line": 864,
           "constant": "/operator/topics/platform_demand"
         }
       ]
@@ -1194,13 +1223,13 @@ export const topology: Topology = {
         {
           "component": "platform",
           "path": "app/config/run.json",
-          "line": 465,
+          "line": 466,
           "constant": "/platform/topics/state"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 1436,
+          "line": 1439,
           "constant": "/shell/topics/platform_state"
         }
       ]
@@ -1220,19 +1249,19 @@ export const topology: Topology = {
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 684,
+          "line": 685,
           "constant": "/scheduler/topics/run_cost"
         },
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 684,
+          "line": 685,
           "constant": "/model_runner/topics/run_cost"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 684,
+          "line": 685,
           "constant": "/shell/topics/run_cost"
         }
       ]
@@ -1255,43 +1284,43 @@ export const topology: Topology = {
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/scheduler/topics/run_published"
         },
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/model_runner/topics/run_published"
         },
         {
           "component": "analyst",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/analyst/topics/run_published"
         },
         {
           "component": "planner",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/planner/topics/run_published"
         },
         {
           "component": "telemetry",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/telemetry/topics/run_published"
         },
         {
           "component": "offload",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/offload/topics/run_published"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 681,
+          "line": 682,
           "constant": "/shell/topics/run_published"
         }
       ]
@@ -1311,25 +1340,25 @@ export const topology: Topology = {
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 680,
+          "line": 681,
           "constant": "/scheduler/topics/run_request"
         },
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 680,
+          "line": 681,
           "constant": "/model_runner/topics/run_request"
         },
         {
           "component": "analyst",
           "path": "app/config/run.json",
-          "line": 680,
+          "line": 681,
           "constant": "/analyst/topics/run_request"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 680,
+          "line": 681,
           "constant": "/shell/topics/run_request"
         }
       ]
@@ -1348,13 +1377,13 @@ export const topology: Topology = {
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 704,
+          "line": 705,
           "constant": "/model_runner/topics/run_started"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 704,
+          "line": 705,
           "constant": "/shell/topics/run_started"
         }
       ]
@@ -1378,31 +1407,31 @@ export const topology: Topology = {
         {
           "component": "monitor",
           "path": "app/config/run.json",
-          "line": 651,
+          "line": 652,
           "constant": "/monitor/topics/telemetry"
         },
         {
           "component": "scheduler",
           "path": "app/config/run.json",
-          "line": 651,
+          "line": 652,
           "constant": "/scheduler/topics/telemetry"
         },
         {
           "component": "model-runner",
           "path": "app/config/run.json",
-          "line": 651,
+          "line": 652,
           "constant": "/model_runner/topics/telemetry"
         },
         {
           "component": "telemetry",
           "path": "app/config/run.json",
-          "line": 651,
+          "line": 652,
           "constant": "/telemetry/topics/telemetry"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 651,
+          "line": 652,
           "constant": "/shell/topics/telemetry"
         }
       ]
@@ -1424,37 +1453,37 @@ export const topology: Topology = {
         {
           "component": "ingest",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/ingest/topics/observations"
         },
         {
           "component": "monitor",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/monitor/topics/observations"
         },
         {
           "component": "analyst",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/analyst/topics/observations"
         },
         {
           "component": "planner",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/planner/topics/observations"
         },
         {
           "component": "telemetry",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/telemetry/topics/observations"
         },
         {
           "component": "shell",
           "path": "app/config/run.json",
-          "line": 609,
+          "line": 610,
           "constant": "/shell/topics/observations"
         }
       ]
@@ -1480,7 +1509,7 @@ export const topology: Topology = {
         {
           "component": "sensors",
           "path": "app/config/run.json",
-          "line": 537,
+          "line": 538,
           "constant": "/sensors/topics/ownship"
         }
       ]

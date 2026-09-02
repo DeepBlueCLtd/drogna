@@ -481,14 +481,6 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
     });
   }
 
-  const frontEstimate = front(anomaly, grid, eddy ? [eddy] : []);
-  if (!frontEstimate) {
-    declined.push({
-      kind: 'front',
-      reason: 'every cell of the analysis lies inside the warm feature’s neighbourhood, so no gradient outside it could be measured',
-    });
-  }
-
   const nearEddy = (longitude: number, latitude: number): boolean => {
     if (!eddy) return false;
     const { eastKm, northKm } = kmOffsets(longitude, latitude, eddy.centreLongitude, eddy.centreLatitude, grid.referenceLatitude);
@@ -502,10 +494,32 @@ export function estimateFeatures(temperature: Float32Array, grid: FeatureGrid): 
         'no negative horizontal anomaly outside the warm feature’s high-pass ring standing two standard deviations above the field’s own scatter. At one of the shipped start conditions this is the honest answer: the drifting feature’s anomaly there is weaker than the front’s cold side, and an estimate would have been the front reported as a drifting feature 213 km from where it was authored',
     });
   }
+
+  /*
+   * The front last, masked against **both** blobs — which is what this module has claimed
+   * from the start and did not do.
+   *
+   * The mask argument is that an unmasked gradient maximum finds whichever anomaly happens
+   * to be steeper at this seed, and would find the other at the next one. It was applied to
+   * the warm blob and not the cold one, because the front was found before the cold blob
+   * existed to mask with. Measured across the shipped seeds, the anchor then landed *inside*
+   * the authored drifting feature at three of five, and the step taken across "the front"
+   * was 16% to 35% larger than the quantity its master describes. The ordering was never
+   * load-bearing — the cold search needs only the warm blob — so it is simply reordered.
+   */
+  const frontEstimate = front(anomaly, grid, [eddy, moving].filter((entry): entry is BlobEstimate => entry !== undefined));
+  if (!frontEstimate) {
+    declined.push({
+      kind: 'front',
+      reason: 'every cell of the analysis lies inside a blob’s neighbourhood, so no gradient outside them could be measured',
+    });
+  }
+
   const thermoclineEstimate = thermocline(temperature, grid);
   if (!thermoclineEstimate) {
     declined.push({ kind: 'thermocline', reason: 'the domain-mean profile does not fall with depth anywhere, so there is no thermocline to place' });
   }
+
   /*
    * The magnitudes that are **not** recovered, named every time rather than left to be
    * inferred from what is absent (FR-41; Constitution IX).

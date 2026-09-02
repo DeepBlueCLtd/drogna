@@ -38,6 +38,7 @@ import type {
   RunPublished,
   RunRequest,
   RunStarted,
+  TelemetryRunFailed,
   TelemetrySchedulerDecision,
 } from '../../generated/types.js';
 import { topicMatchesFilter } from '../messages/topic-match.js';
@@ -58,6 +59,19 @@ export const FORECAST_REGIONS = [
   { id: 'ahead', label: 'the spread ahead', element: '[data-region="ahead"]' },
   { id: 'timeline', label: 'the runs, in simulation time, labelled by cause', element: '[data-region="timeline"]' },
 ] as const;
+
+/**
+ * A short, stable fingerprint of a sentence, so two holds at one tick get two keys.
+ *
+ * Not a digest for any security purpose and not a claim of uniqueness — it is the smallest
+ * thing that distinguishes two entries a reader can see are different, and it is stable
+ * across mounts, which is the property an addressable entry needs.
+ */
+function hashOf(text: string): string {
+  let hash = 0;
+  for (let index = 0; index < text.length; index++) hash = (Math.imul(hash, 31) + text.charCodeAt(index)) | 0;
+  return (hash >>> 0).toString(36);
+}
 
 /**
  * How a cause is said to a reader. Three causes — the scheduler declares them on the run
@@ -86,6 +100,8 @@ interface Entry {
   /** For a hold: how much validity must still decay before it is released. */
   readonly shortfallTicks?: number;
   readonly detail?: string;
+  /** Why a run will never publish, where the runner said so. */
+  readonly abandoned?: string;
 }
 
 /**
@@ -136,7 +152,6 @@ export function ForecastPanel({ params }: PanelProps) {
   const [cost, setCost] = useState<RunCost | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
-  const refusedRef = useRef(0);
   const [refused, setRefused] = useState(0);
   /** Causes heard, by run id, so a started run can be labelled with what asked for it. */
   const causesRef = useRef(new Map<string, string>());
@@ -150,10 +165,9 @@ export function ForecastPanel({ params }: PanelProps) {
     (topic: string, payload: unknown): boolean => {
       const mapping = config.message_schemas.find((entry) => topicMatchesFilter(entry.filter, topic));
       const ok = mapping !== undefined && validator.validate(mapping.schema, payload).ok;
-      if (!ok) {
-        refusedRef.current += 1;
-        setRefused(refusedRef.current);
-      }
+      // One counter, not a ref shadowing a state: the functional update is safe under
+      // batching, which is the only thing the ref was there for.
+      if (!ok) setRefused((count) => count + 1);
       return ok;
     },
     [config.message_schemas, validator],
@@ -218,17 +232,32 @@ export function ForecastPanel({ params }: PanelProps) {
       client.subscribe(config.topics.telemetry, (message) => {
         if (!drawable(message.topic, message.payload)) return;
         const report = message.payload as { kind?: string };
+        // A run the runner gave up on. **The panel used to receive this and drop it**, so a
+        // run stopped mid-cost read "occupying 12 tick(s)" for the rest of the session — a
+        // surface built to make an occupancy visible saying work is in progress that the
+        // component owing it had already said would never finish, with the contradicting
+        // message delivered and discarded.
+        if (report.kind === 'run-failed') {
+          const failed = message.payload as TelemetryRunFailed;
+          setEntries((previous) =>
+            previous.map((entry) => (entry.runId === failed.run_id ? { ...entry, abandoned: failed.detail } : entry)),
+          );
+          return;
+        }
         if (report.kind !== 'scheduler-decision') return;
         const decision = message.payload as TelemetrySchedulerDecision;
         if (decision.decision !== 'held-for-cost') return;
         setEntries((previous) => [
           ...previous,
           {
-            // Keyed by the tick and what was held, not by position in the list: a
-            // scheduled run and a reader's prompt can both be held at the same tick and
-            // must not share a key, but an index assigned at insertion differs on every
-            // mount, which would make a hold unaddressable.
-            key: `held:${decision.tick}:${decision.divergence_id ?? 'none'}:${decision.shortfall_ticks ?? 0}`,
+            // Keyed by the tick and by **what the scheduler said**, not by position in the
+            // list: a scheduled hold and a reader's prompt held at the same tick compute
+            // the same shortfall from the same validity and the same cost, so neither the
+            // tick nor the shortfall tells them apart — and `divergence_id` never can,
+            // because a divergence is never held and it is always null here. An index
+            // assigned at insertion would differ on every mount, which is what made a hold
+            // unaddressable in the first place. The detail is the one field that differs.
+            key: `held:${decision.tick}:${hashOf(decision.detail)}`,
             kind: 'held',
             tick: decision.tick,
             simTime: decision.sim_time,
@@ -374,7 +403,9 @@ export function ForecastPanel({ params }: PanelProps) {
                   <span className="forecast-run-detail">
                     {entry.kind === 'held'
                       ? `${entry.shortfallTicks ?? 0} tick(s) of validity still to decay`
-                      : entry.costTicks === undefined
+                      : entry.abandoned !== undefined
+                        ? 'never published: the runner gave it up'
+                        : entry.costTicks === undefined
                         ? 'in the store; what asked for it is not recoverable from a holding'
                         : entry.publishedAtTick === undefined
                           ? `occupying ${entry.costTicks} tick(s)`

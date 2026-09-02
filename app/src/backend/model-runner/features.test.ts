@@ -264,15 +264,28 @@ describe('the four features, estimated from a gridded field and scored against t
     const last = carried[3].eddy;
     if (!first || !last) throw new Error('the carry dropped the eddy it was handed');
     expect(last.centreLongitude).toBeGreaterThan(first.centreLongitude);
-    // Nothing is declined silently: every kind is either estimated or named with a reason.
-    const named = new Set(carried[0].declined.map((entry) => entry.kind));
+    // Nothing is declined silently: a kind that was not estimated carries a **whole-feature**
+    // reason — one with no `quantity`, which is the shape that means "this feature, not one
+    // of its numbers".
+    //
+    // The first version of this loop tested `declined.some(e => e.kind === kind)`, which is
+    // a tautology: every kind is pushed to `declined` on both branches, with a whole-feature
+    // reason when it is absent and a quantity reason when it is present, so the set always
+    // holds all four and no reachable state could fail it. A check that cannot fail is worth
+    // nothing (CLAUDE.md, lesson 2) — and this file is where that lesson is quoted.
+    const wholeFeature = new Set(
+      carried[0].declined.filter((entry) => entry.quantity === undefined).map((entry) => entry.kind),
+    );
+    const estimated: Record<string, boolean> = {
+      eddy: carried[0].eddy !== undefined,
+      moving: carried[0].moving !== undefined,
+      front: carried[0].front !== undefined,
+      thermocline: carried[0].thermocline !== undefined,
+    };
     for (const kind of ['eddy', 'moving', 'front', 'thermocline'] as const) {
-      const present =
-        (kind === 'eddy' && carried[0].eddy) ||
-        (kind === 'moving' && carried[0].moving) ||
-        (kind === 'front' && carried[0].front) ||
-        (kind === 'thermocline' && carried[0].thermocline);
-      expect(Boolean(present) || named.has(kind)).toBe(true);
+      expect(estimated[kind] || wholeFeature.has(kind), `${kind} is neither estimated nor declined`).toBe(true);
+      // And never both, which would be a feature published and disowned in one message.
+      expect(estimated[kind] && wholeFeature.has(kind), `${kind} is both estimated and declined`).toBe(false);
     }
   });
 });

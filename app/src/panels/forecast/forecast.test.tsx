@@ -138,8 +138,16 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     // Nothing requested: the timeline says so, in those terms, rather than being empty.
     expect(screen.getByText(/no run has been announced yet/)).toBeDefined();
 
+    // Driven until the thing being asserted is on screen, capped — a fixed count pays for
+    // ticks nobody needs, and this file is the slowest in the repository.
     await act(async () => {
-      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+      for (
+        let i = 0;
+        i < config.scheduler.max_interval_ticks * 3 && document.querySelector('.forecast-run-held') === null;
+        i++
+      ) {
+        runtime.clock.tickOnce();
+      }
     });
     const entries = [...document.querySelectorAll('.forecast-run')];
     expect(entries.length).toBeGreaterThan(0);
@@ -195,7 +203,13 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     // invented. What it must not do is guess: a holding says when it was published and
     // nothing about what asked for it.
     await act(async () => {
-      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+      for (
+        let i = 0;
+        i < config.scheduler.max_interval_ticks * 3 && runtime.store.currentInstance() === undefined;
+        i++
+      ) {
+        runtime.clock.tickOnce();
+      }
     });
     cleanup();
     render(<ForecastPanel {...panelProps()} />);
@@ -227,7 +241,13 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     };
     render(<ForecastPanel {...panelProps(address)} />);
     await act(async () => {
-      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+      for (
+        let i = 0;
+        i < config.scheduler.max_interval_ticks * 3 && document.querySelector('.forecast-run') === null;
+        i++
+      ) {
+        runtime.clock.tickOnce();
+      }
     });
     const live = document.querySelector('.forecast-run') as HTMLElement;
     await act(async () => {
@@ -246,8 +266,17 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(screen.getByTestId('forecast-selected')).toBeDefined();
     expect(document.querySelector('.forecast-run.is-selected')).not.toBeNull();
   });
+});
 
-  it('FR-140: every region the surface offers has a step in the tour, and no step invents one', () => {
+/**
+ * The tour's coverage is a fact about two lists on disk and needs no running system, so it
+ * is out here rather than inside a `describe` whose `beforeEach` builds a whole backend for
+ * it. That backend is about a second, and this file is already the slowest in the
+ * repository — the suite's total is close enough to vitest's worker-reply deadline that a
+ * file which pays for what it does not use is a flake nobody will be able to reproduce.
+ */
+describe('the Forecast tab’s help tour', () => {
+  it('FR-140: every region the surface offers has a step, and no step invents one', () => {
     expect(uncoveredSubjects('forecast', FORECAST_REGIONS, FORECAST_TOUR_STEPS)).toEqual([]);
     expect(FORECAST_REGIONS.length).toBeGreaterThan(0);
   });

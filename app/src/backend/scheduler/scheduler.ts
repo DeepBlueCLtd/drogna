@@ -260,7 +260,7 @@ export class Scheduler {
       // prompt is a discrete act by a reader and a button that answers nothing the second
       // time it is pressed is a button that looks broken.
       this.promptHeld = true;
-      this.hold('operator', null, shortfall, 'a reader prompted a run', true);
+      this.hold('operator', shortfall, 'a reader prompted a run', true);
       return;
     }
     this.holding = undefined;
@@ -376,7 +376,7 @@ export class Scheduler {
     if (this.simTime.tick < this.maximumInterval()) return; // give the loop its first interval
     const shortfall = this.holdShortfall();
     if (shortfall > 0) {
-      this.hold('scheduled', null, shortfall, 'the cadence floor has come due');
+      this.hold('scheduled', shortfall, 'the cadence floor has come due');
       return;
     }
     this.holding = undefined;
@@ -418,13 +418,7 @@ export class Scheduler {
    * thousand ticks would be indistinguishable from a run nothing asked for, which is
    * precisely the confusion FR-115 forbids.
    */
-  private hold(
-    cause: RunRequest['cause'],
-    divergenceId: string | null,
-    shortfall: number,
-    why: string,
-    always = false,
-  ): void {
+  private hold(cause: RunRequest['cause'], shortfall: number, why: string, always = false): void {
     // The cadence floor is considered on every tick and would republish an unchanged fact
     // for as long as the hold lasted, so it is reported once per episode. A reader's prompt
     // is not on a cadence: it is asked, and it is answered, every time.
@@ -435,7 +429,11 @@ export class Scheduler {
       `held for cost: ${why}, but the standing forecast has ${this.remainingValidityTicks()} tick(s) of validity left ` +
       `against a run costing ${this.runCostTicks ?? 0} plus a ${this.config.release_margin_ticks}-tick margin — ` +
       `${shortfall} tick(s) to go, and it is released as that headroom decays`;
-    this.reportDecision(divergenceId, 'held-for-cost', this.lastDecision, null, shortfall);
+    // No divergence is ever named here, and the parameter that used to carry one is gone:
+    // a divergence is never held (ADR-0043), so every hold this component reports has a
+    // null divergence by construction and a parameter both callers passed null to was
+    // machinery for a flexibility that cannot exist.
+    this.reportDecision(null, 'held-for-cost', this.lastDecision, null, shortfall);
   }
 
   private request(cause: RunRequest['cause'], divergence: Divergence | undefined): string {

@@ -176,9 +176,23 @@ export class ModelRunner {
     return Math.ceil(this.workUnits() / this.config.cost.rate_work_per_tick);
   }
 
+  /**
+   * Integration steps, which is one fewer than output steps.
+   *
+   * Step 0 of a run's output is the state it initialises from — the lead convention the
+   * manifest declares — so a run of four steps integrates three times. The cost arithmetic
+   * kept multiplying by the output count after that convention was corrected, and stated
+   * "4 step(s)" in a `basis` string whose whole purpose is that a reader who disagrees with
+   * the cost can see which assumption to argue with. Self-consistent, since the declared
+   * cost was also the occupied one, and wrong by a third as a statement.
+   */
+  private integrationSteps(): number {
+    return Math.max(0, this.config.steps - 1);
+  }
+
   private workUnits(): number {
     const nominal = this.config.cost.nominal_cell_km;
-    return this.config.steps * this.subStepsAt(nominal, nominal) * this.config.cost.work_per_sub_step;
+    return this.integrationSteps() * this.subStepsAt(nominal, nominal) * this.config.cost.work_per_sub_step;
   }
 
   private stateCost(): void {
@@ -196,7 +210,8 @@ export class ModelRunner {
       basis:
         subSteps === 0
           ? `${this.kernel.name} declares no work, so a run costs nothing and is never held for cost`
-          : `${this.config.steps} step(s) x ${subSteps} sub-step(s) x ${this.config.cost.work_per_sub_step} work unit(s), ` +
+          : `${this.integrationSteps()} integration step(s) — one fewer than the ${this.config.steps} the run outputs, ` +
+            `because step 0 is the state it initialises from — x ${subSteps} sub-step(s) x ${this.config.cost.work_per_sub_step} work unit(s), ` +
             `declared against a nominal cell of ${nominal} km; the rate is a declaration about an afloat appliance nobody here has measured`,
     } satisfies RunCost);
     this.costStatedAtTick = this.simTime.tick;

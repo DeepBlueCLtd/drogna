@@ -944,7 +944,7 @@
         "step": 10,
         "integer": true,
         "figure": "max_interval",
-        "description": "The interval after which a run is warranted on schedule alone, once the current run's validity has lapsed."
+        "description": "The interval after which a run is warranted on schedule alone. Whether it is then requested at once or held is decided against the cost the model runner published, never here."
       },
       {
         "id": "sampling-cadence",

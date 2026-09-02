@@ -55,6 +55,13 @@ async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number):
     expect(validator.validate('run-cost', message.payload).refusals).toEqual([]);
   });
   await driveTicks(runtime.clock, ticks);
+  // **The assertions above are inside subscription handlers, and the broker swallows a
+  // handler fault** — it catches, counts and logs, so `expect` in a subscriber throws into
+  // a `catch` and the test goes green over a message its master refused. Every
+  // conformance check in this file rested on that, including the two feature 123 added,
+  // and the record claimed they held the shape against rot. This is what makes them real:
+  // a swallowed throw is a counted fault, and a counted fault fails the drive.
+  expect(runtime.broker.deliveryFaults, 'a subscriber threw and the broker swallowed it').toBe(0);
   return record;
 }
 
@@ -84,6 +91,7 @@ async function recordUntil(
     record.published.push(message.payload as RunPublished);
   });
   await driveUntil(runtime.clock, () => done(record), limit);
+  expect(runtime.broker.deliveryFaults, 'a subscriber threw and the broker swallowed it').toBe(0);
   return record;
 }
 

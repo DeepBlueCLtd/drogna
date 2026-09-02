@@ -119,10 +119,14 @@ Numbered locally; the mapping onto the SRD's global numbers is in *SRD amendment
 
 ### The four features
 
-- **FR-05** The runner publishes the seeded features **as features** — the eddy's centre,
-  radius and strength; the front's position and orientation; the thermocline's depth and
-  gradient; the drifting feature's track — per forecast step, each with an uncertainty growing
-  with lead.
+- **FR-05** The runner publishes the seeded features **as features** — the eddy's centre and
+  radius; the front's position and orientation; the thermocline's depth; the drifting
+  feature's track — per forecast step, each with an uncertainty growing with lead, and each
+  with its own uncertainty rather than one block computed from the strongest feature.
+  *Amended after measurement:* the **strengths**, the front's **amplitude** and the
+  thermocline's **gradient** are not recoverable at this grid and are reported as not done
+  under FR-07, with what the estimator does measure published under names that do not claim
+  to be them. SRD-v2 FR-113 carries the same amendment.
 - **FR-06** The parameters are estimated from **the analysis the run initialises from**. A run
   never reads the true field: that is feature 116's lesson, recorded in the runner's own head
   comment, and the reason the runner subscribes to the analysis announcement rather than to

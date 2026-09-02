@@ -1226,7 +1226,18 @@ a surface of this size invites one.
   the field: the eddy's centre, radius and strength; the front's position and orientation;
   the thermocline's depth and gradient; the drifting feature's track. Each shall be
   published with a growing uncertainty, so that a forecast makes a falsifiable claim about
-  next week rather than a picture of it. The manifest's ground truth is what scores it, and
+  next week rather than a picture of it.
+
+  *Amended by what feature 123 measured.* Three of those quantities — the eddy's and the
+  drifting feature's **strength**, the front's **amplitude**, and the thermocline's
+  **gradient** — are not recoverable by a horizontal estimator over a grid that resolves two
+  hundred metres of depth, and the first implementation published them under the manifest's
+  own property names at up to sixteen times the uncertainty it declared for them. What the
+  estimator does measure is published under names of its own (`anomaly_peak_c`,
+  `anomaly_step_c`, `layer_drop_c`), which do not invite the comparison, and each authored
+  quantity is named in the message's `not_estimated` list with the reason it was not
+  recovered. That is Constitution IX's answer — reported as not done, never softened by
+  widening a bound — and the requirement is amended here rather than left reading as met. The manifest's ground truth is what scores it, and
   the bound is derived from the authoring jitter on disk rather than typed into the test
   *(FI-08; FR-06, AT-03, Constitution IX)*. The parameters are estimated from **the analysis
   the run initialises from** and from nothing else: a run never reads the true field, which

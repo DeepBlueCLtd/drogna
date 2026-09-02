@@ -38,17 +38,23 @@ lands as the old one lapses.
 
 ## The demo
 
-![The Forecast tab. Left: a vertical gauge headed "Why now", showing a sound-speed residual
-of 0.12 m/s against a threshold of 1.2 m/s marked as a dashed line across the bar, with the
-streak at 0 of 3 beneath it, and under that the sentence "A run costs 12 ticks of simulation
-time — 4 steps x 1 sub-step x 3 work units, declared against a nominal cell of 11 km",
-attributed to the model-runner component. Centre and right: two dashed panels headed "What it
-is made from" and "What next", each stating that it is feature 124 and is not built. Along the
-foot: a panel headed "Runs, in simulation time", listing the forecasts the store holds.
+![The Forecast tab. Left, a panel headed "Why now": a vertical gauge showing a sound-speed
+residual of 0.95 m/s, nearly filling the bar, against a threshold of 1.2 m/s drawn as a dashed
+line across it, with the streak at 0 of 3 and the note that it is showing the sound-speed
+residual against the standing forecast, published by the monitor. Beneath it, in the same
+frame: "A run costs 9 ticks of simulation time — 3 integration step(s) — one fewer than the 4
+the run outputs, because step 0 is the state it initialises from — x 1 sub-step(s) x 3 work
+unit(s), declared against a nominal cell of 5 km; the rate is a declaration about an afloat
+appliance nobody here has measured. Stated by model-runner, which is the component that will
+spend it." Centre and right, two dashed panels headed "What it is made from" and "What next",
+each stating that it is feature 124 and is not built. Along the foot, "Runs, in simulation
+time": two forecasts at ticks 1809 and 4470, marked "before this console opened" and saying
+that what asked for them is not recoverable from a holding, and then at tick 6261 an
+hourglass and "held for cost — 861 tick(s) of validity still to decay".
 ](../assets/123-affordable-when-you-do-not-need-it-yet.png)
 
 Open the Forecast tab. The gauge is the disagreement between what the instruments measure
 and what the forecast said, with the cost of a run under it in the same frame. Along the
-foot, runs in simulation time — and the waits, saying how much life is left.
+foot, runs in simulation time — and a wait, saying how much life the standing one has left.
 
 [Open it at the Forecast tab](../../instances/claude-srd-model-forecast-specs-ws9x3d/#/view/forecast)

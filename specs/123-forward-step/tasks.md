@@ -421,6 +421,75 @@ mislabelled every forecast the harness ever served.
       dead `scheduler` parameter in the test bench was silenced with `void` rather than
       removed; and T024 stood beside T052 and T053 carrying the numbers they replace.
 
+### The third round, and the one finding that indicts the other two
+
+- [x] T065 **Two of the checks feature 123 added could not fail, and the record said they
+      held the shape against rot.** The master-conformance assertions in `loop.test.ts` live
+      inside broker subscription handlers, and the broker *catches* a handler fault: it
+      counts it, logs it, and delivery continues. So a published message its master refused
+      turned a green test greener. This is the repository's second lesson arriving in the
+      work that quotes it — a check never seen to fail is worth nothing — and it is a
+      widening of a hole the file already had rather than a new one. Every drive now asserts
+      the broker's fault count is zero. Watched failing: renaming `anomaly_peak_c` to
+      `peak_c` in the master, which `tsc` cannot see past the runner's casts, now fails with
+      "a subscriber threw and the broker swallowed it" where it used to pass.
+- [x] T066 **Two requirements still said the runner publishes quantities it declines.**
+      T051 renamed the magnitudes and declared the authored ones not recovered — and stopped
+      there, in the tasks file, which is the one place the SRD does not point at. A reader
+      tracing FR-113 to the wire would have found a requirement that reads as met and is
+      not. SRD §5.20 FR-113 and this feature's own FR-05 are amended in place, with what was
+      measured and why, which is the half of lesson 1 that says fix the record.
+- [x] T067 The smaller ones: a held entry's timeline key carried `divergence_id`, which is
+      always null for a hold because a divergence is never held — so two holds at one tick
+      could collide, and the key now carries what the scheduler actually said; `hold()`'s
+      `divergenceId` parameter was passed null by both callers and could never gain a third,
+      so it is gone; `release_margin_ticks` carried an unreachable `default` beside being
+      required; the panel kept one count in a ref and a state; and the Forecast tab's tests
+      were the slowest file in the repository — the pure tour check paid for a whole backend
+      it never touched, and three drives ran a fixed 5,400 ticks where they wanted a
+      condition. That last one is a flake risk this feature enlarged: the suite's total is
+      close enough to vitest's worker-reply deadline that one run of `pnpm check` exited
+      non-zero with every test passing.
+
+### The fourth round, and a claim made in three documents and implemented in none
+
+- [x] T068 **The front was masked against the eddy and not against the drifting feature,
+      while this module, its master and its own function's docstring all said "outside both
+      blobs".** The mask argument is that an unmasked gradient maximum finds whichever
+      anomaly is steeper at this seed and would find the other at the next — and it was
+      applied to one of the two, because the front was estimated before the cold blob
+      existed to mask with. Measured across the shipped seeds, the anchor landed **inside the
+      authored drifting feature at three of five**, and the step taken across "the front" was
+      16% to 35% larger than the quantity its master describes. Neither of the two figures
+      the tests score could see it: the anchor is scored as a perpendicular distance to the
+      authored line and the drifting feature happens to sit near that line, and the step is
+      not scored at all. The order is now eddy, then the cold blob, then the front against
+      both — the ordering was never load-bearing, since the cold search needs only the warm
+      blob.
+- [x] T069 **The declared cost stated four integration steps where the kernel takes three.**
+      T056 made step 0 the state a run initialises from, so a four-step run integrates three
+      times; the cost arithmetic went on multiplying by the output count. Self-consistent —
+      the declared cost was also the occupied one — and wrong by a third as a *statement*, in
+      a `basis` string whose whole purpose is that a reader who disagrees with the cost can
+      see which assumption to argue with. A run now costs 9 ticks and says why.
+- [x] T070 **An abandoned run said "occupying 12 tick(s)" for ever.** T049 gave the runner a
+      way to say it had given a run up and the scheduler a way to hear it; the Forecast tab
+      receives the same message on the same topic and dropped it. So the surface built to
+      make an occupancy visible went on asserting work in progress that the component owing
+      it had already disowned — with the contradicting message delivered to the panel and
+      discarded. It now says the run was never published.
+- [x] T071 **A check in `features.test.ts` could not fail.** "Every kind is either estimated
+      or named with a reason" tested `declined.some(e => e.kind === kind)`, and every kind is
+      pushed to `declined` on both branches — absent with a whole-feature reason, present
+      with a quantity reason — so the set always held all four. It now requires a
+      **whole-feature** decline, and requires that a kind is never both estimated and
+      disowned. In the same file that quotes lesson 2.
+- [x] T072 The rest: the `cadence-floor` tunable in `run.json` still described the rule the
+      scheduler's master had already been rewritten away from; the timeline's held key
+      carried `divergence_id`, which is null for every hold by construction, so two holds at
+      one tick collided (it now carries what the scheduler said); and the blog capture and
+      its alt text stated a nominal cell of 11 km after T063 moved it to 5.
+
 Two of their observations were recorded rather than acted on. The sub-stepping machinery
 never engages at the shipped grid (one sub-step at both the nominal and the real cell size,
 because a 900-second step on 5 km cells is nowhere near the stability limit) — it is

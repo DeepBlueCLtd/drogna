@@ -60,6 +60,15 @@ moment a task is declined, never reconstructed later.
       workstream after the arc lands: the estate serves review instances meanwhile,
       and the V1 site remains the published archive. Blog obligations (PR-04a)
       attach to that workstream.*
-- [ ] T037 AT-04 one-command replay proof — *deferred to 102 with the reason in
-      spec.md: nothing byte-heavy exists to compare until the generator lands. The
-      manifest determinism half is already tested (same seed, same manifest).*
+- [x] T037 AT-04 one-command replay proof — *deferred to 102, then carried to 107 and
+      built at the arc's close-out as `scripts/replay-proof.ts` (`pnpm replay-proof`).
+      Ticked only now, and not when the script first landed: it selected with
+      `vitest run -t replay`, which matched neither the name of the generator's own
+      byte-identity test nor its `describe`, so the one test this line was originally
+      deferred *for* was the one the proof skipped — seven ran, 623 were skipped, and it
+      printed "held". The proof now derives its expected set from `AT-04: byte-identity`
+      markers in the tree and requires every marked test to have run and passed. Watched
+      failing three ways before the fix was trusted: no marker anywhere (the floor a name
+      filter never had — `vitest run -t <unmatched>` skips everything and exits 0), a
+      marker not above an `it(`, and a planted per-run drift in the generator's draw path
+      that took six of the seven down, the generator's named among them.*

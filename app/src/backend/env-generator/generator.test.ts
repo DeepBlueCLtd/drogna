@@ -239,6 +239,7 @@ describe('the synthetic ocean (feature 102)', () => {
     runtime.stop();
   });
 
+  // AT-04: byte-identity
   it('AT-04 seed: two runs from one root seed are byte-identical across every holding and every seam message', () => {
     const config = lockstepConfig();
     const record = (label: string) => {

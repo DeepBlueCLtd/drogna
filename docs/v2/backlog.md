@@ -1,36 +1,38 @@
 # Outstanding work in drogna, in the order it should be done
 
-*Read against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.*
+*Read against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.
+The five P1 lines this document identified are discharged on the branch that carries it;
+the counts below are stated as of that branch.*
 
-Seventy unticked task lines sit across the V2 feature specs. Read against the tree rather
-than the record, most of them are not work: over half belong to a feature that is complete
-on an open pull request, and twenty were declined on purpose and should stay declined.
+Seventy unticked task lines sat across the V2 feature specs when this triage began. Read
+against the tree rather than the record, most were not work: over half belong to a feature
+that is complete on an open pull request, and twenty were declined on purpose and should
+stay declined. Five have since been discharged, leaving **sixty-five**.
 
 **This file is a dated snapshot, and the task lines are the authority.** Where the two
 disagree, the lines win and this file is wrong. It carries no gate — no check in
 `scripts/gates.registry` reads `docs/v2/` — so it will drift, and the counts below are
-already false the moment #107 merges: the 70, the −37, P0 in its entirety, and the note that
+already false the moment #107 merges: the 65, the −37, P0 in its entirety, and the note that
 feature 124's file is not yet on `main` all die with that merge. (Feature 124 stays unstarted
 — the merge ticks none of its 35 lines.) Regenerate the counts with
 `grep -hcE '^- \[ \] ' specs/1*/tasks.md | paste -sd+ | bc` rather than trusting the table —
 `grep -c` over several files reports per file and never prints the total.
 
-## What the seventy lines actually are
+## What the unticked lines actually are
 
 | | |
 |---:|---|
-| **70** | Unticked lines in `specs/1NN-*/tasks.md` on `main` |
+| 70 | Unticked lines in `specs/1NN-*/tasks.md` at `3ad5212`, where this triage began |
+| −5 | **Discharged on this branch** — the whole of P1, below |
+| **65** | Unticked now |
 | −37 | Feature 123, the forward step — complete on PR #107 |
 | −20 | Declined or deliberately not done, each carrying its reason in the line |
-| −2 | Done in the tree, unticked in the record: `110 T010`, `113 T007` |
-| **11** | **Work**, below — of which one is not a developer's to action |
+| **8** | **Work**, below — of which one is not a developer's to action |
 
-The eleven are two lines whose proof has a hole in it (`101 T037`, `107 T607`), one line whose
-record needs correcting and whose promise is one amendment short (`113 T006`), and eight owed
-items. The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
+The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.
 
-Feature 124 is specified on PR #107 and unstarted, at 35 task lines. It is not in the seventy
+Feature 124 is specified on PR #107 and unstarted, at 35 task lines. It is not in the count
 because its file is not on `main` yet.
 
 ---
@@ -46,8 +48,8 @@ ticked on the branch (83 at the current tip; 11 of them are already ticked on `m
 record-reconciliation phase that merged as `cd938b1`).
 
 Only P2 below waits on this merge for its *specification*: within `specs/`, #107 touches
-`123-forward-step` and `124-forecast-illustration` and nothing else, so P1's record work, P3's
-captures, P4's gate and P6 can all proceed in parallel.
+`123-forward-step` and `124-forecast-illustration` and nothing else, so P3's captures, P4's
+gate and P6 can all proceed in parallel. (P1 already did, and is discharged.)
 
 One row below is entangled with #107 in code even though it is not in `specs/`: P5's forecast
 eras is discharged by changing run-identifier derivation in
@@ -68,15 +70,17 @@ lean on the gate during review.
 
 ---
 
-## P1 — The replay proof, and the record
+## P1 — The replay proof, and the record *(done on this branch)*
 
-### 101 T037 and 107 T607 — fix the replay proof before ticking either line
+All five lines are ticked. Kept here because the reasoning is the part that cannot be
+reconstructed from a checkbox, and because one of the five was not the clerical job it looked
+like.
 
-Both records defer the AT-04 one-command proof, and `scripts/replay-proof.ts` exists on `main`
-with `package.json:22` wiring `pnpm replay-proof`. It states the claim's boundary carefully
-and propagates exit status. But its header asserts it "runs every byte-identity test in the
-suite — the generator's, the whole loop's, and the advisories-and-bundles one", and it selects
-them by name:
+### 101 T037 and 107 T607 — the replay proof was fixed before it was ticked
+
+`scripts/replay-proof.ts` has existed since the arc's close-out, with `package.json:22` wiring
+`pnpm replay-proof`. Its header claimed it "runs every byte-identity test in the suite — the
+generator's, the whole loop's, and the advisories-and-bundles one". It selected them by name:
 
 ```ts
 spawnSync('pnpm', ['exec', 'vitest', 'run', '-t', 'replay'], …)
@@ -84,60 +88,52 @@ spawnSync('pnpm', ['exec', 'vitest', 'run', '-t', 'replay'], …)
 
 The generator's byte-identity test is `AT-04 seed: two runs from one root seed are
 byte-identical across every holding and every seam message`, inside `describe('the synthetic
-ocean (feature 102)')` (`app/src/backend/env-generator/generator.test.ts:242`, `:40`). Neither
-string contains "replay". Running that selection gives 7 tests passed and 623 skipped, and the
-generator's is among the skipped. Break the generator's seed derivation and the one-command
-proof prints *replay proof held* and exits 0.
+ocean (feature 102)')`. Neither string contains "replay", so that selection ran 7 tests and
+skipped 623 — the generator's among them. The proof named a test in its header and excluded it
+by its selector, and the excluded one is the test `101 T037` was originally deferred *for*.
+A name filter has no floor either: `vitest run -t <anything unmatched>` skips every test and
+exits 0.
 
-`pnpm check` still catches it, because the test runs under the full suite. What is broken is
-the artefact both task lines are about.
+Selection is now derived from the tree. Each byte-identity test carries an `AT-04:
+byte-identity` marker on the line above it; the script reads the markers off disk, runs the
+files that carry them, and requires every marked test to have run and passed. A rename cannot
+shrink the proof, because the marker travels with the test and the expected name is read from
+the same line that defines it. Seven tests are marked, and the eighth match the old selector
+picked up — `the manifest does not carry the demand…` — was a boundary test rather than a
+byte-identity one, covered incidentally because its `describe` matched.
 
-A name filter is the wrong mechanism here, and a tag would be too: **vitest exits 0 when the
-selector matches nothing.** Checked — `vitest run -t zzz-no-such-test-name` skips all 630
-tests and exits 0 — so a renamed or dropped tag degrades the proof to zero tests and it still
-prints *replay proof held*. The proof needs a floor.
+**Watched failing three ways before the fix was trusted**, then reverted: no marker anywhere
+(the floor — the script refuses rather than proving nothing); a marker not sitting above an
+`it(`, which the script names by file and line rather than guessing; and a planted per-run
+drift in the generator's draw path, which took six of the seven down with the generator's
+named among them. On the clean tree it reports all seven ran and held.
 
-**Done when** the script names the test files explicitly, asserts that the number of tests
-actually run is the number expected, the hole has been watched failing before the fix goes in,
-and only then are both lines ticked. Ticking them as they stand records a guarantee the proof
-does not give.
+### 113 T006 — the section number was wrong, and one amendment was missing
 
-### 113 T006 — correct the section number, and record the one amendment still missing
+The line promised "new §5.11 with FR-52 to FR-60". Those requirements are on `main` at
+`srd.md:583-641` and V2-C21 is at `:173`, but under **§5.12** — §5.11 is feature 112, which
+took that number while 113 was being written. `spec.md:58` already said §5.12; `tasks.md:48`
+and `specs/113-operator-flowchart/plan.md:61` did not, and both now do. `docs/v2/plan.md` also
+mentions §5.11, at line 178, and that mention is *correct* — it was left alone.
 
-The line promises "new §5.11 with FR-52 to FR-60". Those requirements are on `main` at
-`srd.md:583-641`, and V2-C21 Platform is in §4's component table at `:173` — but under
-**§5.12, *The platform, and the operator's flow (feature 113)***. §5.11 is feature 112, the
-shell at a phone's width. `specs/113-operator-flowchart/spec.md:58` already says §5.12, so
-only `specs/113-operator-flowchart/tasks.md:48` and
-`specs/113-operator-flowchart/plan.md:61` carry the stale number. Note the second path:
-`docs/v2/plan.md` also mentions §5.11, at line 178, and that mention is **correct** —
-feature 112 did take §5.11. Do not touch it.
+The line's second half was three-quarters done: FR-22, FR-36 and FR-40 carried their *Amended
+by feature 113* markers and FR-35 did not, though `spec.md:312` maps it. FR-35 now carries the
+same pointer to §5.12 for presentation. Check such markers by reading the requirements rather
+than grepping for "feature 113": FR-36's wraps across `srd.md:417-418`, so a grep finds three
+of the four that are there.
 
-The line's second half — FR-22, FR-35, FR-36 and FR-40 amended in place — is three-quarters
-done. FR-22 (`srd.md:319`), FR-36 (`:417`) and FR-40 (`:476`) each carry an *Amended by
-feature 113* marker; **FR-35 (`srd.md:407`) carries none, and no §5.12 pointer**, though
-`spec.md:312` maps it. The omission is editorial rather than behavioural — FR-36 carries
-the substantive presentation pointer — but it is the residue. Check the markers by reading
-the four requirements, not by grepping for "feature 113": FR-36's marker wraps across
-`srd.md:417-418`, so a grep finds three of the four that are there and invites the
-conclusion that two are missing.
+### 110 T010 and 113 T007 — ticked
 
-**Done when** the two stale §5.11 references read §5.12, FR-35 carries its marker, and the
-line is then ticked.
+`srd.md` §5.13 carries FR-61 at `:653` and FR-62 at `:664`; `docs/v2/plan.md` §5 discusses
+feature 113 from line 188. Both were work already on disk.
 
-### 110 T010 and 113 T007 — two lines to tick
-
-`110 T010` says "tick when that amendment is on `main`": `srd.md` §5.13, *The walkthrough
-(feature 110)*, carries FR-61 at `:653` and FR-62 at `:664`. `113 T007` asks for feature 113 to
-be noted in `docs/v2/plan.md` §5; it is discussed there from line 188, including the renumber
-it settled. Both are simply owed a tick.
-
-### Issue #54 — verify and close, or state the residue
+### Issue #54 — still open, and deliberately
 
 Six issues are open. **#54** (the Background tab) tracks feature 111, whose 41 done lines
 leave three unticked, all declined — including `T070`, which the tree declines with a reason
-deliberately rewritten once the content existed. Verify against the tree and close it, or say
-in the issue what is still owed.
+deliberately rewritten once the content existed. It is not closed here: verifying and closing
+somebody else's issue is a different decision from ticking a task line, and belongs to whoever
+owns the issue. Close it against the tree, or say in it what is still owed.
 
 **#61** is the one to be careful with: its title names three deferrals — per-region statistics,
 **failure kinds**, latency — and `107 T608` discharges two. `run_failed` and
@@ -154,11 +150,13 @@ The largest piece of real work, and the only one with a written specification wa
 35 task lines, and the only row that needs #107 merged first.
 
 SRD-v2 §5.20, *The forward step, its cost, and what made the field* (`srd.md:1158`, spanning
-FR-106 to FR-140, of which roughly FR-120 onward is this feature's half), says plainly which half of itself feature 123 built. Of the two
-halves it names — the forward step, and the surface showing what a cell's value was made from
-— `srd.md:1171-1172` reads: *"The second is the deliverable. The first exists because a
-surface explaining a forecast needs a forecast to explain."* Its tasks run in seven phases — the analyst's substrate, the volume and its grid, the rays, the profile, the right
-region and its ghost, the constraints held rather than asserted, and the record.
+FR-106 to FR-140, of which roughly FR-120 onward is this feature's half) says plainly which
+half of itself feature 123 built. Of the two it names — the forward step, and the surface
+showing what a cell's value was made from — `srd.md:1171-1172` reads: *"The second is the
+deliverable. The first exists because a surface explaining a forecast needs a forecast to
+explain."* Its tasks run in seven phases: the analyst's substrate, the volume and its grid,
+the rays, the profile, the right region and its ghost, the constraints held rather than
+asserted, and the record.
 
 This is time-sensitive in a way the other rows are not. `#/view/forecast` does not exist on
 `main` — it arrives with #107 — and when it does it discloses its own incompleteness to every

@@ -58,7 +58,7 @@ docs/adr/
 ├── 0034-ownship-state-is-measured.md    NEW — the enum amendment and why ADR-0005 stands
 └── 0035-the-operator-tab-is-a-flow-chart.md  NEW — edges from the topology master;
                                          the three kinds of figure; the two suppressions
-srd.md                                   AMENDED — §5.11 (FR-52 to FR-60); FR-22, FR-35,
+srd.md                                   AMENDED — §5.12 (FR-52 to FR-60); FR-22, FR-35,
                                          FR-36 and FR-40 amended in place; §4 gains V2-C21
 docs/v2/plan.md                          AMENDED — §5 notes 112 beside 111's note
 ```

@@ -407,7 +407,10 @@ directed → the machinery is interrogated → advice travels light → it is se
 - **FR-35** Telemetry: running residual statistics; forecast skill always reported
   against a persistence reference, and the display says when the model is not earning
   its compute; throughput as counts per simulation second; keeping-up and end-to-end
-  latency in simulation time *(v1 FR-37, FR-38, FR-68, FR-69)*.
+  latency in simulation time *(v1 FR-37, FR-38, FR-68, FR-69)*. **Amended by feature
+  113:** what telemetry reports is unchanged, and its *presentation* moves to §5.12 —
+  a component's statistics are read from its face in the flow chart, and the table
+  specified here remains one of two equal views of the same figures.
 - **FR-36** The operator surface aggregates what components report about themselves —
   a component never heard from is reported unheard, not absent — and dispatches
   commands: clock rate within bounds, step, and stop/start/restart of in-browser

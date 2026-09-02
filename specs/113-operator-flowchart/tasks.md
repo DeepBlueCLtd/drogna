@@ -45,11 +45,18 @@ composition root (ADR-0030), the operator surface and the map all come from them
       master rather than authored; the two suppressed namespaces and why; the three kinds
       of figure and the rule that a figure may not change kind. The alternatives and the
       rejections are in `plan.md`.
-- [ ] T006 Amend `srd.md`: new §5.11 with FR-52 to FR-60; FR-22, FR-35, FR-36 and FR-40
-      amended in place; §4's component table gains V2-C21 Platform. *(Drafted with this
-      spec — tick when the amendment is on `main`.)*
-- [ ] T007 Note feature 113 in `docs/v2/plan.md` §5, beside the note 111 left, so the
-      numbering is reconciled openly. *(Drafted with this spec.)*
+- [x] T006 Amend `srd.md`: new §5.12 with FR-52 to FR-60; FR-22, FR-35, FR-36 and FR-40
+      amended in place; §4's component table gains V2-C21 Platform. *The section number
+      said §5.11 here from drafting until now, and it was wrong from the moment feature
+      112 took §5.11 on `main`: the platform landed as §5.12 (`srd.md:576`), which
+      `spec.md:58` already said. FR-22, FR-36 and FR-40 carried their markers; FR-35 did
+      not, and its pointer to §5.12 for presentation is added with this tick rather than
+      left as an unrecorded residue. Read the four requirements to check them — FR-36's
+      marker wraps across `srd.md:417-418`, so grepping for "feature 113" finds three of
+      the four that are there.*
+- [x] T007 Note feature 113 in `docs/v2/plan.md` §5, beside the note 111 left, so the
+      numbering is reconciled openly. *On `main`: §5 discusses 113 from line 188,
+      including the renumber it settled and the collision it met.*
 
 ## The platform
 

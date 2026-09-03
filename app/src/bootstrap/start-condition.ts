@@ -113,16 +113,31 @@ export function preRollTicks(condition: ConfigStartConditionsCondition): number 
 
 /**
  * The components a condition's committed artefact stands in for (ADR-0041): the authors
- * of the eras it carries, from the declaration in the snapshot source's configuration.
+ * of the eras it carries, and whoever else must be quiet while those eras are replayed —
+ * both read from the snapshot source's own configuration.
+ *
+ * The authors are the obvious half: a component left running beside its own artefact
+ * republishes what is already there. The second half is not obvious and was found by
+ * measuring. The scheduler authors no era, so nothing held it back; it ran through the
+ * whole pre-roll deciding into a void, requesting a run at each cadence floor that the
+ * held-back analyst was not there to hear. Those requests reached nobody, and the tick of
+ * the last one became the tick the next floor was measured from — so a run that had just
+ * been handed every forecast the artefact carried opened its console and then sat quiet
+ * for most of another interval. Between 611 and 1,790 ticks, across the four shipped
+ * conditions.
+ *
  * Empty where the condition declares no artefact, which is what makes "hold these back"
  * and "there is nothing to hold back" the same line of code at the call site.
  */
-export function authorsCoveredBySnapshot(
+export function heldBackBySnapshot(
   condition: ConfigStartConditionsCondition,
   source: ConfigSnapshotSource,
 ): ReadonlySet<string> {
   const covered = new Set<string>();
-  for (const era of condition.snapshot_eras ?? []) covered.add(source.authors[era]);
+  for (const era of condition.snapshot_eras ?? []) {
+    covered.add(source.authors[era]);
+    for (const id of source.quiesce?.[era] ?? []) covered.add(id);
+  }
   return covered;
 }
 

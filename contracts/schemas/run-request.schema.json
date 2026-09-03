@@ -44,7 +44,7 @@
     "run_sequence": {
       "type": "integer",
       "minimum": 0,
-      "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. Carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse; before it was carried the run manifest recorded a null here for want of anything to record. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward."
+      "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward. It is carried and currently read by nothing. The earlier description justified it by a run manifest recording it as a fact rather than as a parse; no manifest schema has such a field, so that justification is withdrawn rather than repeated. It stays because removing a required property of a published master is a wire change owed its own reason, and because the ordinal is the one thing the identifier no longer says."
     },
     "initialisation_sim_time": {
       "type": "string",

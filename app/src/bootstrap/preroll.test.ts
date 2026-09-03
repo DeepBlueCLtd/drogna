@@ -31,7 +31,7 @@ import type { ConfigRun, ConfigStartConditionsCondition, Observation } from '../
 import { createSeamValidator } from '../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
 import {
-  authorsCoveredBySnapshot,
+  heldBackBySnapshot,
   configForCondition,
   defaultCondition,
   holdingBack,
@@ -416,8 +416,11 @@ describe('the start conditions (feature 120)', () => {
     live.stop();
 
     // The page's path: the artefact replayed, its authors held back.
-    const held = authorsCoveredBySnapshot(condition, effective.snapshot_source);
-    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner']);
+    const held = heldBackBySnapshot(condition, effective.snapshot_source);
+    // The scheduler is in this list and authors nothing: it is quiesced because it decides
+    // when the other two act, and a decider running against a muted pipeline poisons its own
+    // cadence. `config.snapshot-source.schema.json` carries the measurement.
+    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner', 'scheduler']);
     const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
     await drive(page);
 

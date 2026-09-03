@@ -236,11 +236,13 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           <a href={hashForView('operator')}>Operator</a> tab offers, before this console
           opened. Nothing was written into a store to arrange it, and the whole pre-roll is
           in <a href={hashForView('messages')}>Messages</a> where you can read it back. The
-          ocean itself — the archive and the now-cast — was authored <em>ahead of time</em>,
-          by these same components from this same seed, and arrives as a committed artefact
-          the snapshot source republishes through the coverage store&rsquo;s one
-          digest-checked write path: a gate rebuilds it on every change and fails the build
-          if a byte differs from what the generator would author now.
+          ocean and the forecasts it was run under — the archive, the now-cast, the analyses
+          and the forecast instances — were authored <em>ahead of time</em>, by these same
+          components from this same seed, and arrive as a committed artefact the snapshot
+          source republishes through the coverage store&rsquo;s one digest-checked write
+          path: a gate rebuilds it on every change and fails the build if a byte differs
+          from what those components would author now. What you watch happen from here is
+          live; the loop turns again within a few ticks of this console opening.
         </p>
         <p>
           The drawing is a schematic; the system is the rest of the shell. Watch the

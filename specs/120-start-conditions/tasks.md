@@ -211,12 +211,15 @@ but those controls, driven from a script.
 
 ## Deliberately not done
 
-- [ ] **The forecast eras in the artefacts.** The other 10.9 MB and the other 2.1 seconds.
-      Blocked on the scheduler's run identifiers, which reset on restart: holding the loop
-      back for a pre-roll means restarting it, and the first live cycle would republish
-      under the artefact's first cycle's holding ids and silently replace them. A test
-      refuses the declaration with that explanation, so the one-line edit fails loudly
-      rather than producing a run that loses holdings a minute after opening.
+- [x] **The forecast eras in the artefacts.** Done in feature 125, not here. This line
+      recorded the work as blocked on the scheduler's run identifiers resetting on restart —
+      which was the wrong cause: `holdingBack` never stops the scheduler, so that reset never
+      happened, and the test that refused the declaration in those words had never been seen
+      to fail. What was actually there: holding the analyst back meant the scheduler's request
+      reached nobody, its outstanding-run guard latched, and the run opened onto a loop that
+      never turned again. See ADR-0041's amendment. All four conditions now declare
+      `["archive", "nowcast", "analysis", "instance"]`; 27.3 MB committed; `arriving` 4.7 s to
+      2.2 s, click to console, in headless Chromium.
 - [ ] NetCDF export. The input names it; SRD-v2 FR-39 holds offload to announcement-only in
       V2, and this feature makes that path reachable — `returning` arrives with a package
       staged and its measurement geometry beside it — rather than widening FR-39. Reasoned

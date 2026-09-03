@@ -144,10 +144,10 @@ suite can fail rather than a description of a file somebody wrote.
 - **FR-17** The artefact is **refused at construction** when its header does not describe
   this run: another condition, another seed, another run id, another generator
   configuration. Each is named.
-- **FR-18** Which eras are committed is **configuration**. The shipped value is the ocean —
-  archive and now-cast — and the forecast eras are guarded by a test rather than merely
-  unset, because extending to them is unsafe until a restarted scheduler stops reusing run
-  identifiers.
+- **FR-18** Which eras are committed is **configuration**. The shipped value was the ocean —
+  archive and now-cast — with the forecast eras guarded by a test rather than merely unset.
+  Feature 125 declared all four; the guard is retired and the reason it was wrong is in
+  ADR-0041's amendment.
 - **FR-13** The scenario gains a **quay approaches** reference area, so "leaving quay-side"
   and "returning to quay-side" name a place on the map rather than a figure of speech. It is
   reference geometry like the domain and the loiter region, provisioned from configuration
@@ -193,10 +193,11 @@ because it is a fault in the harness rather than in the script. The scheduler ho
 request in flight at a time and clears it only when a run is published, so stopping the
 analyst underneath it strands it: the request is never answered and every later prompt is
 declined by that policy, for the rest of the run. Worse, restarting it resets its run
-sequence, and a run identifier is `<run>-run-<sequence>` — so the second restart's first run
-reuses the first's identifier and silently replaces its holdings in the store. Both are
-reachable today from the Operator tab's own restart control. Neither is fixed here (see
-below); the script simply never stops the scheduler.
+sequence, and a run identifier was `<run>-run-<sequence>` — so the second restart's first run
+reused the first's identifier and silently replaced its holdings in the store. Both were
+reachable from the Operator tab's own restart control, and neither was fixed here; the
+script simply never stops the scheduler. **Both are fixed in feature 125**: a watchdog
+releases a run nobody is working on, and identifiers derive from the request tick.
 
 ## What pre-generation cost and bought
 
@@ -275,22 +276,18 @@ to putting back everything it tuned — planted by deleting that leg, and it rep
   staged and its measurement geometry beside it, which is what the surface needs in order
   to be worth exercising. Writing the bytes as NetCDF is a change to FR-39's scope and
   belongs in its own feature, against the engine decision ADR-0031 defers to V3.
-- **The scheduler's stranded request and its repeating run identifiers are not fixed.**
-  Both are pre-existing and both are reachable from a control the Operator tab already
-  offers. The second one is now load-bearing: it is what stands between the shipped cut
-  point and the remaining 2.1 seconds. Holding the loop back for a pre-roll means
-  restarting the scheduler after one, its run sequence resets to zero, and run identifiers
-  are the holding ids the analyst and the model runner publish under — so the first live
-  cycle would republish under the artefact's first cycle's ids and the store would replace
-  them, silently, since each holding is internally consistent. `snapshot_eras` is guarded
-  by a test that refuses the forecast eras with that explanation rather than letting the
-  one-line edit produce a run that quietly loses holdings a minute after opening. Fixing
-  the derivation is a change to the loop's identity scheme and belongs to its own feature.
-- **The forecast eras are not committed.** They are the other 10.9 MB and the other 2.1
-  seconds. Beyond the scheduler fault above, four conditions' worth would be about 44 MB
-  of binary in the repository, regenerated and re-committed whenever the analytic form,
-  the kernel or a leg changes. The cut point is one line of configuration and the numbers
-  to move it with are in the table above.
+- **The scheduler's stranded request and its repeating run identifiers were not fixed here.**
+  Both were pre-existing and both reachable from a control the Operator tab already offers,
+  and the second was load-bearing: it was what stood between the shipped cut point and the
+  remaining seconds. **Feature 125 fixed both** — a watchdog releases a run outstanding longer
+  than its declared cost plus the release margin, and identifiers derive from the request
+  tick. The blocker as stated here named the wrong mechanism; ADR-0041's amendment records
+  what was actually there.
+- **The forecast eras were not committed here.** They are the other seconds. **Feature 125
+  committed them**: 27.3 MB across the four, against the 44 MB this section estimated — the
+  estimate predated features 121–124 and the run's own cycle count moved. The second-order
+  cost this section named is real and unchanged: the artefacts are regenerated and
+  re-committed whenever the analytic form, a kernel, a seed or a leg changes.
 - **No start condition simulates the passage between the quay and the work area whole.**
   It is 240 km, which is nineteen hours at the platform's maximum speed and something like
   three minutes of pre-roll. The conditions place the platform where it is at the moment

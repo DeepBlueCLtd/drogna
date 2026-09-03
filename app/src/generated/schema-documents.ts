@@ -4055,6 +4055,37 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           }
         }
       },
+      "quiesce": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Components that must be held back alongside an era's author while that era is replayed, though they author nothing themselves. The loop's eras need this and the ocean's do not: the scheduler decides when the analyst and the model runner act, so replaying their output while it runs leaves it deciding into a void. It requests a run at the cadence floor, nothing answers, and the tick of that unanswered request becomes the one the next floor is measured from — so the console opened onto a loop that stayed quiet for most of another interval, having already been handed the forecasts it was about to compute. Measured at 611 to 1,790 ticks across the four shipped conditions before this was declared. Held back it has no such state to poison, and turns the loop on the first sample after the console opens.",
+        "properties": {
+          "archive": {
+            "type": "array",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          },
+          "nowcast": {
+            "type": "array",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          },
+          "analysis": {
+            "type": "array",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          },
+          "instance": {
+            "type": "array",
+            "items": {
+              "$ref": "config.common.schema.json#/$defs/component_id"
+            }
+          }
+        }
+      },
       "authors": {
         "type": "object",
         "required": [
@@ -9744,7 +9775,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "run_sequence": {
         "type": "integer",
         "minimum": 0,
-        "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. Carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse; before it was carried the run manifest recorded a null here for want of anything to record. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward."
+        "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward. It is carried and currently read by nothing. The earlier description justified it by a run manifest recording it as a fact rather than as a parse; no manifest schema has such a field, so that justification is withdrawn rather than repeated. It stays because removing a required property of a published master is a wire change owed its own reason, and because the ordinal is the one thing the identifier no longer says."
       },
       "initialisation_sim_time": {
         "type": "string",
@@ -10693,9 +10724,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "accepted",
               "minimum-interval",
               "duplicate-outstanding",
-              "held-for-cost"
+              "held-for-cost",
+              "abandoned"
             ],
-            "description": "accepted means a run was requested. The other three name the rule that held or declined it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held — the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing."
+            "description": "accepted means a run was requested. The others name the rule that held, declined or ended it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held — the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing. abandoned is not a decision about a new run but the end of an old one: the scheduler waited longer than the run's declared cost plus the release margin and released it, because nothing was ever going to publish it. It is published rather than merely counted because a run that vanished for want of a listener is otherwise indistinguishable from a quiet loop, which is the confusion FR-32 exists to prevent."
           },
           "detail": {
             "type": "string",

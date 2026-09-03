@@ -2376,6 +2376,10 @@
       "path_prefix": "./snapshots/",
       "path_suffix": ".snapshot"
     },
+    "quiesce": {
+      "analysis": ["scheduler"],
+      "instance": ["scheduler"]
+    },
     "authors": {
       "archive": "env-generator",
       "nowcast": "env-generator",

@@ -1,6 +1,6 @@
 # ADR-0041: seed data may be built ahead of time, under a gate
 
-**Status:** Accepted
+**Status:** Accepted, amended 3 September 2026 (feature 125: the forecast eras declared)
 **Date:** 30 August 2026
 **Feature:** 120 (start conditions, chosen on a welcome page)
 **Requirements:** SRD-v2 FR-105 (FR-92 when this was written; see §5.18); amends FR-11's application; Constitution 2.1.0 (Data)

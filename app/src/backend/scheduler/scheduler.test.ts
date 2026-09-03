@@ -592,4 +592,60 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     ).toBeGreaterThan(whileWarm);
     runtime.stop();
   });
+
+  /**
+   * The identifier rule, held to the thing it exists to prevent.
+   *
+   * Run identifiers were `<run>-run-<sequence>`, counted in this component's memory, and this
+   * component is restartable from the Operator tab. A fresh instance counted from zero and
+   * asked for identifiers a previous one had already spent — so the analyst and the model
+   * runner published `analysis.<run>-run-0` and its forecast a second time, over holdings
+   * already in the store. `CoverageStore.publish` sets by id, so the first pair was replaced
+   * in place. Silently: each holding is internally consistent, both digests check out, and
+   * the reader simply finds one fewer forecast than the timeline showed a moment earlier.
+   *
+   * **This test exists because the fix shipped without one.** An adversarial pass reverted
+   * `identifierForThisTick` to the counter and every one of the 686 app tests stayed green —
+   * the change was in exactly the condition `CLAUDE.md`'s second lesson forbids, and one
+   * commit earlier this branch had retired a *different* untested guard for being worthless.
+   * The assertion is over the store's own bytes rather than over the shape of an identifier,
+   * because the identifier is the mechanism and the replaced holding is the harm.
+   */
+  it('a restarted scheduler does not republish over holdings a previous instance named', async () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+
+    // Two runs in, so a restarted instance counting from zero lands on ids already spent.
+    await driveUntil(runtime.clock, () => seen.started.length >= 2, config.scheduler.max_interval_ticks * 6);
+    expect(seen.started.length, 'the loop never reached a second run').toBeGreaterThanOrEqual(2);
+
+    /** Every holding as id -> field digest, so a replacement in place is visible. */
+    const inventory = () =>
+      new Map(runtime.store.holdings().map((holding) => [holding.holding_id, holding.field.sha256]));
+    const before = inventory();
+    expect(before.size, 'nothing was in the store to be overwritten').toBeGreaterThan(0);
+
+    // The Operator tab's own verbs.
+    runtime.control.stop(config.scheduler.id);
+    runtime.control.start(config.scheduler.id);
+
+    // Far enough for the restarted instance's first floor to fire and be answered in full.
+    await driveUntil(
+      runtime.clock,
+      () => seen.published.length > seen.started.length - 1 && runtime.store.holdings().length > before.size,
+      config.scheduler.max_interval_ticks * 6,
+    );
+
+    const after = inventory();
+    const replaced = [...before]
+      .filter(([id, digest]) => after.has(id) && after.get(id) !== digest)
+      .map(([id]) => id);
+    const lost = [...before.keys()].filter((id) => !after.has(id));
+    expect(
+      { replaced, lost },
+      'a restarted scheduler reissued an identifier a previous instance had spent, and the store replaced the holding',
+    ).toEqual({ replaced: [], lost: [] });
+    runtime.stop();
+  }, 180_000);
 });

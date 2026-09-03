@@ -248,8 +248,8 @@
         "divergence_id": { "type": ["string", "null"], "description": "The divergence this decision was about, or null where the scheduler was deciding on an operator prompt rather than on a divergence." },
         "decision": {
           "type": "string",
-          "enum": ["accepted", "minimum-interval", "duplicate-outstanding", "held-for-cost"],
-          "description": "accepted means a run was requested. The other three name the rule that held or declined it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held \u2014 the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing."
+          "enum": ["accepted", "minimum-interval", "duplicate-outstanding", "held-for-cost", "abandoned"],
+          "description": "accepted means a run was requested. The others name the rule that held, declined or ended it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held \u2014 the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing. abandoned is not a decision about a new run but the end of an old one: the scheduler waited longer than the run's declared cost plus the release margin and released it, because nothing was ever going to publish it. It is published rather than merely counted because a run that vanished for want of a listener is otherwise indistinguishable from a quiet loop, which is the confusion FR-32 exists to prevent."
         },
         "detail": { "type": "string", "description": "Enough of why for the record to stand alone." },
         "run_id": {

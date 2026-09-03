@@ -854,6 +854,12 @@ export type ConfigSnapshotSource = {
     "path_prefix": string;
     "path_suffix": string;
   };
+  "quiesce"?: {
+    "archive"?: ConfigCommonComponentId[];
+    "nowcast"?: ConfigCommonComponentId[];
+    "analysis"?: ConfigCommonComponentId[];
+    "instance"?: ConfigCommonComponentId[];
+  };
   "authors": {
     "archive": ConfigCommonComponentId;
     "nowcast": ConfigCommonComponentId;
@@ -2272,7 +2278,7 @@ export type TelemetrySchedulerDecision = {
   "tick": TelemetryTickIndex;
   "kind": "scheduler-decision";
   "divergence_id": string | null;
-  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding" | "held-for-cost";
+  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding" | "held-for-cost" | "abandoned";
   "detail": string;
   "run_id": string | null;
   "shortfall_ticks": number | null;

@@ -19,6 +19,14 @@ describe('which share a served parameter is', () => {
    * from the configured labels on disk — rather than typed out. A label edited in
    * `config.analyst.shares` moves this test with it, which is the point: the fault this guards
    * was a label ("departure forecast") that the shell's match did not survive.
+   *
+   * **It is a second copy of the analyst's munging, and it cannot be anything else here.** The
+   * analyst is across the seam, so this file may not import it; what this can hold is the
+   * *shape* of a served name, and a change to how the analyst builds one would move this test
+   * along with the shell rather than failing. The end-to-end binding is in `forecast.test.tsx`,
+   * where the names are read off an EDR area response and every one of them is required to
+   * resolve — that is the assertion that would catch the munging changing, and it lives with the
+   * running loop because that is the only place the two vocabularies actually meet.
    */
   const served = (label: string) => `temperature_share_${label.replace(/[^a-z]+/gi, '_').toLowerCase()}`;
 

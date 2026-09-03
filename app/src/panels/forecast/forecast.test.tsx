@@ -28,6 +28,7 @@ import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { ForecastPanel, FORECAST_REGIONS } from './ForecastPanel.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, contributionResidual, raysFor } from './rays.js';
+import { sourceOf } from './shares.js';
 import { FORECAST_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -254,7 +255,20 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(opacities.size, 'every cell in the field was drawn at one value').toBeGreaterThan(1);
 
     // It was read through the query layer, by the query the standard has for a field.
-    expect(fetched.some((url) => url.includes('/area?') && url.includes('-provenance'))).toBe(true);
+    const area = fetched.find((url) => url.includes('/area?') && url.includes('-provenance'));
+    expect(area).toBeTruthy();
+
+    // **Every share the query layer serves resolves, and all four are there.** `shares.test.ts`
+    // asks this of names it builds by re-implementing the analyst's own munging of a configured
+    // label — so a change to that munging moves the test with the shell and leaves the real path
+    // broken, which is how the departure share went unread from feature 116. These names come
+    // off the wire.
+    const body = (await (await fetch(area as string)).json()) as { ranges?: Record<string, unknown> };
+    const names = Object.keys(body.ranges ?? {});
+    expect(names.length, 'the area query served no ranges to name').toBeGreaterThan(0);
+    const resolved = new Set(names.map((name) => sourceOf(name)));
+    expect(resolved.has(undefined), `a served share resolves to nothing: ${names.join(', ')}`).toBe(false);
+    expect([...resolved].sort()).toEqual(['archive', 'departure', 'measurement', 'model']);
 
     // The legend is always present, because identity is never colour alone.
     const legend = document.querySelectorAll('.forecast-share-legend li');
@@ -746,9 +760,12 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       const tolerance = runtime.store.holding(holding.holding_id)?.descriptor.manifest.variables[0].tolerance_absolute;
       expect(tolerance, 'the holding declares no tolerance to check against').toBeGreaterThan(0);
 
-      // Checked through `contributionResidual` — the function the surface's own ray set is
-      // built by — rather than re-summed here, so what is held is the drawn arithmetic and not
-      // a second implementation of it that could agree while the surface disagreed.
+      // Checked through `contributionResidual`, which is the function the region's own caption
+      // sums with, rather than re-summed here: what is held is the arithmetic the surface
+      // prints and not a second implementation of it that could agree while the surface
+      // disagreed. It had no production caller at all until the caption stopped printing
+      // `ω − remainder` — a rearrangement of the published weight that agreed with the drawn
+      // rays by construction.
       let checked = 0;
       for (const level of served.levels) {
         // By depth, as the surface selects: passing `depth_index` here selected the level

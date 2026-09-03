@@ -1337,6 +1337,16 @@ says so where they will be rather than drawing an empty canvas.
   surface plane**, labelled, in stable positions across selections, so a reader learns where
   to look. The margin position is an admission that those sources have no geometry, not a
   substitute for one *(FI-18)*.
+
+  *Amended at delivery (feature 124).* The docking is **conditional on such a source existing**,
+  and none does. Every entry in the analyst's source table is an instrument of the vessel's own:
+  the shore broadcast and the archive eras enter the analysis as *background*, which FR-125
+  rules out of the ray set entirely, so a non-spatial source would have to be admitted by a
+  future analyst before there were anything to dock. The requirement stands for that day and is
+  not built now, because a margin of empty labelled boxes is a claim about sources the run does
+  not have. What guards the transition is `backgroundRaysIn`, which asks the master's own `kind`
+  field and reports any such origin where a reader sees it, rather than the shell drawing it
+  quietly as an ordinary ray.
 - **FR-124** Sources shall be grouped and marked as **measured** (the vessel's own sensing)
   or **modelled** (climatology, the archive eras, the shore broadcast). The shore broadcast is
   modelled: it is another party's forecast and is drawn as such *(FI-19)*.

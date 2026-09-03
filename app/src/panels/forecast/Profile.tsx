@@ -42,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { backgroundRaysIn, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { backgroundRaysIn, contributionResidual, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -398,7 +398,12 @@ export function Profile({
         <p className="forecast-column-caption">
           {rays.reachedCount} of this column’s {rays.rays.length} source
           {rays.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}
-          {(rays.observationWeight - rays.remainder).toFixed(4)} between them, with{' '}
+          {/* Summed over the rays that are drawn, through the same function SC-001 is asserted
+              with. This printed `ω − remainder`, which is the published weight rearranged: it
+              agrees with the drawn rays exactly when the identity holds, so a drawing that had
+              lost one would have gone on printing a total that included it. The number now says
+              what is on the screen. */}
+          {(contributionResidual(rays).drawn - rays.remainder).toFixed(4)} between them, with{' '}
           {rays.remainder.toFixed(4)} more from observations beyond its reach — coupling the gain
           carries through the inverse, which has no position and so is a band here and never a
           ray. Together they are ω = {rays.observationWeight.toFixed(4)}, the weight this cycle’s

@@ -257,7 +257,9 @@ drawing in it.
       separation the taper was evaluated on, the instrument's declared error and the
       background's. Under the profile rather than in a tooltip, for the reason the map's readout
       is: it cannot be clipped at a phone's width and a screen reader meets it in document order.
-- [x] T022 `contributions.test.ts`: the drawn contributions sum to the published value of the
+- [x] T022 `contributions.test.ts` (**landed as `rays.test.ts` and `forecast.test.tsx`**; no file of
+      that name exists — the unit arithmetic wanted one file and the end-to-end sum wanted the
+      running loop, and neither was worth a third): the drawn contributions sum to the published value of the
       column, cell by cell, within the holding's own declared tolerance (SC-001, AT-07).
 
       *Built* (SC-001, AT-07), against the running loop rather than a constructed document:
@@ -346,13 +348,17 @@ the part worth recording, because each was a sentence asserting a property the c
       and **read by nothing** — `.is-source` had no rule at all. Both are Q-01's own subject, and
       the docstring was answering the question the capture is supposed to answer.
 
-      The six are now an ordered luminance ramp (0.094 to 0.635, extremes at contrast 4.76, no
-      pair below 1.32), the hatch is drawn, and `greyscale.test.ts` holds it — modelled on
+      The six are now an ordered luminance ramp, the hatch is drawn, and `greyscale.test.ts` holds it — modelled on
       `panels/consumers/greyscale.test.ts`, values read out of the palette rather than typed.
       Six ordered steps cannot each clear a contrast of 3 against a neighbour, so the ramp
       carries order and the hatch and dash carry identity; that disjunction is the honest claim
       and is what the test asserts. **Q-01 is still open**: whether it survives a real capture is
       T030's, and the palette comment no longer pretends otherwise.
+
+      *The figures this task first recorded — "0.094 to 0.635, extremes at contrast 4.76, no pair
+      below 1.32" — were the first ramp's and were left standing in the present tense after T022i
+      replaced it. The shipped palette measures 0.147 to 0.751, extremes 4.07, worst pair 1.236,
+      nothing below 3.44 against `--shell-bg`; T022i carries them and `shares.ts` states them.*
 - [x] T022f **Three checks that could not fail, and three faults with no check at all.**
       - The FR-122 "never descends into the volume" test walked each ray for a `z` attribute an
         SVG line cannot carry; it passed on any code that drew lines, including code drawing
@@ -474,6 +480,66 @@ the part worth recording, because each was a sentence asserting a property the c
 
 ## The right region, and the ghost
 
+- [x] T022n **A fourth review round, and it found that the picture did not draw.** Two adversarial
+      passes over the whole change, both measuring against a running loop rather than reading the
+      diff. Between them they found ten things; four of them meant the delivered surface was not
+      showing what every comment in it said it showed.
+
+      **Four of six rays were points.** `placeOn` snapped a position to the nearest served axis
+      entry and then to the nearest *drawn* column. Thinned by two, over a platform that loiters
+      within a cell or two of the column it reaches, that put both endpoints of four rays on the
+      same cell centre — including the one carrying the whole width encoding. Nothing saw it: the
+      SC-003 check compared each ray's endpoint with itself between levels, and the viewBox
+      containment loop could not fail while the placement returned cell centres by construction.
+      The position is interpolated now.
+
+      **Five of the remaining widths were below a device pixel.** 8, 0.47, 0.073, 0.0082, 0.0033,
+      0.0012 px — a 6667:1 spread, drawn as one ray, under a sentence promising the same sources
+      at that level's widths. Proportional and invisible is not more honest than proportional and
+      marked: a reached ray under the floor is drawn at the floor, marked, and counted in a line
+      beneath the map. The floor is for *reached* rays only, so it does not reintroduce the
+      inversion T022k removed.
+
+      **The mark that keeps an absent source's place was painted in the background colour.** The
+      hue went on as an SVG presentation attribute, which sits at specificity 0, under
+      `.forecast-ray-origin { stroke: var(--shell-bg) }`. A reached marker was saved by its fill;
+      an absent one is `fill: none`, so it drew nothing at all — and at the three deepest levels
+      of this column every source is absent, so the ray layer went blank while the caption said
+      it had been re-weighted. This is T022c's fault back by another door, and the door was the
+      cascade. Inline style now, which is also what makes it assertable in jsdom.
+
+      **The blog capture was 41% flat background, and its warming loop had been refused.** The
+      element is 1592 px tall and the viewport was 1000: the numbers table the entry's
+      requirement paragraph promises was below the fold. The loop asked for 120 ticks a burst
+      against a declared bound of 60 and read no response, so the simulation advanced by nothing
+      — what made a picture at all was the pre-roll running on at the configured rate while
+      Playwright worked, which the sidecar recorded as `rate 1` in a field nobody read. The
+      second navigation dropped the query string, so `DROGNA_FORECAST_START` had no effect and
+      the shell was answering 503 when the evaluate fired. And `image_size` came off the
+      element's box rather than the file, which is why the two disagreed by two pixels. All
+      fixed, the shot re-taken and reproducible byte-for-byte, and **added to CI** — it ran
+      nowhere, which is why four faults survived in it.
+
+      Two more checks that could not fail: the SC-005 loop tested a source id against the
+      *share* vocabulary when a source id is `<datastream>.cell-<n>`, and the proportionality
+      bound was `1e-4 / the narrowest weight`, vacuous at one end and a division by zero at the
+      other. And one that was vacuous by circumstance — the marker assertion was written into a
+      test where no source is absent, passed with the fault planted, and had to be moved to the
+      level where the fault actually lives. That one is worth naming on its own: a plant is the
+      only thing that tells an empty loop from a passing one.
+
+      The simplicity findings are in the same commit series: three paths and two refs answering
+      "what is the depth axis" collapsed to one (watched failing in both mount orders), a prop
+      passed beside the value it is derived from, a `depthIndex` prop typed as an index and
+      carrying metres, a `BACKGROUND_KEYS` list kept in step with `SOURCES` by hand, an
+      unreachable hue literal, and `contributionResidual` — exported from a production module
+      with no production caller while the region's own caption printed `ω − remainder`, a
+      rearrangement of the published weight that agreed with the drawn rays by construction. The
+      caption sums the rays now. `shares.test.ts` re-implements the analyst's munging and cannot
+      do otherwise across the seam, so the end-to-end binding went into `forecast.test.tsx`,
+      where the parameter names are read off an EDR area response; watched failing against the
+      original `endsWith('_departure')`.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath
@@ -500,10 +566,24 @@ the part worth recording, because each was a sentence asserting a property the c
       Not separable: group sources — measured by platform, modelled by origin — and record the
       grouping here as the answer, with the capture that forced it. Then strike Q-01 from
       `srd.md` §10 with the answer in the requirement it lands in.
-- [ ] T031 The help tour's steps for the two regions this feature fills are **rewritten**,
+- [x] T031 The help tour's steps for the two regions this feature fills are **rewritten**,
       not gained: feature 123 wrote a step for each saying the region is not built and naming
       this feature, and `forecast.test.tsx` already holds every region to having one. What
       changes is what they say.
+
+      *Done, and it was overdue by the whole of this feature.* Until this task the `volume` step
+      read "This region is feature 124 and is not built" to a reader standing in front of the
+      share map, the rays, the profile and the numbers table; the `ahead` step said the same over
+      the feature tracks. Both are rewritten to what the regions draw and what each is still
+      missing — the volume in the first case, the ensemble spread along a route in the second.
+
+      **Nothing could have caught it**, which is the part worth recording: `uncoveredSubjects`
+      asks whether every region has *a* step and never what the step says, and the panel's own
+      prose — careful to name the *part* that is missing rather than the region — was rewritten
+      without the tour beside it. `forecast.test.tsx` now binds the two: a step may call a region
+      unbuilt only where the rendered region has nothing in it to read, and what counts as
+      something to read is taken from the DOM rather than from a list in the test. Watched
+      failing by restoring the old sentence.
 
 ## The record
 

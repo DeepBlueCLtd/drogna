@@ -174,7 +174,10 @@ Numbered locally; the mapping onto the SRD's global numbers is in *Traceability*
   the column. Rays are drawn on the surface plane only and never descend into the volume.
 - **FR-09** Spatial sources are drawn where they physically are. Non-spatial sources are
   docked as fixed, labelled nodes at the margin of the surface plane, in positions stable
-  across selections.
+  across selections — **where one exists, and on this configuration none does**. The analyst's
+  source table is the vessel's own instruments; the shore broadcast and the archive eras enter
+  as background, which FR-10 keeps out of the ray set. The docking is therefore specified and
+  not built (T014), and `backgroundRaysIn` is what will say so if an analyst ever admits one.
 - **FR-10** Sources are grouped and marked measured or modelled, and the standing forecast is
   **not** among them: it is the background, drawn as the baseline of the depth profile's
   stack and never as a ray.

@@ -131,7 +131,6 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const [slab, setSlab] = useState<Slab | undefined>();
   const [column, setColumn] = useState<Column | undefined>();
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
-  /** The served per-source column, and the depth its rays are weighted to (never an index). */
   /**
    * The served column, or which of the two ways it is not here. FR-129 names three facts and a
    * refusal is the third: collapsing it into `undefined` made the profile say the document had
@@ -159,6 +158,21 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    */
   const wantedSlab = useRef(0);
   const wantedColumn = useRef(0);
+
+  /**
+   * The chosen depth, and it is `undefined` where the chooser's position no longer names a level
+   * on the grid in hand.
+   *
+   * `depthIndex` is a position in `grid.depthsM`, and nothing reset it when the grid changed: an
+   * analysis with fewer levels than the last left the index past the end, `depthM` undefined,
+   * the slab effect returning early, and the previous era's field still drawn under a depth row
+   * where no chip reads as chosen. The reset below is what closes that. It is unreachable on the
+   * shipped configuration, where every analysis shares one axis — which is exactly the
+   * assumption `gridForAnalysis` exists because it could not rely on.
+   */
+  useEffect(() => {
+    setDepthIndex((at) => (grid && at < grid.depthsM.length ? at : 0));
+  }, [grid]);
 
   const depthM = grid?.depthsM[depthIndex];
 

@@ -370,6 +370,7 @@ export class Analyst {
         depthM: observation.location.depth_m,
         value: observation.result,
         errorStd,
+        sourceKey: observation.datastream_id,
       });
     }
     return out;

@@ -63,7 +63,7 @@ prose below is where that is said.</p>
 <tr>
 <td><code>analyst</code></td>
 <td><code>app/src/backend/analyst</code></td>
-<td><code>ctl/analysis/published</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/analysis/published</code>, <code>ctl/analysis/standing</code>, <code>ctl/heartbeat</code></td>
 <td><code>obs/#</code>, <code>ctl/run/request</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
@@ -111,13 +111,13 @@ prose below is where that is said.</p>
 <tr>
 <td><code>model-runner</code></td>
 <td><code>app/src/backend/model-runner</code></td>
-<td><code>ctl/run/started</code>, <code>ctl/run/published</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/run/started</code>, <code>ctl/run/published</code>, <code>ctl/run/cost</code>, <code>ctl/forecast/features</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
 <td><code>ctl/analysis/published</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>monitor</code></td>
 <td><code>app/src/backend/monitor</code></td>
-<td><code>ctl/divergence</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
+<td><code>ctl/divergence</code>, <code>ctl/telemetry</code>, <code>ctl/forecast/indicator</code>, <code>ctl/heartbeat</code></td>
 <td><code>ctl/operator/command</code>, <code>obs/#</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
@@ -160,7 +160,7 @@ prose below is where that is said.</p>
 <td><code>scheduler</code></td>
 <td><code>app/src/backend/scheduler</code></td>
 <td><code>ctl/run/request</code>, <code>ctl/telemetry</code>, <code>ctl/heartbeat</code></td>
-<td><code>ctl/operator/command</code>, <code>ctl/divergence</code>, <code>ctl/run/published</code>, <code>ctl/clock</code></td>
+<td><code>ctl/operator/command</code>, <code>ctl/divergence</code>, <code>ctl/run/published</code>, <code>ctl/run/cost</code>, <code>ctl/telemetry</code>, <code>ctl/clock</code></td>
 </tr>
 <tr>
 <td><code>sensors</code></td>
@@ -254,9 +254,15 @@ would fail the drift gate before it reached this page.</p>
 </tr>
 <tr>
 <td><code>ctl/analysis/published</code></td>
-<td>—</td>
+<td><code>analysis-published.schema.json</code></td>
 <td><code>analyst</code></td>
 <td><code>model-runner</code>, <code>planner</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/analysis/standing</code></td>
+<td><code>analysis-published.schema.json</code></td>
+<td><code>analyst</code></td>
+<td><code>shell</code></td>
 </tr>
 <tr>
 <td><code>ctl/boundary/denial</code></td>
@@ -275,6 +281,18 @@ would fail the drift gate before it reached this page.</p>
 <td><code>divergence.schema.json</code></td>
 <td><code>monitor</code></td>
 <td><code>scheduler</code>, <code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/forecast/features</code></td>
+<td><code>forecast-features.schema.json</code></td>
+<td><code>model-runner</code></td>
+<td><code>shell</code></td>
+</tr>
+<tr>
+<td><code>ctl/forecast/indicator</code></td>
+<td><code>forecast-indicator.schema.json</code></td>
+<td><code>monitor</code></td>
+<td><code>shell</code></td>
 </tr>
 <tr>
 <td><code>ctl/heartbeat</code></td>
@@ -313,6 +331,12 @@ would fail the drift gate before it reached this page.</p>
 <td><code>shell</code></td>
 </tr>
 <tr>
+<td><code>ctl/run/cost</code></td>
+<td><code>run-cost.schema.json</code></td>
+<td><code>model-runner</code></td>
+<td><code>scheduler</code>, <code>shell</code></td>
+</tr>
+<tr>
 <td><code>ctl/run/published</code></td>
 <td><code>run-published.schema.json</code></td>
 <td><code>model-runner</code></td>
@@ -333,8 +357,8 @@ would fail the drift gate before it reached this page.</p>
 <tr>
 <td><code>ctl/telemetry</code></td>
 <td><code>telemetry.schema.json</code></td>
-<td><code>monitor</code>, <code>scheduler</code>, <code>telemetry</code></td>
-<td><code>shell</code>, <code>telemetry</code></td>
+<td><code>model-runner</code>, <code>monitor</code>, <code>scheduler</code>, <code>telemetry</code></td>
+<td><code>scheduler</code>, <code>shell</code>, <code>telemetry</code></td>
 </tr>
 <tr>
 <td><code>obs/#</code></td>

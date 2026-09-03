@@ -406,5 +406,15 @@ describe('what each cell was made from, source by source (feature 124)', () => {
     expect((outside.body as { refused: string }).refused).toContain('outside');
     const bare = await get(runtime, `${prefix}/${analysis.collections.contributions}/column`);
     expect(bare.status).toBe(400);
+    // The prefix itself, with the trailing slash the boundary's allow list requires —
+    // the shell endpoint is the bare prefix and always appends a segment, as EDR's does.
+    const root = await get(runtime, `${prefix}/`);
+    expect(root.status).toBe(404);
+    expect((root.body as { refused: string }).refused).toContain(analysis.collections.contributions);
+    // And the served document names the model run the announcement names, not the
+    // scenario the descriptor names.
+    const document = (await get(runtime, `${prefix}/${analysis.collections.contributions}/column?coords=POINT(-11 46)`)).body as AnalysisContributions;
+    expect(document.run_id).toBe(analysis.run_id);
+    expect(document.run_id).not.toBe(analysis.scenario_run_id);
   });
 });

@@ -46,8 +46,9 @@ published today.
       datastream makes inside one cell shares that cell's covariance row exactly — the same
       separation to every other cell, the same declared error — and the sum of their K_aj is
       the source's contribution by linearity, with nothing approximated. What forced it is
-      size: measured on the shipped configuration, a cycle assimilates 1,080–1,572
-      observations (the kernel's own comment said ~180) and each reaches ~1,200 cells at a
+      size: measured on the shipped configuration (root seed 4242, the loitering condition,
+      lockstep — the analyst test's own drive), the first three cycles assimilate 1,080, 1,572
+      and 1,596 observations (the kernel's own comment said ~180) and each reaches ~1,200 cells at a
       60 km support over a 5 km grid, so per-observation retention is ~800,000 entries and
       ~9 MB a cycle, kept for the life of the run, against a store holding ~9 MB in total.
       Per source it is tens of sources a cycle, and a column has tens of rays rather than
@@ -71,15 +72,17 @@ published today.
       observation weight — and a **remainder**, ω less the in-support sources' sum, which is
       the coupling from beyond the cell's reach. The identity the tests hold is Σ sources +
       remainder = ω, exactly; a dense out-of-support column set is what is not stored.
-      *Built.* A note for the profile and the rays (T018, T021): the manifest's declared
-      tolerance on the second cycle's holding is 1.5e-5, which is float32's width at a
-      magnitude between 16 and 32 — a contribution or ω of that size exists where the
-      ensemble spread at a cell dwarfs the spread at the observed cell and the gain
-      extrapolates (kernel.test.ts, "lets the weight exceed one"). That is optimal
-      interpolation behaving as documented since feature 116, not this feature's doing; a
-      ray whose width is proportional to it will dominate the column, and the drawing task
-      has to decide what proportional means at that magnitude rather than meet it as a
-      surprise.
+      *Built.* A note for the profile and the rays (T018, T021): under root seed 4242 on
+      the loitering condition the holdings' declared tolerances are 9.5e-7, 7.6e-6 and
+      3.05e-5 over the first three cycles — float32's width at magnitudes of 1–2, 8–16 and
+      32–64 — so a contribution or ω of that size exists where the ensemble spread at a cell
+      dwarfs the spread at the observed cell and the gain extrapolates (kernel.test.ts, "lets
+      the weight exceed one"), and it grows as the spread sharpens. (The first record here
+      said 1.5e-5 for the second cycle, back-derived from a test tolerance with the wrong
+      divisor; review caught it.) That is optimal interpolation behaving as documented since
+      feature 116, not this feature's doing; a ray whose width is proportional to it will
+      dominate the column, and the drawing task has to decide what proportional means at
+      that magnitude rather than meet it as a surprise.
 - [x] T003 `analysis-contributions.schema.json`: the column document the query layer serves —
       the sources reaching the column, each level's contributions by source with the
       separation and the two errors (spec FR-04), ω and the remainder per level — and, under
@@ -110,7 +113,20 @@ published today.
       *Built.* `query/contributions.ts`; the snap to a cell is `field-sampler.ts`'s own
       `nearestIndex`, now exported, so the contributions query and EDR's position query agree
       on which column answered. `ConfigShell.endpoints.contributions` is declared and
-      configured and has no reader yet: it is T013's.
+      configured and has no reader yet: it is T013's. The document's `run_id` is the model
+      run's, read from the holding's own header, because the descriptor's is the scenario's
+      for every analysis holding (review). No decode cache: a holding is ~100 KB and there is
+      no caller yet to measure against (review).
+
+      *After review:* the holding's arrival in the store reached three faces that treat
+      every holding as a coverage — the Data tab grouped it as a phantom cycle captioned
+      "the corrected field", its volume asked EDR for a collection EDR had stopped listing,
+      and the query component counted it as a served collection. One predicate,
+      `lib/holding-format.ts`, now answers "is this a coverage" for EDR, the count and the
+      contributions query; the Data tab reads `field.format` for itself across the seam, as
+      it already does for the collection id. The SC-008 test that guards exactly this was
+      waiting on the pre-rolled archive and had never seen an analysis holding; it drives
+      to one now, and asserts the non-coverage is *not* served.
 - [x] T006 **Watched failing**: a planted contribution beyond the correlation's support, seen
       refused. Reverted, and said so in the commit message (SC-002).
       *Watched, twice.* Kernel: with the `continue` on ρ = 0 removed so every observation
@@ -159,7 +175,14 @@ published today.
       positions stable across selections, from a declared order rather than from whatever the
       holding happened to list first. The remainder (T002) has no position and is not a ray:
       it is stated in the region, as coupling from beyond the column's reach.
+      *Reconciled after the substrate:* every source in the contributions holding is spatial
+      and measured by construction (spec FR-03 as amended). The non-spatial origins — the
+      archive, the departure forecast, the model's own error — are the *provenance* holding's
+      shares, not this holding's sources, and the docked nodes read them from there.
 - [ ] T015 Measured and modelled grouped and marked. The shore broadcast is modelled.
+      *Reconciled after the substrate:* "modelled" is the provenance holding's three
+      non-measurement shares, drawn as the baseline; the contributions holding's `kind` is
+      carried so the master states the distinction, and today it is always `measured`.
 - [ ] T016 The standing forecast is not in the ray set (SC-005), and the omission is a named
       condition in the code rather than an absence to be read as an oversight.
 - [ ] T017 Rays never descend into the volume: drawn on the surface plane, held by a test over

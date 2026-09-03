@@ -16,6 +16,7 @@ import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { EdrComponent } from './edr.js';
 import { ContributionsComponent } from './contributions.js';
+import { isCoverage } from '../lib/holding-format.js';
 import { SensorThingsComponent } from './sensorthings.js';
 import { FeaturesComponent } from './features.js';
 
@@ -78,9 +79,12 @@ export class QueryComponent {
         sim_time: this.simTime.value,
         tick: this.simTime.tick,
         status: 'ok',
-        detail: `serving ${coverageStore.holdings().length} collection(s) and ${observationStore.count()} observation(s)`,
+        // Collections are coverages: what EDR lists. The analyst's contributions holding
+        // is in the store and is served, but at its own prefix, and a count that included
+        // it would be one more than any request to EDR can reach (feature 124).
+        detail: `serving ${coverageStore.holdings().filter(isCoverage).length} collection(s) and ${observationStore.count()} observation(s)`,
         figures: [
-          { key: 'collections', value: coverageStore.holdings().length, label: 'collections' },
+          { key: 'collections', value: coverageStore.holdings().filter(isCoverage).length, label: 'collections' },
           { key: 'observations', value: observationStore.count(), label: 'observations' },
         ],
       }),

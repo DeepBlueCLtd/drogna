@@ -18,7 +18,8 @@
 import type { SeamHttpResponse, SeamRequest } from '../../seam/http.js';
 import type { AnalysisContributions, AnalysisContributionsLevel, ConfigQuery, CoverageHolding } from '../../generated/types.js';
 import type { CoverageStore } from '../coverage-store/store.js';
-import { CONTRIBUTIONS_FORMAT, decodeContributions, type DecodedContributions } from '../lib/contributions-format.js';
+import { decodeContributions, type DecodedContributions } from '../lib/contributions-format.js';
+import { CONTRIBUTIONS_FORMAT } from '../lib/holding-format.js';
 import { axisValueAt, nearestIndex } from './field-sampler.js';
 import { parsePoint } from './wkt.js';
 
@@ -31,9 +32,6 @@ function refusal(status: number, text: string): SeamHttpResponse {
 }
 
 export class ContributionsComponent {
-  /** Decoded once per holding: holdings are immutable, and a column is asked for often. */
-  private readonly decoded = new Map<string, DecodedContributions>();
-
   constructor(
     private readonly config: ConfigQuery,
     private readonly store: CoverageStore,
@@ -67,26 +65,20 @@ export class ContributionsComponent {
         `'${segments[0]}' is a ${holding.descriptor.field.format} coverage, served by EDR at ${this.config.http.edr_prefix}; contributions holdings served: ${this.served().join(', ') || 'none yet'}`,
       );
     }
-    const decoded = this.decode(holding);
-    if (segments.length === 1) return json(200, decoded.header);
-    if (segments[1] !== 'column' || segments.length > 2) {
+    if (segments.length > 2 || (segments.length === 2 && segments[1] !== 'column')) {
       return refusal(404, `'${segments.slice(1).join('/')}' is not a query this prefix serves; served: column`);
     }
+    // Decoded per request, once the request is known to be one this serves. A holding is
+    // ~100 KB and the decode is a header parse and nine copies; a cache would be a second
+    // copy of a store the run already keeps for ever, kept for a caller that does not exist
+    // yet. The first measurement that wants one is where it gets added.
+    const decoded = decodeContributions(holding.bytes);
+    if (segments.length === 1) return json(200, decoded.header);
     const coords = query.get('coords');
     if (!coords) return refusal(400, "a column is asked for by 'coords=POINT(lon lat)', and none was given");
     const point = parsePoint(coords);
     if (!point.ok) return refusal(400, point.refusal);
     return this.column(holding, decoded, point.value.longitude, point.value.latitude);
-  }
-
-  private decode(holding: { descriptor: CoverageHolding; bytes: Uint8Array }): DecodedContributions {
-    const id = holding.descriptor.holding_id;
-    let decoded = this.decoded.get(id);
-    if (!decoded) {
-      decoded = decodeContributions(holding.bytes);
-      this.decoded.set(id, decoded);
-    }
-    return decoded;
   }
 
   private column(
@@ -142,7 +134,8 @@ export class ContributionsComponent {
     const document: AnalysisContributions = {
       schema_version: 1,
       holding_id: holding.descriptor.holding_id,
-      run_id: holding.descriptor.run_id,
+      // The model run, from the header: the descriptor's run_id is the scenario's.
+      run_id: header.run_id,
       variable: header.variable,
       correlation: header.correlation,
       column: {

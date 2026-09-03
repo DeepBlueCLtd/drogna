@@ -14,6 +14,7 @@ import type { CoverageStore } from '../coverage-store/store.js';
 import { sampleGrid, sampleHolding, timeAxisPosixOrigin, type SamplePoint } from './field-sampler.js';
 import { parsePoint, parsePolygon, parseTrajectory } from './wkt.js';
 import { parseEpochMicros } from '../lib/sim-time.js';
+import { isCoverage } from '../lib/holding-format.js';
 
 const IMPLEMENTED_QUERY_TYPES = ['position', 'trajectory', 'area'] as const;
 const KNOWN_UNIMPLEMENTED = ['radius', 'cube', 'corridor', 'items', 'locations', 'instances'];
@@ -50,7 +51,7 @@ export class EdrComponent {
       // contributions holding (feature 124) is in the same store under the same digest
       // check and is not one — sparse, per source, no grid to sample — so it is served
       // at its own prefix and listed here would be a collection every query refused.
-      if (descriptor.field.format !== 'drogna-f32-v1') continue;
+      if (!isCoverage(descriptor)) continue;
       const entry = this.store.holding(descriptor.holding_id);
       if (!entry) continue;
       const manyPerEra = descriptor.era === 'instance' || descriptor.era === 'analysis';

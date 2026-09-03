@@ -13,6 +13,7 @@ import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { Rng } from '../lib/rng.js';
 import { choleskyFactor, choleskyInverse, choleskySolve } from './linalg.js';
+import { ulpAt } from '../lib/ulp.js';
 import {
   gaspariCohn,
   optimalInterpolationKernel,
@@ -638,14 +639,9 @@ describe('the analysis moves the field toward the truth', () => {
 });
 
 describe('the contributions the gain is made of (feature 124)', () => {
-  /**
-   * Float32 is what the holding stores, so the identity is held to what float32 can
-   * hold: a few units in the last place at the magnitudes involved, derived from the
-   * terms rather than typed.
-   */
-  function ulpAt(magnitude: number): number {
-    return Math.pow(2, Math.max(Math.floor(Math.log2(Math.max(magnitude, 1))) - 23, -149));
-  }
+  // Float32 is what the holding stores, so the identity is held to what float32 can
+  // hold: a few units in the last place at the magnitudes involved, from the one
+  // derivation every manifest's tolerance uses, rather than a copy of it.
 
   function rowsOf(contributions: ReturnType<typeof optimalInterpolationKernel.analyse>['contributions']) {
     const rows: { cell: number; weight: number; remainder: number; entries: { source: number; contribution: number; horizontalKm: number; verticalM: number }[] }[] = [];

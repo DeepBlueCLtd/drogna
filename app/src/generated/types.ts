@@ -101,6 +101,7 @@ export type AnalysisContributionsContribution = {
 export type AnalysisContributionsHeader = {
   "schema_version": 1;
   "format": "drogna-contributions-v1";
+  "run_id": string;
   "variable": AnalysisContributionsVariable;
   "correlation": AnalysisContributionsCorrelation;
   "sources": AnalysisContributionsSource[];

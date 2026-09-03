@@ -12,6 +12,7 @@ function header(cells: number, entries: number): AnalysisContributionsHeader {
   return {
     schema_version: 1,
     format: CONTRIBUTIONS_FORMAT,
+    run_id: 'scenario-run-0',
     variable: 'temperature',
     correlation: { horizontal_km: 30, vertical_m: 160 },
     sources: [

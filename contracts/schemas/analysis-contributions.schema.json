@@ -9,7 +9,7 @@
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
     "holding_id": { "type": "string", "minLength": 1 },
-    "run_id": { "type": "string", "minLength": 1, "description": "The model run this analysis initialises, as the analysis announcement names it." },
+    "run_id": { "type": "string", "minLength": 1, "description": "The model run this analysis initialises — the announcement's `run_id`, not its `scenario_run_id` — read from the holding's own header, because the coverage descriptor's `run_id` is the scenario's for every analysis holding." },
     "variable": { "$ref": "#/$defs/variable" },
     "correlation": { "$ref": "#/$defs/correlation" },
     "column": {
@@ -134,12 +134,13 @@
     "header": {
       "title": "drogna analysis contributions header",
       "type": "object",
-      "required": ["schema_version", "format", "variable", "correlation", "sources", "cells", "entries", "layout"],
+      "required": ["schema_version", "format", "run_id", "variable", "correlation", "sources", "cells", "entries", "layout"],
       "additionalProperties": false,
       "description": "The header a `drogna-contributions-v1` holding opens with: a little-endian u32 byte length, then this document as UTF-8 padded with spaces to a multiple of four bytes, then the sections `layout` names, each four bytes an element, in order.",
       "properties": {
         "schema_version": { "type": "integer", "const": 1 },
         "format": { "type": "string", "const": "drogna-contributions-v1" },
+        "run_id": { "type": "string", "minLength": 1, "description": "The model run this analysis initialises, as the analysis announcement names it." },
         "variable": { "$ref": "#/$defs/variable" },
         "correlation": { "$ref": "#/$defs/correlation" },
         "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },

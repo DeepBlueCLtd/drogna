@@ -28,8 +28,9 @@
  * every `drogna-f32-v1` reader in this tree already makes.
  */
 import type { AnalysisContributionsHeader } from '../../generated/types.js';
+import { CONTRIBUTIONS_FORMAT } from './holding-format.js';
 
-export const CONTRIBUTIONS_FORMAT = 'drogna-contributions-v1' as const;
+export { CONTRIBUTIONS_FORMAT };
 
 /** The rows of the holding: compressed by cell, the i-th cell's entries at offsets[i]..offsets[i+1]. */
 export interface ContributionRows {

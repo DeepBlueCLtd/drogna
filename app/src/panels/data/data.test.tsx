@@ -24,7 +24,7 @@ import { createSeamFetch } from '../../seam/http.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { DataPanel } from './DataPanel.js';
-import { BRANCHES } from './tree.js';
+import { BRANCHES, isGriddedCoverage } from './tree.js';
 import { TABLE_ROWS } from './table.js';
 
 const validator = createSeamValidator();
@@ -506,23 +506,41 @@ describe('the Data tab (feature 121)', { timeout: 180_000 }, () => {
     expect(instants.size).toBe(1);
   });
 
-  it('SC-008 through the shell: every holding’s volume asks for a collection the server serves', async () => {
+  it('SC-008 through the shell: every coverage’s volume asks for a collection the server serves, and a non-coverage asks for none', async () => {
     // `Volume.tsx` derives the EDR collection id from the same convention the query
     // component uses, on the other side of the seam where it cannot import it. This is
-    // what stops the two drifting: every holding the store reports must name a
+    // what stops the two drifting: every coverage the store reports must name a
     // collection the collections list actually offers.
+    //
+    // **Driven to an analysis cycle, deliberately.** This test used to wait for the store
+    // to hold anything, which the pre-rolled archive satisfied at once, so it never saw
+    // an analysis holding — and when feature 124 put a holding in the store that EDR does
+    // not serve, the property it guards was false on the running system while this
+    // passed (found by review). The state it guards is the one with every kind of
+    // holding present, so that is the state it waits for.
     await mounted();
     await act(async () => {
-      await settle(() => runtime.store.holdings().length > 0);
+      await driveUntil(runtime.clock, () => runtime.store.holdings().some((holding) => holding.era === 'analysis'), 4000);
     });
     const response = await fetch(`${config.shell.endpoints.edr}/collections`);
     const served = new Set(
       ((await response.json()) as { collections: { id: string }[] }).collections.map((entry) => entry.id),
     );
+    let coverages = 0;
+    let others = 0;
     for (const holding of runtime.store.holdings()) {
       const manyPerEra = holding.era === 'instance' || holding.era === 'analysis';
       const asksFor = manyPerEra ? holding.holding_id : holding.era;
-      expect(served.has(asksFor), `nothing serves '${asksFor}' for ${holding.holding_id}`).toBe(true);
+      if (isGriddedCoverage(holding)) {
+        coverages += 1;
+        expect(served.has(asksFor), `nothing serves '${asksFor}' for ${holding.holding_id}`).toBe(true);
+      } else {
+        // Not a coverage: EDR must not list it, and the tab must not ask.
+        others += 1;
+        expect(served.has(asksFor), `EDR lists '${asksFor}', which is not a coverage`).toBe(false);
+      }
     }
+    expect(coverages).toBeGreaterThan(3);
+    expect(others).toBeGreaterThan(0);
   });
 });

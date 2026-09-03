@@ -82,9 +82,10 @@ configured correlation rather than assumed. A sparse holding keyed by (observati
 what is published; a dense field per observation is what is not.
 
 *Amended before the substrate was built, on a measurement.* The paragraph above was true in
-shape and wrong by an order of magnitude. On the shipped configuration a cycle assimilates
-1,080–1,572 observations — the kernel's own comment said "~180", written when the cadence was
-longer and the platform slower — and a 60 km support over a ~5 km grid with one level of
+shape and wrong by an order of magnitude. On the shipped configuration (root seed 4242, the
+loitering condition, in lockstep) the first three cycles assimilate 1,080, 1,572 and 1,596
+observations — the kernel's own comment said "~180", written when the cadence was longer and
+the platform slower — and a 60 km support over a ~5 km grid with one level of
 vertical reach is ~1,200 cells per observation. Per-observation retention is therefore
 ~800,000 entries and ~9 MB a cycle, kept for the life of the run, against a store holding
 ~9 MB in total; the analyst already declines to publish salinity's four shares at three

@@ -41,6 +41,8 @@ import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE } from '../env-generator/analytic.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import { CONTRIBUTIONS_FORMAT, encodeContributions } from '../lib/contributions-format.js';
+import { F32_FORMAT } from '../lib/holding-format.js';
+import { ulpAt } from '../lib/ulp.js';
 import {
   optimalInterpolationKernel,
   propagateShares,
@@ -249,6 +251,8 @@ export class Analyst {
         horizontalKm: this.config.correlation.horizontal_km,
         verticalM: this.config.correlation.vertical_m,
         measurementShareIndex: MEASUREMENT,
+        // Temperature's alone, as the provenance is: see the note at the publication.
+        retainContributions: v === 0,
       });
       assimilated += analysis.observations.length;
       for (const entry of analysis.observations) {
@@ -311,10 +315,11 @@ export class Analyst {
       'analysis',
       request,
       manifest,
-      encodeContributions(this.contributionsHeader(contributions, analysisGrid), contributions),
+      encodeContributions(this.contributionsHeader(contributions, analysisGrid, request.run_id), contributions),
       CONTRIBUTIONS_FORMAT,
       [contributionVariable(manifest.variables[0], contributions)],
-      `Each source's contribution to each cell within its support — Σⱼ K_aj over the observations an instrument made in one cell, read off the gain the analysis was built with — and, per cell, ω and the remainder, ω less the in-support sum: what observations beyond the cell's reach did to it through the inverse's coupling with those within. Σ sources + remainder = ω. ${contributions.sources.length} source(s), ${contributions.cells.length} cell(s) reached, ${contributions.entrySource.length} entries.`,
+      `Not a gridded coverage: a sparse holding in the ${CONTRIBUTIONS_FORMAT} format, whose rows are keyed on the cells of the grid this manifest declares — the grid is the coordinate reference, not a claim that every cell holds a value. Each source's contribution to each cell within its support — Σⱼ K_aj over the observations an instrument made in one cell, read off the gain the analysis was built with — and, per cell, ω and the remainder, ω less the in-support sum: what observations beyond the cell's reach did to it through the inverse's coupling with those within. Σ sources + remainder = ω. ${contributions.sources.length} source(s), ${contributions.cells.length} cell(s) reached, ${contributions.entrySource.length} entries.`,
+      'analysis-contributions',
     );
 
     const announcement: AnalysisPublished = {
@@ -416,7 +421,7 @@ export class Analyst {
    * vessel's instruments and nothing else, and the shore broadcast enters as background
    * (FR-125), so the flag is stated rather than left for the reader to assume.
    */
-  private contributionsHeader(contributions: AnalysisContributions, grid: AnalysisGrid): AnalysisContributionsHeader {
+  private contributionsHeader(contributions: AnalysisContributions, grid: AnalysisGrid, runId: string): AnalysisContributionsHeader {
     const perLevel = grid.latitude.count * grid.longitude.count;
     const sources: AnalysisContributionsSource[] = contributions.sources.map((source) => {
       const lonIndex = source.cellIndex % grid.longitude.count;
@@ -443,6 +448,7 @@ export class Analyst {
     return {
       schema_version: 1,
       format: CONTRIBUTIONS_FORMAT,
+      run_id: runId,
       variable: VARIABLES[0],
       correlation: { horizontal_km: this.config.correlation.horizontal_km, vertical_m: this.config.correlation.vertical_m },
       sources,
@@ -478,7 +484,7 @@ export class Analyst {
       request,
       baseManifest,
       bytes,
-      'drogna-f32-v1',
+      F32_FORMAT,
       names.map((name) => ({ ...template, name, standard_name: null, long_name: name.replace(/_/g, ' ') })),
       rule,
     );
@@ -494,6 +500,7 @@ export class Analyst {
     format: CoverageHolding['field']['format'],
     variables: Manifest['variables'],
     rule: string,
+    compositionRule = 'analysis',
   ): string {
     const digest = `sha256:${sha256Hex(bytes)}`;
     const manifest: Manifest = {
@@ -512,7 +519,7 @@ export class Analyst {
         },
       },
       variables,
-      composition: { rule: 'analysis', description: rule },
+      composition: { rule: compositionRule, description: rule },
       outputs: {
         field: { name: holdingId, format, sha256: digest },
         manifest: { name: `${holdingId}.manifest`, format: 'application/json' },
@@ -544,7 +551,6 @@ function contributionVariable(template: Manifest['variables'][number], contribut
   for (const array of [contributions.weight, contributions.remainder, contributions.entryContribution]) {
     for (const value of array) magnitude = Math.max(magnitude, Math.abs(value));
   }
-  const ulpAt = (at: number) => Math.pow(2, Math.max(Math.floor(Math.log2(Math.max(at, 1))) - 23, -149));
   return {
     ...template,
     name: `${VARIABLES[0]}_contribution`,

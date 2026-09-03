@@ -154,7 +154,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "run_id": {
         "type": "string",
         "minLength": 1,
-        "description": "The model run this analysis initialises, as the analysis announcement names it."
+        "description": "The model run this analysis initialises — the announcement's `run_id`, not its `scenario_run_id` — read from the holding's own header, because the coverage descriptor's `run_id` is the scenario's for every analysis holding."
       },
       "variable": {
         "$ref": "#/$defs/variable"
@@ -433,6 +433,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "schema_version",
           "format",
+          "run_id",
           "variable",
           "correlation",
           "sources",
@@ -450,6 +451,11 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "format": {
             "type": "string",
             "const": "drogna-contributions-v1"
+          },
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The model run this analysis initialises, as the analysis announcement names it."
           },
           "variable": {
             "$ref": "#/$defs/variable"

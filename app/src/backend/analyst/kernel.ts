@@ -79,6 +79,13 @@ export interface AnalysisParameters {
   readonly verticalM: number;
   /** Which share the observations credit. Every other share is scaled by what is left. */
   readonly measurementShareIndex: number;
+  /**
+   * Whether to keep the gain's columns per source (feature 124). The analyst publishes
+   * contributions for temperature alone, for the reason it publishes provenance for
+   * temperature alone, so the rows salinity would fill are not accumulated to be thrown
+   * away. Absent means keep them.
+   */
+  readonly retainContributions?: boolean;
 }
 
 export interface AnalysedObservation {
@@ -454,8 +461,12 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     // The contributions, accumulated per cell as the gain's columns fall out of the
     // error reduction below. `perSource` is a scratch row over the sources; `touched`
     // lists which of them this cell's reaching observations belong to.
+    const retain = parameters.retainContributions !== false;
     const perSource = new Float64Array(sourceRows.length);
     const touched = new Int32Array(sourceRows.length);
+    // Membership, kept apart from the accumulator: a partial sum that returned to exactly
+    // zero, or a first gain of exactly zero, would otherwise be read as "not yet seen".
+    const isTouched = new Uint8Array(sourceRows.length);
     const contributionCells: number[] = [];
     const contributionWeight: number[] = [];
     const contributionRemainder: number[] = [];
@@ -516,13 +527,18 @@ export const optimalInterpolationKernel: AnalysisKernel = {
           row += inverse[k * order + j] * covarianceRow[j];
         }
         explained += covarianceRow[k] * row;
-        const source = sourceOfObservation[k];
-        if (perSource[source] === 0) touched[touchedCount++] = source;
-        perSource[source] += row;
+        if (retain) {
+          const source = sourceOfObservation[k];
+          if (isTouched[source] === 0) {
+            isTouched[source] = 1;
+            touched[touchedCount++] = source;
+          }
+          perSource[source] += row;
+        }
       }
       errorStd[cell] = Math.sqrt(Math.max(cellStd * cellStd - explained, 0));
 
-      if (reach > 0) {
+      if (retain && reach > 0) {
         // Rows of the sparse holding, in source order so a column's entries are stable
         // across cells and cycles rather than in whichever order the observations
         // happened to reach.
@@ -538,6 +554,7 @@ export const optimalInterpolationKernel: AnalysisKernel = {
           entryHorizontalKm.push(Math.hypot(east, north));
           entryVerticalM.push(Math.abs(down));
           perSource[source] = 0;
+          isTouched[source] = 0;
         }
         contributionCells.push(cell);
         contributionWeight.push(weight);

@@ -207,35 +207,49 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
   });
 
   /**
-   * The cut point, guarded.
+   * The cut point, and the refusal that used to stand here.
    *
-   * Which eras are worth committing is meant to be a one-line edit, and for the ocean
-   * eras it is. Extending it to the forecast eras is NOT, and the reason is not size: it
-   * is that holding the loop back for a pre-roll means restarting the scheduler after
-   * one, and a restarted scheduler rebuilds from configuration with its run sequence at
-   * zero. Run identifiers are `<run>-run-<sequence>`, and they are the holding ids the
-   * analyst and the model runner publish under — so the first live cycle after the
-   * console opens would republish under the identifier the artefact's first cycle
-   * already used, and the store would replace it. Silently: the digests match, because
-   * each holding is internally consistent; the reader would simply find one fewer
-   * forecast than the timeline showed a moment earlier.
+   * Until this feature the shipped value was `["archive", "nowcast"]` and a test in this
+   * place *refused* the forecast eras, in these words: holding the loop back for a pre-roll
+   * restarts the scheduler, whose run sequence resets to zero, so the first live cycle
+   * republishes under the artefact's first cycle's holding ids and replaces them. It was
+   * right that the declaration was unsafe and wrong about why, and both halves are worth
+   * keeping.
    *
-   * So the edit is made safe rather than left as a trap. Flipping it fails here, with the
-   * reason, instead of producing a run that quietly loses holdings a minute after
-   * opening. What unblocks it is deriving a run identifier that survives a restart, which
-   * is a change to the scheduler and belongs to whichever feature makes it.
+   * Wrong about why: `holdingBack` never stops the scheduler. It stops the authors the
+   * declared eras name — the analyst and the model runner — and the scheduler runs through
+   * the whole pre-roll untouched, so the reset it warned of never happened.
+   *
+   * Right that it was unsafe, for a worse reason that was measured rather than reasoned.
+   * Holding the analyst back means the scheduler's run request reaches *nobody*: the analyst
+   * takes a request synchronously and holds no pending state, so the request is not declined,
+   * not failed and not remembered, and the outstanding-run guard latched on it. A run backed
+   * by the forecast eras did not lose a holding a minute after opening — it opened with a
+   * loop that never turned again at all, and the same fault was reachable from the Operator
+   * tab with no artefact in sight.
+   *
+   * Two changes retired it, and each is proven where it lives rather than here:
+   * `scheduler.test.ts` holds the watchdog that releases a run nobody is working on
+   * (FR-31), and derives run identifiers from the request tick so that no scheduler
+   * instance can reissue another's; `preroll.test.ts` drives a snapshot-backed pre-roll and
+   * holds the run to opening with what a live run produces and to still turning afterwards.
+   *
+   * What stays here is the declaration itself, so that a future edit narrowing it has to
+   * say why.
    */
-  it('refuses to declare the forecast eras until a restarted scheduler stops reusing run ids', () => {
-    const authoredByTheLoop = new Set(['analysis', 'instance']);
+  it('declares the forecast eras its authors can be held back for', () => {
     for (const condition of conditions.conditions) {
-      const declared = (condition.snapshot_eras ?? []).filter((era) => authoredByTheLoop.has(era));
-      expect(
-        declared,
-        `'${condition.id}' declares ${declared.join(' and ')}. Holding the loop back for the ` +
-          `pre-roll restarts the scheduler, whose run sequence resets to zero, so the first ` +
-          `live cycle republishes under the artefact's first cycle's holding ids and replaces ` +
-          `them. Derive a run identifier that survives a restart first.`,
-      ).toEqual([]);
+      expect(condition.snapshot_eras, `'${condition.id}' declares no eras`).toEqual([
+        'archive',
+        'nowcast',
+        'analysis',
+        'instance',
+      ]);
+      // Every declared era names an author, or the page would hold back `undefined` and the
+      // artefact would be replayed *beside* a component still authoring the same eras live.
+      for (const era of condition.snapshot_eras ?? []) {
+        expect(config.snapshot_source.authors[era], `era '${era}' names no author`).toBeTruthy();
+      }
     }
   });
 });

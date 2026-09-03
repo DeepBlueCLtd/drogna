@@ -30,8 +30,16 @@ import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, ConfigStartConditionsCondition, Observation } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
-import { configForCondition, defaultCondition, preRollTicks } from './start-condition.js';
+import {
+  authorsCoveredBySnapshot,
+  configForCondition,
+  defaultCondition,
+  holdingBack,
+  preRollTicks,
+} from './start-condition.js';
 import { runPreRoll } from './preroll.js';
+import { decodeSnapshot, encodeSnapshot } from '../backend/snapshot/codec.js';
+import { driveUntil } from '../backend/test-support/drive.js';
 
 const validator = createSeamValidator();
 const config = runConfigDocument as ConfigRun;
@@ -320,4 +328,113 @@ describe('the start conditions (feature 120)', () => {
       runtime.stop();
     }
   }, 120_000);
+  /**
+   * ADR-0041's far half, and the test the refusal in `start-condition.test.ts` was standing
+   * in for until this feature.
+   *
+   * The artefacts carry the forecast eras now, which means a run that replays one holds the
+   * **analyst and the model runner** back for the whole pre-roll — not just the ocean. Two
+   * things had to become true for that to be safe, and neither is visible in a snapshot's
+   * bytes, so neither is covered by `check-snapshot-drift`:
+   *
+   *  - the run must *open* holding what a live run would have produced, and
+   *  - the loop must still turn afterwards.
+   *
+   * The second is the one that was broken, and badly. Holding the analyst back means the
+   * scheduler's run request reaches nobody at all — the analyst takes a request synchronously
+   * and holds no pending state — so the outstanding-run guard latched and the console opened
+   * onto a loop that never turned again. Measured before the watchdog: `returning` opened with
+   * a run in flight that stayed in flight, and 5,400 further ticks produced not one analysis
+   * and not one forecast.
+   *
+   * Driven against a real artefact built the way `pnpm snapshots` builds one, because an
+   * artefact assembled by the test would prove the test's idea of a snapshot and not the
+   * shipped one.
+   */
+  it('a run backed by the forecast eras opens like a live one, and keeps turning', async () => {
+    const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'loitering');
+    if (!condition) throw new Error('the configuration no longer offers loitering');
+    const eras: ReadonlySet<string> = new Set<string>(condition.snapshot_eras ?? []);
+    expect(eras.has('analysis') && eras.has('instance'), 'this case is about the forecast eras').toBe(true);
+
+    /** Lockstep, so the ticks after the pre-roll are this test's and not the host's. */
+    const effective = (() => {
+      const copy = configForCondition(JSON.parse(JSON.stringify(config)) as ConfigRun, condition);
+      copy.clock.mode = 'lockstep';
+      copy.clock.rate = 0;
+      return copy;
+    })();
+    const options = {
+      rootSeed: condition.root_seed,
+      startCondition: condition.id,
+      revision: 'test',
+      dirty: false,
+    };
+    const drive = async (runtime: BackendRuntime) =>
+      runPreRoll(
+        {
+          backend: runtime.httpBackend,
+          clock: effective.clock,
+          operator: effective.operator,
+          breathe,
+          onProgress: () => undefined,
+        },
+        runtime === live ? condition : holdingBack(condition, held),
+      );
+    const countByEra = (runtime: BackendRuntime) => {
+      const tally: Record<string, number> = {};
+      for (const holding of runtime.store.holdings()) tally[holding.era] = (tally[holding.era] ?? 0) + 1;
+      return tally;
+    };
+
+    // The control: everybody authors, which is exactly what `build-snapshots.ts` drives.
+    const live = buildBackend(effective, { ...options, snapshot: undefined }, validator);
+    await drive(live);
+    const liveTally = countByEra(live);
+    const staged = live.store
+      .holdings()
+      .filter((descriptor) => eras.has(descriptor.era))
+      .map((descriptor) => {
+        const holding = live.store.holding(descriptor.holding_id);
+        if (!holding) throw new Error(`the store lost '${descriptor.holding_id}' between listing and reading it`);
+        return holding;
+      })
+      .sort((a, b) => a.descriptor.published_at.tick - b.descriptor.published_at.tick);
+    const artefact = await decodeSnapshot(
+      await encodeSnapshot(
+        {
+          format: 'drogna-snapshot-1',
+          start_condition: condition.id,
+          run_id: live.runId,
+          root_seed: condition.root_seed,
+          config_digest: staged[0].descriptor.manifest.config_digest,
+          code_revision: 'test',
+        },
+        staged,
+      ),
+    );
+    live.stop();
+
+    // The page's path: the artefact replayed, its authors held back.
+    const held = authorsCoveredBySnapshot(condition, effective.snapshot_source);
+    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner']);
+    const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+    await drive(page);
+
+    // It opens holding what the live run held. Era by era, so a missing forecast half is a
+    // named difference rather than a count that happens to match.
+    expect(countByEra(page)).toEqual(liveTally);
+
+    // And it keeps turning. Without the scheduler's watchdog this waits out the limit with
+    // the count exactly where the pre-roll left it.
+    const forecasts = () => page.store.holdings().filter((holding) => holding.era === 'instance').length;
+    const onOpening = forecasts();
+    expect(onOpening, 'the run opened with no forecast at all').toBeGreaterThan(0);
+    await driveUntil(page.clock, () => forecasts() > onOpening, effective.scheduler.max_interval_ticks * 6);
+    expect(
+      forecasts(),
+      'the loop never turned after the console opened: a run was requested into the held-back analyst and never released',
+    ).toBeGreaterThan(onOpening);
+    page.stop();
+  }, 180_000);
 });

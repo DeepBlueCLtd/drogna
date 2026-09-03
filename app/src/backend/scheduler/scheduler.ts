@@ -497,8 +497,36 @@ export class Scheduler {
     this.reportDecision(null, 'held-for-cost', this.lastDecision, null, shortfall);
   }
 
+  /**
+   * The identifier a run is known by, everywhere: the holding ids the analyst and the model
+   * runner publish under, and the name in every later message.
+   *
+   * **Derived from the tick the run was requested at, not from a counter, and that is the
+   * whole of the point.** A counter lives in this component's memory, and this component is
+   * restartable from the operator plane — so a restarted scheduler counted from zero again
+   * and asked for identifiers a previous instance had already used. `scheduler.test.ts`
+   * records a draft of the restart test that *passed* because of exactly that collision: the
+   * occupying run's publication cleared the new scheduler's outstanding run by an id clash
+   * rather than by anything being right.
+   *
+   * The same reset is what ADR-0041 named as the blocker on committing the forecast eras,
+   * because a run that replays an artefact holds the loop back for its pre-roll and the live
+   * cycles afterwards would republish under the artefact's own identifiers and silently
+   * replace them.
+   *
+   * Simulation time is the one monotonic thing this component hears rather than keeps: it
+   * survives a restart, because the clock does not restart with it, and it cannot repeat,
+   * because a run is requested at most once per tick — the outstanding-run guard and the
+   * minimum interval each forbid a second on the same tick. `run_sequence` stays the ordinal
+   * count of runs this instance has requested and is carried as a fact, but it is no longer
+   * half of the identifier rule; the master says so.
+   */
+  private identifierFor(tick: number): string {
+    return `${this.runId}-run-t${tick}`;
+  }
+
   private request(cause: RunRequest['cause'], divergence: Divergence | undefined): string {
-    const runIdentifier = `${this.runId}-run-${this.runSequence}`;
+    const runIdentifier = this.identifierFor(this.simTime.tick);
     const request: RunRequest = {
       component: this.config.id,
       scenario_run_id: this.runId,

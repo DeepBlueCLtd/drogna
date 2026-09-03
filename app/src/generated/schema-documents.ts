@@ -9739,12 +9739,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "run_id": {
         "type": "string",
-        "description": "Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store."
+        "description": "Deterministic model run identifier: the scenario run identifier and the simulation tick the run was requested at. It names the run in every later message and in the coverage store. It was a function of the root seed and the run ordinal until the ordinal was found to be a counter held in the scheduler's memory — which resets when a reader restarts that component from the operator plane, so a restarted scheduler reissued identifiers an earlier instance had already used, and holdings published under them replaced their predecessors silently (ADR-0041 named this as the blocker on committing the forecast eras). Simulation time is the monotonic thing the scheduler hears rather than keeps: it survives a restart and cannot repeat, because a run is requested at most once per tick."
       },
       "run_sequence": {
         "type": "integer",
         "minimum": 0,
-        "description": "Which run of this scenario this is, counting from zero. It is the other half of the identifier rule — run_id is a function of the root seed and this number — and it is carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse. Before it was carried the run manifest recorded a null here for want of anything to record."
+        "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. Carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse; before it was carried the run manifest recorded a null here for want of anything to record. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward."
       },
       "initialisation_sim_time": {
         "type": "string",

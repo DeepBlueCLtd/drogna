@@ -392,13 +392,18 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     const runtime = buildBackend(config, options, validator);
     const seen = watch(runtime, config);
     // **The second run, not the first, and the difference is not incidental.** A restarted
-    // scheduler counts run ids from zero again, so a restart during the *first* run has the
-    // new scheduler asking for the same `…-run-0` that is already occupying — and the
-    // occupying run's publication then clears the new scheduler's outstanding run by an id
+    // scheduler used to count run ids from zero again, so a restart during the *first* run had
+    // the new scheduler asking for the same `…-run-0` that was already occupying — and the
+    // occupying run's publication then cleared the new scheduler's outstanding run by an id
     // collision rather than by anything being right. The first draft of this test restarted
     // during run 0, was rescued by that collision, and passed against the unfixed code on
-    // every assertion but one. The window this is about is the second run occupying while
-    // the restarted scheduler asks for the first id again.
+    // every assertion but one.
+    //
+    // Run identifiers are derived from the request tick now, so that collision cannot happen
+    // any more and the rescue is gone with it. The second run is kept all the same: it is the
+    // window this test is *about* — a restarted scheduler's first floor firing into a runner
+    // that is still occupied — and a test that no longer needs its precaution is not a test
+    // that should quietly drop it.
     await driveUntil(
       runtime.clock,
       () => seen.started.length >= 2 && seen.published.length < seen.started.length,

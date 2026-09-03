@@ -518,4 +518,73 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     expect(seen.decisions.at(-1)?.decision).toBe('accepted');
     runtime.stop();
   });
+  /**
+   * FR-31, through the one door that was still open: a run requested into a component
+   * that is not there to hear it.
+   *
+   * The `run-failed` release covers the model runner, which is still present to say it
+   * will not deliver. The analyst is not: it takes a run request synchronously and holds
+   * no pending state, so a request published while it is stopped is not declined, not
+   * failed and not remembered. It vanishes, and the scheduler's outstanding-run guard
+   * latches on it for the rest of the visit.
+   *
+   * Watched happening before the watchdog existed, by exactly the steps below — stop the
+   * analyst from the Operator tab, let the cadence floor come due, start it again — and the
+   * loop never turned another cycle: `analysis` and `instance` frozen where they stood, every
+   * later divergence declined as a duplicate of a run nobody was working on. Driven through
+   * the plane's own endpoints rather than by calling `stop()`, because the reachability by an
+   * ordinary reader is the point.
+   */
+  it('FR-31: the loop recovers from a run requested into a stopped analyst', async () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+    const command = (id: string, verb: 'stop' | 'start') =>
+      runtime.httpBackend.handle({
+        method: 'POST',
+        path: `${config.operator.http.command_prefix}/${id}/${verb}`,
+        body: '',
+      });
+
+    // The loop turning, as a reader would find it.
+    await driveUntil(runtime.clock, () => seen.published.length >= 1, config.scheduler.max_interval_ticks * 6);
+    const whileWarm = seen.published.length;
+    expect(whileWarm, 'the loop never turned at all, so this test proves nothing').toBeGreaterThan(0);
+
+    const requestedWhileWarm = seen.requests.length;
+    expect((await command(config.analyst.id, 'stop')).status).toBe(200);
+
+    // Driven until a run is actually requested into the silence, not for a tick count that
+    // might not reach one. The cadence floor comes due on its own schedule and is then *held*
+    // while the standing forecast still has life in it (FR-115), so "max_interval ticks have
+    // passed" is not the same event as "a run was requested" — and a version of this test that
+    // assumed it was passed against the unfixed scheduler, having never set the latch it was
+    // written to catch.
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > requestedWhileWarm,
+      config.scheduler.max_interval_ticks * 6,
+    );
+    expect(
+      seen.requests.length,
+      'no run was requested while the analyst was stopped, so the latch this test needs was never set',
+    ).toBeGreaterThan(requestedWhileWarm);
+    expect(seen.published.length, 'a run published with the analyst stopped').toBe(whileWarm);
+
+    // The reader changes their mind, as the Operator tab invites them to.
+    expect((await command(config.analyst.id, 'start')).status).toBe(200);
+
+    // The watchdog releases the run nobody was working on, and the floor turns the loop
+    // again. Without it this waits out the whole limit and the count never moves.
+    await driveUntil(
+      runtime.clock,
+      () => seen.published.length > whileWarm,
+      config.scheduler.max_interval_ticks * 6,
+    );
+    expect(
+      seen.published.length,
+      'the loop never turned again after the analyst came back: the outstanding-run guard is still latched',
+    ).toBeGreaterThan(whileWarm);
+    runtime.stop();
+  });
 });

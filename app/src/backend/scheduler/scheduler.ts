@@ -56,6 +56,12 @@ export class Scheduler {
   private lastRequestTick: number | undefined;
   private runSequence = 0;
   private inFlight: string | undefined;
+  /**
+   * The tick the outstanding run was requested at, for the watchdog below. Kept beside
+   * `inFlight` rather than derived from `lastRequestTick`, which moves for reasons that
+   * have nothing to do with the run still being owed.
+   */
+  private inFlightSinceTick: number | undefined;
   private validityEnd: string | undefined;
   declinedByPolicy = 0;
   heldForCost = 0;
@@ -185,6 +191,9 @@ export class Scheduler {
       }
       this.lastSample = { tick: sample.tick, millis };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      // Before either of the two below, both of which read `inFlight` and would otherwise
+      // be reading a guard that no longer stands for anything.
+      this.abandonStalledRun();
       this.releaseHeldPrompt();
       this.considerCadenceFloor();
     });
@@ -205,6 +214,7 @@ export class Scheduler {
       const report = message.payload as { kind?: string; run_id?: string; detail?: string };
       if (report.kind !== 'run-failed' || report.run_id !== this.inFlight) return;
       this.inFlight = undefined;
+      this.inFlightSinceTick = undefined;
       this.lastDecision = `released run ${report.run_id}, which will not be published: ${report.detail ?? 'no reason given'}`;
       this.abandoned += 1;
     });
@@ -216,7 +226,10 @@ export class Scheduler {
     });
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;
-      if (published.run_id === this.inFlight) this.inFlight = undefined;
+      if (published.run_id === this.inFlight) {
+        this.inFlight = undefined;
+        this.inFlightSinceTick = undefined;
+      }
       if (published.current) this.validityEnd = published.valid_time.end_sim_time;
     });
     this.heartbeat.start();
@@ -224,6 +237,45 @@ export class Scheduler {
 
   stop(): void {
     this.heartbeat.stop();
+  }
+
+  /**
+   * A run nobody is going to publish, released on the scheduler's own authority.
+   *
+   * The `run-failed` subscription above covers the case where the component that owed the
+   * run is still there to say so — the model runner stopped mid-cost, or refusing a second
+   * run. It cannot cover the case where the request reached **nobody**. The analyst takes a
+   * run request synchronously and holds no pending state, so a request published while it is
+   * stopped is not declined, not failed and not remembered: it simply vanishes, and this
+   * component waits on a publication that no component is aware it owes.
+   *
+   * That was reachable by an ordinary operator verb and was watched happening. Stop the
+   * analyst from the Operator tab, let the cadence floor come due, start it again — and the
+   * loop never turns for the rest of the visit, because `inFlight` was latched by a request
+   * the analyst never heard. Every divergence and every cadence floor after it is declined
+   * as a duplicate, for ever. That is the permanently becalmed loop FR-31 forbids, so the
+   * guard cannot be allowed to clear only on the say-so of a component that may not be
+   * listening.
+   *
+   * The bound is the cadence floor's own interval, and is not a new constant on purpose. A
+   * run costs what the model runner declares — a few ticks — so any bound above that would
+   * do; what makes this one the right one is that it already *means* the thing being tested.
+   * The maximum interval is this harness's own statement of how long is too long between
+   * runs, so a run outstanding for longer than a whole interval is, by the loop's own
+   * definition, a loop that has stopped turning. It is tunable from the operator plane, and
+   * the watchdog follows it there rather than holding a second opinion.
+   */
+  private abandonStalledRun(): void {
+    if (this.inFlight === undefined || this.inFlightSinceTick === undefined) return;
+    const outstanding = this.simTime.tick - this.inFlightSinceTick;
+    if (outstanding <= this.maximumInterval()) return;
+    const abandoned = this.inFlight;
+    this.inFlight = undefined;
+    this.inFlightSinceTick = undefined;
+    this.abandoned += 1;
+    this.lastDecision =
+      `released run ${abandoned}, outstanding ${outstanding} tick(s) — longer than the ${this.maximumInterval()}-tick ` +
+      'cadence floor, so nothing is going to publish it; requesting again rather than waiting for ever';
   }
 
   /**
@@ -467,6 +519,7 @@ export class Scheduler {
     this.runSequence += 1;
     this.lastRequestTick = this.simTime.tick;
     this.inFlight = runIdentifier;
+    this.inFlightSinceTick = this.simTime.tick;
     this.requested.push({ run_id: runIdentifier, cause });
     this.lastDecision =
       cause === 'divergence'

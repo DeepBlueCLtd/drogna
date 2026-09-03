@@ -417,10 +417,7 @@ describe('the start conditions (feature 120)', () => {
 
     // The page's path: the artefact replayed, its authors held back.
     const held = heldBackBySnapshot(condition, effective.snapshot_source);
-    // The scheduler is in this list and authors nothing: it is quiesced because it decides
-    // when the other two act, and a decider running against a muted pipeline poisons its own
-    // cadence. `config.snapshot-source.schema.json` carries the measurement.
-    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner', 'scheduler']);
+    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner']);
     const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
     await drive(page);
 

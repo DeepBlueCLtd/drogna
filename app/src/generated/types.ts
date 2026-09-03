@@ -942,12 +942,6 @@ export type ConfigSnapshotSource = {
     "path_prefix": string;
     "path_suffix": string;
   };
-  "quiesce"?: {
-    "archive"?: ConfigCommonComponentId[];
-    "nowcast"?: ConfigCommonComponentId[];
-    "analysis"?: ConfigCommonComponentId[];
-    "instance"?: ConfigCommonComponentId[];
-  };
   "authors": {
     "archive": ConfigCommonComponentId;
     "nowcast": ConfigCommonComponentId;

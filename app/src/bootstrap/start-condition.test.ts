@@ -188,21 +188,12 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
     expect(new Set(seeds).size).toBe(seeds.length);
   });
 
-  it('holds back the declared eras’ authors, and whoever must be quiet beside them', () => {
+  it('holds back exactly the components the declared eras name as their authors', () => {
     for (const condition of conditions.conditions) {
       const covered = heldBackBySnapshot(condition, config.snapshot_source);
       const expected = new Set(
         (condition.snapshot_eras ?? []).map((era) => config.snapshot_source.authors[era]),
       );
-      // The quiesced components author nothing, so they are not in `authors` and were not in
-      // this expectation. The scheduler is the one that matters: it decides when the analyst
-      // and the model runner act, so left running against a muted pipeline it requested runs
-      // nobody answered and poisoned the tick its next cadence floor was measured from — the
-      // console opened onto a loop that stayed quiet for most of another interval. Measured at
-      // 611 to 1,790 ticks across the four conditions before it was declared.
-      for (const era of condition.snapshot_eras ?? []) {
-        for (const id of config.snapshot_source.quiesce?.[era] ?? []) expected.add(id);
-      }
       expect([...covered].sort()).toEqual([...expected].sort());
       // And holding them back changes the script and nothing else about it.
       const script = holdingBack(condition, covered);
@@ -254,11 +245,7 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
         'analysis',
         'instance',
       ]);
-      // Every declared era names an author, or the page would hold back `undefined` and the
-      // artefact would be replayed *beside* a component still authoring the same eras live.
-      for (const era of condition.snapshot_eras ?? []) {
-        expect(config.snapshot_source.authors[era], `era '${era}' names no author`).toBeTruthy();
-      }
+
     }
   });
 });

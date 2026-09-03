@@ -113,31 +113,38 @@ export function preRollTicks(condition: ConfigStartConditionsCondition): number 
 
 /**
  * The components a condition's committed artefact stands in for (ADR-0041): the authors
- * of the eras it carries, and whoever else must be quiet while those eras are replayed —
- * both read from the snapshot source's own configuration.
- *
- * The authors are the obvious half: a component left running beside its own artefact
- * republishes what is already there. The second half is not obvious and was found by
- * measuring. The scheduler authors no era, so nothing held it back; it ran through the
- * whole pre-roll deciding into a void, requesting a run at each cadence floor that the
- * held-back analyst was not there to hear. Those requests reached nobody, and the tick of
- * the last one became the tick the next floor was measured from — so a run that had just
- * been handed every forecast the artefact carried opened its console and then sat quiet
- * for most of another interval. Between 611 and 1,790 ticks, across the four shipped
- * conditions.
- *
+ * of the eras it carries, from the declaration in the snapshot source's configuration.
  * Empty where the condition declares no artefact, which is what makes "hold these back"
  * and "there is nothing to hold back" the same line of code at the call site.
+ *
+ * **The authors and nobody else, and that was measured twice.** The scheduler is not held
+ * back, though it decides when two of these components act, so through a replayed pre-roll
+ * it requests runs the held-back analyst is not there to hear. Those requests reach nobody
+ * and the watchdog releases them; a review read that as a stall — the console opening onto
+ * a loop that stayed quiet for another 611 to 1,790 ticks — and it was answered by quiescing
+ * the scheduler alongside the authors.
+ *
+ * That was the wrong fix, because the reading was wrong. A **live** run of the same four
+ * conditions, driven to the same tick with nobody held back, publishes its next forecast
+ * after 599, 1,794, 1,080 and 639 ticks: the quiet is the cadence, not a stall, and the
+ * replayed run's 611 to 1,790 sits inside it. Quiescing the scheduler replaced it with a
+ * fresh instance that knows of no standing forecast and so fires its cadence floor on the
+ * first sample after the console opens — a run 10 to 21 ticks after the one the artefact had
+ * just supplied, against a 600-tick minimum interval, which is a cadence no live run can
+ * produce and a model run spent for nothing.
+ *
+ * What remains is real and is not fixed here: the replayed run reaches the right cadence for
+ * the wrong reason, because the resumed scheduler is counting from a request nobody answered
+ * rather than from the standing forecast's validity. The principled fix is for the model
+ * runner to restate its publication for a late listener, exactly as it already restates its
+ * cost, and it belongs to its own change.
  */
 export function heldBackBySnapshot(
   condition: ConfigStartConditionsCondition,
   source: ConfigSnapshotSource,
 ): ReadonlySet<string> {
   const covered = new Set<string>();
-  for (const era of condition.snapshot_eras ?? []) {
-    covered.add(source.authors[era]);
-    for (const id of source.quiesce?.[era] ?? []) covered.add(id);
-  }
+  for (const era of condition.snapshot_eras ?? []) covered.add(source.authors[era]);
   return covered;
 }
 

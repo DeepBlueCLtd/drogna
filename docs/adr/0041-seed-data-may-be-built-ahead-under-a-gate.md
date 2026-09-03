@@ -156,8 +156,11 @@ violation shipped in `main`, found by trying to do this work rather than by look
 Two changes, and the order matters — the second is unsafe without the first:
 
 1. **The scheduler releases a run nobody is working on** when it has been outstanding
-   longer than the cadence floor's own interval. Not a new constant: the maximum interval
-   is already this harness's statement of how long is too long between runs.
+   longer than the run's declared cost plus the release margin — 39 ticks at shipped values,
+   both figures already on the wire from the model runner. An earlier draft of this
+   amendment described the bound as the cadence floor's whole interval, which is what the
+   first implementation used and what its own docstring now argues against; the ADR was
+   recording the rejected alternative as the decision.
 2. **Run identifiers are derived from the request tick**, `<run>-run-t<tick>`. This *is*
    the "run identifier that survives a restart" the paragraph above asked for, and it
    closes the collision the paragraph named as well as the one it did not — a restarted
@@ -177,6 +180,30 @@ Mbps. On the machine that reported twenty seconds it is not close. The harness i
 people are shown, usually on a good connection and not always on a fast laptop, so the
 trade is taken — with the ratio recorded here so that a future reader who has better
 numbers than a click-to-console stopwatch can re-open it.
+
+### The cadence a replayed run opens on, measured rather than assumed
+
+An adversarial pass read the quiet after a snapshot-backed console opens — 611 to 1,790
+ticks before the first live forecast — as a stall introduced by holding the loop back. It
+was answered by quiescing the scheduler alongside the era authors, and that was the wrong
+fix because the reading was wrong.
+
+A **live** run of the same four conditions, driven to the same tick with nobody held back,
+publishes its next forecast after 599, 1,794, 1,080 and 639 ticks. The quiet is the
+cadence. Quiescing the scheduler replaced it with a fresh instance that knows of no standing
+forecast and fires its floor on the first sample after opening — a run 10 to 21 ticks after
+the one the artefact had just supplied, against a 600-tick minimum interval. That is a
+cadence no live run can produce, and it spends a model run for nothing. Reverted.
+
+What is left is real and is not fixed here. The replayed run reaches the right cadence for
+the wrong reason: its scheduler is counting from a request nobody answered rather than from
+the standing forecast's remaining validity, because `run_published` is announced by the
+model runner alone and a component held back through the pre-roll never hears it. The
+snapshot source must not invent that announcement — it carries grid bounds, collections and
+digests that no holding descriptor holds, and a source that synthesised them would be
+authoring a claim rather than replaying bytes, which is the fixture hazard this record
+exists to forbid. The principled fix is for the model runner to restate its publication for
+a late listener, exactly as it already restates its cost, and it belongs to its own change.
 
 ### What this does not fix
 

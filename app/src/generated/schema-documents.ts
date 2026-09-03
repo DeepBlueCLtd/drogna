@@ -4437,37 +4437,6 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           }
         }
       },
-      "quiesce": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Components that must be held back alongside an era's author while that era is replayed, though they author nothing themselves. The loop's eras need this and the ocean's do not: the scheduler decides when the analyst and the model runner act, so replaying their output while it runs leaves it deciding into a void. It requests a run at the cadence floor, nothing answers, and the tick of that unanswered request becomes the one the next floor is measured from — so the console opened onto a loop that stayed quiet for most of another interval, having already been handed the forecasts it was about to compute. Measured at 611 to 1,790 ticks across the four shipped conditions before this was declared. Held back it has no such state to poison, and turns the loop on the first sample after the console opens.",
-        "properties": {
-          "archive": {
-            "type": "array",
-            "items": {
-              "$ref": "config.common.schema.json#/$defs/component_id"
-            }
-          },
-          "nowcast": {
-            "type": "array",
-            "items": {
-              "$ref": "config.common.schema.json#/$defs/component_id"
-            }
-          },
-          "analysis": {
-            "type": "array",
-            "items": {
-              "$ref": "config.common.schema.json#/$defs/component_id"
-            }
-          },
-          "instance": {
-            "type": "array",
-            "items": {
-              "$ref": "config.common.schema.json#/$defs/component_id"
-            }
-          }
-        }
-      },
       "authors": {
         "type": "object",
         "required": [

@@ -279,6 +279,7 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     runtime.stop();
   });
 
+  // AT-04: byte-identity
   it('replays identically: one seed, the same advisories and the same staged bundles, twice', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);

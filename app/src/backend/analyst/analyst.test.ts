@@ -154,6 +154,7 @@ describe('the analysis, on the loop as it ships', () => {
     expect(shares.reduce((total, name) => total + ranges[name].values[0], 0)).toBeCloseTo(1, 3);
   });
 
+  // AT-04: not byte-identity — locality within one run, not reproduction across two
   it('changes the field only where the measurements reach, and leaves the rest byte-identical', () => {
     // The second cycle, whose background is a forecast rather than the cold start.
     const analysis = record.analyses[1];

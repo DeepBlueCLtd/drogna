@@ -60,6 +60,23 @@ moment a task is declined, never reconstructed later.
       workstream after the arc lands: the estate serves review instances meanwhile,
       and the V1 site remains the published archive. Blog obligations (PR-04a)
       attach to that workstream.*
-- [ ] T037 AT-04 one-command replay proof — *deferred to 102 with the reason in
-      spec.md: nothing byte-heavy exists to compare until the generator lands. The
-      manifest determinism half is already tested (same seed, same manifest).*
+- [x] T037 AT-04 one-command replay proof — *deferred to 102, then carried to 107 and
+      built at the arc's close-out as `scripts/replay-proof.ts` (`pnpm replay-proof`).
+      Ticked only now, and not when the script first landed: it selected with
+      `vitest run -t replay`, which matched neither the name of the generator's own
+      byte-identity test nor its `describe`, so the one test this line was originally
+      deferred *for* was the one the proof skipped — seven ran, 623 were skipped, and it
+      printed "held". The proof now derives its expected set from `AT-04: byte-identity`
+      markers in the tree, requires every marked test to have run and passed — matched by
+      file as well as by name, so a pass in one file cannot stand in for a skip in another
+      — and sweeps for tests that read as a determinism claim and carry neither that marker
+      nor `AT-04: not byte-identity` with a reason. The sweep is the half a marker alone
+      does not give: it found this line's own other half, `runtime.test.ts`'s "the same
+      seed provisions the same manifest", and the planner's "one seed, one plan, twice",
+      both outside the proof under the old selector and under the first marking. Nine
+      tests are marked and two excluded by name. Watched failing five ways before the fix
+      was trusted, each reverted: no marker anywhere (the floor a name filter never had —
+      `vitest run -t <unmatched>` skips everything and exits 0); a marker not above an
+      `it(`; a marked test skipped; a byte-identity test whose marker was forgotten, which
+      the sweep names; and a planted per-run drift in the generator's draw path, which took
+      six down with the generator's named among them.*

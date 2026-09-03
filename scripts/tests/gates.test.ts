@@ -30,6 +30,7 @@ import { runGate as oneBreakpoint } from '../gates/check-one-breakpoint.js';
 import { runGate as viewIds } from '../gates/check-view-ids.js';
 import { runGate as truthInitialisation } from '../gates/check-truth-initialisation.js';
 import { runGate as blogLength } from '../gates/check-blog-length.js';
+import { runGate as replayMarkers, scan } from '../gates/check-replay-markers.js';
 import { runGate as declaredCost } from '../gates/check-declared-cost.js';
 
 const fixtures = join(REPO_ROOT, 'scripts', 'gates', 'tests', 'fixtures');
@@ -37,6 +38,77 @@ const violations = join(fixtures, 'violations');
 const clean = join(fixtures, 'clean');
 
 describe('each gate catches its planted violation and passes a clean tree', () => {
+  it('replay-markers: an unmarked byte-identity test and a marker adrift both fail; the real tree passes', () => {
+    // The fault this gate exists against, in the shape it actually took: `pnpm
+    // replay-proof` selected with `-t replay`, the generator's byte-identity test
+    // matched neither its own name nor its describe, and the proof printed "held"
+    // over it. Selection by marker closes that; what it cannot close is a
+    // byte-identity test written with no marker at all, which is planted here.
+    const unclassified = replayMarkers(join(fixtures, 'replay-unclassified'));
+    expect(unclassified.map((f) => f.message)).toEqual([
+      expect.stringMatching(/reads as a determinism or replay claim and carries neither marker/),
+    ]);
+    expect(unclassified[0].message).toContain('replays byte-identically: one seed, one run, twice');
+    // The exclusion marker is an answer, not a silence: the sibling carrying it is
+    // not reported, and neither is the test whose name makes no such claim.
+    expect(unclassified).toHaveLength(1);
+
+    // The other half: a marker that has drifted off its test. The proof cannot say
+    // which test it expects, so it refuses rather than guessing. Both facts are
+    // reported, and deliberately: the marker is adrift *and* the test below it is
+    // left unclassified, which are two different things to fix and would be two
+    // different mistakes to make.
+    const unreadable = replayMarkers(join(fixtures, 'replay-unreadable'));
+    expect(unreadable.map((f) => f.message)).toEqual([
+      expect.stringMatching(/is neither on nor directly above a test declaration/),
+      expect.stringMatching(/reads as a determinism or replay claim and carries neither marker/),
+    ]);
+
+    expect(replayMarkers(REPO_ROOT)).toEqual([]);
+  });
+
+  it('replay-markers: a trailing marker marks its own test, not the next one', () => {
+    // The fault the first version of this gate had, and the original fault's exact
+    // shape: reading only the line *below* a marker meant a marker written as a
+    // trailing comment marked the following test and let its own drop out of the
+    // sweep unreported. Both halves failed at once, and silently.
+    const root = join(fixtures, 'replay-trailing');
+    expect(replayMarkers(root)).toEqual([]);
+    const { marked } = scan(root);
+    expect(marked.map((test) => test.name)).toEqual([
+      'replays byte-identically: one seed, one run, twice',
+    ]);
+  });
+
+  it('replay-markers: test() and a name on the next line are both swept', () => {
+    // vitest exports `test` as well as `it`, and a multi-line call is ordinary
+    // formatting. A per-line /\bit\(/ saw neither, so a byte-identity test written
+    // either way sat outside the proof with nothing said — the silent direction.
+    const found = replayMarkers(join(fixtures, 'replay-spellings'));
+    expect(found).toHaveLength(2);
+    expect(found[0].message).toContain('replays byte-identically via test()');
+    expect(found[1].message).toContain('with the name on the next line');
+  });
+
+  it('replay-markers: prose quoting a test name is not a test', () => {
+    // This repository's docblocks quote test names as a habit — check-replay-markers'
+    // own header does. Reported as violations, the only escapes were to reword the
+    // prose or to mark it, and marking it adds a test that does not exist to the
+    // proof's expected set, which then fails for the wrong reason.
+    expect(replayMarkers(join(fixtures, 'replay-prose'))).toEqual([]);
+    expect(scan(join(fixtures, 'replay-prose')).marked).toEqual([]);
+  });
+
+  it('replay-markers: two marked tests sharing a name in one file is refused', () => {
+    // The proof keys a pass by (file, leaf title) because vitest's title carries no
+    // ancestor describe. Two marked tests with one title in one file would make a
+    // pass for either indistinguishable from a skip of the other.
+    const found = replayMarkers(join(fixtures, 'replay-duplicate'));
+    expect(found.map((f) => f.message)).toEqual([
+      expect.stringMatching(/both called "replays byte-identically"/),
+    ]);
+  });
+
   it('truth-initialisation: a component reaching for the true field fails; the real tree passes', () => {
     // The leak this feature closed: for nine features the model runner initialised
     // from a now-cast evaluated from the true ocean, so nothing the platform measured

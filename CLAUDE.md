@@ -39,6 +39,7 @@ containers, no daemon (SRD-v2 NFR-01).
 ```sh
 pnpm install
 pnpm check        # typecheck, lint, unit tests, gates — NOT all of what CI runs
+pnpm replay-proof # AT-04: the byte-identity tests, their claim and its boundary
 pnpm gates        # the constitution gates alone (scripts/gates.registry)
 pnpm generate     # regenerate app/src/generated/ from contracts/ masters
 pnpm snapshots    # regenerate app/public/snapshots/ by running the components (ADR-0041)
@@ -48,18 +49,29 @@ pnpm site:build   # the published site, into site/build/ (ADR-0031)
 pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped labels
 ```
 
-**`pnpm check` is not the build.** This line read "what CI runs" until a branch shipped
-seven consecutive red CI runs while `pnpm check` reported green on every commit of it. CI
-runs six capture proofs after the checks above — `capture:glance operator`,
-`capture:background`, `capture:messages`, `capture:map`, `capture:mobile` and
-`capture:consumers` — and they need a build and a browser, which is why they are not in
-`check`. They are also the only thing that reads the shell as a *rendered page*: the eleven
-failures that branch collected were a new panel that did not fit a phone, which no unit test
-can see. Before pushing anything with a face, build and run the proof for it:
+**`pnpm check` is not the build, and CI runs seven more things than it does.** This line
+read "what CI runs" until a branch shipped seven consecutive red CI runs while `pnpm check`
+reported green on every commit of it. After the checks, CI runs `pnpm replay-proof` and then
+six capture proofs — `capture:glance operator`, `capture:background`, `capture:messages`,
+`capture:map`, `capture:mobile` and `capture:consumers`.
+
+The proof is out of `check` because it re-runs the marked tests' files, and paying that twice
+locally would make `pnpm check` a command nobody runs; its cheap half — that every
+determinism-shaped test declares whether it is in the proof — is `check-replay-markers` and
+*is* in `pnpm gates`. The captures are out because they need a build and a browser. They are
+also the only thing that reads the shell as a *rendered page*: the eleven failures that branch
+collected were a new panel that did not fit a phone, which no unit test can see. Before
+pushing anything with a face, build and run the proof for it:
 
 ```sh
 pnpm -C app build && pnpm run capture:mobile   # and the others CI runs, listed above
 ```
+
+**And a capture proof measures a stopped harness.** `capture:mobile` pins the clock to rate 0
+before it measures, so every surface drawn from an announcement is absent from every picture
+it takes — a gauge, a forecast, anything the loop produces. "The narrow presentation holds" is
+an empty claim about those from that proof alone; warm the loop, pin it, and measure. A gauge
+that had overflowed its box since the day it was written survived every run of the proof.
 
 `pnpm gates` runs the gates listed in `scripts/gates.registry`, one per line. **A new
 gate is a line appended to that registry.** Never edit the runner — it names no gate,

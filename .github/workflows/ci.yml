@@ -57,6 +57,20 @@ jobs:
       - name: Gates (Constitution I, II, III, IV, V, XI)
         run: pnpm run gates
 
+      # AT-04's one-command proof, run here because it was not: it had reported
+      # "held" over a test it never ran since the 101-109 close-out, and nothing
+      # noticed, because nothing ran it. The cheap half — that every
+      # determinism-shaped test says whether it is in the proof — is
+      # check-replay-markers in the step above and costs no test time. This is the
+      # other half, and it re-runs the marked tests' files -- around two and a half
+      # minutes, and the App tests step has already run those same files once. That
+      # duplication is the deliberate trade: selecting the nine tests by name would
+      # be cheaper and is now safe, since the JSON-report check supplies the floor a
+      # name filter lacks, but running whole files also fails the proof when an
+      # unmarked test in one of them breaks. Revisit if the wall time starts to bite.
+      - name: 'AT-04 replay proof (byte-identical replay, its claim and its boundary)'
+        run: pnpm run replay-proof
+
       - name: Build
         run: pnpm -C app run build
 

@@ -24,6 +24,7 @@
 - [ ] T009 A tour that operates the panels' controls — *deliberately not done. A tour
       that stepped the clock or stopped a component would have to undo what it did, or
       leave the harness changed by having been explained.*
-- [ ] T010 SRD requirement for the walkthrough. *Owed: this landed as a request during
-      113's implementation, and `srd.md` §5.13 carries FR-61 and FR-62 written from the
-      feature as built — tick when that amendment is on `main`.*
+- [x] T010 SRD requirement for the walkthrough. *On `main`: `srd.md` §5.13, "The
+      walkthrough (feature 110)", carries FR-61 and FR-62, written from the feature as
+      built. Cited by anchor rather than by line: line numbers in `srd.md` move under a
+      citation the next time a requirement above it is amended.*

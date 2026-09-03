@@ -42,6 +42,7 @@ describe('the backend runtime', () => {
     runtime.stop();
   });
 
+  // AT-04: byte-identity
   it('is deterministic: the same seed provisions the same manifest', () => {
     const first = buildBackend(testConfig(), options, validator);
     const second = buildBackend(testConfig(), options, validator);

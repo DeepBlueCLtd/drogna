@@ -98,7 +98,9 @@ rather than pretending (Constitution VII, carried into presentation).
   shell's configuration document and its master.
 - **`pnpm replay-proof`** (T607, deferred from 105 → 107 → here, deliberately):
   states AT-04's claim and boundary — lockstep only, commands ephemeral and
-  outside the claim — then runs every replay test and propagates the verdict.
+  outside the claim — then runs the marked byte-identity tests and propagates the
+  verdict. *This read "every replay test" until 101 T037's close-out found that the
+  selector excluded the generator's; see that line for what replaced it.*
 
 ## Acceptance evidence
 

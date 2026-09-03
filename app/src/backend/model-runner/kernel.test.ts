@@ -76,6 +76,7 @@ function parameters(overrides: Partial<KernelParameters> = {}): KernelParameters
 }
 
 describe('shallow-two-layer-v1', () => {
+  // AT-04: byte-identity
   it('replays byte-identically from the same seed, and differs from another (Constitution II, AT-04)', () => {
     const run = (seed: number) =>
       shallowTwoLayerKernel.memberField(initialState(), parameters(), new Rng(seed, 'model-runner:test'));

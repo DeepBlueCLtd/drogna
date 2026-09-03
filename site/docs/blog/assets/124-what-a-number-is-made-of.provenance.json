@@ -2,18 +2,23 @@
   "image": "124-what-a-number-is-made-of.png",
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
-  "sim_time": "2026-01-01T01:39:23Z",
+  "sim_time": "2026-01-01T01:39:22Z",
+  "clock_pinned": "rate 1",
   "holding": "analysis.loiter-arriving-pahu-run-1-contributions",
-  "clock_pinned": "rate 0",
-  "warmed": "stepped in bursts of 120 ticks until an analysis cycle had published, then pinned",
-  "column": "picked from the served contributions header, so it is a column a source reached",
+  "rays_drawn": 4,
+  "column": "read off the served contributions header, so it is a column an instrument reached",
+  "warmed": "stepped in bursts of 120 ticks at rate 0 until an analysis cycle published",
   "viewport": {
     "width": 1280,
     "height": 1000
+  },
+  "image_size": {
+    "width": 388,
+    "height": 1592
   },
   "browser": {
     "name": "chromium",
     "version": "141.0.7390.37"
   },
-  "caption": "The forecast tab centre region, with a water column opened."
+  "caption": "The forecast tab's centre region with a water column open: the share field at 0 m, the rays to the instruments that reached the picked column, and the depth profile with its per-source bands and figures."
 }

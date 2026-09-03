@@ -707,9 +707,10 @@
   font-weight: 700;
 }
 
-/* A source that reached nothing at the chosen level keeps its ray and its place (FR-128) at the
-   thinnest stroke there is, dimmed. It is not absent from the column — it contributed nothing
-   *here* — and the numbers table says which in words. */
+/* A source that reached nothing at the chosen level has no width — its contribution is nought,
+   which is the bottom of the same scale — so this rule only dims whatever remains of the line's
+   cap. What actually keeps its place is the hollow origin marker below. (This comment used to
+   describe a constant hairline; that inverted the encoding and was removed.) */
 .forecast-ray.is-absent {
   opacity: 0.35;
 }

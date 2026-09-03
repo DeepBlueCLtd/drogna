@@ -295,10 +295,15 @@ drawing in it.
         and `temperature-200m 21.7%` on one level — two bands, one name. `sourceLabels` gives an
         ordinal only where a datastream carries more than one source, so a lone instrument keeps
         its plain name and the numbers table's separation says which is physically which.
-      - **The bar holds at the magnitudes T002 warned about.** At 667 m the level reads
-        `measurement, earlier cycles −122.3%` against `temperature-200m ·1 106.0%`, and still
-        sums to 100.0% — the extrapolating gain drawn at its magnitude and marked, rather than
-        clamped into something tidier that the arithmetic does not say.
+      - **The bar holds at the magnitudes T002 warned about** — *and the figure first recorded
+        here was an artefact, which T022l explains.* The reading was written as "at 667 m,
+        `measurement, earlier cycles −122.3%` against `temperature-200m ·1 106.0%`". The
+        extrapolation is real: at **400 m** the level's ω is 122.3%, drawn as +106.0% and +21.7%
+        against an earlier-cycles band of −1.5% and a remainder of −5.4%, still summing to
+        100.0%. The −122.3% was not the gain: it was one depth's measurement share minus another
+        depth's ω, because the profile was pairing rows with the wrong levels. The claim survives
+        at a different row and a different sign, and it is corrected here rather than left
+        standing.
       - **The rays are short on this condition, and that is the scenario rather than the
         drawing.** The platform loiters, so every source sits within a cell or two of any column
         it reached and the fan collapses to almost a point. Nothing is wrong with the geometry —
@@ -423,6 +428,50 @@ the part worth recording, because each was a sentence asserting a property the c
       stylesheet's rule. And the band labelled "measurement, earlier cycles" carried that label
       even when this cycle's ω was unknown, where the honest label is the cumulative one.
 
+- [x] T022l **The profile was reading the wrong depths, and its own self-check could not see
+      it.** Both review passes found this independently, with measurements.
+
+      The panel took the centre region's depth axis from `inventory.holdings[0]` — whichever
+      holding the store listed first, which is the **archive**, filed at four levels — while an
+      analysis is filed at six. Feature 123 could live with that: it queried each depth by value
+      and EDR snapped it, so a reader saw the right numbers under a rounded label. This feature
+      turned the row's *position* into an index into the contributions document, and the
+      mislabelling became a data-mixing fault. Measured on the shipped configuration:
+
+      | row shown | background shares from | ω and per-source bands from |
+      |---|---|---|
+      | 0 m | 0 m | 0 m |
+      | 333 m | 400 m | **200 m** |
+      | 667 m | 600 m | **400 m** |
+      | 1000 m | 1000 m | **600 m** |
+
+      The analysis's 800 m and 1000 m levels were never shown at all, and the absence sentence
+      under the row labelled 1000 m was a true statement about 600 m.
+
+      **Nothing caught it, and the reason is worth more than the fault.** The region prints
+      "sums to 100.0%" and the docstring offers that as the reader's guard — but the stack is
+      Σbackground + (measurement − ω) + Σcontributions + remainder, and Σcontributions +
+      remainder = ω identically, so **ω cancels**. The printed sum is 100.0% whichever level's ω
+      is subtracted from whichever level's measurement share. A surface's own advertised
+      self-check was invariant under the fault it would have to catch: the repository's
+      "a check that has never been seen to fail", in the picture rather than in a gate.
+
+      Fixed at the root and again at the join: the axis is taken from the holding the analysis
+      names, and every level lookup matches on `depth_m` rather than on position, so the pairing
+      is checkable instead of assumed. `forecast.test.tsx` now asserts every profile row is a
+      depth the analysis is filed at, and that every level it carries is offered. Watched failing
+      against the axis as it shipped: "the profile offers 333 m, which the analysis is not filed
+      at: expected [ 0, 200, 400, 600, 800, 1000 ] to include 333".
+- [x] T022m **Three smaller readings that were wrong or unsupported.** The numbers table printed
+      an unsigned separation as "200 m down" — the kernel stores `Math.abs(down)`, so the
+      document carries no direction, and the 50 m instruments are *above* a 200 m level. Ray
+      widths renormalise to the widest at the level shown, so clicking a level redrew a 0.42
+      contribution at the width a 2.11 had occupied a frame earlier, under a sentence inviting
+      exactly that comparison; the scale is stated now, with the figure it is relative to. And
+      the two request streams, given separate cancellation tokens last round, still shared one
+      refusal list — so a successful depth change deleted the refusal that the profile's rows
+      were pointing at with "the refusal is named beneath".
+
 ## The right region, and the ghost
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
@@ -463,13 +512,19 @@ the part worth recording, because each was a sentence asserting a property the c
       *Built:* `site/docs/blog/posts/the-weights-were-there-and-thrown-away.md`, with the
       capture and its provenance beside it.
 
-      **Captured still rather than moving, and the reason is what `capture:motion` is.** That
-      script drives the *clock* and films what the system does on its own; the thing that moves
-      here is a reader picking a depth and the rays re-weighting, which is an interaction and
-      not a system animation, so filming it would have produced a still picture with a moving
-      clock in the corner. The capture is the region with a column open, and the alt text is
-      long enough to carry the reading — including the 667 m level at −122.3% against 106.0%,
-      still summing to 100.0%, which is the extrapolating gain drawn honestly.
+      **Captured still rather than moving — and the reason first written here was wrong about a
+      file in this repository.** It said `capture:motion` "drives the clock and films what the
+      system does on its own". It does not: it pins the clock exactly as `capture:glance` does,
+      requires `DROGNA_MOTION_ACT` — a selector to click — and records frames across that click.
+      It is an interaction recorder, and two entries on the estate were made with it.
+
+      The real reason is narrower. Motion clicks **one** selector and this surface needs two: a
+      cell picked to open a column, then a level chosen to re-weight it. Teaching a shared script
+      a second act for one caller is a change to make when a second caller wants it, not now. So
+      the capture is a still, from `scripts/capture/forecast.ts` — a committed script, because
+      `site/authoring/README.md` requires it and the first version of this asset was taken by a
+      throw-away in `.capture/` whose sidecar then described a viewport the image was not shot
+      at. The alt text carries the reading.
 
       The asset carries a `.provenance.json` on the estate's convention, and its values are read
       off the running page rather than written from memory: the run, the simulated instant, the

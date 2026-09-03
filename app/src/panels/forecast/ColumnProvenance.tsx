@@ -131,7 +131,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const [slab, setSlab] = useState<Slab | undefined>();
   const [column, setColumn] = useState<Column | undefined>();
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
-  /** The served per-source column, and which of its levels the rays are weighted to. */
+  /** The served per-source column, and the depth its rays are weighted to (never an index). */
   /**
    * The served column, or which of the two ways it is not here. FR-129 names three facts and a
    * refusal is the third: collapsing it into `undefined` made the profile say the document had
@@ -140,7 +140,15 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const [contributions, setContributions] = useState<AnalysisContributions | 'refused' | undefined>();
   const [selectedLevel, setSelectedLevel] = useState<number | undefined>();
   const [busy, setBusy] = useState(false);
-  const [refusals, setRefusals] = useState<readonly string[]>([]);
+  /**
+   * One list per stream, for the reason the tokens are one per stream. They shared a list, and
+   * the slab effect clears its own on every success — so a successful depth change deleted the
+   * refusal that the profile's rows were pointing at with "the refusal is named beneath", and
+   * left the sentence pointing at nothing.
+   */
+  const [slabRefusals, setSlabRefusals] = useState<readonly string[]>([]);
+  const [columnRefusals, setColumnRefusals] = useState<readonly string[]>([]);
+  const refusals = useMemo(() => [...slabRefusals, ...columnRefusals], [slabRefusals, columnRefusals]);
   /**
    * One token per request stream, and the reason is a regression the first attempt at this
    * caused. A single shared token looked economical and was not: `readColumn` bumping it
@@ -171,7 +179,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     setColumn(undefined);
     setContributions(undefined);
     setSelectedLevel(undefined);
-    setRefusals([]);
+    setColumnRefusals([]);
   }, [analysis?.collections.contributions]);
 
   /**
@@ -195,7 +203,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
         const body = (await response.json()) as RangeBody;
         if (cancelled || token !== wantedSlab.current) return;
         if (!response.ok) {
-          setRefusals([`the share field at ${depthM} m was refused: ${response.status}`]);
+          setSlabRefusals([`the share field at ${depthM} m was refused: ${response.status}`]);
           setSlab(undefined);
         } else {
           const longitudes = body.domain?.axes?.x?.values ?? [];
@@ -210,12 +218,12 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
             const key = sourceOf(name);
             if (key && range.values) shares[key] = range.values;
           }
-          setRefusals([]);
+          setSlabRefusals([]);
           setSlab({ depthM, longitudes, latitudes, shares });
         }
       } catch (error) {
         if (!cancelled && token === wantedSlab.current) {
-          setRefusals([`the share field at ${depthM} m could not be read: ${String(error)}`]);
+          setSlabRefusals([`the share field at ${depthM} m could not be read: ${String(error)}`]);
           setSlab(undefined);
         }
       } finally {
@@ -297,7 +305,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
         failed.push(`the per-source column could not be read: ${String(error)}`);
         setContributions('refused');
       }
-      setRefusals(failed);
+      setColumnRefusals(failed);
     },
     [analysis, grid, edrPrefix, contributionsPrefix],
   );

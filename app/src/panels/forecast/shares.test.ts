@@ -69,10 +69,12 @@ describe('which of the three facts a level with no contributions is', () => {
   it('tells the three apart, and says nothing at all about a level that has contributions', () => {
     // Absent: the document never arrived.
     expect(absenceOf(undefined, 0)).toMatch(/have not arrived/);
-    // Absent in a different way: it arrived and carries no such level.
-    expect(absenceOf(document([]), 0)).toMatch(/no entry for this level/);
+    // Absent in a different way: it arrived and carries no level at that depth.
+    expect(absenceOf(document([]), 0)).toMatch(/no level at this depth/);
     // Nothing was within reach — a fact the compact support makes exact.
     expect(absenceOf(document([level({ reached: false })]), 0)).toMatch(/within reach/);
+    // A depth the analysis does not carry at all is its own fact, not "nothing reached it".
+    expect(absenceOf(document([level({ reached: true, depth_m: 0 })]), 900)).toMatch(/no level at this depth/);
     // Reached, and contributed nothing: the other fact, and it must not read as the one above.
     const summedToNothing = absenceOf(document([level({ reached: true })]), 0);
     expect(summedToNothing).toMatch(/contributed nothing/);

@@ -114,9 +114,12 @@ describe('the rays a column is made of', () => {
   });
 
   it('SC-003: selecting a level re-weights the rays without moving them or changing their count', () => {
+    // Levels are chosen by **depth**, never by position: the panel's depth list and the served
+    // document are filed on different axes, and an index paired one depth's background with
+    // another depth's contributions on three rows out of four.
     const whole = raysFor(document());
-    const surface = raysFor(document(), 0);
-    const deep = raysFor(document(), 1);
+    const surface = raysFor(document(), 0);   // the level at 0 m
+    const deep = raysFor(document(), 200); // the level at 200 m, by depth and not by index
 
     // Same origins, in the same order, at every level — the volume carries *which* sources and
     // the profile carries *where they mattered*, and neither is read through the other.
@@ -156,7 +159,7 @@ describe('the rays a column is made of', () => {
   });
 
   it('SC-001: the drawn contributions and the remainder sum to the weight the holding published', () => {
-    for (const level of [undefined, 0, 1]) {
+    for (const level of [undefined, 0, 200]) {
       const set = raysFor(document(), level);
       const residual = contributionResidual(set);
       expect(residual.published).toBeCloseTo(set.observationWeight, 10);

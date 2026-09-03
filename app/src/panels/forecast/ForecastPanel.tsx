@@ -73,6 +73,32 @@ export const FORECAST_REGIONS = [
   { id: 'timeline', label: 'the runs, in simulation time, labelled by cause', element: '[data-region="timeline"]' },
 ] as const;
 
+
+/**
+ * The depth axis the centre region walks, taken from the **analysis** the region is reading and
+ * not from whichever holding the inventory happens to list first.
+ *
+ * **"Every era shares the one grid" is false, and the depth axis is where.** The shipped
+ * configuration authors the archive over four levels and the now-cast, the departure brief and
+ * every analysis over six (`config.env_generator`), so the first holding in the inventory — the
+ * archive — offered 0, 333, 667 and 1000 m for a column whose analysis is filed at 0, 200, 400,
+ * 600, 800 and 1000. While the region drew four aggregate shares that was wrong but survivable:
+ * each depth was queried by value and EDR snapped it to the nearest level, so a reader saw the
+ * right numbers under a rounded label. Feature 124 made the row's position an *index into
+ * another document*, and it stopped being survivable: the row labelled 333 m carried the 400 m
+ * level's background against the 200 m level's contributions, and the analysis's 800 m level was
+ * never shown at all.
+ *
+ * So the axis comes from the holding the analysis names. Where that holding is not in the
+ * inventory yet the chooser stays undrawn, which is the honest state — a chooser over the wrong
+ * axis is worse than no chooser.
+ */
+function gridForAnalysis(inventory: HoldingsInventory, analysis: AnalysisPublished | undefined): ColumnGrid | undefined {
+  if (!analysis) return undefined;
+  const named = inventory.holdings.find((holding) => holding.holding_id === analysis.collections.analysis);
+  return columnGridOf(named as CoverageHolding | undefined);
+}
+
 /**
  * A short, stable fingerprint of a sentence, so two holds at one tick get two keys.
  *
@@ -165,6 +191,14 @@ export function ForecastPanel({ params }: PanelProps) {
   const [cost, setCost] = useState<RunCost | undefined>();
   const [features, setFeatures] = useState<ForecastFeatures | undefined>();
   const [analysis, setAnalysis] = useState<AnalysisPublished | undefined>();
+  /**
+   * The standing analysis, readable from a subscription callback and from the inventory fetch
+   * without either becoming a dependency of the other. Both need to know which analysis the
+   * depth axis must come from, and neither should re-run when a restatement arrives.
+   */
+  const analysisRef = useRef<AnalysisPublished | undefined>(undefined);
+  /** Which analysis the depth axis in hand was taken from, so it is fetched once per cycle. */
+  const gridForRef = useRef<string | undefined>(undefined);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
@@ -235,7 +269,9 @@ export function ForecastPanel({ params }: PanelProps) {
             if (!response.ok) return;
             const body: unknown = await response.json();
             if (!validator.validate('holdings-inventory', body).ok) return;
-            const grid = columnGridOf((body as HoldingsInventory).holdings[0] as CoverageHolding | undefined);
+            const grid = gridForAnalysis(body as HoldingsInventory, analysisRef.current);
+            // The axis belongs to the analysis, so a cycle that has not been seen yet leaves
+            // the chooser undrawn and asks again on the next holding announcement.
             if (grid) setColumnGrid(grid);
             else gridWantedRef.current = true;
           } catch {
@@ -252,7 +288,9 @@ export function ForecastPanel({ params }: PanelProps) {
       // Nothing is fetched here, and nothing is fetched until a reader picks a square.
       client.subscribe(config.topics.analysis_standing, (message) => {
         if (!drawable(message.topic, message.payload)) return;
-        setAnalysis(message.payload as AnalysisPublished);
+        const standing = message.payload as AnalysisPublished;
+        analysisRef.current = standing;
+        setAnalysis(standing);
       }),
     );
     stops.push(
@@ -344,6 +382,38 @@ export function ForecastPanel({ params }: PanelProps) {
 
   // The store's own inventory, once, on mount. Everything after it arrives on an
   // announcement; this is the history that had already happened when the console opened.
+  /**
+   * The depth axis, fetched once for each analysis cycle the panel comes to draw.
+   *
+   * Driven by the announcement and not by a timer: the dependency is the analysis's own
+   * collection name, so a standing restatement — which carries the same names — changes
+   * nothing, and a genuinely new cycle asks once. Keyed on the *analysis holding* rather than
+   * taking whatever the inventory lists first, because the eras do not share a depth axis and
+   * a row's depth is now joined against the contributions document (`gridForAnalysis`).
+   */
+  useEffect(() => {
+    const named = analysis?.collections.analysis;
+    if (!named || gridForRef.current === named) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(config.endpoints.holdings);
+        if (!response.ok) return;
+        const body: unknown = await response.json();
+        if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
+        const grid = gridForAnalysis(body as HoldingsInventory, analysis);
+        if (!grid) return;
+        gridForRef.current = named;
+        setColumnGrid(grid);
+      } catch {
+        // Left for the next cycle to ask again; a chooser over no axis is drawn as absent.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [analysis, config.endpoints.holdings, validator]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -361,14 +431,16 @@ export function ForecastPanel({ params }: PanelProps) {
       }
       if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
       const inventory = body as HoldingsInventory;
-      // The grid the centre region's chooser spans, read off a holding's own manifest rather
-      // than from configuration: a chooser laid over a domain the store does not hold would
-      // offer squares that resolve to nothing. Any holding will do — every era shares the
-      // one grid — so the first is taken, and its absence leaves the chooser undrawn.
-      const grid = columnGridOf(inventory.holdings[0] as CoverageHolding | undefined);
+      // The grid the centre region's chooser spans, read off the analysis's own manifest: a
+      // chooser laid over another era's depth axis offers squares whose levels are not the
+      // ones the analysis is filed at (`gridForAnalysis`). Its absence leaves the chooser
+      // undrawn until an analysis lands, which is the honest state.
+      const grid = gridForAnalysis(inventory, analysisRef.current);
       if (grid) {
         setColumnGrid(grid);
         gridWantedRef.current = false;
+      } else {
+        gridWantedRef.current = true;
       }
       const seeded = entriesFromInventory(inventory);
       setEntries((previous) => {

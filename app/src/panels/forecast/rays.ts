@@ -102,16 +102,42 @@ export interface RaySet {
 /**
  * The rays for a column, or for one level of it.
  *
- * `levelIndex` undefined is the column: FR-122's own reading, a source's contribution *to the
- * column*, summed over its levels. A level index re-weights to that level alone (FR-128) — same
+ * `depthM` undefined is the column: FR-122's own reading, a source's contribution *to the
+ * column*, summed over its levels. A depth re-weights to that level alone (FR-128) — same
  * sources, same origins, different widths, which is why this returns the whole source table's
  * order either way rather than only the sources that happened to reach the chosen level.
+ *
+ * **Chosen by depth and not by index, because the two documents do not share an axis.** The
+ * shell's depth list came from whichever holding the inventory listed first — the archive, at
+ * four levels — while an analysis is filed at six, so an index matched the row labelled 333 m
+ * to the level at 200 m: one depth's background against another's contributions, and two of the
+ * analysis's levels never shown. The axis is taken from the analysis now, and this matches on
+ * the value anyway, so the pairing is checkable rather than assumed.
  */
-export function raysFor(document: AnalysisContributions, levelIndex?: number): RaySet {
-  const levels =
-    levelIndex === undefined
-      ? document.levels
-      : document.levels.filter((level) => level.depth_index === levelIndex);
+export function levelAtDepth(
+  document: AnalysisContributions,
+  depthM: number,
+): AnalysisContributions['levels'][number] | undefined {
+  let nearest: AnalysisContributions['levels'][number] | undefined;
+  for (const level of document.levels) {
+    if (!nearest || Math.abs(level.depth_m - depthM) < Math.abs(nearest.depth_m - depthM)) nearest = level;
+  }
+  // Nearest, but only if it is *this* level: half the spacing of the document's own axis is
+  // the widest a match can be and still be a match. A display depth with no level within that
+  // is a depth this document does not carry, and saying so is the point.
+  if (!nearest) return undefined;
+  // Half the spacing of the document's own axis is the widest a match can be and still be one.
+  // A document carrying a single level carries exactly that depth and no tolerance can be
+  // derived from it, so the spacing is nought and the match is exact — an `Infinity` there
+  // would make a one-level document answer for every depth asked of it.
+  const spacing =
+    document.levels.length > 1 ? Math.abs(document.levels[1].depth_m - document.levels[0].depth_m) : 0;
+  return Math.abs(nearest.depth_m - depthM) <= spacing / 2 ? nearest : undefined;
+}
+
+export function raysFor(document: AnalysisContributions, depthM?: number): RaySet {
+  const chosen = depthM === undefined ? undefined : levelAtDepth(document, depthM);
+  const levels = depthM === undefined ? document.levels : chosen ? [chosen] : [];
 
   /** Per source index over the chosen levels: the summed contribution, and its separation. */
   const summed = new Map<number, { contribution: number; separationKm: number; separationM: number }>();

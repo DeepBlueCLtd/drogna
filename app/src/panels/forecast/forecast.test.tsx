@@ -640,7 +640,11 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // a second implementation of it that could agree while the surface disagreed.
       let checked = 0;
       for (const level of served.levels) {
-        const residual = contributionResidual(raysFor(served, level.depth_index));
+        // By depth, as the surface selects: passing `depth_index` here selected the level
+        // nearest *one metre* and the assertion compared two different levels' weights, which
+        // is the same fault this round fixed in the region and is why the function takes a
+        // depth at all.
+        const residual = contributionResidual(raysFor(served, level.depth_m));
         // The bound is the holding's declared tolerance times the number of terms summed: each
         // of the contributions, the remainder and ω carries at most one ulp of float32 error at
         // the magnitude the holding stores, and the tolerance *is* that ulp (four of them, as
@@ -659,6 +663,40 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // rays carry no source the document does not.
       const drawnSources = [...document.querySelectorAll('line.forecast-ray')].map((ray) => ray.getAttribute('data-source'));
       expect([...drawnSources].sort()).toEqual(served.sources.map((source) => source.source_id).sort());
+    });
+
+    it('every profile row reads the analysis level it is labelled with, on an axis that is the analysis’s own', async () => {
+      // **The fault this exists for was structural and drew a plausible picture.** The panel
+      // took its depth axis from whichever holding the inventory listed first — the archive, at
+      // four levels — while an analysis is filed at six, and the profile then paired a row with
+      // the served level *of the same index*. Three rows in four carried one depth's background
+      // against another depth's contributions, two of the analysis's levels were never shown,
+      // and the published capture's headline figure was an artefact of it. The printed
+      // "sums to 100.0%" could not catch it: ω cancels out of that sum.
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      const picked = await openColumnAt(at.longitude, at.latitude);
+      const served = await servedColumn(holding.holding_id, picked.longitude, picked.latitude);
+
+      // The rows the reader sees, and the depths the analysis is actually filed at.
+      const rows = [...document.querySelectorAll('button.forecast-column-level')].map((row) =>
+        Number(row.getAttribute('data-depth')),
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      const analysisDepths = served.levels.map((level) => level.depth_m);
+      // Every row is a depth the analysis carries — not a neighbouring era's rounding of it.
+      for (const row of rows) {
+        expect(analysisDepths, `the profile offers ${row} m, which the analysis is not filed at`).toContain(row);
+      }
+      // And every level the analysis carries is offered: a row missing is a level a reader
+      // cannot reach, which is how 800 m went unshown.
+      expect([...rows].sort((a, b) => a - b)).toEqual([...analysisDepths].sort((a, b) => a - b));
+
+      // The axis came from the analysis holding, whose depth count differs from the archive's
+      // on the shipped configuration — which is what made an index join wrong rather than merely
+      // untidy.
+      const analysisGrid = runtime.store.holding(holding.holding_id)?.descriptor.manifest.grid.depth;
+      expect(rows.length).toBe(analysisGrid?.count);
     });
 
     it('the readout under the field names the cell it is pointing at, not one two cells away', async () => {

@@ -42,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { sourceLabels, type Ray, type RaySet } from './rays.js';
+import { levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_KEYS, SOURCES, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -73,6 +73,7 @@ export interface ProfileProps {
    */
   readonly rays: RaySet | undefined;
   /** Which level's rays are drawn: a depth index, or nothing for the whole column. */
+  /** The depth whose contributions the rays are weighted to, or nothing for the whole column. */
   readonly selectedLevel: number | undefined;
   readonly onSelectLevel: (depthIndex: number | undefined) => void;
 }
@@ -90,7 +91,6 @@ interface Band {
 function bandsFor(
   level: ProfileLevel,
   document: AnalysisContributions | undefined,
-  index: number,
   labels: readonly string[],
 ): Band[] {
   // A refused depth has no reading at all, so it has no bands: the row states the refusal
@@ -104,7 +104,10 @@ function bandsFor(
   }
 
   const measurement = SOURCES.find((candidate) => candidate.key === 'measurement');
-  const served = document?.levels.find((candidate) => candidate.depth_index === index);
+  // Matched on the depth the row is labelled with, never on its position in the list: the two
+  // documents are filed on different axes and an index silently paired one depth's background
+  // with another depth's contributions.
+  const served = document ? levelAtDepth(document, level.depthM) : undefined;
   const omega = served?.observation_weight ?? 0;
   bands.push({
     key: 'earlier',
@@ -149,14 +152,14 @@ function bandsFor(
 /** A level's own statement when it carries no source: which of the facts it is. */
 export function absenceOf(
   document: AnalysisContributions | 'refused' | undefined,
-  index: number,
+  depthM: number,
   refusedHere = false,
 ): string | undefined {
   if (refusedHere) return 'the query for this depth was refused, so this row is a place-holder and not a reading';
   if (document === 'refused') return 'the per-source column was refused, which is a different fact from its not having arrived: the refusal is named beneath';
   if (!document) return 'the contributions for this column have not arrived, so what made this level is not stated';
-  const served = document.levels.find((candidate) => candidate.depth_index === index);
-  if (!served) return 'the served column carries no entry for this level at all';
+  const served = levelAtDepth(document, depthM);
+  if (!served) return 'the analysis carries no level at this depth, so nothing here is read from it';
   if (!served.reached) {
     return 'no observation was within reach of this level: the correlation reaches exactly zero beyond twice its half-width, so this is a fact rather than a small number';
   }
@@ -204,9 +207,11 @@ export function Profile({
             </>
           ) : (
             <>
-              The rays above are re-weighted to{' '}
-              <strong>{levels[selectedLevel]?.depthM.toFixed(0) ?? '—'} m</strong>: the same
-              sources at the same places, at that level’s widths.{' '}
+              The rays above are re-weighted to <strong>{selectedLevel.toFixed(0)} m</strong>:
+              the same sources at the same places, at that level’s widths. Widths are relative
+              to the widest ray <em>at the level shown</em>
+              {set && set.widest > 0 ? ` — ${set.widest.toFixed(4)} here` : ''}, so a ray is not
+              comparable across levels and the figures below are what carry that.{' '}
               <button type="button" className="forecast-chip" onClick={() => onSelectLevel(undefined)}>
                 back to the whole column
               </button>
@@ -234,15 +239,15 @@ export function Profile({
 
       <ol className="forecast-column-levels">
         {levels.map((level, index) => {
-          const bands = bandsFor(level, served, index, labels);
+          const bands = bandsFor(level, served, labels);
           const magnitude = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? Math.abs(band.value) : 0), 0);
           const total = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? band.value : 0), 0);
           // A share the query never served is absent, and absent is not nought (FR-041): it is
           // left out of the bar and named in the figures, rather than drawn as a band of no
           // width that a reader would read as "this contributed nothing".
           const unserved = bands.filter((band) => !Number.isFinite(band.value));
-          const absence = absenceOf(contributions, index, level.refused);
-          const selected = selectedLevel === index;
+          const absence = absenceOf(contributions, level.depthM, level.refused);
+          const selected = selectedLevel === level.depthM;
           return (
             <li key={level.depthM} className={selected ? 'is-selected' : undefined}>
               <button
@@ -250,7 +255,7 @@ export function Profile({
                 className="forecast-column-level"
                 aria-pressed={selected}
                 data-depth={level.depthM.toFixed(0)}
-                onClick={() => onSelectLevel(selected ? undefined : index)}
+                onClick={() => onSelectLevel(selected ? undefined : level.depthM)}
               >
                 <span className="forecast-column-depth">{level.depthM.toFixed(0)} m</span>
                 <span className="forecast-column-stack" aria-hidden="true">
@@ -322,7 +327,7 @@ export function Profile({
       {set && set.rays.length > 0 && (
         <table className="forecast-column-numbers" data-testid="contribution-numbers">
           <caption>
-            What produced each width{selectedLevel === undefined ? ', over the whole column' : ` at ${levels[selectedLevel]?.depthM.toFixed(0)} m`}. The
+            What produced each width{selectedLevel === undefined ? ', over the whole column' : ` at ${selectedLevel.toFixed(0)} m`}. The
             separation is what the taper was evaluated on, cell centre to cell centre; the two
             errors are what the gain weighed against each other.
           </caption>
@@ -336,23 +341,26 @@ export function Profile({
             </tr>
           </thead>
           <tbody>
-            {set.rays.map((ray: Ray, index: number) => (
+            {set.rays.map((ray: Ray) => (
               <tr key={ray.sourceId}>
                 <th scope="row">
                   <span
                     className="forecast-share-swatch"
-                    style={{ background: instrumentAt(served?.sources.findIndex((candidate) => candidate.source_id === ray.sourceId) ?? index).hue }}
+                    style={{ background: instrumentAt(ray.sourceIndex).hue }}
                     aria-hidden="true"
                   />
-                  {labels[served?.sources.findIndex((candidate) => candidate.source_id === ray.sourceId) ?? index] ?? ray.datastreamId}
+                  {labels[ray.sourceIndex] ?? ray.datastreamId}
                   <span className="forecast-column-kind"> ({ray.kind})</span>
                 </th>
                 <td className={ray.contribution < 0 ? 'is-negative' : undefined}>
                   {ray.reachedHere ? ray.contribution.toFixed(4) : 'not at this level'}
                 </td>
                 <td>
+                  {/* A magnitude, said as one. The kernel stores `Math.abs(down)`, so the
+                      document carries no direction — and the 50 m instruments are *above* a
+                      200 m level, which the word "down" asserted of all three of them. */}
                   {ray.reachedHere
-                    ? `${ray.separationKm.toFixed(1)} km${ray.separationM > 0 ? `, ${ray.separationM.toFixed(0)} m down` : ', same level'}`
+                    ? `${ray.separationKm.toFixed(1)} km${ray.separationM > 0 ? `, ${ray.separationM.toFixed(0)} m in depth` : ', same level'}`
                     : '—'}
                 </td>
                 <td>{ray.errorStd}</td>

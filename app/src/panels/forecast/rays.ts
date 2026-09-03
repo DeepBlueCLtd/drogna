@@ -257,3 +257,42 @@ export function contributionResidual(set: RaySet): { drawn: number; published: n
 export function backgroundRaysIn(set: RaySet): readonly Ray[] {
   return set.rays.filter((ray) => ray.kind === 'modelled');
 }
+
+/**
+ * The width the widest contribution in a column is drawn at, in screen pixels.
+ *
+ * Here rather than in the component because the note under the map, the numbers table and the
+ * tests all have to agree with the drawing about which rays the width scale can carry, and three
+ * copies of a threshold is how they come to disagree.
+ */
+export const RAY_WIDTH_PX = 8;
+
+/**
+ * The thinnest line the map can put on a screen. Below this a stroke is under a device pixel and
+ * renders as nothing whatever the arithmetic says.
+ *
+ * **This is not the constant term T022k removed.** That one was added to every ray, absent ones
+ * included, and inverted the encoding: a source contributing under about 9% of the widest drew
+ * *thinner* than a source that contributed nothing at all. This one applies to reached sources
+ * only, so the ordering "contributed something" > "contributed nothing" is never crossed, and a
+ * ray that meets it is marked under-scale rather than passed off as a quantity.
+ */
+export const RAY_MIN_DRAWN_PX = 0.75;
+
+/** The stroke width a ray is drawn at: proportional, floored at what a screen can show. */
+export function drawnWidthOf(ray: Ray): number {
+  if (!ray.reachedHere) return 0;
+  return Math.max(ray.weight * RAY_WIDTH_PX, RAY_MIN_DRAWN_PX);
+}
+
+/**
+ * True where a ray's true width is below what the map can draw, so its drawn width is the floor
+ * and not its contribution.
+ *
+ * Measured on the shipped loitering condition this is five rays of six at 0 m: the widths the
+ * proportional scale asks for run 8, 0.47, 0.073, 0.0082, 0.0033 and 0.0012 px. Drawing them
+ * proportionally means drawing one ray and calling it six.
+ */
+export function underScale(ray: Ray): boolean {
+  return ray.reachedHere && ray.weight * RAY_WIDTH_PX < RAY_MIN_DRAWN_PX;
+}

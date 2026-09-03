@@ -41,7 +41,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
-import { backgroundRaysIn, raysFor } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, backgroundRaysIn, drawnWidthOf, raysFor, underScale } from './rays.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -330,28 +330,50 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
 
   /**
    * Where a longitude and latitude fall in the drawn map's coordinates, which are one unit per
-   * drawn cell. The served axes are the authority for what is where: a value is snapped to the
-   * nearest axis entry and then to the nearest *drawn* column, never interpolated between two.
+   * drawn cell.
    *
-   * The snapping is the drawing's own quantum and not the analysis's. `rays.ts` argues that a
-   * ray ends where the instrument was rather than at the cell the gain attributed it to, and
-   * that remains what is passed in here; but the map is thinned to what a panel can show, so
-   * two served cells can share one drawn column and the line lands within that. The figures
-   * beneath carry the distinction the picture cannot: the separation stated is the analysis's
-   * own, cell centre to cell centre.
+   * **Interpolated, and the previous version's snapping is why.** This used to snap a value to
+   * the nearest served axis entry and then that entry to the nearest *drawn* column, on the
+   * argument that "two served cells can share one drawn column and the line lands within that".
+   * Measured on the shipped loitering condition, that argument's conclusion was wrong: the
+   * platform's sources sit within a cell or two of the column they reach, the map is thinned by
+   * two, and **four of six rays came out with `x1 === x2` and `y1 === y2`** — including the one
+   * carrying the whole width encoding. A line of zero length is not a thin line, it is no line,
+   * and nothing in the tree measured one: the SC-003 assertion compared `"23.5,20.5"` to itself
+   * and the containment check could not fail because the snapping structurally returned a cell
+   * centre.
+   *
+   * So the position is carried through continuously: a fractional index on the served axis, by
+   * linear interpolation between the two entries that bracket the value, divided by the thinning
+   * step. Thinning still costs resolution — a served cell is half a drawn unit at step 2 — but it
+   * no longer costs the line its existence. The figures beneath still carry what the picture
+   * cannot: the separation stated is the analysis's own, cell centre to cell centre.
+   *
+   * A value outside the axis is clamped to the drawn extent. The axes carry cell *centres* and
+   * an observation sits inside a cell, so this is at most half a cell and only ever at the grid's
+   * rim; it is a clamp rather than an invention because the alternative — a marker outside the
+   * map — reads as a place the source is not.
    */
   const placeOn = useCallback(
     (axis: readonly number[], kept: readonly number[], value: number): number | undefined => {
       if (axis.length === 0 || kept.length === 0) return undefined;
-      let nearest = 0;
-      for (let index = 1; index < axis.length; index++) {
-        if (Math.abs(axis[index] - value) < Math.abs(axis[nearest] - value)) nearest = index;
+      let served = 0;
+      if (axis.length > 1) {
+        const ascending = axis[axis.length - 1] >= axis[0];
+        served = ascending === (value < axis[0]) ? 0 : axis.length - 1;
+        for (let index = 0; index < axis.length - 1; index++) {
+          const from = axis[index];
+          const to = axis[index + 1];
+          if (value >= Math.min(from, to) && value <= Math.max(from, to)) {
+            served = to === from ? index : index + (value - from) / (to - from);
+            break;
+          }
+        }
       }
-      let at = 0;
-      for (let index = 1; index < kept.length; index++) {
-        if (Math.abs(kept[index] - nearest) < Math.abs(kept[at] - nearest)) at = index;
-      }
-      return at + 0.5;
+      // `kept` is `0, step, 2*step, …` by construction, so a served index divided by the step is
+      // the drawn column it falls in, fraction and all.
+      const step = kept.length > 1 ? kept[1] - kept[0] : 1;
+      return Math.min(Math.max(served / step + 0.5, 0), kept.length);
     },
     [],
   );
@@ -392,6 +414,8 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    * anywhere in the shell, which is the outcome its docstring says is prevented.
    */
   const backgroundDrawn = rays ? backgroundRaysIn(rays.set) : [];
+  /** How many rays are at the width floor rather than at their own width (FR-122). */
+  const underScaleCount = rays ? rays.set.rays.filter(underScale).length : 0;
 
   const sharesAt = useCallback(
     (row: number, col: number): Record<SourceKey, number> => {
@@ -622,10 +646,13 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                 {rays.drawn.map(({ ray, x, y, instrument }) => (
                   <line
                     key={ray.sourceId}
-                    className={`forecast-ray${ray.contribution < 0 ? ' is-negative' : ''}${ray.reachedHere ? '' : ' is-absent'}`}
+                    className={`forecast-ray${ray.contribution < 0 ? ' is-negative' : ''}${ray.reachedHere ? '' : ' is-absent'}${underScale(ray) ? ' is-under-scale' : ''}`}
                     data-source={ray.sourceId}
                     data-weight={ray.weight.toFixed(4)}
                     data-reached={ray.reachedHere ? 'yes' : 'no'}
+                    // The master's own word for what an origin is, on the drawn element, so
+                    // SC-005 can be asked of the picture rather than of a source id's spelling.
+                    data-kind={ray.kind}
                     x1={rays.from.x}
                     y1={rays.from.y}
                     x2={x}
@@ -640,12 +667,23 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                     // where it is and the numbers table still lists it.
                     //
                     // A source that reached nothing contributed nothing, so its line has no
-                    // width — the truthful end of the same scale. The first attempt gave it a
+                    // width — the truthful end of the same scale. The first attempt gave *it* a
                     // constant 0.75 to keep it visible, which **inverted the encoding**: any
                     // reached source under about 9% of the widest drew thinner than a source
                     // that reached nothing at all. What keeps its place is its origin marker,
                     // drawn hollow below, which is a position and not a quantity.
-                    strokeWidth={ray.reachedHere ? ray.weight * 8 : 0}
+                    //
+                    // The floor that remains is the other half of that correction, and it is
+                    // for reached sources only. Measured on the shipped condition the six
+                    // widths at 0 m ran 8, 0.47, 0.073, 0.0082, 0.0033, 0.0012 px — a 6667:1
+                    // spread, five of the six below a device pixel and therefore drawn as
+                    // nothing at all, under a sentence promising "the same sources at the same
+                    // places, at that level's widths". Proportional and invisible is not more
+                    // honest than proportional and marked: a ray under the floor is drawn at
+                    // the floor and **says so**, in its class, in the note below the map and in
+                    // the numbers table, so the reader is told the width is not the quantity
+                    // rather than told the source is not there.
+                    strokeWidth={drawnWidthOf(ray)}
                     // The instrument's own dash always: it is half of this source's identity
                     // without colour, and overriding it for a negative contribution — which the
                     // first version did — buys a sign at the cost of telling two sources apart.
@@ -668,13 +706,40 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                     cy={y}
                     r={0.45}
                     fill={ray.reachedHere ? instrument.hue : 'none'}
-                    stroke={instrument.hue}
+                    // **Inline, because a presentation attribute loses.** This carried
+                    // `stroke={instrument.hue}` as a JSX attribute while `forecast.css` set
+                    // `.forecast-ray-origin { stroke: var(--shell-bg) }`. An SVG presentation
+                    // attribute sits at specificity 0, below any class selector, so the class
+                    // won every time. For a reached source that was invisible — the fill
+                    // carries the hue — but an absent source is `fill: none`, so its only paint
+                    // was the background colour and the marker the comment above calls "what
+                    // keeps its place" was a background-coloured ring on a background. At the
+                    // three deepest levels of the shipped column every ray is absent, so the
+                    // whole ray layer went blank under a caption saying it had been re-weighted.
+                    // An inline style beats a class, so the invariant is now one jsdom can read.
+                    style={ray.reachedHere ? undefined : { stroke: instrument.hue }}
+                    vectorEffect="non-scaling-stroke"
                   />
                 ))}
                 <circle className="forecast-ray-column" cx={rays.from.x} cy={rays.from.y} r={0.5} />
               </g>
             )}
           </svg>
+
+          {/* **What the width scale could not carry, said where the widths are.** A ray whose
+              true width is below `RAY_MIN_DRAWN_PX` is drawn at that floor, so its thickness is
+              the map's limit and not its contribution; without this sentence the floor would be
+              the quiet lie the proportional scale was there to avoid. The count is the drawing's
+              own — the same predicate the stroke width is computed from — and the figures are in
+              the table beneath. */}
+          {rays && underScaleCount > 0 && (
+            <p className="forecast-ray-note" data-testid="forecast-under-scale">
+              {underScaleCount === 1 ? 'One ray is' : `${underScaleCount} rays are`} drawn at the thinnest width this
+              map can show: {underScaleCount === 1 ? 'its' : 'their'} share of the widest contribution is under{' '}
+              {(RAY_MIN_DRAWN_PX / RAY_WIDTH_PX).toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 1 })},
+              so the width is the floor rather than the figure. The figures are printed below.
+            </p>
+          )}
 
           {/* The readout under the map rather than a floating tooltip: it cannot be clipped at
               a phone's width, it is the same for a pointer and for the keyboard cursor, and a

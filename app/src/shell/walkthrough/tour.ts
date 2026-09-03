@@ -466,14 +466,14 @@ const FORECAST_STEPS: SubjectStep[] = [
     element: '[data-region="volume"]',
     title: 'What a cell’s value was made from',
     what: 'The question an operator asks of a forecast is not which model ran but what a given number is made of: which observations moved it, by how much, and where the rest came from when nothing sampled. Assimilation is arithmetic over published numbers, and every reader assumes it is magic.',
-    panel: 'This region is feature 124 and is not built. It says so rather than drawing an empty canvas: a picture that showed nothing would be a claim the shell is not entitled to make, and the difference between "not built" and "nothing to show" is the difference this whole surface exists to keep.',
+    panel: 'Pick a square and the region answers for that column. The map above is the four provenance shares at a chosen depth, every square a cell the analyst published rather than an average of several. The lines run to the instruments whose observations the gain actually weighed, each as wide as it counted; a source that reached the column but contributed nothing at the chosen depth keeps its place as a hollow marker rather than vanishing. Beneath, the depth profile stacks each level’s composition and prints every figure, including the part of the correction that came through a reading beyond this cell’s own reach and so has no line to be drawn from.',
   },
   {
     subject: 'ahead',
     element: '[data-region="ahead"]',
     title: 'The spread ahead',
     what: 'An ensemble disagrees with itself, and how much it disagrees along the route you intend to take is a different question from how much it disagrees on average. Confidence decays against a declared timescale, and a forecast that does not widen with lead is making a stronger claim than it can support.',
-    panel: 'This region is feature 124 and is not built. The spread itself is published and the Map draws it: what is missing is this region, not the figure.',
+    panel: 'The forecast’s own features are drawn here in plan — the eddy, the front, the drifting one — against the run that carries them. What is not built is the ensemble spread along a planned route: the spread itself is published and the Map draws it today, so what is missing is this presentation of it and not the figure.',
   },
   {
     subject: 'timeline',

@@ -27,8 +27,21 @@ import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { ForecastPanel, FORECAST_REGIONS } from './ForecastPanel.js';
-import { contributionResidual, raysFor } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, contributionResidual, raysFor } from './rays.js';
 import { FORECAST_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/**
+ * The ground the map is drawn on, read out of the stylesheet that declares it rather than
+ * restated here — a marker asserted against a hard-coded `#10151b` would stop being an
+ * assertion the day the shell's background moved.
+ */
+const ground =
+  /--shell-bg:\s*(#[0-9a-f]{3,8})/i.exec(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shell', 'shell.css'), 'utf8'),
+  )?.[1] ?? '';
 
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
@@ -183,6 +196,35 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     }
     expect(document.querySelector('[data-region="ahead"]')?.textContent).toMatch(/ensemble spread/);
     expect(document.querySelector('[data-region="volume"]')?.textContent).toMatch(/rays/);
+  });
+
+  it('FR-140: the help tour does not call a region unbuilt that the panel draws', async () => {
+    // **The fault this is for.** The tour's volume step read "This region is feature 124 and is
+    // not built" for the whole of this feature's life, while the region behind the tooltip drew
+    // the share map, the rays, the profile and the numbers table; the `ahead` step said the same
+    // over the feature tracks. Nothing caught it: `uncoveredSubjects` asks whether every region
+    // has *a* step and never what the step says, and the panel's own prose — which is careful to
+    // name the *part* that is missing — was rewritten without the tour beside it.
+    //
+    // The rule is the narrow one that fault violates: a step may say a region is not built only
+    // where there is nothing in it to read. What counts as something to read is taken from the
+    // rendered region rather than from a list here, so a region that grows a surface moves the
+    // check with it.
+    render(<ForecastPanel {...panelProps()} />);
+    await act(async () => {
+      for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+    });
+    for (const region of FORECAST_REGIONS) {
+      const section = document.querySelector(`[data-region="${region.id}"]`);
+      const step = FORECAST_TOUR_STEPS.find((entry) => entry.subject === region.id);
+      expect(step, `no tour step for ${region.id}`).toBeDefined();
+      const claimsTheRegion = /this region\b[^.]*\bnot built/i.test(step?.panel ?? '');
+      const drawsSomething = section?.querySelector('svg, button, table, ol') !== null;
+      expect(
+        claimsTheRegion && drawsSomething,
+        `the tour calls the whole ${region.id} region unbuilt while the panel draws in it`,
+      ).toBe(false);
+    }
   });
 
   it('draws the share field as a map, and opens a column from it', async () => {
@@ -549,36 +591,78 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // arithmetic and not the drawing. Two rays' stroke widths now stand in the same ratio as
       // the contributions behind them.
       const reached = rays.filter((ray) => ray.getAttribute('data-reached') === 'yes');
-      const byWeight = [...reached].sort(
-        (a, b) => Number(b.getAttribute('data-weight')) - Number(a.getAttribute('data-weight')),
-      );
-      if (byWeight.length >= 2) {
-        const widest = byWeight[0];
-        const narrowest = byWeight[byWeight.length - 1];
-        const small = Number(narrowest.getAttribute('data-weight'));
-        const weightRatio = Number(widest.getAttribute('data-weight')) / small;
-        const drawnRatio = Number(widest.getAttribute('stroke-width')) / Number(narrowest.getAttribute('stroke-width'));
-        expect(Number.isFinite(drawnRatio)).toBe(true);
-        // The bound is the attribute's own rounding, not a number chosen here: `data-weight` is
-        // written to four decimals, so each weight carries up to 5e-5 of error and the ratio
-        // carries twice that, relative to the smaller of the two. Anything wider than that is
-        // the drawing departing from the arithmetic rather than the attribute being rounded.
-        const fromRounding = (2 * 5e-5) / small;
+      expect(reached.length, 'no reached ray to measure a width on').toBeGreaterThan(0);
+
+      // Checked per ray against the width the arithmetic asks for, rather than as a ratio
+      // between the widest and the narrowest. The ratio form was the first correction and it
+      // set its own strength from the data: the tolerance was `1e-4 / smallest weight`, so a
+      // narrowest weight near 1e-4 made it a 100% tolerance the affine drawing would have
+      // passed, and a weight rounding to `0.0000` made it divide by zero. This form has no
+      // such degree of freedom — every reached ray above the floor must be drawn at
+      // `weight * RAY_WIDTH_PX`, within the four decimals `data-weight` is written to.
+      let measured = 0;
+      for (const ray of reached) {
+        const weight = Number(ray.getAttribute('data-weight'));
+        const drawn = Number(ray.getAttribute('stroke-width'));
+        const wanted = weight * RAY_WIDTH_PX;
+        if (ray.classList.contains('is-under-scale')) {
+          // Below the floor the width is the map's limit and the ray says so; what is asserted
+          // is that it is *at* the floor and marked, never that it is proportional.
+          expect(drawn, 'an under-scale ray is not drawn at the floor').toBeCloseTo(RAY_MIN_DRAWN_PX, 6);
+          expect(wanted).toBeLessThan(RAY_MIN_DRAWN_PX);
+          continue;
+        }
+        measured += 1;
+        expect(wanted).toBeGreaterThanOrEqual(RAY_MIN_DRAWN_PX);
+        // 5e-5 of weight is 5e-5 * RAY_WIDTH_PX of width; anything wider is the drawing
+        // departing from the arithmetic rather than the attribute being rounded.
         expect(
-          Math.abs(drawnRatio - weightRatio) / weightRatio,
-          'the drawn widths are not in the ratio of the contributions',
-        ).toBeLessThanOrEqual(fromRounding);
+          Math.abs(drawn - wanted),
+          `a ray is drawn ${drawn} wide for a weight of ${weight}`,
+        ).toBeLessThanOrEqual(5e-5 * RAY_WIDTH_PX);
       }
+      // The widest contribution in a column is weight 1 by construction, so at least one ray is
+      // always above the floor and this loop always measures something.
+      expect(measured, 'every ray was under the floor, so proportionality went unchecked').toBeGreaterThan(0);
+
+      // **A ray has length.** Four of six came out as points, `x1 === x2 && y1 === y2`, because
+      // the placement snapped a position to the nearest *drawn* column — and nothing saw it: the
+      // SC-003 check below compares each ray's endpoint to itself between levels, and the
+      // containment loop above cannot fail while the placement returns cell centres by
+      // construction. A picture of six sources that draws one mark is not a picture of six
+      // sources.
+      const points = rays.filter(
+        (ray) =>
+          ray.getAttribute('x1') === ray.getAttribute('x2') && ray.getAttribute('y1') === ray.getAttribute('y2'),
+      );
+      expect(
+        points.map((ray) => ray.getAttribute('data-source')),
+        'a ray is drawn as a point, so the source it names has no line',
+      ).toEqual([]);
+
+      // **The under-scale rays are counted where a reader meets them.** A floor that is not
+      // stated is the quiet lie the proportional scale exists to avoid.
+      const note = screen.queryByTestId('forecast-under-scale');
+      const underScaleDrawn = rays.filter((ray) => ray.classList.contains('is-under-scale')).length;
+      if (underScaleDrawn === 0) expect(note).toBeNull();
+      else expect(note?.textContent).toContain(String(underScaleDrawn));
+
+      // The marker an absent source keeps its place by is asserted in SC-003 below, at a level
+      // where sources *are* absent. Asserting it here, where every source reached, would iterate
+      // an empty set — which it did, and passed with the fault planted.
 
       // **SC-005 over the drawn ray set**, which is where the requirement asks for it: the
       // standing forecast is the background and never a ray. The shell's own named condition
       // reports any that appears, and the region carries no such notice.
       expect(screen.queryByTestId('background-drawn')).toBeNull();
+      // Asked of the master's own field and not of a source id's spelling. The loop this
+      // replaces tested `data-source` against five words from the *share* vocabulary, while a
+      // source id is `<datastream>.cell-<n>` — so no document the analyst can publish could
+      // have made it fire. That is the same fault T022j found and fixed in `rays.test.ts`; the
+      // unfalsifiable spelling was left standing here, reading as coverage.
       for (const ray of rays) {
         const named = ray.getAttribute('data-source') ?? '';
-        for (const background of ['archive', 'departure', 'model', 'forecast', 'background']) {
-          expect(named.startsWith(`${background}.`), `${named} is the background drawn as a ray`).toBe(false);
-        }
+        expect(ray.getAttribute('data-kind'), `${named} is drawn as a ray`).toBe('measured');
       }
 
       // And it was read from the contributions prefix, not from EDR: a sparse per-source
@@ -621,6 +705,33 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // Different widths, which is the whole of what selecting a level does.
       expect(level.map((ray) => ray.weight)).not.toEqual(whole.map((ray) => ray.weight));
       expect(screen.getByTestId('column-profile').textContent).toMatch(/re-weighted to/);
+
+      // **The deepest level, where the correlation reaches nothing and every source is absent.**
+      // This is where FR-128's promise is hardest and where it was being broken: every line has
+      // width 0 there, so the *only* mark left is the origin marker — and the marker was
+      // painted in `--shell-bg`, because the hue went on as an SVG presentation attribute and
+      // the stylesheet's class selector outranks one. The ray layer went blank under a caption
+      // saying the same sources were still there at that level's widths.
+      await act(async () => {
+        fireEvent.click(levels[levels.length - 1]);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const deep = read();
+      expect(deep.map((ray) => ray.source), 'a source left the set at the deepest level').toEqual(
+        whole.map((ray) => ray.source),
+      );
+      const absent = [...document.querySelectorAll('circle.forecast-ray-origin.is-absent')];
+      expect(absent.length, 'no source is absent at the deepest level, so nothing is being asserted').toBeGreaterThan(
+        0,
+      );
+      for (const marker of absent) {
+        const painted = (marker as SVGCircleElement).style.stroke;
+        expect(painted, 'an absent source’s marker carries no paint of its own').not.toBe('');
+        expect(painted, 'an absent source’s marker is painted in the ground colour').not.toBe(ground);
+        expect(marker.getAttribute('fill')).toBe('none');
+      }
     });
 
     it('SC-001, AT-07: the drawn contributions and the remainder sum to the weight the holding published', async () => {

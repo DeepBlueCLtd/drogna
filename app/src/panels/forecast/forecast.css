@@ -576,17 +576,41 @@
   opacity: 0.85;
 }
 
-/* A negative contribution is drawn at its magnitude and marked, never floored to zero: where a
-   cell's background error greatly exceeds the observed cell's the gain extrapolates and the
-   weight passes one, which is optimal interpolation behaving correctly. The dash is the mark;
-   the sign is printed in the table beneath. */
+/* What the width scale could not carry, stated under the map it could not be carried on. */
+.forecast-ray-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: var(--shell-dim);
+}
+
+/* A negative contribution is drawn at its magnitude, never floored to zero: where a cell's
+   background error greatly exceeds the observed cell's the gain extrapolates and the weight
+   passes one, which is optimal interpolation behaving correctly.
+
+   This comment used to read "The dash is the mark", and that was never true — the dash belongs
+   to the instrument and is the same for that source's positive and negative rays, deliberately,
+   so that two sources stay tellable apart. On the map a negative ray is at full opacity against
+   0.85; **the sign itself is carried by the table beneath**, which prints it, and that is the
+   honest statement of what the picture does and does not carry. */
 .forecast-ray.is-negative {
   opacity: 1;
 }
 
+/* A ray at the width floor: its thickness is the map's limit, not its contribution. Dimmed so it
+   does not read as a peer of the rays whose width means something, and named in a sentence under
+   the map — a mark alone would be one more thing to decode. */
+.forecast-ray.is-under-scale {
+  opacity: 0.6;
+}
+
+/* Screen units, because the marker now carries `vector-effect: non-scaling-stroke` like the rays
+   do. Without it the map's `preserveAspectRatio="none"` stretched the ring's stroke by a
+   different factor along each axis, so a marker's outline thickness depended on nothing but the
+   map's shape. The numbers changed with the units: 0.08 user units was about 0.7 px at the sizes
+   this draws at, which is what these now say directly. */
 .forecast-ray-origin {
   stroke: var(--shell-bg);
-  stroke-width: 0.08;
+  stroke-width: 0.7;
 }
 
 /* Where the rays converge: the column that was picked. Hollow, so the cell's own share colour
@@ -718,8 +742,16 @@
 /* A source that reached nothing at the chosen level has no width to draw — its contribution is
    nought, which is the bottom of the same scale — so what keeps its place is a hollow origin
    marker. A filled marker means "this source contributed here"; a hollow one means "this source
-   is part of this column and contributed nothing at this level". */
+   is part of this column and contributed nothing at this level".
+
+   **The stroke is deliberately not set here, and that is the whole of a fault this had.** The
+   rule above paints every marker's outline in `--shell-bg` so a filled one reads against a
+   coloured cell. A hollow marker has no fill, so that outline was its only paint — a
+   background-coloured ring on the background, invisible — while the component passed the
+   instrument's hue as an SVG presentation attribute, which sits below any class selector and
+   lost every time. The hue now arrives as an inline style, which wins; setting a stroke here
+   would take it back. */
 .forecast-ray-origin.is-absent {
-  opacity: 0.55;
-  stroke-width: 0.14;
+  opacity: 0.7;
+  stroke-width: 1.2;
 }

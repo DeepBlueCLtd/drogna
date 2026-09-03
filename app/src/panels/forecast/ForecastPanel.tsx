@@ -442,7 +442,12 @@ export function ForecastPanel({ params }: PanelProps) {
               not: the analyst has published the per-cell shares since feature 116, and only
               the per-source rays are blocked. What is still 124's is said inside the region,
               beneath the reading, where a reader meets it after the thing that does work. */}
-          <ColumnProvenance analysis={analysis} grid={columnGrid} edrPrefix={config.endpoints.edr} />
+          <ColumnProvenance
+            analysis={analysis}
+            grid={columnGrid}
+            edrPrefix={config.endpoints.edr}
+            contributionsPrefix={config.endpoints.contributions}
+          />
         </section>
 
         <section className="forecast-region" data-region="ahead" aria-label="the spread ahead">

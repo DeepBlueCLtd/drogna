@@ -566,3 +566,143 @@
   font-size: 0.8em;
   color: var(--shell-dim);
 }
+
+/* --------------------------------------------- the rays, and the source profile --- */
+
+/* The rays sit over the field and take no pointer events, so the cell beneath a ray is still
+   the cell a click selects. Their width is set per ray from the arithmetic; nothing here may
+   set one, or the picture would stop being proportional to the contribution. */
+.forecast-ray {
+  opacity: 0.85;
+}
+
+/* A negative contribution is drawn at its magnitude and marked, never floored to zero: where a
+   cell's background error greatly exceeds the observed cell's the gain extrapolates and the
+   weight passes one, which is optimal interpolation behaving correctly. The dash is the mark;
+   the sign is printed in the table beneath. */
+.forecast-ray.is-negative {
+  opacity: 1;
+}
+
+.forecast-ray-origin {
+  stroke: var(--shell-bg);
+  stroke-width: 0.08;
+}
+
+/* Where the rays converge: the column that was picked. Hollow, so the cell's own share colour
+   still reads through it. */
+.forecast-ray-column {
+  fill: none;
+  stroke: var(--shell-fg);
+  stroke-width: 0.12;
+}
+
+.forecast-column-level {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0.15em 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.forecast-column-level:hover .forecast-column-stack,
+.forecast-column-level:focus-visible .forecast-column-stack {
+  outline: 1px solid var(--shell-fg);
+  outline-offset: 2px;
+}
+
+.forecast-column-levels > li.is-selected {
+  border-top-color: var(--shell-fg);
+}
+
+.forecast-column-levels > li.is-selected .forecast-column-depth {
+  font-weight: 700;
+}
+
+/* The four kinds of band carry a shape as well as a colour: the background's three are plain,
+   what earlier cycles left is stippled, this cycle's sources are solid at full strength, and
+   the remainder is the one band that is not a place. Colour is never the only carrier. */
+.forecast-column-segment.is-earlier {
+  opacity: 0.55;
+}
+
+.forecast-column-segment.is-remainder {
+  opacity: 0.7;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.45) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+.forecast-column-segment.is-negative {
+  outline: 1px dashed var(--shell-fg);
+  outline-offset: -1px;
+}
+
+.forecast-column-selected {
+  margin: 0.3em 0;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-column-absent {
+  margin: 0;
+  font-size: 0.78em;
+  color: var(--shell-dim);
+  font-style: italic;
+}
+
+.forecast-column-sum {
+  color: var(--shell-fg);
+}
+
+.forecast-column-kind {
+  color: var(--shell-dim);
+  font-weight: 400;
+}
+
+/* The two numbers behind every width (FR-130), as a table because they are a table: five
+   columns of figures a reader compares down rather than across. It scrolls inside its own box
+   at a phone's width rather than pushing the page sideways. */
+.forecast-column-numbers {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  margin: 0.6em 0 0;
+  border-collapse: collapse;
+  font-size: 0.78em;
+  font-family: monospace;
+  color: var(--shell-dim);
+}
+
+.forecast-column-numbers caption {
+  text-align: left;
+  font-family: system-ui, sans-serif;
+  padding-bottom: 0.4em;
+  color: var(--shell-dim);
+}
+
+.forecast-column-numbers th,
+.forecast-column-numbers td {
+  text-align: left;
+  padding: 0.15em 0.7em 0.15em 0;
+  white-space: nowrap;
+  border-bottom: 1px solid #232c36;
+}
+
+.forecast-column-numbers th[scope='row'] {
+  color: var(--shell-fg);
+  font-weight: 400;
+}
+
+.forecast-column-numbers .is-negative {
+  color: var(--shell-fg);
+  font-weight: 700;
+}

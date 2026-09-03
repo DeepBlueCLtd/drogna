@@ -38,24 +38,12 @@
  * hatched against the grain and printed with their sign rather than floored to zero.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AnalysisPublished, CoverageHolding } from '../../generated/types.js';
+import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
+import { Profile } from './Profile.js';
+import { raysFor } from './rays.js';
+import { SOURCES, instrumentAt, type SourceKey } from './shares.js';
 
-/**
- * The four sources, in a fixed order that never changes and is never cycled.
- *
- * The order is the analyst's own storage order, so slot 1 is slot 1 wherever it appears — on
- * the map, in the legend, in the profile — and a source keeps its colour when another is
- * filtered out. Hues are the validated categorical steps for a dark surface; `pattern` names
- * the hatch that carries the same identity without colour.
- */
-export const SOURCES = [
-  { key: 'archive', label: 'archive', hue: '#3987e5', pattern: 'hatch-archive' },
-  { key: 'departure', label: 'departure', hue: '#d95926', pattern: 'hatch-departure' },
-  { key: 'measurement', label: 'measurement', hue: '#199e70', pattern: 'hatch-measurement' },
-  { key: 'model', label: 'model', hue: '#c98500', pattern: 'hatch-model' },
-] as const;
-
-type SourceKey = (typeof SOURCES)[number]['key'];
+export { SOURCES } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
 const MAP = { maxCells: 48, height: 190 };
@@ -106,9 +94,26 @@ interface RangeBody {
   ranges?: Record<string, { values?: number[] }>;
 }
 
-/** Which source a served parameter name belongs to, or nothing where it names something else. */
-function sourceOf(parameterName: string): SourceKey | undefined {
-  return SOURCES.find((source) => parameterName.endsWith(`_${source.key}`))?.key;
+/**
+ * Which share a served parameter name belongs to, or nothing where it names something else.
+ *
+ * **Matched on the segment after `_share_`, by prefix, and the reason is a fault this had.**
+ * The analyst names each field from its *configured label* — `config.analyst.shares.departure`
+ * ships as "departure forecast" — so the served parameter is `temperature_share_departure_forecast`.
+ * Matched by `endsWith('_departure')` that name misses, and the departure share came back `NaN`
+ * on every cell of every column: drawn as nothing on the map, and printed as `NaN%` in the
+ * readout beneath it, since feature 116. Nothing caught it because both surfaces treated a
+ * non-number as a zero, which is exactly the reading FR-041 forbids and is why the profile
+ * below now states an absent share rather than drawing one.
+ *
+ * The prefix match is deliberate rather than a wider `includes`: a label may be extended
+ * ("departure forecast", "departure brief") and still be the departure share, but a share whose
+ * label stops beginning with its key is a vocabulary change the shell should miss loudly.
+ */
+export function sourceOf(parameterName: string): SourceKey | undefined {
+  const at = parameterName.lastIndexOf('_share_');
+  const suffix = at >= 0 ? parameterName.slice(at + '_share_'.length) : parameterName;
+  return SOURCES.find((source) => suffix === source.key || suffix.startsWith(`${source.key}_`))?.key;
 }
 
 function sharesFrom(body: RangeBody, at: (values: number[]) => number): Record<SourceKey, number> {
@@ -125,9 +130,14 @@ export interface ColumnProvenanceProps {
   readonly grid: ColumnGrid | undefined;
   /** The EDR prefix the boundary serves on, from configuration — never assembled here. */
   readonly edrPrefix: string;
+  /**
+   * Where the contributions holding is served (feature 124). Its own prefix and not EDR's,
+   * because a sparse per-source holding is not a coverage and the standard has no query for it.
+   */
+  readonly contributionsPrefix: string;
 }
 
-export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenanceProps) {
+export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefix }: ColumnProvenanceProps) {
   const [depthIndex, setDepthIndex] = useState(0);
   /**
    * Opens on the strongest source, and that is a choice about what a reader meets first.
@@ -140,6 +150,9 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
   const [slab, setSlab] = useState<Slab | undefined>();
   const [column, setColumn] = useState<Column | undefined>();
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
+  /** The served per-source column, and which of its levels the rays are weighted to. */
+  const [contributions, setContributions] = useState<AnalysisContributions | undefined>();
+  const [selectedLevel, setSelectedLevel] = useState<number | undefined>();
   const [busy, setBusy] = useState(false);
   const [refusals, setRefusals] = useState<readonly string[]>([]);
   const wanted = useRef(0);
@@ -222,9 +235,31 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
         }
       }
       setColumn({ longitude, latitude, levels });
+      setSelectedLevel(undefined);
+
+      // The per-source column, in one request rather than one per level: the contributions
+      // query serves a whole water column, which is the unit FR-121 says selection is in.
+      const point = `POINT(${longitude.toFixed(4)} ${latitude.toFixed(4)})`;
+      try {
+        const response = await fetch(
+          `${contributionsPrefix}/${analysis.collections.contributions}/column?coords=${encodeURIComponent(point)}`,
+        );
+        const body = (await response.json()) as AnalysisContributions | { refused?: string };
+        if (!response.ok) {
+          failed.push(
+            `the per-source column was refused: ${response.status}${'refused' in body && body.refused ? ` — ${body.refused}` : ''}`,
+          );
+          setContributions(undefined);
+        } else {
+          setContributions(body as AnalysisContributions);
+        }
+      } catch (error) {
+        failed.push(`the per-source column could not be read: ${String(error)}`);
+        setContributions(undefined);
+      }
       setRefusals(failed);
     },
-    [analysis, grid, edrPrefix],
+    [analysis, grid, edrPrefix, contributionsPrefix],
   );
 
   /**
@@ -244,6 +279,54 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
     for (let y = 0; y < slab.latitudes.length; y += stepY) rows.push(y);
     return { cols, rows, width: slab.longitudes.length };
   }, [slab]);
+
+  /**
+   * Where a longitude and latitude fall in the drawn map's coordinates, which are one unit per
+   * drawn cell. The served axes are the authority for what is where: a value is snapped to the
+   * nearest axis entry and then to the nearest drawn column, so a ray ends on the cell the
+   * analysis actually attributed the observation to rather than on an interpolated point
+   * between two of them.
+   */
+  const placeOn = useCallback(
+    (axis: readonly number[], kept: readonly number[], value: number): number | undefined => {
+      if (axis.length === 0 || kept.length === 0) return undefined;
+      let nearest = 0;
+      for (let index = 1; index < axis.length; index++) {
+        if (Math.abs(axis[index] - value) < Math.abs(axis[nearest] - value)) nearest = index;
+      }
+      let at = 0;
+      for (let index = 1; index < kept.length; index++) {
+        if (Math.abs(kept[index] - nearest) < Math.abs(kept[at] - nearest)) at = index;
+      }
+      return at + 0.5;
+    },
+    [],
+  );
+
+  /**
+   * The rays for the picked column, at the chosen level (FR-122, FR-128).
+   *
+   * Drawn on the surface plane and nowhere else: every one of these is a line between two
+   * points of the map above, and depth is answered by the profile beneath it. FR-122 rules a
+   * ray descending into the volume out on the grounds that it buys no explanation and costs a
+   * sorting problem against translucent geometry, and the geometry here cannot express one —
+   * there is no third coordinate to give it.
+   */
+  const rays = useMemo(() => {
+    if (!contributions || !slab || !drawn || !column) return undefined;
+    const set = raysFor(contributions, selectedLevel);
+    const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
+    const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
+    if (x === undefined || y === undefined) return undefined;
+    const drawnRays = set.rays.flatMap((ray, index) => {
+      const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
+      const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
+      if (sourceX === undefined || sourceY === undefined) return [];
+      const position = contributions.sources.findIndex((candidate) => candidate.source_id === ray.sourceId);
+      return [{ ray, x: sourceX, y: sourceY, instrument: instrumentAt(position < 0 ? index : position) }];
+    });
+    return { set, from: { x, y }, drawn: drawnRays };
+  }, [contributions, slab, drawn, column, selectedLevel, placeOn]);
 
   const sharesAt = useCallback(
     (row: number, col: number): Record<SourceKey, number> => {
@@ -273,13 +356,12 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
   // landed, so it is said on both branches.
   const stillToCome = (
     <p className="forecast-column-basis">
-      The <strong>volume</strong> and the <strong>rays to each contributing source</strong> are{' '}
-      <strong>feature 124</strong>, and are not built. The rays are blocked on the analyst rather
-      than on drawing: FR-122 wants one ray per source at a width proportional to that source’s
-      contribution, and the analysis kernel computes the per-observation gain and then reports its
-      row sum — so the per-source columns are discarded before anything could draw them. The four
-      shares here <em>are</em> that row sum, broken out by kind: a different and weaker claim, and
-      labelled as the one it is.
+      The field here is a <strong>plan at one depth</strong>. The{' '}
+      <strong>semi-transparent volume</strong>, with the thermocline as a surface through it and
+      the forecast’s features carried down it, is <strong>feature 124’s remaining half</strong>{' '}
+      and is not built: what it adds is a dimension to a drawing that works, and the reason to
+      say so here rather than draw an empty frame is that the column selection, the rays and the
+      profile are the explanation — the volume is the setting they happen in.
     </p>
   );
 
@@ -424,6 +506,11 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
                     fill={showing === 'dominant' ? `url(#${source.pattern})` : source.hue}
                     fillOpacity={showing === 'dominant' ? Math.max(magnitude, 0.15) : magnitude}
                     className={`share-cell${isHere ? ' is-here' : ''}${shown.value < 0 ? ' is-negative' : ''}`}
+                    // Where this cell is, from the served axes: the readout beneath states it
+                    // for the one under the cursor, and this states it for every one, so the
+                    // drawing can be checked against the holding cell by cell.
+                    data-lon={slab.longitudes[sourceCol]?.toFixed(4)}
+                    data-lat={slab.latitudes[sourceRow]?.toFixed(4)}
                     onMouseEnter={() => setCursor({ row, col })}
                     onClick={() => {
                       const longitude = slab.longitudes[sourceCol];
@@ -443,6 +530,47 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
                 height={1}
                 pointerEvents="none"
               />
+            )}
+
+            {/* The rays, last so they sit over the field, and inert so they never take a click
+                away from the cell beneath them.
+
+                Stroke width is `non-scaling-stroke`: the map is drawn with
+                `preserveAspectRatio="none"`, so a width in user units would be stretched by a
+                different factor along each axis and a ray's thickness would depend on which way
+                it happened to point. In screen units the ratios a reader compares are the
+                arithmetic's own. */}
+            {rays && (
+              <g className="forecast-rays" data-testid="forecast-rays" pointerEvents="none">
+                {rays.drawn.map(({ ray, x, y, instrument }) => (
+                  <line
+                    key={ray.sourceId}
+                    className={`forecast-ray${ray.contribution < 0 ? ' is-negative' : ''}`}
+                    data-source={ray.sourceId}
+                    data-weight={ray.weight.toFixed(4)}
+                    x1={rays.from.x}
+                    y1={rays.from.y}
+                    x2={x}
+                    y2={y}
+                    stroke={instrument.hue}
+                    strokeWidth={1 + ray.weight * 7}
+                    strokeDasharray={ray.contribution < 0 ? '3 2' : instrument.dash}
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+                {rays.drawn.map(({ ray, x, y, instrument }) => (
+                  <circle
+                    key={`${ray.sourceId}-origin`}
+                    className="forecast-ray-origin"
+                    cx={x}
+                    cy={y}
+                    r={0.45}
+                    fill={instrument.hue}
+                  />
+                ))}
+                <circle className="forecast-ray-column" cx={rays.from.x} cy={rays.from.y} r={0.5} />
+              </g>
             )}
           </svg>
 
@@ -483,49 +611,14 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
       </ul>
 
       {column && (
-        <div className="forecast-column-readout" data-testid="column-profile">
-          <p className="forecast-column-where">
-            The column at {column.latitude.toFixed(2)}°N, {column.longitude.toFixed(2)}°E — every
-            level, and what made it. The shares are read off the gain rather than approximated,
-            and they sum to one.
-          </p>
-          <ol className="forecast-column-levels">
-            {column.levels.map((level) => {
-              const total = SOURCES.reduce(
-                (sum, source) => sum + Math.max(Number.isFinite(level.shares[source.key]) ? level.shares[source.key] : 0, 0),
-                0,
-              );
-              return (
-                <li key={level.depthM}>
-                  <span className="forecast-column-depth">{level.depthM.toFixed(0)} m</span>
-                  {/* A hundred-per-cent stacked bar, with a surface gap between segments so
-                      adjacent fills never touch. */}
-                  <span className="forecast-column-stack" aria-hidden="true">
-                    {SOURCES.map((source) => {
-                      const value = level.shares[source.key];
-                      const width = total > 0 ? (Math.max(Number.isFinite(value) ? value : 0, 0) / total) * 100 : 0;
-                      if (width <= 0) return null;
-                      return (
-                        <span
-                          key={source.key}
-                          className="forecast-column-segment"
-                          style={{ width: `${width}%`, background: source.hue }}
-                        />
-                      );
-                    })}
-                  </span>
-                  <span className="forecast-column-figures">
-                    {SOURCES.map((source) => (
-                      <span key={source.key} className={level.shares[source.key] < 0 ? 'is-negative' : undefined}>
-                        {source.label} {(level.shares[source.key] * 100).toFixed(0)}%
-                      </span>
-                    ))}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+        <Profile
+          longitude={column.longitude}
+          latitude={column.latitude}
+          levels={column.levels}
+          contributions={contributions}
+          selectedLevel={selectedLevel}
+          onSelectLevel={setSelectedLevel}
+        />
       )}
 
       {refusals.length > 0 && (
@@ -536,9 +629,13 @@ export function ColumnProvenance({ analysis, grid, edrPrefix }: ColumnProvenance
       )}
 
       <p className="forecast-column-caption">
-        Read from <code>{analysis.collections.provenance}</code> through OGC API-EDR — one area
-        query for the field, one position query per depth for a column — the same path an external
-        client takes, so the surface is evidence that the query layer works.
+        The field is read from <code>{analysis.collections.provenance}</code> through OGC
+        API-EDR — one area query for the field, one position query per depth for a column — and
+        the rays from <code>{analysis.collections.contributions}</code>, a sparse per-source
+        holding served at its own prefix because it is not a coverage and the standard has no
+        query for one. Both are the paths an external client takes, so the surface is evidence
+        that the query layer works rather than a picture drawn from a private reach into the
+        store.
       </p>
 
       {stillToCome}

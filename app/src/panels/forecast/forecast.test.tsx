@@ -21,7 +21,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IDockviewPanelProps } from 'dockview-react';
 import runConfigDocument from '../../../config/run.json';
-import type { ConfigRun } from '../../generated/types.js';
+import type { AnalysisContributions, ConfigRun } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import { createSeamFetch } from '../../seam/http.js';
@@ -413,6 +413,209 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     expect(screen.getByTestId('forecast-selected')).toBeDefined();
     expect(document.querySelector('.forecast-run.is-selected')).not.toBeNull();
   });
+
+  /**
+   * Feature 124's own: the rays, and the profile they are re-weighted from.
+   *
+   * The column these pick is not chosen here — it is read off the served contributions header,
+   * so the test opens a column some instrument actually reached rather than a cell of open
+   * water this file happened to like the look of. Every number asserted is the analyst's.
+   */
+  describe('what a column was made from, source by source (feature 124)', () => {
+    /** Drive until an analysis cycle has published its contributions, then draw the field. */
+    async function toAField() {
+      render(<ForecastPanel {...panelProps()} />);
+      await act(async () => {
+        for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) {
+          runtime.clock.tickOnce();
+          if (document.querySelector('.forecast-share-map')) break;
+        }
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      // **The standing cycle, not the first one.** A start condition pre-rolls several analysis
+      // cycles before the shell mounts, so the store holds several of these; the panel draws
+      // the one the standing announcement names, which is the last published. Reading the first
+      // instead compares two different cycles — measured, when this test did exactly that: six
+      // rays drawn against four sources served, and attributed cells one apart, because the
+      // platform had moved between them.
+      const holdings = runtime.store
+        .holdings()
+        .filter((candidate) => candidate.field.format === 'drogna-contributions-v1');
+      const holding = holdings[holdings.length - 1];
+      if (!holding) throw new Error('the loop published no contributions holding');
+      return holding;
+    }
+
+    /** The served column at a position, exactly as the panel asks for it. */
+    async function servedColumn(holdingId: string, longitude: number, latitude: number) {
+      const point = `POINT(${longitude.toFixed(4)} ${latitude.toFixed(4)})`;
+      const response = await runtime.httpBackend.handle({
+        method: 'GET',
+        path: `${config.query.http.contributions_prefix}/${holdingId}/column?coords=${encodeURIComponent(point)}`,
+        body: '',
+      });
+      return JSON.parse(response.body) as AnalysisContributions;
+    }
+
+    /** Click the drawn cell nearest a position, using the coordinates the cells carry. */
+    async function openColumnAt(longitude: number, latitude: number) {
+      const cells = [...document.querySelectorAll('rect.share-cell')];
+      expect(cells.length, 'the field was drawn with no cells to pick from').toBeGreaterThan(0);
+      let nearest = cells[0];
+      let best = Infinity;
+      for (const cell of cells) {
+        const lon = Number(cell.getAttribute('data-lon'));
+        const lat = Number(cell.getAttribute('data-lat'));
+        const distance = Math.hypot(lon - longitude, lat - latitude);
+        if (distance < best) {
+          best = distance;
+          nearest = cell;
+        }
+      }
+      await act(async () => {
+        fireEvent.click(nearest);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      return { longitude: Number(nearest.getAttribute('data-lon')), latitude: Number(nearest.getAttribute('data-lat')) };
+    }
+
+    /**
+     * A column some source reached. The instruments sit at 50 m and 200 m and the platform
+     * loiters, so the sources cluster; the header's own first source names where to look.
+     */
+    async function reachedColumn(holdingId: string) {
+      const header = JSON.parse(
+        (await runtime.httpBackend.handle({
+          method: 'GET',
+          path: `${config.query.http.contributions_prefix}/${holdingId}`,
+          body: '',
+        })).body,
+      ) as { sources: { cell: { longitude: number; latitude: number } }[] };
+      expect(header.sources.length, 'the cycle assimilated nothing, so no column can be reached').toBeGreaterThan(0);
+      return header.sources[0].cell;
+    }
+
+    it('FR-122: draws one ray per contributing source, on the surface plane and nowhere else', async () => {
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      const picked = await openColumnAt(at.longitude, at.latitude);
+      const served = await servedColumn(holding.holding_id, picked.longitude, picked.latitude);
+
+      const group = screen.getByTestId('forecast-rays');
+      const rays = [...group.querySelectorAll('line.forecast-ray')];
+      expect(rays.length, 'a column with sources drew no rays').toBeGreaterThan(0);
+      // One per source the served document carries for this column, and no more: the remainder
+      // is a band in the profile and never a line to somewhere.
+      expect(rays.length).toBe(served.sources.length);
+      expect(new Set(rays.map((ray) => ray.getAttribute('data-source'))).size).toBe(rays.length);
+
+      // **On the surface plane.** FR-122 rules out a ray descending into the volume, and the
+      // check is over the drawn geometry rather than over a comment: every ray is a child of
+      // the map's own SVG, and carries two endpoints in that plane and no third coordinate.
+      const surface = document.querySelector('svg.forecast-share-map');
+      expect(surface?.contains(group)).toBe(true);
+      for (const ray of rays) {
+        expect(ray.getAttribute('x1')).toBeTruthy();
+        expect(ray.getAttribute('y2')).toBeTruthy();
+        for (const attribute of ray.getAttributeNames()) {
+          expect(attribute, `a ray carried ${attribute}, which is a depth`).not.toMatch(/^(z|z1|z2|depth)$/);
+        }
+      }
+
+      // And it was read from the contributions prefix, not from EDR: a sparse per-source
+      // holding is not a coverage, and the standard has no query that would serve it.
+      expect(fetched.some((url) => url.includes(config.query.http.contributions_prefix) && url.includes('/column?'))).toBe(true);
+      expect(fetched.some((url) => url.includes('/collections/') && url.includes('-contributions'))).toBe(false);
+    });
+
+    it('SC-003: choosing a level re-weights the rays without moving them or changing their count', async () => {
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      await openColumnAt(at.longitude, at.latitude);
+
+      const read = () =>
+        [...document.querySelectorAll('line.forecast-ray')].map((ray) => ({
+          source: ray.getAttribute('data-source'),
+          at: `${ray.getAttribute('x2')},${ray.getAttribute('y2')}`,
+          weight: ray.getAttribute('data-weight'),
+        }));
+      const whole = read();
+      expect(whole.length).toBeGreaterThan(0);
+
+      // The level the sources actually reach: the instruments are at 50 m and 200 m, so the
+      // surface level is the one with something in it, and a level chosen blindly would be
+      // asserting about an empty re-weighting.
+      const levels = [...document.querySelectorAll('button.forecast-column-level')];
+      expect(levels.length, 'the profile offered no levels to choose').toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(levels[0]);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const level = read();
+
+      // Same sources, same order, same origins — the profile says *where they mattered*, and
+      // the volume says *which sources*; neither is read through the other (FR-128).
+      expect(level.map((ray) => ray.source)).toEqual(whole.map((ray) => ray.source));
+      expect(level.map((ray) => ray.at)).toEqual(whole.map((ray) => ray.at));
+      // Different widths, which is the whole of what selecting a level does.
+      expect(level.map((ray) => ray.weight)).not.toEqual(whole.map((ray) => ray.weight));
+      expect(screen.getByTestId('column-profile').textContent).toMatch(/re-weighted to/);
+    });
+
+    it('SC-001, AT-07: the drawn contributions and the remainder sum to the weight the holding published', async () => {
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      const picked = await openColumnAt(at.longitude, at.latitude);
+      const served = await servedColumn(holding.holding_id, picked.longitude, picked.latitude);
+
+      // The tolerance is the holding's own, derived from float32's width at the magnitude it
+      // actually stores. A number chosen here would be a second opinion about how close is
+      // close enough, and it would drift as the gain's magnitudes grow cycle by cycle.
+      const tolerance = runtime.store.holding(holding.holding_id)?.descriptor.manifest.variables[0].tolerance_absolute;
+      expect(tolerance, 'the holding declares no tolerance to check against').toBeGreaterThan(0);
+
+      let checked = 0;
+      for (const level of served.levels) {
+        const drawn = level.contributions.reduce((sum, entry) => sum + entry.contribution, 0) + level.remainder;
+        expect(
+          Math.abs(drawn - level.observation_weight),
+          `the contributions drawn at ${level.depth_m} m do not sum to the weight published for it`,
+        ).toBeLessThanOrEqual((tolerance ?? 0) * (level.contributions.length + 2));
+        checked += 1;
+      }
+      expect(checked).toBe(served.levels.length);
+
+      // And the picture is the same set: every source the document carries has a ray, and the
+      // rays carry no source the document does not.
+      const drawnSources = [...document.querySelectorAll('line.forecast-ray')].map((ray) => ray.getAttribute('data-source'));
+      expect([...drawnSources].sort()).toEqual(served.sources.map((source) => source.source_id).sort());
+    });
+
+    it('FR-129: a level nothing reached says so, and says it differently from one that contributed nothing', async () => {
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      await openColumnAt(at.longitude, at.latitude);
+
+      // The instruments sit at 50 m and 200 m against a 320 m vertical support, so the bottom
+      // of the column is out of every source's reach — the reading FR-127 says the profile
+      // exists to make obvious, and it is stated rather than drawn as an empty bar.
+      const absent = [...document.querySelectorAll('[data-testid^="level-absent-"]')];
+      expect(absent.length, 'no level stated an absence, in a column whose deepest levels nothing reaches').toBeGreaterThan(0);
+      expect(absent.some((note) => /within reach/.test(note.textContent ?? ''))).toBe(true);
+      // The figures are still printed beside the statement: what is absent is the observational
+      // part, and the background's own composition is known.
+      const profile = screen.getByTestId('column-profile');
+      expect(profile.textContent).toMatch(/archive/);
+      expect(profile.textContent).toMatch(/%/);
+    });
+  });
+
 });
 
 /**

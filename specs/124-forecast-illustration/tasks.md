@@ -171,10 +171,28 @@ published today.
 
 ## The rays
 
-- [ ] T013 `rays.ts`: contributions for the selected column, by source, widths proportional to
+*Built before the volume, and the reason is recorded rather than left as a reordering.* The
+task file's order was "the substrate before the picture", and that dependency was real. Between
+the substrate and the volume there is no such dependency: a ray is drawn on the **surface
+plane** (FR-122 rules out one descending into the volume), its origin is a position on that
+plane, and its width comes from the served contributions. What it needs is a column selection,
+which the share map has had since feature 123. The volume is the setting the rays happen in and
+not a thing they are read through — FR-128 says exactly that about the profile — so building it
+first would have delayed the whole explanatory claim of §5.20 behind the most speculative
+drawing in it.
+
+
+- [x] T013 `rays.ts`: contributions for the selected column, by source, widths proportional to
       contribution. Pure; no DOM, so the arithmetic is testable alone. A source is what the
       holding says it is (T001): an instrument at a cell, so its ray has one origin.
-- [ ] T014 Spatial sources placed where they are; non-spatial sources docked at the margin in
+      *Built.* `rays.ts`, pure and tested alone. Two decisions are in its docstring because
+      they are judgements rather than readings: a ray's origin is where the **instrument** was
+      while its stated separation is the **cell-to-cell** distance the taper was evaluated on —
+      two distances, both stated, neither pretending to be the other — and widths are
+      proportional *within the drawn set*, normalised by the widest, because a contribution is a
+      gain coefficient rather than a share and T002's measured magnitudes would otherwise draw
+      one ray as a slab and the rest as hairlines.
+- [x] T014 Spatial sources placed where they are; non-spatial sources docked at the margin in
       positions stable across selections, from a declared order rather than from whatever the
       holding happened to list first. The remainder (T002) has no position and is not a ray:
       it is stated in the region, as coupling from beyond the column's reach.
@@ -182,30 +200,85 @@ published today.
       and measured by construction (spec FR-03 as amended). The non-spatial origins — the
       archive, the departure forecast, the model's own error — are the *provenance* holding's
       shares, not this holding's sources, and the docked nodes read them from there.
-- [ ] T015 Measured and modelled grouped and marked. The shore broadcast is modelled.
+      *Built.* The remainder is returned beside the rays and drawn as a band in the profile,
+      never as a line: it has no position, and drawing it from the margin would invent one. No
+      docked nodes are drawn, because no non-spatial source exists to dock — the reconciliation
+      above records why, and the profile's baseline is where those origins appear.
+- [x] T015 Measured and modelled grouped and marked. The shore broadcast is modelled.
       *Reconciled after the substrate:* "modelled" is the provenance holding's three
       non-measurement shares, drawn as the baseline; the contributions holding's `kind` is
       carried so the master states the distinction, and today it is always `measured`.
-- [ ] T016 The standing forecast is not in the ray set (SC-005), and the omission is a named
+      *Built as the reconciliation says:* the background's three shares are the profile's
+      baseline bands, the contributions holding's `kind` is carried into the numbers table
+      beside every source, and every source in this harness is `measured`.
+- [x] T016 The standing forecast is not in the ray set (SC-005), and the omission is a named
       condition in the code rather than an absence to be read as an oversight.
-- [ ] T017 Rays never descend into the volume: drawn on the surface plane, held by a test over
+      *Built.* `backgroundRaysIn` is the named condition, and it is tested against a source
+      table that admits the archive — which no analyst here produces, so the test plants what
+      the code is guarding against rather than asserting an absence that cannot fail.
+- [x] T017 Rays never descend into the volume: drawn on the surface plane, held by a test over
       the drawn geometry rather than by a comment.
 
+      *Built, and held over the drawn geometry.* The rays are children of the surface plane's
+      own SVG and carry two endpoints in it; the test walks every ray's attributes and refuses
+      any that reads as a depth, which is a check on the DOM rather than on a comment.
 ## The profile
 
-- [ ] T018 `Profile.tsx`: depth down the vertical axis, each level's composition as bands
+- [x] T018 `Profile.tsx`: depth down the vertical axis, each level's composition as bands
       sized by contribution and coloured by source, background as the baseline band.
       *Reconciled:* `ColumnProvenance.tsx` already opens a picked column into a profile of the
       four shares; this profile replaces the measurement share's band with the sources' bands
       and the remainder, and keeps the other three as the baseline it sits on.
-- [ ] T019 Selecting a level re-weights the rays and does not move them (SC-003).
-- [ ] T020 A level with no observational contribution states that, distinguishably from a
+      *Built.* `Profile.tsx`, and the stack is an identity rather than an arrangement:
+      archive + departure + model, then the measurement share **less ω** — what earlier cycles'
+      observations left, which is not this cycle's and must not be drawn as though it were —
+      then this cycle's per-source contributions and the remainder. It sums to one because the
+      gain says so, and the sum is printed rather than normalised away.
+- [x] T019 Selecting a level re-weights the rays and does not move them (SC-003).
+      *Built* (SC-003), and held twice: over the arithmetic in `rays.test.ts` and over the
+      drawn geometry in `forecast.test.tsx`, where the origins are asserted identical and the
+      widths asserted different. Watched failing with the level ignored: "expected [ '0.0586',
+      '1.0000', … ] to not deeply equal [ '0.0586', '1.0000', … ]".
+- [x] T020 A level with no observational contribution states that, distinguishably from a
       level whose contributions summed to zero (SC-004). Absent, null and declined are three
       facts.
-- [ ] T021 The two numbers behind any contribution, stated in the region it is drawn in
+      *Built* (SC-004), and the first draft had it wrong in a way worth keeping: the absence
+      note **replaced** the level's figures. What is absent at a level nothing reached is the
+      observational part; the background's own composition is known, and hiding a fact in order
+      to state one is not the trade FR-129 asks for. The note now sits beside the figures.
+- [x] T021 The two numbers behind any contribution, stated in the region it is drawn in
       (FR-130): the separation, and the observation's declared error against the background's.
-- [ ] T022 `contributions.test.ts`: the drawn contributions sum to the published value of the
+      *Built* (FR-130): a table under the profile carrying, per source, the contribution, the
+      separation the taper was evaluated on, the instrument's declared error and the
+      background's. Under the profile rather than in a tooltip, for the reason the map's readout
+      is: it cannot be clipped at a phone's width and a screen reader meets it in document order.
+- [x] T022 `contributions.test.ts`: the drawn contributions sum to the published value of the
       column, cell by cell, within the holding's own declared tolerance (SC-001, AT-07).
+
+      *Built* (SC-001, AT-07), against the running loop rather than a constructed document:
+      the served column's contributions and remainder are summed per level and checked against
+      the ω the same holding published, at the tolerance that holding's own manifest declares.
+      The test also asserts the drawn ray set is exactly the served source set, so the picture
+      is checked against the provenance and not only the arithmetic against itself.
+## A fault the rays uncovered, and what it cost
+
+- [x] T022a **The departure share had never been read, on any surface, since feature 116.** The
+      analyst names each provenance field from its *configured label* — `config.analyst.shares.departure`
+      ships as "departure forecast" — so the served parameter is
+      `temperature_share_departure_forecast`. `ColumnProvenance.tsx` matched a share by
+      `endsWith('_departure')`, which that name does not, so the share came back `NaN` at every
+      cell of every column: drawn as nothing on the map, printed as `NaN%` in the readout, and
+      folded into a zero in the profile's stack.
+
+      Nothing caught it because **both surfaces treated a non-number as a zero** — the reading
+      FR-041 exists to forbid — and the only test over the profile asserted that *some* stack was
+      drawn. It surfaced here because the new stack sums its bands and prints the sum, and a
+      `NaN` band makes the sum `NaN` rather than quietly vanishing.
+
+      Fixed by matching on the segment after `_share_`, by prefix, so a label may be extended and
+      still be its share while a label that stops beginning with its key is missed loudly. The
+      profile now states a share it was not served rather than drawing it as nought. Watched
+      failing against the match as it shipped: "expected undefined to be 'departure'".
 
 ## The right region, and the ghost
 

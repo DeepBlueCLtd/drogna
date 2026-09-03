@@ -26,8 +26,9 @@ feature 124's file is not yet on `main` all die with that merge. (Feature 124 st
 | −5 | **Discharged on this branch** — the whole of P1, below |
 | **65** | Unticked now |
 | −37 | Feature 123, the forward step — complete on PR #107 |
+| −1 | The forecast eras in the artefacts — closed by feature 125 |
 | −20 | Declined or deliberately not done, each carrying its reason in the line |
-| **7** | **Work**, below — of which one is not a developer's to action. Was 8; the forecast eras row is closed by feature 125 |
+| **7** | **Work**, below — of which one is not a developer's to action |
 
 The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.

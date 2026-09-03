@@ -78,6 +78,30 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       corrected; this directory written, having been named in five places with nothing behind
       it.
 
+- [x] **T047** The restatement named the **scenario** run, not the model run. A coverage
+      descriptor carries both under confusable names — `descriptor.run_id` is the scenario,
+      `descriptor.holding_id` is the run — and telemetry keys its skill ledger by the latter
+      and looks the holding up by it. Every condition opened scoring a run id that names no
+      holding, dropping 180 residual samples in the first 900 ticks while the monitor
+      published them; and restarting the model runner from the Operator tab did the same to a
+      live run. Both adversarial passes found it independently.
+- [x] **T048** Two consumers read the restatement as news. Telemetry closed the ledger on any
+      current publication (58 scored samples discarded on a restart); the offload packager
+      staged on every announcement (two bundles and twice the bytes for one run, and four such
+      restarts pass `staging_bound_bytes`, after which production stops for good). Both now
+      compare against the run they already hold.
+- [x] **T049** The test for T047/T048 took four attempts, and the first three each passed
+      against a fault. Asserting the bundle count after a 4,000-tick sweep failed the *clean*
+      tree, because a legitimate run stages inside it; asserting `count` alone missed the
+      ledger discard, because statistics publish on a cadence and a discarded ledger re-warms
+      past its old count before the next statement. `first_sim_time` is where a discard shows.
+      All three faults are now planted and watched failing.
+- [x] **T050** Five copies of `isoPlusSeconds`, two of which disagreed: the model runner
+      truncates to whole seconds, the copy written for this feature kept milliseconds. They
+      agree only because `tick_interval_us` is 1,000,000, so a sub-second tick would have made
+      a restatement's validity differ from the announcement it restates. One helper in
+      `lib/sim-time.ts`, on the BigInt microseconds that module exists for.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured, and

@@ -68,7 +68,10 @@ export class Scheduler {
   /**
    * Outstanding runs released without a publication: because the component that owed one
    * said it would not, and — since the watchdog below — because nobody said anything at all.
-   * The two reach the same counter and are told apart by the decision each publishes.
+   * One counter for both, and they are **not** told apart on any surface: the watchdog
+   * publishes an `abandoned` decision, the `run-failed` path publishes nothing and only sets
+   * `lastDecision`. A reader watching this figure climb cannot tell which happened without
+   * reading Messages for the runner's own report.
    */
   abandoned = 0;
   requested: { run_id: string; cause: RunRequest['cause'] }[] = [];
@@ -287,9 +290,16 @@ export class Scheduler {
     // Published, not merely recorded. `lastDecision` reaches a reader through the heartbeat,
     // and the two calls that follow this one on the same clock sample — the held prompt and
     // the cadence floor — overwrite it before any heartbeat can fire, so the sentence above
-    // was unreachable output in the first draft. The Forecast timeline reads these decisions,
-    // and a run that vanished because nothing was listening is exactly the appearance FR-32
-    // asks not be silent.
+    // was unreachable output in the first draft.
+    //
+    // Where it surfaces, stated exactly: the Operator tab's decision drawer, which takes
+    // whatever this component last decided, and Messages, which carries the topic. **Not**
+    // the Forecast timeline — that filters to `held-for-cost`, and a run that vanished into
+    // a component that was not listening never announced a start for the timeline to
+    // annotate anyway. An earlier draft of this comment claimed the timeline as the consumer
+    // and was wrong; the enum value was widened on that claim, so it is corrected rather than
+    // quietly dropped. Drawing an abandoned run on the timeline is a reasonable thing to want
+    // and is not done here.
     this.reportDecision(null, 'abandoned', this.lastDecision, abandoned, null);
   }
 

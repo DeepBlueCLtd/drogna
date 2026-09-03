@@ -118,7 +118,17 @@ export class OffloadPackager {
     });
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;
+      // A run stages once. The announcement is republished when the model runner resumes and
+      // restates the run that already stood (feature 125), and a handler that staged on every
+      // announcement made a bundle for a release that had not happened: two bundles and twice
+      // the staged bytes for one run, with `intervalStartTick` advanced so the *next* genuine
+      // bundle's measurement geometry covered a truncated interval. Four such restarts push
+      // `stagedBytes` past the bound, after which production stops for good — nothing is
+      // evictable in V2. Staging a bundle for a release that did not happen is also a claim
+      // about a release that did not happen.
+      const alreadyStaged = this.lastPublished?.run_id === published.run_id;
       this.lastPublished = published;
+      if (alreadyStaged) return;
       this.stage(published, published.tick);
     });
     this.client.subscribe(this.config.topics.command, (message) => {

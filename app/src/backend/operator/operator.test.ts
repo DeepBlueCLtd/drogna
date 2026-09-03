@@ -21,7 +21,7 @@ import type {
 } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
-import { driveUntil } from '../test-support/drive.js';
+import { driveTicks, driveUntil } from '../test-support/drive.js';
 
 const validator = createSeamValidator();
 
@@ -41,6 +41,87 @@ async function get(runtime: BackendRuntime, path: string, method = 'GET') {
 
 describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
   describe('telemetry', () => {
+    /**
+     * Restarting the model runner is an ordinary operator verb, and from feature 125 it
+     * republishes the standing run so that components which were not listening when the run
+     * was published can still learn of it (`backend/lib/standing-run.ts`). Two consumers
+     * treated that restatement as news, and both were watched doing it:
+     *
+     *  - telemetry closed the ledger on **any** current publication, so a restart discarded
+     *    58 scored samples and left the surface reporting "0 scored sample(s)" while the
+     *    monitor went on publishing residuals into it — silence shown where there is traffic;
+     *  - the offload packager staged on every announcement, so one run produced two bundles
+     *    and twice the staged bytes, with the next genuine bundle's measurement geometry
+     *    covering a truncated interval. Four such restarts pass `staging_bound_bytes`, after
+     *    which production stops for good, nothing being evictable in V2.
+     */
+    it('restating the standing run neither closes the skill ledger nor stages a second bundle', async () => {
+      const config = lockstepConfig();
+      const runtime = buildBackend(config, options, validator);
+      await driveUntil(runtime.clock, () => runtime.telemetry.lastStatistics?.state === 'reporting', 8000);
+      const scoredBefore = runtime.telemetry.lastStatistics?.count ?? 0;
+      const runBefore = runtime.telemetry.lastStatistics?.forecast_run_id;
+      const bundlesBefore = runtime.offload.staged().length;
+      const bytesBefore = runtime.offload.staged().reduce((sum, bundle) => sum + bundle.fieldByteLength, 0);
+      expect(scoredBefore, 'nothing was scored, so there is no ledger to lose').toBeGreaterThan(0);
+
+      const statementBefore = runtime.telemetry.lastStatistics;
+      runtime.control.stop(config.model_runner.id);
+      runtime.control.start(config.model_runner.id);
+      await driveTicks(runtime.clock, 20);
+
+      // The staging check belongs here and not after the sweep below: `min_interval_ticks` is
+      // 600, so nothing legitimate can have released a run twenty ticks after the restart —
+      // whereas over the sweep's 4,000 ticks a genuine run publishes and stages a bundle it
+      // is entitled to. Asserting this at the end passed the fault and failed the clean tree.
+      expect(runtime.offload.staged().length, 'a second bundle was staged for one run').toBe(bundlesBefore);
+      expect(
+        runtime.offload.staged().reduce((sum, bundle) => sum + bundle.fieldByteLength, 0),
+        'the staging bound was consumed by a restatement',
+      ).toBe(bytesBefore);
+
+      // **Monotonic while the run is the same run**, which is the fault's exact shape. A
+      // discarded ledger re-warms, so "the count is above where it was" passes on the fault
+      // given enough ticks — the first draft of this assertion did exactly that. A genuinely
+      // new run *should* reset the ledger, so the comparison only runs across statements that
+      // name the same forecast.
+      let previous = statementBefore;
+      const drops: string[] = [];
+      for (let i = 0; i < 4000 && drops.length === 0; i += 1) {
+        runtime.clock.tickOnce();
+        const now = runtime.telemetry.lastStatistics;
+        if (now === previous || !now) continue;
+        if (
+          previous &&
+          now.forecast_run_id === previous.forecast_run_id &&
+          // `count` alone is too coarse: statistics publish on a cadence, and a ledger that
+          // was discarded re-warms past its old count before the next statement is sent, so
+          // the fault passed. `first_sim_time` is where the discard shows — it is the instant
+          // of the earliest sample still held, and a reset moves it forward.
+          (now.first_sim_time !== previous.first_sim_time || now.count < previous.count)
+        ) {
+          drops.push(
+            `${previous.forecast_run_id}: ${previous.count} scored from ${previous.first_sim_time}, ` +
+              `then ${now.count} from ${now.first_sim_time}`,
+          );
+        }
+        previous = now;
+      }
+      expect(
+        drops,
+        'the ledger was discarded for a run it was already scoring: the restatement was read as a new run',
+      ).toEqual([]);
+      expect(previous, 'no statistics were published after the restart').not.toBe(statementBefore);
+
+      // And it is scored against the run that was standing, named as the model run and not as
+      // the scenario — telemetry keys its ledger by this and looks the holding up by it, so
+      // the scenario id would silently match nothing for the rest of the visit.
+      expect(runtime.store.holding(String(previous?.forecast_run_id)), 'the scored run names no holding').toBeDefined();
+      expect(scoredBefore, 'nothing was scored before the restart').toBeGreaterThan(0);
+      expect(runBefore, 'no run was named before the restart').toBeTruthy();
+      runtime.stop();
+    });
+
     it('aggregates the monitor’s samples into master-valid statistics and a skill sentence', async () => {
       const config = lockstepConfig();
       const runtime = buildBackend(config, options, validator);

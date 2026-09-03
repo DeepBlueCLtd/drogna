@@ -144,9 +144,18 @@ export class Telemetry {
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;
       if (!published.current) return;
-      // A new current run closes the previous ledger: skill is per run, and
-      // evidence against a superseded field is not carried (the monitor's rule,
-      // held here too).
+      // A **new** current run closes the previous ledger: skill is per run, and evidence
+      // against a superseded field is not carried (the monitor's rule, held here too). A
+      // restatement of the run already being scored is not a new run and closes nothing.
+      //
+      // The model runner republishes the standing run when it resumes, so that a component
+      // which was not listening when the run was published can still learn of it (feature
+      // 125, `backend/lib/standing-run.ts`). This handler could not tell the two apart and
+      // discarded the ledger either way: restarting the runner from the Operator tab threw
+      // away 58 scored samples and left the Telemetry surface reporting "0 scored sample(s)"
+      // while the monitor went on publishing residuals into it — silence shown where there
+      // is traffic, which is the half of Principle VII that is easiest to ship by accident.
+      if (published.run_id === this.forecastRunId) return;
       this.forecastRunId = published.run_id;
       this.residuals = [];
       this.persistenceErrors = [];

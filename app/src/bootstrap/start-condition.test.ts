@@ -228,11 +228,14 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
    * loop that never turned again at all, and the same fault was reachable from the Operator
    * tab with no artefact in sight.
    *
-   * Two changes retired it, and each is proven where it lives rather than here:
-   * `scheduler.test.ts` holds the watchdog that releases a run nobody is working on
-   * (FR-31), and derives run identifiers from the request tick so that no scheduler
-   * instance can reissue another's; `preroll.test.ts` drives a snapshot-backed pre-roll and
-   * holds the run to opening with what a live run produces and to still turning afterwards.
+   * Three changes retired it, and each is proven where it lives rather than here:
+   * `scheduler.test.ts` holds the watchdog that releases a run nobody is working on (FR-31)
+   * and the run identifiers derived from the request tick, which *narrow* an instance's reuse
+   * of another's identifier rather than closing it; `env-generator/generator.test.ts` holds
+   * the coverage store refusing a second set of bytes under a held holding id, which closes
+   * the remainder; and `preroll.test.ts` drives a snapshot-backed pre-roll and holds the run
+   * to opening with what a live run produces, to still turning afterwards on the cadence a
+   * live run keeps, and to staging what its card promises.
    *
    * What stays here is the declaration itself, so that a future edit narrowing it has to
    * say why.

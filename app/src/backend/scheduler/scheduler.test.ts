@@ -646,6 +646,18 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
       { replaced, lost },
       'a restarted scheduler reissued an identifier a previous instance had spent, and the store replaced the holding',
     ).toEqual({ replaced: [], lost: [] });
+
+    // **And nothing was refused on the way, which is the assertion that keeps this test able
+    // to fail.** The coverage store now refuses a second set of bytes under a held id, so with
+    // the identifier derivation reverted the holdings survive — and the assertion above passes,
+    // masked by the guard behind it. The refusal reaches the analyst as a `throw` inside a
+    // broker subscription, which the broker catches and counts, so a reissued identifier shows
+    // up here as a delivery fault. Watched: with the counter restored this reads 1 and the
+    // inventory reads clean.
+    expect(
+      runtime.broker.deliveryFaults,
+      'a publication was refused during the restart: an identifier was reissued and the store, not the identifier rule, is what saved the holdings',
+    ).toBe(0);
     runtime.stop();
   }, 180_000);
 });

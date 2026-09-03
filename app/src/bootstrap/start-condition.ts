@@ -133,11 +133,11 @@ export function preRollTicks(condition: ConfigStartConditionsCondition): number 
  * just supplied, against a 600-tick minimum interval, which is a cadence no live run can
  * produce and a model run spent for nothing.
  *
- * What remains is real and is not fixed here: the replayed run reaches the right cadence for
- * the wrong reason, because the resumed scheduler is counting from a request nobody answered
- * rather than from the standing forecast's validity. The principled fix is for the model
- * runner to restate its publication for a late listener, exactly as it already restates its
- * cost, and it belongs to its own change.
+ * What that left — the replayed run reaching the right cadence for the wrong reason, its
+ * scheduler counting from a request nobody answered rather than from the standing forecast's
+ * validity — is fixed where it belongs: the model runner restates the standing run from the
+ * store's own descriptors when it resumes (`backend/lib/standing-run.ts`), and the replayed
+ * cadence is now the live cadence exactly.
  */
 export function heldBackBySnapshot(
   condition: ConfigStartConditionsCondition,

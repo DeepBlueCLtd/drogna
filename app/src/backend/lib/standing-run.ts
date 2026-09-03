@@ -28,12 +28,7 @@
  */
 import type { CoverageStore } from '../coverage-store/store.js';
 import type { RunPublished } from '../../generated/types.js';
-
-/** Seconds added to an ISO instant, preserving the microsecond precision the seam uses. */
-function isoPlusSeconds(iso: string, seconds: number): string {
-  const millis = Date.parse(iso.slice(0, 23) + 'Z') + seconds * 1000;
-  return `${new Date(millis).toISOString().replace('Z', '')}000Z`;
-}
+import { isoPlusSeconds } from './sim-time.js';
 
 /**
  * The standing forecast as its announcement would read, or undefined where the store holds
@@ -58,7 +53,15 @@ export function standingRunFromStore(
     scenario_run_id: scenarioRunId,
     sim_time: simTime.value,
     tick: simTime.tick,
-    run_id: standing.descriptor.run_id,
+    // The holding id, not the descriptor's `run_id`. A coverage holding carries both and
+    // they are not the same thing: `run_id` on the descriptor is the **scenario** run
+    // (`loiter-loitering-pahv`), while the model run this announcement is about is the
+    // holding's own id (`loiter-loitering-pahv-run-t1800`), because the runner publishes its
+    // forecast under `forecastId = request.run_id`. Two fields, one name, and the first draft
+    // took the wrong one — telemetry keys its skill ledger by this and dropped every residual
+    // sample for the rest of the visit, which is the surface reporting silence where the
+    // monitor was publishing the whole time.
+    run_id: standing.descriptor.holding_id,
     current: true,
     valid_time: {
       start_sim_time: start,

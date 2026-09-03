@@ -32,6 +32,7 @@ import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { standingRunFromStore } from '../lib/standing-run.js';
+import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
 import type { CoverageStore } from '../coverage-store/store.js';
@@ -547,7 +548,7 @@ export class ModelRunner {
 
     const forecastId = request.run_id;
     const spreadId = `${request.run_id}-spread`;
-    const validityEnd = this.isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
+    const validityEnd = isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
 
     // Everything above has been computed. Nothing below has happened yet: the publication
     // waits out the ticks the run costs (ADR-0043), released by the clock subscription this
@@ -789,8 +790,4 @@ export class ModelRunner {
     return digest;
   }
 
-  private isoPlusSeconds(iso: string, seconds: number): string {
-    const millis = Date.parse(iso.slice(0, 23) + 'Z') + seconds * 1000;
-    return `${new Date(millis).toISOString().slice(0, 19)}.000000Z`;
-  }
 }

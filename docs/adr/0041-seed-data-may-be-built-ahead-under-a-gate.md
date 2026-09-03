@@ -153,7 +153,7 @@ turned again, with no forecast beyond the artefact's own. And the same fault was
 with no artefact in sight, by stopping the analyst from the Operator tab: an FR-31
 violation shipped in `main`, found by trying to do this work rather than by looking for it.
 
-Two changes, and the order matters — the second is unsafe without the first:
+Three changes, and the order matters — the second is unsafe without the first, and the third is what the second turned out to need:
 
 1. **The scheduler releases a run nobody is working on** when it has been outstanding
    longer than the run's declared cost plus the release margin — 39 ticks at shipped values,
@@ -201,15 +201,21 @@ forecast and fires its floor on the first sample after opening — a run 10 to 2
 the one the artefact had just supplied, against a 600-tick minimum interval. That is a
 cadence no live run can produce, and it spends a model run for nothing. Reverted.
 
-What is left is real and is not fixed here. The replayed run reaches the right cadence for
-the wrong reason: its scheduler is counting from a request nobody answered rather than from
-the standing forecast's remaining validity, because `run_published` is announced by the
-model runner alone and a component held back through the pre-roll never hears it. The
-snapshot source must not invent that announcement — it carries grid bounds, collections and
-digests that no holding descriptor holds, and a source that synthesised them would be
-authoring a claim rather than replaying bytes, which is the fixture hazard this record
-exists to forbid. The principled fix is for the model runner to restate its publication for
-a late listener, exactly as it already restates its cost, and it belongs to its own change.
+That left the replayed run reaching the right cadence for the wrong reason — its scheduler
+counting from a request nobody answered rather than from the standing forecast's remaining
+validity, because `run_published` is announced by the model runner alone and a component held
+back through the pre-roll never hears it. **Replaying holdings does not replay
+announcements**, and that is the cost this record did not price: four components hold nothing
+but what the announcement told them, and `returning` opened with zero staged offload bundles
+against a live run's five, its card promising a staged package.
+
+So the model runner restates the standing run from the store's own descriptors when it
+resumes, as it already restates its cost, and the offload packager consults the same reading
+when prompted with nothing announced. The snapshot source must not do this: it would be
+composing a statement no component made, which is the hazard this record exists to forbid,
+whereas the runner reading back what it itself wrote is the resumption rule the environment
+generator already follows. With the standing run restated, a replayed run's cadence is the
+live run's cadence exactly, on all four conditions.
 
 ### What this does not fix
 

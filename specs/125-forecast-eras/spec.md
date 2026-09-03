@@ -35,8 +35,15 @@ no hot component to optimise — only work to move off the visit.
 - **FR-125-03** The loop cannot be permanently becalmed by a run request that reaches no
   component (SRD-v2 FR-31). This is the fault holding the analyst back exposed, and it is
   reachable from the Operator tab with no artefact in sight.
-- **FR-125-04** A run identifier is unique across every scheduler instance in a run, so no
-  instance can republish over holdings another named.
+- **FR-125-04** No scheduler instance can republish over holdings another named. Tick-derived
+  identifiers narrow this; the coverage store closes it by refusing a second set of bytes
+  under a holding id it already holds.
+- **FR-125-05** A replayed run must **know** what it holds, not merely hold it.
+  `run_published` is the only statement that a forecast stands, and the components that learn
+  from it — the scheduler, the offload packager, the analyst, telemetry — are left behind when
+  the model runner is held back for the whole pre-roll. The runner restates the standing run
+  from the store's own descriptors on resume; the snapshot source must not, because composing
+  an announcement no component made is the fixture hazard ADR-0041 forbids.
 
 ## What was decided, and what was given up
 
@@ -57,14 +64,10 @@ backlog's P0 row wanted and is also ~27 MB of git history per change.
 
 ## Deliberately not done
 
-- **The resumed scheduler does not learn the standing forecast's validity.** A replayed run
-  reaches the right cadence for the wrong reason — counting from a request nobody answered
-  rather than from remaining validity. `run_published` is announced by the model runner
-  alone, and a component held back through the pre-roll never hears it. The snapshot source
-  must not synthesise that announcement: it carries grid bounds, collections and digests no
-  holding descriptor holds, and inventing them is the fixture hazard ADR-0041 forbids. The
-  fix is for the model runner to restate its publication for a late listener, as it already
-  restates its cost.
+- **The features are not restated with the run.** `forecast_features` is derived per step and
+  is not in the store, so the feature surface is empty until the first live run — which is
+  what a restarted runner has always done, and is the one part of a resumed run's knowledge
+  the store cannot supply.
 - **The digest is the largest single remaining cost and is untouched.** Every field's bytes
   are hashed twice, by the author and by the store verifying the descriptor — that is the
   guarantee, not waste. Making it cheap means `crypto.subtle`, which is async, against

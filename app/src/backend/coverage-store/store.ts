@@ -160,6 +160,36 @@ export class CoverageStore {
       };
     }
     const descriptor = staged.descriptor;
+    /**
+     * A holding id names one set of bytes for the life of a run.
+     *
+     * Without this the map entry was simply overwritten, and the loss was perfectly silent:
+     * both holdings are internally consistent, both digests check out against their own
+     * descriptors, and the reader finds the field they were looking at replaced by a
+     * different one under the same name. The digest check above cannot see it — it proves
+     * the staged bytes match the descriptor that travelled with them, which a replacement
+     * satisfies exactly.
+     *
+     * Reachable from the Operator tab with the clock stopped, and watched happening: restart
+     * the scheduler at the tick a run was requested at, and a rate change republishes that
+     * tick to the fresh instance, whose cadence floor fires and reissues the same
+     * tick-derived identifier. Four analysis holdings were replaced with the clock never
+     * moving. Deriving run identifiers from the request tick narrows that fault — it needs
+     * the restart to land inside the requesting tick, where the counter it replaced collided
+     * on every restart — but it does not close it, and the store is where it closes, because
+     * the store is what owns the holdings.
+     *
+     * Re-publishing the *same* bytes stays allowed. A restatement of what is already held is
+     * not a loss, and the snapshot source's whole job is to put bytes back exactly as they
+     * were authored.
+     */
+    const standing = this.holdingsById.get(descriptor.holding_id);
+    if (standing !== undefined && standing.descriptor.field.sha256 !== recorded) {
+      return {
+        published: false,
+        refusal: `'${descriptor.holding_id}' is already held, with field ${standing.descriptor.field.sha256}; a holding id names one set of bytes for the life of a run, so this publication is refused rather than replacing it silently`,
+      };
+    }
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).
     this.holdingsById.set(descriptor.holding_id, { descriptor, bytes: staged.bytes });

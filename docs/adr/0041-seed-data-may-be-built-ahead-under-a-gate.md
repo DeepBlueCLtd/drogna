@@ -161,11 +161,17 @@ Two changes, and the order matters — the second is unsafe without the first:
    amendment described the bound as the cadence floor's whole interval, which is what the
    first implementation used and what its own docstring now argues against; the ADR was
    recording the rejected alternative as the decision.
-2. **Run identifiers are derived from the request tick**, `<run>-run-t<tick>`. This *is*
-   the "run identifier that survives a restart" the paragraph above asked for, and it
-   closes the collision the paragraph named as well as the one it did not — a restarted
-   scheduler resumes at the current tick, not at zero. `run-request.schema.json` is amended:
-   `run_sequence` stays the ordinal and is no longer half of the identifier rule.
+2. **Run identifiers are derived from the request tick**, `<run>-run-t<tick>`. This is the
+   "run identifier that survives a restart" the paragraph above asked for, and it *narrows*
+   the collision rather than closing it: the counter collided on every restart, this one
+   needs the restart to land inside the very tick a run was requested at — reachable from the
+   Operator tab with the clock stopped, and watched replacing four analysis holdings.
+   `run-request.schema.json` is amended: `run_sequence` stays the ordinal and is no longer
+   half of the identifier rule.
+3. **The coverage store refuses a second set of bytes under a holding id it already holds**,
+   which closes the remainder and is where it belongs — the store owns the holdings, and the
+   digest check beside it cannot see a replacement, because a replacement satisfies it
+   exactly. Restating identical bytes stays allowed; the snapshot source depends on it.
 
 ### The numbers, remeasured
 

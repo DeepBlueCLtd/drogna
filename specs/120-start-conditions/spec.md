@@ -196,8 +196,10 @@ declined by that policy, for the rest of the run. Worse, restarting it resets it
 sequence, and a run identifier was `<run>-run-<sequence>` — so the second restart's first run
 reused the first's identifier and silently replaced its holdings in the store. Both were
 reachable from the Operator tab's own restart control, and neither was fixed here; the
-script simply never stops the scheduler. **Both are fixed in feature 125**: a watchdog
-releases a run nobody is working on, and identifiers derive from the request tick.
+script simply never stops the scheduler. **Both are answered in feature 125**: a watchdog
+releases a run nobody is working on; identifiers derive from the request tick, which narrows
+the reuse to a restart inside the requesting tick; and the coverage store closes the
+remainder by refusing a second set of bytes under a holding id it already holds.
 
 ## What pre-generation cost and bought
 

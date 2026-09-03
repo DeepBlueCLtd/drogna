@@ -530,11 +530,22 @@ export class Scheduler {
    * replace them.
    *
    * Simulation time is the one monotonic thing this component hears rather than keeps: it
-   * survives a restart, because the clock does not restart with it, and it cannot repeat,
-   * because a run is requested at most once per tick — the outstanding-run guard and the
-   * minimum interval each forbid a second on the same tick. `run_sequence` stays the ordinal
-   * count of runs this instance has requested and is carried as a fact, but it is no longer
-   * half of the identifier rule; the master says so.
+   * survives a restart, because the clock does not restart with it. Within one instance a run
+   * is requested at most once per tick — the outstanding-run guard and the minimum interval
+   * each forbid a second — so the identifiers an instance issues cannot repeat.
+   *
+   * **Across instances it is a narrowing and not a closure, and the difference is worth
+   * stating exactly**, because an earlier draft of this comment claimed closure in three
+   * places. Both guards are this instance's memory. Restart the scheduler at the very tick a
+   * run was requested at and a rate change republishes that tick to the fresh instance, whose
+   * cadence floor fires and reissues the same identifier — watched from the Operator tab with
+   * the clock never moving, and four analysis holdings were replaced. The counter this
+   * replaced collided on *every* restart, so this is a real narrowing; what closes the
+   * remainder is the coverage store refusing a second set of bytes under a holding id it
+   * already holds, which is where it belongs, because the store owns the holdings.
+   *
+   * `run_sequence` stays the ordinal count of runs this instance has requested and is carried
+   * as a fact, but it is no longer half of the identifier rule; the master says so.
    */
   private identifierForThisTick(): string {
     return `${this.runId}-run-t${this.simTime.tick}`;

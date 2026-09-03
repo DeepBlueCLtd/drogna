@@ -103,6 +103,46 @@ describe('the synthetic ocean (feature 102)', () => {
     runtime.stop();
   });
 
+  it('refuses a second set of bytes under a holding id it already holds (feature 125, watched)', () => {
+    /**
+     * The digest check above proves the staged bytes match the descriptor that travelled
+     * with them. A *replacement* satisfies that exactly — both holdings are internally
+     * consistent, both digests check out — so it passed, the map entry was overwritten, and
+     * the reader found the field they were looking at replaced by a different one under the
+     * same name. Perfectly silent.
+     *
+     * Watched happening from the Operator tab with the clock stopped: restart the scheduler
+     * at the tick a run was requested at, and a rate change republishes that tick to the
+     * fresh instance, whose cadence floor fires and reissues the same tick-derived
+     * identifier. Four analysis holdings replaced, clock never moving.
+     */
+    const runtime = buildBackend(lockstepConfig(), options, validator);
+    const nowcast = runtime.store.currentNowcast();
+    if (!nowcast) throw new Error('no nowcast');
+    const standing = runtime.store.holding(nowcast.descriptor.holding_id);
+    if (!standing) throw new Error('the store lost the now-cast between reading it twice');
+
+    // Different bytes, honestly described: a descriptor whose digest matches what it carries.
+    const different = new Uint8Array(nowcast.bytes);
+    different[7] ^= 0xff;
+    const descriptor: CoverageHolding = {
+      ...nowcast.descriptor,
+      field: { ...nowcast.descriptor.field, sha256: `sha256:${sha256Hex(different)}` },
+    };
+    const verdict = runtime.store.publish({ descriptor, bytes: different });
+    expect(verdict.published).toBe(false);
+    expect(verdict.refusal).toMatch(/already held/);
+    expect(verdict.refusal).toMatch(/one set of bytes for the life of a run/);
+    // And the bytes that were there are the bytes that are there.
+    expect(runtime.store.holding(nowcast.descriptor.holding_id)?.descriptor.field.sha256).toBe(
+      standing.descriptor.field.sha256,
+    );
+
+    // Restating what is already held is not a loss, and the snapshot source depends on it.
+    expect(runtime.store.publish({ descriptor: nowcast.descriptor, bytes: nowcast.bytes }).published).toBe(true);
+    runtime.stop();
+  });
+
   it('replaces the now-cast on its configured cadence, announced not polled', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);

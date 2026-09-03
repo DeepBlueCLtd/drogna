@@ -10,7 +10,14 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
-import type { AnalysisPublished, ConfigRun, CoverageHolding, RunPublished } from '../../generated/types.js';
+import type {
+  AnalysisContributions,
+  AnalysisContributionsHeader,
+  AnalysisPublished,
+  ConfigRun,
+  CoverageHolding,
+  RunPublished,
+} from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { soundSpeedMs } from '../env-generator/analytic.js';
@@ -261,5 +268,143 @@ describe('the analysis, on the loop as it ships', () => {
     expect(ownRecord.analyses[0].observations.assimilated).toBeGreaterThan(0);
     expect(soundSpeedMs(10, 35, 50)).toBeGreaterThan(0);
     own.stop();
+  });
+});
+
+describe('what each cell was made from, source by source (feature 124)', () => {
+  let runtime: BackendRuntime;
+  let config: ConfigRun;
+  let record: Record;
+
+  beforeAll(async () => {
+    config = lockstepConfig();
+    runtime = buildBackend(config, options, validator);
+    record = await driveUntilAnalyses(runtime, config, 2, 12000);
+  });
+
+  afterAll(() => runtime.stop());
+
+  /** A holding's rows summed per level of a column, from the served document. */
+  function levelsOf(document: AnalysisContributions) {
+    return document.levels.map((level) => ({
+      ...level,
+      sum: level.contributions.reduce((total, entry) => total + entry.contribution, 0) + level.remainder,
+      magnitude:
+        level.contributions.reduce((total, entry) => total + Math.abs(entry.contribution), 0) +
+        Math.abs(level.remainder) +
+        Math.abs(level.observation_weight),
+    }));
+  }
+
+  it('publishes the contributions beside the analysis, under their own format, and EDR does not list them', async () => {
+    for (const analysis of record.analyses) {
+      const holding = runtime.store.holding(analysis.collections.contributions);
+      expect(holding?.descriptor.field.sha256).toBe(analysis.digests.contributions);
+      expect(holding?.descriptor.field.format).toBe('drogna-contributions-v1');
+      expect(holding?.descriptor.era).toBe('analysis');
+    }
+    const listed = await get(runtime, `${config.query.http.edr_prefix}/collections`);
+    const served = new Set((listed.body as { collections: { id: string }[] }).collections.map((c) => c.id));
+    expect(served.has(record.analyses[1].collections.provenance)).toBe(true);
+    expect(served.has(record.analyses[1].collections.contributions)).toBe(false);
+    // And asked for as a collection anyway, EDR names what it does serve rather than
+    // sampling bytes that are not a grid.
+    const refused = await get(runtime, `${config.query.http.edr_prefix}/collections/${record.analyses[1].collections.contributions}`);
+    expect(refused.status).toBe(404);
+  });
+
+  it('serves a column whose sources sum, with the remainder, to the weight it states — within the holding’s own tolerance', async () => {
+    const analysis = record.analyses[1];
+    const prefix = config.query.http.contributions_prefix;
+    const holding = runtime.store.holding(analysis.collections.contributions);
+    if (!holding) throw new Error('no contributions holding');
+    const tolerance = holding.descriptor.manifest.variables[0].tolerance_absolute;
+    expect(tolerance).toBeGreaterThan(0);
+
+    const header = await get(runtime, `${prefix}/${analysis.collections.contributions}`);
+    expect(header.status).toBe(200);
+    expect(validator.validate('analysis-contributions#header', header.body).refusals).toEqual([]);
+    const sources = (header.body as AnalysisContributionsHeader).sources;
+    expect(sources.length).toBeGreaterThan(0);
+    for (const source of sources) expect(source.kind).toBe('measured');
+
+    // A column at a source's own cell: reached at that level, and at least one entry.
+    const at = sources[0].cell;
+    const answer = await get(runtime, `${prefix}/${analysis.collections.contributions}/column?coords=POINT(${at.longitude} ${at.latitude})`);
+    expect(answer.status).toBe(200);
+    expect(validator.validate('analysis-contributions', answer.body).refusals).toEqual([]);
+    const document = answer.body as AnalysisContributions;
+    expect(document.column.longitude).toBeCloseTo(at.longitude, 9);
+    const levels = levelsOf(document);
+    const reached = levels.filter((level) => level.reached);
+    expect(reached.length).toBeGreaterThan(0);
+    expect(reached.some((level) => level.contributions.length > 0)).toBe(true);
+    for (const level of levels) {
+      if (!level.reached) {
+        // Not reached: nought exactly, nothing to state, and said as such (FR-129).
+        expect(level.observation_weight).toBe(0);
+        expect(level.contributions).toEqual([]);
+        expect(level.background_error_std).toBeNull();
+        continue;
+      }
+      expect(level.background_error_std).toBeGreaterThan(0);
+      // The identity, at the tolerance the manifest declares for this holding — float32's
+      // width at the largest magnitude stored — scaled by the terms summed.
+      expect(Math.abs(level.sum - level.observation_weight)).toBeLessThanOrEqual(tolerance * (level.contributions.length + 2));
+      for (const entry of level.contributions) {
+        expect(entry.source).toBeLessThan(document.sources.length);
+        // Inside the support, which is twice each half-width the document itself states.
+        const { horizontal_km, vertical_m } = document.correlation;
+        const scaled = Math.hypot(entry.separation.horizontal_km / horizontal_km, entry.separation.vertical_m / vertical_m);
+        expect(scaled).toBeLessThan(2);
+      }
+    }
+    // Deep water: the instruments sit at 50 m and 200 m and the vertical support is
+    // 320 m, so the bottom of the column is out of every source's reach — the reading
+    // FR-127 says the profile exists to make obvious.
+    expect(levels[levels.length - 1].reached).toBe(false);
+  });
+
+  it('at the cold start, where nothing was carried, the weight IS the measurement share the same cycle published', async () => {
+    // The published measurement share is (1 − ω)·carried + ω. On the first cycle the
+    // carried share is nought — the state is all archive at the quay — so the share
+    // and ω are one number, and the holding is checked against the provenance rather
+    // than trusted. On later cycles the carried share is not published on its own and
+    // the identity is held in kernel.test.ts instead.
+    const analysis = record.analyses[0];
+    const prefix = config.query.http.contributions_prefix;
+    const holding = runtime.store.holding(analysis.collections.contributions);
+    const provenance = runtime.store.holding(analysis.collections.provenance);
+    if (!holding || !provenance) throw new Error('the loop did not turn');
+    const shares = fieldsOf(provenance);
+    const measurementShare = shares[provenance.descriptor.manifest.variables.findIndex((v) => v.name.endsWith('_measurement'))];
+    const tolerance = holding.descriptor.manifest.variables[0].tolerance_absolute;
+    const header = (await get(runtime, `${prefix}/${analysis.collections.contributions}`)).body as AnalysisContributionsHeader;
+    let compared = 0;
+    for (const source of header.sources.slice(0, 5)) {
+      const answer = await get(runtime, `${prefix}/${analysis.collections.contributions}/column?coords=POINT(${source.cell.longitude} ${source.cell.latitude})`);
+      const document = answer.body as AnalysisContributions;
+      for (const level of document.levels) {
+        expect(Math.abs(level.observation_weight - measurementShare[level.cell_index])).toBeLessThanOrEqual(2 * tolerance);
+        compared += 1;
+      }
+    }
+    expect(compared).toBeGreaterThan(0);
+  });
+
+  it('refuses what it cannot serve by name: a coverage, a query it lacks, a position outside the domain', async () => {
+    const analysis = record.analyses[1];
+    const prefix = config.query.http.contributions_prefix;
+    const coverage = await get(runtime, `${prefix}/${analysis.collections.provenance}`);
+    expect(coverage.status).toBe(404);
+    expect((coverage.body as { refused: string }).refused).toContain(config.query.http.edr_prefix);
+    const unknown = await get(runtime, `${prefix}/${analysis.collections.contributions}/radius?coords=POINT(-11 46)`);
+    expect(unknown.status).toBe(404);
+    expect((unknown.body as { refused: string }).refused).toContain('column');
+    const outside = await get(runtime, `${prefix}/${analysis.collections.contributions}/column?coords=POINT(0 0)`);
+    expect(outside.status).toBe(400);
+    expect((outside.body as { refused: string }).refused).toContain('outside');
+    const bare = await get(runtime, `${prefix}/${analysis.collections.contributions}/column`);
+    expect(bare.status).toBe(400);
   });
 });

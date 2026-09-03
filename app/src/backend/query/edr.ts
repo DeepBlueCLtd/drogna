@@ -46,6 +46,11 @@ export class EdrComponent {
   private collectionsById(): Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }> {
     const result = new Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }>();
     for (const descriptor of this.store.holdings()) {
+      // A collection is a coverage: a grid of values the sampler can read. The analyst's
+      // contributions holding (feature 124) is in the same store under the same digest
+      // check and is not one — sparse, per source, no grid to sample — so it is served
+      // at its own prefix and listed here would be a collection every query refused.
+      if (descriptor.field.format !== 'drogna-f32-v1') continue;
       const entry = this.store.holding(descriptor.holding_id);
       if (!entry) continue;
       const manyPerEra = descriptor.era === 'instance' || descriptor.era === 'analysis';

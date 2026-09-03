@@ -24,6 +24,8 @@
  */
 import type { SeamClient } from '../../seam/transport.js';
 import type {
+  AnalysisContributionsHeader,
+  AnalysisContributionsSource,
   AnalysisPublished,
   ConfigAnalyst,
   ConfigModelRunner,
@@ -38,9 +40,11 @@ import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE } from '../env-generator/analytic.js';
 import type { CoverageStore } from '../coverage-store/store.js';
+import { CONTRIBUTIONS_FORMAT, encodeContributions } from '../lib/contributions-format.js';
 import {
   optimalInterpolationKernel,
   propagateShares,
+  type AnalysisContributions,
   type AnalysisGrid,
   type AnalysisObservation,
   type AnalysisState,
@@ -65,6 +69,8 @@ interface CarriedState {
 export class Analyst {
   private readonly heartbeat: HeartbeatEmitter;
   private readonly observationErrorByDatastream: ReadonlyMap<string, number>;
+  /** Which instrument a datastream is, for the contributions holding's source table. */
+  private readonly sensorByDatastream: ReadonlyMap<string, string>;
   private simTime = { value: '', tick: 0 };
   private pending: Observation[] = [];
   private carried: CarriedState | undefined;
@@ -105,6 +111,7 @@ export class Analyst {
     this.observationErrorByDatastream = new Map(
       sensors.instruments.map((instrument) => [instrument.datastream_id, instrument.noise_std]),
     );
+    this.sensorByDatastream = new Map(sensors.instruments.map((instrument) => [instrument.datastream_id, instrument.sensor_id]));
     this.heartbeat = new HeartbeatEmitter(
       config.id,
       config.heartbeat,
@@ -198,6 +205,8 @@ export class Analyst {
     const analysedValues: Float32Array[] = [];
     const analysedError: Float32Array[] = [];
     const analysedShares: Float32Array[][] = [];
+    /** Temperature's, for the same reason the provenance is temperature's: see below. */
+    let contributions: AnalysisContributions | undefined;
     let assimilated = 0;
     let clamped = 0;
     let worstDisplacementKm = 0;
@@ -249,8 +258,10 @@ export class Analyst {
       analysedValues.push(analysis.values);
       analysedError.push(analysis.errorStd);
       analysedShares.push(analysis.shares.map((share) => Float32Array.from(share)));
+      if (v === 0) contributions = analysis.contributions;
     }
     this.departed = true;
+    if (!contributions) throw new Error('the temperature analysis published no contributions');
 
     this.carried = {
       errorStd: { temperature: analysedError[0], salinity: analysedError[1] },
@@ -262,6 +273,7 @@ export class Analyst {
     const analysisId = `analysis.${request.run_id}`;
     const errorId = `${analysisId}-error`;
     const provenanceId = `${analysisId}-provenance`;
+    const contributionsId = `${analysisId}-contributions`;
     const observationNote =
       `${assimilated} observation(s) assimilated` +
       (clamped > 0 ? `, ${clamped} clamped to the domain edge, worst ${worstDisplacementKm.toFixed(1)} km` : '') +
@@ -289,6 +301,22 @@ export class Analyst {
     }
     const provenanceDigest = this.publish(provenanceId, 'analysis', request, manifest, provenanceValues, provenanceNames, `Where each cell's value came from. Because H selects a cell, xᵃ = (I − KH)xᵇ + Ky exactly, so these shares are read off the gain rather than approximated, and they sum to one. A share may be negative: where a cell's background error greatly exceeds the observed cell's, the gain extrapolates, ω passes one, and that is optimal interpolation behaving correctly rather than a fault to clamp away.`);
 
+    // What the measurement share is the row sum of (feature 124): each source's
+    // contribution to each cell it reached, with the remainder — the coupling from
+    // beyond a cell's reach — so the sum is ω exactly. Temperature alone, as the
+    // provenance is, and for the same reason. The bytes are their own format: a sparse
+    // per-source holding is not a coverage, and EDR does not list it.
+    const contributionsDigest = this.publishBytes(
+      contributionsId,
+      'analysis',
+      request,
+      manifest,
+      encodeContributions(this.contributionsHeader(contributions, analysisGrid), contributions),
+      CONTRIBUTIONS_FORMAT,
+      [contributionVariable(manifest.variables[0], contributions)],
+      `Each source's contribution to each cell within its support — Σⱼ K_aj over the observations an instrument made in one cell, read off the gain the analysis was built with — and, per cell, ω and the remainder, ω less the in-support sum: what observations beyond the cell's reach did to it through the inverse's coupling with those within. Σ sources + remainder = ω. ${contributions.sources.length} source(s), ${contributions.cells.length} cell(s) reached, ${contributions.entrySource.length} entries.`,
+    );
+
     const announcement: AnalysisPublished = {
       component: this.config.id,
       scenario_run_id: this.runId,
@@ -298,8 +326,8 @@ export class Analyst {
       initialisation_sim_time: request.initialisation_sim_time,
       ensemble_size: request.ensemble_size,
       background: { holding_id: background.descriptor.holding_id, era: backgroundEra },
-      collections: { analysis: analysisId, error: errorId, provenance: provenanceId },
-      digests: { analysis: analysisDigest, error: errorDigest, provenance: provenanceDigest },
+      collections: { analysis: analysisId, error: errorId, provenance: provenanceId, contributions: contributionsId },
+      digests: { analysis: analysisDigest, error: errorDigest, provenance: provenanceDigest, contributions: contributionsDigest },
       observations: { assimilated, clamped, worst_displacement_km: worstDisplacementKm },
     };
     this.client.publish(this.config.topics.analysis_published, announcement);
@@ -381,7 +409,51 @@ export class Analyst {
     return this.cycleObservations.filter((observation) => observation.observed_property === variable);
   }
 
-  /** Staged through the store's one write seam, digest-checked like everything else. */
+  /**
+   * The contributions holding's header: the kernel's sources named as the harness
+   * names them — a datastream, its instrument, the cell's centre — with the correlation
+   * the support is read from. Every source is measured: the analyst assimilates the
+   * vessel's instruments and nothing else, and the shore broadcast enters as background
+   * (FR-125), so the flag is stated rather than left for the reader to assume.
+   */
+  private contributionsHeader(contributions: AnalysisContributions, grid: AnalysisGrid): AnalysisContributionsHeader {
+    const perLevel = grid.latitude.count * grid.longitude.count;
+    const sources: AnalysisContributionsSource[] = contributions.sources.map((source) => {
+      const lonIndex = source.cellIndex % grid.longitude.count;
+      const latIndex = Math.floor(source.cellIndex / grid.longitude.count) % grid.latitude.count;
+      const depthIndex = Math.floor(source.cellIndex / perLevel);
+      return {
+        source_id: `${source.sourceKey}.cell-${source.cellIndex}`,
+        datastream_id: source.sourceKey,
+        sensor_id: this.sensorByDatastream.get(source.sourceKey) ?? source.sourceKey,
+        kind: 'measured',
+        cell: {
+          index: source.cellIndex,
+          longitude: grid.longitude.minimum + lonIndex * grid.longitude.spacing,
+          latitude: grid.latitude.minimum + latIndex * grid.latitude.spacing,
+          depth_m: grid.depth.minimum + depthIndex * grid.depth.spacing,
+        },
+        observed: { longitude: source.longitude, latitude: source.latitude, depth_m: source.depthM },
+        observation_count: source.observationCount,
+        error_std: source.errorStd,
+        background_error_std: source.backgroundErrorStd,
+        mean_innovation: source.meanInnovation,
+      };
+    });
+    return {
+      schema_version: 1,
+      format: CONTRIBUTIONS_FORMAT,
+      variable: VARIABLES[0],
+      correlation: { horizontal_km: this.config.correlation.horizontal_km, vertical_m: this.config.correlation.vertical_m },
+      sources,
+      cells: contributions.cells.length,
+      entries: contributions.entrySource.length,
+      layout:
+        'u32[cells] cell; f32[cells] observation_weight; f32[cells] remainder; f32[cells] background_error_std; u32[cells+1] offsets; u32[entries] source; f32[entries] contribution; f32[entries] horizontal_km; f32[entries] vertical_m',
+    };
+  }
+
+  /** Gridded fields, concatenated in the manifest's variable order: `drogna-f32-v1`. */
   private publish(
     holdingId: string,
     era: CoverageHolding['era'],
@@ -399,8 +471,31 @@ export class Analyst {
       bytes.set(new Uint8Array(field.buffer, field.byteOffset, field.byteLength), offset);
       offset += field.byteLength;
     }
-    const digest = `sha256:${sha256Hex(bytes)}`;
     const template = baseManifest.variables[0];
+    return this.publishBytes(
+      holdingId,
+      era,
+      request,
+      baseManifest,
+      bytes,
+      'drogna-f32-v1',
+      names.map((name) => ({ ...template, name, standard_name: null, long_name: name.replace(/_/g, ' ') })),
+      rule,
+    );
+  }
+
+  /** Staged through the store's one write seam, digest-checked like everything else. */
+  private publishBytes(
+    holdingId: string,
+    era: CoverageHolding['era'],
+    request: RunRequest,
+    baseManifest: Manifest,
+    bytes: Uint8Array,
+    format: CoverageHolding['field']['format'],
+    variables: Manifest['variables'],
+    rule: string,
+  ): string {
+    const digest = `sha256:${sha256Hex(bytes)}`;
     const manifest: Manifest = {
       ...baseManifest,
       generator: { name: 'drogna-analyst', version: '2.0.0', analytic_form_version: 1 },
@@ -416,10 +511,10 @@ export class Analyst {
           units: 'seconds since the origin sim time',
         },
       },
-      variables: names.map((name) => ({ ...template, name, standard_name: null, long_name: name.replace(/_/g, ' ') })),
+      variables,
       composition: { rule: 'analysis', description: rule },
       outputs: {
-        field: { name: holdingId, format: 'drogna-f32-v1', sha256: digest },
+        field: { name: holdingId, format, sha256: digest },
         manifest: { name: `${holdingId}.manifest`, format: 'application/json' },
       },
     };
@@ -429,13 +524,36 @@ export class Analyst {
       era,
       run_id: this.runId,
       published_at: { sim_time: this.simTime.value, tick: this.simTime.tick },
-      field: { format: 'drogna-f32-v1', sha256: digest, byte_length: bytes.byteLength },
+      field: { format, sha256: digest, byte_length: bytes.byteLength },
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
     if (!verdict.published) throw new Error(`coverage store refused ${holdingId}: ${verdict.refusal}`);
     return digest;
   }
+}
+
+/**
+ * The contributions holding's one manifest variable: a weight, dimensionless, with the
+ * tolerance derived from float32's width at the largest magnitude stored — the same
+ * derivation the generator and the runner use, so a comparison against the holding has
+ * a stated threshold rather than a chosen one.
+ */
+function contributionVariable(template: Manifest['variables'][number], contributions: AnalysisContributions): Manifest['variables'][number] {
+  let magnitude = 0;
+  for (const array of [contributions.weight, contributions.remainder, contributions.entryContribution]) {
+    for (const value of array) magnitude = Math.max(magnitude, Math.abs(value));
+  }
+  const ulpAt = (at: number) => Math.pow(2, Math.max(Math.floor(Math.log2(Math.max(at, 1))) - 23, -149));
+  return {
+    ...template,
+    name: `${VARIABLES[0]}_contribution`,
+    standard_name: null,
+    long_name: `${VARIABLES[0]} contribution by source`,
+    units: '1',
+    dtype: 'float32',
+    tolerance_absolute: 4 * ulpAt(magnitude),
+  };
 }
 
 function floatsOf(bytes: Uint8Array): Float32Array {

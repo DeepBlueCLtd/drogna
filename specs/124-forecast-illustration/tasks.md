@@ -36,7 +36,7 @@ published today.
 
 ## The substrate — the analyst publishes what it already computes
 
-- [ ] T001 `kernel.ts` (analyst): `AnalysisField` gains the per-source contributions the gain
+- [x] T001 `kernel.ts` (analyst): `AnalysisField` gains the per-source contributions the gain
       already produces — K_aj kept per (source, cell) instead of collapsed into
       `observationWeight`. The row sum stays: it is what the measurement share is, and a
       consumer that recomputed it from the columns would be a second implementation.
@@ -52,7 +52,13 @@ published today.
       ~9 MB a cycle, kept for the life of the run, against a store holding ~9 MB in total.
       Per source it is tens of sources a cycle, and a column has tens of rays rather than
       hundreds — which is also the only count a reader could read.
-- [ ] T002 The retention is bounded by the correlation's own support: Gaspari–Cohn reaches
+      *Built, and measured again with the holding in the store:* 4–6 sources a cycle on the
+      loitering condition (the platform's two temperature instruments in the two or three
+      cells it loiters over), 1,144–1,203 cells reached, 3,174–4,761 entries, 75–103 KB a
+      cycle against the provenance holding's 737 KB. The kernel already had every number —
+      `row` in the error reduction is K_ak — so the change is an accumulate per reaching
+      observation and no new arithmetic.
+- [x] T002 The retention is bounded by the correlation's own support: Gaspari–Cohn reaches
       exactly zero at twice the declared half-width, so a source outside it holds no entry
       against the cell. The bound is read from `AnalysisParameters`, never a constant.
 
@@ -65,32 +71,64 @@ published today.
       observation weight — and a **remainder**, ω less the in-support sources' sum, which is
       the coupling from beyond the cell's reach. The identity the tests hold is Σ sources +
       remainder = ω, exactly; a dense out-of-support column set is what is not stored.
-- [ ] T003 `analysis-contributions.schema.json`: the column document the query layer serves —
+      *Built.* A note for the profile and the rays (T018, T021): the manifest's declared
+      tolerance on the second cycle's holding is 1.5e-5, which is float32's width at a
+      magnitude between 16 and 32 — a contribution or ω of that size exists where the
+      ensemble spread at a cell dwarfs the spread at the observed cell and the gain
+      extrapolates (kernel.test.ts, "lets the weight exceed one"). That is optimal
+      interpolation behaving as documented since feature 116, not this feature's doing; a
+      ray whose width is proportional to it will dominate the column, and the drawing task
+      has to decide what proportional means at that magnitude rather than meet it as a
+      surprise.
+- [x] T003 `analysis-contributions.schema.json`: the column document the query layer serves —
       the sources reaching the column, each level's contributions by source with the
       separation and the two errors (spec FR-04), ω and the remainder per level — and, under
       `$defs`, the header the holding's own bytes open with. One master; amended, never
       round-tripped through a formatter.
-- [ ] T004 `pnpm generate`, and commit the output.
-- [ ] T005 `analyst.ts` publishes the contributions holding beside the analysis, its error and
+      *Built.* The level's `background_error_std` is null where the level was not reached,
+      because the holding carries a row for every reached cell and no other: null is that
+      fact, not a nought pretending to be a measurement (FR-129's three facts).
+- [x] T004 `pnpm generate`, and commit the output.
+- [x] T005 `analyst.ts` publishes the contributions holding beside the analysis, its error and
       the four shares, and names it in `analysis-published.schema.json`'s `collections` and
       `digests` — which grows by one property each, appended. The bytes are
       `drogna-contributions-v1`, a second format `coverage-holding.schema.json` admits beside
       `drogna-f32-v1`: a header and typed arrays, because the same content as JSON measured
       several times the size and the cost this feature accepts is storage, not that much of it.
       EDR does not list it — a sparse holding is not a coverage — and says so in the code.
-- [ ] T005a The query component serves it at a configured prefix (`config.query.http`,
+      *Built.* `contributions-format.ts` is the codec, one file both ways on the snapshot
+      codec's argument; the header is padded to four bytes so every section is a typed array,
+      and the decoder copies each section so an unaligned caller is never a fault. The
+      manifest's one variable carries a tolerance derived as the generator and runner derive
+      theirs, 4 ulp at the largest magnitude stored.
+- [x] T005a The query component serves it at a configured prefix (`config.query.http`,
       `config.shell.endpoints`, the boundary's allow list — three documents, appended): the
       header, and a column by `coords=POINT(lon lat)` as EDR's position query spells a
       position, validated against the master. Not under the EDR prefix: the standard has no
       such query type, and the EDR component refuses unknown types by name, which is the
       honesty this must not spend.
-- [ ] T006 **Watched failing**: a planted contribution beyond the correlation's support, seen
+      *Built.* `query/contributions.ts`; the snap to a cell is `field-sampler.ts`'s own
+      `nearestIndex`, now exported, so the contributions query and EDR's position query agree
+      on which column answered. `ConfigShell.endpoints.contributions` is declared and
+      configured and has no reader yet: it is T013's.
+- [x] T006 **Watched failing**: a planted contribution beyond the correlation's support, seen
       refused. Reverted, and said so in the commit message (SC-002).
-- [ ] T007 `analyst.test.ts`: the contributions sum, per cell, with the remainder, to the cell's
+      *Watched, twice.* Kernel: with the `continue` on ρ = 0 removed so every observation
+      counted as reaching, "an entry at 75.8 km, 0 m lies beyond the support: expected 2.526
+      to be less than 2", and the remainder test saw the far cast appear as a source.
+      Served column: with ω scaled by 1.01 and the remainder shifted by 0.01, the identity
+      test failed by 0.0094 against a tolerance of 6.1e-5 and the cold-start test by 0.01
+      against 1.9e-6. Both reverted; both in the commit messages.
+- [x] T007 `analyst.test.ts`: the contributions sum, per cell, with the remainder, to the cell's
       ω; and on the cold-start cycle — where the carried measurement share is nought, so the
       published share *is* ω — to the measurement share the same cycle published. The
       tolerance is the holding's own `tolerance_absolute`, never typed in.
 
+      *Built.* The first draft of the kernel's remainder test placed two casts beyond each
+      other's reach and watched the remainder be exactly nought — correct, and the reason
+      the coupling needs a chain is now the test's comment. The cold-start equality is the
+      one cycle on which the published measurement share is ω itself; on later cycles the
+      carried share is not published alone, and the identity is the kernel test's.
 ## The centre region — the volume and its grid
 
 - [ ] T008 `panels/forecast/Volume.tsx`, code-split as the map is (`registry.tsx`'s

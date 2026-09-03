@@ -103,6 +103,11 @@ requirements they change:
   drawn from, so it is published per cell as one figure — the remainder — and never as a dense
   column set.
 
+*Measured after the substrate was built:* on the loitering condition a cycle's holding is 4–6
+sources, 1,144–1,203 cells reached, 3,174–4,761 entries and 75–103 KB — a tenth of the
+provenance holding it sits beside — so the cost accepted above was accepted for a tenth of what
+the first paragraph feared and a hundredth of what per-observation retention would have been.
+
 **Q-01 stays open until the profile is drawn.** §10 carries the companion document's Q3 as
 Q-01 — whether the depth profile's source colouring survives greyscale beyond about five
 distinct sources — and says this feature answers it. It is answered by the capture and not

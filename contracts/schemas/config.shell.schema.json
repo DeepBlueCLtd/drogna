@@ -227,7 +227,8 @@
         "operator_controls",
         "operator_tuning",
         "operator_event",
-        "undeclared_probe"
+        "undeclared_probe",
+        "contributions"
       ],
       "additionalProperties": false,
       "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -273,6 +274,10 @@
         "query_subsets": {
           "$ref": "config.common.schema.json#/$defs/relative_path",
           "description": "Where the subset statement is served; the composer offers only what it states."
+        },
+        "contributions": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Feature 124: the contributions prefix the forecast view reads a column's sources from, matching the query component's own declaration."
         },
         "operator_controls": {
           "$ref": "config.common.schema.json#/$defs/relative_path",

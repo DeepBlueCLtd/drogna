@@ -15,6 +15,7 @@ import type { Router } from '../runtime/router.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { EdrComponent } from './edr.js';
+import { ContributionsComponent } from './contributions.js';
 import { SensorThingsComponent } from './sensorthings.js';
 import { FeaturesComponent } from './features.js';
 
@@ -56,7 +57,9 @@ export class QueryComponent {
     const edr = new EdrComponent(config, coverageStore);
     const sensorThings = new SensorThingsComponent(config, observationStore);
     const features = new FeaturesComponent(config, advisoryStore, featureStore);
+    const contributions = new ContributionsComponent(config, coverageStore);
     router.registerPrefix('GET', config.http.edr_prefix, (request) => edr.handle(request));
+    router.registerPrefix('GET', config.http.contributions_prefix, (request) => contributions.handle(request));
     router.registerPrefix('GET', config.http.st_prefix, (request) => sensorThings.handle(request));
     router.registerPrefix('GET', config.http.features_prefix, (request) => features.handle(request));
     router.register('GET', config.http.subsets_path, () => ({

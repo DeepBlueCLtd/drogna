@@ -478,9 +478,10 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       // enters contributes exactly nothing — dropping them is an identity, not an
       // approximation. It is also what makes the analysis affordable on a real grid:
       // the error reduction below is quadratic in the observations considered, and at
-      // 46,080 cells against a cycle's ~180 observations that is 1.5 billion products
-      // per variable if the zeros are multiplied out, against a few million if they
-      // are not.
+      // 46,080 cells against a cycle's observations — measured at 1,080 to 1,572 on
+      // the shipped configuration by feature 124, where this comment used to say ~180 —
+      // multiplying the zeros out would be tens of billions of products per variable,
+      // against the fraction of that the taper leaves.
       let reach = 0;
       for (let k = 0; k < order; k++) {
         const b = located[k];

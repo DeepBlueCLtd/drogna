@@ -125,6 +125,363 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       }
     }
   },
+  "analysis-contributions": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.harness.invalid/analysis-contributions.schema.json",
+    "title": "drogna analysis contributions",
+    "description": "What a column's values were made from, source by source (feature 124, SRD-v2 FR-111, FR-122, FR-130): the columns of the analysis gain the kernel has always computed and, until this feature, discarded. The root shape is the column document the query layer serves for one water column of one analysis cycle; `$defs/header` is the header the holding's own bytes open with (format `drogna-contributions-v1`, a second format `coverage-holding.schema.json` admits). A SOURCE is an instrument at the cell its observations were attributed to, not an observation: under nearest-neighbour H every observation a datastream makes inside one cell shares that cell's covariance row exactly, so their gains sum without approximation — and per observation the holding measured at ~9 MB a cycle against a store of ~9 MB. Every contribution here is Σⱼ K_aj over the source's observations, read off the published analysis and never recomputed. The support bounds the covariance and not the gain: the inverse couples observations within reach of each other, so a cast beyond a level's reach still moves it through one within, and that coupling — real, positionless, not a ray — is carried per level as the REMAINDER. The identity a consumer may hold, at float32's own tolerance: Σ contributions + remainder = observation_weight. A level no source reaches has observation_weight exactly nought and says `reached: false`, which is a different fact from a level that was reached and whose contributions summed to nothing (FR-129).",
+    "type": "object",
+    "required": [
+      "schema_version",
+      "holding_id",
+      "run_id",
+      "variable",
+      "correlation",
+      "column",
+      "sources",
+      "levels"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "type": "integer",
+        "const": 1
+      },
+      "holding_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "run_id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The model run this analysis initialises, as the analysis announcement names it."
+      },
+      "variable": {
+        "$ref": "#/$defs/variable"
+      },
+      "correlation": {
+        "$ref": "#/$defs/correlation"
+      },
+      "column": {
+        "type": "object",
+        "required": [
+          "longitude",
+          "latitude",
+          "longitude_index",
+          "latitude_index"
+        ],
+        "additionalProperties": false,
+        "description": "The column served: the grid cell nearest the position asked for, as EDR's position query snaps, stated so the reader knows which column answered.",
+        "properties": {
+          "longitude": {
+            "type": "number"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latitude_index": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "sources": {
+        "type": "array",
+        "description": "The sources some level of this column has an entry for, and no others. `levels[].contributions[].source` indexes this array.",
+        "items": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "levels": {
+        "type": "array",
+        "minItems": 1,
+        "description": "One per depth level of the grid, in the grid's order, surface first.",
+        "items": {
+          "$ref": "#/$defs/level"
+        }
+      }
+    },
+    "$defs": {
+      "variable": {
+        "type": "string",
+        "enum": [
+          "temperature"
+        ],
+        "description": "Contributions are published for temperature alone, for the reason the provenance shares are: nothing reads salinity's, and publishing them would double a holding kept for the life of the run to answer a question nothing asks."
+      },
+      "correlation": {
+        "type": "object",
+        "required": [
+          "horizontal_km",
+          "vertical_m"
+        ],
+        "additionalProperties": false,
+        "description": "The Gaspari–Cohn half-widths the analysis was built with, from the analyst's configuration; the support — the distance beyond which a source holds no entry — is exactly twice each.",
+        "properties": {
+          "horizontal_km": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "vertical_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "source": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "datastream_id",
+          "sensor_id",
+          "kind",
+          "cell",
+          "observed",
+          "observation_count",
+          "error_std",
+          "background_error_std",
+          "mean_innovation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+            "description": "Stable within a cycle: the datastream and the cell index."
+          },
+          "datastream_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "sensor_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "modelled"
+            ],
+            "description": "Measured: the vessel's own sensing. Modelled: another party's model output admitted as an observation. In this harness every observation the analyst assimilates is a vessel instrument's — the shore broadcast enters as background, never as an observation (SRD-v2 FR-125) — so every source is measured; the distinction is stated here so a consumer reads it rather than assumes it."
+          },
+          "cell": {
+            "type": "object",
+            "required": [
+              "index",
+              "longitude",
+              "latitude",
+              "depth_m"
+            ],
+            "additionalProperties": false,
+            "description": "The cell the source's observations were attributed to, and its centre: where the ray is drawn from.",
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "latitude": {
+                "type": "number"
+              },
+              "depth_m": {
+                "type": "number"
+              }
+            }
+          },
+          "observed": {
+            "type": "object",
+            "required": [
+              "longitude",
+              "latitude",
+              "depth_m"
+            ],
+            "additionalProperties": false,
+            "description": "Where the instrument was, on average over the source's observations, when it made them.",
+            "properties": {
+              "longitude": {
+                "type": "number"
+              },
+              "latitude": {
+                "type": "number"
+              },
+              "depth_m": {
+                "type": "number"
+              }
+            }
+          },
+          "observation_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "error_std": {
+            "type": "number",
+            "minimum": 0,
+            "description": "R's diagonal: the instrument's declared error, shared by every observation of the source."
+          },
+          "background_error_std": {
+            "type": "number",
+            "minimum": 0,
+            "description": "B's diagonal at the attributed cell: what the declared error was weighed against there."
+          },
+          "mean_innovation": {
+            "type": "number",
+            "description": "The mean of y − Hxᵇ over the source's observations: what the instruments said, less what the background expected."
+          }
+        }
+      },
+      "level": {
+        "type": "object",
+        "required": [
+          "depth_index",
+          "depth_m",
+          "cell_index",
+          "reached",
+          "observation_weight",
+          "remainder",
+          "background_error_std",
+          "contributions"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "depth_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "depth_m": {
+            "type": "number"
+          },
+          "cell_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reached": {
+            "type": "boolean",
+            "description": "Whether any source's support covers this cell. False is a level nobody sampled within reach, and its weight is exactly nought; a level that was reached and whose contributions summed to nothing says true, which is the other fact (FR-129)."
+          },
+          "observation_weight": {
+            "type": "number",
+            "description": "ω = Σⱼ K_aj over every observation: the measurement share this cycle added at the cell, not confined to [0, 1]."
+          },
+          "remainder": {
+            "type": "number",
+            "description": "ω less the in-support sources' contributions: what observations beyond this cell's reach did to it through their coupling with those within reach. Not attributable to a position and never drawn as a ray."
+          },
+          "background_error_std": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "B's diagonal at this cell — the second of FR-130's two numbers, beside each source's declared error. Null where the level was not reached: the holding carries a row for every cell some source reaches and for no other, so there is nothing to state, and null is that fact rather than a nought pretending to be a measurement."
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/contribution"
+            }
+          }
+        }
+      },
+      "contribution": {
+        "type": "object",
+        "required": [
+          "source",
+          "contribution",
+          "separation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "An index into the document's `sources`."
+          },
+          "contribution": {
+            "type": "number",
+            "description": "Σⱼ K_aj over the source's observations, at this cell."
+          },
+          "separation": {
+            "type": "object",
+            "required": [
+              "horizontal_km",
+              "vertical_m"
+            ],
+            "additionalProperties": false,
+            "description": "The distance the taper was evaluated on, from the source's cell to this one — the first of FR-130's two numbers.",
+            "properties": {
+              "horizontal_km": {
+                "type": "number",
+                "minimum": 0
+              },
+              "vertical_m": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "header": {
+        "title": "drogna analysis contributions header",
+        "type": "object",
+        "required": [
+          "schema_version",
+          "format",
+          "variable",
+          "correlation",
+          "sources",
+          "cells",
+          "entries",
+          "layout"
+        ],
+        "additionalProperties": false,
+        "description": "The header a `drogna-contributions-v1` holding opens with: a little-endian u32 byte length, then this document as UTF-8 padded with spaces to a multiple of four bytes, then the sections `layout` names, each four bytes an element, in order.",
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1
+          },
+          "format": {
+            "type": "string",
+            "const": "drogna-contributions-v1"
+          },
+          "variable": {
+            "$ref": "#/$defs/variable"
+          },
+          "correlation": {
+            "$ref": "#/$defs/correlation"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/source"
+            }
+          },
+          "cells": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The count of corrected cells — cells some source reaches — each a row of the holding."
+          },
+          "entries": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The count of (cell, source) entries across every row."
+          },
+          "layout": {
+            "type": "string",
+            "const": "u32[cells] cell; f32[cells] observation_weight; f32[cells] remainder; f32[cells] background_error_std; u32[cells+1] offsets; u32[entries] source; f32[entries] contribution; f32[entries] horizontal_km; f32[entries] vertical_m",
+            "description": "The sections after the header, stated in the header so the bytes are readable from the holding alone. Rows are compressed: the entries of the i-th cell run from offsets[i] to offsets[i+1]."
+          }
+        }
+      }
+    }
+  },
   "analysis-published": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/analysis-published.schema.json",
@@ -200,7 +557,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "analysis",
           "error",
-          "provenance"
+          "provenance",
+          "contributions"
         ],
         "additionalProperties": false,
         "properties": {
@@ -212,6 +570,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "provenance": {
             "type": "string"
+          },
+          "contributions": {
+            "type": "string",
+            "description": "Feature 124: what each cell's value was made from, source by source — the columns of the gain the provenance's measurement share is the row sum of. A `drogna-contributions-v1` holding (analysis-contributions.schema.json), served by the query component at its configured contributions prefix rather than through EDR, because a sparse per-source holding is not a coverage."
           }
         }
       },
@@ -220,7 +582,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
         "required": [
           "analysis",
           "error",
-          "provenance"
+          "provenance",
+          "contributions"
         ],
         "additionalProperties": false,
         "properties": {
@@ -231,6 +594,9 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
             "type": "string"
           },
           "provenance": {
+            "type": "string"
+          },
+          "contributions": {
             "type": "string"
           }
         }
@@ -2757,7 +3123,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "edr_prefix",
           "st_prefix",
           "subsets_path",
-          "features_prefix"
+          "features_prefix",
+          "contributions_prefix"
         ],
         "additionalProperties": false,
         "properties": {
@@ -2773,6 +3140,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "features_prefix": {
             "$ref": "config.common.schema.json#/$defs/relative_path"
+          },
+          "contributions_prefix": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Feature 124: where an analysis cycle's contributions holding is served — its header at `<prefix>/<holding_id>`, and one water column at `<prefix>/<holding_id>/column?coords=POINT(lon lat)`, spelled as EDR's position query spells a position. Its own prefix and not a query type under the EDR prefix: the standard has no such query, and the EDR component refuses unknown types by name, which is an honesty this must not spend."
           }
         }
       },
@@ -3381,7 +3752,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "operator_controls",
           "operator_tuning",
           "operator_event",
-          "undeclared_probe"
+          "undeclared_probe",
+          "contributions"
         ],
         "additionalProperties": false,
         "description": "Relative seam paths the shell calls. Relative and same-origin by requirement (FR-04).",
@@ -3427,6 +3799,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "query_subsets": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
             "description": "Where the subset statement is served; the composer offers only what it states."
+          },
+          "contributions": {
+            "$ref": "config.common.schema.json#/$defs/relative_path",
+            "description": "Feature 124: the contributions prefix the forecast view reads a column's sources from, matching the query component's own declaration."
           },
           "operator_controls": {
             "$ref": "config.common.schema.json#/$defs/relative_path",
@@ -4526,11 +4902,14 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           "byte_length"
         ],
         "additionalProperties": false,
-        "description": "The stored bytes: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated.",
+        "description": "The stored bytes. `drogna-f32-v1`: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated — the gridded format every coverage is, and the only one EDR serves. `drogna-contributions-v1` (feature 124): a sparse per-source holding the analyst publishes beside its analysis, laid out as analysis-contributions.schema.json's `$defs/header` states, held by the same store under the same digest check and served by the query component at its contributions prefix. Not a coverage, and EDR does not list it.",
         "properties": {
           "format": {
             "type": "string",
-            "const": "drogna-f32-v1"
+            "enum": [
+              "drogna-f32-v1",
+              "drogna-contributions-v1"
+            ]
           },
           "sha256": {
             "type": "string",

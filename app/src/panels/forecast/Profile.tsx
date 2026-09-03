@@ -35,7 +35,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { raysFor, type Ray } from './rays.js';
+import { raysFor, sourceLabels, type Ray } from './rays.js';
 import { BACKGROUND_KEYS, SOURCES, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -64,7 +64,12 @@ interface Band {
   readonly kind: 'background' | 'earlier' | 'source' | 'remainder';
 }
 
-function bandsFor(level: ProfileLevel, document: AnalysisContributions | undefined, index: number): Band[] {
+function bandsFor(
+  level: ProfileLevel,
+  document: AnalysisContributions | undefined,
+  index: number,
+  labels: readonly string[],
+): Band[] {
   const bands: Band[] = [];
   for (const key of BACKGROUND_KEYS) {
     const source = SOURCES.find((candidate) => candidate.key === key);
@@ -94,8 +99,9 @@ function bandsFor(level: ProfileLevel, document: AnalysisContributions | undefin
       const instrument = instrumentAt(position);
       bands.push({
         key: source.source_id,
-        label: source.datastream_id,
+        label: labels[position] ?? source.datastream_id,
         value: entry.contribution,
+        // Labelled so two sources of one instrument are told apart (see `sourceLabels`).
         hue: instrument.hue,
         hatchAngle: instrument.angle,
         kind: 'source',
@@ -128,6 +134,7 @@ export function absenceOf(document: AnalysisContributions | undefined, index: nu
 
 export function Profile({ longitude, latitude, levels, contributions, selectedLevel, onSelectLevel }: ProfileProps) {
   const set = contributions ? raysFor(contributions, selectedLevel) : undefined;
+  const labels = contributions ? sourceLabels(contributions.sources) : [];
   const exhausted = contributions ? paletteExhausted(contributions.sources.length) : false;
 
   return (
@@ -169,7 +176,7 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
 
       <ol className="forecast-column-levels">
         {levels.map((level, index) => {
-          const bands = bandsFor(level, contributions, index);
+          const bands = bandsFor(level, contributions, index, labels);
           const magnitude = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? Math.abs(band.value) : 0), 0);
           const total = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? band.value : 0), 0);
           // A share the query never served is absent, and absent is not nought (FR-041): it is
@@ -260,7 +267,7 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
                     style={{ background: instrumentAt(contributions?.sources.findIndex((s) => s.source_id === ray.sourceId) ?? index).hue }}
                     aria-hidden="true"
                   />
-                  {ray.datastreamId}
+                  {labels[contributions?.sources.findIndex((s) => s.source_id === ray.sourceId) ?? index] ?? ray.datastreamId}
                   <span className="forecast-column-kind"> ({ray.kind})</span>
                 </th>
                 <td className={ray.contribution < 0 ? 'is-negative' : undefined}>{ray.contribution.toFixed(4)}</td>

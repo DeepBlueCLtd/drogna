@@ -171,6 +171,28 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
 }
 
 /**
+ * A label per source that a reader can tell apart, which the datastream alone is not.
+ *
+ * **Found by reading a capture rather than by reading the code.** One instrument sampling on
+ * either side of a cell boundary becomes two sources — same datastream, different attributed
+ * cell — and the profile printed both as `temperature-200m`, at 106.0% and 21.7% of one level.
+ * Two bands, one name, and no way to tell which was which. Where a datastream carries the
+ * column alone it keeps its plain name; where it carries more than one source, each gets its
+ * ordinal, and the numbers table's separation column says which is physically which.
+ */
+export function sourceLabels(sources: readonly AnalysisContributionsSource[]): readonly string[] {
+  const seen = new Map<string, number>();
+  for (const source of sources) seen.set(source.datastream_id, (seen.get(source.datastream_id) ?? 0) + 1);
+  const used = new Map<string, number>();
+  return sources.map((source) => {
+    if ((seen.get(source.datastream_id) ?? 0) < 2) return source.datastream_id;
+    const ordinal = (used.get(source.datastream_id) ?? 0) + 1;
+    used.set(source.datastream_id, ordinal);
+    return `${source.datastream_id} ·${ordinal}`;
+  });
+}
+
+/**
  * The identity the picture may be checked against (SC-001, AT-07): the drawn contributions and
  * the remainder sum to the weight the holding published for the same levels.
  *

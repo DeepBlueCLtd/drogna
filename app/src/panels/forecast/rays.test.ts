@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
-import { backgroundRaysIn, contributionResidual, raysFor } from './rays.js';
+import { backgroundRaysIn, contributionResidual, raysFor, sourceLabels } from './rays.js';
 
 function source(id: string, longitude: number, datastream = id): AnalysisContributionsSource {
   return {
@@ -188,5 +188,17 @@ describe('the rays a column is made of', () => {
     admitted.sources = [source('c.cell-2', -10.6), source('a.cell-0', -11.4), source('d.cell-3', -11.0, 'archive')];
     const named = backgroundRaysIn(raysFor(admitted));
     expect(named.map((ray) => ray.datastreamId)).toEqual(['archive']);
+  });
+});
+
+describe('telling two sources of one instrument apart', () => {
+  it('names a lone datastream plainly and an ambiguous one by its ordinal', () => {
+    // The case a capture found: one instrument sampling either side of a cell boundary is two
+    // sources, and the profile printed both as `temperature-200m` at different widths.
+    const twice = [source('a.cell-0', -11.4, 'temperature-200m'), source('b.cell-1', -11.0, 'temperature-050m'), source('c.cell-2', -10.6, 'temperature-200m')];
+    expect(sourceLabels(twice)).toEqual(['temperature-200m ·1', 'temperature-050m', 'temperature-200m ·2']);
+    // And a column where every instrument appears once keeps the plain names: the ordinal is
+    // there to remove an ambiguity, not as decoration.
+    expect(sourceLabels([source('a.cell-0', -11.4, 'temperature-050m')])).toEqual(['temperature-050m']);
   });
 });

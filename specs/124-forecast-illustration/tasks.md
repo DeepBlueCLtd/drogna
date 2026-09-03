@@ -280,6 +280,31 @@ drawing in it.
       profile now states a share it was not served rather than drawing it as nought. Watched
       failing against the match as it shipped: "expected undefined to be 'departure'".
 
+- [x] T022b **Read off the warmed capture, not off the diff.** `capture:mobile` pins the clock
+      before it measures, so it never sees a ray; the region was measured with the loop warmed
+      to an analysis and a column opened on a source the served header names (CLAUDE.md's own
+      correction, and feature 123's T083). Three findings, in the order a reader meets them:
+
+      - **Two sources of one instrument printed the same name.** One instrument sampling either
+        side of a cell boundary is two sources, and the profile read `temperature-200m 106.0%`
+        and `temperature-200m 21.7%` on one level — two bands, one name. `sourceLabels` gives an
+        ordinal only where a datastream carries more than one source, so a lone instrument keeps
+        its plain name and the numbers table's separation says which is physically which.
+      - **The bar holds at the magnitudes T002 warned about.** At 667 m the level reads
+        `measurement, earlier cycles −122.3%` against `temperature-200m ·1 106.0%`, and still
+        sums to 100.0% — the extrapolating gain drawn at its magnitude and marked, rather than
+        clamped into something tidier that the arithmetic does not say.
+      - **The rays are short on this condition, and that is the scenario rather than the
+        drawing.** The platform loiters, so every source sits within a cell or two of any column
+        it reached and the fan collapses to almost a point. Nothing is wrong with the geometry —
+        on a transiting condition the sources spread along the track — but a reader of the
+        loitering start cannot count four rays by eye, which is why the count, the labels and
+        the figures are printed beneath rather than left to the picture.
+
+      Narrow widths hold with the loop warmed: at 390px and 360px nothing overflows and the page
+      does not scroll sideways. The one box whose content exceeds it is the numbers table, which
+      scrolls inside itself by design.
+
 ## The right region, and the ghost
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening

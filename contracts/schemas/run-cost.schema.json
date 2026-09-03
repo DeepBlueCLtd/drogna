@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/run-cost.schema.json",
+  "title": "drogna model run cost statement",
+  "description": "What a forecast run costs, in ticks of simulation time (SRD-v2 FR-114, FR-115; ADR-0043). Published by the model runner and by no other component: the thing that will spend the compute is the thing that declares what it comes to, so the figure the scheduler holds a run against and the figure the run actually occupies cannot disagree. `scripts/gates/check-declared-cost.ts` fails the build if any other component's configuration master declares one.\n\nThe cost is simulation time and never host time. A host-clock duration is a fact about the machine the tab happens to be open on, and admitting one would put a figure inside a run that differs between two replays of the same manifest — AT-04's byte-identical claim is the property that cannot be retrofitted at acceptable cost. What is given up is stated rather than glossed: the magnitude is a declared rate and not a measurement. What is kept is that the cost is spent rather than merely stated.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "kernel",
+    "cost_ticks",
+    "work_units",
+    "rate_work_per_tick",
+    "basis"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The model runner, matching config /component/id. The only component entitled to publish this message."
+    },
+    "scenario_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The scenario run this statement belongs to."
+    },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the statement was made, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The tick index the runner had observed."
+    },
+    "kernel": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The kernel behind the port whose work this states. A cost is a fact about an implementation, not about the port."
+    },
+    "cost_ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Ticks of simulation time a run will occupy. Zero where the configured kernel declares no work — true of a kernel that translates a field rather than propagating a state, and said plainly rather than hidden behind a nominal figure."
+    },
+    "work_units": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Work the run covers, in the declared units the rate below is expressed in. Carried so the arithmetic that produced cost_ticks is readable rather than trusted."
+    },
+    "rate_work_per_tick": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Work units one tick buys, from configuration. A declaration about an afloat appliance nobody here has measured."
+    },
+    "basis": {
+      "type": "string",
+      "minLength": 1,
+      "description": "How the work was arrived at, in the runner's own words, including the nominal cell size the declaration assumed. A reader who disagrees with the cost should be able to see which assumption to argue with."
+    }
+  }
+}

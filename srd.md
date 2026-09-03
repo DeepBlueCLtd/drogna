@@ -1234,6 +1234,17 @@ a surface of this size invites one.
   *(FI-08; FR-06, AT-03, Constitution IX)*. The parameters are estimated from **the analysis
   the run initialises from** and from nothing else: a run never reads the true field, which
   is feature 116's lesson and the reason the runner subscribes to the analysis announcement.
+
+  *Amended by what feature 123 measured.* Three of those quantities — the eddy's and the
+  drifting feature's **strength**, the front's **amplitude**, and the thermocline's
+  **gradient** — are not recoverable by a horizontal estimator over a grid that resolves two
+  hundred metres of depth, and the first implementation published them under the manifest's
+  own property names at up to sixteen times the uncertainty it declared for them. What the
+  estimator does measure is published under names of its own (`anomaly_peak_c`,
+  `anomaly_step_c`, `layer_drop_c`), which do not invite the comparison, and each authored
+  quantity is named in the message's `not_estimated` list with the reason it was not
+  recovered. That is Constitution IX's answer — reported as not done, never softened by
+  widening a bound — and the requirement is amended here rather than left reading as met.
 - **FR-114** The step's **cost shall be declared and real**, and the figure shall be
   **simulation time**. The kernel reports the work a run covers; configuration declares a
   rate; the run then **occupies** the ticks its cost comes to, publishing when they are

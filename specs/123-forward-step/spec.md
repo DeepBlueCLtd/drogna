@@ -119,10 +119,14 @@ Numbered locally; the mapping onto the SRD's global numbers is in *SRD amendment
 
 ### The four features
 
-- **FR-05** The runner publishes the seeded features **as features** — the eddy's centre,
-  radius and strength; the front's position and orientation; the thermocline's depth and
-  gradient; the drifting feature's track — per forecast step, each with an uncertainty growing
-  with lead.
+- **FR-05** The runner publishes the seeded features **as features** — the eddy's centre and
+  radius; the front's position and orientation; the thermocline's depth; the drifting
+  feature's track — per forecast step, each with an uncertainty growing with lead, and each
+  with its own uncertainty rather than one block computed from the strongest feature.
+  *Amended after measurement:* the **strengths**, the front's **amplitude** and the
+  thermocline's **gradient** are not recoverable at this grid and are reported as not done
+  under FR-07, with what the estimator does measure published under names that do not claim
+  to be them. SRD-v2 FR-113 carries the same amendment.
 - **FR-06** The parameters are estimated from **the analysis the run initialises from**. A run
   never reads the true field: that is feature 116's lesson, recorded in the runner's own head
   comment, and the reason the runner subscribes to the analysis announcement rather than to
@@ -160,7 +164,24 @@ Numbered locally; the mapping onto the SRD's global numbers is in *SRD amendment
   With the topic silent it states the absence and draws no gauge.
 - **FR-16** Its timeline draws runs in simulation time, each labelled by cause — scheduled,
   divergence-triggered, reader-requested, held for cost.
-- **FR-17** Its centre and right regions state that they are not built and name feature 124.
+- **FR-17** Its centre region states that it is not built and names feature 124. *Amended
+  after the tab was built:* the **right** region draws the forecast's own features in plan —
+  the eddy, the drifting feature and the front across the lead steps, each with its
+  uncertainty widening, and the thermocline stated in figures because a depth has no place in
+  a plan view — and names feature 124 for the ensemble spread along the route alone.
+
+  The amendment is here because the omission was real. As first built, this view had no
+  graphic of a forecast anywhere: a gauge about the run loop, a cost, and a list of runs.
+  `ctl/forecast/features` — FR-05's whole product — was published on every run and consumed by
+  nothing, so the feature's output was unverifiable by anything a reader could open. Feature
+  124 claims those features for its volume (its FR-05), but the volume waits on an analyst
+  change 124 is itself blocked on, and a plan view needs neither it nor that change.
+- **FR-17a** The runner **restates** the standing forecast's features on the cadence it already
+  restates cost on. A run's features are a standing fact about the forecast that is current,
+  not an event: published on the run alone, a console mounting afterwards — which every console
+  does — had nothing to draw until the next run, 1800 ticks and half an hour away at the
+  default rate. Nothing is recomputed; the message published on the run is republished with the
+  instant it is said at, so there is never a second opinion about one run.
 - **FR-18** Everything is fetched through the seam and validated against the master the
   response declares before anything is drawn; refusals are stated where the content would have
   been. Nothing polls: the view refreshes on announcement.
@@ -231,8 +252,11 @@ deliverable the author asked for and the code is the second half.
 - **SC-009** With the indicator topic silent, the left region states the absence and draws no
   gauge; with the monitor's residual published, the gauge names what it is showing (AT-10).
 - **SC-010** Nothing in the view polls. Held by a test that advances the clock with no
-  announcement published and asserts no fetch was made, then publishes one and asserts the
-  view refetched.
+  announcement published and asserts no fetch was made — neither a redraw nor a request.
+  *Amended:* the second half of this, "then publishes one and asserts the view refetched",
+  describes a surface that fetches on announcement. This one does not: it makes a single
+  request on mount, for the history that had already happened, and everything after it
+  arrives as a message. There is no refetch to assert.
 - **SC-011** The committed snapshots regenerate clean under `check-snapshot-drift` after the
   kernel change, and the diff is read and explained rather than accepted.
 - **SC-012** Every acceptance above is **watched happening in the shell** across the full path

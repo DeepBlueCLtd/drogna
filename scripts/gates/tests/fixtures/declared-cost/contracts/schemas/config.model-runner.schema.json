@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.model-runner.schema.json",
+  "title": "the owner master, as much of it as this gate reads",
+  "description": "A stub, not a copy. `check-declared-cost` reads exactly one thing from the owner: the name of its cost-shaped block, which is the vocabulary it then forbids everywhere else. A 200-line copy of the real master would carry that one key and 199 lines free to drift from it \u2014 and did, within one branch of being written.",
+  "type": "object",
+  "properties": {
+    "cost": {
+      "type": "object"
+    }
+  }
+}

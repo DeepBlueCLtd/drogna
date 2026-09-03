@@ -13,7 +13,9 @@
     "steps",
     "step_seconds",
     "advection",
-    "noise_std"
+    "noise_std",
+    "two_layer",
+    "cost"
   ],
   "additionalProperties": false,
   "properties": {
@@ -31,7 +33,10 @@
         "run_request",
         "analysis_published",
         "run_started",
-        "run_published"
+        "run_published",
+        "run_cost",
+        "forecast_features",
+        "telemetry"
       ],
       "additionalProperties": false,
       "properties": {
@@ -50,6 +55,18 @@
         },
         "run_published": {
           "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "run_cost": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where this component states what a run costs, in ticks of simulation time. It is the sole publisher of that figure (SRD-v2 FR-115): the scheduler subscribes here rather than holding a second copy, and check-declared-cost fails the build if any other component's configuration declares one."
+        },
+        "telemetry": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where this component reports a run it did not finish. A run occupies the ticks it costs before it publishes (FR-114), so there is now an interval in which the runner can be stopped with a run staged and unpublished. A run that leaves no trace is a run the scheduler waits on for ever \u2014 the permanently becalmed loop FR-31 forbids \u2014 so the runner says so on its way out, and the scheduler releases what it was holding."
+        },
+        "forecast_features": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where the run announces the seeded features it forecast as features (SRD-v2 FR-113) — the eddy, the front, the thermocline and the drifting feature, each with an uncertainty growing with lead."
         }
       }
     },
@@ -86,6 +103,83 @@
         }
       }
     },
+    "two_layer": {
+      "type": "object",
+      "required": [
+        "interface_depth_m",
+        "upper",
+        "lower",
+        "horizontal_diffusivity_m2_per_s",
+        "interfacial_exchange_per_day",
+        "max_courant",
+        "max_sub_steps"
+      ],
+      "additionalProperties": false,
+      "description": "The shallow two-layer advection\u2013diffusion step (SRD-v2 FR-112). Deliberately impoverished physics that nonetheless propagates state forward rather than sliding a field sideways: upwind advection and explicit horizontal diffusion within each layer, and an interfacial exchange between them. It is not an implementation of, port of, or wrapper around NEMO, ROMS, MITgcm, PDAF, DART, OceanVar or OpenDA (FR-107); those are named in the explainer as what the real thing is.",
+      "properties": {
+        "interface_depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Depth of the interface splitting the upper layer from the lower. A cell is in whichever layer its depth falls in; the interface is a modelling assumption and deliberately not the analysed thermocline, so a forecast that puts the thermocline somewhere else is saying something."
+        },
+        "upper": { "$ref": "#/$defs/layer_velocity" },
+        "lower": { "$ref": "#/$defs/layer_velocity" },
+        "horizontal_diffusivity_m2_per_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Explicit horizontal diffusivity, applied per layer. Bounded by the kernel's own stability condition: a configuration that violates it is refused with the numbers named, never integrated."
+        },
+        "interfacial_exchange_per_day": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rate at which the two layers exchange, per day. Zero makes the layers independent, which is a legitimate configuration and says so."
+        },
+        "max_courant": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "The Courant number the kernel sub-steps to stay under. The sub-step count is derived from this, the grid and the velocities \u2014 never configured, because a configured count is a number that can disagree with the grid it runs on."
+        },
+        "max_sub_steps": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "The ceiling on sub-steps per forecast step. Reaching it is a REFUSAL and not a clamp: the kernel names the Courant number, the diffusion number, the exchange number, the sub-steps they require and this ceiling, and integrates nothing. Clamping instead would integrate unstably and publish the result as a forecast, which is the fault this bound exists to make impossible."
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "required": [
+        "work_per_sub_step",
+        "rate_work_per_tick",
+        "nominal_cell_km",
+        "restate_every_ticks"
+      ],
+      "additionalProperties": false,
+      "description": "What a run costs, as simulation time (SRD-v2 FR-114, ADR-0043). The magnitude is a declared rate and not a measurement \u2014 a host-clock duration is a fact about the machine the tab is open on, and admitting one would put a figure inside a run that differs between two replays of the same manifest (AT-04). What is kept is that the cost is spent rather than merely stated: the run occupies the ticks it comes to.",
+      "properties": {
+        "work_per_sub_step": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Declared work one integration sub-step covers, in work units. A declaration, not a measurement."
+        },
+        "rate_work_per_tick": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Work units one tick of simulation time buys. Cost in ticks is the work the run covers divided by this, rounded up."
+        },
+        "restate_every_ticks": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "How often the cost statement is repeated, in ticks of simulation time. A cost is a DECLARATION rather than an event: every restatement carries the same figures, so repeating it tells a listener that arrived late what the first statement said and tells one that heard it nothing new. Without it the figure would be published once, before the shell had mounted, and the surface that must state cost beside need (FR-118) could never have heard it. Measured in ticks and driven by the clock subscription this component already holds, so the repetition is deterministic and replays identically \u2014 it is a publication on the component's own clock and not a poll. No default: it is required, so a default here would be a value nothing can ever read."
+        },
+        "nominal_cell_km": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The horizontal cell size the cost DECLARATION assumes, so that a cost can be stated before any analysis has arrived and the scheduler can weigh it. The integration itself sub-steps from the grid it is handed, and the run-started message reports the sub-step count that actually ran \u2014 a declared figure and a reported one, never the same figure twice (ADR-0036).\n\n**Keep it near the grid the run is actually handed, and a test says so.** The declaration and the occupancy are only the same amount of work while the two agree on the sub-step count. It was first set to 11 km against a now-cast whose cells are about 4.9 by 5.6 km at this domain's latitude \u2014 a factor of two, invisible only because both round to one sub-step at this step length. `features`-adjacent tests compare the two, so a grid refined past where the nominal stops being representative fails rather than quietly making FR-114's 'the run occupies the ticks its cost comes to' untrue."
+        }
+      }
+    },
     "noise_std": {
       "type": "object",
       "required": [
@@ -103,6 +197,18 @@
           "type": "number",
           "minimum": 0
         }
+      }
+    }
+  },
+  "$defs": {
+    "layer_velocity": {
+      "type": "object",
+      "required": ["east_km_per_day", "north_km_per_day"],
+      "additionalProperties": false,
+      "description": "One layer's advecting velocity. Two layers moving differently is the whole of what makes this a propagation rather than a translation: the field shears, and the shear is what the old kernel could not produce.",
+      "properties": {
+        "east_km_per_day": { "type": "number" },
+        "north_km_per_day": { "type": "number" }
       }
     }
   }

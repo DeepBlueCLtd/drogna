@@ -25,7 +25,8 @@
         "observations",
         "divergence",
         "telemetry",
-        "command"
+        "command",
+        "indicator"
       ],
       "additionalProperties": false,
       "properties": {
@@ -44,6 +45,10 @@
         "command": {
           "$ref": "config.common.schema.json#/$defs/topic",
           "description": "Operator commands. The monitor acts on a tuning addressed to it and ignores the rest."
+        },
+        "indicator": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "The declared topic an indicator that re-forecasting is becoming valuable publishes on (SRD-v2 FR-117). The indicator itself is environmental science and belongs to the environmental-indicators workstream; what drogna provides is this socket, a gauge that renders whatever is published here, and a refusal that names the absence when nothing is. Drogna's own residual statistic is wired in as the reference implementation, published by this component because it already holds both the running residual and the threshold in force \u2014 any other publisher would hold a second copy of the threshold, and the mark on the gauge could then disagree with the rule that fires a run."
         }
       }
     },

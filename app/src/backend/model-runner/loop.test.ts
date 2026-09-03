@@ -45,7 +45,23 @@ async function drive(runtime: BackendRuntime, config: ConfigRun, ticks: number):
     expect(validator.validate('run-published', message.payload).refusals).toEqual([]);
     record.published.push(message.payload as RunPublished);
   });
+  // The two messages feature 123 added, validated as they cross. Nothing consumes the
+  // forecast features yet — that surface is feature 124's — and a master with a publisher
+  // and no reader is a shape free to rot until somebody builds against it.
+  shell.subscribe(config.model_runner.topics.forecast_features, (message) => {
+    expect(validator.validate('forecast-features', message.payload).refusals).toEqual([]);
+  });
+  shell.subscribe(config.model_runner.topics.run_cost, (message) => {
+    expect(validator.validate('run-cost', message.payload).refusals).toEqual([]);
+  });
   await driveTicks(runtime.clock, ticks);
+  // **The assertions above are inside subscription handlers, and the broker swallows a
+  // handler fault** — it catches, counts and logs, so `expect` in a subscriber throws into
+  // a `catch` and the test goes green over a message its master refused. Every
+  // conformance check in this file rested on that, including the two feature 123 added,
+  // and the record claimed they held the shape against rot. This is what makes them real:
+  // a swallowed throw is a counted fault, and a counted fault fails the drive.
+  expect(runtime.broker.deliveryFaults, 'a subscriber threw and the broker swallowed it').toBe(0);
   return record;
 }
 
@@ -75,6 +91,7 @@ async function recordUntil(
     record.published.push(message.payload as RunPublished);
   });
   await driveUntil(runtime.clock, () => done(record), limit);
+  expect(runtime.broker.deliveryFaults, 'a subscriber threw and the broker swallowed it').toBe(0);
   return record;
 }
 
@@ -89,10 +106,18 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     // tick count that happened to cover them. Feature 116 pushed the first divergence of
     // a scenario out to tick 6540 — a forecast corrected by what was measured takes far
     // longer to drift into a breach — and 6000 had been just enough before it.
+    // The condition is a divergence-triggered run *published*, not merely requested.
+    // Feature 123 put a cost between the two: a run announces its start, occupies the
+    // ticks it comes to, and publishes when they are spent, so a drive that stopped at
+    // the request would stop with the last run still integrating and then find one more
+    // request than publication. Re-derived from the behaviour rather than by adding a
+    // tick count generous enough to cover it (T045).
     const record = await recordUntil(
       runtime,
       config,
-      (seen) => seen.requests.some((request) => request.cause === 'divergence'),
+      (seen) =>
+        seen.requests.some((request) => request.cause === 'divergence') &&
+        seen.published.length === seen.requests.length,
       12000,
     );
 
@@ -151,7 +176,12 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     // produces.
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);
-    const record = await drive(runtime, config, config.scheduler.max_interval_ticks + 1);
+    // Driven until that scheduled run has *published*, not merely been requested. A run
+    // now occupies the ticks it costs, so a divergence raised while it is still
+    // integrating is declined as a duplicate — a true and different fact from the one
+    // this test is about. Stated as the event rather than as a tick count for exactly the
+    // reason `recordUntil` exists (T045).
+    const record = await recordUntil(runtime, config, (seen) => seen.published.length >= 1, config.scheduler.max_interval_ticks * 2);
     expect(record.requests.length).toBeGreaterThanOrEqual(1);
     expect(record.requests[0].cause).toBe('scheduled');
     const declinedBefore = runtime.scheduler.declinedByPolicy;

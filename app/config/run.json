@@ -137,6 +137,7 @@
         "publish": [
           "ctl/divergence",
           "ctl/telemetry",
+          "ctl/forecast/indicator",
           "ctl/heartbeat"
         ],
         "subscribe": [
@@ -156,6 +157,8 @@
           "ctl/operator/command",
           "ctl/divergence",
           "ctl/run/published",
+          "ctl/run/cost",
+          "ctl/telemetry",
           "ctl/clock"
         ]
       },
@@ -176,6 +179,7 @@
         "role": "analyst",
         "publish": [
           "ctl/analysis/published",
+          "ctl/analysis/standing",
           "ctl/heartbeat"
         ],
         "subscribe": [
@@ -190,6 +194,9 @@
         "publish": [
           "ctl/run/started",
           "ctl/run/published",
+          "ctl/run/cost",
+          "ctl/forecast/features",
+          "ctl/telemetry",
           "ctl/heartbeat"
         ],
         "subscribe": [
@@ -643,7 +650,8 @@
       "observations": "obs/#",
       "divergence": "ctl/divergence",
       "telemetry": "ctl/telemetry",
-      "command": "ctl/operator/command"
+      "command": "ctl/operator/command",
+      "indicator": "ctl/forecast/indicator"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -673,13 +681,15 @@
       "run_request": "ctl/run/request",
       "run_published": "ctl/run/published",
       "telemetry": "ctl/telemetry",
-      "command": "ctl/operator/command"
+      "command": "ctl/operator/command",
+      "run_cost": "ctl/run/cost"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
       "interval_seconds": 2,
       "liveness_window_seconds": 6
     },
+    "release_margin_ticks": 30,
     "min_interval_ticks": 600,
     "max_interval_ticks": 1800,
     "ensemble_size": 5,
@@ -693,19 +703,43 @@
       "run_request": "ctl/run/request",
       "analysis_published": "ctl/analysis/published",
       "run_started": "ctl/run/started",
-      "run_published": "ctl/run/published"
+      "run_published": "ctl/run/published",
+      "run_cost": "ctl/run/cost",
+      "forecast_features": "ctl/forecast/features",
+      "telemetry": "ctl/telemetry"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
       "interval_seconds": 2,
       "liveness_window_seconds": 6
     },
-    "kernel": "shift-advect-v1",
+    "kernel": "shallow-two-layer-v1",
     "steps": 4,
     "step_seconds": 900,
     "advection": {
       "east_km_per_day": 4,
       "north_km_per_day": 2
+    },
+    "two_layer": {
+      "interface_depth_m": 250,
+      "upper": {
+        "east_km_per_day": 7,
+        "north_km_per_day": 3
+      },
+      "lower": {
+        "east_km_per_day": -2,
+        "north_km_per_day": 1
+      },
+      "horizontal_diffusivity_m2_per_s": 45,
+      "interfacial_exchange_per_day": 0.06,
+      "max_courant": 0.4,
+      "max_sub_steps": 64
+    },
+    "cost": {
+      "work_per_sub_step": 3,
+      "rate_work_per_tick": 1,
+      "nominal_cell_km": 5,
+      "restate_every_ticks": 60
     },
     "noise_std": {
       "temperature": 0.35,
@@ -715,12 +749,14 @@
   "analyst": {
     "id": "analyst",
     "stream": "analyst-perturbations",
+    "restate_every_ticks": 60,
     "topics": {
       "clock": "ctl/clock",
       "observations": "obs/#",
       "run_request": "ctl/run/request",
       "run_published": "ctl/run/published",
-      "analysis_published": "ctl/analysis/published"
+      "analysis_published": "ctl/analysis/published",
+      "analysis_standing": "ctl/analysis/standing"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -911,7 +947,7 @@
         "step": 10,
         "integer": true,
         "figure": "max_interval",
-        "description": "The interval after which a run is warranted on schedule alone, once the current run's validity has lapsed."
+        "description": "The interval after which a run is warranted on schedule alone. Whether it is then requested at once or held is decided against the cost the model runner published, never here."
       },
       {
         "id": "sampling-cadence",
@@ -1208,6 +1244,10 @@
         "label": "Operator"
       },
       {
+        "id": "forecast",
+        "label": "Forecast"
+      },
+      {
         "id": "map",
         "label": "Map"
       },
@@ -1398,7 +1438,13 @@
       "all": "#",
       "platform_state": "ctl/platform/state",
       "observations": "obs/#",
-      "telemetry": "ctl/telemetry"
+      "telemetry": "ctl/telemetry",
+      "run_started": "ctl/run/started",
+      "run_request": "ctl/run/request",
+      "run_cost": "ctl/run/cost",
+      "forecast_features": "ctl/forecast/features",
+      "forecast_indicator": "ctl/forecast/indicator",
+      "analysis_standing": "ctl/analysis/standing"
     },
     "message_schemas": [
       {
@@ -1426,6 +1472,14 @@
         "schema": "divergence"
       },
       {
+        "filter": "ctl/analysis/published",
+        "schema": "analysis-published"
+      },
+      {
+        "filter": "ctl/analysis/standing",
+        "schema": "analysis-published"
+      },
+      {
         "filter": "ctl/run/request",
         "schema": "run-request"
       },
@@ -1436,6 +1490,18 @@
       {
         "filter": "ctl/run/published",
         "schema": "run-published"
+      },
+      {
+        "filter": "ctl/run/cost",
+        "schema": "run-cost"
+      },
+      {
+        "filter": "ctl/forecast/features",
+        "schema": "forecast-features"
+      },
+      {
+        "filter": "ctl/forecast/indicator",
+        "schema": "forecast-indicator"
       },
       {
         "filter": "ctl/plan",
@@ -1987,8 +2053,8 @@
             ]
           },
           {
-            "note": "the departure forecast the cadence floor warranted",
-            "ticks": 900,
+            "note": "the departure forecast the cadence floor warranted, and the ticks it occupies",
+            "ticks": 920,
             "stopped": [
               "sensors",
               "advisory-source",

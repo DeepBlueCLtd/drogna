@@ -974,6 +974,15 @@ describe('the Operator flow chart (feature 113)', () => {
       expect(decision.textContent).toMatch(/accepted/);
       expect(decision.textContent).toMatch(/operator prompt/);
 
+      // Let the accepted run finish before asking again. A run occupies the ticks it
+      // costs (feature 123), so a second prompt sent immediately is declined as a
+      // duplicate while the first is still integrating — true, and a different fact from
+      // the one this test is about.
+      await act(async () => {
+        for (let i = 0; i < 400 && runtime.store.currentInstance() === undefined; i++) runtime.clock.tickOnce();
+      });
+      expect(runtime.store.currentInstance()).toBeDefined();
+
       // Asked again inside the minimum interval, the scheduler declines — and the
       // panel shows the decline as the ordinary outcome it is.
       await act(async () => {

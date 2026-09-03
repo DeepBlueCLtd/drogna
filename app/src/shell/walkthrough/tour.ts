@@ -452,11 +452,51 @@ export function mapTour(): Tour {
 /** The Map tour's steps, for the completeness check. */
 export const MAP_TOUR_STEPS: readonly SubjectStep[] = MAP_STEPS;
 
+
+const FORECAST_STEPS: SubjectStep[] = [
+  {
+    subject: 'indicator',
+    element: '[data-region="indicator"]',
+    title: 'Why a run is warranted, and what one costs',
+    what: 'A forecast that takes minutes is not an engineering embarrassment to be optimised away; it is a planning problem the operator owns. The vessel chooses when to spend the compute — on passage, in quiet water, before a decision point — so need and cost belong in one frame or the region has not done its job.',
+    panel: 'The gauge draws whatever is published on the declared indicator topic, with the threshold at which a run becomes warranted marked across it, and it names which indicator it is showing. What that indicator ought to be is environmental science and belongs elsewhere; this is the socket. With the topic silent the region says so and draws no gauge, because an empty gauge and an unheard indicator are different facts. Beneath it is what a run costs, stated by the component that will spend it and by no other.',
+  },
+  {
+    subject: 'volume',
+    element: '[data-region="volume"]',
+    title: 'What a cell’s value was made from',
+    what: 'The question an operator asks of a forecast is not which model ran but what a given number is made of: which observations moved it, by how much, and where the rest came from when nothing sampled. Assimilation is arithmetic over published numbers, and every reader assumes it is magic.',
+    panel: 'This region is feature 124 and is not built. It says so rather than drawing an empty canvas: a picture that showed nothing would be a claim the shell is not entitled to make, and the difference between "not built" and "nothing to show" is the difference this whole surface exists to keep.',
+  },
+  {
+    subject: 'ahead',
+    element: '[data-region="ahead"]',
+    title: 'The spread ahead',
+    what: 'An ensemble disagrees with itself, and how much it disagrees along the route you intend to take is a different question from how much it disagrees on average. Confidence decays against a declared timescale, and a forecast that does not widen with lead is making a stronger claim than it can support.',
+    panel: 'This region is feature 124 and is not built. The spread itself is published and the Map draws it: what is missing is this region, not the figure.',
+  },
+  {
+    subject: 'timeline',
+    element: '[data-region="timeline"]',
+    title: 'The runs, in simulation time',
+    what: 'Four things can happen when a run is considered, and they are four facts rather than one appearance: a run is requested, declined by the minimum interval, declined as a duplicate, or held because the standing forecast still has more life left than the run costs. The hold is not a decline — it is the loop waiting until the compute is worth spending, and it releases as the headroom decays so the new run lands as the old one lapses.',
+    panel: 'Each entry is labelled by what asked for it, read from the run request where the scheduler declares it rather than inferred from a sentence. A run announces its start and publishes when the ticks it costs are spent, so the interval between the two is the cost being spent rather than a spinner. Select an entry and the address names it, so a link opens this view at the run being discussed.',
+  },
+];
+
+/** The Forecast tour, held to the panel's own declared region list. */
+export function forecastTour(): Tour {
+  return surfaceTour('forecast', 'forecast', 'The Forecast tab, region by region', FORECAST_STEPS);
+}
+
+/** The Forecast tour's steps, for the completeness check. */
+export const FORECAST_TOUR_STEPS: readonly SubjectStep[] = FORECAST_STEPS;
+
 /**
  * Every tour the shell offers, so the checks that apply to *all* of them (FR-62, SC-09)
  * can enumerate rather than being told. A tour added without being listed here would be
  * a tour no rule covered, which is the failure mode the list exists against.
  */
 export function allTours(shell: ConfigShell): readonly Tour[] {
-  return [componentTour(shell), mapTour(), dataTour(), messagesTour()];
+  return [componentTour(shell), mapTour(), dataTour(), messagesTour(), forecastTour()];
 }

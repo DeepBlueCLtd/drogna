@@ -33,6 +33,7 @@ import { DataPanel } from '../panels/data/DataPanel.js';
 import { OperatorPanel } from '../panels/operator/OperatorPanel.js';
 import { MessagesPanel } from '../panels/messages/MessagesPanel.js';
 import { BackgroundPanel } from '../panels/background/BackgroundPanel.js';
+import { ForecastPanel } from '../panels/forecast/ForecastPanel.js';
 import { SamplingPanel } from '../panels/consumers/sampling/SamplingPanel.js';
 import { CoursesPanel } from '../panels/consumers/courses/CoursesPanel.js';
 import { FeasibilityPanel } from '../panels/consumers/feasibility/FeasibilityPanel.js';
@@ -95,6 +96,7 @@ export const panelComponents: Record<string, React.FunctionComponent<PanelProps>
   background: BackgroundPanel,
   data: DataPanel,
   operator: OperatorPanel,
+  forecast: ForecastPanel,
   map: MapPanel,
   messages: MessagesPanel,
   // The three downstream consumers (feature 116). They are registered here like any other

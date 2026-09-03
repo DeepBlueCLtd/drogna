@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/forecast-indicator.schema.json",
+  "title": "drogna re-forecast indicator",
+  "description": "The message on the declared indicator topic (SRD-v2 FR-117): a figure saying that re-forecasting is becoming valuable, the threshold at which it becomes warranted, and what the figure actually is.\n\n**This is a socket, not science.** The indicator that re-forecasting is becoming valuable is environmental science and belongs to the environmental-indicators workstream. What drogna provides is this declared shape, a gauge that renders whatever is published on the topic, and a refusal that names the absence when nothing is — an empty gauge and an unheard indicator are different facts and are drawn differently (FR-119).\n\nDrogna's own residual statistic is wired in as the reference implementation, published by the monitor because it already holds both the running residual and the threshold in force. Any other publisher would hold a second copy of the threshold, and the mark on the gauge could then disagree with the rule that fires a run — which is the fault class this repository keeps finding.",
+  "type": "object",
+  "required": [
+    "component",
+    "scenario_run_id",
+    "sim_time",
+    "tick",
+    "indicator",
+    "label",
+    "value",
+    "threshold",
+    "unit",
+    "streak"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "component": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Whoever published it, matching config /component/id. The gauge names this, so a reader can see which indicator they are looking at rather than assuming the one they expected."
+    },
+    "scenario_run_id": { "type": "string", "minLength": 1 },
+    "sim_time": {
+      "type": "string",
+      "description": "Simulation time at which the figure was current, ISO-8601 UTC with microsecond precision."
+    },
+    "tick": { "type": "integer", "minimum": 0 },
+    "indicator": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "A stable identifier for which indicator this is. The surface states it: a gauge that does not say what it is showing is a number with a shape around it."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What a reader is told the figure is, in the publisher's own words."
+    },
+    "value": {
+      "type": "number",
+      "description": "The figure. Reported, never derived by the surface from a configured expectation (FR-119)."
+    },
+    "threshold": {
+      "type": "number",
+      "description": "The value at which a run becomes warranted, in the same unit, as the publisher holds it. Marked on the gauge, and read from the same place the rule that fires a run reads it."
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The unit both figures are in."
+    },
+    "streak": {
+      "type": "object",
+      "required": ["count", "of"],
+      "additionalProperties": false,
+      "description": "How close the publisher is to acting on the figure, in its own counting. A consumer that recomputed this from the samples it happened to receive would be a second implementation of the rule, free to disagree about whether the loop is about to turn (FR-58).",
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "of": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

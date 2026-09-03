@@ -46,7 +46,11 @@ async function driveUntilAnalyses(
   shell.subscribe(config.model_runner.topics.run_published, (message) => {
     record.runs.push(message.payload as RunPublished);
   });
-  await driveUntil(runtime.clock, () => record.analyses.length >= wanted, limit);
+  // Both, and not only the analyses. Feature 123 put a cost between a run being announced
+  // and its publication — the run occupies the ticks it comes to — so a drive that stopped
+  // at the second analysis would stop with the second run still integrating, and the
+  // pairing this file is about would be one short at the moment it was checked (T045).
+  await driveUntil(runtime.clock, () => record.analyses.length >= wanted && record.runs.length >= wanted, limit);
   return record;
 }
 

@@ -298,10 +298,16 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
    * The updated-region leakage comparison, pointed at this harness's own releases
    * (issue #57, T708). The comparison machinery, and the case where a known leak
    * must be caught, live in
-   * `offload/leakage.test.ts`; what is held here is why it cannot yet return a
-   * conclusive verdict about *these* releases, measured rather than asserted — so
-   * that the day the harness changes enough for a verdict to be possible, this test
-   * fails and somebody has to look at it.
+   * `offload/leakage.test.ts`; what is held here is why a verdict about *these* releases
+   * still says nothing useful, measured rather than asserted — so that the day the harness
+   * changes enough for that to move, this test fails and somebody has to look at it.
+   *
+   * It did, at feature 123 — twice, in the same branch, in both directions. The second
+   * reason (two noise-free releases identical, so no mask at all) became "they differ
+   * everywhere, so the mask is the whole domain" when the kernel began propagating a state,
+   * and then became identical again when that kernel's lead convention was corrected. The
+   * conclusion never moved: a mask that is empty and a mask that covers everything both
+   * discriminate nothing. #57 stays open and this stays not a gate.
    */
   it('scores its own successive releases, and names why the comparison is inconclusive (#57)', async () => {
     // The scoring run the open question proposed: the same kernel with its per-cell
@@ -335,10 +341,27 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(span).toBeLessThan(geometry.identification_radius_m);
     expect(verdict).toMatchObject({ conclusive: false, reason: 'measurements-within-radius' });
 
-    // Reason two, which only shows once the first is out of the way: with the noise
-    // suppressed, two successive releases initialised from the same now-cast are
-    // identical value for value, so there is no mask at all. Scored against a
-    // geometry that does span the radius, the same pair reports exactly that.
+    // Reason two, which only shows once the first is out of the way. **This test fired
+    // twice in one branch, for two different reasons, and both are recorded because the
+    // second is the more interesting.**
+    //
+    // It began as: with the per-cell noise suppressed, two successive releases are
+    // identical value for value, so there is no mask to score. Introducing a kernel that
+    // propagates a state rather than translating a field flipped it — two runs from
+    // analyses differing anywhere then diverged everywhere, and the mask became the whole
+    // domain, which discriminates nothing for the opposite reason. Then correcting the new
+    // kernel's lead convention (step 0 is the state the run initialises from) flipped it
+    // back, and the reason is measured rather than assumed: at this configuration the two
+    // runs are made from **byte-identical analyses** — `analysis.…run-0` and
+    // `analysis.…run-1` carry the same digest, as do their error and provenance fields — so
+    // with the model noise off the two forecasts cannot differ.
+    //
+    // Why the assimilation left the field unchanged across a cycle here is not settled, and
+    // this test does not pretend to settle it: it is a property of the zero-noise
+    // configuration this test constructs and not of the shipped one, where `analyst.test.ts`
+    // holds the analysis to moving the field where a measurement reached. What is held here
+    // is what the comparison says and why it says nothing useful, which is what keeps #57
+    // open and keeps this from being a gate.
     const spanning = {
       ...geometry,
       measurements: [
@@ -349,10 +372,20 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(measurementSpanMetres(spanning.measurements)).toBeGreaterThan(
       geometry.identification_radius_m,
     );
-    expect(scoreUpdatedRegion(before, after, spanning)).toMatchObject({
-      conclusive: false,
-      reason: 'empty-mask',
-    });
+    const spanningVerdict = scoreUpdatedRegion(before, after, spanning);
+    expect(spanningVerdict).toMatchObject({ conclusive: false, reason: 'empty-mask' });
+    // Asserted alongside it, because the reason above is a claim about the two products and
+    // this is the evidence for it: the two runs carry the same forecast digest, and the two
+    // analyses they were made from carry the same digest too. If a future change makes the
+    // analyses differ, this fails here rather than leaving the paragraph above standing as
+    // an explanation of something that has stopped being true.
+    expect(record.published[1].digests.forecast).toBe(record.published[0].digests.forecast);
+    const analysisDigests = runtime.store
+      .holdings()
+      .filter((holding) => holding.era === 'analysis' && !/-(error|provenance)$/.test(holding.holding_id))
+      .map((holding) => holding.field.sha256);
+    expect(analysisDigests.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(analysisDigests).size).toBe(1);
 
     // And with the noise left on — the harness as it ships — the mask is the whole
     // domain, which is the reason the open question recorded. It scores at chance

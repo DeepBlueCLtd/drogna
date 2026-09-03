@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.harness.invalid/config.analyst.schema.json",
   "title": "drogna analyst configuration (V2-C19)",
-  "description": "The analyst (SRD-v2 FR-30, amended by feature 116): on a run request, takes the current forecast as background and the observations since its last cycle, and publishes an analysis — the field corrected by what was measured, the error that correction left, and where every cell's value came from. Until feature 116 the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so no measurement ever changed a field value and the loop converged because truth leaked in on a timer. This document configures the step that replaced that.",
+  "description": "The analyst (SRD-v2 FR-30, amended by feature 116): on a run request, takes the current forecast as background and the observations since its last cycle, and publishes an analysis \u2014 the field corrected by what was measured, the error that correction left, and where every cell's value came from. Until feature 116 the model runner initialised from a now-cast the environment generator evaluated from the true ocean, so no measurement ever changed a field value and the loop converged because truth leaked in on a timer. This document configures the step that replaced that.",
   "type": "object",
   "required": [
     "id",
@@ -11,7 +11,8 @@
     "heartbeat",
     "correlation",
     "excluded_datastreams",
-    "shares"
+    "shares",
+    "restate_every_ticks"
   ],
   "additionalProperties": false,
   "properties": {
@@ -30,7 +31,8 @@
         "observations",
         "run_request",
         "run_published",
-        "analysis_published"
+        "analysis_published",
+        "analysis_standing"
       ],
       "additionalProperties": false,
       "properties": {
@@ -48,6 +50,10 @@
         },
         "analysis_published": {
           "$ref": "config.common.schema.json#/$defs/topic"
+        },
+        "analysis_standing": {
+          "$ref": "config.common.schema.json#/$defs/topic",
+          "description": "Where the standing analysis is DECLARED, which is deliberately not where it is ANNOUNCED. `analysis_published` is a trigger: the model runner starts a forecast on it (feature 116) and the planner re-plans on it, so repeating it repeats the work \u2014 measured, when it was tried: ten tests across seven files, replay determinism among them. A declaration carries the same message and commands nothing, which is the same separation the model runner already keeps between `run_started` and `run_cost`. It is published beside each cycle and restated on the cadence, so a console that mounts after a cycle can still name the collections it should read."
         }
       }
     },
@@ -61,7 +67,7 @@
         "vertical_m"
       ],
       "additionalProperties": false,
-      "description": "The background error correlation: Gaspari–Cohn half-widths, so the taper reaches exactly zero at twice each value and a cell beyond that owes a measurement nothing at all — a fact rather than a small number. This is the harness's ONE declaration of how far a measurement's influence reaches: the planner reads it from here rather than restating it, because a planner that scores a collapse of uncertainty at one scale while the analysis applies it at another is scoring a system that does not exist. It is a modelling assumption and is meant to be: the analyst may not read the world's own feature scales, since that document describes the truth. specs/116 argues the values.",
+      "description": "The background error correlation: Gaspari\u2013Cohn half-widths, so the taper reaches exactly zero at twice each value and a cell beyond that owes a measurement nothing at all \u2014 a fact rather than a small number. This is the harness's ONE declaration of how far a measurement's influence reaches: the planner reads it from here rather than restating it, because a planner that scores a collapse of uncertainty at one scale while the analysis applies it at another is scoring a system that does not exist. It is a modelling assumption and is meant to be: the analyst may not read the world's own feature scales, since that document describes the truth. specs/116 argues the values.",
       "properties": {
         "horizontal_km": {
           "type": "number",
@@ -90,7 +96,7 @@
         "model"
       ],
       "additionalProperties": false,
-      "description": "The provenance vocabulary, in the order the shares are stored and drawn. Four, and each is a different kind of claim: what was known before the scenario began; what the state held when the platform left; what the instruments have since measured; and the error successive forecasts have added, which belongs to no observation. The departure share's content is archive — the model propagates information without creating any — so that bar is a convention kept for the operator's benefit, and specs/116 requires the explainer to say so.",
+      "description": "The provenance vocabulary, in the order the shares are stored and drawn. Four, and each is a different kind of claim: what was known before the scenario began; what the state held when the platform left; what the instruments have since measured; and the error successive forecasts have added, which belongs to no observation. The departure share's content is archive \u2014 the model propagates information without creating any \u2014 so that bar is a convention kept for the operator's benefit, and specs/116 requires the explainer to say so.",
       "properties": {
         "archive": {
           "type": "string",
@@ -109,6 +115,11 @@
           "minLength": 1
         }
       }
+    },
+    "restate_every_ticks": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "How often the last analysis announcement is repeated, in ticks of simulation time. An analysis cycle's collections are a STANDING fact about the analysis that is current, not an event that happened once: the provenance of a cell is still what it was until another cycle replaces it. Announced on the cycle alone, a console that mounted afterwards \u2014 which every console does, since the shell opens after the pre-roll \u2014 had no way to name the collections it should read, and the surface that shows what a cell's value was made from said so for up to a whole cadence. The same argument the model runner's cost and feature statements already make for themselves. Nothing is recomputed: the message published on the cycle is republished with the instant it is said at, so no component ever holds two opinions about one analysis. It is a publication on the component's own clock and not a poll."
     }
   }
 }

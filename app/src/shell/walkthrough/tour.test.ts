@@ -62,7 +62,7 @@ describe('the walkthrough (feature 110)', () => {
     // cover would be a tour no rule applied to, which is the failure mode the
     // enumeration exists against (SC-09).
     const tours = allTours(config.shell);
-    expect(tours.map((tour) => tour.id).sort()).toEqual(['components', 'data', 'map', 'messages']);
+    expect(tours.map((tour) => tour.id).sort()).toEqual(['components', 'data', 'forecast', 'map', 'messages']);
     for (const step of tours.flatMap((tour) => tour.steps)) {
       const prose = `${step.what} ${step.panel}`;
       // Constitution VII is not engaged by teaching (feature 111's precedent), and

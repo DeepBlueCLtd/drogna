@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.harness.invalid/config.scheduler.schema.json",
+  "title": "a scheduler that declares what a run costs",
+  "description": "The planted violation: a run's cost in the document of a component that will not spend it. The scheduler could then hold a run against one number while the run occupied another, and neither document would be wrong on its own terms.",
+  "type": "object",
+  "properties": {
+    "topics": {
+      "type": "object",
+      "description": "A topic naming where the cost is published is NOT a declaration of it \u2014 the scheduler subscribes here in the real tree, and the gate must not read that as the fault. Present so the exemption is exercised rather than assumed.",
+      "properties": {
+        "run_cost": {
+          "type": "string"
+        }
+      }
+    },
+    "min_interval_ticks": {
+      "type": "integer"
+    },
+    "run_cost_ticks": {
+      "type": "integer",
+      "description": "The fault."
+    }
+  }
+}

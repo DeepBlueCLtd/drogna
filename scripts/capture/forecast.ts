@@ -131,6 +131,18 @@ try {
     throw new Error(`no column drew a ray (${picked.why}); the picture would show an empty region`);
   }
 
+  // **Pinned after the warming, not before it.** Setting rate 0 before the steps is what makes
+  // the stepping deterministic, but a start condition's pre-roll puts the configured rate back
+  // when its script finishes — so the first version of this script recorded `rate 1` in its own
+  // sidecar and took the picture of a running clock. Pinned here, and the sidecar reads the rate
+  // in force at the shutter rather than the one asked for earlier.
+  await page.evaluate(async () => {
+    await fetch('/api/ctl/clock/rate', { method: 'PUT', body: JSON.stringify({ rate: 0 }) });
+  });
+  await page.waitForFunction(() => /rate 0/.test(document.querySelector('[data-testid="sim-rate"]')?.textContent ?? ''), {
+    timeout: 30_000,
+  });
+
   const region = await page.$('.forecast-column');
   if (!region) throw new Error('the centre region is not on the page');
   mkdirSync(dirname(outPath), { recursive: true });

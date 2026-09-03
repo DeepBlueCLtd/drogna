@@ -3,7 +3,7 @@
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
   "sim_time": "2026-01-01T01:39:22Z",
-  "clock_pinned": "rate 1",
+  "clock_pinned": "rate 0",
   "holding": "analysis.loiter-arriving-pahu-run-1-contributions",
   "rays_drawn": 4,
   "column": "read off the served contributions header, so it is a column an instrument reached",

@@ -129,12 +129,15 @@ published today.
       to one now, and asserts the non-coverage is *not* served.
 - [x] T006 **Watched failing**: a planted contribution beyond the correlation's support, seen
       refused. Reverted, and said so in the commit message (SC-002).
-      *Watched, twice.* Kernel: with the `continue` on ρ = 0 removed so every observation
-      counted as reaching, "an entry at 75.8 km, 0 m lies beyond the support: expected 2.526
-      to be less than 2", and the remainder test saw the far cast appear as a source.
-      Served column: with ω scaled by 1.01 and the remainder shifted by 0.01, the identity
-      test failed by 0.0094 against a tolerance of 6.1e-5 and the cold-start test by 0.01
-      against 1.9e-6. Both reverted; both in the commit messages.
+      *Watched, three times.* Kernel: with the `continue` on ρ = 0 removed so every
+      observation counted as reaching, "an entry at 75.8 km, 0 m lies beyond the support:
+      expected 2.526 to be less than 2", and the remainder test saw the far cast appear as a
+      source. Served column: with ω scaled by 1.01 and the remainder shifted by 0.01, the
+      identity test failed by 0.0094 against a tolerance of 6.1e-5 and the cold-start test by
+      0.01 against 1.9e-6. And after review, the SC-008 Data test that had never seen an
+      analysis holding (T005a): with `lib/holding-format.ts`'s predicate planted to call
+      every holding a coverage, "EDR lists 'analysis.…-run-0-contributions', which is not a
+      coverage". All three reverted; all three in the commit messages.
 - [x] T007 `analyst.test.ts`: the contributions sum, per cell, with the remainder, to the cell's
       ω; and on the cold-start cycle — where the carried measurement share is nought, so the
       published share *is* ω — to the measurement share the same cycle published. The

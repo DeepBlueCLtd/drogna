@@ -27,6 +27,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
+import { standingRunFromStore } from '../lib/standing-run.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import type { ObservationStore } from '../observation-store/store.js';
@@ -124,9 +125,22 @@ export class OffloadPackager {
       const command = message.payload as OperatorCommand;
       if (command.target !== this.config.id || command.kind !== 'event') return;
       if (command.event !== this.config.prompt_event) return;
-      if (!this.lastPublished) {
-        // Nothing has been released, so there is nothing to stage a bundle OF. Said
-        // in the ledger rather than answered with an empty bundle.
+      // Nothing announced is not the same as nothing standing. This component learns of a
+      // run from `run_published` and from nothing else, so a run published while it was not
+      // listening — or, since feature 125, one replayed into the store from a committed
+      // artefact while the model runner was held back for the whole pre-roll — leaves it
+      // believing the run has no forecast at all. `returning`'s card promises a staged
+      // package and its script prompts for one mid-pre-roll, at a tick where the runner is
+      // held back; before this line it declined, and the Offload surface told the reader
+      // nothing had been released while the store held eight forecasts.
+      //
+      // So the store is consulted before the ledger is written: what stands is a fact about
+      // the inventory, and reading it is the same resumption rule the environment generator
+      // and the model runner already follow.
+      const against = this.lastPublished ?? standingRunFromStore(this.coverageStore, this.config.id, this.runId, this.simTime);
+      if (!against) {
+        // Genuinely nothing to stage a bundle OF. Said in the ledger rather than answered
+        // with an empty bundle.
         this.declined.push(
           `window ${this.stagedBundles.length + this.declined.length}: asked to stage, and nothing has been released yet to stage over`,
         );
@@ -134,7 +148,7 @@ export class OffloadPackager {
         return;
       }
       this.prompted += 1;
-      this.stage(this.lastPublished, this.simTime.tick);
+      this.stage(against, this.simTime.tick);
     });
     this.heartbeat.start();
   }

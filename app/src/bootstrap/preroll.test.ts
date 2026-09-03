@@ -437,4 +437,128 @@ describe('the start conditions (feature 120)', () => {
     ).toBeGreaterThan(onOpening);
     page.stop();
   }, 180_000);
+  /**
+   * What a replayed run knows, as against what it holds.
+   *
+   * Committing the forecast eras holds the **model runner** back for the whole pre-roll, and
+   * `run_published` is the only statement that a forecast stands. Four components hold
+   * nothing but what it told them — the scheduler its remaining validity, the offload
+   * packager the run it would stage, the analyst its background spread, telemetry its skill
+   * ledger — so replaying the holdings left every one of them believing the run had no
+   * forecast at all. The holdings were all there; the knowledge was not, and the per-era
+   * counts the case above compares cannot see the difference.
+   *
+   * Two things it cost, both measured before the fix:
+   *  - `returning`'s card promises "a package staged for offload, with the measurement
+   *    geometry beside it". Its script prompts for one mid-pre-roll, at a tick where the
+   *    runner is held back, and the packager declined: **zero** staged bundles against a live
+   *    run's five, with the Offload surface telling the reader nothing had been released
+   *    while the store held eight forecasts and the timeline drew them.
+   *  - The scheduler, counting from a request nobody answered rather than from the standing
+   *    forecast's validity, reached its next run at 611, 1,272, 1,514 and 1,790 ticks where a
+   *    live run of the same conditions reaches it at 599, 1,794, 1,080 and 639.
+   *
+   * Both are held here, and the cadence one is held against a live run driven in the same
+   * test rather than against a number typed into it — which is the assertion that would have
+   * refused the first attempt at this, a quiesced scheduler that turned the loop 10 ticks
+   * after opening and looked like an improvement.
+   */
+  // The bytes are held to identity by check-snapshot-drift and by the replay case above; what
+  // this asks is whether replaying them leaves the components that learn from announcements
+  // in the state a live run leaves them in.
+  // AT-04: not byte-identity — two different runs compared on when their loop next turns, not one run reproduced
+  it('a replayed run stages what its card promises, and keeps the cadence a live run keeps', async () => {
+    /** Ticks from the console opening to the next forecast the loop computes for itself. */
+    const ticksToNextForecast = async (runtime: BackendRuntime, limit: number) => {
+      const forecasts = () => runtime.store.holdings().filter((holding) => holding.era === 'instance').length;
+      const onOpening = forecasts();
+      let waited = 0;
+      while (waited < limit && forecasts() === onOpening) {
+        runtime.clock.tickOnce();
+        waited += 1;
+        if (waited % 200 === 0) await breathe();
+      }
+      return forecasts() > onOpening ? waited : Number.POSITIVE_INFINITY;
+    };
+
+    const readings: string[] = [];
+    for (const condition of config.start_conditions.conditions) {
+      const effective = (() => {
+        const copy = configForCondition(JSON.parse(JSON.stringify(config)) as ConfigRun, condition);
+        copy.clock.mode = 'lockstep';
+        copy.clock.rate = 0;
+        return copy;
+      })();
+      const options = { rootSeed: condition.root_seed, startCondition: condition.id, revision: 'test', dirty: false };
+      const held = heldBackBySnapshot(condition, effective.snapshot_source);
+      const limit = effective.scheduler.max_interval_ticks * 6;
+      const opened = async (artefact: Awaited<ReturnType<typeof decodeSnapshot>> | undefined) => {
+        const runtime = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+        await runPreRoll(
+          {
+            backend: runtime.httpBackend,
+            clock: effective.clock,
+            operator: effective.operator,
+            breathe,
+            onProgress: () => undefined,
+          },
+          artefact ? holdingBack(condition, held) : condition,
+        );
+        return runtime;
+      };
+
+      // The control, and the artefact built from it exactly as `pnpm snapshots` builds one.
+      const live = await opened(undefined);
+      const eras: ReadonlySet<string> = new Set<string>(condition.snapshot_eras ?? []);
+      const staged = live.store
+        .holdings()
+        .filter((descriptor) => eras.has(descriptor.era))
+        .map((descriptor) => {
+          const holding = live.store.holding(descriptor.holding_id);
+          if (!holding) throw new Error(`the store lost '${descriptor.holding_id}'`);
+          return holding;
+        })
+        .sort((a, b) => a.descriptor.published_at.tick - b.descriptor.published_at.tick);
+      const artefact = await decodeSnapshot(
+        await encodeSnapshot(
+          {
+            format: 'drogna-snapshot-1',
+            start_condition: condition.id,
+            run_id: live.runId,
+            root_seed: condition.root_seed,
+            config_digest: staged[0].descriptor.manifest.config_digest,
+            code_revision: 'test',
+          },
+          staged,
+        ),
+      );
+      const liveCadence = await ticksToNextForecast(live, limit);
+      live.stop();
+
+      const page = await opened(artefact);
+      // The card's promise, where a card makes one. `returning` is the condition whose script
+      // prompts for a package mid-pre-roll, at a tick where the model runner is held back.
+      if (condition.id === 'returning') {
+        const offload = page.offload as unknown as { stagedBundles: unknown[]; declined: string[] };
+        expect(
+          offload.stagedBundles.length,
+          `returning's card promises a staged package and the replayed run staged none: ${offload.declined.join('; ')}`,
+        ).toBeGreaterThan(0);
+      }
+      const pageCadence = await ticksToNextForecast(page, limit);
+      page.stop();
+      readings.push(`${condition.id}: live ${liveCadence}, replayed ${pageCadence}`);
+      expect(Number.isFinite(liveCadence), `${condition.id}: the live run never computed a forecast`).toBe(true);
+    }
+
+    // Every condition, against its own live run rather than a number typed in here. Two of
+    // the four agree by coincidence whichever way the fix goes — `leaving` and `returning`
+    // both read 599 and 639 with the resume disabled — so a case that checked one condition
+    // proved nothing, which is how the first draft of this passed against the unfixed tree.
+    const differing = readings.filter((reading) => {
+      const [, live, replayed] = /live (\S+), replayed (\S+)$/.exec(reading) ?? [];
+      return live !== replayed;
+    });
+    expect(differing, `a replayed run reached its next forecast on a cadence the live run did not:\n${readings.join('\n')}`).toEqual([]);
+  }, 600_000);
 });

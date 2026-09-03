@@ -713,3 +713,12 @@
 .forecast-ray.is-absent {
   opacity: 0.35;
 }
+
+/* A source that reached nothing at the chosen level has no width to draw — its contribution is
+   nought, which is the bottom of the same scale — so what keeps its place is a hollow origin
+   marker. A filled marker means "this source contributed here"; a hollow one means "this source
+   is part of this column and contributed nothing at this level". */
+.forecast-ray-origin.is-absent {
+  opacity: 0.55;
+  stroke-width: 0.14;
+}

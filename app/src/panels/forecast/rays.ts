@@ -60,6 +60,8 @@ import type { AnalysisContributions, AnalysisContributionsSource } from '../../g
 /** One drawn ray: a source, where it is, how much it did, and the two numbers behind that. */
 export interface Ray {
   readonly sourceId: string;
+  /** Where this source sits in the served document's own table: its palette slot. */
+  readonly sourceIndex: number;
   readonly datastreamId: string;
   readonly kind: AnalysisContributionsSource['kind'];
   /** Where the instrument was: the end of the drawn line. */
@@ -95,8 +97,6 @@ export interface RaySet {
   readonly widest: number;
   /** How many of the column's sources reached the levels drawn. */
   readonly reachedCount: number;
-  /** The levels this set was summed over, by depth index. */
-  readonly levels: readonly number[];
 }
 
 /**
@@ -147,6 +147,7 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
     const entry = summed.get(index);
     return {
       sourceId: source.source_id,
+      sourceIndex: index,
       datastreamId: source.datastream_id,
       kind: source.kind,
       longitude: source.observed.longitude,
@@ -168,7 +169,6 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
     observationWeight,
     widest,
     reachedCount: summed.size,
-    levels: levels.map((level) => level.depth_index),
   };
 }
 
@@ -217,10 +217,17 @@ export function contributionResidual(set: RaySet): { drawn: number; published: n
  * background rather than as an observation — so this never fires today. It exists because
  * "never" is a claim about a document that a later feature could change: admit a modelled origin
  * to the source table and this names it rather than letting the surface quietly draw the
- * baseline as a ray. The names are the harness's own, from `config.analyst`'s share vocabulary.
+ * baseline as a ray.
+ *
+ * **It asks the master's own question, and the first version did not.** That version matched the
+ * datastream id against five words taken from `config.analyst`'s share vocabulary — which is a
+ * different vocabulary, in a different document, munged differently: the harness's datastream
+ * ids are sensor streams like `temperature-050m`, and two of the shipped share labels are not
+ * even in the list in their configured spelling. A shore broadcast admitted as
+ * `shore-temperature-broadcast` would have passed straight through the guard written to catch
+ * it. `kind` is `'measured' | 'modelled'` in the master, the analyst fills it, the numbers table
+ * already prints it, and it is the question being asked.
  */
-export const BACKGROUND_SOURCE_NAMES: readonly string[] = ['archive', 'departure', 'model', 'forecast', 'background'];
-
 export function backgroundRaysIn(set: RaySet): readonly Ray[] {
-  return set.rays.filter((ray) => BACKGROUND_SOURCE_NAMES.some((name) => ray.datastreamId === name));
+  return set.rays.filter((ray) => ray.kind === 'modelled');
 }

@@ -15,8 +15,18 @@
  * records for route and ghost.
  */
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { AA_NON_TEXT, contrast, luminance } from '../../shell/colour.js';
 import { INSTRUMENTS, SOURCES } from './shares.js';
+
+/** The ground these are drawn on, read off the shell's own stylesheet rather than restated. */
+const SHELL_CSS = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shell', 'shell.css'),
+  'utf8',
+);
+const GROUND = /--shell-bg:\s*(#[0-9a-f]{3,8})/i.exec(SHELL_CSS)?.[1];
 
 describe('the instrument palette without colour', () => {
   it('climbs monotonically, so six sources are six greys rather than one', () => {
@@ -55,6 +65,21 @@ describe('the instrument palette without colour', () => {
       }
     }
     expect(worst.ratio, `${worst.pair} is the same grey twice`).toBeGreaterThanOrEqual(floor);
+  });
+
+  it('is legible on the surface it is actually drawn on', () => {
+    // **The check the first version of this file omitted**, and the omission cost a hue: the
+    // palette was held against *itself* and passed, while `#7233b8` sat at 2.52 against the
+    // shell's own ground — under the bound — and every column draws slot 0. The model this
+    // test says it follows, `panels/consumers/greyscale.test.ts`, makes exactly this
+    // assertion; leaving it out is how a palette can be internally beautiful and unreadable.
+    expect(GROUND, 'the shell declares no --shell-bg to measure against').toBeTruthy();
+    for (const instrument of INSTRUMENTS) {
+      expect(
+        contrast(instrument.hue, GROUND ?? '#000000'),
+        `${instrument.hue} is not legible on ${GROUND}`,
+      ).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    }
   });
 
   it('carries identity in texture too, so the ramp never has to do it alone', () => {

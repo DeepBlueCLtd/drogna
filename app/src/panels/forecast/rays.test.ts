@@ -10,12 +10,17 @@ import { describe, expect, it } from 'vitest';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
 import { backgroundRaysIn, contributionResidual, raysFor, sourceLabels } from './rays.js';
 
-function source(id: string, longitude: number, datastream = id): AnalysisContributionsSource {
+function source(
+  id: string,
+  longitude: number,
+  datastream = id,
+  kind: AnalysisContributionsSource['kind'] = 'measured',
+): AnalysisContributionsSource {
   return {
     source_id: id,
     datastream_id: datastream,
     sensor_id: `${datastream}-sensor`,
-    kind: 'measured',
+    kind,
     cell: { index: 0, longitude, latitude: 46, depth_m: 0 },
     observed: { longitude: longitude + 0.01, latitude: 46.01, depth_m: 50 },
     observation_count: 3,
@@ -198,13 +203,23 @@ describe('the rays a column is made of', () => {
     const clean = raysFor(document());
     expect(backgroundRaysIn(clean)).toEqual([]);
 
-    // The named condition doing its work: a source table that admitted the background — which
-    // no analyst in this harness produces, because the shore broadcast enters as background and
-    // the archive is a share rather than an observation — is reported rather than drawn.
+    // **The plant is a document a future analyst could actually publish.** The first version of
+    // this test planted a source whose *datastream id* was the word `archive`, matching a guard
+    // that string-matched the share vocabulary — but datastream ids in this harness are sensor
+    // streams, so the plant tested the function and not the guard: a shore broadcast admitted as
+    // `shore-temperature-broadcast` would have walked straight past it. What marks an origin as
+    // the background is `kind`, which the master defines and the analyst fills.
     const admitted = document();
-    admitted.sources = [source('c.cell-2', -10.6), source('a.cell-0', -11.4), source('d.cell-3', -11.0, 'archive')];
+    admitted.sources = [
+      source('c.cell-2', -10.6),
+      source('a.cell-0', -11.4),
+      source('d.cell-3', -11.0, 'shore-temperature-broadcast', 'modelled'),
+    ];
     const named = backgroundRaysIn(raysFor(admitted));
-    expect(named.map((ray) => ray.datastreamId)).toEqual(['archive']);
+    expect(named.map((ray) => ray.datastreamId)).toEqual(['shore-temperature-broadcast']);
+    // And it is found by what it is, not by what it is called: the same source under any name
+    // is still the background.
+    expect(named[0].kind).toBe('modelled');
   });
 });
 

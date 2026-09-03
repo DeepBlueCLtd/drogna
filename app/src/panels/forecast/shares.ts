@@ -44,12 +44,15 @@ export const BACKGROUND_KEYS: readonly SourceKey[] = ['archive', 'departure', 'm
  * store). A seventh source would wrap, and `paletteExhausted` says so rather than letting two
  * instruments quietly share a colour; the region prints the warning where a reader sees it.
  *
- * **The hues are an ordered luminance ramp, and that is the correction a review forced.** The
- * first palette picked six pleasant hues at similar lightness, and its worst pair —
- * `#b58ae0` against `#e87f9e` — came to a contrast of **1.037**, which is the same grey twice.
- * Two sources of one column sit as adjacent bands of one bar, so that is not a theoretical
- * complaint. These six climb monotonically from 0.094 to 0.635 relative luminance: the extremes
- * clear `AA_NON_TEXT`, and no pair anywhere in the set falls below 1.32.
+ * **The hues are an ordered luminance ramp, and that took two corrections.** The first palette
+ * picked six pleasant hues at similar lightness, and its worst pair — `#b58ae0` against
+ * `#e87f9e` — came to a contrast of **1.037**, which is the same grey twice; two sources of one
+ * column sit as adjacent bands of one bar, so that was not a theoretical complaint. The ramp
+ * that replaced it was ordered but started too dark: `#7233b8` measured **2.52** against the
+ * shell's own ground, under `AA_NON_TEXT`, and every column draws slot 0. The floor is therefore
+ * the ground and not the palette — a hue must clear 3:1 on `--shell-bg` before it can be the
+ * bottom of anything — and these six climb from there, 0.147 to 0.751, no pair below 1.23 and
+ * nothing below 3.44 against the surface it is drawn on.
  *
  * Six ordered steps cannot each clear a contrast of 3 against its neighbour — that would need a
  * luminance range no screen has — so the ramp is what colour can honestly carry, and identity is
@@ -60,12 +63,12 @@ export const BACKGROUND_KEYS: readonly SourceKey[] = ['archive', 'departure', 'm
  * beside this file holds it here.
  */
 export const INSTRUMENTS = [
-  { hue: '#7233b8', angle: 0, dash: 'none' },
-  { hue: '#c03a30', angle: 30, dash: '6 3' },
-  { hue: '#ae7016', angle: 60, dash: '2 3' },
-  { hue: '#41a891', angle: 90, dash: '10 4' },
-  { hue: '#77b7e5', angle: 120, dash: '4 2 1 2' },
-  { hue: '#dad2a0', angle: 150, dash: '1 3' },
+  { hue: '#8b4bc8', angle: 0, dash: 'none' },
+  { hue: '#e0584a', angle: 30, dash: '6 3' },
+  { hue: '#c48f2e', angle: 60, dash: '2 3' },
+  { hue: '#4fbca4', angle: 90, dash: '10 4' },
+  { hue: '#8cc4ea', angle: 120, dash: '4 2 1 2' },
+  { hue: '#e7e2bd', angle: 150, dash: '1 3' },
 ] as const;
 
 export function instrumentAt(index: number): (typeof INSTRUMENTS)[number] {

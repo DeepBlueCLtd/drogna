@@ -14,8 +14,15 @@
  *   + remainder                              coupling from beyond this cell's reach
  *   = 1
  *
- * and that is the bar. Nothing is normalised to make it come out; the sum is printed, and where
+ * and that is what the *figures* say: the sum is printed rather than normalised away, and where
  * it is not one the reader is looking at a served document that disagrees with itself.
+ *
+ * The *bar* is a second thing and the region says so. A drawn stack has to fit its box, so each
+ * band's width is its share of the level's total magnitude — and where a band runs negative,
+ * which is ordinary once the gain extrapolates, magnitudes sum past one and a band fills less of
+ * the bar than the same figure would at a level where everything is positive. Widths compare
+ * within a level, figures compare between them, and claiming the bar itself was unnormalised —
+ * which an earlier draft of this comment did — was the picture flattering the arithmetic.
  *
  * The two middle terms are the ones a first draft gets wrong, so they are worth naming. The
  * measurement share is **cumulative** — it carries every cycle's observations, diluted as each
@@ -35,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { raysFor, sourceLabels, type Ray } from './rays.js';
+import { sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_KEYS, SOURCES, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -59,6 +66,12 @@ export interface ProfileProps {
    * in so the region states it rather than the check living only in a test.
    */
   readonly backgroundDrawn: readonly string[];
+  /**
+   * The ray set the map drew, passed in rather than derived again here. Two derivations of one
+   * thing from the same two inputs agree only by inspection, and nothing asserted that the
+   * widths on the map and the rows in the table below described the same set.
+   */
+  readonly rays: RaySet | undefined;
   /** Which level's rays are drawn: a depth index, or nothing for the whole column. */
   readonly selectedLevel: number | undefined;
   readonly onSelectLevel: (depthIndex: number | undefined) => void;
@@ -95,7 +108,10 @@ function bandsFor(
   const omega = served?.observation_weight ?? 0;
   bands.push({
     key: 'earlier',
-    label: 'measurement, earlier cycles',
+    // Named for what is actually known. With this cycle's ω in hand the band is the *earlier*
+    // cycles' measurement; without it — no document, or a refusal — ω is nought and the band is
+    // the whole cumulative share, which is not the same claim and must not wear the same label.
+    label: served ? 'measurement, earlier cycles' : 'measurement, all cycles',
     // Cumulative, less this cycle's own addition. Where no document arrived, ω is nought and
     // this band is the whole measurement share — which is the honest reading of "we cannot say
     // how much of it is this cycle's".
@@ -156,11 +172,12 @@ export function Profile({
   levels,
   contributions,
   backgroundDrawn,
+  rays,
   selectedLevel,
   onSelectLevel,
 }: ProfileProps) {
   const served = typeof contributions === 'object' ? contributions : undefined;
-  const set = served ? raysFor(served, selectedLevel) : undefined;
+  const set = rays;
   const labels = served ? sourceLabels(served.sources) : [];
   const exhausted = served ? paletteExhausted(served.sources.length) : false;
 
@@ -170,7 +187,12 @@ export function Profile({
         The column at {latitude.toFixed(2)}°N, {longitude.toFixed(2)}°E — every level, and what
         made it. The bands are the analysis’s own arithmetic: the background by where it came
         from, what earlier cycles’ measurements left in it, and this cycle’s contributions source
-        by source. They sum to one because the gain says they do, not because they were scaled.
+        by source. The <em>figures</em> sum to one because the gain says they do, and the printed
+        sum is that sum rather than a normalisation. The <em>bar</em> is each band’s share of the
+        level’s total magnitude, which is a different thing wherever a band runs negative: where
+        the gain extrapolates, magnitudes exceed one and a band of a given size fills less of the
+        bar than the same band at a level where everything is positive. Bar lengths are
+        comparable within a level; the figures are comparable between them.
       </p>
 
       {served && (
@@ -242,7 +264,11 @@ export function Profile({
                         className={`forecast-column-segment is-${band.kind}${band.value < 0 ? ' is-negative' : ''}`}
                         style={{
                           width: `${width}%`,
-                          background: band.hue,
+                          // `backgroundColor`, not the `background` shorthand: the shorthand
+                          // writes `background-image: none` into the inline block, which beats
+                          // the stylesheet, so the remainder band's stripe — the CSS comment's
+                          // own carrier for "the one band that is not a place" — never drew.
+                          backgroundColor: band.hue,
                           // **Drawn, not merely computed.** The angle was assigned to every band
                           // and read by nothing, while the palette's own comment claimed the
                           // hatch as the carrier that survives greyscale — which is the whole of
@@ -271,6 +297,7 @@ export function Profile({
                   {absence}
                 </p>
               )}
+              {!level.refused && (
               <span className="forecast-column-figures">
                   {bands.map((band) => (
                     <span key={band.key} className={band.value < 0 ? 'is-negative' : undefined}>
@@ -283,6 +310,7 @@ export function Profile({
                     {unserved.length > 0 ? ` of what was served; ${unserved.length} share(s) were not` : ''}
                   </span>
               </span>
+              )}
             </li>
           );
         })}

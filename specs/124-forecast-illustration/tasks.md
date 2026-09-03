@@ -219,9 +219,14 @@ drawing in it.
 - [x] T017 Rays never descend into the volume: drawn on the surface plane, held by a test over
       the drawn geometry rather than by a comment.
 
-      *Built, and held over the drawn geometry.* The rays are children of the surface plane's
-      own SVG and carry two endpoints in it; the test walks every ray's attributes and refuses
-      any that reads as a depth, which is a check on the DOM rather than on a comment.
+      *Built, and held over the drawn geometry.* Every ray in the document is asserted to live
+      inside the surface plane's own SVG, with both endpoints inside that plane's view box.
+
+      *Corrected after review, and the first version is the reason T022f exists:* it walked each
+      ray's attributes refusing anything that read as a depth — which an SVG line cannot carry,
+      so it passed on any code that drew lines at all, including code drawing them through a
+      volume in another element. A tick pointing at a check the same file elsewhere calls
+      worthless is worse than no tick.
 ## The profile
 
 - [x] T018 `Profile.tsx`: depth down the vertical axis, each level's composition as bands
@@ -368,6 +373,55 @@ the part worth recording, because each was a sentence asserting a property the c
       keyboard handler had always translated; the readout never did. The `data-lon`/`data-lat`
       attributes added for the rays are what made it visible, by carrying the right answer next
       to the wrong one.
+
+- [x] T022h **A second review round, and three of its findings were faults the first round's
+      fixes had introduced.** That is the part worth recording: a fix is a change like any
+      other, and these were shipped inside a commit whose subject was "fix what the adversarial
+      review found".
+
+      - **One cancellation token served two independent streams.** Adding a token to
+        `readColumn` — the right fix for two picks racing — took it from the ref the slab effect
+        already used, so a cell click *cancelled an in-flight depth change*: the map stayed drawn
+        from the old depth with the new depth's chip highlighted, `busy` stuck true because the
+        `finally` was skipped with it, and nothing retried until the next depth change. A
+        standing restatement, which arrives on a cadence and changes nothing, could equally
+        cancel a reader's pick and leave the click doing nothing at all. One token per stream now.
+      - **The guard ran after the write it guarded.** `setContributions` was called and *then*
+        the token checked, so a stale answer wrote unconditionally.
+      - **And the state it guarded was never cleared.** `column` is set a round trip before
+        `contributions` arrives, so a second pick drew the new column's caption and coordinates
+        over the old column's rays, bands and numbers for the width of that trip. Cleared at the
+        start of the read now, and the cycle-change effect bumps the token as well as clearing
+        the display — clearing alone left an in-flight read free to land afterwards and restore
+        exactly what it had cleared.
+- [x] T022i **The greyscale test held the palette against itself and not against the surface.**
+      The ramp was ordered and its extremes cleared the bound, and `#7233b8` still measured
+      **2.52** against the shell's own `--shell-bg` — under `AA_NON_TEXT`, on the hue every
+      column draws first. The model this test names, `panels/consumers/greyscale.test.ts`, makes
+      the against-the-ground assertion; leaving it out is how a palette can be internally
+      beautiful and unreadable. The floor is the ground now: the ramp starts where a hue first
+      clears 3:1 on the surface (0.147) and climbs to 0.751, nothing below 3.44 against the
+      ground and no pair below 1.23, with the ground read out of `shell.css` rather than restated.
+- [x] T022j **The named condition asked the wrong question, and its plant hid it.** SC-005's
+      guard matched a source's *datastream id* against five words from `config.analyst`'s share
+      vocabulary — a different vocabulary in a different document, munged differently. The
+      harness's datastream ids are sensor streams, so a shore broadcast admitted as
+      `shore-temperature-broadcast` would have walked past the guard written to catch it, and two
+      of the shipped share labels are not in the list in their configured spelling anyway. The
+      test's plant used the word `archive` as a datastream id — a value the id construction
+      cannot produce — so it exercised the function and not the guard. `kind` is
+      `'measured' | 'modelled'` in the master, the analyst fills it, the numbers table prints it,
+      and it is the question being asked. The plant is now a document a future analyst could
+      publish.
+- [x] T022k **Three smaller things a reader would have met.** The ray encoding *inverted at the
+      bottom*: an absent source was drawn at a constant 0.75 while a reached one under about 9%
+      of the widest drew thinner than that, so contributing less than a ninth looked like
+      contributing nothing — and contributing nothing looked like more. An absent source now has
+      no width at all, which is the truthful end of the scale, and what keeps its place is a
+      hollow origin marker, because a position is not a quantity. The remainder band's stripe
+      never rendered: the inline `background` shorthand wrote `background-image: none` over the
+      stylesheet's rule. And the band labelled "measurement, earlier cycles" carried that label
+      even when this cycle's ω was unknown, where the honest label is the cumulative one.
 
 ## The right region, and the ghost
 

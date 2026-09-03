@@ -42,8 +42,8 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
-import { BACKGROUND_KEYS, SOURCES, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
+import { backgroundRaysIn, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
   readonly depthM: number;
@@ -62,20 +62,29 @@ export interface ProfileProps {
    */
   readonly contributions: AnalysisContributions | 'refused' | undefined;
   /**
-   * Datastreams drawn as rays that name a background origin — FR-125's named condition, passed
-   * in so the region states it rather than the check living only in a test.
-   */
-  readonly backgroundDrawn: readonly string[];
-  /**
    * The ray set the map drew, passed in rather than derived again here. Two derivations of one
    * thing from the same two inputs agree only by inspection, and nothing asserted that the
-   * widths on the map and the rows in the table below described the same set.
+   * widths on the map and the rows in the table below described the same rays.
+   *
+   * FR-125's named condition is read *off this set*, below, for the same reason. It used to
+   * arrive as a second prop — `backgroundDrawn`, the datastream ids of `backgroundRaysIn(rays)`
+   * — computed in the parent and handed over beside the set it was computed from, which is the
+   * duplication this docstring argues against, one line above where it does it.
    */
   readonly rays: RaySet | undefined;
-  /** Which level's rays are drawn: a depth index, or nothing for the whole column. */
-  /** The depth whose contributions the rays are weighted to, or nothing for the whole column. */
+  /**
+   * The depth in **metres** whose contributions the rays are weighted to, or nothing for the
+   * whole column.
+   *
+   * Metres and never an index, and the parameter below is named for it. It was `depthIndex`,
+   * against a docstring one line above that said the opposite and a caller that has always
+   * passed metres: a caller written to the signature would have asked for level 1 and been
+   * given the level nearest one metre, which is 0 m — the rays re-weighted to the surface, no
+   * row showing as pressed, and a caption reading "re-weighted to 1 m". That is the fault
+   * T022l fixed in the region, left standing in the type.
+   */
   readonly selectedLevel: number | undefined;
-  readonly onSelectLevel: (depthIndex: number | undefined) => void;
+  readonly onSelectLevel: (depthM: number | undefined) => void;
 }
 
 /** One drawn band of the stack. */
@@ -97,13 +106,20 @@ function bandsFor(
   // rather than drawing a bar out of four unknowns.
   if (level.refused) return [];
   const bands: Band[] = [];
-  for (const key of BACKGROUND_KEYS) {
-    const source = SOURCES.find((candidate) => candidate.key === key);
-    if (!source) continue;
-    bands.push({ key, label: source.label, value: level.shares[key], hue: source.hue, kind: 'background' });
+  // Over the entries themselves rather than over a list of keys that then has to be looked back
+  // up in `SOURCES`: the lookup could not miss — every `SourceKey` is in `SOURCES` by
+  // construction — so its `continue` was a branch no state selected, and the two lists had to be
+  // kept in step by hand.
+  for (const source of BACKGROUND_SOURCES) {
+    bands.push({
+      key: source.key,
+      label: source.label,
+      value: level.shares[source.key],
+      hue: source.hue,
+      kind: 'background',
+    });
   }
 
-  const measurement = SOURCES.find((candidate) => candidate.key === 'measurement');
   // Matched on the depth the row is labelled with, never on its position in the list: the two
   // documents are filed on different axes and an index silently paired one depth's background
   // with another depth's contributions.
@@ -119,7 +135,10 @@ function bandsFor(
     // this band is the whole measurement share — which is the honest reading of "we cannot say
     // how much of it is this cycle's".
     value: level.shares.measurement - omega,
-    hue: measurement?.hue ?? '#199e70',
+    // From the list, with no fallback: a `?? '#199e70'` here was unreachable and was a second
+    // copy of the measurement hue, free to drift from the one in `shares.ts` that every other
+    // surface reads.
+    hue: MEASUREMENT.hue,
     kind: 'earlier',
   });
 
@@ -174,13 +193,14 @@ export function Profile({
   latitude,
   levels,
   contributions,
-  backgroundDrawn,
   rays,
   selectedLevel,
   onSelectLevel,
 }: ProfileProps) {
   const served = typeof contributions === 'object' ? contributions : undefined;
-  const set = rays;
+  // FR-125's named condition, read off the drawn set here rather than computed in the parent and
+  // handed over beside it.
+  const backgroundDrawn = rays ? backgroundRaysIn(rays).map((ray) => ray.datastreamId) : [];
   const labels = served ? sourceLabels(served.sources) : [];
   const exhausted = served ? paletteExhausted(served.sources.length) : false;
 
@@ -198,7 +218,10 @@ export function Profile({
         comparable within a level; the figures are comparable between them.
       </p>
 
-      {served && (
+      {/* `rays` as well as `served`, because the sentence is about the map: with the area query
+          refused there is a served column and no field to draw on, so this stated what "the rays
+          above" showed over an empty space. */}
+      {served && rays && (
         <p className="forecast-column-selected" aria-live="polite">
           {selectedLevel === undefined ? (
             <>
@@ -210,7 +233,7 @@ export function Profile({
               The rays above are re-weighted to <strong>{selectedLevel.toFixed(0)} m</strong>:
               the same sources at the same places, at that level’s widths. Widths are relative
               to the widest ray <em>at the level shown</em>
-              {set && set.widest > 0 ? ` — ${set.widest.toFixed(4)} here` : ''}, so a ray is not
+              {rays.widest > 0 ? ` — ${rays.widest.toFixed(4)} here` : ''}, so a ray is not
               comparable across levels and the figures below are what carry that.{' '}
               <button type="button" className="forecast-chip" onClick={() => onSelectLevel(undefined)}>
                 back to the whole column
@@ -324,7 +347,7 @@ export function Profile({
       {/* FR-130: the two numbers behind any contribution, stated in the region it is drawn in.
           Under the profile rather than in a tooltip, for the reason the map's readout is: it
           cannot be clipped at a phone's width, and a screen reader meets it in document order. */}
-      {set && set.rays.length > 0 && (
+      {rays && rays.rays.length > 0 && (
         <table className="forecast-column-numbers" data-testid="contribution-numbers">
           <caption>
             What produced each width{selectedLevel === undefined ? ', over the whole column' : ` at ${selectedLevel.toFixed(0)} m`}. The
@@ -341,7 +364,7 @@ export function Profile({
             </tr>
           </thead>
           <tbody>
-            {set.rays.map((ray: Ray) => (
+            {rays.rays.map((ray: Ray) => (
               <tr key={ray.sourceId}>
                 <th scope="row">
                   <span
@@ -371,14 +394,14 @@ export function Profile({
         </table>
       )}
 
-      {set && (
+      {rays && (
         <p className="forecast-column-caption">
-          {set.reachedCount} of this column’s {set.rays.length} source
-          {set.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}
-          {(set.observationWeight - set.remainder).toFixed(4)} between them, with{' '}
-          {set.remainder.toFixed(4)} more from observations beyond its reach — coupling the gain
+          {rays.reachedCount} of this column’s {rays.rays.length} source
+          {rays.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}
+          {(rays.observationWeight - rays.remainder).toFixed(4)} between them, with{' '}
+          {rays.remainder.toFixed(4)} more from observations beyond its reach — coupling the gain
           carries through the inverse, which has no position and so is a band here and never a
-          ray. Together they are ω = {set.observationWeight.toFixed(4)}, the weight this cycle’s
+          ray. Together they are ω = {rays.observationWeight.toFixed(4)}, the weight this cycle’s
           observations added, and the standing forecast is not among them: it is the background
           these sit on.
         </p>

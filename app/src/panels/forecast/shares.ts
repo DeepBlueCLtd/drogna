@@ -33,8 +33,17 @@ export const SOURCES = [
 
 export type SourceKey = (typeof SOURCES)[number]['key'];
 
-/** The three shares that are not measurement: the background a correction sits on (FR-125). */
-export const BACKGROUND_KEYS: readonly SourceKey[] = ['archive', 'departure', 'model'];
+/**
+ * The three shares that are not measurement: the background a correction sits on (FR-125).
+ *
+ * Derived rather than restated. The list used to be written out again as three key strings, so
+ * `SOURCES` and this had to be kept in step by hand, and the consumer then looked each key back
+ * up in `SOURCES` through a `find` that could not miss.
+ */
+export const BACKGROUND_SOURCES = SOURCES.filter((source) => source.key !== 'measurement');
+
+/** The measurement share itself, the one the background is not. */
+export const MEASUREMENT = SOURCES.find((source) => source.key === 'measurement') ?? SOURCES[0];
 
 /**
  * The instrument palette: hue, hatch angle and dash by position in the column's own source list.

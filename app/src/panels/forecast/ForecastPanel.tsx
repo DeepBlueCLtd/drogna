@@ -192,12 +192,9 @@ export function ForecastPanel({ params }: PanelProps) {
   const [features, setFeatures] = useState<ForecastFeatures | undefined>();
   const [analysis, setAnalysis] = useState<AnalysisPublished | undefined>();
   /**
-   * The standing analysis, readable from a subscription callback and from the inventory fetch
-   * without either becoming a dependency of the other. Both need to know which analysis the
-   * depth axis must come from, and neither should re-run when a restatement arrives.
+   * Which analysis the depth axis in hand was taken from, so it is fetched once per cycle and a
+   * standing restatement — which carries the same collection names — asks for nothing.
    */
-  const analysisRef = useRef<AnalysisPublished | undefined>(undefined);
-  /** Which analysis the depth axis in hand was taken from, so it is fetched once per cycle. */
   const gridForRef = useRef<string | undefined>(undefined);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
@@ -251,36 +248,6 @@ export function ForecastPanel({ params }: PanelProps) {
       }),
     );
     stops.push(
-      // **A second chance at the grid, and only while there is not one.** It was read from
-      // the inventory on mount and nowhere else, so a console that mounted while the store
-      // was still empty — which a browser does, since the page loads before the pre-roll
-      // finishes — never got one, and the centre region said "no analysis yet" for the rest
-      // of the session however many analyses arrived. Measured that way in a built instance
-      // before this: the chooser drew no squares at all.
-      //
-      // This is not a poll and cannot become one: it is driven by an announcement, and the
-      // guard means it can fire at most once in the life of the panel.
-      client.subscribe(config.topics.holdings, () => {
-        if (!gridWantedRef.current) return;
-        gridWantedRef.current = false;
-        void (async () => {
-          try {
-            const response = await fetch(config.endpoints.holdings);
-            if (!response.ok) return;
-            const body: unknown = await response.json();
-            if (!validator.validate('holdings-inventory', body).ok) return;
-            const grid = gridForAnalysis(body as HoldingsInventory, analysisRef.current);
-            // The axis belongs to the analysis, so a cycle that has not been seen yet leaves
-            // the chooser undrawn and asks again on the next holding announcement.
-            if (grid) setColumnGrid(grid);
-            else gridWantedRef.current = true;
-          } catch {
-            gridWantedRef.current = true;
-          }
-        })();
-      }),
-    );
-    stops.push(
       // Which analysis the centre region reads from — the *standing* declaration, not the
       // announcement. They carry the same message under the same master, and the difference
       // is what listens: the announcement is what the model runner starts a forecast on, so
@@ -288,9 +255,7 @@ export function ForecastPanel({ params }: PanelProps) {
       // Nothing is fetched here, and nothing is fetched until a reader picks a square.
       client.subscribe(config.topics.analysis_standing, (message) => {
         if (!drawable(message.topic, message.payload)) return;
-        const standing = message.payload as AnalysisPublished;
-        analysisRef.current = standing;
-        setAnalysis(standing);
+        setAnalysis(message.payload as AnalysisPublished);
       }),
     );
     stops.push(
@@ -378,18 +343,27 @@ export function ForecastPanel({ params }: PanelProps) {
   // Whether the centre region's grid is still unknown, read inside a subscription without
   // making the subscription depend on it — a dependency there would tear down and rebuild
   // every subscription the moment the grid arrived.
-  const gridWantedRef = useRef(true);
-
-  // The store's own inventory, once, on mount. Everything after it arrives on an
-  // announcement; this is the history that had already happened when the console opened.
   /**
-   * The depth axis, fetched once for each analysis cycle the panel comes to draw.
+   * The depth axis, fetched once for each analysis cycle the panel comes to draw. The only
+   * place it is fetched.
    *
-   * Driven by the announcement and not by a timer: the dependency is the analysis's own
-   * collection name, so a standing restatement — which carries the same names — changes
-   * nothing, and a genuinely new cycle asks once. Keyed on the *analysis holding* rather than
-   * taking whatever the inventory lists first, because the eras do not share a depth axis and
-   * a row's depth is now joined against the contributions document (`gridForAnalysis`).
+   * Driven by the announcement and not by a timer, and it is `gridForRef` that makes that true
+   * rather than the dependency list. The docstring here used to say "the dependency is the
+   * analysis's own collection name, so a standing restatement changes nothing" — the dependency
+   * is the analysis *object*, whose identity changes on every restatement, and what actually
+   * stops the re-fetch is the guard on the line below. The distinction is not academic: on a
+   * fetch that fails, the ref is never set and every restatement asks again, which is a retry
+   * and is what should happen, but it is a retry rather than the nothing the old sentence
+   * claimed.
+   *
+   * Keyed on the *analysis holding* rather than taking whatever the inventory lists first,
+   * because the eras do not share a depth axis and a row's depth is joined against the
+   * contributions document (`gridForAnalysis`).
+   *
+   * A cycle whose axis cannot be read leaves the *previous* cycle's grid standing rather than
+   * clearing it: the chooser then offers depths the new analysis may not be filed at, which
+   * `levelAtDepth` refuses row by row and the profile states. Clearing it would take the whole
+   * region away over one failed inventory fetch, which is the worse of the two.
    */
   useEffect(() => {
     const named = analysis?.collections.analysis;
@@ -431,17 +405,15 @@ export function ForecastPanel({ params }: PanelProps) {
       }
       if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
       const inventory = body as HoldingsInventory;
-      // The grid the centre region's chooser spans, read off the analysis's own manifest: a
-      // chooser laid over another era's depth axis offers squares whose levels are not the
-      // ones the analysis is filed at (`gridForAnalysis`). Its absence leaves the chooser
-      // undrawn until an analysis lands, which is the honest state.
-      const grid = gridForAnalysis(inventory, analysisRef.current);
-      if (grid) {
-        setColumnGrid(grid);
-        gridWantedRef.current = false;
-      } else {
-        gridWantedRef.current = true;
-      }
+      // The depth axis is *not* read here. It was, and so was a holdings-announcement
+      // subscription, and so is the per-analysis effect below — three paths and two refs
+      // answering one question, able to disagree about it: the announcement path set the grid
+      // without setting `gridForRef`, so the effect then re-fetched the whole inventory for a
+      // cycle whose axis was already in hand. The axis belongs to an analysis, the effect below
+      // is keyed on exactly that, and the analyst publishes the holdings before it announces the
+      // analysis that names them — so by the time there is an analysis to take an axis from, the
+      // inventory carrying it is already in the store. This effect seeds the history and nothing
+      // else.
       const seeded = entriesFromInventory(inventory);
       setEntries((previous) => {
         const known = new Set(previous.map((entry) => entry.runId));

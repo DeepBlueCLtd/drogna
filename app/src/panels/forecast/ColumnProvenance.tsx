@@ -41,7 +41,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
-import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, backgroundRaysIn, drawnWidthOf, raysFor, underScale } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, raysFor, underScale } from './rays.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -407,13 +407,6 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     return { set, from: { x, y }, drawn: drawnRays };
   }, [served, slab, drawn, column, selectedLevel, placeOn]);
 
-  /**
-   * FR-125's named condition, where a reader can see it fire. `backgroundRaysIn` existed and was
-   * called by nothing but its own test, so the case it guards — an analyst admitting a modelled
-   * origin into the source table — would have drawn the background as a ray with no notice
-   * anywhere in the shell, which is the outcome its docstring says is prevented.
-   */
-  const backgroundDrawn = rays ? backgroundRaysIn(rays.set) : [];
   /** How many rays are at the width floor rather than at their own width (FR-122). */
   const underScaleCount = rays ? rays.set.rays.filter(underScale).length : 0;
 
@@ -680,9 +673,9 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                     // nothing at all, under a sentence promising "the same sources at the same
                     // places, at that level's widths". Proportional and invisible is not more
                     // honest than proportional and marked: a ray under the floor is drawn at
-                    // the floor and **says so**, in its class, in the note below the map and in
-                    // the numbers table, so the reader is told the width is not the quantity
-                    // rather than told the source is not there.
+                    // the floor and **says so** — in its class and in the note below the map,
+                    // with its own figure in the numbers table beneath — so the reader is told
+                    // the width is not the quantity rather than told the source is not there.
                     strokeWidth={drawnWidthOf(ray)}
                     // The instrument's own dash always: it is half of this source's identity
                     // without colour, and overriding it for a negative contribution — which the
@@ -784,7 +777,6 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
           levels={column.levels}
           contributions={contributions}
           rays={rays?.set}
-          backgroundDrawn={backgroundDrawn.map((ray) => ray.datastreamId)}
           selectedLevel={selectedLevel}
           onSelectLevel={setSelectedLevel}
         />

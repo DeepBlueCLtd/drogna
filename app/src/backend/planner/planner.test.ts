@@ -143,6 +143,7 @@ describe('the planner (feature 106)', { timeout: 60_000 }, () => {
     runtime.stop();
   });
 
+  // AT-04: byte-identity
   it('recommends deterministically: one seed, one plan, twice', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);

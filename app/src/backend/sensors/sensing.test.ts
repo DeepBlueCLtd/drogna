@@ -165,6 +165,7 @@ describe('sensing (feature 103)', () => {
     runtime.stop();
   });
 
+  // AT-04: not byte-identity — one delivery path, not two runs: the id makes a duplicate idempotent
   it('redelivery is a no-op: the deterministic id absorbs the duplicate', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);

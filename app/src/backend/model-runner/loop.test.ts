@@ -220,6 +220,7 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     runtime.stop();
   });
 
+  // AT-04: byte-identity
   it('replays byte-identically: one seed, one loop, twice (AT-04 grows with the loop)', async () => {
     const config = lockstepConfig();
     const first = buildBackend(config, options, validator);

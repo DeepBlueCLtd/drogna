@@ -14,11 +14,14 @@
       table; Intro grown by 107 with the commands-outside-replay statement
 - [x] T606 Tests: aggregation to reporting state, genuine stop/start silence and
       resumption, three refusal shapes, step through the seam, master-valid reports
-- [ ] T607 The one-command AT-04 replay proof (deferred at 105 to here) — *moved
-      once more, deliberately, to ride 108/109's close-out: the byte-identity tests
-      now span generator, loop and planner, and the proof script's one remaining
-      job is packaging them behind `pnpm replay-proof` with the command-exclusion
-      statement; it belongs beside the wrap-up rather than mid-beat.*
+- [x] T607 The one-command AT-04 replay proof (deferred at 105 to here) — *packaged at
+      the arc's close-out as `scripts/replay-proof.ts`, with the command-exclusion
+      statement it prints before it runs. The packaging was incomplete until now: the
+      script named the generator's byte-identity test in its header and excluded it by
+      its selector. Selection is now by marker rather than by test name, with the marked
+      set read off disk, every marked test required to have run and passed, and a sweep
+      that refuses a determinism-shaped test carrying no marker either way. See
+      `specs/101-foundations-shell/tasks.md` T037 for the five watched failures.*
 - [x] T608 Per-region residual statistics and end-to-end latency (issue #61). The
       region grid comes from the telemetry component's own configuration (rows,
       columns, minimum samples) and is laid over the scored holding's extent, so the

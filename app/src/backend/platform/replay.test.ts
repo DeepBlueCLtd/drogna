@@ -116,6 +116,7 @@ const TICKS = 1200;
 const DEMAND = { atTick: 400, course: 215, speed: 3.6, depth: 180 };
 
 describe('replay with the platform in the loop (AT-04, feature 113)', { timeout: 180_000 }, () => {
+  // AT-04: byte-identity
   it('replays byte-identically although the sensors now depend on delivery order', async () => {
     const first = await run(TICKS);
     const second = await run(TICKS);
@@ -128,6 +129,7 @@ describe('replay with the platform in the loop (AT-04, feature 113)', { timeout:
     expect(second.holdings).toEqual(first.holdings);
   });
 
+  // AT-04: byte-identity
   it('replays byte-identically when the same demand is issued at the same tick', async () => {
     const first = await run(TICKS, DEMAND);
     const second = await run(TICKS, DEMAND);

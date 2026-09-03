@@ -226,6 +226,7 @@ describe('the start conditions (feature 120)', () => {
     }
   }, 180_000);
 
+  // AT-04: byte-identity
   it('replays: one seed and one condition, the same run twice, byte for byte', async () => {
     // The pre-roll is a sequence of operator commands, which AT-04 puts outside its
     // claim — commands are ephemeral, and a demanded run replays identically only when

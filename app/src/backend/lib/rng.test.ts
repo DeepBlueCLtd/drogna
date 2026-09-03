@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng, SEED_DERIVATION, streamSeed } from './rng.js';
 
 describe('seeded rng', () => {
+  // AT-04: byte-identity
   it('replays exactly: same root seed and stream name, same sequence', () => {
     const first = new Rng(42, 'env-generator');
     const second = new Rng(42, 'env-generator');

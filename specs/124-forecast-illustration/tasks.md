@@ -305,6 +305,70 @@ drawing in it.
       does not scroll sideways. The one box whose content exceeds it is the numbers table, which
       scrolls inside itself by design.
 
+## What the adversarial review found in the rays, and what it cost
+
+Two passes over the pushed head, neither of which had seen it written. Ten findings survived,
+and four of them were faults in claims this feature had already made about itself — which is
+the part worth recording, because each was a sentence asserting a property the code did not have.
+
+- [x] T022c **Selecting a level deleted rays, while the region said it had not.** `raysFor`
+      built its set from the chosen level's entries, so a source that reached the surface and
+      not 667 m simply vanished — against FR-128 ("same origin, **same sources**, different
+      widths") and SC-003 ("without changing their origins or their **count**"). Worse, the
+      function's own docstring claimed the opposite behaviour, a test asserted the deletion *as
+      correct*, and T019 ticked SC-003 as held. The panel meanwhile printed "the same sources at
+      the same places" over a map with fewer lines on it. The set is now the column's at every
+      level; a source that reached nothing there keeps its ray and its place at the thinnest
+      stroke, marked, and the numbers table says so in words.
+
+      The integration test passed throughout because it clicked the shallowest level, which
+      every source in the loitering condition reaches: green by scenario, not by construction.
+- [x] T022d **The ray width was affine, not proportional.** `1 + weight * 7` drew a 6.5:1
+      contribution ratio as 3.85:1 — a 41% compression — three lines below a comment claiming
+      "the ratios a reader compares are the arithmetic's own". The only proportionality test
+      read `data-weight`, which is the arithmetic and not the drawing. Now `weight * 8`, with
+      the drawn stroke widths asserted in the ratio of the contributions behind them and the
+      bound derived from the attribute's own four-decimal rounding.
+- [x] T022e **The instrument palette failed the repository's own greyscale bound.** Six hues
+      chosen at similar lightness: worst pair `#b58ae0`/`#e87f9e` at contrast **1.037**, the same
+      grey twice, for two colours that sit as adjacent bands of one bar. And the hatch angle the
+      palette's docstring named as the carrier that survives greyscale was assigned to every band
+      and **read by nothing** — `.is-source` had no rule at all. Both are Q-01's own subject, and
+      the docstring was answering the question the capture is supposed to answer.
+
+      The six are now an ordered luminance ramp (0.094 to 0.635, extremes at contrast 4.76, no
+      pair below 1.32), the hatch is drawn, and `greyscale.test.ts` holds it — modelled on
+      `panels/consumers/greyscale.test.ts`, values read out of the palette rather than typed.
+      Six ordered steps cannot each clear a contrast of 3 against a neighbour, so the ramp
+      carries order and the hatch and dash carry identity; that disjunction is the honest claim
+      and is what the test asserts. **Q-01 is still open**: whether it survives a real capture is
+      T030's, and the palette comment no longer pretends otherwise.
+- [x] T022f **Three checks that could not fail, and three faults with no check at all.**
+      - The FR-122 "never descends into the volume" test walked each ray for a `z` attribute an
+        SVG line cannot carry; it passed on any code that drew lines, including code drawing
+        them through a volume elsewhere. It now asserts every ray in the whole document lives
+        inside the surface plane's SVG and every endpoint lies within its view box.
+      - SC-005's "named condition" was a function nothing in the shell called. The region calls
+        it now and prints what it returns, and the test asserts over the drawn set.
+      - A refused contributions query was reported as one that never arrived — two of FR-129's
+        three facts collapsed into one, and a `shares.test.ts` case encoded the conflation as
+        expected. A refusal is now its own state and says so.
+      - A single refused depth query shifted every level below it onto another depth's
+        contributions: a bar summed across two depths, an absence sentence about the wrong one.
+        Every depth gets a row, and a refused row says it is a place-holder.
+      - `readColumn` reads seven documents and carried no cancellation token, where the slab
+        effect twelve lines above carries one. Two picks in flight could pair one column's shares
+        with another's contributions.
+      - A picked column outlived the cycle it was read from, under a caption naming the new
+        one — a surface stating a provenance it did not have. It is cleared when a cycle lands.
+- [x] T022g **A fault in the region since it was written, which this feature's own attributes
+      exposed.** The readout under the field indexed *drawn* cursor positions into the *served*
+      axes: at the shipped grid, thinned by two, hovering a cell printed the position and the
+      shares of a cell two rows and two columns away — 44.66°N where the cell said 45.32°N. The
+      keyboard handler had always translated; the readout never did. The `data-lon`/`data-lat`
+      attributes added for the rays are what made it visible, by carrying the right answer next
+      to the wrong one.
+
 ## The right region, and the ghost
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening

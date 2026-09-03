@@ -13,10 +13,11 @@
  * switches between one source's share and whichever source dominates; a depth control that
  * walks the column; and a picked cell that opens into the full profile down the water column.
  *
- * **What is genuinely blocked is narrower than this region.** FR-122 wants one ray per
- * contributing *source* at a width proportional to that source's contribution, and the
- * analysis kernel computes the per-observation gain row by row and then reports only the row
- * sum, so the columns a ray needs are discarded. The rays wait. The field did not have to.
+ * **The rays are drawn here now** (feature 124). FR-122 wants one ray per contributing *source*
+ * at a width proportional to that source's contribution, and until the analyst kept the gain's
+ * columns there was nothing to draw one from. It publishes them, so a picked column draws a ray
+ * to every source that reached it and a depth profile that breaks the measurement share into
+ * those sources. What is still to come is the volume this plan is a section through.
  *
  * **Every figure is read through OGC API-EDR** — an area query for the slab, position queries
  * for the column — exactly as an external client would ask for it. The shell holds no private
@@ -40,10 +41,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile } from './Profile.js';
-import { raysFor } from './rays.js';
-import { SOURCES, instrumentAt, type SourceKey } from './shares.js';
-
-export { SOURCES } from './shares.js';
+import { backgroundRaysIn, raysFor } from './rays.js';
+import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
 const MAP = { maxCells: 48, height: 190 };
@@ -81,7 +80,17 @@ interface Slab {
 interface Level {
   readonly depthM: number;
   readonly shares: Readonly<Record<SourceKey, number>>;
+  /** True where the query for this depth was refused: the row is a place-holder, not a reading. */
+  readonly refused?: boolean;
 }
+
+/** Every share unknown, for a depth whose query was refused. */
+const EMPTY_SHARES: Readonly<Record<SourceKey, number>> = {
+  archive: Number.NaN,
+  departure: Number.NaN,
+  measurement: Number.NaN,
+  model: Number.NaN,
+};
 
 interface Column {
   readonly longitude: number;
@@ -94,27 +103,6 @@ interface RangeBody {
   ranges?: Record<string, { values?: number[] }>;
 }
 
-/**
- * Which share a served parameter name belongs to, or nothing where it names something else.
- *
- * **Matched on the segment after `_share_`, by prefix, and the reason is a fault this had.**
- * The analyst names each field from its *configured label* — `config.analyst.shares.departure`
- * ships as "departure forecast" — so the served parameter is `temperature_share_departure_forecast`.
- * Matched by `endsWith('_departure')` that name misses, and the departure share came back `NaN`
- * on every cell of every column: drawn as nothing on the map, and printed as `NaN%` in the
- * readout beneath it, since feature 116. Nothing caught it because both surfaces treated a
- * non-number as a zero, which is exactly the reading FR-041 forbids and is why the profile
- * below now states an absent share rather than drawing one.
- *
- * The prefix match is deliberate rather than a wider `includes`: a label may be extended
- * ("departure forecast", "departure brief") and still be the departure share, but a share whose
- * label stops beginning with its key is a vocabulary change the shell should miss loudly.
- */
-export function sourceOf(parameterName: string): SourceKey | undefined {
-  const at = parameterName.lastIndexOf('_share_');
-  const suffix = at >= 0 ? parameterName.slice(at + '_share_'.length) : parameterName;
-  return SOURCES.find((source) => suffix === source.key || suffix.startsWith(`${source.key}_`))?.key;
-}
 
 function sharesFrom(body: RangeBody, at: (values: number[]) => number): Record<SourceKey, number> {
   const out = { archive: Number.NaN, departure: Number.NaN, measurement: Number.NaN, model: Number.NaN };
@@ -151,13 +139,32 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const [column, setColumn] = useState<Column | undefined>();
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
   /** The served per-source column, and which of its levels the rays are weighted to. */
-  const [contributions, setContributions] = useState<AnalysisContributions | undefined>();
+  /**
+   * The served column, or which of the two ways it is not here. FR-129 names three facts and a
+   * refusal is the third: collapsing it into `undefined` made the profile say the document had
+   * not arrived while the refusal list beneath it said it had been refused.
+   */
+  const [contributions, setContributions] = useState<AnalysisContributions | 'refused' | undefined>();
   const [selectedLevel, setSelectedLevel] = useState<number | undefined>();
   const [busy, setBusy] = useState(false);
   const [refusals, setRefusals] = useState<readonly string[]>([]);
   const wanted = useRef(0);
 
   const depthM = grid?.depthsM[depthIndex];
+
+  /**
+   * A picked column belongs to the analysis it was read from, and is dropped when another
+   * lands. The map refetches on a new cycle already; the column and its contributions did not,
+   * so a reader who left one open kept cycle N's bands, numbers and rays under a caption that
+   * named cycle N+1's holding — a surface stating a provenance it did not have. Cleared rather
+   * than silently refetched, because a column re-read under the reader's feet would move the
+   * figures they were looking at without being asked.
+   */
+  useEffect(() => {
+    setColumn(undefined);
+    setContributions(undefined);
+    setSelectedLevel(undefined);
+  }, [analysis?.collections.contributions]);
 
   /**
    * The slab at the chosen depth, through an EDR **area** query — one request for the whole
@@ -216,6 +223,12 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const readColumn = useCallback(
     async (longitude: number, latitude: number) => {
       if (!analysis || !grid) return;
+      // The same token the slab effect carries, and for the same reason. This reads seven
+      // documents in sequence; two picks in flight, answered out of order, would leave one
+      // column's four shares in the same bar as another's per-source contributions, under a
+      // heading naming a third place. Today's transport answers in call order, which is
+      // exactly the thing Principle XI says no code path may rely on knowing.
+      const token = ++wanted.current;
       const levels: Level[] = [];
       const failed: string[] = [];
       for (const depth of grid.depthsM) {
@@ -227,13 +240,22 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
           const body = (await response.json()) as RangeBody;
           if (!response.ok) {
             failed.push(`the column at ${depth} m was refused: ${response.status}`);
+            // **A placeholder, not a skip.** The profile pairs a level with the contributions
+            // the holding filed under the same depth index, so a level dropped on a refusal
+            // shifted every level below it onto another depth's contributions — a bar summed
+            // across two depths, an absence sentence about the wrong one, and a re-weighting to
+            // a level the reader did not choose. Every depth gets a row, and a row that was
+            // refused says so.
+            levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
             continue;
           }
           levels.push({ depthM: depth, shares: sharesFrom(body, (values) => values[0] ?? Number.NaN) });
         } catch (error) {
           failed.push(`the column at ${depth} m could not be read: ${String(error)}`);
+          levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
         }
       }
+      if (token !== wanted.current) return;
       setColumn({ longitude, latitude, levels });
       setSelectedLevel(undefined);
 
@@ -249,14 +271,15 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
           failed.push(
             `the per-source column was refused: ${response.status}${'refused' in body && body.refused ? ` — ${body.refused}` : ''}`,
           );
-          setContributions(undefined);
+          setContributions('refused');
         } else {
           setContributions(body as AnalysisContributions);
         }
       } catch (error) {
         failed.push(`the per-source column could not be read: ${String(error)}`);
-        setContributions(undefined);
+        setContributions('refused');
       }
+      if (token !== wanted.current) return;
       setRefusals(failed);
     },
     [analysis, grid, edrPrefix, contributionsPrefix],
@@ -312,9 +335,10 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    * sorting problem against translucent geometry, and the geometry here cannot express one —
    * there is no third coordinate to give it.
    */
+  const served = typeof contributions === 'object' ? contributions : undefined;
   const rays = useMemo(() => {
-    if (!contributions || !slab || !drawn || !column) return undefined;
-    const set = raysFor(contributions, selectedLevel);
+    if (!served || !slab || !drawn || !column) return undefined;
+    const set = raysFor(served, selectedLevel);
     const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
     const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
     if (x === undefined || y === undefined) return undefined;
@@ -322,11 +346,19 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
       const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
       if (sourceX === undefined || sourceY === undefined) return [];
-      const position = contributions.sources.findIndex((candidate) => candidate.source_id === ray.sourceId);
+      const position = served.sources.findIndex((candidate) => candidate.source_id === ray.sourceId);
       return [{ ray, x: sourceX, y: sourceY, instrument: instrumentAt(position < 0 ? index : position) }];
     });
     return { set, from: { x, y }, drawn: drawnRays };
-  }, [contributions, slab, drawn, column, selectedLevel, placeOn]);
+  }, [served, slab, drawn, column, selectedLevel, placeOn]);
+
+  /**
+   * FR-125's named condition, where a reader can see it fire. `backgroundRaysIn` existed and was
+   * called by nothing but its own test, so the case it guards — an analyst admitting a modelled
+   * origin into the source table — would have drawn the background as a ray with no notice
+   * anywhere in the shell, which is the outcome its docstring says is prevented.
+   */
+  const backgroundDrawn = rays ? backgroundRaysIn(rays.set) : [];
 
   const sharesAt = useCallback(
     (row: number, col: number): Record<SourceKey, number> => {
@@ -378,9 +410,21 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     );
   }
 
-  const cellShares = cursor ? sharesAt(cursor.row, cursor.col) : undefined;
-  const cellLongitude = cursor && slab ? slab.longitudes[cursor.col] : undefined;
-  const cellLatitude = cursor && slab ? slab.latitudes[cursor.row] : undefined;
+  /**
+   * **The readout's own indices, corrected.** `cursor` holds *drawn* positions — the map is
+   * thinned to what a panel can show — while `sharesAt` and the served axes are indexed by
+   * position in the *served* field. The keyboard handler translated (`drawn.cols[cursor.col]`);
+   * this readout did not, so at the shipped grid, where the thinning step is two, hovering a
+   * cell reported the shares and the position of a cell two rows and two columns away. It has
+   * done so since the region was written. The `data-lon` and `data-lat` this feature added to
+   * every cell are what made it visible — they carry the right coordinates, and printed the
+   * wrong ones underneath.
+   */
+  const cursorRow = cursor && drawn ? drawn.rows[cursor.row] : undefined;
+  const cursorCol = cursor && drawn ? drawn.cols[cursor.col] : undefined;
+  const cellShares = cursorRow !== undefined && cursorCol !== undefined ? sharesAt(cursorRow, cursorCol) : undefined;
+  const cellLongitude = cursorCol !== undefined && slab ? slab.longitudes[cursorCol] : undefined;
+  const cellLatitude = cursorRow !== undefined && slab ? slab.latitudes[cursorRow] : undefined;
 
   return (
     <div className="forecast-column" data-testid="column-provenance">
@@ -545,16 +589,33 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                 {rays.drawn.map(({ ray, x, y, instrument }) => (
                   <line
                     key={ray.sourceId}
-                    className={`forecast-ray${ray.contribution < 0 ? ' is-negative' : ''}`}
+                    className={`forecast-ray${ray.contribution < 0 ? ' is-negative' : ''}${ray.reachedHere ? '' : ' is-absent'}`}
                     data-source={ray.sourceId}
                     data-weight={ray.weight.toFixed(4)}
+                    data-reached={ray.reachedHere ? 'yes' : 'no'}
                     x1={rays.from.x}
                     y1={rays.from.y}
                     x2={x}
                     y2={y}
                     stroke={instrument.hue}
-                    strokeWidth={1 + ray.weight * 7}
-                    strokeDasharray={ray.contribution < 0 ? '3 2' : instrument.dash}
+                    // **Proportional, with no constant term.** FR-122 asks for a width
+                    // proportional to the contribution, and `1 + weight * 7` is affine: at the
+                    // measured fixture values it drew a 6.5:1 contribution ratio as 3.85:1, a
+                    // 41% compression, while the comment below claimed the ratios were the
+                    // arithmetic's own. A source that contributed almost nothing now draws
+                    // almost nothing, which is the true statement; its origin dot still marks
+                    // where it is and the numbers table still lists it.
+                    //
+                    // A source that reached nothing at the chosen level is the one exception,
+                    // and it is not on this scale at all: it keeps its ray and its place
+                    // (FR-128) at the thinnest stroke there is, marked by its class and named
+                    // in words by the table.
+                    strokeWidth={ray.reachedHere ? ray.weight * 8 : 0.75}
+                    // The instrument's own dash always: it is half of this source's identity
+                    // without colour, and overriding it for a negative contribution — which the
+                    // first version did — buys a sign at the cost of telling two sources apart.
+                    // The sign is carried by the class and printed in the table.
+                    strokeDasharray={instrument.dash}
                     strokeLinecap="round"
                     vectorEffect="non-scaling-stroke"
                   />
@@ -616,6 +677,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
           latitude={column.latitude}
           levels={column.levels}
           contributions={contributions}
+          backgroundDrawn={backgroundDrawn.map((ray) => ray.datastreamId)}
           selectedLevel={selectedLevel}
           onSelectLevel={setSelectedLevel}
         />

@@ -8,8 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { AnalysisContributions, ConfigRun } from '../../generated/types.js';
-import { sourceOf } from './ColumnProvenance.js';
 import { absenceOf } from './Profile.js';
+import { sourceOf } from './shares.js';
 
 const config = runConfigDocument as ConfigRun;
 

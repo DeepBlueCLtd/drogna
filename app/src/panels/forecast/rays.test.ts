@@ -85,10 +85,9 @@ describe('the rays a column is made of', () => {
     // The line ends at the observed position…
     expect(a.longitude).toBeCloseTo(-11.39, 10);
     expect(a.latitude).toBeCloseTo(46.01, 10);
-    // …and the cell the gain attributed it to is carried beside it, which is what the
-    // separation is measured between. Two distances, both stated, neither pretending to be
-    // the other.
-    expect(a.cellLongitude).toBe(-11.4);
+    // …and the separation it states is the cell-to-cell distance the taper was evaluated on,
+    // which is a different distance. Two distances, both stated, neither pretending to be the
+    // other.
     expect(a.separationKm).toBe(25);
     expect(a.errorStd).toBe(0.02);
     expect(a.backgroundErrorStd).toBe(0.3);
@@ -126,17 +125,29 @@ describe('the rays a column is made of', () => {
     expect(surface.rays.find((ray) => ray.sourceId === 'b.cell-1')?.weight).toBe(1);
     expect(deep.rays.find((ray) => ray.sourceId === 'a.cell-0')?.weight).toBe(1);
 
-    // A level a source did not reach drops its ray rather than drawing it at zero width: an
-    // absent contribution and a contribution of nothing are different facts (FR-129).
-    expect(deep.rays.map((ray) => ray.sourceId)).toEqual(['a.cell-0', 'b.cell-1']);
+    // **The count does not change**, which is what FR-128 and SC-003 require and what the
+    // first version of this got wrong: it dropped a source that did not reach the chosen
+    // level, so choosing a level made rays vanish. A ray that disappears says "this source is
+    // not part of this column"; the source is part of it and contributed nothing *here*, which
+    // is what the flag says and what the profile prints.
+    expect(deep.rays.map((ray) => ray.sourceId)).toEqual(whole.rays.map((ray) => ray.sourceId));
+    expect(deep.rays).toHaveLength(3);
+    const missing = deep.rays.find((ray) => ray.sourceId === 'c.cell-2');
+    expect(missing?.reachedHere).toBe(false);
+    expect(missing?.contribution).toBe(0);
+    expect(missing?.weight).toBe(0);
+    // And the ones that did reach it say so, at their own widths.
+    expect(deep.rays.filter((ray) => ray.reachedHere)).toHaveLength(2);
+    expect(deep.reachedCount).toBe(2);
   });
 
   it('carries the remainder beside the rays and never as one of them', () => {
     const set = raysFor(document());
     expect(set.remainder).toBeCloseTo(0.05, 10);
-    // No ray is the remainder: the drawn set is exactly the sources.
+    // No ray is the remainder: the drawn set is exactly the column's sources.
     expect(set.rays.some((ray) => ray.contribution === set.remainder)).toBe(false);
     expect(set.rays).toHaveLength(3);
+    expect(set.rays.map((ray) => ray.sourceId).sort()).toEqual(['a.cell-0', 'b.cell-1', 'c.cell-2']);
   });
 
   it('SC-001: the drawn contributions and the remainder sum to the weight the holding published', () => {
@@ -164,9 +175,12 @@ describe('the rays a column is made of', () => {
       })),
     };
     const set = raysFor(unreachedDocument);
-    expect(set.unreached).toBe(true);
-    expect(set.rays).toEqual([]);
     expect(set.widest).toBe(0);
+    expect(set.reachedCount).toBe(0);
+    // The column's sources are still its sources; none of them reached it, and every ray says
+    // so rather than the set being empty, which would read as a column with no sources at all.
+    expect(set.rays).toHaveLength(3);
+    expect(set.rays.every((ray) => ray.reachedHere === false)).toBe(true);
 
     // And a column that *was* reached and whose contributions summed to nothing is the other
     // fact: reached, no rays worth drawing, and it does not claim to be unsampled.
@@ -174,7 +188,10 @@ describe('the rays a column is made of', () => {
       ...empty,
       levels: [{ ...empty.levels[0], reached: true, observation_weight: 0, remainder: 0, contributions: [] }],
     };
-    expect(raysFor(summedToNothing).unreached).toBe(false);
+    // Reached, and contributed nothing: `reachedCount` counts sources with an entry, and a
+    // level with no entries has none — the two facts are told apart by `absenceOf`, over the
+    // document, which is where FR-129's distinction is drawn.
+    expect(raysFor(summedToNothing).reachedCount).toBe(0);
   });
 
   it('SC-005: the standing forecast is not a ray, and a source table that admitted one is named', () => {

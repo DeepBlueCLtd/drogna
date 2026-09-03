@@ -706,3 +706,10 @@
   color: var(--shell-fg);
   font-weight: 700;
 }
+
+/* A source that reached nothing at the chosen level keeps its ray and its place (FR-128) at the
+   thinnest stroke there is, dimmed. It is not absent from the column — it contributed nothing
+   *here* — and the numbers table says which in words. */
+.forecast-ray.is-absent {
+  opacity: 0.35;
+}

@@ -438,10 +438,11 @@ export function ForecastPanel({ params }: PanelProps) {
 
         <section className="forecast-region" data-region="volume" aria-label="what a cell’s value was made from">
           <h3>What it is made from</h3>
-          {/* The stub this replaces named the whole region as feature 124's. Most of it was
-              not: the analyst has published the per-cell shares since feature 116, and only
-              the per-source rays are blocked. What is still 124's is said inside the region,
-              beneath the reading, where a reader meets it after the thing that does work. */}
+          {/* The stub this replaced named the whole region as feature 124's, and then this
+              comment said the per-source rays were still blocked. Both have been overtaken: the
+              analyst publishes the contributions, the rays are drawn from them, and what is
+              still to come — the volume the plan is a section through — is said inside the
+              region, beneath the reading, where a reader meets it after the thing that works. */}
           <ColumnProvenance
             analysis={analysis}
             grid={columnGrid}

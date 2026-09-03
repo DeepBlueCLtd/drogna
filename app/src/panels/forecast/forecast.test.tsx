@@ -27,6 +27,7 @@ import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
 import { ForecastPanel, FORECAST_REGIONS } from './ForecastPanel.js';
+import { contributionResidual, raysFor } from './rays.js';
 import { FORECAST_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
 
 const validator = createSeamValidator();
@@ -513,16 +514,70 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(rays.length).toBe(served.sources.length);
       expect(new Set(rays.map((ray) => ray.getAttribute('data-source'))).size).toBe(rays.length);
 
-      // **On the surface plane.** FR-122 rules out a ray descending into the volume, and the
-      // check is over the drawn geometry rather than over a comment: every ray is a child of
-      // the map's own SVG, and carries two endpoints in that plane and no third coordinate.
+      // **On the surface plane, and the check has to be one that could fail.** The first
+      // version walked each ray's attributes refusing a `z` — which an SVG line cannot carry, so
+      // it passed on any code that drew lines at all, including code drawing them through a
+      // volume in another element. What can fail: *every* ray in the whole document lives
+      // inside the map's own SVG, and every endpoint lies within that SVG's own view box. A ray
+      // drawn into a volume elsewhere, or reaching outside the plane, fails here.
       const surface = document.querySelector('svg.forecast-share-map');
-      expect(surface?.contains(group)).toBe(true);
+      expect(surface).toBeTruthy();
+      const everyRay = [...document.querySelectorAll('line.forecast-ray')];
+      expect(everyRay.length).toBe(rays.length);
+      for (const ray of everyRay) {
+        expect(surface?.contains(ray), 'a ray was drawn outside the surface plane').toBe(true);
+      }
+      const box = (surface?.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
+      expect(box).toHaveLength(4);
       for (const ray of rays) {
-        expect(ray.getAttribute('x1')).toBeTruthy();
-        expect(ray.getAttribute('y2')).toBeTruthy();
-        for (const attribute of ray.getAttributeNames()) {
-          expect(attribute, `a ray carried ${attribute}, which is a depth`).not.toMatch(/^(z|z1|z2|depth)$/);
+        for (const [axis, limit] of [
+          ['x1', box[2]],
+          ['x2', box[2]],
+          ['y1', box[3]],
+          ['y2', box[3]],
+        ] as const) {
+          const value = Number(ray.getAttribute(axis));
+          expect(Number.isFinite(value), `a ray has no ${axis}`).toBe(true);
+          expect(value, `a ray's ${axis} lies outside the surface plane`).toBeGreaterThanOrEqual(0);
+          expect(value).toBeLessThanOrEqual(limit);
+        }
+      }
+
+      // **FR-122's "proportional" is proportional, and the drawn width is what is checked.**
+      // The first version drew `1 + weight * 7` — affine — so a 6.5:1 contribution ratio came
+      // out as 3.85:1 on screen while the only test looked at `data-weight`, which is the
+      // arithmetic and not the drawing. Two rays' stroke widths now stand in the same ratio as
+      // the contributions behind them.
+      const reached = rays.filter((ray) => ray.getAttribute('data-reached') === 'yes');
+      const byWeight = [...reached].sort(
+        (a, b) => Number(b.getAttribute('data-weight')) - Number(a.getAttribute('data-weight')),
+      );
+      if (byWeight.length >= 2) {
+        const widest = byWeight[0];
+        const narrowest = byWeight[byWeight.length - 1];
+        const small = Number(narrowest.getAttribute('data-weight'));
+        const weightRatio = Number(widest.getAttribute('data-weight')) / small;
+        const drawnRatio = Number(widest.getAttribute('stroke-width')) / Number(narrowest.getAttribute('stroke-width'));
+        expect(Number.isFinite(drawnRatio)).toBe(true);
+        // The bound is the attribute's own rounding, not a number chosen here: `data-weight` is
+        // written to four decimals, so each weight carries up to 5e-5 of error and the ratio
+        // carries twice that, relative to the smaller of the two. Anything wider than that is
+        // the drawing departing from the arithmetic rather than the attribute being rounded.
+        const fromRounding = (2 * 5e-5) / small;
+        expect(
+          Math.abs(drawnRatio - weightRatio) / weightRatio,
+          'the drawn widths are not in the ratio of the contributions',
+        ).toBeLessThanOrEqual(fromRounding);
+      }
+
+      // **SC-005 over the drawn ray set**, which is where the requirement asks for it: the
+      // standing forecast is the background and never a ray. The shell's own named condition
+      // reports any that appears, and the region carries no such notice.
+      expect(screen.queryByTestId('background-drawn')).toBeNull();
+      for (const ray of rays) {
+        const named = ray.getAttribute('data-source') ?? '';
+        for (const background of ['archive', 'departure', 'model', 'forecast', 'background']) {
+          expect(named.startsWith(`${background}.`), `${named} is the background drawn as a ray`).toBe(false);
         }
       }
 
@@ -580,13 +635,22 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       const tolerance = runtime.store.holding(holding.holding_id)?.descriptor.manifest.variables[0].tolerance_absolute;
       expect(tolerance, 'the holding declares no tolerance to check against').toBeGreaterThan(0);
 
+      // Checked through `contributionResidual` — the function the surface's own ray set is
+      // built by — rather than re-summed here, so what is held is the drawn arithmetic and not
+      // a second implementation of it that could agree while the surface disagreed.
       let checked = 0;
       for (const level of served.levels) {
-        const drawn = level.contributions.reduce((sum, entry) => sum + entry.contribution, 0) + level.remainder;
+        const residual = contributionResidual(raysFor(served, level.depth_index));
+        // The bound is the holding's declared tolerance times the number of terms summed: each
+        // of the contributions, the remainder and ω carries at most one ulp of float32 error at
+        // the magnitude the holding stores, and the tolerance *is* that ulp (four of them, as
+        // the analyst derives it). Nothing here is chosen; the count comes from the document.
+        const terms = level.contributions.length + 2;
         expect(
-          Math.abs(drawn - level.observation_weight),
+          Math.abs(residual.difference),
           `the contributions drawn at ${level.depth_m} m do not sum to the weight published for it`,
-        ).toBeLessThanOrEqual((tolerance ?? 0) * (level.contributions.length + 2));
+        ).toBeLessThanOrEqual((tolerance ?? 0) * terms);
+        expect(residual.published).toBe(level.observation_weight);
         checked += 1;
       }
       expect(checked).toBe(served.levels.length);
@@ -595,6 +659,25 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // rays carry no source the document does not.
       const drawnSources = [...document.querySelectorAll('line.forecast-ray')].map((ray) => ray.getAttribute('data-source'));
       expect([...drawnSources].sort()).toEqual(served.sources.map((source) => source.source_id).sort());
+    });
+
+    it('the readout under the field names the cell it is pointing at, not one two cells away', async () => {
+      // A fault the `data-lon`/`data-lat` attributes made visible: `cursor` holds *drawn*
+      // positions and the readout indexed the *served* axes with them, so at the shipped grid —
+      // thinned by two — hovering a cell printed the position and the shares of a cell two rows
+      // and two columns away. The keyboard handler translated; the readout did not.
+      await toAField();
+      const cells = [...document.querySelectorAll('rect.share-cell')];
+      const target = cells[Math.floor(cells.length / 3)];
+      await act(async () => {
+        fireEvent.mouseEnter(target);
+      });
+      const readout = document.querySelector('.forecast-share-readout')?.textContent ?? '';
+      const lon = Number(target.getAttribute('data-lon'));
+      const lat = Number(target.getAttribute('data-lat'));
+      // The cell carries the truth; the readout beneath has to print the same place.
+      expect(readout).toContain(lat.toFixed(2));
+      expect(readout).toContain(lon.toFixed(2));
     });
 
     it('FR-129: a level nothing reached says so, and says it differently from one that contributed nothing', async () => {

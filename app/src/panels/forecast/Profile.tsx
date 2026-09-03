@@ -41,14 +41,24 @@ import { BACKGROUND_KEYS, SOURCES, instrumentAt, paletteExhausted, type SourceKe
 export interface ProfileLevel {
   readonly depthM: number;
   readonly shares: Readonly<Record<SourceKey, number>>;
+  /** True where the query for this depth was refused, so the row is a place-holder. */
+  readonly refused?: boolean;
 }
 
 export interface ProfileProps {
   readonly longitude: number;
   readonly latitude: number;
   readonly levels: readonly ProfileLevel[];
-  /** The served contributions column, or nothing where it has not arrived or was refused. */
-  readonly contributions: AnalysisContributions | undefined;
+  /**
+   * The served contributions column; `'refused'` where the query was answered with a refusal,
+   * and nothing where it has not arrived. Three facts, not two (FR-129).
+   */
+  readonly contributions: AnalysisContributions | 'refused' | undefined;
+  /**
+   * Datastreams drawn as rays that name a background origin — FR-125's named condition, passed
+   * in so the region states it rather than the check living only in a test.
+   */
+  readonly backgroundDrawn: readonly string[];
   /** Which level's rays are drawn: a depth index, or nothing for the whole column. */
   readonly selectedLevel: number | undefined;
   readonly onSelectLevel: (depthIndex: number | undefined) => void;
@@ -70,6 +80,9 @@ function bandsFor(
   index: number,
   labels: readonly string[],
 ): Band[] {
+  // A refused depth has no reading at all, so it has no bands: the row states the refusal
+  // rather than drawing a bar out of four unknowns.
+  if (level.refused) return [];
   const bands: Band[] = [];
   for (const key of BACKGROUND_KEYS) {
     const source = SOURCES.find((candidate) => candidate.key === key);
@@ -95,11 +108,10 @@ function bandsFor(
     for (const entry of served.contributions) {
       const source = document?.sources[entry.source];
       if (!source) continue;
-      const position = document?.sources.indexOf(source) ?? 0;
-      const instrument = instrumentAt(position);
+      const instrument = instrumentAt(entry.source);
       bands.push({
         key: source.source_id,
-        label: labels[position] ?? source.datastream_id,
+        label: labels[entry.source] ?? source.datastream_id,
         value: entry.contribution,
         // Labelled so two sources of one instrument are told apart (see `sourceLabels`).
         hue: instrument.hue,
@@ -118,8 +130,14 @@ function bandsFor(
   return bands;
 }
 
-/** A level's own statement when it carries no source: which of the three facts it is. */
-export function absenceOf(document: AnalysisContributions | undefined, index: number): string | undefined {
+/** A level's own statement when it carries no source: which of the facts it is. */
+export function absenceOf(
+  document: AnalysisContributions | 'refused' | undefined,
+  index: number,
+  refusedHere = false,
+): string | undefined {
+  if (refusedHere) return 'the query for this depth was refused, so this row is a place-holder and not a reading';
+  if (document === 'refused') return 'the per-source column was refused, which is a different fact from its not having arrived: the refusal is named beneath';
   if (!document) return 'the contributions for this column have not arrived, so what made this level is not stated';
   const served = document.levels.find((candidate) => candidate.depth_index === index);
   if (!served) return 'the served column carries no entry for this level at all';
@@ -132,10 +150,19 @@ export function absenceOf(document: AnalysisContributions | undefined, index: nu
   return undefined;
 }
 
-export function Profile({ longitude, latitude, levels, contributions, selectedLevel, onSelectLevel }: ProfileProps) {
-  const set = contributions ? raysFor(contributions, selectedLevel) : undefined;
-  const labels = contributions ? sourceLabels(contributions.sources) : [];
-  const exhausted = contributions ? paletteExhausted(contributions.sources.length) : false;
+export function Profile({
+  longitude,
+  latitude,
+  levels,
+  contributions,
+  backgroundDrawn,
+  selectedLevel,
+  onSelectLevel,
+}: ProfileProps) {
+  const served = typeof contributions === 'object' ? contributions : undefined;
+  const set = served ? raysFor(served, selectedLevel) : undefined;
+  const labels = served ? sourceLabels(served.sources) : [];
+  const exhausted = served ? paletteExhausted(served.sources.length) : false;
 
   return (
     <div className="forecast-column-readout" data-testid="column-profile">
@@ -146,7 +173,7 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
         by source. They sum to one because the gain says they do, not because they were scaled.
       </p>
 
-      {contributions && (
+      {served && (
         <p className="forecast-column-selected" aria-live="polite">
           {selectedLevel === undefined ? (
             <>
@@ -166,6 +193,15 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
         </p>
       )}
 
+      {backgroundDrawn.length > 0 && (
+        <p className="forecast-column-refused" data-testid="background-drawn">
+          {backgroundDrawn.join(', ')} {backgroundDrawn.length === 1 ? 'is' : 'are'} drawn as a ray
+          and name the standing forecast’s own origins. The background is not a contributing source
+          (FR-125): it is the baseline these bands sit on, and a ray from it would blur the
+          grammar of assimilation. Reported here rather than drawn quietly.
+        </p>
+      )}
+
       {exhausted && (
         <p className="forecast-column-refused">
           this column carries more sources than the palette has distinct entries, so two of them
@@ -176,14 +212,14 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
 
       <ol className="forecast-column-levels">
         {levels.map((level, index) => {
-          const bands = bandsFor(level, contributions, index, labels);
+          const bands = bandsFor(level, served, index, labels);
           const magnitude = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? Math.abs(band.value) : 0), 0);
           const total = bands.reduce((sum, band) => sum + (Number.isFinite(band.value) ? band.value : 0), 0);
           // A share the query never served is absent, and absent is not nought (FR-041): it is
           // left out of the bar and named in the figures, rather than drawn as a band of no
           // width that a reader would read as "this contributed nothing".
           const unserved = bands.filter((band) => !Number.isFinite(band.value));
-          const absence = absenceOf(contributions, index);
+          const absence = absenceOf(contributions, index, level.refused);
           const selected = selectedLevel === index;
           return (
             <li key={level.depthM} className={selected ? 'is-selected' : undefined}>
@@ -204,7 +240,20 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
                       <span
                         key={band.key}
                         className={`forecast-column-segment is-${band.kind}${band.value < 0 ? ' is-negative' : ''}`}
-                        style={{ width: `${width}%`, background: band.hue }}
+                        style={{
+                          width: `${width}%`,
+                          background: band.hue,
+                          // **Drawn, not merely computed.** The angle was assigned to every band
+                          // and read by nothing, while the palette's own comment claimed the
+                          // hatch as the carrier that survives greyscale — which is the whole of
+                          // what Q-01 asks about. A source band now carries its instrument's
+                          // angle as a stripe over its hue, so six bands differ in direction as
+                          // well as in colour.
+                          backgroundImage:
+                            band.hatchAngle === undefined
+                              ? undefined
+                              : `repeating-linear-gradient(${band.hatchAngle}deg, rgba(0,0,0,0.55) 0 2px, transparent 2px 5px)`,
+                        }}
                         data-band={band.key}
                       />
                     );
@@ -264,16 +313,19 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
                 <th scope="row">
                   <span
                     className="forecast-share-swatch"
-                    style={{ background: instrumentAt(contributions?.sources.findIndex((s) => s.source_id === ray.sourceId) ?? index).hue }}
+                    style={{ background: instrumentAt(served?.sources.findIndex((candidate) => candidate.source_id === ray.sourceId) ?? index).hue }}
                     aria-hidden="true"
                   />
-                  {labels[contributions?.sources.findIndex((s) => s.source_id === ray.sourceId) ?? index] ?? ray.datastreamId}
+                  {labels[served?.sources.findIndex((candidate) => candidate.source_id === ray.sourceId) ?? index] ?? ray.datastreamId}
                   <span className="forecast-column-kind"> ({ray.kind})</span>
                 </th>
-                <td className={ray.contribution < 0 ? 'is-negative' : undefined}>{ray.contribution.toFixed(4)}</td>
+                <td className={ray.contribution < 0 ? 'is-negative' : undefined}>
+                  {ray.reachedHere ? ray.contribution.toFixed(4) : 'not at this level'}
+                </td>
                 <td>
-                  {ray.separationKm.toFixed(1)} km
-                  {ray.separationM > 0 ? `, ${ray.separationM.toFixed(0)} m down` : ', same level'}
+                  {ray.reachedHere
+                    ? `${ray.separationKm.toFixed(1)} km${ray.separationM > 0 ? `, ${ray.separationM.toFixed(0)} m down` : ', same level'}`
+                    : '—'}
                 </td>
                 <td>{ray.errorStd}</td>
                 <td>{ray.backgroundErrorStd.toFixed(3)}</td>
@@ -285,8 +337,8 @@ export function Profile({ longitude, latitude, levels, contributions, selectedLe
 
       {set && (
         <p className="forecast-column-caption">
-          {set.rays.length} source
-          {set.rays.length === 1 ? '' : 's'} reached this column, contributing{' '}
+          {set.reachedCount} of this column’s {set.rays.length} source
+          {set.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}
           {(set.observationWeight - set.remainder).toFixed(4)} between them, with{' '}
           {set.remainder.toFixed(4)} more from observations beyond its reach — coupling the gain
           carries through the inverse, which has no position and so is a band here and never a

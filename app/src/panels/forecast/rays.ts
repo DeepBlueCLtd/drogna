@@ -37,12 +37,23 @@
  *
  * **The standing forecast is not among the rays**, and this is a named condition rather than an
  * absence (FR-125, SC-005). It is the background: the baseline the corrections sit on, drawn as
- * the profile's baseline band. `assertNoBackgroundRay` says so where a future source table that
- * admitted one would be caught.
+ * the profile's baseline band. `backgroundRaysIn` is that condition, and the region calls it and
+ * reports what it returns, so a future source table that admitted one is named on the surface
+ * rather than only in a test.
  *
  * **Order is declared, not encountered.** Rays are ordered by source id, so a source keeps its
  * place as the reader moves between levels and between runs; FR-123 wants stable positions, and
  * a set ordered by whatever the holding happened to list first is stable only by luck.
+ *
+ * **The set is the column's, at every level.** FR-128 is explicit — "same origin, same sources,
+ * different widths" — and SC-003 asks for the count to be unchanged, so choosing a level
+ * re-weights the whole column's sources rather than selecting among them. A source that
+ * contributed nothing at the chosen level keeps its ray and its place, at zero width and marked
+ * `reachedHere: false`, because a ray that vanishes says "this source is not part of this
+ * column", which is a different and false claim. The first version of this file dropped them,
+ * and argued in a comment that dropping was FR-129's absent-versus-zero distinction applied to
+ * rays; it is not — FR-129 is about a *level*, and the distinction it asks for is carried here
+ * by the flag and by what the profile prints, not by a line disappearing.
  */
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
 
@@ -50,25 +61,24 @@ import type { AnalysisContributions, AnalysisContributionsSource } from '../../g
 export interface Ray {
   readonly sourceId: string;
   readonly datastreamId: string;
-  readonly sensorId: string;
   readonly kind: AnalysisContributionsSource['kind'];
   /** Where the instrument was: the end of the drawn line. */
   readonly longitude: number;
   readonly latitude: number;
-  /** The cell the gain attributed it to: what the separation below is measured from. */
-  readonly cellLongitude: number;
-  readonly cellLatitude: number;
-  readonly cellDepthM: number;
   /** Σⱼ K_aj for this source over the levels drawn. Signed: the gain may run negative. */
   readonly contribution: number;
   /** |contribution| as a fraction of the widest in the set, in [0, 1]. */
   readonly weight: number;
+  /**
+   * Whether this source reached the levels drawn at all. False keeps the ray — FR-128 fixes the
+   * set — at zero width, and is what the profile and the numbers table say in words.
+   */
+  readonly reachedHere: boolean;
   /** FR-130's two numbers, at the level nearest the drawn set's own. */
   readonly separationKm: number;
   readonly separationM: number;
   readonly errorStd: number;
   readonly backgroundErrorStd: number;
-  readonly observationCount: number;
 }
 
 export interface RaySet {
@@ -83,8 +93,8 @@ export interface RaySet {
   readonly observationWeight: number;
   /** The largest |contribution| the widths were normalised by; 0 when nothing contributed. */
   readonly widest: number;
-  /** True where every level drawn reported no source within reach (FR-129's first fact). */
-  readonly unreached: boolean;
+  /** How many of the column's sources reached the levels drawn. */
+  readonly reachedCount: number;
   /** The levels this set was summed over, by depth index. */
   readonly levels: readonly number[];
 }
@@ -103,25 +113,24 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
       ? document.levels
       : document.levels.filter((level) => level.depth_index === levelIndex);
 
-  /** Per source index: the summed contribution, and the separation at the deepest level it reached. */
+  /** Per source index over the chosen levels: the summed contribution, and its separation. */
   const summed = new Map<number, { contribution: number; separationKm: number; separationM: number }>();
   let remainder = 0;
   let observationWeight = 0;
-  let reached = false;
   for (const level of levels) {
-    if (level.reached) reached = true;
     remainder += level.remainder;
     observationWeight += level.observation_weight;
     for (const entry of level.contributions) {
       const running = summed.get(entry.source);
       if (running) {
         running.contribution += entry.contribution;
-        // The separation stated is the one at the level nearest the surface, which is the
-        // level a reader is most likely looking at; the horizontal part is the same at every
-        // level of one column anyway, since a column is one (longitude, latitude).
       } else {
         summed.set(entry.source, {
           contribution: entry.contribution,
+          // The separation stated is the one at the shallowest level the source reached. The
+          // horizontal part is the same at every level of one column — a column is one
+          // (longitude, latitude) — so only the vertical part varies, and the shallowest is the
+          // level a reader is most likely looking at.
           separationKm: entry.separation.horizontal_km,
           separationM: entry.separation.vertical_m,
         });
@@ -132,32 +141,25 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
   let widest = 0;
   for (const entry of summed.values()) widest = Math.max(widest, Math.abs(entry.contribution));
 
-  const rays: Ray[] = [];
-  for (const [index, entry] of summed) {
-    const source = document.sources[index];
-    // A contribution naming a source the document does not carry is a served document that
-    // disagrees with itself; it is dropped rather than drawn at a guessed position, and the
-    // count the region prints will not match, which is the visible form of the fault.
-    if (!source) continue;
-    rays.push({
+  // Every source the column carries, whether or not it reached the levels drawn: FR-128 fixes
+  // the set, and the flag carries what changed.
+  const rays: Ray[] = document.sources.map((source, index) => {
+    const entry = summed.get(index);
+    return {
       sourceId: source.source_id,
       datastreamId: source.datastream_id,
-      sensorId: source.sensor_id,
       kind: source.kind,
       longitude: source.observed.longitude,
       latitude: source.observed.latitude,
-      cellLongitude: source.cell.longitude,
-      cellLatitude: source.cell.latitude,
-      cellDepthM: source.cell.depth_m,
-      contribution: entry.contribution,
-      weight: widest > 0 ? Math.abs(entry.contribution) / widest : 0,
-      separationKm: entry.separationKm,
-      separationM: entry.separationM,
+      contribution: entry?.contribution ?? 0,
+      weight: entry && widest > 0 ? Math.abs(entry.contribution) / widest : 0,
+      reachedHere: entry !== undefined,
+      separationKm: entry?.separationKm ?? Number.NaN,
+      separationM: entry?.separationM ?? Number.NaN,
       errorStd: source.error_std,
       backgroundErrorStd: source.background_error_std,
-      observationCount: source.observation_count,
-    });
-  }
+    };
+  });
   rays.sort((a, b) => (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0));
 
   return {
@@ -165,7 +167,7 @@ export function raysFor(document: AnalysisContributions, levelIndex?: number): R
     remainder,
     observationWeight,
     widest,
-    unreached: !reached,
+    reachedCount: summed.size,
     levels: levels.map((level) => level.depth_index),
   };
 }

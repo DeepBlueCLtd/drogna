@@ -2,23 +2,28 @@
   "image": "124-what-a-number-is-made-of.png",
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
-  "sim_time": "2026-01-01T01:39:22Z",
+  "start_condition": "arriving",
+  "sim_time": "2026-01-01T01:59:00Z",
   "clock_pinned": "rate 0",
-  "holding": "analysis.loiter-arriving-pahu-run-1-contributions",
-  "rays_drawn": 4,
+  "holding": "analysis.loiter-arriving-pahu-run-2-contributions",
+  "rays_drawn": 6,
   "column": "read off the served contributions header, so it is a column an instrument reached",
-  "warmed": "stepped in bursts of 120 ticks at rate 0 until an analysis cycle published",
+  "warmed": "stepped in bursts of 60 ticks at rate 0 until 3 analysis cycles had published (20 bursts)",
   "viewport": {
-    "width": 1280,
-    "height": 1000
+    "width": 2560,
+    "height": 1213
   },
   "image_size": {
-    "width": 388,
-    "height": 1592
+    "width": 816,
+    "height": 1173
+  },
+  "element_box": {
+    "width": 815,
+    "height": 1172
   },
   "browser": {
     "name": "chromium",
     "version": "141.0.7390.37"
   },
-  "caption": "The forecast tab's centre region with a water column open: the share field at 0 m, the rays to the instruments that reached the picked column, and the depth profile with its per-source bands and figures."
+  "caption": "The forecast tab's centre region with a water column open: the four provenance shares at 0 m, the rays to the six instrument-sources that reached the picked column, the depth profile, and the table of what produced each width."
 }

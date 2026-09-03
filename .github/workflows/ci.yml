@@ -121,6 +121,23 @@ jobs:
       - name: 'Consumer-tab proofs (keyboard reach, the map''s own keys, greyscale pair)'
         run: pnpm run capture:consumers
 
+      # Feature 124. The one proof that drives the forecast's centre region as a reader does:
+      # warm the loop until three analysis cycles have published, pick the column the served
+      # contributions header names, and shoot the region with its rays and profile drawn.
+      #
+      # **It is here because the version that ran nowhere was wrong in four ways at once.** Its
+      # warming loop asked for 120 ticks a burst against a declared bound of 60, so every step
+      # was refused and the simulation advanced by nothing; its second navigation dropped the
+      # query string, so the start condition it documented had no effect and the shell was still
+      # provisioning when it fired; neither response was read. What made the picture was the
+      # pre-roll running on at the configured rate while Playwright worked, and the sidecar it
+      # wrote said so in a field nobody read. All four are checked in the script now — a refusal
+      # throws, the rate is asserted at the shutter, and the viewport is grown to the region so
+      # it is not shot with its lower half below the fold — and this line is what re-runs those
+      # checks.
+      - name: Forecast-region proof (a warmed loop, a picked column, its rays)
+        run: pnpm run capture:forecast .capture/forecast-column.png
+
       - uses: actions/upload-artifact@v4
         with:
           name: glance

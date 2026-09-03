@@ -540,6 +540,29 @@ the part worth recording, because each was a sentence asserting a property the c
       where the parameter names are read off an EDR area response; watched failing against the
       original `endsWith('_departure')`.
 
+- [x] T022o **The narrow reading was a sentence in this file with nothing on disk behind it, and
+      now it is a step in CI.** T022b asserted "at 390px and 360px nothing overflows and the page
+      does not scroll sideways" on the strength of a throw-away script that was then deleted.
+      `capture:mobile` is the repository's narrow proof and cannot stand in for it: it pins the
+      clock to rate 0 before it measures and picks no column, so the rays, the profile, the
+      under-scale note and the numbers table are absent from every frame it takes — the blindness
+      `CLAUDE.md` records and the reason a gauge that had overflowed its box since the day it was
+      written survived every run of that proof.
+
+      `capture:forecast` now measures the region at both phone sizes *after* it has been warmed
+      and with a column open, and fails on a page that scrolls sideways or a box whose content it
+      cannot reach. Watched failing: a planted `min-width: 900px` was reported as "900px of
+      content in a 352px box" at 390 and "in a 322px box" at 360.
+
+      **And it nearly went in as a bug report, which is the part worth keeping.** Crossing the
+      breakpoint changes presentation, which remounts the panel; the remounted panel subscribes
+      to `analysis_standing` and reads "no analysis has been announced yet" until one arrives.
+      With the clock pinned that is for ever, and the first version of this pass duly declared
+      the region broken at a phone's width. It is not: the analyst restates the standing
+      declaration every `restate_every_ticks`, which is what a standing topic is *for* — the
+      measurement was of a stopped harness, again, one layer further in. The pass steps that many
+      ticks before it measures, which is what a second of a running clock would have done.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath

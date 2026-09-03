@@ -35,7 +35,7 @@ import { mkdirSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import runConfigDocument from '../../app/config/run.json' with { type: 'json' };
 import type { ConfigRun } from '../../app/src/generated/types.js';
 
@@ -72,6 +72,66 @@ function pngSize(bytes: Buffer): { width: number; height: number } {
   if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47) throw new Error('the capture is not a PNG');
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
+
+/**
+ * Warm the page's *standing* contributions holding, find the drawn cell nearest the column its
+ * header names, and click it. Returns how many rays that column drew.
+ *
+ * A function rather than an inline evaluate because it is asked twice: once at the shot's own
+ * width, and again after the resize to a phone's, where the shell changes presentation and
+ * remounts the panel — so the column a reader picked at a desk is not still open, and a narrow
+ * pass that only resized was measuring a region with nothing in it.
+ */
+async function pickAColumn(page: Page, prefix: string) {
+  return page.evaluate(async (prefix: string) => {
+    const inventory = await (await fetch('/api/ctl/holdings')).json();
+    const holdings = inventory.holdings.filter(
+      (holding: { field: { format: string } }) => holding.field.format === 'drogna-contributions-v1',
+    );
+    // The standing cycle, which is the one the panel draws: a start condition pre-rolls several.
+    const holding = holdings[holdings.length - 1];
+    if (!holding) return { rays: 0, holding: 'none', why: 'no contributions holding was published' };
+    const header = await (await fetch(`${prefix}/${holding.holding_id}`)).json();
+    if (!header.sources?.length) return { rays: 0, holding: holding.holding_id, why: 'the cycle assimilated nothing' };
+    const want = header.sources[0].cell;
+    let nearest: SVGRectElement | undefined;
+    let best = Infinity;
+    for (const node of document.querySelectorAll('rect.share-cell')) {
+      const cell = node as SVGRectElement;
+      const distance = Math.hypot(
+        Number(cell.getAttribute('data-lon')) - want.longitude,
+        Number(cell.getAttribute('data-lat')) - want.latitude,
+      );
+      if (distance < best) {
+        best = distance;
+        nearest = cell;
+      }
+    }
+    if (!nearest) return { rays: 0, holding: holding.holding_id, why: 'no drawn cell to click' };
+    nearest.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // Polled rather than slept. Opening a column is seven position queries and a contributions
+    // read, and after a resize the panel has remounted and is refetching its slab as well — a
+    // fixed 800 ms was enough at the shot's width and not at a phone's, where the first version
+    // of the narrow pass reported "no column could be opened" for a column that opened a moment
+    // later.
+    let rays = 0;
+    for (let wait = 0; wait < 60 && rays === 0; wait++) {
+      await new Promise((settled) => setTimeout(settled, 200));
+      rays = document.querySelectorAll('line.forecast-ray').length;
+    }
+    return { rays, holding: holding.holding_id, why: 'picked from the served header' };
+  }, prefix);
+}
+
+/**
+ * The phone sizes the narrow pass measures at, matching `scripts/capture/mobile.ts`'s own two
+ * portrait sizes. Landscape is left to that script: this region is a tall column and the
+ * question a phone asks of it is width.
+ */
+const NARROW_SIZES = [
+  { width: 390, height: 844 },
+  { width: 360, height: 800 },
+];
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -167,38 +227,7 @@ try {
   }
   await page.waitForSelector('.forecast-share-map', { timeout: 60_000 });
 
-  const picked = await page.evaluate(async (prefix: string) => {
-    const inventory = await (await fetch('/api/ctl/holdings')).json();
-    const holdings = inventory.holdings.filter(
-      (holding: { field: { format: string } }) => holding.field.format === 'drogna-contributions-v1',
-    );
-    // The standing cycle, which is the one the panel draws: a start condition pre-rolls several.
-    const holding = holdings[holdings.length - 1];
-    if (!holding) return { rays: 0, holding: 'none', why: 'no contributions holding was published' };
-    const header = await (await fetch(`${prefix}/${holding.holding_id}`)).json();
-    if (!header.sources?.length) return { rays: 0, holding: holding.holding_id, why: 'the cycle assimilated nothing' };
-    const want = header.sources[0].cell;
-    let nearest: SVGRectElement | undefined;
-    let best = Infinity;
-    for (const node of document.querySelectorAll('rect.share-cell')) {
-      const cell = node as SVGRectElement;
-      const distance = Math.hypot(
-        Number(cell.getAttribute('data-lon')) - want.longitude,
-        Number(cell.getAttribute('data-lat')) - want.latitude,
-      );
-      if (distance < best) {
-        best = distance;
-        nearest = cell;
-      }
-    }
-    nearest?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise((settled) => setTimeout(settled, 800));
-    return {
-      rays: document.querySelectorAll('line.forecast-ray').length,
-      holding: holding.holding_id,
-      why: 'picked from the served header',
-    };
-  }, config.shell.endpoints.contributions);
+  const picked = await pickAColumn(page, config.shell.endpoints.contributions);
 
   if (picked.rays === 0) {
     throw new Error(`no column drew a ray (${picked.why}); the picture would show an empty region`);
@@ -262,8 +291,80 @@ try {
     caption: process.env.DROGNA_FORECAST_CAPTION ?? '',
   };
   await writeFile(outPath.replace(/\.png$/, '.provenance.json'), `${JSON.stringify(provenance, null, 2)}\n`);
+
+  /**
+   * **The same region at a phone's width, warmed and with the column still open.**
+   *
+   * `capture:mobile` is the repository's narrow proof and it cannot see any of this: it pins the
+   * clock to rate 0 before it measures and picks no column, so the rays, the profile, the
+   * under-scale note and the numbers table are absent from every frame it takes — which is the
+   * blindness `CLAUDE.md` records ("a capture proof measures a stopped harness") and the reason a
+   * gauge that had overflowed its box since the day it was written survived every run of it.
+   * Until now the only claim that this region held at 390 px was a sentence in `tasks.md` with a
+   * throw-away script behind it and nothing on disk.
+   *
+   * Nothing is re-warmed: the page is the one that was just shot, so the loop is warm, the column
+   * is open and the resize is the only variable.
+   */
+  const narrow: string[] = [];
+  for (const size of NARROW_SIZES) {
+    await page.setViewportSize(size);
+    await page.waitForFunction((want: number) => window.innerWidth === want, size.width, { timeout: 15_000 });
+    // **Time is let through, and the reason is worth writing down because it nearly went in as a
+    // bug report.** Crossing the breakpoint changes presentation, which remounts the panel; the
+    // remounted panel subscribes to `analysis_standing` and the region reads "no analysis has
+    // been announced yet" until one arrives. With the clock pinned that is for ever, so the
+    // first version of this pass reported the region as broken at a phone's width. It is not:
+    // the analyst *restates* the standing declaration every `restate_every_ticks`, which is what
+    // a standing topic is for and is the same mechanism the run cost uses. Stepping that many
+    // ticks is what a second of a running clock would have done on its own.
+    await page.evaluate(
+      async ({ ticks, restate }: { ticks: number; restate: number }) => {
+        for (let stepped = 0; stepped < restate + ticks; stepped += ticks) {
+          await fetch('/api/ctl/clock/step', { method: 'POST', body: JSON.stringify({ ticks }) });
+        }
+      },
+      { ticks: stepTicks, restate: config.analyst.restate_every_ticks },
+    );
+    // The narrow presentation puts regions behind disclosures, so a surface can be in the
+    // document and not on the screen — FR-011 working, not a fault, and why these are opened the
+    // way `shell/narrow.test.tsx` opens them before measuring.
+    await page.evaluate(() => {
+      for (const details of document.querySelectorAll('details')) details.open = true;
+    });
+    await page.waitForSelector('.forecast-share-map', { timeout: 60_000 });
+    // Picked again here: at a phone's width the shell changes presentation and the panel
+    // remounts, so the column open at the desk is not open on the phone. Measuring without
+    // re-picking measured an empty region and said the region held.
+    const there = await pickAColumn(page, config.shell.endpoints.contributions);
+    if (there.rays === 0) {
+      narrow.push(`${size.width}x${size.height}: no column could be opened (${there.why})`);
+      continue;
+    }
+    const measured = await page.evaluate((label: string) => {
+      const out: string[] = [];
+      if (document.documentElement.scrollWidth > window.innerWidth + 1) {
+        out.push(`${label}: the page scrolls sideways`);
+      }
+      for (const selector of ['.forecast-column', '.forecast-share-map', '.forecast-ray-note', '.forecast-column-readout']) {
+        const node = document.querySelector(selector);
+        if (!node) continue;
+        // A box whose content is wider than itself and which is not declared scrollable is
+        // content a reader cannot reach. The numbers table is *meant* to scroll inside its own
+        // box, which is why it is not in this list.
+        if (node.scrollWidth > node.clientWidth + 1) {
+          out.push(`${label}: ${selector} is ${node.scrollWidth}px of content in a ${node.clientWidth}px box`);
+        }
+      }
+      return out;
+    }, `${size.width}x${size.height}`);
+    narrow.push(...measured);
+  }
+  if (narrow.length > 0) throw new Error(`the centre region does not hold at a phone's width:\n${narrow.join('\n')}`);
+
   console.log(outPath);
   console.log(`forecast: ${picked.rays} ray(s) drawn from ${picked.holding}; sim time ${simTime ?? 'unknown'}`);
+  console.log(`forecast: the region holds, warmed and with a column open, at ${NARROW_SIZES.map((size) => `${size.width}x${size.height}`).join(', ')}`);
 } finally {
   await browser.close();
   server.close();

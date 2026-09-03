@@ -382,7 +382,7 @@ describe('shore advisories and the boundary (feature 108)', { timeout: 120_000 }
     expect(record.published[1].digests.forecast).toBe(record.published[0].digests.forecast);
     const analysisDigests = runtime.store
       .holdings()
-      .filter((holding) => holding.era === 'analysis' && !/-(error|provenance)$/.test(holding.holding_id))
+      .filter((holding) => holding.era === 'analysis' && !/-(error|provenance|contributions)$/.test(holding.holding_id))
       .map((holding) => holding.field.sha256);
     expect(analysisDigests.length).toBeGreaterThanOrEqual(2);
     expect(new Set(analysisDigests).size).toBe(1);

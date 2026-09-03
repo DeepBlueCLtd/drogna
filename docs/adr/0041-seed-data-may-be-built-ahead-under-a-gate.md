@@ -92,8 +92,13 @@ for the thing that is fast.
 
 ### The cut point is configuration, and the far half is guarded
 
+> **Superseded, 3 September 2026 — see the amendment at the end of this record.** The
+> shipped value is now all four eras. The blocker set out below was real in its conclusion
+> and wrong in its cause, and the paragraph is left standing because what was believed at
+> the cut point is the part worth keeping.
+
 `snapshot_eras` on each condition says which eras its artefact carries; the shipped value
-is `["archive", "nowcast"]`. Extending it to the forecast eras is a one-line edit and is
+was `["archive", "nowcast"]`. Extending it to the forecast eras is a one-line edit and is
 *not* yet safe, for a reason that is not size. Holding the loop back for a pre-roll means
 restarting the scheduler after one, and a restarted scheduler rebuilds from configuration
 with its run sequence at zero. Run identifiers are `<run>-run-<sequence>` and they are the
@@ -121,3 +126,69 @@ quietly loses holdings a minute after opening.
   which `check-truth-initialisation` holds it to — and resumes.
 - Two faults ADR-0040 recorded in the scheduler are still open, and one of them is now the
   thing standing between the shipped cut point and the rest of the saving.
+
+
+## Amendment, 3 September 2026: the far half, and what was actually guarding it
+
+**Feature:** 125 · **Requirements:** SRD-v2 FR-31, FR-105
+
+The forecast eras are declared. The measurement that prompted it was a reader reporting
+twenty seconds on `arriving`, against the 5.3 s this record measured for it — the same
+harness on a slower machine, which is the case the byte-for-seconds trade was never run
+against.
+
+**The blocker above named the wrong mechanism.** `holdingBack` does not stop the
+scheduler. It stops the components the declared eras name as their authors — the analyst
+and the model runner — and the scheduler runs through the whole pre-roll untouched, so
+the run sequence never reset and the collision never happened. The refusing test had never
+been seen to fail, which is the second lesson in `CLAUDE.md` and is how a plausible cause
+survived a year in an ADR.
+
+**What was actually there was worse.** Holding the analyst back means the scheduler's run
+request reaches *nobody*: the analyst takes a request synchronously and holds no pending
+state, so the request is not declined, not failed and not remembered, and the
+outstanding-run guard latched on it for the rest of the visit. A run backed by the forecast
+eras did not lose one holding a minute after opening — it opened onto a loop that never
+turned again, with no forecast beyond the artefact's own. And the same fault was reachable
+with no artefact in sight, by stopping the analyst from the Operator tab: an FR-31
+violation shipped in `main`, found by trying to do this work rather than by looking for it.
+
+Two changes, and the order matters — the second is unsafe without the first:
+
+1. **The scheduler releases a run nobody is working on** when it has been outstanding
+   longer than the cadence floor's own interval. Not a new constant: the maximum interval
+   is already this harness's statement of how long is too long between runs.
+2. **Run identifiers are derived from the request tick**, `<run>-run-t<tick>`. This *is*
+   the "run identifier that survives a restart" the paragraph above asked for, and it
+   closes the collision the paragraph named as well as the one it did not — a restarted
+   scheduler resumes at the current tick, not at zero. `run-request.schema.json` is amended:
+   `run_sequence` stays the ordinal and is no longer half of the identifier rule.
+
+### The numbers, remeasured
+
+Headless Chromium, click to console, `arriving`: 4.7 s with the ocean alone, 2.2 s with all
+four eras. The artefacts go from 1.73 MB to 27.3 MB across the four.
+
+That is a much worse ratio than the ocean's 45%-for-4%, and it is worth being plain that it
+is a *conditional* win rather than a free one. The saving is compute and scales with how
+slow the reader's machine is; the cost is bytes and does not. On the machine this was
+measured on, `returning`'s 11.1 MB is roughly a wash against the seconds it saves at 25
+Mbps. On the machine that reported twenty seconds it is not close. The harness is a thing
+people are shown, usually on a good connection and not always on a fast laptop, so the
+trade is taken — with the ratio recorded here so that a future reader who has better
+numbers than a click-to-console stopwatch can re-open it.
+
+### What this does not fix
+
+The profile says the remaining pre-roll is not one hot component. For `returning` with the
+ocean replayed: `sha256Hex` 19% — every field's bytes are digested twice, once by the author
+and once by the store verifying the descriptor, which is the guarantee and not waste — the
+model runner 18%, the analyst kernel 13%, broker topic matching 11%, the ensemble RNG 11%,
+and the analytic truth field 8% for the sensors sampling it. The digest is the largest
+single item and ships no bytes, but `crypto.subtle` is async and every publication path here
+is synchronous, which is a larger change than this one and belongs to whoever takes it.
+
+Raising the operator plane's step bound from 60 to 600 ticks was measured too: 2.2 s → 1.9
+s, once the eras are committed. It was not taken. Fourteen percent is not worth widening a
+bound a reader can drive from the Operator tab, and the two concerns do not belong in one
+change.

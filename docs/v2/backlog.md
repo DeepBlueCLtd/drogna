@@ -56,15 +56,16 @@ eras is discharged by changing run-identifier derivation in
 `app/src/backend/scheduler/scheduler.ts`, and #107 adds 244 lines to that same file for the
 cost-hold state machine. Take that row after the merge, not beside it.
 
-**Do not expect a snapshot diff.** The committed artefacts hold only the `archive` and
-`nowcast` eras, both authored by `env-generator` (`app/config/run.json:2305-2310`, and every
-condition's `snapshot_eras`), so no model-runner output reaches them and no kernel change can
-move them. This was checked rather than assumed: a planted kernel fault shifting every
-forecast temperature by 5 °C and tripling its spread leaves `check-snapshot-drift` exiting 0,
-while the kernel is confirmed to run 125 times during the pre-rolls and have its output
-discarded by the era filter. **The forecast kernel has no snapshot regression cover at all**,
-which is the deliberate consequence of the P5 item below, and is worth knowing before you
-lean on the gate during review.
+**Closed by feature 125 — expect a snapshot diff now.** This paragraph recorded that the
+committed artefacts held only the `archive` and `nowcast` eras, so no model-runner output
+reached them and no kernel change could move them: a planted kernel fault shifting every
+forecast temperature by 5 °C and tripling its spread left `check-snapshot-drift` exiting 0,
+while the kernel ran 125 times during the pre-rolls and had its output discarded by the era
+filter. Every condition now declares `analysis` and `instance` as well, so the analyst's and
+the model runner's own bytes are in the artefacts and under the gate. **The forecast kernel
+has snapshot regression cover**, as a side effect of the P5 row below being taken. Re-planted
+rather than assumed: the same 5 °C shift, in the configured kernel this time, fails
+`check-snapshot-drift` on all four conditions.
 
 **Done when** #107 is merged and `pnpm check` is green on `main`.
 
@@ -251,21 +252,23 @@ than leaving it as an open line.
 **Done when** the plan is present on open, or the line is closed as declined with that
 argument written in it.
 
-### The forecast eras in the artefacts
+### The forecast eras in the artefacts — **done, feature 125**
 
-The other 10.9 MB and the other 2.1 seconds. Blocked on the scheduler's run identifiers, which
-reset on restart: holding the loop back for a pre-roll means restarting it, and the first live
-cycle would republish under the artefact's first cycle's holding identifiers and silently
-replace them. `app/src/bootstrap/start-condition.test.ts:228` refuses the declaration in those
-words, so the tempting one-line edit fails loudly instead of losing holdings a minute after the
-console opens.
+Taken after a reader reported ~20 s on `arriving` against the 5.3 s ADR-0041 measured for it:
+the same harness on a slower machine, which is the case the byte-for-seconds trade had never
+been run against. Headless Chromium, click to console, `arriving`: 4.7 s → 2.2 s. Artefacts
+1.73 MB → 27.3 MB.
 
-This is also what leaves the forecast kernel with no snapshot regression cover, as P0 notes.
-Whoever takes this row should say in it whether that cover is a reason to do the work sooner.
+**The blocker this row recorded was wrong about its own cause**, and the refusing test had
+never been seen to fail — the second lesson in `CLAUDE.md`, at work. `holdingBack` does not
+stop the scheduler, so the run sequence never reset. What was actually there: holding the
+analyst back meant the scheduler's request reached nobody, the outstanding-run guard latched,
+and the run opened onto a loop that never turned again. The same fault was reachable from the
+Operator tab with no artefact in sight — an FR-31 violation in `main`, found by doing the work
+rather than by looking for it. ADR-0041 carries the amendment; the scheduler carries a watchdog
+and tick-derived run identifiers.
 
-**Done when** run identifiers survive a restart — or are namespaced by era — the refusing test
-is retired with its reason, and the artefacts carry the eras. Read the `pnpm snapshots` diff
-before committing it.
+The forecast kernel now has the snapshot regression cover P0 said it lacked.
 
 ### NetCDF export
 
@@ -369,9 +372,18 @@ it that records two checks built and one watched failing.
 and both P0 and P1 exist because a check was trusted without being watched fail. `pnpm
 replay-proof` names the generator's byte-identity test in its header and excludes it by its
 selector — and would still print *held* over zero tests, because vitest exits 0 on an empty
-selection. `check-snapshot-drift` covers no forecast-kernel output, which a planted 5 °C shift
+selection. `check-snapshot-drift` covered no forecast-kernel output, which a planted 5 °C shift
 confirmed by passing clean. Neither was found by reading; both were found by trying to break
 them.
+
+That second one is closed by feature 125, and re-planting the same 5 °C shift is what closed
+it: the gate now fails on all four conditions. Worth recording how the re-plant went, because
+it nearly produced a false all-clear of its own. The first attempt patched
+`kernel.ts:132` — which is inside `shift-advect-v1`, the second implementation ADR-0042 keeps
+registered and that `run.json` does not select — and the gate reported **ok**, exactly as it
+had before. A planted violation in code the run never reaches proves the same nothing as no
+plant at all. The configured kernel is `shallow-two-layer-v1`; check which one you are in
+before believing either result.
 
 **And check the checker.** Two rounds of adversarial review produced four findings that did
 not survive verification, two of them here: that `ClockStrip.tsx` arrived with feature 105

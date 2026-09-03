@@ -33,7 +33,8 @@
         "edr_prefix",
         "st_prefix",
         "subsets_path",
-        "features_prefix"
+        "features_prefix",
+        "contributions_prefix"
       ],
       "additionalProperties": false,
       "properties": {
@@ -49,6 +50,10 @@
         },
         "features_prefix": {
           "$ref": "config.common.schema.json#/$defs/relative_path"
+        },
+        "contributions_prefix": {
+          "$ref": "config.common.schema.json#/$defs/relative_path",
+          "description": "Feature 124: where an analysis cycle's contributions holding is served — its header at `<prefix>/<holding_id>`, and one water column at `<prefix>/<holding_id>/column?coords=POINT(lon lat)`, spelled as EDR's position query spells a position. Its own prefix and not a query type under the EDR prefix: the standard has no such query, and the EDR component refuses unknown types by name, which is an honesty this must not spend."
         }
       }
     },

@@ -30,6 +30,7 @@ import type {
   OperatorCommand,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
+import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import type { CoverageStore } from '../coverage-store/store.js';
@@ -354,7 +355,6 @@ export class EnvGenerator {
 
     // float32 tolerance, derived from the stored width at the largest magnitude —
     // never chosen (manifest `tolerance`).
-    const ulpAt = (magnitude: number) => Math.pow(2, Math.max(Math.floor(Math.log2(Math.max(magnitude, 1))) - 23, -149));
     const holdingId = `${era}.${this.runId}.t${this.simTime.tick}`;
     const manifest: Manifest = {
       schema_version: 1,

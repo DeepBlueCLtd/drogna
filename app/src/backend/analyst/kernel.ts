@@ -45,6 +45,14 @@ export interface AnalysisObservation {
    * from the one the instrument obeys.
    */
   readonly errorStd: number;
+  /**
+   * Which instrument made it, as the caller names it — a datastream. The kernel keeps
+   * no vocabulary of its own for this; it uses the key to group observations into
+   * sources (feature 124, FR-01): every observation sharing a key and an attributed
+   * cell is one source, because under nearest-neighbour H they share that cell's
+   * covariance row exactly and their gains sum without approximation.
+   */
+  readonly sourceKey: string;
 }
 
 export interface AnalysisState {
@@ -71,6 +79,13 @@ export interface AnalysisParameters {
   readonly verticalM: number;
   /** Which share the observations credit. Every other share is scaled by what is left. */
   readonly measurementShareIndex: number;
+  /**
+   * Whether to keep the gain's columns per source (feature 124). The analyst publishes
+   * contributions for temperature alone, for the reason it publishes provenance for
+   * temperature alone, so the rows salinity would fill are not accumulated to be thrown
+   * away. Absent means keep them.
+   */
+  readonly retainContributions?: boolean;
 }
 
 export interface AnalysedObservation {
@@ -95,6 +110,74 @@ export interface AnalysedObservation {
   readonly clamped: boolean;
 }
 
+/**
+ * A source (feature 124, FR-01): one instrument at the cell its observations were
+ * attributed to. Not an observation, and the reason is size, measured: a cycle
+ * assimilates 1,080–1,572 observations on the shipped configuration and each reaches
+ * ~1,200 cells, so per-observation columns are ~9 MB a cycle against a store of ~9 MB.
+ * Grouping by attributed cell loses nothing the columns carry — H is a selection, so
+ * every observation attributed to one cell has the same covariance row, the same
+ * separation to every other cell and (per datastream) the same declared error — and
+ * the sum of their gains is the source's contribution by linearity.
+ */
+export interface AnalysisSource {
+  readonly sourceKey: string;
+  /** The cell the source's observations were attributed to. */
+  readonly cellIndex: number;
+  readonly observationCount: number;
+  /** R's diagonal, shared by every observation of the source. */
+  readonly errorStd: number;
+  /** B's diagonal at the attributed cell: the other number the gain was made from. */
+  readonly backgroundErrorStd: number;
+  /** The mean of y − Hxᵇ over the source's observations. */
+  readonly meanInnovation: number;
+  /** Where the instrument was, on average, when it made them. */
+  readonly longitude: number;
+  readonly latitude: number;
+  readonly depthM: number;
+}
+
+/**
+ * What each source contributed to each cell it reached (feature 124, FR-01, FR-02):
+ * the columns of K the kernel has always computed and until this feature discarded.
+ *
+ * **The support bounds the covariance, not the gain.** K = BHᵀ(HBHᵀ + R)⁻¹, and the
+ * inverse couples every observation in a connected cluster, so an observation beyond
+ * a cell's reach still moves the cell — through its correlation with one within
+ * reach. That coupling is real (it is how two nearby casts share one innovation rather
+ * than counting it twice) and it belongs to no position a ray could be drawn from, so
+ * it is carried per cell as one figure, the remainder, and never as a dense column
+ * set. The identity that holds exactly, in the arithmetic this was computed in:
+ *
+ *   Σ (in-support sources' contributions) + remainder = ω = observationWeight[cell]
+ *
+ * Sparse, by compressed rows: `cells` lists every cell some source reaches, ascending,
+ * and the entries for `cells[i]` are `offsets[i]` to `offsets[i + 1]`. A cell no source
+ * reaches has no row, and its ω is exactly zero — the taper made that a fact.
+ */
+export interface AnalysisContributions {
+  readonly sources: readonly AnalysisSource[];
+  readonly cells: Uint32Array;
+  /** ω at `cells[i]`: the same number `observationWeight` holds there. */
+  readonly weight: Float32Array;
+  /** ω less the in-support sources' sum at `cells[i]`. */
+  readonly remainder: Float32Array;
+  /**
+   * B's diagonal at `cells[i]`: the background's error the gain weighed each source's
+   * declared error against (FR-04's second number). Carried here because the spread
+   * it was read from is a different holding, named by a different announcement.
+   */
+  readonly backgroundErrorStd: Float32Array;
+  readonly offsets: Uint32Array;
+  /** Per entry: an index into `sources`. */
+  readonly entrySource: Uint32Array;
+  /** Per entry: Σⱼ K_aj over the source's observations. */
+  readonly entryContribution: Float32Array;
+  /** Per entry: the separation the taper was evaluated on, source cell to this cell. */
+  readonly entryHorizontalKm: Float32Array;
+  readonly entryVerticalM: Float32Array;
+}
+
 export interface AnalysisField {
   readonly values: Float32Array;
   /** The diagonal of Pᵃ = (I − KH)B, as a standard deviation. */
@@ -108,6 +191,7 @@ export interface AnalysisField {
    */
   readonly observationWeight: Float32Array;
   readonly observations: readonly AnalysedObservation[];
+  readonly contributions: AnalysisContributions;
 }
 
 export interface AnalysisKernel {
@@ -165,6 +249,27 @@ export function gaspariCohn(normalisedDistance: number): number {
  * no correlation along that axis — so it is the Kronecker delta rather than a
  * division by zero.
  */
+/**
+ * The separation between two cells, in the units the half-widths are declared in.
+ * One function, because the taper is evaluated on it and the contributions holding
+ * states it (FR-04): two arithmetics would be two opinions about one distance.
+ */
+function separation(
+  grid: AnalysisGrid,
+  aDepth: number,
+  aLat: number,
+  aLon: number,
+  bDepth: number,
+  bLat: number,
+  bLon: number,
+): { east: number; north: number; down: number } {
+  return {
+    east: (aLon - bLon) * grid.cellKmEast,
+    north: (aLat - bLat) * grid.cellKmNorth,
+    down: (aDepth - bDepth) * grid.depth.spacing,
+  };
+}
+
 function correlation(
   grid: AnalysisGrid,
   parameters: AnalysisParameters,
@@ -175,9 +280,7 @@ function correlation(
   bLat: number,
   bLon: number,
 ): number {
-  const east = (aLon - bLon) * grid.cellKmEast;
-  const north = (aLat - bLat) * grid.cellKmNorth;
-  const down = (aDepth - bDepth) * grid.depth.spacing;
+  const { east, north, down } = separation(grid, aDepth, aLat, aLon, bDepth, bLat, bLon);
   let scaled = 0;
   if (parameters.horizontalKm > 0) {
     scaled += (east * east + north * north) / (parameters.horizontalKm * parameters.horizontalKm);
@@ -237,7 +340,7 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     // No observations is not a failure and not a special case in the maths: the gain
     // is empty, so the analysis is the background and every share is unmoved.
     if (observations.length === 0) {
-      return { values, errorStd, shares, observationWeight, observations: [] };
+      return { values, errorStd, shares, observationWeight, observations: [], contributions: emptyContributions() };
     }
 
     const located = observations.map((observation) => {
@@ -264,11 +367,68 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     });
 
     const order = located.length;
+
+    // The sources: one per (instrument, attributed cell), in first-seen order, which
+    // is the observations' own order and so deterministic. Each observation knows its
+    // source's index; the per-cell loop below sums gains into it.
+    const sourceIndexByKey = new Map<string, number>();
+    const sourceOfObservation = new Int32Array(order);
+    const sourceRows: {
+      sourceKey: string;
+      cellIndex: number;
+      count: number;
+      errorStd: number;
+      backgroundErrorStd: number;
+      innovationSum: number;
+      longitudeSum: number;
+      latitudeSum: number;
+      depthSum: number;
+      depthIndex: number;
+      latIndex: number;
+      lonIndex: number;
+    }[] = [];
+    for (let i = 0; i < order; i++) {
+      const entry = located[i];
+      const key = `${entry.observation.sourceKey}\u0000${entry.cellIndex}`;
+      let index = sourceIndexByKey.get(key);
+      if (index === undefined) {
+        index = sourceRows.length;
+        sourceIndexByKey.set(key, index);
+        sourceRows.push({
+          sourceKey: entry.observation.sourceKey,
+          cellIndex: entry.cellIndex,
+          count: 0,
+          errorStd: entry.observation.errorStd,
+          backgroundErrorStd: background.errorStd[entry.cellIndex],
+          innovationSum: 0,
+          longitudeSum: 0,
+          latitudeSum: 0,
+          depthSum: 0,
+          depthIndex: entry.depthIndex,
+          latIndex: entry.latIndex,
+          lonIndex: entry.lonIndex,
+        });
+      } else if (sourceRows[index].errorStd !== entry.observation.errorStd) {
+        // One datastream declares one error; two values under one key would make the
+        // source's "declared error" a number nobody declared.
+        throw new Error(
+          `source '${entry.observation.sourceKey}' declares error ${sourceRows[index].errorStd} and ${entry.observation.errorStd}; one instrument has one declared error`,
+        );
+      }
+      sourceOfObservation[i] = index;
+      const row = sourceRows[index];
+      row.count += 1;
+      row.longitudeSum += entry.observation.longitude;
+      row.latitudeSum += entry.observation.latitude;
+      row.depthSum += entry.observation.depthM;
+    }
+
     const system = new Float64Array(order * order);
     const innovation = new Float64Array(order);
     for (let i = 0; i < order; i++) {
       const a = located[i];
       innovation[i] = a.observation.value - background.values[a.cellIndex];
+      sourceRows[sourceOfObservation[i]].innovationSum += innovation[i];
       for (let j = 0; j < order; j++) {
         const b = located[j];
         const rho = correlation(grid, parameters, a.depthIndex, a.latIndex, a.lonIndex, b.depthIndex, b.latIndex, b.lonIndex);
@@ -297,6 +457,26 @@ export const optimalInterpolationKernel: AnalysisKernel = {
     const covarianceRow = new Float64Array(order);
     /** Indices of the observations that reach the cell being analysed, reused per cell. */
     const reaching = new Int32Array(order);
+
+    // The contributions, accumulated per cell as the gain's columns fall out of the
+    // error reduction below. `perSource` is a scratch row over the sources; `touched`
+    // lists which of them this cell's reaching observations belong to.
+    const retain = parameters.retainContributions !== false;
+    const perSource = new Float64Array(sourceRows.length);
+    const touched = new Int32Array(sourceRows.length);
+    // Membership, kept apart from the accumulator: a partial sum that returned to exactly
+    // zero, or a first gain of exactly zero, would otherwise be read as "not yet seen".
+    const isTouched = new Uint8Array(sourceRows.length);
+    const contributionCells: number[] = [];
+    const contributionWeight: number[] = [];
+    const contributionRemainder: number[] = [];
+    const contributionBackgroundErrorStd: number[] = [];
+    const contributionOffsets: number[] = [0];
+    const entrySource: number[] = [];
+    const entryContribution: number[] = [];
+    const entryHorizontalKm: number[] = [];
+    const entryVerticalM: number[] = [];
+
     for (let cell = 0; cell < cells; cell++) {
       const lonIndex = cell % longitude.count;
       const latIndex = Math.floor(cell / longitude.count) % latitude.count;
@@ -309,9 +489,10 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       // enters contributes exactly nothing — dropping them is an identity, not an
       // approximation. It is also what makes the analysis affordable on a real grid:
       // the error reduction below is quadratic in the observations considered, and at
-      // 46,080 cells against a cycle's ~180 observations that is 1.5 billion products
-      // per variable if the zeros are multiplied out, against a few million if they
-      // are not.
+      // 46,080 cells against a cycle's observations — measured at 1,080 to 1,572 on
+      // the shipped configuration by feature 124, where this comment used to say ~180 —
+      // multiplying the zeros out would be tens of billions of products per variable,
+      // against the fraction of that the taper leaves.
       let reach = 0;
       for (let k = 0; k < order; k++) {
         const b = located[k];
@@ -334,16 +515,56 @@ export const optimalInterpolationKernel: AnalysisKernel = {
       // it. Clamped at zero against float error only — the quadratic form cannot
       // exceed σ² in exact arithmetic.
       let explained = 0;
+      let touchedCount = 0;
       for (let ki = 0; ki < reach; ki++) {
         const k = reaching[ki];
+        // `row` is K_ak itself: Σⱼ M⁻¹_kj · cov_aj over the observations that reach
+        // this cell — exact, because cov_aj is identically zero for the rest. The gain
+        // was always here; until feature 124 it was folded into `explained` and lost.
         let row = 0;
         for (let ji = 0; ji < reach; ji++) {
           const j = reaching[ji];
           row += inverse[k * order + j] * covarianceRow[j];
         }
         explained += covarianceRow[k] * row;
+        if (retain) {
+          const source = sourceOfObservation[k];
+          if (isTouched[source] === 0) {
+            isTouched[source] = 1;
+            touched[touchedCount++] = source;
+          }
+          perSource[source] += row;
+        }
       }
       errorStd[cell] = Math.sqrt(Math.max(cellStd * cellStd - explained, 0));
+
+      if (retain && reach > 0) {
+        // Rows of the sparse holding, in source order so a column's entries are stable
+        // across cells and cycles rather than in whichever order the observations
+        // happened to reach.
+        const sorted = touched.subarray(0, touchedCount).slice().sort();
+        let inSupport = 0;
+        for (const source of sorted) {
+          const contribution = perSource[source];
+          inSupport += contribution;
+          const origin = sourceRows[source];
+          const { east, north, down } = separation(grid, depthIndex, latIndex, lonIndex, origin.depthIndex, origin.latIndex, origin.lonIndex);
+          entrySource.push(source);
+          entryContribution.push(contribution);
+          entryHorizontalKm.push(Math.hypot(east, north));
+          entryVerticalM.push(Math.abs(down));
+          perSource[source] = 0;
+          isTouched[source] = 0;
+        }
+        contributionCells.push(cell);
+        contributionWeight.push(weight);
+        // What observations beyond this cell's reach contributed, through the inverse's
+        // coupling with those within it. Not attributable to a position; stated as one
+        // figure, and the identity Σ sources + remainder = ω holds by construction.
+        contributionRemainder.push(weight - inSupport);
+        contributionBackgroundErrorStd.push(cellStd);
+        contributionOffsets.push(entrySource.length);
+      }
 
       for (let s = 0; s < shares.length; s++) {
         shares[s][cell] = (1 - weight) * background.shares[s][cell];
@@ -362,9 +583,47 @@ export const optimalInterpolationKernel: AnalysisKernel = {
         displacementKm: entry.displacementKm,
         clamped: entry.clamped,
       })),
+      contributions: {
+        sources: sourceRows.map((row) => ({
+          sourceKey: row.sourceKey,
+          cellIndex: row.cellIndex,
+          observationCount: row.count,
+          errorStd: row.errorStd,
+          backgroundErrorStd: row.backgroundErrorStd,
+          meanInnovation: row.innovationSum / row.count,
+          longitude: row.longitudeSum / row.count,
+          latitude: row.latitudeSum / row.count,
+          depthM: row.depthSum / row.count,
+        })),
+        cells: Uint32Array.from(contributionCells),
+        weight: Float32Array.from(contributionWeight),
+        remainder: Float32Array.from(contributionRemainder),
+        backgroundErrorStd: Float32Array.from(contributionBackgroundErrorStd),
+        offsets: Uint32Array.from(contributionOffsets),
+        entrySource: Uint32Array.from(entrySource),
+        entryContribution: Float32Array.from(entryContribution),
+        entryHorizontalKm: Float32Array.from(entryHorizontalKm),
+        entryVerticalM: Float32Array.from(entryVerticalM),
+      },
     };
   },
 };
+
+/** No observations: no sources, no rows, and every ω exactly zero. */
+function emptyContributions(): AnalysisContributions {
+  return {
+    sources: [],
+    cells: new Uint32Array(0),
+    weight: new Float32Array(0),
+    remainder: new Float32Array(0),
+    backgroundErrorStd: new Float32Array(0),
+    offsets: Uint32Array.from([0]),
+    entrySource: new Uint32Array(0),
+    entryContribution: new Float32Array(0),
+    entryHorizontalKm: new Float32Array(0),
+    entryVerticalM: new Float32Array(0),
+  };
+}
 
 /**
  * The step between analyses: what the forecast does to the provenance.

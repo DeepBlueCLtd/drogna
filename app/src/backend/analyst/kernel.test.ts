@@ -13,6 +13,7 @@ import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun } from '../../generated/types.js';
 import { Rng } from '../lib/rng.js';
 import { choleskyFactor, choleskyInverse, choleskySolve } from './linalg.js';
+import { ulpAt } from '../lib/ulp.js';
 import {
   gaspariCohn,
   optimalInterpolationKernel,
@@ -127,13 +128,21 @@ function backgroundState(errorStd: number, bias = 0.8): AnalysisState {
   return { values, errorStd: spread, shares };
 }
 
-function observationAt(lonIndex: number, latIndex: number, depthIndex: number, value: number, errorStd: number): AnalysisObservation {
+function observationAt(
+  lonIndex: number,
+  latIndex: number,
+  depthIndex: number,
+  value: number,
+  errorStd: number,
+  sourceKey = 'ctd',
+): AnalysisObservation {
   return {
     longitude: longitudeOf(lonIndex),
     latitude: latitudeOf(latIndex),
     depthM: depthOf(depthIndex),
     value,
     errorStd,
+    sourceKey,
   };
 }
 
@@ -477,6 +486,7 @@ describe('the clamp record', () => {
       depthM: depthOf(0),
       value: 14.5,
       errorStd: declaredTemperatureErrorStd(),
+      sourceKey: 'ctd',
     };
     const analysis = optimalInterpolationKernel.analyse(background, [inside], GRID, PARAMETERS);
     expect(analysis.observations[0].clamped).toBe(false);
@@ -495,6 +505,7 @@ describe('the clamp record', () => {
       depthM: depthOf(0),
       value: 14.5,
       errorStd: declaredTemperatureErrorStd(),
+      sourceKey: 'ctd',
     };
     const analysis = optimalInterpolationKernel.analyse(background, [outside], GRID, PARAMETERS);
     expect(analysis.observations[0].clamped).toBe(true);
@@ -624,5 +635,155 @@ describe('the analysis moves the field toward the truth', () => {
         (backgroundStd * backgroundStd + observationStd * observationStd),
     );
     expect(analysedMeasured).toBeGreaterThan(2 * irreducible);
+  });
+});
+
+describe('the contributions the gain is made of (feature 124)', () => {
+  // Float32 is what the holding stores, so the identity is held to what float32 can
+  // hold: a few units in the last place at the magnitudes involved, from the one
+  // derivation every manifest's tolerance uses, rather than a copy of it.
+
+  function rowsOf(contributions: ReturnType<typeof optimalInterpolationKernel.analyse>['contributions']) {
+    const rows: { cell: number; weight: number; remainder: number; entries: { source: number; contribution: number; horizontalKm: number; verticalM: number }[] }[] = [];
+    for (let i = 0; i < contributions.cells.length; i++) {
+      const entries = [];
+      for (let e = contributions.offsets[i]; e < contributions.offsets[i + 1]; e++) {
+        entries.push({
+          source: contributions.entrySource[e],
+          contribution: contributions.entryContribution[e],
+          horizontalKm: contributions.entryHorizontalKm[e],
+          verticalM: contributions.entryVerticalM[e],
+        });
+      }
+      rows.push({ cell: contributions.cells[i], weight: contributions.weight[i], remainder: contributions.remainder[i], entries });
+    }
+    return rows;
+  }
+
+  const observationStd = declaredTemperatureErrorStd();
+  /** A short track: four casts a cell apart along row 3, at two depths, one instrument each. */
+  function track(): AnalysisObservation[] {
+    const out: AnalysisObservation[] = [];
+    for (let lonIndex = 2; lonIndex < 6; lonIndex++) {
+      for (const depthIndex of [0, 1]) {
+        out.push(observationAt(lonIndex, 3, depthIndex, truthAt(lonIndex, 3, depthIndex) + 0.1, observationStd, `ctd-${depthIndex}`));
+      }
+    }
+    return out;
+  }
+
+  it('sums, with the remainder, to the weight it reports for every cell — and reports no row where the weight is nought', () => {
+    const background = backgroundState(0.3);
+    const analysis = optimalInterpolationKernel.analyse(background, track(), GRID, PARAMETERS);
+    const rows = rowsOf(analysis.contributions);
+    expect(rows.length).toBeGreaterThan(0);
+    const rowed = new Set(rows.map((row) => row.cell));
+    for (const row of rows) {
+      let sum = row.remainder;
+      let magnitude = Math.abs(row.remainder) + Math.abs(row.weight);
+      for (const entry of row.entries) {
+        sum += entry.contribution;
+        magnitude += Math.abs(entry.contribution);
+      }
+      // ω as the holding stores it is ω as the field reports it: one number, twice.
+      expect(row.weight).toBe(analysis.observationWeight[row.cell]);
+      // And the background error the gain weighed the sources against is the one the
+      // background declared at that cell, not a restatement.
+      expect(analysis.contributions.backgroundErrorStd[rows.indexOf(row)]).toBe(background.errorStd[row.cell]);
+      expect(Math.abs(sum - row.weight)).toBeLessThanOrEqual(4 * (row.entries.length + 2) * ulpAt(magnitude));
+    }
+    for (let cell = 0; cell < CELLS; cell++) {
+      if (!rowed.has(cell)) expect(analysis.observationWeight[cell]).toBe(0);
+    }
+  });
+
+  it('stores a source against the cells inside its support and no others, with the support read from the parameters', () => {
+    const analysis = optimalInterpolationKernel.analyse(backgroundState(0.3), track(), GRID, PARAMETERS);
+    const rows = rowsOf(analysis.contributions);
+    let entries = 0;
+    for (const row of rows) {
+      for (const entry of row.entries) {
+        entries += 1;
+        // Gaspari–Cohn is identically zero at twice the half-width, in the scaled
+        // space the kernel combines the axes in — the same bound, from the same
+        // declaration, and never a constant here.
+        const scaled = Math.sqrt(
+          (entry.horizontalKm * entry.horizontalKm) / (PARAMETERS.horizontalKm * PARAMETERS.horizontalKm) +
+            (entry.verticalM * entry.verticalM) / (PARAMETERS.verticalM * PARAMETERS.verticalM),
+        );
+        expect(scaled, `an entry at ${entry.horizontalKm.toFixed(1)} km, ${entry.verticalM} m lies beyond the support`).toBeLessThan(2);
+      }
+    }
+    expect(entries).toBeGreaterThan(0);
+    // And a cell three rows off the track — 66.9 km against a 60 km support — has no
+    // row at all, which is what "absent means outside the support" means.
+    expect(rhoBetween(0, 3, 0)).toBe(0);
+    const rowed = new Set(rows.map((row) => row.cell));
+    for (const latIndex of [0, 6]) {
+      for (let lonIndex = 0; lonIndex < GRID.longitude.count; lonIndex++) {
+        expect(rowed.has(cellIndexOf(0, latIndex, lonIndex))).toBe(false);
+      }
+    }
+  });
+
+  it('groups an instrument’s observations in one cell into one source, exactly, by linearity', () => {
+    // Two casts in the same cell under two keys are two sources; under one key they
+    // are one, and M is the same system either way — the keys are names, not maths —
+    // so the one source's contribution to every cell is the two sources' sum.
+    const at = (key: string, value: number) => observationAt(4, 3, 0, value, observationStd, key);
+    const apart = optimalInterpolationKernel.analyse(backgroundState(0.3), [at('a', 14.2), at('b', 14.6)], GRID, PARAMETERS);
+    const together = optimalInterpolationKernel.analyse(backgroundState(0.3), [at('ctd', 14.2), at('ctd', 14.6)], GRID, PARAMETERS);
+    expect(apart.contributions.sources.map((source) => source.sourceKey)).toEqual(['a', 'b']);
+    expect(together.contributions.sources).toHaveLength(1);
+    expect(together.contributions.sources[0]).toMatchObject({ sourceKey: 'ctd', observationCount: 2, cellIndex: cellIndexOf(0, 3, 4) });
+    expect(together.contributions.sources[0].meanInnovation).toBeCloseTo(
+      (apart.contributions.sources[0].meanInnovation + apart.contributions.sources[1].meanInnovation) / 2,
+      10,
+    );
+    const apartRows = rowsOf(apart.contributions);
+    const togetherRows = rowsOf(together.contributions);
+    expect(togetherRows.map((row) => row.cell)).toEqual(apartRows.map((row) => row.cell));
+    for (let i = 0; i < apartRows.length; i++) {
+      const sum = apartRows[i].entries.reduce((total, entry) => total + entry.contribution, 0);
+      expect(togetherRows[i].entries).toHaveLength(1);
+      expect(togetherRows[i].entries[0].contribution).toBeCloseTo(sum, 6);
+      // Both are in-support by construction, so both remainders are float noise.
+      expect(Math.abs(togetherRows[i].remainder)).toBeLessThanOrEqual(4 * ulpAt(Math.abs(togetherRows[i].weight)));
+    }
+  });
+
+  it('carries what observations beyond a cell’s reach did to it as the remainder, which one observation alone never has', () => {
+    // One observation: every cell it reaches owes it the whole of ω, so the remainder
+    // is nought everywhere, within float32.
+    const alone = optimalInterpolationKernel.analyse(backgroundState(0.3), [observationAt(2, 3, 0, 14.4, observationStd)], GRID, PARAMETERS);
+    for (const row of rowsOf(alone.contributions)) {
+      expect(Math.abs(row.remainder)).toBeLessThanOrEqual(4 * ulpAt(Math.abs(row.weight)));
+    }
+    // The coupling needs a chain. Two casts beyond each other's reach are two
+    // uncoupled systems — M is block-diagonal, its inverse is too, and the remainder is
+    // exactly nought; the first draft of this test placed them so and watched it be
+    // nought. So: a cell at column 1; a near cast at column 3, 35.6 km off, within the
+    // cell's reach; a far cast at column 5, 35.6 km from the near cast and so well
+    // within *its* reach, but 71 km from the cell and beyond the cell's. The far cast
+    // reaches the cell only through the near one, which is what the remainder is, and
+    // it is not float noise here because the two casts contradict each other. (At
+    // column 6 the coupling is real and 570 ulps, which is the taper at 53 km: small.)
+    const near = observationAt(3, 3, 0, 14.4, observationStd, 'near');
+    const far = observationAt(5, 3, 0, 11.0, observationStd, 'far');
+    expect(rhoBetween(2, 0, 0)).toBeGreaterThan(0);
+    expect(rhoBetween(4, 0, 0)).toBe(0);
+    const pair = optimalInterpolationKernel.analyse(backgroundState(0.3), [near, far], GRID, PARAMETERS);
+    const nearCell = cellIndexOf(0, 3, 1);
+    const row = rowsOf(pair.contributions).find((candidate) => candidate.cell === nearCell);
+    if (!row) throw new Error('the observed cell has no row');
+    expect(row.entries.map((entry) => pair.contributions.sources[entry.source].sourceKey)).toEqual(['near']);
+    expect(Math.abs(row.remainder)).toBeGreaterThan(1000 * ulpAt(Math.abs(row.weight)));
+    expect(row.entries[0].contribution + row.remainder).toBeCloseTo(row.weight, 5);
+  });
+
+  it('refuses one instrument declaring two errors, by name', () => {
+    const one = observationAt(4, 3, 0, 14.2, observationStd, 'ctd');
+    const other = { ...observationAt(4, 3, 0, 14.6, observationStd, 'ctd'), errorStd: observationStd * 2 };
+    expect(() => optimalInterpolationKernel.analyse(backgroundState(0.3), [one, other], GRID, PARAMETERS)).toThrow(/one instrument has one declared error/);
   });
 });

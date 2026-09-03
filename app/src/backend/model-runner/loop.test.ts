@@ -152,11 +152,13 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     }
 
     // Instances accumulate as holdings: the three authored at provisioning — archive,
-    // departure brief and now-cast (feature 121) — plus 5 per run: the runner's forecast
-    // and uncertainty, and the analyst's analysis, error and provenance (FR-30, as
-    // feature 116 amends it). Every one is a holding you can query, which is the whole
-    // reason the analysis is a component rather than a private stage.
-    expect(runtime.store.holdings().length).toBe(3 + 5 * record.published.length);
+    // departure brief and now-cast (feature 121) — plus 6 per run: the runner's forecast
+    // and uncertainty, and the analyst's analysis, error, provenance (FR-30, as feature
+    // 116 amends it) and, from feature 124, the contributions the provenance's measurement
+    // share is the row sum of. Every one is a holding you can query — five through EDR,
+    // the sixth at its own prefix — which is the whole reason the analysis is a component
+    // rather than a private stage.
+    expect(runtime.store.holdings().length).toBe(3 + 6 * record.published.length);
 
     runtime.stop();
   });

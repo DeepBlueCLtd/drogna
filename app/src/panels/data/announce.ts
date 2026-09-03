@@ -23,6 +23,7 @@
 import type { CoverageHolding } from '../../generated/types.js';
 import { displayInstant } from '../../shell/display.js';
 import { coverageInterval, describeSpan } from './interval.js';
+import { isGriddedCoverage } from './tree.js';
 
 /** One fact the timeline announces, keyed by the master property it comes from. */
 export interface Announcement {
@@ -52,6 +53,13 @@ export const NOT_ANNOUNCED: Readonly<Record<string, string>> = {
 export function announceHolding(holding: CoverageHolding): readonly Announcement[] {
   const interval = coverageInterval(holding.manifest.grid.time);
   const grid = holding.manifest.grid;
+  const shape = `${grid.longitude.count}×${grid.latitude.count}×${grid.depth.count}×${grid.time.count}`;
+  // A coverage's grid is what it holds. Feature 124's contributions holding is not a
+  // coverage, and its grid is the coordinate reference its sparse rows are keyed on —
+  // announced as that, or a reader is told of a field that is not there.
+  const gridText = isGriddedCoverage(holding)
+    ? `grid ${shape}`
+    : `not a gridded coverage; sparse rows keyed on the ${shape} grid`;
   return [
     { property: 'era', label: 'era', text: holding.era },
     { property: 'holding_id', label: 'holding', text: holding.holding_id },
@@ -70,13 +78,15 @@ export function announceHolding(holding: CoverageHolding): readonly Announcement
       text: interval
         ? `${displayInstant(interval.startSimTime)} to ${displayInstant(interval.endSimTime)}, ${describeSpan(
             interval.endMillis - interval.startMillis,
-          )} · grid ${grid.longitude.count}×${grid.latitude.count}×${grid.depth.count}×${grid.time.count}`
-        : `grid ${grid.longitude.count}×${grid.latitude.count}×${grid.depth.count}×${grid.time.count} · its time axis could not be read, so no interval is claimed`,
+          )} · ${gridText}`
+        : `${gridText} · its time axis could not be read, so no interval is claimed`,
     },
     {
       property: 'field',
       label: 'field digest',
-      text: `${holding.field.sha256.slice(7, 19)}… , ${holding.field.byte_length} bytes`,
+      // The format is announced beside the size because the two only agree for a
+      // coverage: a sparse holding's byte count is not its grid's (feature 124).
+      text: `${holding.field.format}, ${holding.field.sha256.slice(7, 19)}… , ${holding.field.byte_length} bytes`,
     },
   ];
 }

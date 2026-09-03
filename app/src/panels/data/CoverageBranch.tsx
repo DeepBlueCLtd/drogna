@@ -25,7 +25,7 @@ import { HoldingsTimeline } from './HoldingsTimeline.js';
 import { Comparison } from './Comparison.js';
 import { Volume } from './lazy.js';
 import { announceHolding } from './announce.js';
-import { analysisCycles, analysisFieldLabel, type Branch } from './tree.js';
+import { analysisCycles, analysisFieldLabel, isGriddedCoverage, type Branch } from './tree.js';
 
 export function CoverageBranch({
   branch,
@@ -131,7 +131,18 @@ export function CoverageBranch({
                 />
               </div>
               <div data-region="volume">
-                <Volume holding={chosen} edrPrefix={edrPrefix} validator={validator} />
+                {isGriddedCoverage(chosen) ? (
+                  <Volume holding={chosen} edrPrefix={edrPrefix} validator={validator} />
+                ) : (
+                  // Feature 124: a holding in the store that is not a coverage. An area
+                  // query for it would be refused by name, and a volume that asked
+                  // anyway would show a refusal where the fact is simpler.
+                  <p className="panel-footnote" data-testid="volume-not-a-coverage">
+                    not a gridded coverage — its bytes are <code>{chosen.field.format}</code>, a sparse holding of
+                    what each cell&rsquo;s value was made from, by source. EDR does not list it and this tab does not
+                    draw it; the Forecast view reads it at its own prefix.
+                  </p>
+                )}
               </div>
               <div data-region="manifest">
                 <h3>{chosen.holding_id} — ground-truth manifest</h3>

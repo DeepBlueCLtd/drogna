@@ -24,7 +24,8 @@ export interface Sampled {
 
 export type SampleResult = { ok: true; value: Sampled } | { ok: false; refusal: string };
 
-function nearestIndex(axis: ManifestSpatialAxis, value: number): number | undefined {
+/** The grid index nearest a coordinate, or undefined beyond half a cell outside the axis: EDR's snap, shared with the contributions query so the two agree on which column answered. */
+export function nearestIndex(axis: ManifestSpatialAxis, value: number): number | undefined {
   if (value < axis.minimum - axis.spacing / 2 || value > axis.maximum + axis.spacing / 2) return undefined;
   const index = Math.round((value - axis.minimum) / axis.spacing);
   return Math.min(Math.max(index, 0), axis.count - 1);

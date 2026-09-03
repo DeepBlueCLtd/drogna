@@ -1,0 +1,19 @@
+{
+  "image": "124-what-a-number-is-made-of.png",
+  "run_id": "loiter-arriving-pahu",
+  "view": "forecast",
+  "sim_time": "2026-01-01T01:39:23Z",
+  "holding": "analysis.loiter-arriving-pahu-run-1-contributions",
+  "clock_pinned": "rate 0",
+  "warmed": "stepped in bursts of 120 ticks until an analysis cycle had published, then pinned",
+  "column": "picked from the served contributions header, so it is a column a source reached",
+  "viewport": {
+    "width": 1280,
+    "height": 1000
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "The forecast tab centre region, with a water column opened."
+}

@@ -458,8 +458,23 @@ the part worth recording, because each was a sentence asserting a property the c
 
 ## The record
 
-- [ ] T032 The blog entry, with the capture. The rays re-weighting as a level is selected is
+- [x] T032 The blog entry, with the capture. The rays re-weighting as a level is selected is
       the thing that moves; `pnpm capture:motion`.
+      *Built:* `site/docs/blog/posts/the-weights-were-there-and-thrown-away.md`, with the
+      capture and its provenance beside it.
+
+      **Captured still rather than moving, and the reason is what `capture:motion` is.** That
+      script drives the *clock* and films what the system does on its own; the thing that moves
+      here is a reader picking a depth and the rays re-weighting, which is an interaction and
+      not a system animation, so filming it would have produced a still picture with a moving
+      clock in the corner. The capture is the region with a column open, and the alt text is
+      long enough to carry the reading — including the 667 m level at −122.3% against 106.0%,
+      still summing to 100.0%, which is the extrapolating gain drawn honestly.
+
+      The asset carries a `.provenance.json` on the estate's convention, and its values are read
+      off the running page rather than written from memory: the run, the simulated instant, the
+      holding, how the loop was warmed, and that the column was picked from the served header so
+      it is one a source actually reached.
 - [ ] T033 The pull request links its own instance opened at `#/view/forecast`, and the entry
       by its full URL on the branch.
 - [ ] T034 `pnpm snapshots` if the analyst's new output moves a committed artefact, and read

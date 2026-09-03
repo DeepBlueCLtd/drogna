@@ -64,6 +64,15 @@ backlog's P0 row wanted and is also ~27 MB of git history per change.
 
 ## Deliberately not done
 
+- **The store's refusal is a fault nobody hears.** When the residual identifier collision does
+  fire — restart the scheduler inside the tick a run was requested at, then change the clock
+  rate — the store refuses, the analyst raises inside a broker subscription, and the broker
+  catches it into `deliveryFaults`, which no surface reads. The analysis is lost and the loop
+  pauses until the watchdog releases the latch, with a `console.error` as the only trace. That
+  is the shape `model-runner/runner.ts` condemns in its own words — "a refusal whose only
+  consumer is a counter is not a refusal anybody hears" — for a fault fixed one feature ago.
+  Making a store refusal a published fact rather than a throw is the right fix and is a change
+  to how every author reports, not to this feature.
 - **The features are not restated with the run.** `forecast_features` is derived per step and
   is not in the store, so the feature surface is empty until the first live run — which is
   what a restarted runner has always done, and is the one part of a resumed run's knowledge

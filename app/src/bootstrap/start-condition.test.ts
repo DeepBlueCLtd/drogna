@@ -240,15 +240,19 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
    * What stays here is the declaration itself, so that a future edit narrowing it has to
    * say why.
    */
-  it('declares the forecast eras its authors can be held back for', () => {
+  it('declares every era the snapshot source knows an author for', () => {
+    // Against the master's own enum rather than a list typed in here, and as a set, because
+    // the order of `snapshot_eras` carries no meaning — `heldBackBySnapshot` builds a Set and
+    // the artefact is sorted by publication tick. A first version compared a four-element
+    // literal and failed a pure reordering with the message "declares no eras", which is
+    // false of the one edit it would have caught.
+    const known = Object.keys(config.snapshot_source.authors).sort();
     for (const condition of conditions.conditions) {
-      expect(condition.snapshot_eras, `'${condition.id}' declares no eras`).toEqual([
-        'archive',
-        'nowcast',
-        'analysis',
-        'instance',
-      ]);
-
+      expect(
+        [...(condition.snapshot_eras ?? [])].sort(),
+        `'${condition.id}' declares ${(condition.snapshot_eras ?? []).join(', ') || 'no eras'}; narrowing the ` +
+          `cut point is an ordinary configuration edit (FR-18) and this test is where the reason for one goes`,
+      ).toEqual(known);
     }
   });
 });

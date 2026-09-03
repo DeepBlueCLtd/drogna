@@ -96,16 +96,43 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       ledger discard, because statistics publish on a cadence and a discarded ledger re-warms
       past its old count before the next statement. `first_sim_time` is where a discard shows.
       All three faults are now planted and watched failing.
-- [x] **T050** Five copies of `isoPlusSeconds`, two of which disagreed: the model runner
-      truncates to whole seconds, the copy written for this feature kept milliseconds. They
-      agree only because `tick_interval_us` is 1,000,000, so a sub-second tick would have made
-      a restatement's validity differ from the announcement it restates. One helper in
-      `lib/sim-time.ts`, on the BigInt microseconds that module exists for.
+- [x] **T050** Three copies of the `(iso, seconds) → iso` helper, and they disagreed: the
+      model runner truncated to whole seconds, the advisory source and the copy written for
+      this feature kept milliseconds. They agree only because `tick_interval_us` is 1,000,000,
+      so a sub-second tick would have made a restatement's validity differ from the
+      announcement it restates. One helper in `lib/sim-time.ts`, on the BigInt microseconds
+      that module exists for. The planner's `isoMicros` takes POSIX seconds and is a different
+      function, not a fourth copy — a first pass at this line called it one.
+
+- [x] **T051** The offload dedupe keyed on `lastPublished` — "the run this component has
+      heard of" — where it needed "the run it has staged for". The two diverge on the path the
+      feature adds, and the test covering it restarted the runner in a *live* run, where the
+      announcement handler had set the field, so the guard worked and the path needing it was
+      never exercised. Keyed on `stagedForRunId` now.
+- [x] **T052** `run-published.schema.json` was the one master whose meaning this feature
+      changed and the one left un-amended, while two others were amended at length. A message
+      that may now be a restatement, and a `sim_time` that may be the instant it is being said
+      at, are the contract a V3 backend generates from.
+- [x] **T053** The watchdog bound's stated benefit was measured false. "A reader who stopped
+      the analyst waited half an hour to find out the loop had recovered" — the tighter bound
+      gives 1,809 ticks against the rejected one's 1,810, because releasing the run does not
+      release the cadence. What it actually buys is a divergence acted on from the minimum
+      interval instead of declined until the floor comes due. Corrected in three places.
+- [x] **T054** The Intro panel asserted artefact provenance unconditionally, where a missing
+      artefact is a supported path (FR-105) — and this feature doubled the surface of the
+      claim from two eras to four. It now points the reader at the snapshot source's own node.
+      The first attempt linked a `system` view that does not exist; `check-view-ids` caught it.
 
 ## Declined, with the reason
 
-- [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured, and
-      reverted.** A review read the 611–1,790 tick quiet after opening as a stall; a live run
+- [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and
+      reverted twice** — the second time on the argument that the standing-run restatement
+      (T042) would now seed the fresh instance. It does not: the resumed scheduler fires its
+      cadence floor on the first sample after the console opens, before the restatement
+      reaches it, so `loitering` and `returning` both turn the loop 10 ticks after opening
+      against a 600-tick minimum. The cost of not quiescing is that a replayed `returning`
+      opens showing five `abandoned` decisions where a live run has none — kept, because it is
+      true, and because the alternative shows a cadence no live run can produce. A review read the 611–1,790 tick quiet after opening as a stall; a live run
       of the same four conditions publishes its next forecast after 599, 1,794, 1,080 and 639
       ticks, so the quiet is the cadence. Quiescing replaced it with a fresh instance firing
       its floor 10–21 ticks after the artefact's own forecast, against a 600-tick minimum —

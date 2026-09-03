@@ -29,7 +29,7 @@ export function simTimeAtTick(epochMicros: bigint, tickIntervalUs: number, tick:
 /**
  * An instant advanced by whole seconds of simulation time, at the precision the seam uses.
  *
- * Four components had written this arithmetic out by hand, and the copies were not the same:
+ * Three components had written this arithmetic out by hand, and the copies were not the same:
  * the model runner truncates to whole seconds and appends `.000000`, while a fifth copy added
  * for feature 125 preserved milliseconds. They agree only because every simulated instant on
  * disk lands on a whole second, `tick_interval_us` being 1,000,000 — so a sub-second tick

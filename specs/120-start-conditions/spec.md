@@ -295,7 +295,7 @@ to putting back everything it tuned — planted by deleting that leg, and it rep
   tick. The blocker as stated here named the wrong mechanism; ADR-0041's amendment records
   what was actually there.
 - **The forecast eras were not committed here.** They are the other seconds. **Feature 125
-  committed them**: 27.3 MB across the four, against the 44 MB this section estimated — the
+  committed them**: 27.7 MB across the four, against the 44 MB this section estimated — the
   estimate predated features 121–124 and the run's own cycle count moved. The second-order
   cost this section named is real and unchanged: the artefacts are regenerated and
   re-committed whenever the analytic form, a kernel, a seed or a leg changes.

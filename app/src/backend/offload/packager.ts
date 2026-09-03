@@ -53,6 +53,29 @@ export class OffloadPackager {
   private stagedBundles: StagedBundle[] = [];
   /** The last release heard: what a prompted window is staged over. */
   private lastPublished: RunPublished | undefined;
+  /**
+   * The run a bundle has actually been staged for.
+   *
+   * Kept apart from `lastPublished`, which is only "the run this component has *heard* of".
+   * The two diverge on the path this feature adds: through a replayed pre-roll nothing is
+   * announced at all, so a bundle staged from a reader's prompt — read out of the store —
+   * left `lastPublished` unset. A dedupe keyed on the announcement would then have let the
+   * *next* restatement of that same run stage it a second time.
+   *
+   * The first attempt did key on `lastPublished` and looked right, because the test covering
+   * it restarted the runner in a **live** run, where the announcement handler had set the
+   * field — so the guard worked and the path that needed it was never exercised. Keyed on
+   * what was actually staged, a restatement of a run already bundled is a no-op on both
+   * paths: measured, restarting the runner after a replayed open leaves the count where it
+   * was, on the live run and the snapshot-backed one alike.
+   *
+   * What this deliberately does **not** suppress is the first staging of a run this component
+   * had not heard of. A replayed run learns of the standing forecast when the model runner
+   * restates it, and bundling it then is the restatement doing its job — the run was released,
+   * during the pre-roll the artefact stands for. `returning` ends with the live run's first
+   * two windows rather than its five, which is a fidelity gap and not a phantom bundle.
+   */
+  private stagedForRunId: string | undefined;
   /** Windows staged because a reader asked, rather than on a release. */
   private prompted = 0;
   private stagedBytes = 0;
@@ -126,7 +149,7 @@ export class OffloadPackager {
       // `stagedBytes` past the bound, after which production stops for good — nothing is
       // evictable in V2. Staging a bundle for a release that did not happen is also a claim
       // about a release that did not happen.
-      const alreadyStaged = this.lastPublished?.run_id === published.run_id;
+      const alreadyStaged = this.stagedForRunId === published.run_id;
       this.lastPublished = published;
       if (alreadyStaged) return;
       this.stage(published, published.tick);
@@ -178,6 +201,9 @@ export class OffloadPackager {
    * interval — is decided by the rules that were already here.
    */
   private stage(published: RunPublished, uptoTick: number): void {
+    // Recorded before the bound check below, so a run declined for want of staging room is
+    // not staged again by the next announcement of the same run.
+    this.stagedForRunId = published.run_id;
     const windowIndex = this.stagedBundles.length + this.declined.length;
     if (!this.producing || this.stagedBytes >= this.config.staging_bound_bytes) {
       // At the bound with nothing evictable — and in V2 nothing is ever

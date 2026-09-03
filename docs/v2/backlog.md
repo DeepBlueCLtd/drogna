@@ -30,6 +30,12 @@ feature 124's file is not yet on `main` all die with that merge. (Feature 124 st
 | −20 | Declined or deliberately not done, each carrying its reason in the line |
 | **7** | **Work**, below — of which one is not a developer's to action |
 
+**This table no longer reproduces from the tree, and one edited row does not make it current.**
+It was taken at `3ad5212`; #107 has merged and feature 124 has landed since, so the document's
+own `grep` gives 59 unticked lines rather than 65, and feature 125's four declined lines are in
+neither bucket. The `−1` above is honest about one row and says nothing about the rest. Retake
+the whole count before leaning on it — the tree is the authority and this is a claim about it.
+
 The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.
 
@@ -258,7 +264,7 @@ argument written in it.
 Taken after a reader reported ~20 s on `arriving` against the 5.3 s ADR-0041 measured for it:
 the same harness on a slower machine, which is the case the byte-for-seconds trade had never
 been run against. Headless Chromium, click to console, `arriving`: 4.7 s → 2.2 s. Artefacts
-1.73 MB → 27.3 MB.
+1.73 MB → 27.7 MB.
 
 **The blocker this row recorded was wrong about its own cause**, and the refusing test had
 never been seen to fail — the second lesson in `CLAUDE.md`, at work. `holdingBack` does not

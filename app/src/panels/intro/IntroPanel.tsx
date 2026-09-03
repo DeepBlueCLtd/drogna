@@ -237,13 +237,17 @@ export function IntroPanel({ params }: PanelProps): ReactNode {
           opened. Nothing was written into a store to arrange it, and the whole pre-roll is
           in <a href={hashForView('messages')}>Messages</a> where you can read it back. The
           ocean and the forecasts it was run under — the archive, the now-cast, the analyses
-          and the forecast instances — were authored <em>ahead of time</em>, by these same
-          components from this same seed, and arrive as a committed artefact the snapshot
-          source republishes through the coverage store&rsquo;s one digest-checked write
-          path: a gate rebuilds it on every change and fails the build if a byte differs
-          from what those components would author now. What you watch happen from here is
-          live: the loop takes over at its own cadence, so the next forecast is the one it
-          computes.
+          and the forecast instances — are <em>usually</em> authored ahead of time, by these
+          same components from this same seed, and arrive as a committed artefact the
+          snapshot source republishes through the coverage store&rsquo;s one digest-checked
+          write path: a gate rebuilds it on every change and fails the build if a byte
+          differs from what those components would author now. Whether this run took that
+          path is a thing to check rather than take on trust — the snapshot source&rsquo;s
+          node in <a href={hashForView('operator')}>Operator</a> says how many holdings it
+          replayed, or that it found no artefact and the run computed its own, several
+          seconds slower and every bit as true. What you watch happen from here is live
+          either way: the loop takes over at its own cadence, so the next forecast is the
+          one it computes.
         </p>
         <p>
           The drawing is a schematic; the system is the rest of the shell. Watch the

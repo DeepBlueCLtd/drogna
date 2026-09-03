@@ -159,8 +159,11 @@ Three changes, and the order matters — the second is unsafe without the first,
    longer than the run's declared cost plus the release margin — 39 ticks at shipped values,
    both figures already on the wire from the model runner. An earlier draft of this
    amendment described the bound as the cadence floor's whole interval, which is what the
-   first implementation used and what its own docstring now argues against; the ADR was
-   recording the rejected alternative as the decision.
+   first implementation used; the ADR was recording the rejected alternative as the decision.
+   The reason first given for preferring the tighter bound — that it gets the reader a faster
+   recovery — is also wrong, and measured so: 1,809 ticks against 1,810, because releasing the
+   run does not release the cadence. What it buys is that a divergence can be acted on from the
+   minimum interval rather than declined as `duplicate-outstanding` until the floor comes due.
 2. **Run identifiers are derived from the request tick**, `<run>-run-t<tick>`. This is the
    "run identifier that survives a restart" the paragraph above asked for, and it *narrows*
    the collision rather than closing it: the counter collided on every restart, this one
@@ -176,7 +179,7 @@ Three changes, and the order matters — the second is unsafe without the first,
 ### The numbers, remeasured
 
 Headless Chromium, click to console, `arriving`: 4.7 s with the ocean alone, 2.2 s with all
-four eras. The artefacts go from 1.73 MB to 27.3 MB across the four.
+four eras. The artefacts go from 1.73 MB to 27.7 MB across the four.
 
 That is a much worse ratio than the ocean's 45%-for-4%, and it is worth being plain that it
 is a *conditional* win rather than a free one. The saving is compute and scales with how
@@ -216,6 +219,24 @@ composing a statement no component made, which is the hazard this record exists 
 whereas the runner reading back what it itself wrote is the resumption rule the environment
 generator already follows. With the standing run restated, a replayed run's cadence is the
 live run's cadence exactly, on all four conditions.
+
+### What a replayed pre-roll shows the reader that a live run does not
+
+The scheduler is not held back — the measurement above says why — so through a replayed
+pre-roll it goes on deciding while the analyst it commands is replaced by the artefact. Its
+requests reach nobody and the watchdog releases them, and each release is published. A
+snapshot-backed `returning` therefore opens with five `abandoned` decisions and *released
+unfinished: 5* on the scheduler's face where the live run has none, and with three fewer
+`held-for-cost` annotations on the Forecast timeline.
+
+Kept, because every alternative measured worse and because it is true: those runs were
+requested and nothing answered them. Quiescing the scheduler removes them and was tried
+twice — once before the restatement existed and once after, on the argument that the
+restatement would now seed the fresh instance. It does not: the resumed scheduler fires its
+cadence floor on the first sample after the console opens, before the restatement reaches it,
+so both conditions turn the loop 10 ticks after opening against a 600-tick minimum interval.
+The reader would be shown a cadence no live run can produce instead of a decision record that
+is merely unfamiliar.
 
 ### What this does not fix
 

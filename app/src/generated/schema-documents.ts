@@ -9919,7 +9919,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-published.schema.json",
     "title": "drogna model run published",
-    "description": "The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.",
+    "description": "The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. From feature 125 the message is also **restated**: the model runner republishes the standing run, read back from the coverage store's own descriptors, when it starts and finds a forecast it did not publish — a reader restarting it from the operator plane, or a start condition whose committed artefact carries the forecast eras and so holds it back for the whole pre-roll. Without that, four components that hold nothing but what this message told them (the scheduler its remaining validity, the offload packager the run it would stage, the analyst its background spread, telemetry its skill ledger) spend the visit believing no forecast exists. A restatement carries the same run_id as the release it restates, which is how a consumer tells the two apart: a consumer that must not act twice on one run compares that id against what it already holds, and one that only needs the standing facts can act on either. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.",
     "type": "object",
     "required": [
       "component",
@@ -9946,7 +9946,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "sim_time": {
         "type": "string",
-        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision."
+        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision — or, for a restatement, the instant it is being said at, exactly as the forecast-features restatement does. The run itself is dated by valid_time, which is identical across a release and every restatement of it, so nothing that reasons about the forecast reads this field."
       },
       "tick": {
         "type": "integer",

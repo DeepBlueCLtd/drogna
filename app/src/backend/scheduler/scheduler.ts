@@ -265,11 +265,23 @@ export class Scheduler {
    * watchdog waits exactly as long as a working run would have taken and not a tick longer.
    *
    * It was the cadence floor's whole interval in the first draft, on the argument that any
-   * bound above the cost would do and that the maximum interval already *means* how long is
-   * too long between runs. True of correctness and false of the reader: at the shipped
-   * values that is 1,800 ticks against a run costing 9, so a reader who stopped the analyst
-   * waited half an hour of simulated time to find out the loop had recovered. Correctness
-   * was the only thing that draft was measured against.
+   * bound above the cost would do. **What the tighter bound buys is not what was first
+   * claimed for it, and the claim was measured false.** It was said to give the reader a
+   * faster recovery; measured on `loitering` — stop the analyst, let the floor come due,
+   * start it again — the next forecast arrives 1,809 ticks later under this bound and 1,810
+   * under the one it replaced. One tick. Releasing `inFlight` does not release the cadence:
+   * `lastRequestTick` still points at the request that vanished, and `considerCadenceFloor`
+   * measures from it, so the floor fires at `request + maximumInterval` either way.
+   *
+   * What it does buy is the window between: while a run is held in flight every divergence is
+   * declined as `duplicate-outstanding`, so at 39 ticks the world can be acted on from the
+   * minimum interval onward, where at 1,800 it could not be acted on at all until the floor
+   * came due. That is a real difference and it is the reason to prefer this bound.
+   *
+   * Resetting `lastRequestTick` on release would make the first claim true, and is not done:
+   * the cadence a replayed run opens on currently matches a live run's to the tick on all
+   * four conditions, and re-requesting every 39 ticks through a pre-roll whose loop is held
+   * back would fill the Messages tab with requests nobody can answer.
    *
    * An unstated cost is treated as nothing, leaving the margin alone — which is the right
    * failing, because the only way the cost is unknown is that the runner has never spoken,

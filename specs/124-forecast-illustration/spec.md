@@ -81,6 +81,28 @@ contributes to a fixed neighbourhood and not to the domain — and the bound is 
 configured correlation rather than assumed. A sparse holding keyed by (observation, cell) is
 what is published; a dense field per observation is what is not.
 
+*Amended before the substrate was built, on a measurement.* The paragraph above was true in
+shape and wrong by an order of magnitude. On the shipped configuration a cycle assimilates
+1,080–1,572 observations — the kernel's own comment said "~180", written when the cadence was
+longer and the platform slower — and a 60 km support over a ~5 km grid with one level of
+vertical reach is ~1,200 cells per observation. Per-observation retention is therefore
+~800,000 entries and ~9 MB a cycle, kept for the life of the run, against a store holding
+~9 MB in total; the analyst already declines to publish salinity's four shares at three
+quarters of a megabyte a cycle on the same ground. Two things follow, both recorded at the
+requirements they change:
+
+- **A source is an instrument at the cell its observations were attributed to** (FR-01, FR-03),
+  not an observation. H is nearest-neighbour, so every observation a datastream makes inside
+  one cell shares that cell's covariance row exactly — the same separation to every other cell,
+  the same declared error — and the sum of their gains is the source's contribution by
+  linearity, with nothing approximated. Tens of sources a cycle; a column has tens of rays,
+  which is also the only count a reader could read.
+- **The support bounds the covariance, not the gain** (FR-02). The inverse in K couples every
+  observation in a connected cluster, so an observation beyond a cell's reach still moves it,
+  through its correlation with one within reach. That coupling has no position a ray could be
+  drawn from, so it is published per cell as one figure — the remainder — and never as a dense
+  column set.
+
 **Q-01 stays open until the profile is drawn.** §10 carries the companion document's Q3 as
 Q-01 — whether the depth profile's source colouring survives greyscale beyond about five
 distinct sources — and says this feature answers it. It is answered by the capture and not
@@ -93,17 +115,29 @@ Numbered locally; the mapping onto the SRD's global numbers is in *Traceability*
 
 ### The substrate
 
-- **FR-01** The analysis kernel retains, for each observation, its contribution to each cell
-  it reached, and the analyst publishes them as a holding announced beside the analysis. The
-  contribution is K_aj — what the published analysis actually used — and never a
-  recomputation.
-- **FR-02** The holding is sparse and its bound is read from the configured correlation: an
-  observation is stored against the cells inside its support and no others. A contribution of
-  exactly zero is absent rather than stored, and absent means outside the support.
+- **FR-01** The analysis kernel retains, for each **source** — an instrument at the cell its
+  observations were attributed to — its contribution to each cell it reached, and the analyst
+  publishes them as a holding announced beside the analysis. The contribution is Σⱼ K_aj over
+  the source's observations — what the published analysis actually used, summed where the
+  sum is exact — and never a recomputation. *Amended before it was built; the measurement is
+  under §"The two costs".*
+- **FR-02** The holding is sparse and its bound is read from the configured correlation: a
+  source is stored against the cells inside its support and no others. Absent means outside
+  the support. *Amended before it was built:* the support bounds the covariance and not the
+  gain, so the holding also carries, per corrected cell, ω — the cycle's total observation
+  weight, which is exactly zero where no source reaches — and the **remainder**, ω less the
+  in-support sources' sum: what observations beyond the cell's reach contributed through
+  their coupling with those within it. Σ sources + remainder = ω is the identity the tests
+  hold, and a level's profile draws the remainder as a band that is not a ray.
 - **FR-03** Each contribution names its **source** — the datastream that produced the
-  observation, or the non-spatial origin (an archive era, climatology, the shore broadcast) —
-  and whether that source is **measured** or **modelled**. The shore broadcast is modelled
-  (FR-125's answer to the companion document's Q1).
+  observations and the cell they were attributed to — and whether that source is **measured**
+  or **modelled**. In this harness every observation the analyst assimilates is a vessel
+  instrument's, so every source in the holding is measured; the flag is carried so the master
+  states the distinction rather than the shell assuming it. The modelled origins — the archive
+  eras, the departure forecast, the model's own error, the shore broadcast — never enter the
+  gain: they are the background's shares (FR-10, FR-125) and are the baseline the profile
+  stacks the sources on. The shore broadcast is modelled (FR-125's answer to the companion
+  document's Q1).
 - **FR-04** For any contribution the holding carries the two numbers that produced it: the
   separation between the observation and the cell, and the observation's declared error
   against the background's at that cell. FR-130 is a requirement about arithmetic being

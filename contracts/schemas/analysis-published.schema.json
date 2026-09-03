@@ -45,22 +45,27 @@
     },
     "collections": {
       "type": "object",
-      "required": ["analysis", "error", "provenance"],
+      "required": ["analysis", "error", "provenance", "contributions"],
       "additionalProperties": false,
       "properties": {
         "analysis": { "type": "string" },
         "error": { "type": "string" },
-        "provenance": { "type": "string" }
+        "provenance": { "type": "string" },
+        "contributions": {
+          "type": "string",
+          "description": "Feature 124: what each cell's value was made from, source by source — the columns of the gain the provenance's measurement share is the row sum of. A `drogna-contributions-v1` holding (analysis-contributions.schema.json), served by the query component at its configured contributions prefix rather than through EDR, because a sparse per-source holding is not a coverage."
+        }
       }
     },
     "digests": {
       "type": "object",
-      "required": ["analysis", "error", "provenance"],
+      "required": ["analysis", "error", "provenance", "contributions"],
       "additionalProperties": false,
       "properties": {
         "analysis": { "type": "string" },
         "error": { "type": "string" },
-        "provenance": { "type": "string" }
+        "provenance": { "type": "string" },
+        "contributions": { "type": "string" }
       }
     },
     "observations": {

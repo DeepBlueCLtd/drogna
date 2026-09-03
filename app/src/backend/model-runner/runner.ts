@@ -29,6 +29,7 @@ import type {
   TelemetryRunFailed,
 } from '../../generated/types.js';
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
+import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
@@ -675,7 +676,6 @@ export class ModelRunner {
         }
       }
     }
-    const ulpAt = (magnitude: number) => Math.pow(2, Math.max(Math.floor(Math.log2(Math.max(magnitude, 1))) - 23, -149));
 
     const manifest: Manifest = {
       ...baseManifest,

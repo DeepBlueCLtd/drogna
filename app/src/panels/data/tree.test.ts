@@ -69,14 +69,19 @@ describe('the Data tree (feature 121)', () => {
       holding('analysis.r1', 'analysis'),
       holding('analysis.r1-error', 'analysis'),
       holding('analysis.r1-provenance', 'analysis'),
+      // Feature 124's fourth holding. Before it was named here it grouped as a cycle of
+      // its own, captioned "the corrected field" — found by review, not by this test,
+      // which built its holdings by hand and never included one.
+      holding('analysis.r1-contributions', 'analysis'),
       holding('analysis.r2', 'analysis'),
     ]);
     expect(cycles.map((cycle) => cycle.id)).toEqual(['analysis.r1', 'analysis.r2']);
-    expect(cycles[0].holdings).toHaveLength(3);
+    expect(cycles[0].holdings).toHaveLength(4);
     expect(cycles[0].holdings.map((h) => analysisFieldLabel(h.holding_id))).toEqual([
       'the corrected field',
       'the error it left',
       'where each value came from',
+      'what each value was made from, by source',
     ]);
   });
 

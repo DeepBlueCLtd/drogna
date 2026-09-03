@@ -29,9 +29,9 @@
       "type": "object",
       "required": ["format", "sha256", "byte_length"],
       "additionalProperties": false,
-      "description": "The stored bytes: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated.",
+      "description": "The stored bytes. `drogna-f32-v1`: every variable's float32 values in the manifest's variable order, each in C order [time][depth][latitude][longitude], little-endian, concatenated — the gridded format every coverage is, and the only one EDR serves. `drogna-contributions-v1` (feature 124): a sparse per-source holding the analyst publishes beside its analysis, laid out as analysis-contributions.schema.json's `$defs/header` states, held by the same store under the same digest check and served by the query component at its contributions prefix. Not a coverage, and EDR does not list it.",
       "properties": {
-        "format": { "type": "string", "const": "drogna-f32-v1" },
+        "format": { "type": "string", "enum": ["drogna-f32-v1", "drogna-contributions-v1"] },
         "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
         "byte_length": { "type": "integer", "minimum": 8 }
       }

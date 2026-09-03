@@ -295,7 +295,8 @@
       "/api/ctl/",
       "/api/edr/",
       "/api/st/",
-      "/api/features/"
+      "/api/features/",
+      "/api/contributions/"
     ],
     "topics": {
       "denial": "ctl/boundary/denial"
@@ -635,7 +636,8 @@
       "edr_prefix": "/api/edr",
       "st_prefix": "/api/st/v1.1",
       "subsets_path": "/api/ctl/query-subsets",
-      "features_prefix": "/api/features"
+      "features_prefix": "/api/features",
+      "contributions_prefix": "/api/contributions"
     },
     "heartbeat": {
       "topic": "ctl/heartbeat",
@@ -1547,7 +1549,8 @@
       "operator_controls": "/api/ctl/controls",
       "operator_tuning": "/api/ctl/tuning",
       "operator_event": "/api/ctl/events",
-      "undeclared_probe": "/api/nothing-is-declared-here"
+      "undeclared_probe": "/api/nothing-is-declared-here",
+      "contributions": "/api/contributions"
     },
     "flow": {
       "suppressed_filters": [

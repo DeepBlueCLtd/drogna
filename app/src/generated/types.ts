@@ -26,6 +26,90 @@ export type Advisory = {
   };
 };
 
+/** drogna analysis contributions — from analysis-contributions.schema.json */
+export type AnalysisContributions = {
+  "schema_version": 1;
+  "holding_id": string;
+  "run_id": string;
+  "variable": AnalysisContributionsVariable;
+  "correlation": AnalysisContributionsCorrelation;
+  "column": {
+    "longitude": number;
+    "latitude": number;
+    "longitude_index": number;
+    "latitude_index": number;
+  };
+  "sources": AnalysisContributionsSource[];
+  "levels": AnalysisContributionsLevel[];
+};
+
+/** analysis-contributions.schema.json #/$defs/variable */
+export type AnalysisContributionsVariable = "temperature";
+
+/** analysis-contributions.schema.json #/$defs/correlation */
+export type AnalysisContributionsCorrelation = {
+  "horizontal_km": number;
+  "vertical_m": number;
+};
+
+/** analysis-contributions.schema.json #/$defs/source */
+export type AnalysisContributionsSource = {
+  "source_id": string;
+  "datastream_id": string;
+  "sensor_id": string;
+  "kind": "measured" | "modelled";
+  "cell": {
+    "index": number;
+    "longitude": number;
+    "latitude": number;
+    "depth_m": number;
+  };
+  "observed": {
+    "longitude": number;
+    "latitude": number;
+    "depth_m": number;
+  };
+  "observation_count": number;
+  "error_std": number;
+  "background_error_std": number;
+  "mean_innovation": number;
+};
+
+/** analysis-contributions.schema.json #/$defs/level */
+export type AnalysisContributionsLevel = {
+  "depth_index": number;
+  "depth_m": number;
+  "cell_index": number;
+  "reached": boolean;
+  "observation_weight": number;
+  "remainder": number;
+  "background_error_std": number | null;
+  "contributions": AnalysisContributionsContribution[];
+};
+
+/** analysis-contributions.schema.json #/$defs/contribution */
+export type AnalysisContributionsContribution = {
+  "source": number;
+  "contribution": number;
+  "separation": {
+    "horizontal_km": number;
+    "vertical_m": number;
+  };
+};
+
+/** analysis-contributions.schema.json #/$defs/header */
+export type AnalysisContributionsHeader = {
+  "schema_version": 1;
+  "format": "drogna-contributions-v1";
+  "run_id": string;
+  "variable": AnalysisContributionsVariable;
+  "correlation": AnalysisContributionsCorrelation;
+  "sources": AnalysisContributionsSource[];
+  "cells": number;
+  "entries": number;
+  "layout": "u32[cells] cell; f32[cells] observation_weight; f32[cells] remainder; f32[cells] background_error_std; u32[cells+1] offsets; u32[entries] source; f32[entries] contribution; f32[entries] horizontal_km; f32[entries] vertical_m";
+};
+
 /** drogna analysis published — from analysis-published.schema.json */
 export type AnalysisPublished = {
   "component": string;
@@ -43,11 +127,13 @@ export type AnalysisPublished = {
     "analysis": string;
     "error": string;
     "provenance": string;
+    "contributions": string;
   };
   "digests": {
     "analysis": string;
     "error": string;
     "provenance": string;
+    "contributions": string;
   };
   "observations": {
     "assimilated": number;
@@ -601,6 +687,7 @@ export type ConfigQuery = {
     "st_prefix": ConfigCommonRelativePath;
     "subsets_path": ConfigCommonRelativePath;
     "features_prefix": ConfigCommonRelativePath;
+    "contributions_prefix": ConfigCommonRelativePath;
   };
   "heartbeat": ConfigCommonHeartbeat;
 };
@@ -740,6 +827,7 @@ export type ConfigShell = {
     "undeclared_probe": ConfigCommonRelativePath;
     "features": ConfigCommonRelativePath;
     "query_subsets": ConfigCommonRelativePath;
+    "contributions": ConfigCommonRelativePath;
     "operator_controls": ConfigCommonRelativePath;
     "operator_tuning": ConfigCommonRelativePath;
     "operator_event": ConfigCommonRelativePath;
@@ -950,7 +1038,7 @@ export type CoverageHolding = {
     "tick": number;
   };
   "field": {
-    "format": "drogna-f32-v1";
+    "format": "drogna-f32-v1" | "drogna-contributions-v1";
     "sha256": string;
     "byte_length": number;
   };

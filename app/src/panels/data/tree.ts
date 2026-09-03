@@ -126,7 +126,7 @@ export interface AnalysisCycle {
 export function analysisCycles(holdings: readonly CoverageHolding[]): readonly AnalysisCycle[] {
   const byCycle = new Map<string, CoverageHolding[]>();
   for (const holding of holdings) {
-    const cycle = holding.holding_id.replace(/-(?:error|provenance)$/, '');
+    const cycle = holding.holding_id.replace(/-(?:error|provenance|contributions)$/, '');
     const existing = byCycle.get(cycle);
     if (existing) existing.push(holding);
     else byCycle.set(cycle, [holding]);
@@ -134,9 +134,23 @@ export function analysisCycles(holdings: readonly CoverageHolding[]): readonly A
   return [...byCycle.entries()].map(([id, group]) => ({ id, holdings: group }));
 }
 
-/** Which of a cycle's three fields a holding is, for the reader choosing between them. */
+/**
+ * Whether a holding is a gridded coverage the volume can draw and EDR serves. The
+ * backend answers the same question in `lib/holding-format.ts`; this side of the seam
+ * cannot import it, and reads the descriptor's own `field.format` instead — the same
+ * arrangement `Volume.tsx` has for the collection id. Feature 124's contributions
+ * holding is the one that is not.
+ */
+export function isGriddedCoverage(holding: Pick<CoverageHolding, 'field'>): boolean {
+  return holding.field.format === 'drogna-f32-v1';
+}
+
+/** Which of a cycle's four holdings this is, for the reader choosing between them. */
 export function analysisFieldLabel(holdingId: string): string {
   if (holdingId.endsWith('-error')) return 'the error it left';
   if (holdingId.endsWith('-provenance')) return 'where each value came from';
+  // Feature 124: the fourth holding, and not a field — the sources each value came
+  // from, sparse, served at its own prefix rather than through EDR.
+  if (holdingId.endsWith('-contributions')) return 'what each value was made from, by source';
   return 'the corrected field';
 }

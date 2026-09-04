@@ -479,20 +479,22 @@ try {
   // fast rather than merely possible. The bound is read from the clock's own configuration
   // (Constitution IV), never typed here.
   const narrowRate = config.clock.max_rate;
-  const running = await page.evaluate(async (rate: number) => {
-    const response = await fetch("/api/ctl/clock/rate", {
-      method: "PUT",
-      body: JSON.stringify({ rate }),
-    });
-    return response.ok;
-  }, narrowRate);
-  if (!running)
-    throw new Error(
-      `the clock would not run at ${narrowRate} for the narrow pass`,
-    );
 
   const narrow: string[] = [];
   for (const size of NARROW_SIZES) {
+    // Started per size, because the measurement below stops it again: the recovery needs time to
+    // pass and the measurement needs it not to.
+    const running = await page.evaluate(async (rate: number) => {
+      const response = await fetch("/api/ctl/clock/rate", {
+        method: "PUT",
+        body: JSON.stringify({ rate }),
+      });
+      return response.ok;
+    }, narrowRate);
+    if (!running)
+      throw new Error(
+        `the clock would not run at ${narrowRate} for the narrow pass`,
+      );
     await page.setViewportSize(size);
     await page.waitForFunction(
       (want: number) => window.innerWidth === want,
@@ -527,6 +529,29 @@ try {
       );
       continue;
     }
+    // **Stopped again before measuring.** The clock runs for this pass because the remount
+    // recovers on a restatement, and it runs at the configured ceiling so that recovery is fast —
+    // but a new analysis cycle clears the picked column by design, and at that rate one lands
+    // every fraction of a real second. Between the pick returning and the measuring evaluate the
+    // column can be gone, and the pass then reports `.forecast-column-readout` "not on the page"
+    // and reddens the build for a layout that is fine. Nothing below needs time to pass, so
+    // nothing below gets any.
+    const stopped = await page.evaluate(async () => {
+      const response = await fetch("/api/ctl/clock/rate", {
+        method: "PUT",
+        body: JSON.stringify({ rate: 0 }),
+      });
+      return response.ok;
+    });
+    if (!stopped)
+      throw new Error("the clock would not stop before the narrow measurement");
+    await page.waitForFunction(
+      () =>
+        /rate 0/.test(
+          document.querySelector('[data-testid="sim-rate"]')?.textContent ?? "",
+        ),
+      { timeout: 30_000 },
+    );
     const measured = await page.evaluate((label: string) => {
       const out: string[] = [];
       if (document.documentElement.scrollWidth > window.innerWidth + 1) {

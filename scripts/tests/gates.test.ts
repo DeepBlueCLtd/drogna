@@ -387,6 +387,13 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.stringMatching(/says three capture proofs; CI runs 2/),
     ]);
 
+    // **And there are two such numbers**, four words apart in one paragraph: the captures, and
+    // the total including `replay-proof`. The gate held the second and not the first, and the
+    // first was wrong the day it was written — "seven more things" against eight.
+    expect(captureInventory(join(fixtures, 'capture-total')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
+    ]);
+
     // And a record that has lost the sentence entirely is a refusal, not a pass: a gate that
     // cannot find what it holds has proved nothing.
     expect(() => captureInventory(join(fixtures, 'capture-unnamed'))).toThrow(/no longer carries the sentence/);

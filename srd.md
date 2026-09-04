@@ -1338,15 +1338,21 @@ says so where they will be rather than drawing an empty canvas.
   to look. The margin position is an admission that those sources have no geometry, not a
   substitute for one *(FI-18)*.
 
-  *Amended at delivery (feature 124).* The docking is **conditional on such a source existing**,
-  and none does. Every entry in the analyst's source table is an instrument of the vessel's own:
-  the shore broadcast and the archive eras enter the analysis as *background*, which FR-125
-  rules out of the ray set entirely, so a non-spatial source would have to be admitted by a
-  future analyst before there were anything to dock. The requirement stands for that day and is
-  not built now, because a margin of empty labelled boxes is a claim about sources the run does
-  not have. What guards the transition is `backgroundRaysIn`, which asks the master's own `kind`
-  field and reports any such origin where a reader sees it, rather than the shell drawing it
-  quietly as an ordinary ray.
+  *Amended at delivery (feature 124).* The docking is **conditional on a non-spatial source
+  existing**, and none can. Every entry in the analyst's source table is an instrument of the
+  vessel's own; and more than that, `analysis-contributions.schema.json` makes `cell` and
+  `observed` required on every source, each carrying a required longitude and latitude — so a
+  source with no geometry is not merely absent from this configuration, it is unrepresentable
+  without amending the master. The requirement stands for the day that master changes, and is not
+  built now, because a margin of empty labelled boxes is a claim about sources the run does not
+  have.
+
+  *And the first version of this amendment named the wrong guard.* It said `modelledRaysIn` —
+  then called `backgroundRaysIn` — "guards the transition", which conflates two orthogonal
+  properties: `kind` says whose *model* an observation came from, not whether it has a *position*.
+  A modelled source is fully spatial and is drawn (FR-124). Nothing in the shell can detect a
+  non-spatial source, because the master cannot express one; what would announce the transition is
+  the master amendment itself, and that is the honest statement of it.
 - **FR-124** Sources shall be grouped and marked as **measured** (the vessel's own sensing)
   or **modelled** (climatology, the archive eras, the shore broadcast). The shore broadcast is
   modelled: it is another party's forecast and is drawn as such *(FI-19)*.

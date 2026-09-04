@@ -617,10 +617,13 @@
 
 /* Where the rays converge: the column that was picked. Hollow, so the cell's own share colour
    still reads through it. */
+/* Screen units, because the ring carries `vector-effect: non-scaling-stroke` — see the comment
+   on the element. In user units, under `preserveAspectRatio="none"`, this was ~2 px across and
+   ~0.57 px top-to-bottom on the shipped field. */
 .forecast-ray-column {
   fill: none;
   stroke: var(--shell-fg);
-  stroke-width: 0.12;
+  stroke-width: 1.4;
 }
 
 .forecast-column-level {

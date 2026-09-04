@@ -49,7 +49,7 @@ pnpm site:build   # the published site, into site/build/ (ADR-0031)
 pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped labels
 ```
 
-**`pnpm check` is not the build, and CI runs seven more things than it does.** This line
+**`pnpm check` is not the build, and CI runs eight more things than it does.** This line
 read "what CI runs" until a branch shipped seven consecutive red CI runs while `pnpm check`
 reported green on every commit of it. After the checks, CI runs `pnpm replay-proof` and then
 seven capture proofs — `capture:glance operator`, `capture:background`, `capture:messages`,

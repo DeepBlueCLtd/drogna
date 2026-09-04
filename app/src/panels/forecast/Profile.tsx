@@ -42,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { backgroundRaysIn, levelAtDepth, paletteSlots, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { levelAtDepth, modelledRaysIn, paletteSlots, sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -67,7 +67,7 @@ export interface ProfileProps {
    * widths on the map and the rows in the table below described the same rays.
    *
    * FR-125's named condition is read *off this set*, below, for the same reason. It used to
-   * arrive as a second prop — `backgroundDrawn`, the datastream ids of `backgroundRaysIn(rays)`
+   * arrive as a second prop — `backgroundDrawn`, the datastream ids of `modelledRaysIn(rays)`
    * — computed in the parent and handed over beside the set it was computed from, which is the
    * duplication this docstring argues against, one line above where it does it.
    */
@@ -223,7 +223,7 @@ export function Profile({
   const served = typeof contributions === 'object' ? contributions : undefined;
   // FR-125's named condition, read off the drawn set here rather than computed in the parent and
   // handed over beside it.
-  const backgroundDrawn = rays ? backgroundRaysIn(rays).map((ray) => ray.datastreamId) : [];
+  const modelledDrawn = rays ? modelledRaysIn(rays).map((ray) => ray.datastreamId) : [];
   const labels = served ? sourceLabels(served.sources) : [];
   // The palette is the instrument's, not the served array's — see `Ray.paletteSlot`. Computed
   // once here and passed down rather than derived per band, so the bar and the swatch beside its
@@ -275,15 +275,22 @@ export function Profile({
         </p>
       )}
 
-      {backgroundDrawn.length > 0 && (
-        <p className="forecast-column-refused" data-testid="background-drawn">
-          {backgroundDrawn.join(', ')} {backgroundDrawn.length === 1 ? 'names' : 'name'} the standing
-          forecast’s own origins, and {backgroundDrawn.length === 1 ? 'is' : 'are'}{' '}
-          <strong>not drawn as a ray</strong> above. The background is not a contributing source
-          (FR-125): it is the baseline these bands sit on, and a ray from it would blur the grammar
-          of assimilation. It stays in the table below and in ω, because it is part of what the
-          gain weighed and dropping it there would break that sum silently. Reported here rather
-          than left out quietly.
+      {/* **FR-124, and it used to say FR-125's thing instead.** A modelled source is another
+          party's model output *admitted as an observation* — the master's own words — so it
+          contributes, it has a position, and the SRD says it is drawn as such. This paragraph
+          declared it "the standing forecast's own origins … the baseline these bands sit on"
+          while its band was drawn in the stack above and its figure printed in the table below,
+          and the map had dropped its ray. The standing forecast is a different thing and is not
+          in the source table at all: it never enters as an observation, which is why FR-125 needs
+          no filter to keep it out of the rays. */}
+      {modelledDrawn.length > 0 && (
+        <p className="forecast-column-refused" data-testid="modelled-drawn">
+          {modelledDrawn.join(', ')} {modelledDrawn.length === 1 ? 'is' : 'are'}{' '}
+          <strong>modelled</strong>: another party’s model output, admitted as an observation and
+          weighed by the gain like any other. Drawn and marked as such (FR-124) rather than passed
+          off as the vessel’s own sensing. The standing forecast is not among these and never
+          appears here — it does not enter as an observation at all, and is the baseline every band
+          on this profile sits on.
         </p>
       )}
 
@@ -388,7 +395,8 @@ export function Profile({
           along with the map, silently: the only message on the page named the refused *field*,
           and none of these four surfaces reads the field. They are computed from the contributions
           document, which is still in hand and still drawing the bands one element above. Only the
-          rays' geometry needs the slab, and `tableRays` is what carries the distinction. */}
+          rays' geometry needs the slab, and the `raySet`/`rays` split in `ColumnProvenance` is
+          what carries the distinction. */}
       {rays && rays.rays.length > 0 && (
         <table className="forecast-column-numbers" data-testid="contribution-numbers">
           <caption>

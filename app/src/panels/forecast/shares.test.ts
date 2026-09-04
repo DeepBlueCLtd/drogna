@@ -53,10 +53,11 @@ describe('which share a served parameter is', () => {
 
 describe('the two share lists derived from the one', () => {
   it('names the measurement share and the three that are not it, whatever the order becomes', () => {
-    // `MEASUREMENT` is `SOURCES[2]` — indexed rather than searched, because a `find` needs a
-    // fallback TypeScript cannot see is unreachable and the fallback is then a second opinion
-    // about which share to use. The index is what this holds, so reordering `SOURCES` fails here
-    // rather than silently colouring the earlier-cycles band as the archive.
+    // **This comment argued for `SOURCES[2]`, an index a reorder would have broken — and the
+    // line it points at could not have caught that even then.** `MEASUREMENT` is
+    // `shareOf('measurement')` now, a keyed lookup, so `MEASUREMENT.key` is `'measurement'` for
+    // any ordering and this assertion fails only if the entry is deleted outright. Worth having,
+    // and not what the comment claimed. What holds the *order* is the line below it.
     expect(MEASUREMENT.key).toBe('measurement');
     expect(BACKGROUND_SOURCES.map((source) => source.key)).toEqual(['archive', 'departure', 'model']);
     expect(BACKGROUND_SOURCES).toHaveLength(SOURCES.length - 1);

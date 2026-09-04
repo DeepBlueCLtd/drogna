@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
 import {
-  backgroundRaysIn,
+  modelledRaysIn,
   contributionResidual,
   drawableRays,
   levelAtDepth,
@@ -214,9 +214,9 @@ describe('the rays a column is made of', () => {
     expect(raysFor(summedToNothing).reachedCount).toBe(0);
   });
 
-  it('SC-005: the standing forecast is not a ray, and a source table that admitted one is named', () => {
+  it('FR-124: a modelled origin is drawn and named as one, and the standing forecast is neither', () => {
     const clean = raysFor(document());
-    expect(backgroundRaysIn(clean)).toEqual([]);
+    expect(modelledRaysIn(clean)).toEqual([]);
 
     // **The plant is a document a future analyst could actually publish.** The first version of
     // this test planted a source whose *datastream id* was the word `archive`, matching a guard
@@ -231,21 +231,22 @@ describe('the rays a column is made of', () => {
       source('d.cell-3', -11.0, 'shore-temperature-broadcast', 'modelled'),
     ];
     const set = raysFor(admitted);
-    const named = backgroundRaysIn(set);
+    const named = modelledRaysIn(set);
     expect(named.map((ray) => ray.datastreamId)).toEqual(['shore-temperature-broadcast']);
-    // And it is found by what it is, not by what it is called: the same source under any name
-    // is still the background.
+    // And it is found by what it is, not by what it is called: the same source under any name is
+    // still modelled.
     expect(named[0].kind).toBe('modelled');
 
-    // **And it is not drawn**, which is what "not among the rays" says. Reporting it in a
-    // paragraph while the map drew it anyway put the guard on the sentence rather than on the
-    // surface — and the SRD's FR-123 amendment, which declines to build the docked marginal
-    // nodes, leans on this guard for the day an analyst admits a non-spatial source.
-    expect(drawableRays(set).map((ray) => ray.datastreamId)).not.toContain('shore-temperature-broadcast');
-    expect(drawableRays(set)).toHaveLength(set.rays.length - 1);
-    // It stays in the set the table and the ω identity are read from: it is part of what the
-    // gain weighed, and dropping it there would break SC-001 silently instead of loudly.
-    expect(set.rays).toHaveLength(3);
+    // **And it is drawn**, which is the correction. This asserted the opposite for four rounds,
+    // on a reading the master does not support: `kind: 'modelled'` is "another party's model
+    // output *admitted as an observation*", so it contributes, it has a position, and SRD FR-124
+    // says it is drawn as such. What FR-125 keeps out of the rays is the *standing forecast*,
+    // which the same master note says never enters as an observation at all — it is not filtered
+    // out of the source table, it is structurally absent from it. Removing a modelled source's
+    // ray dropped a line for a source that reached the column while the region's own paragraph
+    // called it the baseline and its band was drawn in the stack.
+    expect(drawableRays(set).map((ray) => ray.datastreamId)).toContain('shore-temperature-broadcast');
+    expect(drawableRays(set)).toHaveLength(set.rays.length);
     expect(drawableRays(raysFor(document()))).toHaveLength(3);
   });
 });

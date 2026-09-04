@@ -19,12 +19,23 @@
  * to every source that reached it and a depth profile that breaks the measurement share into
  * those sources. What is still to come is the volume this plan is a section through.
  *
- * **Every figure is read through OGC API-EDR** — an area query for the slab, position queries
- * for the column — exactly as an external client would ask for it. The shell holds no private
- * path to the store, and a surface that bypassed the query layer would be evidence of nothing.
+ * **Every figure is read through the query layer, over two paths.** The four provenance shares
+ * come through OGC API-EDR — an area query for the slab, position queries for the column — as an
+ * external client would ask for them. The per-source contributions come from the query
+ * component's own contributions prefix, because a sparse per-source holding is not a coverage and
+ * EDR has no query for one; the caption beneath the profile says so where a reader meets it.
+ * Neither is a private path into the store, which is the property that matters: a surface that
+ * bypassed the query layer would be evidence of nothing.
  *
- * **Nothing here polls** (FR-136). A fetch happens when a reader picks a depth or a cell, and
- * at no other time: not on a tick, not on an announcement, not on a timer.
+ * **Nothing here polls** (FR-136), and that is a narrower claim than "nothing is fetched".
+ * A fetch happens when a reader picks a depth or a cell, and **once when a new analysis cycle is
+ * announced** — the field is re-read because it is a different field, and the axis because it
+ * belongs to that analysis. Never on a tick, never on a timer, and never twice for one cycle: a
+ * *restatement* of the standing analysis carries the same collection names and is keyed out, which
+ * is what `FR-136: a restatement of the standing analysis re-queries nothing` holds.
+ *
+ * This paragraph read "not on an announcement" while both effects were announcement-driven, which
+ * is the sentence a reader would have audited the region against.
  *
  * **Colour is never the only carrier** (FR-138). The four sources sit in a fixed order with a
  * validated palette — checked against this shell's own surface `#10151b`, worst adjacent pair
@@ -112,11 +123,17 @@ interface RangeBody {
  * the last writer won. The slab was given a check for that and this — the path that builds the
  * profile's background bands — was not, so one region had two behaviours on one input.
  */
-function sharesFrom(
+function sharesFrom<T>(
   body: RangeBody,
-  at: (values: number[]) => number,
-): { shares: Record<SourceKey, number>; collided: string[] } {
-  const out = { ...EMPTY_SHARES };
+  at: (values: number[]) => T,
+  // The reading for a share the body did not carry, passed rather than cast: the position path's
+  // is `NaN` ("not served", which the profile prints as such) and the slab's is an empty array
+  // ("no values at any cell"). A `Record<SourceKey, number>` cast into a `Record<SourceKey, T>`
+  // gave the slab four `NaN`s for its arrays, which degrades to the same reading by accident
+  // rather than by statement.
+  absent: T,
+): { shares: Record<SourceKey, T>; collided: string[] } {
+  const out = Object.fromEntries(SOURCES.map((source) => [source.key, absent])) as Record<SourceKey, T>;
   const claimed = new Map<SourceKey, string>();
   const collided: string[] = [];
   for (const [name, range] of Object.entries(body.ranges ?? {})) {
@@ -278,38 +295,17 @@ export function ColumnProvenance({
         } else {
           const longitudes = body.domain?.axes?.x?.values ?? [];
           const latitudes = body.domain?.axes?.y?.values ?? [];
-          const shares = {
-            archive: [] as number[],
-            departure: [] as number[],
-            measurement: [] as number[],
-            model: [] as number[],
-          };
-          // **One range per share, and a second writer is a fault rather than a silent
-          // overwrite.** `sourceOf` reads the segment after the last `_share_`, which discards
-          // the variable: `temperature_share_measurement` and `salinity_share_measurement` both
-          // resolve to `measurement`, and the loop's last writer won. The analyst serves one
-          // variable's provenance today and the master frames that as a size decision rather than
-          // a permanent one — so the day it serves two, the map would have drawn one variable's
-          // field under a legend naming the other, with nothing said. Refused instead, and named.
-          const claimed = new Map<SourceKey, string>();
-          const collided: string[] = [];
-          for (const [name, range] of Object.entries(body.ranges ?? {})) {
-            const key = sourceOf(name);
-            if (!key || !range.values) continue;
-            const already = claimed.get(key);
-            if (already !== undefined) {
-              collided.push(`${already} and ${name} both read as the ${key} share`);
-              continue;
-            }
-            claimed.set(key, name);
-            shares[key] = range.values;
-          }
-          if (collided.length > 0) {
-            setSlabRefusals([`the share field at ${depthM} m is ambiguous: ${collided.join('; ')}`]);
+          // Through `sharesFrom`, which is where the one-range-per-share rule lives. It was
+          // written out again here, eleven lines identical down to the message string, which is
+          // two copies of a refusal rule that have to agree — the fault class this file's own
+          // comments name repeatedly.
+          const read = sharesFrom<number[]>(body, (values) => values, []);
+          if (read.collided.length > 0) {
+            setSlabRefusals([`the share field at ${depthM} m is ambiguous: ${read.collided.join('; ')}`]);
             setSlab(undefined);
           } else {
             setSlabRefusals([]);
-            setSlab({ depthM, longitudes, latitudes, shares });
+            setSlab({ depthM, longitudes, latitudes, shares: read.shares });
           }
         }
       } catch (error) {
@@ -372,7 +368,7 @@ export function ColumnProvenance({
             levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
             continue;
           }
-          const read = sharesFrom(body, (values) => values[0] ?? Number.NaN);
+          const read = sharesFrom<number>(body, (values) => values[0] ?? Number.NaN, Number.NaN);
           if (read.collided.length > 0) {
             failed.push(`the column at ${depth} m is ambiguous: ${read.collided.join('; ')}`);
             levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
@@ -817,7 +813,20 @@ export function ColumnProvenance({
                     vectorEffect="non-scaling-stroke"
                   />
                 ))}
-                <circle className="forecast-ray-column" cx={rays.from.x} cy={rays.from.y} r={0.5} />
+                {/* `non-scaling-stroke` like the markers three lines up, and for the reason the
+                    CSS beside them gives: the map is drawn with `preserveAspectRatio="none"`, so a
+                    width in user units is stretched by a different factor along each axis. At the
+                    shipped field's proportions this ring's left and right edges came out about
+                    2 px and its top and bottom about 0.57 — sub-pixel — so the mark the blog's alt
+                    text calls "a pale ring" rendered as two arcs. The width is in screen units to
+                    match. */}
+                <circle
+                  className="forecast-ray-column"
+                  cx={rays.from.x}
+                  cy={rays.from.y}
+                  r={0.5}
+                  vectorEffect="non-scaling-stroke"
+                />
               </g>
             )}
           </svg>
@@ -828,7 +837,7 @@ export function ColumnProvenance({
               the quiet lie the proportional scale was there to avoid. The count is the drawing's
               own — the same predicate the stroke width is computed from — and the figures are in
               the table beneath. */}
-          {rays && underScaleCount > 0 && (
+          {underScaleCount > 0 && (
             <p className="forecast-ray-note" data-testid="forecast-under-scale">
               {underScaleCount === 1 ? 'One ray is' : `${underScaleCount} rays are`} drawn at the thinnest width this
               map can show: {underScaleCount === 1 ? 'its' : 'their'} share of the widest contribution is under{' '}

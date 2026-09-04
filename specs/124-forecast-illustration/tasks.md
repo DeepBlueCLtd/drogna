@@ -823,6 +823,65 @@ the part worth recording, because each was a sentence asserting a property the c
       exists; and `shares.test.ts`'s comment still argued for the `SOURCES[2]` spelling deleted a
       commit earlier, over an assertion that cannot catch what the comment says it catches.
 
+- [x] T022t **A ninth round, and its first finding is that three of the eighth round's six claimed
+      corrections were never made.** T022s and the commit message both list them; the tree had
+      none of them. They were string replacements written without an assertion, so each matched
+      nothing and did nothing, and I read the script's own "ok" as evidence. That is CLAUDE.md's
+      opening lesson — the record is a claim about the tree — committed inside the commit written
+      to close instances of it. Made now, each one verified in the file afterwards, and every
+      edit in this round carries an assertion that fails loudly when its target is not there.
+
+      **And a misreading of the master, held for four rounds and built on twice.**
+      `analysis-contributions.schema.json` says of `kind`: *"Modelled: another party's model output
+      **admitted as an observation** … the shore broadcast enters as background, **never as an
+      observation**."* So a modelled source contributes, has a position, and SRD FR-124 says it is
+      drawn as such; what FR-125 keeps out of the rays is the *standing forecast*, which is not in
+      the source table at all and needs no filter. `drawableRays` was removing a contributing
+      source's ray while its band was drawn in the stack, its figure printed in the table, and a
+      paragraph beneath called it "the baseline these bands sit on" — three surfaces of one region
+      disagreeing about one source. `backgroundRaysIn` is `modelledRaysIn`, the filter is gone, the
+      notice says what FR-124 asks for, and the test that asserted the removal now asserts the
+      drawing.
+
+      That misreading also went into `srd.md` and `spec.md`. Both said `backgroundRaysIn` "guards
+      the transition" to needing docked marginal nodes — conflating *modelled* with *non-spatial*,
+      which are orthogonal, and missing that the master requires `cell` and `observed` with
+      coordinates on **every** source, so a non-spatial source is unrepresentable rather than
+      merely absent. Both amended: what would announce the transition is an amendment to the
+      master, and no runtime guard can stand in for one.
+
+      **The give-up flag was set on the next entry to the effect, so with the clock pinned it was
+      never set at all** — and a pinned clock is every capture proof and any harness an operator
+      has stopped. The region went on saying "the store had none when this console asked",
+      describing a wait it had abandoned, which is the exact state the flag was added to
+      distinguish. Set where the allowance is spent now.
+
+      **The picked column's ring had no `non-scaling-stroke`** while the markers three lines above
+      it did, with the CSS beside them explaining why. Under `preserveAspectRatio="none"` at the
+      shipped field's proportions its left and right edges came out about 2 px and its top and
+      bottom about 0.57 — so the mark the blog's alt text calls "a pale ring" was drawing as two
+      arcs.
+
+      **"Nothing here polls … not on an announcement" was false**, and had been since the region
+      was written: a new analysis cycle fires an EDR area query and an inventory fetch. FR-136 is
+      about cadence, not about announcements, and the sentence a reader would audit the region
+      against said otherwise. Corrected to what the effects do, including the restatement keying
+      that `FR-136` holds.
+
+      **`check-capture-inventory` held one of the two numbers in the paragraph it guards.** Four
+      words from "seven capture proofs" sits "CI runs seven more things than it does", which
+      counts the captures *and* `replay-proof` — and it was wrong the day the gate was written to
+      hold the other one. The gate holds both now, with a fixture; watched failing against the
+      real tree before the fix.
+
+      Smaller: the share-collision rule was written out twice, eleven lines identical down to the
+      message string, so the fix for "the position path has no check" added a second copy of a
+      refusal rule rather than generalising the first; two assertions restated the line above
+      them and a unit test's title claimed behaviour in an effect it cannot reach; the FR-140
+      check read an absent region as one that draws; the narrow pass measured a column a running
+      clock can clear between the pick and the measurement, and now stops the clock once it has
+      what it needs; and the pin's give-up message counted three attempts after four.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath

@@ -236,7 +236,10 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       const step = FORECAST_TOUR_STEPS.find((entry) => entry.subject === region.id);
       expect(step, `no tour step for ${region.id}`).toBeDefined();
       const claimsTheRegion = /this region\b[^.]*\bnot built/i.test(step?.panel ?? '');
-      const drawsSomething = section?.querySelector('svg, button, table, ol') !== null;
+      // `section?.querySelector(...) !== null` reads as "it draws something" and evaluates to
+      // `true` when there is no section at all — so the one case where "this region is not built"
+      // is honest was the case it would have flagged.
+      const drawsSomething = section !== null && section.querySelector('svg, button, table, ol') !== null;
       expect(
         claimsTheRegion && drawsSomething,
         `the tour calls the whole ${region.id} region unbuilt while the panel draws in it`,
@@ -692,7 +695,7 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // **SC-005 over the drawn ray set**, which is where the requirement asks for it: the
       // standing forecast is the background and never a ray. The shell's own named condition
       // reports any that appears, and the region carries no such notice.
-      expect(screen.queryByTestId('background-drawn')).toBeNull();
+      expect(screen.queryByTestId('modelled-drawn')).toBeNull();
       // Asked of the master's own field and not of a source id's spelling. The loop this
       // replaces tested `data-source` against five words from the *share* vocabulary, while a
       // source id is `<datastream>.cell-<n>` — so no document the analyst can publish could
@@ -1099,14 +1102,14 @@ describe('what one attempt at the depth axis costs', () => {
     let spent = 0;
     for (let cycle = 0; cycle < GRID_ATTEMPTS * 4; cycle++) spent = spendAttempt(spent, 'absent');
     expect(spent, 'a cycle whose axis is not published yet spent the allowance').toBe(0);
-    expect(spent).toBeLessThan(GRID_ATTEMPTS);
   });
 
-  it('spends on a refusal, and stops the region asking once the allowance is gone', () => {
+  it('spends on a refusal, which is the only thing the allowance is for', () => {
+    // The *stopping* is the effect's, and this does not reach it — the title used to say it did.
+    // What is asserted here is the arithmetic the effect's guard reads.
     let spent = 0;
     for (let attempt = 0; attempt < GRID_ATTEMPTS; attempt++) spent = spendAttempt(spent, 'refused');
     expect(spent).toBe(GRID_ATTEMPTS);
-    expect(spent >= GRID_ATTEMPTS, 'a seam that will not answer is asked for ever').toBe(true);
   });
 
   it('gives the whole allowance back on an answer, because one answer is not that seam', () => {

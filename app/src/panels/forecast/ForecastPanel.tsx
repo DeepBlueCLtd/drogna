@@ -417,10 +417,13 @@ export function ForecastPanel({ params }: PanelProps) {
     // allowance the region stops asking and says so — `gaveUp`, below, rather than leaving the
     // "the store had none when this console asked" sentence standing, which describes a state it
     // is no longer in.
-    if (attemptsRef.current >= GRID_ATTEMPTS) {
-      setGridGaveUp(true);
-      return;
-    }
+    // **Set where the allowance is spent, not on the next entry.** It was set here — on the
+    // *following* effect run — so between the last failure and the next restatement the region
+    // went on saying "the store had none when this console asked", describing a wait it had
+    // already abandoned. With the clock pinned, which is every capture proof and any harness an
+    // operator has stopped, no next restatement arrives and that sentence is permanent. Two
+    // representations of one fact, updated at different moments.
+    if (attemptsRef.current >= GRID_ATTEMPTS) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -436,12 +439,14 @@ export function ForecastPanel({ params }: PanelProps) {
         // case Principle XI says no code path may assume away.
         if (!response.ok) {
           attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
           return;
         }
         const body: unknown = await response.json();
         if (cancelled) return;
         if (!validator.validate('holdings-inventory', body).ok) {
           attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
           return;
         }
         const grid = gridForAnalysis(body as HoldingsInventory, analysis);
@@ -467,6 +472,7 @@ export function ForecastPanel({ params }: PanelProps) {
         // Left for the next restatement to ask again, within the allowance above; a chooser over
         // no axis is drawn as absent.
         attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+        setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
       }
     })();
     return () => {

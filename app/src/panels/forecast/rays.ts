@@ -37,7 +37,7 @@
  *
  * **The standing forecast is not among the rays**, and this is a named condition rather than an
  * absence (FR-125, SC-005). It is the background: the baseline the corrections sit on, drawn as
- * the profile's baseline band. `backgroundRaysIn` is that condition, and the region calls it and
+ * the profile's baseline band. `modelledRaysIn` is that condition, and the region calls it and
  * reports what it returns, so a future source table that admitted one is named on the surface
  * rather than only in a test.
  *
@@ -88,16 +88,19 @@ export interface Ray {
    */
   readonly paletteSlot: number;
   /**
-   * Which palette entry's **dash and hatch angle** draw this ray. The instrument's own, stepped
-   * once for each further source that instrument has in this column.
+   * Which palette entry's **dash and hatch angle** draw this ray: the source's own rank among the
+   * column's sources, sorted by id, so no two sources of one column can share one.
    *
    * Hue alone cannot carry both things the reader needs. Keying it on the instrument makes a
    * colour mean the same thing in two columns — the fault above — but a loitering platform puts
    * three sources of one instrument in one column, and they then drew as three adjacent bands of
    * one bar identical in colour *and* texture, which is the defect the greyscale work exists
-   * against. So the hue is the instrument's and the texture separates its sources: the step stays
-   * inside `INSTRUMENTS`, whose angles are multiples of 30, so it cannot land on a share's
-   * direction (odd multiples of 15) or the remainder band's.
+   * against. So the hue is the instrument's and the texture separates the column's sources. The
+   * first version of that stepped from the instrument's slot once per further source of it, which
+   * walks onto *other* instruments' slots and put two identical textures side by side in one bar;
+   * a rank over the sorted ids cannot. Either way the slot stays inside `INSTRUMENTS`, whose
+   * angles are multiples of 30, so it never lands on a share's direction (odd multiples of 15) or
+   * the remainder band's 135°.
    */
   readonly textureSlot: number;
   readonly datastreamId: string;
@@ -333,14 +336,18 @@ export function contributionResidual(set: RaySet): { drawn: number; published: n
 }
 
 /**
- * The background is not a source (FR-125, SC-005).
+ * The **modelled** origins in a column: another party's model output admitted as an observation.
  *
- * Every source in the contributions holding is an instrument by construction — the analyst
- * assimilates the vessel's own datastreams and nothing else, and the shore broadcast enters as
- * background rather than as an observation — so this never fires today. It exists because
- * "never" is a claim about a document that a later feature could change: admit a modelled origin
- * to the source table and this names it rather than letting the surface quietly draw the
- * baseline as a ray.
+ * Named `backgroundRaysIn` and read as "the standing forecast, drawn as a ray" for four rounds,
+ * which the master does not support — see `drawableRays`. What it actually finds is FR-124's
+ * second kind: a source that contributes, has a position, is drawn, and must be *marked* rather
+ * than removed. The region reports it for that reason.
+ *
+ * Every source in the contributions holding is a vessel instrument by construction today — the
+ * analyst assimilates the vessel's own datastreams and nothing else — so this never fires. It
+ * exists because "never" is a claim about a document a later feature could change: admit another
+ * party's model output as an observation, which the master provides for, and this names it so the
+ * region can mark it rather than drawing it as though it were the vessel's own sensing.
  *
  * **It asks the master's own question, and the first version did not.** That version matched the
  * datastream id against five words taken from `config.analyst`'s share vocabulary — which is a
@@ -351,7 +358,7 @@ export function contributionResidual(set: RaySet): { drawn: number; published: n
  * it. `kind` is `'measured' | 'modelled'` in the master, the analyst fills it, the numbers table
  * already prints it, and it is the question being asked.
  */
-export function backgroundRaysIn(set: RaySet): readonly Ray[] {
+export function modelledRaysIn(set: RaySet): readonly Ray[] {
   return set.rays.filter((ray) => ray.kind === 'modelled');
 }
 
@@ -446,17 +453,22 @@ export function placeOn(axis: readonly number[], kept: readonly number[], value:
 }
 
 /**
- * The rays that may be **drawn on the map**: the set, less any modelled origin.
+ * The rays that may be **drawn on the map**, which is all of them.
  *
- * FR-125 and SC-005 say the standing forecast is not among the rays, and `backgroundRaysIn`
- * above reports one that appears — but reporting it and drawing it anyway put the guard on the
- * sentence rather than on the surface, which matters because the SRD's FR-123 amendment leans on
- * exactly this guard for the day an analyst admits a non-spatial source.
+ * **This filtered out `kind: 'modelled'` sources, and that was a misreading of the master held
+ * for four rounds.** The master says of `kind`: *"Modelled: another party's model output admitted
+ * as an observation."* A modelled source is therefore a **contributing** source — it is in ω, it
+ * has a position, and SRD FR-124 says in as many words that it "is drawn as such". What FR-125
+ * keeps out of the ray set is the *standing forecast*, which the same master note says never
+ * enters as an observation at all: it is the background the bands sit on, and it is structurally
+ * absent from the source table rather than filtered out of it.
  *
- * It is only the *map* that loses it. The numbers table, the caption and the ω identity keep it,
- * because it is part of what the gain weighed: dropping it there would silently break the SC-001
- * sum, which is how a reader would learn that something had gone wrong.
+ * So the filter dropped a source that reached the column — no line, no origin marker — while the
+ * paragraph beneath declared it "the baseline these bands sit on", with its band drawn in the
+ * stack above and its contribution listed in the table. The function is kept, and kept trivial,
+ * because the name is where a reader looks for this rule and its absence would read as an
+ * oversight rather than as a decision.
  */
 export function drawableRays(set: RaySet): readonly Ray[] {
-  return set.rays.filter((ray) => ray.kind !== 'modelled');
+  return set.rays;
 }

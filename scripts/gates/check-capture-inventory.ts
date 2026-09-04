@@ -21,9 +21,11 @@
  * pushing. Every proof missing from that list is one they will not run, and will meet as a red
  * CI run instead.
  *
- * The argument for the *count* being checked too, and not only the names: the paragraph states a
- * number in prose ("seven capture proofs"), and a number in prose beside a list is a second place
- * for the same fact to be wrong.
+ * The argument for the *counts* being checked too, and not only the names: the paragraph states
+ * two numbers in prose — "CI runs N more things than it does" and "N capture proofs" — and a
+ * number in prose beside a list is a second place for the same fact to be wrong. The first version
+ * of this gate held the second number and not the first, and the first was wrong at the time it
+ * was written.
  */
 import { join, relative } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -49,6 +51,15 @@ const CI_STEP = /run:\s*pnpm\s+(?:run\s+)?(capture:[a-z0-9:_-]+)/g;
 const NAMED = /`(capture:[a-z0-9:_-]+?)(?:\s[^`]*)?`/g;
 /** "seven capture proofs", so the prose count is held to the list beside it. */
 const COUNTED = /\b([a-z]+)\s+capture proofs\b/;
+/**
+ * "CI runs seven more things than it does" — the *other* number in the same paragraph, four words
+ * from the one above, and the one that was wrong when this gate was written to hold the other.
+ *
+ * It counts `replay-proof` and the captures together, so it is the capture count plus one. A
+ * number in prose beside a list is a second place for the same fact to be wrong, which this gate's
+ * own docstring says; there were two such numbers and it held one.
+ */
+const AFTER_THE_CHECKS = /CI runs ([a-z]+) more things than it does/;
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 
 function read(root: string, path: string): string {
@@ -110,6 +121,22 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
         message: `this list names ${proof} and ${WORKFLOW} does not run it`,
       });
     }
+  }
+
+  const total = AFTER_THE_CHECKS.exec(record);
+  const totalStated = total ? NUMBER_WORDS.indexOf(total[1]) : -1;
+  if (totalStated < 0) {
+    findings.push({
+      file: relative(root, join(root, RECORD)),
+      line,
+      message: 'the paragraph states no number of things CI runs after the checks',
+    });
+  } else if (totalStated !== ran.length + 1) {
+    findings.push({
+      file: relative(root, join(root, RECORD)),
+      line,
+      message: `the paragraph says CI runs ${total?.[1]} more things than \`pnpm check\`; it runs ${ran.length + 1} — ${ran.length} captures and replay-proof`,
+    });
   }
 
   const counted = COUNTED.exec(sentence[0]);

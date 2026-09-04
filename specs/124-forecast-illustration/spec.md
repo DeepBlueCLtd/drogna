@@ -174,10 +174,14 @@ Numbered locally; the mapping onto the SRD's global numbers is in *Traceability*
   the column. Rays are drawn on the surface plane only and never descend into the volume.
 - **FR-09** Spatial sources are drawn where they physically are. Non-spatial sources are
   docked as fixed, labelled nodes at the margin of the surface plane, in positions stable
-  across selections — **where one exists, and on this configuration none does**. The analyst's
-  source table is the vessel's own instruments; the shore broadcast and the archive eras enter
-  as background, which FR-10 keeps out of the ray set. The docking is therefore specified and
-  not built (T014), and `backgroundRaysIn` is what will say so if an analyst ever admits one.
+  across selections — **where one exists, and none can be published**. The analyst's source table
+  is the vessel's own instruments, and `analysis-contributions.schema.json` requires `cell` and
+  `observed` with longitude and latitude on every source, so a non-spatial source is
+  unrepresentable rather than merely absent. The docking is therefore specified and not built
+  (T014); what would announce the need for it is an amendment to that master, and no runtime
+  guard in the shell can stand in for one. (An earlier draft of this sentence named
+  `backgroundRaysIn` as that guard, which conflates *modelled* with *non-spatial* — see SRD
+  FR-123.)
 - **FR-10** Sources are grouped and marked measured or modelled, and the standing forecast is
   **not** among them: it is the background, drawn as the baseline of the depth profile's
   stack and never as a ray.

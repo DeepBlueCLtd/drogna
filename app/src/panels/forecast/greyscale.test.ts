@@ -93,6 +93,20 @@ describe('the instrument palette without colour', () => {
     // were never on `SOURCES` to be found, so the assertion tested a key's absence while the map
     // drew archive at 0° and measurement at 90° — exactly instrument slots 0 and 3, in the same
     // region, one surface above the other.
+    // **The share palette measured too, because it is the one that fails.** The check used to
+    // hold `INSTRUMENTS` to a derived floor and never look at `SOURCES` at all — so the four
+    // hues that sit as adjacent segments of one stacked bar were the palette nothing measured.
+    // They come to 1.067 (archive/departure) and 1.265 (departure/model): one grey, several
+    // times. Four categorical hues chosen for a colour reader cannot also be an ordered ramp, so
+    // what is asserted of them is what is true — each clears the ground it is drawn on, each
+    // carries a distinct hatch, and the figures are printed beside every band.
+    for (const source of SOURCES) {
+      expect(
+        contrast(source.hue, GROUND as string),
+        `${source.key} is ${contrast(source.hue, GROUND as string).toFixed(2)}:1 on the shell's own ground`,
+      ).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    }
+
     const shareAngles = SOURCES.map((source) => source.angle);
     expect(new Set(shareAngles).size, 'two shares hatch at the same angle').toBe(SOURCES.length);
     for (const angle of shareAngles) {

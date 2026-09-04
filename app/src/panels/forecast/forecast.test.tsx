@@ -44,6 +44,9 @@ const ground =
     readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shell', 'shell.css'), 'utf8'),
   )?.[1] ?? '';
 
+/** The region's own stylesheet, for the carriers jsdom cannot apply but a file can be read for. */
+const FORECAST_CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'forecast.css'), 'utf8');
+
 const validator = createSeamValidator();
 const realFetch = globalThis.fetch;
 
@@ -589,19 +592,19 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       for (const ray of everyRay) {
         expect(surface?.contains(ray), 'a ray was drawn outside the surface plane').toBe(true);
       }
-      const box = (surface?.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
-      expect(box).toHaveLength(4);
+      // **There was a loop here checking every endpoint lay inside the viewBox, and it is gone.**
+      // The viewBox is `0 0 cols rows` and `placeOn`'s last statement clamps to
+      // `[0, kept.length]` — the clamp bound *is* the assertion bound, so no input could fail it:
+      // not a source outside the grid, not a reversed axis, not a thinning step. That is the
+      // second time this assertion has been worthless for a structural reason, and the first time
+      // is written into T017's own tick. Coverage of the clamp belongs where the clamp is, and
+      // `rays.test.ts` asserts it directly against out-of-range inputs.
+      //
+      // What is kept is what can fail: every ray carries four finite coordinates, and no ray is
+      // a point.
       for (const ray of rays) {
-        for (const [axis, limit] of [
-          ['x1', box[2]],
-          ['x2', box[2]],
-          ['y1', box[3]],
-          ['y2', box[3]],
-        ] as const) {
-          const value = Number(ray.getAttribute(axis));
-          expect(Number.isFinite(value), `a ray has no ${axis}`).toBe(true);
-          expect(value, `a ray's ${axis} lies outside the surface plane`).toBeGreaterThanOrEqual(0);
-          expect(value).toBeLessThanOrEqual(limit);
+        for (const axis of ['x1', 'x2', 'y1', 'y2'] as const) {
+          expect(Number.isFinite(Number(ray.getAttribute(axis))), `a ray has no ${axis}`).toBe(true);
         }
       }
 
@@ -754,6 +757,49 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       }
     });
 
+    it('FR-138: every band carries a texture, and the caption prints the sum of the rays drawn', async () => {
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      const picked = await openColumnAt(at.longitude, at.latitude);
+      const served = await servedColumn(holding.holding_id, picked.longitude, picked.latitude);
+
+      // **Texture on every band, not only on this cycle's sources.** `shares.ts` says a profile
+      // band carries its hatch angle and `greyscale.test.ts` rests its cross-vocabulary check on
+      // it — but only `kind: 'source'` bands were given an angle, so the three background bands
+      // and the earlier-cycles band were flat fills at 1.067:1 of each other in greyscale, in
+      // adjacent segments of one bar. Read off the rendered style, which is where the claim is
+      // either true or not.
+      const segments = [...document.querySelectorAll('.forecast-column-segment')];
+      expect(segments.length, 'no bands were drawn to inspect').toBeGreaterThan(0);
+      // The remainder's stripe comes from the stylesheet rather than from an inline style — it is
+      // the one band that is not a place, and it is marked as such by a rule and not by an angle.
+      // jsdom applies no stylesheet, so that carrier is checked against the file that declares
+      // it; exempting the band without checking anything would be the hole this is closing.
+      const flat = segments
+        .filter((band) => !band.className.includes('is-remainder'))
+        .filter((band) => !(band as HTMLElement).style.backgroundImage);
+      expect(
+        flat.map((band) => band.className),
+        'a band is drawn as a flat fill, so colour is its only carrier',
+      ).toEqual([]);
+      expect(segments.some((band) => band.className.includes('is-remainder'))).toBe(true);
+      expect(
+        /\.forecast-column-segment\.is-remainder\s*\{[^}]*background-image:/.test(FORECAST_CSS),
+        'the remainder band has no stripe declared for it either',
+      ).toBe(true);
+
+      // **The caption's own number**, which nothing read. The figure it prints is the sum of the
+      // drawn contributions; it used to print `ω − remainder`, a rearrangement of the published
+      // weight that agrees with the drawn rays by construction — so the surface could lose a ray
+      // and go on printing a total including it. Checked against the served document rather than
+      // against the expression that produces it.
+      const whole = raysFor(served);
+      const summed = whole.rays.reduce((total, ray) => total + ray.contribution, 0);
+      const caption = document.querySelector('.forecast-column-caption')?.textContent ?? '';
+      expect(caption, 'the caption prints no total').toContain(summed.toFixed(4));
+      expect(caption).toContain(whole.observationWeight.toFixed(4));
+    });
+
     it('FR-136: a restatement of the standing analysis re-queries nothing', async () => {
       // **The claim this holds, and why the existing one could not.** `ColumnProvenance`'s header
       // says "not on a tick, not on an announcement, not on a timer". The slab effect depended on
@@ -783,6 +829,34 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         `the field was re-queried on the restatement: ${fetched.slice(before).join(', ')}`,
       ).toBe(areasBefore);
       expect(fetched.length, `${fetched.length - before} fetch(es) on a restatement`).toBe(before);
+    });
+
+    it('XI: a 200 that is not the master’s shape is a refusal, not a document', async () => {
+      // The panel above validates the holdings inventory before touching it and every broker
+      // payload goes through `drawable`; this crossing cast a 200 straight to
+      // `AnalysisContributions` and iterated `document.levels` inside a render-time `useMemo`.
+      // A body without `levels` is a TypeError thrown in render, which unwinds the panel instead
+      // of stating a refusal — and Principle XI is that no code path may know whether the seam is
+      // answered locally or remotely, so "our backend cannot send that" is not available here.
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes('/column?')) {
+          return Promise.resolve(new Response('{"schema_version":1}', { status: 200 }));
+        }
+        return passthrough(input, init);
+      }) as typeof globalThis.fetch);
+
+      await openColumnAt(at.longitude, at.latitude);
+      // The region stands, and says what happened.
+      const region = screen.getByTestId('column-provenance');
+      expect(region.textContent).toMatch(/did not match its master/);
+      expect(document.querySelectorAll('line.forecast-ray')).toHaveLength(0);
+      // The profile is still there with the four shares it read through EDR — the column's own
+      // position queries answered, and only the per-source document did not.
+      expect(screen.getByTestId('column-profile').textContent).toMatch(/archive/);
     });
 
     it('FR-130: a refused field takes the map and leaves the numbers, which do not read it', async () => {
@@ -836,12 +910,14 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       const tolerance = runtime.store.holding(holding.holding_id)?.descriptor.manifest.variables[0].tolerance_absolute;
       expect(tolerance, 'the holding declares no tolerance to check against').toBeGreaterThan(0);
 
-      // Checked through `contributionResidual`, which is the function the region's own caption
-      // sums with, rather than re-summed here: what is held is the arithmetic the surface
-      // prints and not a second implementation of it that could agree while the surface
-      // disagreed. It had no production caller at all until the caption stopped printing
-      // `ω − remainder` — a rearrangement of the published weight that agreed with the drawn
-      // rays by construction.
+      // Checked through `contributionResidual`. **It has no production caller**, and saying so
+      // is more useful than the two spellings this comment has carried: it claimed first that
+      // the ray set was built by it and then that the caption sums with it, and neither was
+      // true — the caption sums its own rays inline, because routing a sum through a function
+      // that adds the remainder and then subtracting it again was machinery around an addition.
+      // What this function is for is *this* assertion: it states the SC-001 identity once,
+      // beside the `RaySet` shape it reads, so the test does not carry a second opinion about
+      // what "the drawn contributions and the remainder" means.
       let checked = 0;
       for (const level of served.levels) {
         // By depth, as the surface selects: passing `depth_index` here selected the level

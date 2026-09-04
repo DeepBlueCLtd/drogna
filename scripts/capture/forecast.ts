@@ -371,7 +371,7 @@ try {
       if (document.documentElement.scrollWidth > window.innerWidth + 1) {
         out.push(`${label}: the page scrolls sideways`);
       }
-      for (const selector of ['.forecast-column', '.forecast-share-map', '.forecast-ray-note', '.forecast-column-readout']) {
+      for (const selector of ['.forecast-column', '.forecast-ray-note', '.forecast-column-readout']) {
         const node = document.querySelector(selector);
         if (!node) continue;
         // A box whose content is wider than itself and which is not declared scrollable is
@@ -380,6 +380,19 @@ try {
         if (node.scrollWidth > node.clientWidth + 1) {
           out.push(`${label}: ${selector} is ${node.scrollWidth}px of content in a ${node.clientWidth}px box`);
         }
+      }
+      // **The map is measured against what contains it, and the reason is that the other test
+      // cannot fire for it.** `.forecast-share-map` was in the list above; an SVG element reports
+      // its own layout width as *both* `scrollWidth` and `clientWidth` — measured in this
+      // Chromium: 900 and 900 for an svg overflowing a 200px parent — so `scrollWidth >
+      // clientWidth` is false however far it sticks out. A selector that cannot report is worse
+      // than no selector, because the list reads as coverage.
+      const map = document.querySelector('.forecast-share-map');
+      const holder = map?.parentElement;
+      if (map && holder && map.getBoundingClientRect().width > holder.clientWidth + 1) {
+        out.push(
+          `${label}: the share field is ${Math.round(map.getBoundingClientRect().width)}px wide in a ${holder.clientWidth}px column`,
+        );
       }
       return out;
     }, `${size.width}x${size.height}`);

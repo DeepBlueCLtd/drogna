@@ -41,6 +41,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
+import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawableRays, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
 
@@ -120,9 +121,21 @@ export interface ColumnProvenanceProps {
    * because a sparse per-source holding is not a coverage and the standard has no query for it.
    */
   readonly contributionsPrefix: string;
+  /**
+   * The seam's validator, for the one crossing this component makes on its own.
+   *
+   * The panel above validates the holdings inventory against its master before touching it, and
+   * every broker payload goes through `drawable`; this component cast a 200 from the
+   * contributions endpoint straight to `AnalysisContributions` and iterated `document.levels`
+   * inside a `useMemo` during render. A body without `levels` is a `TypeError` thrown in render,
+   * which unwinds the whole panel rather than stating a refusal — and Principle XI is that no
+   * code path may know whether the seam is answered locally or remotely, so "the backend cannot
+   * send that" is not a property this side may rely on. The master is committed and was unused.
+   */
+  readonly validator: SeamValidator;
 }
 
-export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefix }: ColumnProvenanceProps) {
+export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefix, validator }: ColumnProvenanceProps) {
   const [depthIndex, setDepthIndex] = useState(0);
   /**
    * Opens on the strongest source, and that is a choice about what a reader meets first.
@@ -326,6 +339,11 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
             `the per-source column was refused: ${response.status}${'refused' in body && body.refused ? ` — ${body.refused}` : ''}`,
           );
           setContributions('refused');
+        } else if (!validator.validate('analysis-contributions', body).ok) {
+          // A 200 whose shape is not the master's is a refusal, not a document: cast and
+          // iterated it would throw inside a render-time `useMemo` and take the panel with it.
+          failed.push('the per-source column did not match its master and was not drawn');
+          setContributions('refused');
         } else {
           setContributions(body as AnalysisContributions);
         }
@@ -336,7 +354,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
       }
       setColumnRefusals(failed);
     },
-    [analysis, grid, edrPrefix, contributionsPrefix],
+    [analysis, grid, edrPrefix, contributionsPrefix, validator],
   );
 
   /**
@@ -391,14 +409,16 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const raySet = useMemo(() => (served ? raysFor(served, selectedLevel) : undefined), [served, selectedLevel]);
 
   const rays = useMemo(() => {
-    if (!served || !raySet || !slab || !drawn || !column) return undefined;
-    const set = raySet;
+    // `raySet` is defined exactly when `served` is, so `served` was a condition that could not be
+    // independently true and a dependency the body never read; `const set = raySet` was a third
+    // name for the same value one line down from the second.
+    if (!raySet || !slab || !drawn || !column) return undefined;
     const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
     const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
     if (x === undefined || y === undefined) return undefined;
     // `drawableRays`, not `set.rays`: FR-125's exclusion belongs to the picture and not only to
     // the caption beneath it. The reasoning is in `rays.ts` beside the filter.
-    const drawnRays = drawableRays(set).flatMap((ray) => {
+    const drawnRays = drawableRays(raySet).flatMap((ray) => {
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
       const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
       if (sourceX === undefined || sourceY === undefined) return [];
@@ -408,11 +428,19 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
       // that would have thrown.
       return [{ ray, x: sourceX, y: sourceY, instrument: instrumentAt(ray.sourceIndex) }];
     });
-    return { set, from: { x, y }, drawn: drawnRays };
-  }, [served, raySet, slab, drawn, column]);
+    return { set: raySet, from: { x, y }, drawn: drawnRays };
+  }, [raySet, slab, drawn, column]);
 
   /** How many rays are at the width floor rather than at their own width (FR-122). */
-  const underScaleCount = rays ? rays.set.rays.filter(underScale).length : 0;
+  /**
+   * How many rays are at the width floor rather than at their own width (FR-122).
+   *
+   * Counted over `rays.drawn` — what the map actually draws — and not over the whole set. The
+   * set can carry a modelled origin that `drawableRays` keeps off the map, so a sentence reading
+   * "N rays are drawn at the thinnest width this map can show" would have counted one that is
+   * not drawn at all: the guard applied to the drawing but not to the sentence about it.
+   */
+  const underScaleCount = rays ? rays.drawn.filter(({ ray }) => underScale(ray)).length : 0;
 
   const sharesAt = useCallback(
     (row: number, col: number): Record<SourceKey, number> => {
@@ -737,7 +765,12 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
             <p className="forecast-ray-note" data-testid="forecast-under-scale">
               {underScaleCount === 1 ? 'One ray is' : `${underScaleCount} rays are`} drawn at the thinnest width this
               map can show: {underScaleCount === 1 ? 'its' : 'their'} share of the widest contribution is under{' '}
-              {(RAY_MIN_DRAWN_PX / RAY_WIDTH_PX).toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 1 })},
+              {/* Formatted here rather than through `toLocaleString(undefined, …)`, which asks
+                  the *host* for its locale: the same deterministic run rendered "9.4%" on one
+                  machine and "9,4 %" on another. Not a wall clock and not entropy, but it is a
+                  host read in the render path of a harness whose whole premise is that a run
+                  reproduces. */}
+              {((RAY_MIN_DRAWN_PX / RAY_WIDTH_PX) * 100).toFixed(1)}%,
               so the width is the floor rather than the figure. The figures are printed below.
             </p>
           )}
@@ -795,7 +828,8 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
 
       {refusals.length > 0 && (
         <p className="forecast-column-refused">
-          {refusals.length} query was refused and is not drawn: {refusals.join('; ')}. Stated where
+          {refusals.length} {refusals.length === 1 ? 'query was' : 'queries were'} refused and{' '}
+          {refusals.length === 1 ? 'is' : 'are'} not drawn: {refusals.join('; ')}. Stated where
           the content would have been, rather than left as a gap.
         </p>
       )}

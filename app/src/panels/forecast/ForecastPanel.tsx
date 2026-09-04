@@ -338,7 +338,11 @@ export function ForecastPanel({ params }: PanelProps) {
     return () => {
       for (const stop of stops) stop();
     };
-  }, [client, config.topics, config.endpoints.holdings, drawable, validator]);
+    // `config.endpoints.holdings` is gone from this list: the subscription that fetched the
+    // inventory on a holdings announcement was removed, and nothing in this effect has read that
+    // endpoint since. A dependency here tears down and rebuilds every subscription, which is why
+    // the list is worth keeping honest even where the value is stable.
+  }, [client, config.topics, drawable, validator]);
 
   /**
    * The depth axis, fetched once for each analysis cycle the panel comes to draw. The only
@@ -489,6 +493,7 @@ export function ForecastPanel({ params }: PanelProps) {
             grid={columnGrid}
             edrPrefix={config.endpoints.edr}
             contributionsPrefix={config.endpoints.contributions}
+            validator={validator}
           />
         </section>
 

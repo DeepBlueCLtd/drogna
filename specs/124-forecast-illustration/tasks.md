@@ -623,6 +623,66 @@ the part worth recording, because each was a sentence asserting a property the c
       consecutive runs clean. The shot is still taken at rate 0 and is still byte-identical
       between runs.
 
+- [x] T022q **A sixth round. Two of its findings were checks this feature had already been told
+      about once, in a different disguise.**
+
+      **The viewBox containment loop still could not fail.** T017's tick records the first
+      version being worthless because the placement returned cell centres by construction; the
+      replacement was worthless because `placeOn` *clamps to the viewBox*, so the clamp bound and
+      the assertion bound are the same expression. No source position, no axis direction, no
+      thinning step could fail it. It is gone, and the clamp is asserted where the clamp is.
+
+      **The depth join's second line of defence did not hold against the fault it names.** The
+      tolerance was half the axis's own spacing: asked for the archive era's 333 m against an
+      analysis at 200 m steps, the nearest level is 400 and |400 − 333| = 67 passes. T022l says
+      the pairing is "checkable instead of assumed"; it was assumed, and only the missing 800 m
+      row would have shown. Both axes are built by the same arithmetic from the same manifest, so
+      a real match is equal to within representation — the bound is relative and small now, and
+      the test asks the archive-axis question directly.
+
+      **`residual.published` was compared with `set.observationWeight`**, which the function
+      returns verbatim. True for every input and every implementation. Deleted.
+
+      **The profile's background bands carried no texture at all.** Only `kind: 'source'` bands
+      were given an angle, while `shares.ts` claimed "a profile band carries its hatch angle" and
+      `greyscale.test.ts` rested its cross-vocabulary check on it. Measured: archive/departure
+      **1.067**, archive/model 1.185, departure/model 1.265 — one grey, three times, in adjacent
+      segments of one bar, which is the defect that cost the first instrument palette a rewrite.
+      The greyscale test measured `INSTRUMENTS` against itself and against the ground and never
+      looked at `SOURCES`, so the palette that failed was the one nothing measured. Both fixed,
+      both watched failing.
+
+      **FR-125's notice said a ray was drawn that the map does not draw** — `drawableRays`
+      removed it and the sentence beneath still announced it — and `underScaleCount` counted the
+      set rather than the drawing, so the note would have counted a ray that is not there. The
+      guard was applied to the picture and not to the sentences about the picture.
+
+      **A 200 that is not the master's shape killed the panel.** The contributions body was cast
+      and iterated inside a render-time `useMemo`; a body without `levels` throws
+      `TypeError: levels is not iterable` and React unwinds the region rather than stating a
+      refusal. The panel above validates its inventory and every broker payload goes through
+      `drawable`; this crossing did neither, against a committed master that nothing used.
+      Principle XI is that no code path may know whether the seam is answered locally, so "our
+      backend cannot send that" was not available. Watched failing: with the check removed, the
+      planted body throws in render.
+
+      Smaller: `toLocaleString(undefined, …)` asked the *host* for its locale in the render path,
+      so a deterministic run printed "9.4%" on one machine and "9,4 %" on another; the width floor
+      was 0.75 px, itself sub-pixel and then dimmed to 0.6 opacity, against its own docstring's
+      argument; the caption's printed total was read by no test, so restoring `ω − remainder`
+      would have stayed green; `.forecast-share-map` was in the narrow pass's overflow list where
+      an SVG reports its layout width as *both* `scrollWidth` and `clientWidth` (measured: 900 and
+      900 for a map overflowing a 200 px parent), so that selector could not report and is now a
+      comparison against the column that contains it; a dead `config.endpoints.holdings`
+      dependency on the subscription effect; three spellings of the ray set in eighteen lines; and
+      the "metres and never an index" docstring had been detached onto the `mapped` boolean added
+      above it, leaving the field it argues about undocumented.
+
+      And **`CLAUDE.md` said CI runs six capture proofs while this branch made it seven** — the
+      same paragraph that exists because a branch shipped seven red CI runs against a green
+      `pnpm check`, wrong again one entry later. Amended, with the rule that a pull request adding
+      a capture step amends that line in the same change.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath
@@ -695,7 +755,7 @@ the part worth recording, because each was a sentence asserting a property the c
       it is one a source actually reached.
 - [ ] T033 The pull request links its own instance opened at `#/view/forecast`, and the entry
       by its full URL on the branch.
-- [ ] T034 `pnpm snapshots` if the analyst's new output moves a committed artefact, and read
+- [x] T034 `pnpm snapshots` if the analyst's new output moves a committed artefact, and read
       the diff before committing it. *Reconciled:* the shipped snapshots carry the archive and
       the now-cast alone (read off the artefacts, not assumed), so a new analysis holding
       moves nothing; `check-snapshot-drift` is what says so.

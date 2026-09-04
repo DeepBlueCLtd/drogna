@@ -600,7 +600,9 @@
    does not read as a peer of the rays whose width means something, and named in a sentence under
    the map — a mark alone would be one more thing to decode. */
 .forecast-ray.is-under-scale {
-  opacity: 0.6;
+  /* Dimmed, but not so far that a one-pixel line stops being a line: the floor exists because a
+     sub-pixel stroke renders as nothing, and 0.6 of a hairline was most of the way back to it. */
+  opacity: 0.8;
 }
 
 /* Screen units, because the marker now carries `vector-effect: non-scaling-stroke` like the rays

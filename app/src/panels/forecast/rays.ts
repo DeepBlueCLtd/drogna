@@ -123,29 +123,22 @@ export function levelAtDepth(
     if (!nearest || Math.abs(level.depth_m - depthM) < Math.abs(nearest.depth_m - depthM)) nearest = level;
   }
   if (!nearest) return undefined;
-  // Nearest, but only if it is *this* level: half the axis's own spacing **at that level** is the
-  // widest a match can be and still be one. A display depth with no level within that is a depth
-  // this document does not carry, and saying so is the point.
+  // **Nearest, and only if it is the same depth — not merely a near one.**
   //
-  // The gap either side of the matched level, rather than the gap between the first two. Those
-  // are the same number on the shipped axis (0, 200, … 1000) and are not the same number on a
-  // non-uniform one — a fine near-surface axis coarsening with depth is the ordinary shape for an
-  // ocean model, and derived from the top gap the tolerance would be too tight for every level
-  // below the first coarsening: the profile would print "the analysis carries no level at this
-  // depth" for a level the document plainly carries. Nothing in the masters says the axis is
-  // uniform, so this reads the neighbours it actually has.
+  // This tolerated half the axis's own spacing, and a review worked out what that costs against
+  // the very fault the join exists to catch. The archive era is filed at 0, 333, 667, 1000 and an
+  // analysis at 0, 200, … 1000: asked for 333 the nearest level is 400, half the local spacing is
+  // 100, and |400 − 333| = 67 passes. The second line of defence silently reproduced the
+  // mis-pairing T022l fixed at the root, and only the missing 800 m row would have shown. A
+  // tolerance wide enough to absorb a different axis is a tolerance that cannot refuse one.
   //
-  // A document carrying a single level carries exactly that depth and no tolerance can be
-  // derived from it, so the spacing is nought and the match is exact — an `Infinity` there would
-  // make a one-level document answer for every depth asked of it.
-  const at = document.levels.indexOf(nearest);
-  const gaps: number[] = [];
-  if (at > 0) gaps.push(Math.abs(nearest.depth_m - document.levels[at - 1].depth_m));
-  if (at >= 0 && at < document.levels.length - 1) {
-    gaps.push(Math.abs(document.levels[at + 1].depth_m - nearest.depth_m));
-  }
-  const spacing = gaps.length > 0 ? Math.min(...gaps) : 0;
-  return Math.abs(nearest.depth_m - depthM) <= spacing / 2 ? nearest : undefined;
+  // The two axes are built by the same arithmetic from the same manifest — `columnGridOf` and
+  // `contributions.ts` both compute `minimum + index * spacing` — so a genuine match is equal to
+  // within floating-point representation and nothing wider is wanted. The bound is therefore
+  // relative to the depth's own magnitude rather than to the axis's spacing: a display depth that
+  // is not this level's is not this level, however close the levels happen to be.
+  const scale = Math.max(Math.abs(nearest.depth_m), Math.abs(depthM), 1);
+  return Math.abs(nearest.depth_m - depthM) <= scale * 1e-9 ? nearest : undefined;
 }
 
 export function raysFor(document: AnalysisContributions, depthM?: number): RaySet {
@@ -282,7 +275,11 @@ export const RAY_WIDTH_PX = 8;
 
 /**
  * The thinnest line the map can put on a screen. Below this a stroke is under a device pixel and
- * renders as nothing whatever the arithmetic says.
+ * renders as nothing whatever the arithmetic says — which is the argument for the number being
+ * **one** and not the 0.75 it was first written as. At `devicePixelRatio` 1 a 0.75 px stroke is
+ * itself sub-pixel, antialiased to about three-quarters alpha and then dimmed again by
+ * `.is-under-scale`; a floor defined as "what a screen can show" that a screen cannot quite show
+ * is the same claim the floor was added to stop the drawing making.
  *
  * **This is not the constant term T022k removed.** That one was added to every ray, absent ones
  * included, and inverted the encoding: a source contributing under about 9% of the widest drew
@@ -290,7 +287,7 @@ export const RAY_WIDTH_PX = 8;
  * only, so the ordering "contributed something" > "contributed nothing" is never crossed, and a
  * ray that meets it is marked under-scale rather than passed off as a quantity.
  */
-export const RAY_MIN_DRAWN_PX = 0.75;
+export const RAY_MIN_DRAWN_PX = 1;
 
 /** The stroke width a ray is drawn at: proportional, floored at what a screen can show. */
 export function drawnWidthOf(ray: Ray): number {

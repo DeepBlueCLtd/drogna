@@ -73,22 +73,26 @@ export interface ProfileProps {
    */
   readonly rays: RaySet | undefined;
   /**
-   * The depth in **metres** whose contributions the rays are weighted to, or nothing for the
-   * whole column.
-   *
-   * Metres and never an index, and the parameter below is named for it. It was `depthIndex`,
-   * against a docstring one line above that said the opposite and a caller that has always
-   * passed metres: a caller written to the signature would have asked for level 1 and been
-   * given the level nearest one metre, which is 0 m — the rays re-weighted to the surface, no
-   * row showing as pressed, and a caption reading "re-weighted to 1 m". That is the fault
-   * T022l fixed in the region, left standing in the type.
-   */
-  /**
    * Whether the map above is drawn. Only the sentence that says "the rays above" depends on it:
    * the table, the caption and FR-125's notice are the served document's own arithmetic and are
    * shown whether or not the field behind the rays could be fetched.
    */
   readonly mapped: boolean;
+  /**
+   * The depth in **metres** whose contributions the rays are weighted to, or nothing for the
+   * whole column.
+   *
+   * Metres and never an index, and `onSelectLevel` below is named for it. It was `depthIndex`,
+   * against a docstring that said the opposite and a caller that has always passed metres: a
+   * caller written to the signature would have asked for level 1 and been given the level
+   * nearest one metre, which is 0 m — the rays re-weighted to the surface, no row showing as
+   * pressed, and a caption reading "re-weighted to 1 m". That is the fault T022l fixed in the
+   * region, left standing in the type.
+   *
+   * This block was itself detached from the field it argues about when `mapped` was added above
+   * it, so the warning sat over a boolean and `selectedLevel` had none — a correction that
+   * survived as prose and was reattached to the wrong thing.
+   */
   readonly selectedLevel: number | undefined;
   readonly onSelectLevel: (depthM: number | undefined) => void;
 }
@@ -122,6 +126,15 @@ function bandsFor(
       label: source.label,
       value: level.shares[source.key],
       hue: source.hue,
+      // **The share's own hatch, which these bands did not carry.** `shares.ts` says "a profile
+      // band carries its hatch angle" and `greyscale.test.ts` rests its cross-vocabulary check on
+      // it, but only `kind: 'source'` bands were given an angle: the three background bands and
+      // the earlier-cycles band were flat fills. Measured with the shell's own `contrast`, they
+      // come to 1.067 (archive/departure), 1.185 (archive/model) and 1.265 (departure/model) —
+      // one grey three times, in adjacent segments of one bar, which is exactly the defect that
+      // cost the first instrument palette a rewrite. The angles exist on `SOURCES`; they were
+      // reaching the map and not the profile.
+      hatchAngle: source.angle,
       kind: 'background',
     });
   }
@@ -145,6 +158,7 @@ function bandsFor(
     // copy of the measurement hue, free to drift from the one in `shares.ts` that every other
     // surface reads.
     hue: MEASUREMENT.hue,
+    hatchAngle: MEASUREMENT.angle,
     kind: 'earlier',
   });
 
@@ -253,10 +267,13 @@ export function Profile({
 
       {backgroundDrawn.length > 0 && (
         <p className="forecast-column-refused" data-testid="background-drawn">
-          {backgroundDrawn.join(', ')} {backgroundDrawn.length === 1 ? 'is' : 'are'} drawn as a ray
-          and name the standing forecast’s own origins. The background is not a contributing source
-          (FR-125): it is the baseline these bands sit on, and a ray from it would blur the
-          grammar of assimilation. Reported here rather than drawn quietly.
+          {backgroundDrawn.join(', ')} {backgroundDrawn.length === 1 ? 'names' : 'name'} the standing
+          forecast’s own origins, and {backgroundDrawn.length === 1 ? 'is' : 'are'}{' '}
+          <strong>not drawn as a ray</strong> above. The background is not a contributing source
+          (FR-125): it is the baseline these bands sit on, and a ray from it would blur the grammar
+          of assimilation. It stays in the table below and in ω, because it is part of what the
+          gain weighed and dropping it there would break that sum silently. Reported here rather
+          than left out quietly.
         </p>
       )}
 

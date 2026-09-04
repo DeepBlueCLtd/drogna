@@ -162,7 +162,10 @@ describe('the rays a column is made of', () => {
     for (const level of [undefined, 0, 200]) {
       const set = raysFor(document(), level);
       const residual = contributionResidual(set);
-      expect(residual.published).toBeCloseTo(set.observationWeight, 10);
+      // `residual.published` **is** `set.observationWeight` — the function returns it verbatim —
+      // so an assertion relating the two was true for every input and every implementation,
+      // correct or broken. It read as coverage of the SC-001 identity and covered nothing. What
+      // is left is the line that was always doing the work.
       // Exact in this arithmetic; the running loop's own tolerance is the holding's, and that
       // assertion is in forecast.test.tsx where the numbers are the analyst's.
       expect(residual.difference).toBeCloseTo(0, 10);
@@ -313,37 +316,45 @@ describe('matching a displayed depth to a level the document carries', () => {
     };
   }
 
-  it('reads a non-uniform axis at the spacing it actually has, not the spacing at the top', () => {
+  it('T022l: refuses a depth from another era’s axis rather than pairing it with a near level', () => {
+    // **The fault this join exists to catch, asked of it directly.** The archive era is filed at
+    // 0, 333, 667, 1000 and an analysis at 0, 200, … 1000. A profile drawn over the wrong axis
+    // asks for 333 and 667; if either is answered, a row pairs one depth's background with
+    // another depth's contributions — and the printed "sums to 100.0%" cannot see it, because ω
+    // cancels out of that sum. The first tolerance here was half the axis's own spacing, which
+    // answered both.
+    const analysis = axis([0, 200, 400, 600, 800, 1000]);
+    expect(levelAtDepth(analysis, 333), '333 m was answered from a 200 m axis').toBeUndefined();
+    expect(levelAtDepth(analysis, 667), '667 m was answered from a 200 m axis').toBeUndefined();
+    // Its own depths still match, which is the whole of what a correct axis needs.
+    for (const depth of [0, 200, 400, 600, 800, 1000]) {
+      expect(levelAtDepth(analysis, depth)?.depth_m, `${depth} m went unmatched`).toBe(depth);
+    }
+  });
+
+  it('matches a depth the arithmetic reproduces, without demanding bit equality', () => {
+    // The display axis and the document are built by the same formula from the same manifest —
+    // `minimum + index * spacing` in both — so a real match is equal to within floating-point
+    // representation. `0.1 + 0.2` is the standard demonstration that "the same arithmetic" and
+    // "the same bits" are different claims; the bound is relative and small rather than absent.
+    const analysis = axis([0, 200, 400]);
+    expect(levelAtDepth(analysis, 200 * 3 - 400)?.depth_m).toBe(200);
+    expect(levelAtDepth(analysis, 400 + 1e-9)?.depth_m).toBe(400);
+    // And a metre away is a different depth, not a rounding of this one.
+    expect(levelAtDepth(analysis, 401)).toBeUndefined();
+  });
+
+  it('reads a non-uniform axis, where a spacing-derived tolerance has no single value', () => {
     // A fine near-surface axis coarsening with depth, which is the ordinary shape for an ocean
-    // model and which the masters do not forbid. Derived from the first gap alone the tolerance
-    // is 5 m, and every level below 20 m falls outside it — so the profile prints "the analysis
-    // carries no level at this depth" for levels the document plainly carries.
+    // model and which the masters do not forbid. Every level it carries is matched; nothing
+    // between them is.
     const coarsening = axis([0, 10, 20, 100, 300, 700]);
-    // Asked *off* the level, which is the only place a tolerance is visible at all — asking for
-    // the level's own depth matches under any tolerance, which is why the first version of this
-    // test passed with the fault planted and proved nothing.
-    //
-    // 320 m is 20 m from the 300 m level, whose own neighbours are 200 and 400 m away: a
-    // tolerance of 100 m, and a match. Derived from the *top* gap it is 5 m, and 320 m is a
-    // depth "the analysis does not carry" — for a level 20 m away on an axis whose steps down
-    // there are 400 m wide.
-    expect(levelAtDepth(coarsening, 320)?.depth_m, '320 m went unmatched on a 400 m step').toBe(300);
-    expect(levelAtDepth(coarsening, 660)?.depth_m).toBe(700);
     for (const depth of [0, 10, 20, 100, 300, 700]) {
       expect(levelAtDepth(coarsening, depth)?.depth_m, `${depth} m went unmatched`).toBe(depth);
     }
-    // And it still refuses a depth between two levels, which is what the tolerance is for — up
-    // where the axis is fine, 35 m from the nearest level is not that level.
     expect(levelAtDepth(coarsening, 55)).toBeUndefined();
+    expect(levelAtDepth(coarsening, 320)).toBeUndefined();
     expect(levelAtDepth(coarsening, 500)).toBeUndefined();
-  });
-
-  it('refuses a depth the document does not carry, on a uniform axis', () => {
-    const uniform = axis([0, 200, 400]);
-    expect(levelAtDepth(uniform, 200)?.depth_m).toBe(200);
-    // Inside half a spacing is this level; beyond it is no level at all.
-    expect(levelAtDepth(uniform, 290)?.depth_m).toBe(200);
-    expect(levelAtDepth(uniform, 800)).toBeUndefined();
   });
 
   it('answers only for its own depth when the document carries one level', () => {

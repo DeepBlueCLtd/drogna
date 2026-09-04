@@ -58,7 +58,7 @@ the forecast's at that cell.](../assets/124-what-a-number-is-made-of.png)
 
 Pick a square. The lines are the instruments that reached that column, each as wide as it
 counted; pick a depth and they re-weight without moving. Every figure is printed too, because a
-loitering platform stacks its sources. Here the six contribute 3.86 against a weight of 3.79 —
-the gain extrapolating, drawn at its magnitude rather than clamped.
+loitering platform stacks its sources. Here six contribute 3.86 and the band beyond reach −0.07,
+against a weight of 3.79 — the gain extrapolating, drawn at magnitude.
 
 [Open it at the Forecast tab](../../instances/main/#/view/forecast)

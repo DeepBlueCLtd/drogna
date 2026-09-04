@@ -52,8 +52,11 @@ pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped lab
 **`pnpm check` is not the build, and CI runs seven more things than it does.** This line
 read "what CI runs" until a branch shipped seven consecutive red CI runs while `pnpm check`
 reported green on every commit of it. After the checks, CI runs `pnpm replay-proof` and then
-six capture proofs — `capture:glance operator`, `capture:background`, `capture:messages`,
-`capture:map`, `capture:mobile` and `capture:consumers`.
+seven capture proofs — `capture:glance operator`, `capture:background`, `capture:messages`,
+`capture:map`, `capture:mobile`, `capture:consumers` and `capture:forecast`. **This list is the
+only one in the tree, so it goes stale the way it did before**: it said six for the length of
+feature 124, one commit after the paragraph below was written about exactly that. A pull request
+adding a capture step amends this line in the same change.
 
 The proof is out of `check` because it re-runs the marked tests' files, and paying that twice
 locally would make `pnpm check` a command nobody runs; its cheap half — that every
@@ -66,6 +69,13 @@ pushing anything with a face, build and run the proof for it:
 ```sh
 pnpm -C app build && pnpm run capture:mobile   # and the others CI runs, listed above
 ```
+
+A blog entry's own capture is `capture:motion` for something that moves and `capture:glance` for
+something that does not — **unless a region needs driving before there is anything to shoot**.
+Feature 124's does: with the clock stopped and no column picked, a glance of the forecast's centre
+region is a picture of an empty box, so `capture:forecast` warms the loop, picks the column the
+served header names, and refuses to shoot if no ray is drawn. A third command is a cost; a picture
+of an empty region is a worse one.
 
 **And a capture proof measures a stopped harness.** `capture:mobile` pins the clock to rate 0
 before it measures, so every surface drawn from an announcement is absent from every picture

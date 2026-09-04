@@ -75,6 +75,15 @@ const cycles = Number(process.env.DROGNA_FORECAST_CYCLES ?? 3);
  * enough that a machine losing it every time says so rather than looping.
  */
 const PIN_ATTEMPTS = 3;
+/**
+ * How many further bursts the wait for the field may spend before it gives up.
+ *
+ * The field needs one announcement the region can ask an axis on *after* the last contributions
+ * holding was published, and the warm loop stops the moment the store has enough of them — so
+ * one burst is usually the whole cost. The budget is for the case where it is not, and it is
+ * bounded so that a region which will never draw fails with a diagnosis rather than hanging.
+ */
+const SETTLE_BURSTS = 20;
 const height = 1000;
 
 /**
@@ -164,15 +173,26 @@ async function pickAColumn(page: Page, prefix: string) {
     // falls between the two, and the poll has no way to notice: it reports "no column could be
     // opened" and reddens CI for a layout that is fine. Re-picking each pass costs one click on
     // a cell already open and closes the window.
+    //
+    // **And only when there is no pick standing, because a click cancels the read.**
+    // `readColumn` bumps a token synchronously and every later stage checks it, so an
+    // unconditional re-click each pass discards the read the previous pass started: a column
+    // open slower than one poll period would never complete at all, and the pass would throw
+    // the same "no column drew a ray" it was written to prevent. The readout is the cheap
+    // evidence that a pick is standing — it renders as soon as the column's own queries land,
+    // ahead of the rays — so the click fires on the first pass and then only after a cycle has
+    // actually cleared the pick.
     let rays = 0;
     for (let wait = 0; wait < 60 && rays === 0; wait++) {
-      const cell = document.querySelector(
-        `rect.share-cell[data-lon="${nearest.getAttribute("data-lon")}"][data-lat="${nearest.getAttribute("data-lat")}"]`,
-      );
-      // The node is re-created on every cycle, so the *position* is what identifies the cell —
-      // the captured `nearest` is detached from the document the moment the field is redrawn and
-      // clicking it does nothing at all.
-      (cell ?? nearest).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      if (wait === 0 || !document.querySelector(".forecast-column-readout")) {
+        // The node is re-created on every cycle, so the *position* is what identifies the cell —
+        // the captured `nearest` is detached from the document the moment the field is redrawn
+        // and clicking it does nothing at all.
+        const cell = document.querySelector(
+          `rect.share-cell[data-lon="${nearest.getAttribute("data-lon")}"][data-lat="${nearest.getAttribute("data-lat")}"]`,
+        );
+        (cell ?? nearest).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }
       await new Promise((settled) => setTimeout(settled, 200));
       rays = document.querySelectorAll("line.forecast-ray").length;
     }
@@ -382,7 +402,51 @@ try {
       `only ${warmed.cycles} of ${cycles} analysis cycles published within the step budget`,
     );
   }
-  await page.waitForSelector(".forecast-share-map", { timeout: 60_000 });
+  // **The store having published is not the panel having drawn, and the gap between them is
+   // permanent under a stopped clock.** This was a bare 60-second `waitForSelector`, and it timed
+   // out on CI against a commit whose *previous* run on the same SHA had passed — an intermittent
+   // in this script, not in the shell.
+   //
+   // The mechanism: the region asks for its depth axis once per *analysis cycle*, and an
+   // inventory that answers honestly without carrying that cycle's holding yet records the cycle
+   // as asked-for and returns. That bound is deliberate — without it the ask is one inventory
+   // fetch per restatement for the life of the tab — but it assumes another announcement will
+   // arrive to ask again. Here the clock is pinned at rate 0 and advanced only by explicit steps,
+   // so when the warm loop stops the announcements stop with it: an ask that landed in the window
+   // before the last holding was published is the last ask there will ever be, the region stays
+   // axis-less, and no map is ever drawn however long the wait. Waiting longer cannot fix a state
+   // that is not changing.
+   //
+   // So the wait *drives*: it steps another burst whenever the map is not yet up, which is
+   // another announcement and another ask. The bursts are counted into the sidecar so the record
+   // says what was actually spent, and the failure names what the region says rather than only
+   // the selector, because "the map is not there" and "the map is not there because the axis
+   // never arrived" are different faults to be woken up to.
+   let settling = 0;
+   for (; settling < SETTLE_BURSTS; settling++) {
+     const up = await page
+       .waitForSelector(".forecast-share-map", { timeout: 5_000 })
+       .then(() => true)
+       .catch(() => false);
+     if (up) break;
+     await page.evaluate(
+       async (ticks: number) => {
+         await fetch("/api/ctl/clock/step", {
+           method: "POST",
+           body: JSON.stringify({ ticks }),
+         });
+       },
+       stepTicks,
+     );
+   }
+   if (settling >= SETTLE_BURSTS) {
+     const said = await page
+       .evaluate(() => document.querySelector('[data-testid="column-absent"]')?.textContent ?? "")
+       .catch(() => "");
+     throw new Error(
+       `no share field was drawn after ${cycles} cycles and ${SETTLE_BURSTS} further bursts${said ? `; the region says: ${said}` : ""}`,
+     );
+   }
 
   const picked = await pickAColumn(page, config.shell.endpoints.contributions);
 
@@ -445,7 +509,7 @@ try {
     rays_drawn: picked.rays,
     column:
       "read off the served contributions header, so it is a column an instrument reached",
-    warmed: `stepped in bursts of ${stepTicks} ticks at rate 0 until ${cycles} analysis cycles had published (${warmed.bursts} bursts)`,
+    warmed: `stepped in bursts of ${stepTicks} ticks at rate 0 until ${cycles} analysis cycles had published (${warmed.bursts} bursts), then ${settling} further burst(s) until the field was drawn`,
     viewport: { width, height: shotHeight },
     // **Read out of the file's own header, not off the element's box.** These disagreed —
     // 388x1592 recorded for a 390x1593 file — because the box is CSS pixels before rounding and
@@ -602,13 +666,28 @@ try {
       // Chromium: 900 and 900 for an svg overflowing a 200px parent — so `scrollWidth >
       // clientWidth` is false however far it sticks out. A selector that cannot report is worse
       // than no selector, because the list reads as coverage.
-      // The under-scale note is measured where it exists and its absence is a fact rather than a
-      // gap: a column whose rays are all above the floor draws no note, which is correct.
-      const note = document.querySelector(".forecast-ray-note");
-      if (note && note.scrollWidth > note.clientWidth + 1) {
-        out.push(
-          `${label}: the under-scale note is ${note.scrollWidth}px of content in a ${note.clientWidth}px box`,
-        );
+      // The two notes under the map are measured **by their own testids, not by the class they
+      // share**. `.forecast-ray-note` is on both, and `querySelector` is singular: the first
+      // match won, so this reported the *not-to-scale* paragraph as "the under-scale note" —
+      // and on a column whose rays fall under the floor, where the under-scale note is the one
+      // drawn, the not-to-scale paragraph was never measured at all. That is the fault the
+      // comment above it describes in the map's case, arriving by a different route: a list of
+      // names read as coverage of two when it was coverage of one. Each note's absence is still
+      // a fact rather than a gap — a column whose rays are all above the floor draws no
+      // under-scale note, which is correct.
+      const notes = [
+        { id: "forecast-under-scale", what: "the under-scale note" },
+        { id: "forecast-not-to-scale", what: "the not-to-scale note" },
+      ]
+        .map((entry) => ({ ...entry, node: document.querySelector(`[data-testid="${entry.id}"]`) }))
+        .filter((entry) => entry.node);
+      for (const entry of notes) {
+        const node = entry.node as Element;
+        if (node.scrollWidth > node.clientWidth + 1) {
+          out.push(
+            `${label}: ${entry.what} is ${node.scrollWidth}px of content in a ${node.clientWidth}px box`,
+          );
+        }
       }
 
       const map = document.querySelector(".forecast-share-map");
@@ -624,7 +703,7 @@ try {
       }
       return {
         failures: out,
-        measured: [...measuredHere, ...(note ? [".forecast-ray-note"] : [])],
+        measured: [...measuredHere, ...notes.map((entry) => `[data-testid="${entry.id}"]`)],
       };
     }, `${size.width}x${size.height}`);
     narrow.push(...measured.failures);

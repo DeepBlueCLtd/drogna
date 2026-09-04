@@ -190,6 +190,20 @@ export interface ColumnProvenanceProps {
    * happening.
    */
   readonly gridGaveUp: boolean;
+  /**
+   * Whether the depths on screen were read for an *earlier* analysis than the one announced.
+   *
+   * **A different fact from `gridGaveUp`, and the one the surface actually needs.** The give-up
+   * flag covers a seam that refused its whole allowance; it does not cover the inventory
+   * answering 200 without this cycle's holding, which spends nothing, is asked once per cycle by
+   * design, and leaves the previous cycle's axis standing in exactly the same way. That second
+   * route is the one the shipped configuration produces. Computed from the two collection names
+   * rather than from the retry counter, which is a per-tab total: three refusals spread over
+   * three cycles satisfy it while this cycle was asked once, so a sentence saying "asked several
+   * times over for this cycle's" built on it is a specific claim about the machinery that the
+   * machinery did not perform.
+   */
+  readonly axisIsStale: boolean;
 }
 
 export function ColumnProvenance({
@@ -199,6 +213,7 @@ export function ColumnProvenance({
   contributionsPrefix,
   validator,
   gridGaveUp,
+  axisIsStale,
 }: ColumnProvenanceProps) {
   const [depthIndex, setDepthIndex] = useState(0);
   /**
@@ -696,13 +711,23 @@ export function ColumnProvenance({
           cycle's depth chips over the current cycle's provenance collection with nothing saying
           the axis was old — the same permanent-wrong-sentence fault this feature fixed in the
           other direction, where the region kept saying the store "had none when this console
-          asked" after it had answered. */}
-      {gridGaveUp && (
+          asked" after it had answered.
+
+          **And gated on the axis actually being old, not on the retry allowance being spent.**
+          `gridGaveUp` covers the route where the inventory refuses; it does not cover the route
+          where it answers 200 without carrying this cycle's holding, which spends nothing and
+          leaves the previous cycle's axis standing in exactly the same way — and that is the
+          route the shipped configuration produces. The sentence also said the store had been
+          "asked several times over for this cycle's", which was a per-cycle claim read off a
+          per-tab counter: three refusals across three cycles satisfy it while this cycle was
+          asked once. Both are gone. What is left is what the two collection names say. */}
+      {axisIsStale && (
         <p className="forecast-column-stale" data-testid="column-grid-stale">
           these depths are from an earlier analysis cycle: the grid is read from a holding’s own
-          manifest, the store was asked several times over for this cycle’s and refused, and this
-          console has stopped asking. The field and the columns below are current; the depths they
-          are filed under may not be. Reloading the page starts a new run and asks again.
+          manifest, and the store has not answered with this cycle’s
+          {gridGaveUp ? ' — it was asked until the allowance ran out, and this console has stopped asking' : ''}.
+          The field and the columns below are current; the depths they are filed under may not be.
+          Reloading the page starts a new run and asks again.
         </p>
       )}
 
@@ -813,7 +838,12 @@ export function ColumnProvenance({
                       ? { key: showing, value: shares[showing] }
                       : undefined;
                 const source = shown ? shareOf(shown.key) : undefined;
-                const magnitude = shown && Number.isFinite(shown.value) ? Math.min(Math.abs(shown.value), 1) : 0;
+                // No `Number.isFinite(shown.value)` here: both producers of `shown` now
+                // guarantee a finite value — `dominantAt` only ever returns a finite best, and
+                // the named branch tests it above — so the conjunct was dead, and a dead guard
+                // reads as evidence that the value can be non-finite, which is how a later
+                // reader re-derives the bug it was written against.
+                const magnitude = shown ? Math.min(Math.abs(shown.value), 1) : 0;
                 const isHere = cursor?.row === row && cursor?.col === col;
                 return (
                   <rect

@@ -263,6 +263,19 @@ export function ForecastPanel({ params }: PanelProps) {
   /** True once the axis has been asked for its allowance of times and not got. */
   const [gridGaveUp, setGridGaveUp] = useState(false);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
+  /**
+   * The analysis collection `columnGrid` was read for, as *state* beside the ref that bounds the
+   * asking.
+   *
+   * **The ref cannot answer the question the surface asks.** A ref does not re-render, and the
+   * question — are the depths on screen this cycle's? — is a fact the region has to state. It was
+   * being answered with `gridGaveUp`, which is a narrower predicate: that covers the route where
+   * the inventory *refuses* three times, and not the route where it answers 200 without carrying
+   * this cycle's holding, which spends nothing, is asked once per cycle by design, and leaves the
+   * previous cycle's axis standing exactly the same way. The second route is the one the shipped
+   * configuration actually produces. Comparing the names covers both and needs no counter.
+   */
+  const [gridFor, setGridFor] = useState<string | undefined>(undefined);
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
   const [refused, setRefused] = useState(0);
@@ -506,6 +519,7 @@ export function ForecastPanel({ params }: PanelProps) {
           return;
         }
         gridForRef.current = named;
+        setGridFor(named);
         // Through the policy, not beside it. The reset was written inline, so `spendAttempt`'s
         // `'answered'` arm had no production caller and the test asserting it held a path the
         // panel never took — in a function extracted *because* the policy could not be reached
@@ -638,6 +652,12 @@ export function ForecastPanel({ params }: PanelProps) {
             contributionsPrefix={config.endpoints.contributions}
             validator={validator}
             gridGaveUp={gridGaveUp}
+            // The axis on screen is not this cycle's: it was read for an earlier analysis and
+            // every route that could replace it has failed or not answered. Computed from the
+            // two names rather than from the retry counter, which is a per-tab total and cannot
+            // say anything about *this* cycle (three refusals spread over three cycles satisfy
+            // it while this cycle was asked once).
+            axisIsStale={analysis !== undefined && gridFor !== undefined && gridFor !== analysis.collections.analysis}
           />
         </section>
 

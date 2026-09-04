@@ -837,7 +837,12 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
         if (String(input).includes(config.shell.endpoints.holdings)) {
           empties += 1;
-          return Promise.resolve(new Response('{"holdings":[]}', { status: 200 }));
+          // Valid against the master, which `{"holdings":[]}` is not: the panel validates the
+          // inventory before reading it and the master requires `schema_version`, so the body
+          // this test used for four features was a *refusal* and the state it describes in the
+          // comment above — "asked, answered honestly, nothing there yet" — was never reached.
+          // It passed anyway, because what it asserts is the recovery after the stub is gone.
+          return Promise.resolve(new Response('{"schema_version":1,"holdings":[]}', { status: 200 }));
         }
         return passthrough(input, init);
       }) as typeof globalThis.fetch);
@@ -993,7 +998,9 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(screen.getByTestId('column-profile').textContent).toMatch(/archive/);
     });
 
-    it('a region that has stopped asking for the depth axis says so over the field it is still drawing', async () => {
+    it.each([0, 1])(
+      'a region whose depths are an earlier cycle’s says so over the field it is still drawing (route %i)',
+      async (routeIndex) => {
       // **The fault.** `gridGaveUp` was read in exactly one place — inside `if (!analysis ||
       // !grid)` — so it could only ever be stated by a region that had *never* obtained an axis.
       // Once one had been read the console could spend its whole allowance on every later cycle,
@@ -1005,12 +1012,38 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(document.querySelectorAll('rect.share-cell').length, 'no field to go stale over').toBeGreaterThan(0);
       expect(screen.queryByTestId('column-grid-stale'), 'stale before anything was refused').toBeNull();
 
-      // The holdings inventory alone refuses; every other query answers, so the field below keeps
-      // being re-read for each new cycle and the region is drawing current data under old depths.
+      // **Both routes, because the notice used to cover one.** A refusal spends the retry
+      // allowance and ends in `gridGaveUp`; an inventory that answers 200 without this cycle's
+      // holding spends nothing, is asked once per cycle by design, and leaves the previous
+      // cycle's axis standing in exactly the same way — and that second route is the one the
+      // shipped configuration produces. Gated on the allowance, the notice was silent for it.
+      const routes = [
+        { what: 'refused', answer: () => new Response('{"refused":"planted"}', { status: 503 }) },
+        {
+          what: 'answered without this cycle’s holding',
+          // **`schema_version` matters, and its absence is why this route did not exist.** The
+          // panel validates the inventory against its master before reading it, and the master
+          // requires that field — so `{"holdings":[]}` is a *refusal*, not an honest empty
+          // answer. The existing "does not spend the retry allowance" test uses exactly that
+          // body under a comment describing the state as "asked, answered honestly, nothing
+          // there yet"; it passes because it asserts only the recovery afterwards. Written
+          // valid, this is the route the shipped configuration actually produces.
+          answer: () =>
+            new Response('{"schema_version":1,"holdings":[]}', {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }),
+        },
+      ];
+      const route = routes[routeIndex];
+
+      // The holdings inventory alone answers this way; every other query is the backend's, so the
+      // field below keeps being re-read for each new cycle and the region is drawing current data
+      // under old depths.
       const passthrough = globalThis.fetch;
       vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
         if (String(input).includes(config.shell.endpoints.holdings)) {
-          return Promise.resolve(new Response('{"refused":"planted"}', { status: 503 }));
+          return Promise.resolve(route.answer());
         }
         return passthrough(input, init);
       }) as typeof globalThis.fetch);
@@ -1031,12 +1064,19 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         }
       }
 
-      const stale = screen.getByTestId('column-grid-stale');
-      expect(stale.textContent).toMatch(/earlier analysis cycle/);
+      const stale = screen.getByTestId('column-grid-stale', undefined);
+      expect(stale.textContent, `${route.what}: the depths went stale with nothing saying so`).toMatch(
+        /earlier analysis cycle/,
+      );
+      // The "stopped asking" clause belongs to the refusal route alone: an inventory that answers
+      // honestly is still being asked, once per cycle, and saying otherwise would be the same
+      // kind of specific-claim-the-machinery-did-not-perform the counter version was.
+      expect(/stopped asking/.test(stale.textContent ?? '')).toBe(route.what === 'refused');
       // And it is said *beside a drawn field*, which is the state the sentence could not reach.
       expect(document.querySelectorAll('rect.share-cell').length).toBeGreaterThan(0);
       expect(screen.queryByTestId('column-absent'), 'the region fell back to its no-axis branch').toBeNull();
-    });
+    },
+  );
 
     it('XI: a cell with no reading is marked unserved in every display mode, not only the strongest', async () => {
       // **The fault.** The dominant path was fixed to return nothing for a cell with no finite

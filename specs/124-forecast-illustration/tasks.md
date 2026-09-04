@@ -1092,6 +1092,65 @@ the part worth recording, because each was a sentence asserting a property the c
       occurrence is now itself the finding, with a fixture whose record is correct and which the
       gate mis-reported before the change.
 
+- [x] T022z **A fifteenth round, run against the commit the pull request was opened at, and its
+      findings are follow-up work on the open pull request rather than another round before it.**
+      Three of the five are defects in that commit itself.
+
+      **The not-to-scale paragraph stole the class the capture proof measures by.** Both notes
+      under the map carry `.forecast-ray-note` and `scripts/capture/forecast.ts` selected it
+      singularly, so the narrow pass reported the new paragraph as "the under-scale note" — and on
+      a column whose rays fall under the floor, where the under-scale note is the one drawn, the
+      new paragraph was never measured at all. That is the fault the comment beside it already
+      describes for the map, arriving by another route: a list of names read as coverage of two
+      when it was coverage of one. Each note is measured by its own testid now.
+
+      **The stale-axis notice covered one of the two routes that produce a stale axis.**
+      `gridGaveUp` is spent by a seam that *refuses*; the inventory answering 200 without this
+      cycle's holding spends nothing, is asked once per cycle by design, and leaves the previous
+      cycle's axis standing in exactly the same way — and that is the route the shipped
+      configuration produces. Gated now on the two collection names disagreeing, which covers
+      both and needs no counter. The test drives both routes; route 1 fails against the old gate
+      and route 0 passes, which is what says the finding was real.
+
+      **And the notice stated a per-cycle fact from a per-tab counter.** It said the store had
+      been "asked several times over for this cycle's": `attemptsRef` is reset only on success, so
+      three refusals across three cycles satisfy it while this cycle was asked once. The clause is
+      gone; the "stopped asking" half is kept for the refusal route alone, where it is true.
+
+      **And writing the test for that found the fixture it needed had never existed.** The route
+      is "the inventory answers honestly and does not carry this cycle's holding"; the body four
+      features of tests have used for it is `{"holdings":[]}`, which is missing `schema_version`
+      and therefore *fails the master* — so the panel refuses it and takes the refusal path. The
+      existing test's own comment says the state is "asked, answered honestly, nothing there
+      yet"; it has never been in that state, and it passes because what it asserts is the
+      recovery after the stub is removed. Both fixtures are valid now, and route 1 fails against
+      the old gate with `Unable to find [data-testid="column-grid-stale"]` rather than passing
+      by accident on the refusal path. A fixture that does not reach the state a test names is
+      the same fault as a check that has never been seen to fail, one level down.
+
+      **The regenerated sidecar lost its caption**, because the capture was re-run without
+      `DROGNA_FORECAST_CAPTION` set. Nothing on disk checks that field, so the gates were green
+      over a generated artefact that moved in a way its author did not intend.
+
+      **And CI found the assumption the round before had named and cleared.** `capture:forecast`
+      timed out waiting for `.forecast-share-map` on a commit whose *previous* run on the same
+      SHA had passed. Not a flake: a permanent state. The region asks for its depth axis once per
+      analysis cycle, and an inventory that answers honestly without carrying that cycle's holding
+      yet marks the cycle asked-for and returns — a bound that exists so the ask is not one fetch
+      per restatement for the life of the tab, and that assumes another announcement will arrive.
+      The capture pins the clock at rate 0 and advances it only by explicit steps, so when the
+      warm loop stops the announcements stop with it: an ask that landed before the last holding
+      was published is the last ask there will ever be, and no wait can fix a state that is not
+      changing. The review pass had named this exact assumption and judged it established because
+      the analyst publishes its holdings before it announces; the race is narrower than that and
+      CI closed it. The wait drives now — another burst whenever the field is not up, bounded, and
+      the failure names what the region says rather than only the selector.
+
+      **And the re-click fix could starve the read it waits for.** `readColumn` bumps a token
+      synchronously and every later stage checks it, so clicking on every 200 ms pass discards the
+      read the previous pass started. Guarded on the readout being absent, so the click fires once
+      and then only after a cycle has actually cleared the pick.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

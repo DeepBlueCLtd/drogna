@@ -13,6 +13,7 @@ import type {
   Heartbeat,
   OperatorComponents,
   OperatorControls,
+  RunPublished,
   RunRequest,
   TelemetrySchedulerDecision,
   TelemetryForecastSkill,
@@ -22,7 +23,6 @@ import type {
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
-import type { RunPublished } from '../../generated/types.js';
 
 const validator = createSeamValidator();
 
@@ -77,7 +77,10 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
 
       runtime.control.stop(config.model_runner.id);
       runtime.control.start(config.model_runner.id);
-      await driveTicks(runtime.clock, 20);
+      // Derived from the interval it reasons about rather than typed in: a settle of "20"
+      // stops being safe the moment somebody shortens the minimum interval for a faster demo,
+      // and a bound that quietly stops being true is the shape this test was already bitten by.
+      await driveTicks(runtime.clock, Math.max(1, Math.floor(config.scheduler.min_interval_ticks / 30)));
 
       // **A restatement equals the release it restates, field for field.** The first version
       // dated it at the instant it was being said at, and amended the master to say nothing
@@ -93,8 +96,8 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       expect(restated?.tick).toBe(release?.descriptor.published_at.tick);
       expect(validator.validate('run-published', restated).refusals).toEqual([]);
 
-      // The staging check belongs here and not after the sweep below: `min_interval_ticks` is
-      // 600, so nothing legitimate can have released a run twenty ticks after the restart —
+      // The staging check belongs here and not after the sweep below: nothing legitimate can
+      // have released a run within a fraction of `min_interval_ticks` of the restart —
       // whereas over the sweep's 4,000 ticks a genuine run publishes and stages a bundle it
       // is entitled to. Asserting this at the end passed the fault and failed the clean tree.
       expect(runtime.offload.staged().length, 'a second bundle was staged for one run').toBe(bundlesBefore);

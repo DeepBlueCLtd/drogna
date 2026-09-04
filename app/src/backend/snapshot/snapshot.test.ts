@@ -250,7 +250,7 @@ describe('the committed seed-data artefacts (feature 120)', () => {
         // element; over the four artefacts' 54.7 MB that took 36.6 s of this file's 60 s
         // budget on an idle machine and timed out at 65.9 s under load — a CI flake that
         // arrived with the forecast eras, the artefacts having grown from 9.6 MB decoded.
-        // The same comparison this way is 8.3 s, and it still names the first byte that
+        // The same comparison this way is 2.8 s, and it still names the first byte that
         // differs, which is all a failure needs to say.
         const mine = holding.bytes;
         const theirs = original.holdings[index].bytes;

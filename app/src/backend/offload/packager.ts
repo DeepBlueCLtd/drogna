@@ -52,7 +52,6 @@ export class OffloadPackager {
   private intervalStartTick = 0;
   private stagedBundles: StagedBundle[] = [];
   /** The last release heard: what a prompted window is staged over. */
-  private lastPublished: RunPublished | undefined;
   /**
    * The run a bundle has actually been staged for.
    *
@@ -149,9 +148,7 @@ export class OffloadPackager {
       // `stagedBytes` past the bound, after which production stops for good — nothing is
       // evictable in V2. Staging a bundle for a release that did not happen is also a claim
       // about a release that did not happen.
-      const alreadyStaged = this.stagedForRunId === published.run_id;
-      this.lastPublished = published;
-      if (alreadyStaged) return;
+      if (this.stagedForRunId === published.run_id) return;
       this.stage(published, published.tick);
     });
     this.client.subscribe(this.config.topics.command, (message) => {
@@ -170,7 +167,7 @@ export class OffloadPackager {
       // So the store is consulted before the ledger is written: what stands is a fact about
       // the inventory, and reading it is the same resumption rule the environment generator
       // and the model runner already follow.
-      const against = this.lastPublished ?? standingRunFacts(this.coverageStore);
+      const against = standingRunFacts(this.coverageStore);
       if (!against) {
         // Genuinely nothing to stage a bundle OF. Said in the ledger rather than answered
         // with an empty bundle.

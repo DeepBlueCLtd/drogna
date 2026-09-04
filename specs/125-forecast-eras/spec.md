@@ -64,6 +64,15 @@ backlog's P0 row wanted and is also ~27 MB of git history per change.
 
 ## Deliberately not done
 
+- **The artefact's header digest covers one of its three authors.** `snapshot.schema.json`
+  describes `config_digest` as "the one thing that decides what the fields contain besides the
+  seed", and the source refuses a mismatch at construction. That was total coverage while the
+  artefact held only the ocean; it now also holds the analyst's and the model runner's output,
+  whose contents follow `config.analyst` and `config.model_runner` — neither in the digest. A
+  stale artefact served beside fresh JS would be accepted, and the store's own digest check
+  cannot see it, a stale artefact being perfectly self-consistent. `check-snapshot-drift` is
+  the real guarantee and is unaffected; widening the header is an artefact-format change and
+  deserves its own, with the master amended to say what the field now covers.
 - **The store's refusal is a fault nobody hears.** When the residual identifier collision does
   fire — restart the scheduler inside the tick a run was requested at, then change the clock
   rate — the store refuses, the analyst raises inside a broker subscription, and the broker

@@ -143,6 +143,46 @@ describe('the synthetic ocean (feature 102)', () => {
     runtime.stop();
   });
 
+  it('will not let a republication rewind an era pointer (feature 125, watched)', () => {
+    /**
+     * Identical bytes are allowed — the snapshot source's whole job is to put back what was
+     * authored — but "these are the bytes that were there" is not "this should move the
+     * pointer forward", and everything downstream reads the pointer.
+     *
+     * Watched happening on `returning` through the plane's own verbs, by pressing restart on
+     * the snapshot source: a fresh instance holds the whole artefact again and republishes it,
+     * and the `instance` pointer went from `…-run-t9930` back to `…-run-t9171` while the live
+     * now-cast holding was deleted. The monitor then scored live soundings against a
+     * 759-tick-stale forecast, and telemetry — keyed on the live run — dropped every residual
+     * it published. The now-cast half predates the forecast eras; the `instance` half arrived
+     * with them, because until this feature an artefact carried no instance holdings.
+     */
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const first = runtime.store.currentNowcast();
+    if (!first) throw new Error('no nowcast');
+    const stale = { descriptor: first.descriptor, bytes: first.bytes };
+
+    // Let the cadence move the pointer on.
+    for (let i = 0; i < config.env_generator.nowcast.interval_ticks; i++) runtime.clock.tickOnce();
+    const standing = runtime.store.currentNowcast();
+    expect(standing?.descriptor.holding_id, 'the cadence did not move the pointer').not.toBe(
+      first.descriptor.holding_id,
+    );
+
+    // The older holding, republished byte for byte, exactly as a restarted source would.
+    expect(runtime.store.publish(stale).published, 'identical bytes must still be accepted').toBe(true);
+    expect(
+      runtime.store.currentNowcast()?.descriptor.holding_id,
+      'a republication of an older holding rewound the era pointer',
+    ).toBe(standing?.descriptor.holding_id);
+    expect(
+      runtime.store.holdings().map((holding) => holding.holding_id),
+      'the standing holding was deleted by a republication of its predecessor',
+    ).toContain(String(standing?.descriptor.holding_id));
+    runtime.stop();
+  });
+
   it('replaces the now-cast on its configured cadence, announced not polled', () => {
     const config = lockstepConfig();
     const runtime = buildBackend(config, options, validator);

@@ -145,6 +145,20 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       after the tour and the Intro panel were changed to send the reader there for a statement
       about the forecasts too.
 
+- [x] **T059** Restarting the snapshot source rewound the store's era pointers to the
+      artefact and deleted a live holding. Watched on `returning` through the plane's own
+      verbs — and by pressing restart on the very node T054 had just pointed readers at: the
+      `instance` pointer went from `…-run-t9930` back to `…-run-t9171` and
+      `nowcast.….t9900` was deleted. The monitor then scored live soundings against a
+      759-tick-stale forecast and telemetry dropped every residual it published. The now-cast
+      half predates this feature; the `instance` half arrived with it, an artefact having
+      carried no instance holdings before. An era pointer cannot move backwards in publication
+      time now — identical bytes are still accepted, which is what the snapshot source needs.
+- [x] **T060** A review subagent left an untracked `probe125.test.ts` in the working tree; it
+      failed lint and vitest would have collected it. Deleted, and the committed file list
+      audited against the branch — no stray artefact was ever staged. This is what CLAUDE.md's
+      first working practice is about, and `git add -A` is how it would have got in.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

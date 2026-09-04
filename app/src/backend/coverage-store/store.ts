@@ -190,10 +190,45 @@ export class CoverageStore {
         refusal: `'${descriptor.holding_id}' is already held, with field ${standing.descriptor.field.sha256}; a holding id names one set of bytes for the life of a run, so this publication is refused rather than replacing it silently`,
       };
     }
+    /**
+     * **An era pointer never moves backwards in publication time.**
+     *
+     * The guard above is keyed on bytes, and identical bytes are allowed because that is the
+     * snapshot source's whole job. But "these are the bytes that were there" is not the same
+     * claim as "this publication should move the pointer forward", and everything below the
+     * `set` calls acts on the pointer rather than on the bytes.
+     *
+     * Watched happening, on `returning`, through the plane's own verbs — and reachable by
+     * pressing **restart** on the very node the Intro panel and the walkthrough now send a
+     * reader to. A restarted snapshot source is a fresh instance holding the whole artefact
+     * again, so on its next sample it republishes every holding. Each is accepted, being
+     * byte-identical; each then rewound its era pointer:
+     *
+     *     BEFORE  instance = …-run-t9930   nowcast = nowcast.….t9900   (tick 9939)
+     *     AFTER   instance = …-run-t9171   nowcast = nowcast.….t9000
+     *     LOST    nowcast.….t9900
+     *
+     * The monitor scores live soundings against `currentInstance()`, so it began scoring
+     * against a 759-tick-stale forecast and publishing residuals named for it; telemetry keys
+     * its ledger by the live run and dropped every one — silence shown where there is traffic.
+     * The analyst takes the same field as its next background. And the now-cast branch below
+     * *deletes* the holding it supersedes, so a row a reader was looking at left the inventory.
+     *
+     * The now-cast half of this predates the forecast eras; the `instance` half arrived with
+     * them, because until this feature an artefact carried no instance holdings and a replay
+     * could not touch that pointer. Both are closed here, because the rule is one rule.
+     */
+    const pointedId = this.eraPointers.get(descriptor.era);
+    const pointedAt = pointedId === undefined ? undefined : this.holdingsById.get(pointedId);
+    const rewinds =
+      pointedAt !== undefined &&
+      pointedAt.descriptor.holding_id !== descriptor.holding_id &&
+      descriptor.published_at.tick < pointedAt.descriptor.published_at.tick;
+
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).
     this.holdingsById.set(descriptor.holding_id, { descriptor, bytes: staged.bytes });
-    if (descriptor.era === 'nowcast') {
+    if (descriptor.era === 'nowcast' && !rewinds) {
       const previous = this.eraPointers.get('nowcast');
       if (previous !== undefined && previous !== descriptor.holding_id) this.holdingsById.delete(previous);
       this.eraPointers.set('nowcast', descriptor.holding_id);
@@ -203,7 +238,7 @@ export class CoverageStore {
       // exists so a reader can ask for the brief by era, as it asks for the now-cast.
       this.eraPointers.set('departure', descriptor.holding_id);
     }
-    if (descriptor.era === 'instance') {
+    if (descriptor.era === 'instance' && !rewinds) {
       // Instances accumulate as holdings (FR-30); the pointer names the current one.
       this.eraPointers.set('instance', descriptor.holding_id);
     }

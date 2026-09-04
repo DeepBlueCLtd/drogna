@@ -270,7 +270,7 @@ export function ColumnProvenance({
    * a parameter that would come back empty.
    */
   const [volumeOpen, setVolumeOpen] = useState(false);
-  const [volumeParameter, setVolumeParameter] = useState<VolumeParameter>('temperature');
+  const [volumeParameter, setVolumeParameter] = useState<VolumeParameter>('sound_speed');
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
   /**
    * The served column, or which of the two ways it is not here. FR-129 names three facts and a

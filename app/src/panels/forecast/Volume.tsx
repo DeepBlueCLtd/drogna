@@ -46,6 +46,7 @@ import { PathLayer, SolidPolygonLayer } from '@deck.gl/layers';
 import type { SeamValidator } from '../../seam/validate.js';
 import { cubeFrame, volumeEdges } from '../map/cube.js';
 import { rampColour } from '../map/map-data.js';
+import { soundSpeedMs } from '../../seam/ocean-relations.js';
 import { thermoclineSurface, type LevelField, type Thermocline } from './volume.js';
 import type { ColumnGrid } from './ColumnProvenance.js';
 
@@ -55,9 +56,25 @@ import type { ColumnGrid } from './ColumnProvenance.js';
 // thing that says which way is down. Measured against the region rather than inherited.
 const INITIAL_VIEW = { target: [0, 0, -20] as [number, number, number], zoom: 0.42, rotationX: 32, rotationOrbit: 24 };
 
-/** The variables an analysis holding carries. Sound speed is derived and is not among them. */
-export const VOLUME_PARAMETERS = ['temperature', 'salinity'] as const;
+/**
+ * What the volume can draw: the two variables an analysis holding carries, and the one derived
+ * from them.
+ *
+ * **Sound speed is not served and is not a third copy of the arithmetic.** A holding carries
+ * temperature and salinity; ADR-0005 says sound speed is derived at the point of use, never
+ * stored, and that there is exactly one implementation in drogna. That implementation now sits in
+ * `seam/ocean-relations.ts`, where both halves can reach it — it was in the backend, which is why
+ * this control could not offer sound speed until it moved. A panel evaluating the seam's own
+ * declared relation over served values is the point of use ADR-0005 describes, not a second
+ * opinion about it.
+ */
+export const VOLUME_PARAMETERS = ['sound_speed', 'temperature', 'salinity'] as const;
 export type VolumeParameter = (typeof VOLUME_PARAMETERS)[number];
+
+/** The variables that have to be fetched to draw a parameter. Sound speed needs both. */
+function servedFor(parameter: VolumeParameter): readonly string[] {
+  return parameter === 'sound_speed' ? ['temperature', 'salinity'] : [parameter];
+}
 
 /** One level as the area query answered it, with the axes it was answered over. */
 interface ServedLevel {
@@ -115,8 +132,9 @@ export function Volume({
     setFetched({ status: 'loading' });
     void (async () => {
       const polygon = `POLYGON((${grid.minimumLongitude} ${grid.minimumLatitude},${grid.maximumLongitude} ${grid.minimumLatitude},${grid.maximumLongitude} ${grid.maximumLatitude},${grid.minimumLongitude} ${grid.maximumLatitude},${grid.minimumLongitude} ${grid.minimumLatitude}))`;
-      // Both parameters in one query: the thermocline needs temperature whatever is on show.
-      const names = parameter === 'temperature' ? 'temperature' : `temperature,${parameter}`;
+      // One query per level whatever is on show: the thermocline always needs temperature, and
+      // sound speed needs temperature and salinity, so the union is at most those two.
+      const names = [...new Set(['temperature', ...servedFor(parameter)])].join(',');
       const levels: ServedLevel[] = [];
       for (const depthM of grid.depthsM) {
         try {
@@ -136,9 +154,18 @@ export function Volume({
             return;
           }
           const temperatureC = valuesOf(body, 'temperature');
-          const shown = valuesOf(body, parameter);
           const longitudes = axisOf(body, 'x');
           const latitudes = axisOf(body, 'y');
+          // Derived here for sound speed, through the seam's own declared relation — the same
+          // function the monitor scores residuals with and the manifest names as the
+          // implementation. Read straight off the response for the two that are served.
+          const salinityPsu = parameter === 'sound_speed' ? valuesOf(body, 'salinity') : undefined;
+          const shown =
+            parameter === 'sound_speed'
+              ? temperatureC && salinityPsu
+                ? temperatureC.map((value, index) => soundSpeedMs(value, salinityPsu[index], depthM))
+                : undefined
+              : valuesOf(body, parameter);
           if (!temperatureC || !shown || !longitudes || !latitudes) {
             setFetched({ status: 'refused', why: `the field at ${depthM} m carried no ${parameter} to draw` });
             return;

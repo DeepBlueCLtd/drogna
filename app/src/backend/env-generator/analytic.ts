@@ -242,59 +242,16 @@ export function tauAt(
   return tau.background_seconds * (1 - bestWeight) + bestTau * bestWeight;
 }
 
-export const PRESSURE_RELATION = {
-  name: 'linear-depth',
-  expression: 'pressure_dbar = surface_dbar + dbar_per_metre * depth_m',
-  dbar_per_metre: 1.0075,
-  surface_dbar: 0,
-} as const;
-
-export function pressureDbar(depthM: number): number {
-  return PRESSURE_RELATION.surface_dbar + PRESSURE_RELATION.dbar_per_metre * depthM;
-}
-
-export const SOUND_SPEED = {
-  method: 'Mackenzie 1981 nine-term equation',
-  implementation: 'app/src/backend/env-generator/analytic.ts#soundSpeedMs',
-  validity: {
-    min_temperature_c: 2,
-    max_temperature_c: 30,
-    min_salinity_psu: 25,
-    max_salinity_psu: 40,
-    min_depth_m: 0,
-    max_depth_m: 8000,
-  },
-} as const;
-
-/**
- * ADR-0005: sound speed is derived at the point of use, never stored, and this is
- * the single implementation in drogna — a residual computed anywhere cites it.
- */
-export function soundSpeedMs(temperatureC: number, salinityPsu: number, depthM: number): number {
-  const t = temperatureC;
-  const s = salinityPsu;
-  const d = depthM;
-  return (
-    1448.96 +
-    4.591 * t -
-    5.304e-2 * t * t +
-    2.374e-4 * t * t * t +
-    1.34 * (s - 35) +
-    1.63e-2 * d +
-    1.675e-7 * d * d -
-    1.025e-2 * t * (s - 35) -
-    7.139e-13 * t * d * d * d
-  );
-}
-
-export function insideSoundSpeedValidity(temperatureC: number, salinityPsu: number, depthM: number): boolean {
-  const v = SOUND_SPEED.validity;
-  return (
-    temperatureC >= v.min_temperature_c &&
-    temperatureC <= v.max_temperature_c &&
-    salinityPsu >= v.min_salinity_psu &&
-    salinityPsu <= v.max_salinity_psu &&
-    depthM >= v.min_depth_m &&
-    depthM <= v.max_depth_m
-  );
-}
+// **Pressure and sound speed moved to `app/src/seam/ocean-relations.ts`** and are re-exported
+// here so every existing caller keeps working. They are declared relations rather than the
+// analytic ocean — functions of three numbers that read no field — and a manifest points a
+// client at the implementation, so it has to be reachable from both sides of the seam.
+// ADR-0005's "single implementation in drogna" is what the move preserves: feature 124's volume
+// needs sound speed from served temperature and salinity, and the alternative was a second copy.
+export {
+  PRESSURE_RELATION,
+  SOUND_SPEED,
+  insideSoundSpeedValidity,
+  pressureDbar,
+  soundSpeedMs,
+} from '../../seam/ocean-relations.js';

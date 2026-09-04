@@ -5,8 +5,6 @@ import {
   frontAnomalyT,
   frontSignedDistanceKm,
   movingCentreAt,
-  pressureDbar,
-  soundSpeedMs,
   tauAt,
   temperatureAt,
   thermoclineAnomalyT,
@@ -111,15 +109,5 @@ describe('the analytic form (v1)', () => {
     // The moving feature carries its tau with it (ADR-0002).
     const centreLater = movingCentreAt(world.moving, 10 * 86400);
     expect(tauAt(world, tau, centreLater.longitude, centreLater.latitude, 100, 10 * 86400)).toBeCloseTo(86400, 0);
-  });
-
-  it('pressure and sound speed behave at their anchors', () => {
-    expect(pressureDbar(0)).toBe(0);
-    expect(pressureDbar(1000)).toBeCloseTo(1007.5, 6);
-    // Mackenzie's own anchor: 0°C, 35 psu, surface.
-    expect(soundSpeedMs(0, 35, 0)).toBeCloseTo(1448.96, 2);
-    const mid = soundSpeedMs(10, 35, 100);
-    expect(mid).toBeGreaterThan(1480);
-    expect(mid).toBeLessThan(1500);
   });
 });

@@ -64,6 +64,8 @@ import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale, withinWindow } from './rays.js';
 import { useMapView, ZOOM_STEP, type ViewRect } from '../map-view.js';
+import { Volume } from './lazy.js';
+import { VOLUME_PARAMETERS, type VolumeParameter } from './Volume.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -251,6 +253,24 @@ export function ColumnProvenance({
   const [showing, setShowing] = useState<SourceKey | 'dominant'>('dominant');
   const [slab, setSlab] = useState<Slab | undefined>();
   const [column, setColumn] = useState<Column | undefined>();
+  /**
+   * Whether the volume is open, and which parameter it draws (T008, T012).
+   *
+   * **Closed at rest, and that is the code-split's whole point.** The volume is this tab's only
+   * deck.gl surface and that stack is about a third of the bundle; `lazy.tsx` withholds it, so
+   * opening the Forecast tab costs what it always cost and opening a volume costs what a volume
+   * costs. A volume mounted by default would pull the chunk on every visit and undo the deferral.
+   *
+   * **The parameter does not default to sound speed, and the reason is not a preference.** T012
+   * asks for that default, and an analysis holding carries temperature and salinity only — sound
+   * speed is derived from the pair. ADR-0005 makes that derivation "the single implementation in
+   * drogna", so a second one in this panel is ruled out by a decision already taken rather than
+   * by taste, and the alternatives are a seam move or the query layer serving it. Until one of
+   * those happens the control offers what is served, and the region says so rather than offering
+   * a parameter that would come back empty.
+   */
+  const [volumeOpen, setVolumeOpen] = useState(false);
+  const [volumeParameter, setVolumeParameter] = useState<VolumeParameter>('temperature');
   const [cursor, setCursor] = useState<{ row: number; col: number } | undefined>();
   /**
    * The served column, or which of the two ways it is not here. FR-129 names three facts and a
@@ -727,12 +747,13 @@ export function ColumnProvenance({
   // landed, so it is said on both branches.
   const stillToCome = (
     <p className="forecast-column-basis">
-      The field here is a <strong>plan at one depth</strong>. The{' '}
-      <strong>semi-transparent volume</strong>, with the thermocline as a surface through it and
-      the forecast’s features carried down it, is <strong>feature 124’s remaining half</strong>{' '}
-      and is not built: what it adds is a dimension to a drawing that works, and the reason to
-      say so here rather than draw an empty frame is that the column selection, the rays and the
-      profile are the explanation — the volume is the setting they happen in.
+      The map here is a <strong>plan at one depth</strong>; the{' '}
+      <strong>semi-transparent volume</strong> below it is the setting that plan is a section
+      through, with the <strong>thermocline drawn as a surface</strong> — placed per column, so it
+      carries the shape a single published depth cannot. What is <strong>not built</strong> is the
+      last of <strong>feature 124</strong>: the forecast’s own features — the eddy, the front, the
+      drifting one — carried <em>with depth</em> through that volume. They are drawn in plan today
+      in the region to the right, and what is missing is the dimension rather than the figure.
     </p>
   );
 
@@ -1290,6 +1311,51 @@ export function ColumnProvenance({
         that the query layer works rather than a picture drawn from a private reach into the
         store.
       </p>
+
+      {/* **The volume, and it is closed at rest.** It is this tab's only deck.gl surface and
+          that stack is about a third of the bundle, so `lazy.tsx` withholds it: opening Forecast
+          costs what it always cost and opening a volume costs what a volume costs. The control
+          is a chip like the others rather than a new vocabulary. */}
+      <div className="forecast-column-filter" role="group" aria-label="the volume">
+        <button
+          type="button"
+          className={`forecast-chip${volumeOpen ? ' is-on' : ''}`}
+          aria-pressed={volumeOpen}
+          onClick={() => setVolumeOpen((open) => !open)}
+        >
+          {volumeOpen ? 'hide the volume' : 'show the volume'}
+        </button>
+        {volumeOpen && (
+          <label className="forecast-volume-parameter">
+            parameter{' '}
+            <select
+              value={volumeParameter}
+              onChange={(event) => setVolumeParameter(event.target.value as VolumeParameter)}
+            >
+              {VOLUME_PARAMETERS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      {volumeOpen && (
+        <Volume
+          collectionId={analysis.collections.analysis}
+          grid={grid}
+          edrPrefix={edrPrefix}
+          validator={validator}
+          parameter={volumeParameter}
+          // The column the region already has, and the same reader that opened it: T011 and T012
+          // both say the volume must not be a second selection, and this is what that means in
+          // code — one `readColumn`, one `column`, two drawings of them.
+          column={column}
+          onPickColumn={(longitude, latitude) => void readColumn(longitude, latitude)}
+        />
+      )}
 
       {stillToCome}
     </div>

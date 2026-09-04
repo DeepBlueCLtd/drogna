@@ -150,24 +150,69 @@ published today.
       carried share is not published alone, and the identity is the kernel test's.
 ## The centre region — the volume and its grid
 
-- [ ] T008 `panels/forecast/Volume.tsx`, code-split as the map is (`registry.tsx`'s
+- [x] T008 `panels/forecast/Volume.tsx`, code-split as the map is (`registry.tsx`'s
       `DEFERRED_VIEWS` gains nothing; the split is inside the panel, on the Data tab's
-      precedent).
-- [ ] T009 The semi-transparent field with the thermocline as a surface through it, its
+      precedent). *Built.* `lazy.tsx` withholds it exactly as `data/lazy.tsx` does and for the
+      measured reason that file records: deck.gl is about a third of the bundle and this is the
+      tab's only surface that needs it. Closed at rest, so opening Forecast costs what it always
+      cost. The frame, the cartesian mapping and the click's inverse are `map/cube.ts`, imported
+      rather than copied — the Data tab's volume imports the same module.
+- [x] T009 The semi-transparent field with the thermocline as a surface through it, its
       strength carried by the surface's appearance. Not a depth slice: the reason is at
       FR-120 and is that the thermocline domes, tilts and breaks.
+
+      *Built, and the surface is nearly flat on the shipped configuration — measured, stated on
+      the drawing, and raised as its own question rather than hoped past.* The harness publishes a
+      thermocline as a **domain mean**, which is one number and therefore a plane, so the surface
+      is derived per column from the served field: one area query per level, the run's own
+      definition (`model-runner/features.ts` — the steepest level pair, at its midpoint) applied
+      to each column instead of to the mean. `volume.ts` is that arithmetic, pure and tested, and
+      bound to the backend by a test that **calls `estimateFeatures`** rather than transcribing it.
+
+      Driven against `arriving`: **7,679 of 7,680 columns place it at 100 m and one at 300 m.**
+      The cause is the profile, not the pick — the domain-mean gradients are 4.49, 1.64, 0.92,
+      0.51 and 0.29 °C per 100 m, so the shallowest pair wins by nearly three to one everywhere.
+      At 200 m level spacing the authored thermocline is a layer an order of magnitude thinner
+      than the grid can resolve, which `features.ts` already says of its own estimate: "a 200 m
+      grid cannot see a 30 m layer". **FR-120's doming is not visible at this depth resolution by
+      any means, and this drawing is not the thing that could make it so.** The caption states the
+      distinct-depth count it found, because a picture captioned as a doming surface over two
+      distinct depths is the false illumination this region exists against. What it does show —
+      where the column's strongest gradient sits — is a sonar question whatever it is called.
+      Whether to raise the depth resolution is a data change touching every holding and every
+      feature that scores against one, so it is an issue rather than a line in this task:
+      DeepBlueCLtd/drogna#113 carries the measurement, the profile it came from, and the three
+      options (raise the resolution, amend FR-120, or leave it stated).
 - [ ] T010 The eddy, front and drifting feature carried **with depth** in the volume, against
       the field they are in, read from the forecast-features holding feature 123 publishes.
       *Reconciled:* the plan view of the same features is built (`FeatureTracks.tsx`, 123's
       T080) and stays in the right region; this task adds a dimension to a drawing that
       exists and does not introduce it.
-- [ ] T011 The clickable grid on the surface plane; selection by grid square, yielding a
+- [x] T011 The clickable grid on the surface plane; selection by grid square, yielding a
       water column. Keyboard traversal reaches every square. *Reconciled:* the share map in
       `ColumnProvenance.tsx` already selects a column by square with arrow keys and enter;
-      the volume's grid is the same selection and must not be a second one.
+      the volume's grid is the same selection and must not be a second one. *Built as that
+      reconciliation asks:* the volume is rendered inside `ColumnProvenance`, where `column` and
+      `readColumn` already live, and a click goes through `cube.ts`'s own inverse — tested as a
+      round trip against `toCartesian`, which is why the projection is imported rather than
+      written again. Driven live: clicking the volume opened the column at 46.22°N, -10.90°E in
+      the profile beneath it. The keyboard route to a square is the share map's, unchanged, which
+      is what "must not be a second one" means in code.
 - [ ] T012 The parameter control, defaulting to sound speed, and the depth control.
       *Reconciled:* a depth control exists on the share map (123's T084) and walks the same
       column; the volume shares it rather than gaining a second. The parameter control is new.
+
+      *Half built, and the half that is not is blocked on a decision already taken elsewhere.*
+      The control exists and offers what an analysis holding carries — temperature and salinity.
+      It does **not** default to sound speed, because sound speed is not served: it is derived
+      from the pair, and ADR-0005 makes that derivation "the single implementation in drogna", so
+      a second one in this panel is ruled out by that decision rather than by preference. Three
+      routes, none of them this task's to take alone: move `soundSpeedMs` into `app/src/seam/`
+      (clean, but its implementation path is written into published manifests, so it ripples into
+      snapshot regeneration); have the query layer serve a derived `sound_speed` parameter
+      (architecturally the best fit — the query layer is a point of use — but a backend change);
+      or amend T012. Left unticked with the reason, which is the part that cannot be
+      reconstructed later.
 
 ## The rays
 

@@ -371,6 +371,19 @@
   cursor: default;
 }
 
+/* The volume: a fixed height like the share map, so opening it does not reflow the column. */
+.forecast-volume-canvas {
+  position: relative;
+  height: 260px;
+  margin-top: 0.4em;
+}
+
+.forecast-volume-parameter {
+  align-self: center;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
 .forecast-column-zoom {
   align-self: center;
   font-size: 0.8em;

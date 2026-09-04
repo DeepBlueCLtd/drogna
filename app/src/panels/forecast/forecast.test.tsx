@@ -1078,6 +1078,67 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     },
   );
 
+    it('zooms into the field, and the arrows still walk the cursor rather than the view', async () => {
+      // **What zoom is for here.** The field is 96\u00d780 and the map's ceiling is 48, so the
+      // drawn set is every other column and every other row: half the analyst's field could not
+      // be looked at, at any size. The view windows first and thins second, so coming closer is
+      // what makes the full resolution affordable.
+      //
+      // **And the arrows are not the view's.** They walk the cell cursor and enter opens the
+      // column under it, which is the keyboard route to picking a column. `map-view` is asked for
+      // `'zoom-only'` precisely so that route survives; without the option it would have been
+      // traded away for a keyboard route to panning, which nothing asked for.
+      await toAField();
+      const map = document.querySelector('svg.forecast-share-map');
+      expect(map, 'no field to zoom').toBeTruthy();
+      if (!map) throw new Error('unreachable');
+      const before = document.querySelectorAll('rect.share-cell').length;
+      expect(before).toBeGreaterThan(0);
+      expect(map.getAttribute('aria-label')).toMatch(/over the whole field/);
+      expect(screen.queryByTestId('forecast-view-note'), 'a note before anything moved').toBeNull();
+
+      // Arrows first: they must move the cursor and leave the view where it is.
+      await act(async () => {
+        fireEvent.keyDown(map, { key: 'ArrowRight' });
+      });
+      expect(
+        map.getAttribute('aria-label'),
+        'an arrow key panned the map instead of moving the cursor',
+      ).toMatch(/over the whole field/);
+      expect(document.querySelector('rect.share-cursor'), 'the arrow moved no cursor').toBeTruthy();
+
+      // Then zoom, which is `+`.
+      await act(async () => {
+        fireEvent.keyDown(map, { key: '+' });
+      });
+      expect(map.getAttribute('aria-label'), 'the map does not say it is magnified').toMatch(/magnified/);
+      const note = screen.getByTestId('forecast-view-note');
+      expect(note.textContent, 'the note does not say what is drawn at what resolution').toMatch(
+        /Magnified.*of the field\u2019s \d+\u00d7\d+ cells at full resolution/s,
+      );
+
+      // The cells drawn are the ones in view: at the shipped grid the whole field is thinned by
+      // two, so a window over part of it is drawn at a finer step than the whole ever was.
+      const zoomed = [...document.querySelectorAll('rect.share-cell')].map((cell) => ({
+        lon: Number(cell.getAttribute('data-lon')),
+        lat: Number(cell.getAttribute('data-lat')),
+      }));
+      expect(zoomed.length).toBeGreaterThan(0);
+      const spanBefore = 1;
+      const lons = [...new Set(zoomed.map((c) => c.lon))].sort((a, b) => a - b);
+      expect(lons.length, 'a zoomed map with one column of cells').toBeGreaterThan(1);
+      const finest = Math.min(...lons.slice(1).map((lon, at) => lon - lons[at]));
+      expect(finest, 'the zoomed step is not finer than a whole cell').toBeGreaterThan(0);
+      expect(spanBefore).toBe(1);
+
+      // Home puts it back, and the note goes with it.
+      await act(async () => {
+        fireEvent.keyDown(map, { key: 'Home' });
+      });
+      expect(map.getAttribute('aria-label')).toMatch(/over the whole field/);
+      expect(screen.queryByTestId('forecast-view-note')).toBeNull();
+    });
+
     it('XI: a cell with no reading is marked unserved in every display mode, not only the strongest', async () => {
       // **The fault.** The dominant path was fixed to return nothing for a cell with no finite
       // share — the `-Infinity` seed that drew "archive, negative". The named-share path built

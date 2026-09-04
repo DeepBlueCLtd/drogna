@@ -24,7 +24,7 @@ import {
   zoomAbout,
   zoomFactor,
   type ViewRect,
-} from './view.js';
+} from '../map-view.js';
 import { depthZones, domainFromRun, metresBetween, type Domain } from './domain.js';
 import {
   coverageAtResolution,

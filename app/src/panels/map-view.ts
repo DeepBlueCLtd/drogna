@@ -18,9 +18,15 @@
  *
  * No timers and no host clock: a gesture is an event, and everything here is a pure
  * function of the event and the rectangle it lands on (Constitution I).
+ *
+ * **It sits under `panels/` rather than under `consumers/`, and is typed over its own
+ * `ViewRect` rather than over the consumers' `Domain`.** The forecast's share field is the
+ * second map in the shell that needs to be approached, and a panel reaching into another
+ * panel's module for it would be the coupling that gets copied the third time. Nothing here
+ * ever read `Domain`'s depth bounds — only its four edges, which is `ViewRect` — so the two
+ * are structurally the same and the consumers' callers pass a `Domain` unchanged.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Domain } from './domain.js';
 
 /** A window onto the domain, in the domain's own degrees. */
 export interface ViewRect {
@@ -30,7 +36,7 @@ export interface ViewRect {
   readonly north: number;
 }
 
-export function wholeDomain(domain: Domain): ViewRect {
+export function wholeDomain(domain: ViewRect): ViewRect {
   return { west: domain.west, south: domain.south, east: domain.east, north: domain.north };
 }
 
@@ -45,7 +51,7 @@ const SMALLEST_SPAN_DEGREES = 0.02;
  */
 export function zoomAbout(
   rect: ViewRect,
-  domain: Domain,
+  domain: ViewRect,
   factor: number,
   atLongitude: number,
   atLatitude: number,
@@ -71,7 +77,7 @@ export function zoomAbout(
 }
 
 /** Slide the window, keeping its size, without leaving the domain. */
-export function panBy(rect: ViewRect, domain: Domain, byLongitude: number, byLatitude: number): ViewRect {
+export function panBy(rect: ViewRect, domain: ViewRect, byLongitude: number, byLatitude: number): ViewRect {
   return clampInto(
     {
       west: rect.west + byLongitude,
@@ -87,7 +93,7 @@ export function panBy(rect: ViewRect, domain: Domain, byLongitude: number, byLat
  * A window pushed back inside the domain without being resized. A view that could leave
  * the domain would show empty water the harness never claimed to model.
  */
-function clampInto(rect: ViewRect, domain: Domain): ViewRect {
+function clampInto(rect: ViewRect, domain: ViewRect): ViewRect {
   const width = rect.east - rect.west;
   const height = rect.north - rect.south;
   let west = rect.west;
@@ -100,7 +106,7 @@ function clampInto(rect: ViewRect, domain: Domain): ViewRect {
 }
 
 /** How far in the view is, as a multiple of the whole domain's width. 1 is fully out. */
-export function zoomFactor(rect: ViewRect, domain: Domain): number {
+export function zoomFactor(rect: ViewRect, domain: ViewRect): number {
   const wholeWidth = domain.east - domain.west;
   return wholeWidth > 0 ? wholeWidth / (rect.east - rect.west) : 1;
 }
@@ -126,21 +132,34 @@ export const ZOOM_STEP = 1.2;
  * nothing and is still the map's key, and letting that one through would scroll the panel
  * out from under a viewer who was only trying to look further west.
  */
-export function viewAfterKey(rect: ViewRect, domain: Domain, key: string): ViewRect | undefined {
+export type ViewKeys = 'all' | 'zoom-only';
+
+export function viewAfterKey(
+  rect: ViewRect,
+  domain: ViewRect,
+  key: string,
+  owns: ViewKeys = 'all',
+): ViewRect | undefined {
   const width = rect.east - rect.west;
   const height = rect.north - rect.south;
   const centreLongitude = (rect.west + rect.east) / 2;
   const centreLatitude = (rect.south + rect.north) / 2;
+  // **`'zoom-only'` leaves the arrows to the caller, and the reason is that a map can have a
+  // cursor.** The forecast's share field walks a cell cursor with the arrows and opens the
+  // column under it with enter — the keyboard route to picking a column, which predates this
+  // module being reachable from there. Taking the arrows for panning would have removed the
+  // only keyboard way to select a cell in order to add a keyboard way to pan, which is a trade
+  // no reader asked for. The wheel, the drag, `+`/`-` and `Home` are unambiguous on both maps.
   switch (key) {
     case 'ArrowLeft':
-      return panBy(rect, domain, -width * PAN_STEP, 0);
+      return owns === 'all' ? panBy(rect, domain, -width * PAN_STEP, 0) : undefined;
     case 'ArrowRight':
-      return panBy(rect, domain, width * PAN_STEP, 0);
+      return owns === 'all' ? panBy(rect, domain, width * PAN_STEP, 0) : undefined;
     // North is up, and up is where the latitude grows.
     case 'ArrowUp':
-      return panBy(rect, domain, 0, height * PAN_STEP);
+      return owns === 'all' ? panBy(rect, domain, 0, height * PAN_STEP) : undefined;
     case 'ArrowDown':
-      return panBy(rect, domain, 0, -height * PAN_STEP);
+      return owns === 'all' ? panBy(rect, domain, 0, -height * PAN_STEP) : undefined;
     case '+':
     case '=':
       return zoomAbout(rect, domain, 1 / ZOOM_STEP, centreLongitude, centreLatitude);
@@ -156,9 +175,38 @@ export function viewAfterKey(rect: ViewRect, domain: Domain, key: string): ViewR
 
 export interface MapView {
   readonly rect: ViewRect;
-  /** Attach to the SVG element: the wheel and drag listeners hang off it. */
-  readonly ref: React.RefObject<SVGSVGElement>;
+  /**
+   * Attach to the SVG element: the wheel and drag listeners hang off it.
+   *
+   * **A callback ref rather than a `useRef`, because the element can arrive late.** The listeners
+   * are attached by an effect whose dependencies are the view and the box — none of which change
+   * when the element itself appears — so with a `useRef` the attachment happened only if the SVG
+   * was already in the document on the render the effect first ran. It always is in the consumers'
+   * maps, which draw their frame whatever the data says; the forecast's share field is mounted
+   * only once a slab has been fetched, so its map was inert: wheel, drag and keys all did nothing,
+   * and nothing anywhere reported it. A callback ref puts the element in state, so the effect runs
+   * when there is something to attach to.
+   */
+  readonly ref: (node: SVGSVGElement | null) => void;
   readonly reset: () => void;
+  /**
+   * Zoom by a factor — under 1 comes closer, over 1 goes back — about a given point, or about
+   * the middle of the view where none is named.
+   *
+   * For a *button*, which the wheel and the keys are not. A map whose only ways in are a wheel
+   * and a focused key press has no way in on a touch screen, and no visible affordance saying it
+   * can be approached at all: a reader has to already know. The consumers' maps have carried that
+   * gap since they were written; it shows up here because the same module now sits under a region
+   * whose whole subject is a field too fine to read at one screen's width.
+   *
+   * **The anchor is what makes the button usable rather than merely present.** The wheel keeps
+   * the water under the cursor because a pointer says where to hold; a button has no cursor, so
+   * it holds the middle — and the middle is the wrong place when the reader has already said what
+   * they are looking at. Zooming a picked water column about the field's centre walks that column
+   * toward a corner and then off the map, which is the one thing the reader was coming closer to
+   * see. The caller passes the column when it has one.
+   */
+  readonly zoom: (factor: number, atLongitude?: number, atLatitude?: number) => void;
   readonly factor: number;
   /** True while a drag is in progress, so the cursor can say so. */
   readonly panning: boolean;
@@ -167,14 +215,19 @@ export interface MapView {
 /**
  * The view, and the gestures that move it, bound to an SVG element.
  *
- * `boxWidth`/`boxHeight` are the SVG's own coordinate box, not its pixel size: the
- * gesture is converted through the element's measured rectangle, so it works at any
- * rendered size, including a phone's.
+ * Every gesture is converted through the element's *measured* rectangle, so it works at any
+ * rendered size, including a phone's — which is also why this takes no box dimensions. It used
+ * to take `boxWidth`/`boxHeight`, described as "the SVG's own coordinate box, not its pixel
+ * size"; nothing ever read them. They reached only the dependency array of the effect that
+ * attaches the listeners, and the listeners go through `getBoundingClientRect`. Two parameters
+ * every caller had to supply and none of them could affect anything is Principle VI's shape, and
+ * the tell was a third caller arriving with nothing meaningful to pass.
  */
-export function useMapView(domain: Domain | undefined, boxWidth: number, boxHeight: number): MapView {
+export function useMapView(domain: ViewRect | undefined, owns: ViewKeys = 'all'): MapView {
   const [rect, setRect] = useState<ViewRect | undefined>(undefined);
   const [panning, setPanning] = useState(false);
-  const ref = useRef<SVGSVGElement>(null);
+  const [element, setElement] = useState<SVGSVGElement | null>(null);
+  const ref = useCallback((node: SVGSVGElement | null) => setElement(node), []);
   const dragging = useRef<{ x: number; y: number } | null>(null);
 
   // A new domain — the first one heard, or a different forecast's — resets the view.
@@ -187,7 +240,6 @@ export function useMapView(domain: Domain | undefined, boxWidth: number, boxHeig
   const current = rect ?? (domain ? wholeDomain(domain) : { west: 0, south: 0, east: 1, north: 1 });
 
   useEffect(() => {
-    const element = ref.current;
     if (!element || !domain) return;
 
     const domainAt = (clientX: number, clientY: number) => {
@@ -248,7 +300,7 @@ export function useMapView(domain: Domain | undefined, boxWidth: number, boxHeig
     // arrow the map does not use still scrolls the panel.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
-      const next = viewAfterKey(rect ?? wholeDomain(domain), domain, event.key);
+      const next = viewAfterKey(rect ?? wholeDomain(domain), domain, event.key, owns);
       if (!next) return;
       event.preventDefault();
       setRect(next);
@@ -268,10 +320,26 @@ export function useMapView(domain: Domain | undefined, boxWidth: number, boxHeig
       element.removeEventListener('pointerup', onPointerUp);
       element.removeEventListener('pointercancel', onPointerUp);
     };
-  }, [domain, rect, boxWidth, boxHeight]);
+  }, [element, domain, rect, owns]);
 
   const reset = useCallback(() => setRect(domain ? wholeDomain(domain) : undefined), [domain]);
+  const zoom = useCallback(
+    (factor: number, atLongitude?: number, atLatitude?: number) => {
+      if (!domain) return;
+      setRect((standing) => {
+        const from = standing ?? wholeDomain(domain);
+        return zoomAbout(
+          from,
+          domain,
+          factor,
+          atLongitude ?? (from.west + from.east) / 2,
+          atLatitude ?? (from.south + from.north) / 2,
+        );
+      });
+    },
+    [domain],
+  );
   const factor = useMemo(() => (domain ? zoomFactor(current, domain) : 1), [current, domain]);
 
-  return { rect: current, ref, reset, factor, panning };
+  return { rect: current, ref, reset, zoom, factor, panning };
 }

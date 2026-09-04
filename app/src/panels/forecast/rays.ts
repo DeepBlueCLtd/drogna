@@ -467,24 +467,60 @@ export function underScale(ray: Ray): boolean {
    * rim; it is a clamp rather than an invention because the alternative — a marker outside the
    * map — reads as a place the source is not.
    */
+export function servedIndexOf(axis: readonly number[], value: number): number {
+  if (axis.length <= 1) return 0;
+  const ascending = axis[axis.length - 1] >= axis[0];
+  let served = ascending === (value < axis[0]) ? 0 : axis.length - 1;
+  for (let index = 0; index < axis.length - 1; index++) {
+    const from = axis[index];
+    const to = axis[index + 1];
+    if (value >= Math.min(from, to) && value <= Math.max(from, to)) {
+      served = to === from ? index : index + (value - from) / (to - from);
+      break;
+    }
+  }
+  return served;
+}
+
+/** The step between drawn cells, in served indices. */
+function stepOf(kept: readonly number[]): number {
+  return kept.length > 1 ? kept[1] - kept[0] : 1;
+}
+
+/**
+ * Whether a value falls inside the window `kept` covers, rather than beyond one of its edges.
+ *
+ * **Zoom is what makes this necessary, and it is a Principle VII question rather than a tidiness
+ * one.** `placeOn` clamps, and its docstring argues the clamp is honest because the axes carry
+ * cell centres, a value can miss by at most half a cell, and that only ever happens at the grid's
+ * rim. Both halves of that stop being true the moment the map can be zoomed: with the drawn
+ * window a fraction of the field, a source can sit far outside it, and clamping puts its marker
+ * hard against the edge of the map — a ray to a place the source is not, which is exactly the
+ * claim the region exists to avoid making. So a source outside the window is not drawn at all,
+ * and the count of the ones dropped is stated under the map.
+ */
+export function withinWindow(axis: readonly number[], kept: readonly number[], value: number): boolean {
+  if (axis.length === 0 || kept.length === 0) return false;
+  const served = servedIndexOf(axis, value);
+  const step = stepOf(kept);
+  // Half a cell past either edge is still the edge cell, which is the tolerance `placeOn`'s own
+  // clamp is argued from.
+  return served >= kept[0] - step / 2 && served <= kept[kept.length - 1] + step / 2;
+}
+
 export function placeOn(axis: readonly number[], kept: readonly number[], value: number): number | undefined {
   if (axis.length === 0 || kept.length === 0) return undefined;
-  let served = 0;
-  if (axis.length > 1) {
-      const ascending = axis[axis.length - 1] >= axis[0];
-      served = ascending === (value < axis[0]) ? 0 : axis.length - 1;
-      for (let index = 0; index < axis.length - 1; index++) {
-        const from = axis[index];
-        const to = axis[index + 1];
-        if (value >= Math.min(from, to) && value <= Math.max(from, to)) {
-          served = to === from ? index : index + (value - from) / (to - from);
-          break;
-        }
-      }
-  }
-  // `kept` is `0, step, 2*step, …` by construction, so a served index divided by the step is
-  // the drawn column it falls in, fraction and all.
-  const step = kept.length > 1 ? kept[1] - kept[0] : 1;
-  return Math.min(Math.max(served / step + 0.5, 0), kept.length);
+  const served = servedIndexOf(axis, value);
+  // `kept` is an arithmetic run `kept[0], kept[0] + step, …`, so a served index measured *from
+  // its first entry* and divided by the step is the drawn column it falls in, fraction and all.
+  //
+  // **Measured from `kept[0]`, which used to be assumed to be zero.** It was, while the drawn
+  // set was the whole field thinned — the comment here said "`kept` is `0, step, 2*step, …` by
+  // construction". Zoom makes the drawn set a *window*, so the first entry is wherever the view
+  // starts, and dividing the raw served index by the step placed every ray and every marker as
+  // though the window began at the field's western edge: at the shipped grid, zoomed once, a ray
+  // drawn a whole panel's width away from the column it belongs to.
+  const step = stepOf(kept);
+  return Math.min(Math.max((served - kept[0]) / step + 0.5, 0), kept.length);
 }
 

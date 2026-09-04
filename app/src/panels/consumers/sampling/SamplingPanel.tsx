@@ -35,7 +35,7 @@ import {
   type Domain,
 } from '../domain.js';
 import { coverExtent, hexAt, hexesArePointable, isRefusal, projector, uncertaintyColour } from '../hexes.js';
-import { useMapView } from '../view.js';
+import { useMapView } from '../../map-view.js';
 import type { ServedObservation } from '../../map/map-data.js';
 import {
   coverageAtResolution,
@@ -229,7 +229,7 @@ export function SamplingPanel({ params }: PanelProps) {
 
   // What the map is looking at: the wheel zooms it and a drag pans it (`view.ts`). The
   // hexes cover the *view*, which is what makes a fine resolution affordable at all.
-  const view = useMapView(domain, MAP_WIDTH, MAP_HEIGHT);
+  const view = useMapView(domain);
   const cover = useMemo(
     () => (domain ? coverExtent(view.rect, resolution, config.consumers.hexes.cell_ceiling) : undefined),
     [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],

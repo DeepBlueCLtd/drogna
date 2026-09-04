@@ -1183,6 +1183,57 @@ the part worth recording, because each was a sentence asserting a property the c
       gain extrapolates hard, so the entry's alt text is rewritten against the picture actually
       taken rather than the one it described.
 
+- [x] T036 **Zoom and pan on the share field**, asked for after the screenshots showed the rays
+      as a smudge. The field is 96×80 against a drawn ceiling of 48, so the step was two in both
+      directions and **half the analyst's field could not be looked at at any size**: magnifying
+      a thinned field shows bigger squares and not one more cell. So the view windows first and
+      thins second — the cells drawn are the ones inside the rectangle, at the resolution they
+      were filed at. Measured on a live drive: whole field 48×40 of 96×80; at 1.7× it is 28×46,
+      the step falling to one and the field finally drawn as published; at 12.8×, 8×7.
+
+      **Reused rather than rewritten.** `useMapView` already existed for the consumers' maps —
+      wheel about the pointer, drag, keys, reset, clamped to the domain — and it is promoted from
+      `panels/consumers/view.ts` to `panels/map-view.ts` and typed over its own `ViewRect`. It only
+      ever read `Domain`'s four edges, so the consumers' callers are unchanged. A second
+      implementation of a gesture is the thing this repository's own docstring on that module warns
+      against.
+
+      **Three faults in the borrowed module, found by being its third caller.**
+      *Its listeners never attached when the element arrived late.* The effect's dependencies are
+      the view and the box, none of which change when the SVG first renders, so with a `useRef` the
+      attachment happened only if the map was already in the document. The consumers' maps always
+      are; this one mounts when a slab arrives, so wheel, drag and keys all did nothing and nothing
+      reported it. A callback ref puts the element in state.
+      *Two parameters nothing read.* `boxWidth`/`boxHeight` were documented at length and reached
+      only the dependency array — every gesture goes through `getBoundingClientRect`. The tell was
+      a third caller having nothing meaningful to pass; they are gone.
+      *No way in without a wheel or a focused key.* Neither is an affordance and neither exists on
+      a touch screen, so the map carried no visible way to be approached. There are buttons now,
+      and they anchor on the opened column rather than the middle — about the middle, the column a
+      reader came closer to look at walks off the map.
+
+      **`placeOn` measured from the field's edge, not the window's.** Its comment said "`kept` is
+      `0, step, 2*step, …` by construction", which was true while the drawn set was the whole field
+      thinned and false the moment it became a window. Watched failing: 2.5 against an expected
+      0.5 on a three-unit map — a ray displaced by two-thirds of the map's width from the column it
+      belongs to.
+
+      **And zoom retires the clamp's argument, which is a Principle VII matter.** `placeOn` clamps
+      a value onto the drawn extent, argued as honest because an observation can miss a cell centre
+      by at most half a cell and only at the grid's rim. Over a window a source can be the width of
+      the ocean outside what is drawn, and clamping pins its marker against the edge — a ray to a
+      place the source is not, in the one region whose subject is where a number came from. Sources
+      outside the window are dropped and counted, and the count is stated under the map. Verified
+      on a live drive rather than by a test: panned away at 12.8×, the rays go to nought and the
+      region says "the opened column is outside this view, so its rays are not drawn — the numbers
+      below are unchanged". jsdom cannot drive it, because a drag needs a measured rectangle and
+      jsdom's is 0×0.
+
+      **The arrows stay with the cursor.** They walk the cell cursor and enter opens the column
+      under it: the keyboard route to picking one. `map-view` grew a `'zoom-only'` option so that
+      route survives, and the guard is watched failing — asked for `'all'`, the arrow pans and no
+      cursor is ever drawn.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

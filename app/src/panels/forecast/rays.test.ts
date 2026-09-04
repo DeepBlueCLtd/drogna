@@ -14,6 +14,7 @@ import {
   levelAtDepth,
   paletteSlots,
   placeOn,
+  withinWindow,
   raysFor,
   sourceLabels,
 } from './rays.js';
@@ -294,6 +295,35 @@ describe('where a position lands on the drawn map', () => {
     expect(placeOn(down, kept, 46.8)).toBeCloseTo(0.5, 10);
     expect(placeOn(down, kept, 46.0)).toBeCloseTo(2.5, 10);
     expect(placeOn(down, kept, 46.5)).toBeCloseTo(1.25, 10);
+  });
+
+  it('measures from the window\u2019s first cell, not from the field\u2019s', () => {
+    // **The assumption zoom retires.** While the drawn set was the whole field thinned, `kept`
+    // always began at 0 and a raw served index divided by the step was the drawn column. A view
+    // makes `kept` a *window*, so it begins wherever the reader is looking. Measured from the
+    // field's edge instead of the window's, every ray and marker is displaced by the width of
+    // whatever was panned past — here a whole map's width, which is how it would look on screen.
+    const window = [2, 3, 4];
+    expect(placeOn(axis, window, -11.0), 'the window\u2019s first cell is its own left edge').toBeCloseTo(0.5, 10);
+    expect(placeOn(axis, window, -10.8)).toBeCloseTo(1.5, 10);
+    expect(placeOn(axis, window, -10.6)).toBeCloseTo(2.5, 10);
+    // And a window of one cell is still that cell, not the field's first.
+    expect(placeOn(axis, [4], -10.6)).toBeCloseTo(0.5, 10);
+  });
+
+  it('says which positions are inside the window, so an absent source is dropped not clamped', () => {
+    // The clamp is honest over the whole field — half a cell at the rim — and a lie over a
+    // window, where a source can be the width of the ocean away from what is drawn. The caller
+    // asks this first and omits what falls outside, counting it under the map.
+    const window = [2, 3, 4];
+    expect(withinWindow(axis, window, -11.0), 'the window\u2019s own first cell').toBe(true);
+    expect(withinWindow(axis, window, -10.6), 'the window\u2019s own last cell').toBe(true);
+    expect(withinWindow(axis, window, -11.4), 'two cells west of the window').toBe(false);
+    expect(withinWindow(axis, window, -11.2), 'one cell west of the window').toBe(false);
+    // Over the whole field nothing is outside, which is why this never had to exist before.
+    for (const value of axis) expect(withinWindow(axis, kept, value)).toBe(true);
+    // An empty window holds nothing rather than everything.
+    expect(withinWindow(axis, [], -11.0)).toBe(false);
   });
 
   it('clamps outside the axis to the drawn extent rather than marking a place off the map', () => {

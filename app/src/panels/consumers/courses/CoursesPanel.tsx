@@ -33,7 +33,7 @@ import {
   projector,
   uncertaintyColour,
 } from '../hexes.js';
-import { useMapView } from '../view.js';
+import { useMapView } from '../../map-view.js';
 import { concealmentFromField, seedCloud, type ClassHypothesis } from './participants.js';
 import { buildCandidates, rank, type ScoredCandidate } from './candidates.js';
 
@@ -110,7 +110,7 @@ export function CoursesPanel({ params }: PanelProps) {
   }, [domain, collection, config.endpoints.edr, validator]);
 
   // What the map is looking at: the wheel zooms it and a drag pans it (`view.ts`).
-  const view = useMapView(domain, MAP_WIDTH, MAP_HEIGHT);
+  const view = useMapView(domain);
   const cover = useMemo(
     () => (domain ? coverExtent(view.rect, resolution, config.consumers.hexes.cell_ceiling) : undefined),
     [domain, view.rect, resolution, config.consumers.hexes.cell_ceiling],

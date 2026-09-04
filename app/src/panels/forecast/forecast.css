@@ -365,6 +365,28 @@
 .forecast-column-caption,
 .forecast-column-basis,
 .forecast-column-where,
+/* A control that cannot act says so, rather than looking like one that can and doing nothing. */
+.forecast-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.forecast-column-zoom {
+  align-self: center;
+  font-size: 0.8em;
+  color: var(--shell-dim);
+}
+
+.forecast-share-map {
+  /* The map is grabbable, and says so before it is grabbed. */
+  cursor: grab;
+  touch-action: none;
+}
+
+.forecast-share-map.is-panning {
+  cursor: grabbing;
+}
+
 .forecast-column-busy,
 .forecast-column-stale {
   margin: 0;

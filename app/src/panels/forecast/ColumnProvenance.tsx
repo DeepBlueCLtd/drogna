@@ -62,7 +62,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
-import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale, withinWindow } from './rays.js';
+import { useMapView, ZOOM_STEP, type ViewRect } from '../map-view.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -471,7 +472,42 @@ export function ColumnProvenance({
   );
 
   /**
-   * The drawn grid: the served field, thinned to what a panel can show.
+   * The part of the field the map is looking at, and the gestures that move it.
+   *
+   * The grid's own edges are the whole domain — a view is never allowed outside the field the
+   * analyst published, so there is no empty water to wander into. Taken from `ColumnGrid`, which
+   * already carries them because the slab's polygon query needs them.
+   *
+   * **`'zoom-only'`, because this map has a cursor.** Arrow keys walk the cell cursor here and
+   * enter opens the column under it — the keyboard route to picking a column, which is older than
+   * this module being reachable from this panel. Panning with the arrows would have taken the
+   * only keyboard way to select a cell away in order to add a keyboard way to pan.
+   */
+  const domain: ViewRect | undefined = useMemo(
+    () =>
+      grid
+        ? {
+            west: grid.minimumLongitude,
+            east: grid.maximumLongitude,
+            south: grid.minimumLatitude,
+            north: grid.maximumLatitude,
+          }
+        : undefined,
+    [grid],
+  );
+  const view = useMapView(domain, 'zoom-only');
+
+  // **The cursor is in drawn indices, and a view change renumbers them.** Cell (12, 30) of one
+  // window is a different piece of ocean in the next, so a cursor carried across a zoom would
+  // report a position the reader never pointed at — and past the end of a smaller window it
+  // indexes nothing at all, leaving a highlight drawn outside the map. Cleared, because the
+  // honest answer to "which cell is under the pointer" after the map has moved is none of them.
+  useEffect(() => {
+    setCursor(undefined);
+  }, [view.rect]);
+
+  /**
+   * The drawn grid: the cells inside the view, thinned to what a panel can show.
    *
    * Thinned by taking every nth cell rather than by averaging, and that is deliberate — an
    * average of four shares is a share of nothing anybody computed, and this region's whole
@@ -479,14 +515,38 @@ export function ColumnProvenance({
    */
   const drawn = useMemo(() => {
     if (!slab || slab.longitudes.length === 0 || slab.latitudes.length === 0) return undefined;
-    const stepX = Math.max(1, Math.ceil(slab.longitudes.length / MAP.maxCells));
-    const stepY = Math.max(1, Math.ceil(slab.latitudes.length / MAP.maxCells));
-    const cols: number[] = [];
-    for (let x = 0; x < slab.longitudes.length; x += stepX) cols.push(x);
-    const rows: number[] = [];
-    for (let y = 0; y < slab.latitudes.length; y += stepY) rows.push(y);
+    // **The window first, the thinning second, and that order is the whole point of the zoom.**
+    // Thinning the *field* and then magnifying the result shows bigger squares and not one cell
+    // more: at the shipped 96×80 against a ceiling of 48, every other column and every other row
+    // is not drawn at all, so half the analyst's field was unreachable at any magnification. The
+    // cells are taken from inside the view instead, so coming closer is what makes the full
+    // resolution affordable — the same argument `map-view.ts` makes for the consumers' hexes,
+    // which is why this reuses that module rather than growing a second one.
+    const inside = (axis: readonly number[], low: number, high: number) => {
+      const indices: number[] = [];
+      for (let index = 0; index < axis.length; index++) {
+        if (axis[index] >= low && axis[index] <= high) indices.push(index);
+      }
+      // A window narrower than one cell still has to draw the cell it is inside, or the map goes
+      // blank at the very moment the reader has asked to look most closely.
+      if (indices.length === 0 && axis.length > 0) {
+        let nearest = 0;
+        const middle = (low + high) / 2;
+        for (let index = 1; index < axis.length; index++) {
+          if (Math.abs(axis[index] - middle) < Math.abs(axis[nearest] - middle)) nearest = index;
+        }
+        indices.push(nearest);
+      }
+      return indices;
+    };
+    const inX = inside(slab.longitudes, view.rect.west, view.rect.east);
+    const inY = inside(slab.latitudes, view.rect.south, view.rect.north);
+    const stepX = Math.max(1, Math.ceil(inX.length / MAP.maxCells));
+    const stepY = Math.max(1, Math.ceil(inY.length / MAP.maxCells));
+    const cols = inX.filter((_, at) => at % stepX === 0);
+    const rows = inY.filter((_, at) => at % stepY === 0);
     return { cols, rows };
-  }, [slab]);
+  }, [slab, view.rect]);
 
   /**
    * **North is up.** The served latitude axis *ascends* — `min + i * spacing` over ascending
@@ -553,7 +613,22 @@ export function ColumnProvenance({
     // table to be filtered. Once that was understood the function was the identity, and it was
     // kept for a round with three comments still describing it as a filter and two assertions
     // that could not fail — machinery earning nothing, which is what Principle VI calls it.
+    // **A source outside the view is dropped, not clamped to the edge.** `placeOn` clamps, and
+    // its docstring argues that is honest because a value can miss the axis by at most half a
+    // cell and only at the grid's rim. Zoom retires both halves of that argument: the drawn
+    // window is a fraction of the field, a source can sit well outside it, and clamping would
+    // pin its marker against the edge of the map — a ray to a place the source is not, in the
+    // one region whose whole subject is where a number came from. The count is stated under the
+    // map, because a ray that silently disappears is the same lie in the other direction.
+    let offMap = 0;
     const drawnRays = raySet.rays.flatMap((ray) => {
+      if (
+        !withinWindow(slab.longitudes, drawn.cols, ray.longitude) ||
+        !withinWindow(slab.latitudes, drawn.rows, ray.latitude)
+      ) {
+        offMap += 1;
+        return [];
+      }
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
       const sourceY = flipY(placeOn(slab.latitudes, drawn.rows, ray.latitude));
       if (sourceX === undefined || sourceY === undefined) return [];
@@ -571,7 +646,12 @@ export function ColumnProvenance({
         },
       ];
     });
-    return { from: { x, y }, drawn: drawnRays };
+    // The column itself can be panned off the map too, and then there is no origin to draw
+    // from: the rays are a fan from one point and that point has to be on the page.
+    const columnOnMap =
+      withinWindow(slab.longitudes, drawn.cols, column.longitude) &&
+      withinWindow(slab.latitudes, drawn.rows, column.latitude);
+    return { from: { x, y }, drawn: columnOnMap ? drawnRays : [], offMap, columnOnMap };
   }, [raySet, slab, drawn, column]);
 
   /**
@@ -689,6 +769,51 @@ export function ColumnProvenance({
             </button>
           ))}
         </div>
+        {/* **Visible zoom controls, because a wheel is not an affordance.** The field is finer
+            than a panel's width can show, and until this row the only ways to come closer were a
+            wheel and a key press on a focused map: nothing on the page said the map could be
+            approached, and on a touch screen there was no way at all. The reset is here too and
+            not only in the note above, so that the way back does not appear and disappear. */}
+        <div className="forecast-column-filter" role="group" aria-label="how close the field is drawn">
+          <button
+            type="button"
+            className="forecast-chip"
+            // About the opened column where there is one: it is what the reader said they were
+            // looking at, and about the middle it walks off the map as you approach it.
+            onClick={() => view.zoom(1 / ZOOM_STEP, column?.longitude, column?.latitude)}
+            aria-label="come closer to the field"
+          >
+            closer
+          </button>
+          <button
+            type="button"
+            className="forecast-chip"
+            onClick={() => view.zoom(ZOOM_STEP, column?.longitude, column?.latitude)}
+            disabled={view.factor <= 1.01}
+            aria-label="draw back from the field"
+          >
+            wider
+          </button>
+          <button
+            type="button"
+            className="forecast-chip"
+            onClick={view.reset}
+            disabled={view.factor <= 1.01}
+            aria-label="show the whole field"
+          >
+            whole field
+          </button>
+          {/* Only when there is something to say. At the whole field this read "the whole field"
+              immediately after a button labelled "whole field" — the same words twice in a row,
+              one of them a control and one of them a status, which is a reader's problem to
+              untangle for no gain. The two disabled buttons already say where the view is. */}
+          {view.factor > 1.01 && (
+            <span className="forecast-column-zoom" aria-live="polite">
+              {view.factor.toFixed(1)}× — {drawn?.cols.length ?? 0}×{drawn?.rows.length ?? 0} cells drawn
+            </span>
+          )}
+        </div>
+
         <div className="forecast-column-filter" role="group" aria-label="depth">
           {grid.depthsM.map((depth, index) => (
             <button
@@ -753,12 +878,15 @@ export function ColumnProvenance({
       {drawn && slab && (
         <>
           <svg
-            className="forecast-share-map"
+            className={`forecast-share-map${view.panning ? ' is-panning' : ''}`}
+            ref={view.ref}
             viewBox={`0 0 ${drawn.cols.length} ${drawn.rows.length}`}
             preserveAspectRatio="none"
             style={{ height: `${MAP.height}px` }}
             role="grid"
-            aria-label={`where each cell's value came from at ${slab.depthM.toFixed(0)} metres; arrow keys move, enter opens the column`}
+            aria-label={`where each cell's value came from at ${slab.depthM.toFixed(0)} metres, ${
+              view.factor > 1.01 ? `magnified ${view.factor.toFixed(1)} times` : 'over the whole field'
+            }; arrow keys move the cursor, enter opens the column, plus and minus zoom, home shows the whole field`}
             tabIndex={0}
             onKeyDown={(event) => {
               const step: Record<string, [number, number]> = {
@@ -1020,6 +1148,31 @@ export function ColumnProvenance({
               north-east would not be drawn to the south-east. Which way a ray points is true;
               the angle it makes is not, and a reader comparing two bearings off the picture
               needs to know which of those they have. */}
+          {/* **What the view is, and what it is hiding.** A magnified map that does not say it is
+              magnified is a picture of a smaller ocean; and a source dropped for being outside the
+              window has to be counted, or a reader who zooms in watches rays vanish with nothing
+              saying they were ever there. Both are the region's standing rule — state the absence
+              where the content would have been — applied to a gesture rather than to a fetch. */}
+          {(view.factor > 1.01 || (rays && (rays.offMap > 0 || !rays.columnOnMap))) && (
+            <p className="forecast-ray-note" data-testid="forecast-view-note">
+              {view.factor > 1.01 && (
+                <>
+                  Magnified <strong>{view.factor.toFixed(1)}×</strong>, drawing{' '}
+                  {drawn.cols.length}×{drawn.rows.length} of the field’s {slab.longitudes.length}×
+                  {slab.latitudes.length} cells at full resolution.{' '}
+                </>
+              )}
+              {rays && !rays.columnOnMap
+                ? 'The opened column is outside this view, so its rays are not drawn — the numbers below are unchanged. '
+                : rays && rays.offMap > 0
+                  ? `${rays.offMap} of this column’s sources ${rays.offMap === 1 ? 'is' : 'are'} outside this view and ${rays.offMap === 1 ? 'is' : 'are'} not drawn; ${rays.offMap === 1 ? 'its ray is' : 'their rays are'} in the figures below. `
+                  : ''}
+              <button type="button" className="forecast-chip" onClick={view.reset}>
+                show the whole field
+              </button>
+            </p>
+          )}
+
           <p className="forecast-ray-note" data-testid="forecast-not-to-scale">
             The plan is one square per grid cell, stretched to this box, so <strong>bearings are
             not to scale</strong>: which side of the column a source lies on is true, the angle it

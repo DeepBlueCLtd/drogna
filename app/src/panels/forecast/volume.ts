@@ -109,13 +109,19 @@ export function thermoclineSurface(levels: readonly LevelField[]): (Thermocline 
  * How many of a level's own standard deviations a feature must clear at its centre to be drawn
  * there.
  *
- * **Measured against the shipped field rather than chosen.** The eddy's anomaly at its own centre
- * runs 2.06σ, 2.32σ, 0.18σ, 1.09σ, 0.03σ and −0.65σ down the six levels: it is unmistakable in
- * the top two and indistinguishable from the field's own wiggle below them, and the nearest thing
- * to a false positive is 1.09σ at 600 m. Two sigma separates those with room on both sides. The
- * *floor itself* is the level's spread rather than a temperature typed in here, because a fixed
- * threshold in degrees would be two different claims at the surface, where the field varies by
- * 1.13 °C, and at 800 m where it varies by 0.23 °C.
+ * **Measured against the shipped field rather than chosen, and re-measured when the field moved.**
+ * On the 26-level axis (#113) the eddy's anomaly at its own centre runs 0.43σ, 1.01σ, then 2.15,
+ * 3.65, 2.98, 2.75, 2.83, 2.78, 2.56, 2.18σ, then falls away through 1.67, 1.11, 0.57σ and below;
+ * the drifting feature peaks at 3.49σ and is back under two by 240 m. Two sigma cuts both in the
+ * gap between a peak near three and a tail under one, and the reach it gives is contiguous — the
+ * eddy from 80 to 360 m, the drifting feature from 40 to 200 m — rather than the on-off-on the
+ * six-level axis produced (2.06, 2.32, 0.18, 1.09, 0.03, −0.65σ), where the nearest thing to a
+ * false positive was a 1.09σ level with nothing above it. Finer levels did not change the
+ * threshold; they made it a boundary rather than a coin toss.
+ *
+ * The *floor itself* is the level's spread rather than a temperature typed in here, because a
+ * fixed threshold in degrees would be two different claims at the surface, where the field varies
+ * by 1.11 °C, and at a kilometre down where it varies by 0.02 °C.
  */
 export const FEATURE_SIGMAS = 2;
 
@@ -209,4 +215,34 @@ export function domainMeanProfile(levels: readonly LevelField[]): Profile {
       return counted > 0 ? sum / counted : Number.NaN;
     }),
   };
+}
+
+/**
+ * What the volume can draw: the two variables an analysis holding carries, and the one derived
+ * from them.
+ *
+ * **Sound speed is not served and is not a third copy of the arithmetic.** A holding carries
+ * temperature and salinity; ADR-0005 says sound speed is derived at the point of use, never
+ * stored, and that there is exactly one implementation in drogna. That implementation sits in
+ * `seam/ocean-relations.ts`, where both halves can reach it — it was in the backend, which is why
+ * this control could not offer sound speed until it moved. A panel evaluating the seam's own
+ * declared relation over served values is the point of use ADR-0005 describes, not a second
+ * opinion about it.
+ *
+ * **These live here, in the pure half, rather than beside the drawing that uses them, and the
+ * reason is measurable.** The parameter chooser is in `ColumnProvenance`, which is *not* deferred;
+ * `Volume.tsx` is, because deck.gl is about a third of the bundle. A `const` imported from
+ * `Volume.tsx` is a static import of the module `lazy.tsx` exists to withhold, and Vite says so
+ * — "dynamically imported ... but also statically imported ... dynamic import will not move
+ * module into another chunk". Measured, that one import put the whole deck.gl stack back in the
+ * first-load bundle: `main` went from 521 kB gzipped to 719 kB, and it took the Data tab's and
+ * the Map's own deferrals with it, because they shared the chunk that had just been hoisted.
+ * A value the chooser needs belongs in the half that costs nothing to import.
+ */
+export const VOLUME_PARAMETERS = ['sound_speed', 'temperature', 'salinity'] as const;
+export type VolumeParameter = (typeof VOLUME_PARAMETERS)[number];
+
+/** The variables that have to be fetched to draw a parameter. Sound speed needs both. */
+export function servedFor(parameter: VolumeParameter): readonly string[] {
+  return parameter === 'sound_speed' ? ['temperature', 'salinity'] : [parameter];
 }

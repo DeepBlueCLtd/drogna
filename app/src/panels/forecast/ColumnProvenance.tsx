@@ -65,10 +65,20 @@ import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale, withinWindow } from './rays.js';
 import { useMapView, ZOOM_STEP, type ViewRect } from '../map-view.js';
 import { Volume } from './lazy.js';
-import { VOLUME_PARAMETERS, type VolumeParameter } from './Volume.js';
+import { VOLUME_PARAMETERS, type VolumeParameter } from './volume.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
-/** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
+/**
+  * The map's drawn resolution: what a panel can show legibly, whatever the field's own width.
+  *
+  * **It is a ceiling, and on the shipped configuration the field is exactly at it.** The now-cast
+  * was 96×80 when the zoom was built, so half the analyst's columns were thinned away at rest and
+  * coming closer genuinely revealed cells; #113 spent that horizontal resolution on depth and the
+  * field is 48 wide, which fits whole. The apparatus below is unchanged and correct — it is the
+  * general rule, and it starts working again the moment the field outgrows the panel — but a
+  * reader zooming today gets bigger squares, not more of them, and the notes here say so rather
+  * than promising a resolution that is already on the screen.
+  */
 const MAP = { maxCells: 48, height: 190 };
 
 /**
@@ -261,13 +271,14 @@ export function ColumnProvenance({
    * opening the Forecast tab costs what it always cost and opening a volume costs what a volume
    * costs. A volume mounted by default would pull the chunk on every visit and undo the deferral.
    *
-   * **The parameter does not default to sound speed, and the reason is not a preference.** T012
-   * asks for that default, and an analysis holding carries temperature and salinity only — sound
-   * speed is derived from the pair. ADR-0005 makes that derivation "the single implementation in
-   * drogna", so a second one in this panel is ruled out by a decision already taken rather than
-   * by taste, and the alternatives are a seam move or the query layer serving it. Until one of
-   * those happens the control offers what is served, and the region says so rather than offering
-   * a parameter that would come back empty.
+   * **The parameter defaults to sound speed, which it could not do until the relation moved.** An
+   * analysis holding carries temperature and salinity only — sound speed is derived from the pair,
+   * and ADR-0005 makes that derivation "the single implementation in drogna", so a second one in
+   * this panel was ruled out by a decision already taken rather than by taste. The control
+   * therefore shipped offering only what is served, with the reason recorded, and T012 named the
+   * three ways out. The first of them was taken: `soundSpeedMs` now lives in
+   * `seam/ocean-relations.ts`, reachable from both halves, and a panel evaluating the seam's own
+   * declared relation over served values is the point of use ADR-0005 describes.
    */
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [volumeParameter, setVolumeParameter] = useState<VolumeParameter>('sound_speed');
@@ -561,11 +572,13 @@ export function ColumnProvenance({
     if (!slab || slab.longitudes.length === 0 || slab.latitudes.length === 0) return undefined;
     // **The window first, the thinning second, and that order is the whole point of the zoom.**
     // Thinning the *field* and then magnifying the result shows bigger squares and not one cell
-    // more: at the shipped 96×80 against a ceiling of 48, every other column and every other row
-    // is not drawn at all, so half the analyst's field was unreachable at any magnification. The
-    // cells are taken from inside the view instead, so coming closer is what makes the full
-    // resolution affordable — the same argument `map-view.ts` makes for the consumers' hexes,
-    // which is why this reuses that module rather than growing a second one.
+    // more: at 96×80 against a ceiling of 48 — the shipped grid when this was written — every
+    // other column and every other row was not drawn at all, so half the analyst's field was
+    // unreachable at any magnification. The cells are taken from inside the view instead, so
+    // coming closer is what makes the full resolution affordable — the same argument
+    // `map-view.ts` makes for the consumers' hexes, which is why this reuses that module rather
+    // than growing a second one. The field is 48 wide today (#113) and so is drawn whole; this
+    // ordering is what keeps that a fact about the configuration rather than about the panel.
     const inside = (axis: readonly number[], low: number, high: number) => {
       const indices: number[] = [];
       for (let index = 0; index < axis.length; index++) {
@@ -749,8 +762,9 @@ export function ColumnProvenance({
     <p className="forecast-column-basis">
       The map here is a <strong>plan at one depth</strong>; the{' '}
       <strong>semi-transparent volume</strong> below it is the setting that plan is a section
-      through, with the <strong>thermocline drawn as a surface</strong> — placed per column, so it
-      carries the shape a single published depth cannot. What is <strong>not built</strong> is the
+      through, with the <strong>thermocline drawn as a surface</strong> — placed per column rather
+      than at the one depth the run publishes, and captioned there with how much of the field is
+      level and how much is not. What is <strong>not built</strong> is the
       last of <strong>feature 124</strong>: the forecast’s own features — the eddy, the front, the
       drifting one — carried <em>with depth</em> through that volume. They are drawn in plan today
       in the region to the right, and what is missing is the dimension rather than the figure.
@@ -814,11 +828,12 @@ export function ColumnProvenance({
             </button>
           ))}
         </div>
-        {/* **Visible zoom controls, because a wheel is not an affordance.** The field is finer
-            than a panel's width can show, and until this row the only ways to come closer were a
-            wheel and a key press on a focused map: nothing on the page said the map could be
-            approached, and on a touch screen there was no way at all. The reset is here too and
-            not only in the note above, so that the way back does not appear and disappear. */}
+        {/* **Visible zoom controls, because a wheel is not an affordance.** Until this row the
+            only ways to come closer were a wheel and a key press on a focused map: nothing on the
+            page said the map could be approached, and on a touch screen there was no way at all.
+            The reset is here too and not only in the note above, so that the way back does not
+            appear and disappear. (The field was finer than a panel's width when this was written;
+            see `MAP` for what #113 did to that, and why the controls stay.) */}
         <div className="forecast-column-filter" role="group" aria-label="how close the field is drawn">
           <button
             type="button"

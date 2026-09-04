@@ -61,7 +61,7 @@ const tau = {
   feature_seconds: { eddy: 432000, front: 172800, thermocline: 1209600, moving: 86400 },
 };
 
-describe('the analytic form (v1)', () => {
+describe('the analytic form (v2)', () => {
   it('background cools and freshens towards the deep, monotonically', () => {
     let previous = Number.POSITIVE_INFINITY;
     for (const depth of [0, 50, 100, 200, 400, 800, 1000]) {
@@ -96,19 +96,19 @@ describe('the analytic form (v1)', () => {
 
   it('the layer follows the features that displace it (analytic form 2)', () => {
     /*
-     * The layer sits where it was authored **on the front's own line**, not merely far from
-     * everything: the front's anomaly is a tanh, so it saturates at plus or minus its
-     * amplitude rather than decaying, and the two sides of the domain therefore carry two
-     * different layer depths all the way to the edges. That is a front doing what a front
-     * does — a step in the layer — and the only place its contribution is nought is where
-     * the step crosses. This test was written asserting a quiet far field and failed at
-     * 63.9 m against 80, which is the front's own -1.2 °C times 20 m/°C: the assertion was
-     * wrong about the composition, not the composition wrong about the ocean.
+     * Far from the eddy and the drifting feature the layer sits where it was authored: form 2
+     * reduces to form 1 wherever nothing local is acting, which is what makes the displacement a
+     * perturbation of the authored depth rather than a different depth scale.
+     *
+     * **The far field is quiet only because the front is not a displacement term**, which is
+     * this assertion's other job. An earlier version included it, and this test failed here at
+     * 63.9 m against 80 — the front's own saturated −1.2 °C times the coefficient, reaching the
+     * corner of the domain. A `tanh` never decays, so there is no "far" from a front, and the
+     * measurement in `thermoclineDepthAt`'s note is what that cost the drifting feature's
+     * recovery. Put the front back and this line fails first and cheapest.
      */
-    const onFront = thermoclineDepthAt(world, world.front.anchor_longitude, world.front.anchor_latitude, 0);
-    expect(frontSignedDistanceKm(world.front, world.front.anchor_longitude, world.front.anchor_latitude)).toBeCloseTo(0, 6);
-    expect(onFront).toBeCloseTo(world.thermocline.depth_m, 0);
-    const far = onFront;
+    const far = thermoclineDepthAt(world, -13.9, 44.1, 0);
+    expect(far).toBeCloseTo(world.thermocline.depth_m, 1);
 
     // The eddy is warm-cored (sign +1), so it presses the layer down beneath it.
     const underEddy = thermoclineDepthAt(world, world.eddy.centre_longitude, world.eddy.centre_latitude, 0);

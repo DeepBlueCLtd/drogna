@@ -233,7 +233,33 @@ export class Scheduler {
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;
       if (published.run_id === this.inFlight?.id) this.inFlight = undefined;
-      if (published.current) this.validityEnd = published.valid_time.end_sim_time;
+      if (!published.current) return;
+      this.validityEnd = published.valid_time.end_sim_time;
+      /*
+       * **A run that stands was requested when it initialised, and the intervals measure from
+       * that whether or not this instance was the one that asked.**
+       *
+       * `lastRequestTick` was set only in `release`, so it recorded requests this scheduler
+       * made and nothing else. That is wrong in exactly one situation and it is a shipped one:
+       * a start condition whose artefact carries the forecast eras holds the model runner back
+       * for the whole pre-roll, so every request this component makes goes unanswered and is
+       * released by the watchdog, and the run the reader is actually looking at — replayed out
+       * of the artefact — was requested at a tick this component never saw. It then measured
+       * the minimum interval from its own last orphaned request instead.
+       *
+       * Watched, on `returning`: the live run had requested at 9261 and waited 574 ticks for
+       * its next forecast; the replayed run, standing on that very forecast, held 8400 and
+       * fired in 19. Same artefact, same reader, 555 ticks of difference in when the loop turns.
+       *
+       * The initialisation time is `valid_time.start_sim_time`, which the announcement already
+       * carries — the first forecast step is the state the run was initialised from — so this
+       * needs nothing new on the wire. Never moved backwards: a restatement of an older
+       * standing run must not undo a request this component has since made.
+       */
+      const requested = this.tickOf(published.valid_time.start_sim_time);
+      if (requested !== undefined && (this.lastRequestTick === undefined || requested > this.lastRequestTick)) {
+        this.lastRequestTick = requested;
+      }
     });
     this.heartbeat.start();
   }
@@ -422,6 +448,19 @@ export class Scheduler {
    * below fail open: a scheduler that cannot measure the headroom requests rather than
    * waits, and the loop is never becalmed by the absence of a figure.
    */
+  /**
+   * The tick a simulation time names, from the tick this component is on now. `undefined`
+   * before the first clock sample, or before the tick length has been observed — the same
+   * fail-open rule `remainingValidityTicks` follows, and for the same reason.
+   */
+  private tickOf(simTime: string): number | undefined {
+    if (this.tickSeconds === undefined || this.simTime.value === '') return undefined;
+    const seconds =
+      (Date.parse(simTime.slice(0, 23) + 'Z') - Date.parse(this.simTime.value.slice(0, 23) + 'Z')) / 1000;
+    if (!Number.isFinite(seconds)) return undefined;
+    return this.simTime.tick + Math.round(seconds / this.tickSeconds);
+  }
+
   private remainingValidityTicks(): number {
     if (this.validityEnd === undefined || this.tickSeconds === undefined) return 0;
     const seconds =

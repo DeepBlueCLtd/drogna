@@ -36,7 +36,8 @@
  *
  * **One area query per level, and no more.** EDR takes a comma-separated `parameter-name`, so the
  * temperature the thermocline needs and the parameter a reader chose come back in the same
- * response: six levels, six queries, whichever parameter is on show. Nothing is fetched on a tick
+ * response: one query a level, whichever parameter is on show, and twenty-six of them on the
+ * shipped axis. Nothing is fetched on a tick
  * or a timer — the levels are read when the analysis changes and when a reader changes parameter,
  * which is the same rule the share map states at the head of `ColumnProvenance`.
  */
@@ -48,6 +49,7 @@ import type { SeamValidator } from '../../seam/validate.js';
 import { cubeFrame, volumeEdges } from '../map/cube.js';
 import { rampColour } from '../map/map-data.js';
 import { soundSpeedMs } from '../../seam/ocean-relations.js';
+import { servedFor, type VolumeParameter } from './volume.js';
 import { thermoclineSurface, type LevelField, type Thermocline } from './volume.js';
 import type { ColumnGrid } from './ColumnProvenance.js';
 
@@ -57,25 +59,6 @@ import type { ColumnGrid } from './ColumnProvenance.js';
 // thing that says which way is down. Measured against the region rather than inherited.
 const INITIAL_VIEW = { target: [0, 0, -20] as [number, number, number], zoom: 0.42, rotationX: 32, rotationOrbit: 24 };
 
-/**
- * What the volume can draw: the two variables an analysis holding carries, and the one derived
- * from them.
- *
- * **Sound speed is not served and is not a third copy of the arithmetic.** A holding carries
- * temperature and salinity; ADR-0005 says sound speed is derived at the point of use, never
- * stored, and that there is exactly one implementation in drogna. That implementation now sits in
- * `seam/ocean-relations.ts`, where both halves can reach it — it was in the backend, which is why
- * this control could not offer sound speed until it moved. A panel evaluating the seam's own
- * declared relation over served values is the point of use ADR-0005 describes, not a second
- * opinion about it.
- */
-export const VOLUME_PARAMETERS = ['sound_speed', 'temperature', 'salinity'] as const;
-export type VolumeParameter = (typeof VOLUME_PARAMETERS)[number];
-
-/** The variables that have to be fetched to draw a parameter. Sound speed needs both. */
-function servedFor(parameter: VolumeParameter): readonly string[] {
-  return parameter === 'sound_speed' ? ['temperature', 'salinity'] : [parameter];
-}
 
 /** One level as the area query answered it, with the axes it was answered over. */
 interface ServedLevel {
@@ -245,6 +228,22 @@ export function Volume({
    * of the columns inside 80 m, and the picture agrees with that number rather than the other
    * one. The tail is not hidden: the distinct count still names every depth taken, and the
    * sentence says how much of the field the span covers.
+   *
+   * **And the branch itself is on the core span, not on the count.** `distinct <= 2` was the
+   * first test and it is the same mistake as the span it replaced, one level up: a count is
+   * inflated by outliers exactly as a range is. Twenty-one distinct depths of which one holds
+   * ninety-nine per cent of the columns is a plane, and the count branch called it doming — while
+   * the honest figure was being computed three lines above and printed but not consulted. The
+   * branch now asks whether the depths most of the field is in span more than a single level:
+   * inside one level the surface is a plane at this resolution, whatever the tail does.
+   *
+   * **The modal share is there because the doming is local and the caption should say so.** The
+   * features that displace the layer are an eddy and a drifting feature, tens of kilometres
+   * across in a domain hundreds wide (the front is deliberately not one of them —
+   * `analytic.ts#thermoclineDepthAt` has the measurement), so most of the field is level and a
+   * few hundred columns are not. "It domes and tilts", written across that, is a claim about a
+   * field that is 95% one depth. The share is printed and the sentence describes the mechanism
+   * instead of characterising the picture, which is the reader's to do.
    */
   const CORE_SHARE = 0.9;
   const relief = useMemo(() => {
@@ -269,6 +268,8 @@ export function Volume({
       coreCount: kept.length,
       coreSpanM: kept.length > 0 ? Math.max(...kept) - Math.min(...kept) : 0,
       coreShare: placed > 0 ? held / placed : 0,
+      modalDepthM: core.length > 0 ? core[0][0] : 0,
+      modalShare: placed > 0 ? (core[0]?.[1] ?? 0) / placed : 0,
       spacingM: spacings.length > 0 ? Math.min(...spacings) : 0,
     };
   }, [surface, levels]);
@@ -287,6 +288,23 @@ export function Volume({
     const halfLat = Math.abs((level.latitudes[1] ?? latitude + 0.05) - level.latitudes[0]) / 2 || 0.02;
     return { longitude, latitude, halfLon, halfLat };
   };
+
+  /*
+   * **The per-level alpha is derived from how many levels there are, not typed.**
+   *
+   * It was `46`, with the comment "thin enough to see through a stack of six". Transmittance
+   * through a stack compounds — `(1 − a/255)^n` — so six levels at 46 let 30% of the far side
+   * through, which is what "semi-transparent" means, and the twenty-six levels this axis now
+   * carries (#113) let **0.6%** through. The box went opaque and the surface FR-120 asks the
+   * transparency to reveal was inside it. It is visible in this branch's own committed capture:
+   * a flat grey solid with the thermocline showing only where it pokes past the near edge.
+   *
+   * So the *stack's* transmittance is the constant, and the level's share follows from the count.
+   * Change the depth axis again and the drawing stays as see-through as it was.
+   */
+  const STACK_TRANSMITTANCE = 0.3;
+  const levelAlpha =
+    levels.length > 0 ? Math.max(1, Math.round(255 * (1 - STACK_TRANSMITTANCE ** (1 / levels.length)))) : 46;
 
   const layers = [
     // The field, level by level, semi-transparent so the surface through it can be seen. Every
@@ -309,8 +327,7 @@ export function Volume({
             getFillColor: ({ value }: { value: number }) => {
               if (!Number.isFinite(value)) return [0, 0, 0, 0] as [number, number, number, number];
               const [red, green, blue] = rampColour(value, span.minimum, span.maximum);
-              // Thin enough to see through a stack of six and still read the ramp.
-              return [red, green, blue, 46] as [number, number, number, number];
+              return [red, green, blue, levelAlpha] as [number, number, number, number];
             },
           })
         : undefined,
@@ -371,6 +388,44 @@ export function Volume({
           widthUnits: 'pixels',
         })
       : undefined,
+    /*
+     * **The clickable grid, and it is on the surface plane — nothing inside the volume is
+     * pickable.** FR-121 and this feature's own FR-06 say so in as many words, and the reason
+     * they give is precisely what the first version did wrong. That version put `onClick` on the
+     * canvas and read `info.coordinate`, which is the *ground-plane* unprojection under the
+     * cursor: deck.gl hands back where the ray through the pixel crosses z = 0, and the cell the
+     * reader was pointing at is drawn tens of cube-units above that plane. At `rotationX: 32°`
+     * over a 1,000 m domain, clicking a thermocline cell on the far side opened a column roughly
+     * 180 km from it, silently, and a click on empty canvas beside the box opened a column
+     * outside the domain — clearing the reader's rays and numbers for a position the analysis
+     * never covered.
+     *
+     * A pickable grid of squares at depth nought fixes both by construction: deck.gl resolves it
+     * against the geometry it actually drew, so `info.object` is a cell or it is nothing, and a
+     * click that hits no square is a click that selects nothing. Invisible, because it is the
+     * surface plane rather than a fifth drawn thing; `autoHighlight` gives it the hover a
+     * clickable square owes the reader.
+     */
+    first
+      ? new SolidPolygonLayer({
+          id: 'forecast-volume-picker',
+          data: first.shown.map((_, index) => ({ index })),
+          coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+          pickable: true,
+          autoHighlight: true,
+          highlightColor: [244, 246, 250, 60],
+          getPolygon: ({ index }: { index: number }) => {
+            const { longitude, latitude, halfLon, halfLat } = cellBounds(first, index);
+            return [
+              frame.toCartesian(longitude - halfLon, latitude - halfLat, 0),
+              frame.toCartesian(longitude + halfLon, latitude - halfLat, 0),
+              frame.toCartesian(longitude + halfLon, latitude + halfLat, 0),
+              frame.toCartesian(longitude - halfLon, latitude + halfLat, 0),
+            ];
+          },
+          getFillColor: [0, 0, 0, 0] as [number, number, number, number],
+        })
+      : undefined,
   ].filter((layer) => layer !== undefined);
 
   return (
@@ -383,13 +438,13 @@ export function Volume({
             controller
             layers={layers}
             getCursor={() => 'crosshair'}
-            onClick={(info: { coordinate?: number[] }) => {
-              // A click is placed through the frame's own inverse, which is tested as a round
-              // trip against `toCartesian` — the reason the projection is imported rather than
-              // written again here.
-              const at = info.coordinate;
-              if (!at) return;
-              const { longitude, latitude } = frame.toGeographic(at[0], at[1]);
+            onClick={(info: { object?: unknown; layer?: { id: string } | null }) => {
+              // The picked *square*, never the canvas coordinate: see the picker layer above for
+              // what reading `info.coordinate` cost. A click that hit no square selects nothing,
+              // which is what leaves the reader's open column alone.
+              if (info.layer?.id !== 'forecast-volume-picker' || !info.object || !first) return;
+              const { index } = info.object as { index: number };
+              const { longitude, latitude } = cellBounds(first, index);
               onPickColumn(longitude, latitude);
             }}
           />
@@ -416,9 +471,9 @@ export function Volume({
             {relief.placed} of {surface.length} columns have one, over {relief.distinct} distinct
             depth{relief.distinct === 1 ? '' : 's'}
           </strong>
-          {relief.distinct <= 2
-            ? ` — so it is nearly flat, and that is a fact about the grid rather than about the ocean: the levels are ${relief.spacingM} m apart and the profile falls fastest in the same pair almost everywhere. What this surface shows at this resolution is where the strongest gradient sits, not a doming thermocline.`
-            : `, of which ${relief.coreCount} hold ${Math.round(relief.coreShare * 100)}% of them within ${relief.coreSpanM} m — so it domes and tilts where the features move it. A warm feature presses the layer down beneath it and a cool one lets it rise, which is the shape, not the drawing's. The columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
+          {relief.coreSpanM <= relief.spacingM
+            ? ` — so it is level to within one ${relief.spacingM} m level across the field, and domes only where a feature displaces it: the eddy and the drifting feature are tens of kilometres across in a domain hundreds wide, so most columns fall fastest in the same pair. What this shows at this resolution is where the strongest gradient sits, which is a sonar question whatever its shape.`
+            : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. The layer is level across most of the field and displaced where a feature acts on it: a warm one presses it down beneath itself, a cool one lets it rise. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
         </p>
       )}
     </div>

@@ -169,25 +169,41 @@ published today.
       to each column instead of to the mean. `volume.ts` is that arithmetic, pure and tested, and
       bound to the backend by a test that **calls `estimateFeatures`** rather than transcribing it.
 
-      Driven against `arriving`: **7,679 of 7,680 columns place it at 100 m and one at 300 m.**
-      The cause is the profile, not the pick — the domain-mean gradients are 4.49, 1.64, 0.92,
-      0.51 and 0.29 °C per 100 m, so the shallowest pair wins by nearly three to one everywhere.
-      At 200 m level spacing the authored thermocline is a layer an order of magnitude thinner
-      than the grid can resolve, which `features.ts` already says of its own estimate: "a 200 m
-      grid cannot see a 30 m layer". **FR-120's doming is not visible at this depth resolution by
-      any means, and this drawing is not the thing that could make it so.** The caption states the
-      distinct-depth count it found, because a picture captioned as a doming surface over two
-      distinct depths is the false illumination this region exists against. What it does show —
-      where the column's strongest gradient sits — is a sonar question whatever it is called.
-      Whether to raise the depth resolution is a data change touching every holding and every
-      feature that scores against one, so it is an issue rather than a line in this task:
-      DeepBlueCLtd/drogna#113 carries the measurement, the profile it came from, and the three
-      options (raise the resolution, amend FR-120, or leave it stated).
+      *As first built the surface came out flat, and saying so is what fixed it.* Driven against
+      `arriving` on the then-shipped six-level axis: **7,679 of 7,680 columns placed it at 100 m
+      and one at 300 m.** The caption stated that count rather than calling the result a doming
+      surface, and the measurement was raised as DeepBlueCLtd/drogna#113 rather than settled
+      inside this task, because the depth axis is a data change touching every holding and every
+      feature that scores against one.
+
+      *And the answer was not the one the issue expected, which is why the record of it is here
+      rather than only there.* Raising the resolution alone changes nothing: sampled at 200, 100,
+      50, 40, 25 and 10 m spacing the surface has **one distinct depth at every one of them**,
+      because analytic form 1's `thermoclineAnomalyT` took no longitude and no latitude. The layer
+      was one depth everywhere and there was nothing there to resolve — so FR-120's rationale
+      described something the harness did not contain, and no drawing at any spacing could have
+      shown it. Form 2 displaces the layer where a feature warms or cools the water at it
+      (ADR-0044), the axis went to 26 levels to carry the result, and FR-120 was **not** amended.
+
+      The drawing is unchanged in kind: it still measures the distinct-depth count in the field it
+      was served, still prints it, and still says the flatness is the grid's if it finds one. What
+      it prints now is the modal share as well, because the doming is local — an eddy and a
+      drifting feature in a domain hundreds of kilometres wide — and "it domes and tilts" written
+      across a field that is 82% one depth would be the same false illumination arriving from the
+      other side.
 - [ ] T010 The eddy, front and drifting feature carried **with depth** in the volume, against
       the field they are in, read from the forecast-features holding feature 123 publishes.
       *Reconciled:* the plan view of the same features is built (`FeatureTracks.tsx`, 123's
       T080) and stays in the right region; this task adds a dimension to a drawing that
       exists and does not introduce it.
+
+      *The arithmetic landed ahead of the drawing, and that is a cost worth naming.*
+      `volume.ts` carries `featureReach` and `FEATURE_SIGMAS` — how far a published feature is
+      distinguishable from the field it is in, level by level — tested, but with no caller: the
+      drawing this task asks for is what will use it. It shipped early because it is what the
+      measurement in that file's note *is*, and deleting it to re-derive it would throw away the
+      calibration. Its σ figures were re-measured when #113 moved the depth axis, which is the
+      maintenance an unused module costs and the reason not to make a habit of this.
 - [x] T011 The clickable grid on the surface plane; selection by grid square, yielding a
       water column. Keyboard traversal reaches every square. *Reconciled:* the share map in
       `ColumnProvenance.tsx` already selects a column by square with arrow keys and enter;

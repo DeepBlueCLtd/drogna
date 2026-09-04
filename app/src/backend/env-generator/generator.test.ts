@@ -261,8 +261,12 @@ describe('the synthetic ocean (feature 102)', () => {
     lats.forEach((latitude, la) =>
       lons.forEach((longitude, lo) => {
         for (let level = 0; level < depths.length; level++) column[level] = temperature[level * perLevel + la * lons.length + lo];
+        // A column whose profile never falls has no thermocline, and `estimateFeatures` says so
+        // by returning nothing for it. (An earlier version also tested `'reason' in estimate`,
+        // which selects no reachable state — `ThermoclineEstimate` has no such field — and read
+        // as a guard against something that cannot happen.)
         const estimate = estimateFeatures(column, columnGrid(longitude, latitude)).thermocline;
-        if (!estimate || 'reason' in estimate) return;
+        if (!estimate) return;
         recovered.push({ picked: estimate.depthM, predicted: thermoclineDepthAt(world, longitude, latitude, 0) });
       }),
     );

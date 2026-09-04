@@ -404,7 +404,7 @@
           "thickness_m": 30,
           "temperature_drop_c": 4,
           "salinity_rise_psu": 0.1,
-          "displacement_m_per_c": 30
+          "displacement_m_per_c": 20
         },
         "jitter": {
           "depth_m": 15,

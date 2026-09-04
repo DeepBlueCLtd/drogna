@@ -540,14 +540,43 @@ try {
   const [, placed, total, distinct] = columns;
   if (Number(placed) === 0)
     throw new Error(`the volume placed the thermocline in none of ${total} columns`);
-  // The shape claim as well as the count, because the count alone was what let a caption say
-  // "16 distinct depths spanning 840 m" about a field whose layer moves 80 m.
-  const core = /(\d+) hold (\d+)% of them within (\d+) m/.exec(captionText);
+  /*
+   * **The shape claim, asserted rather than printed.**
+   *
+   * The first version of this block computed these three figures and put them in a `console.log`,
+   * which is not a check: reverting `displacement_m_per_c` to nought — analytic form 1's flat
+   * field, the exact regression issue #113 was raised for — left `placed` at 1920, matched
+   * nothing here, and shot the picture and exited 0. A proof added in answer to a fault that
+   * passes on that fault is the thing `CLAUDE.md` puts second in the file.
+   *
+   * **What is asserted is that the layer's depth varies at all**, which is exactly what analytic
+   * form 1 could not do: `thermoclineAnomalyT` took no position there, so the surface had *one*
+   * distinct depth over every column at every spacing from 200 m down to 10 m. One here means the
+   * displacement term or the depth axis has gone, and that is the regression #113 was raised for.
+   *
+   * It is deliberately not "the surface is not flat". The doming form 2 produces is local — an
+   * eddy and a drifting feature in a domain hundreds of kilometres wide — so the caption's own
+   * level branch is the honest one on the shipped configuration, and a proof demanding the other
+   * branch would be demanding a picture rather than checking one. The count is the falsifiable
+   * part; the shares below it are asserted to be *present* so the caption cannot quietly stop
+   * saying how much of the field holds the shape it reports.
+   */
+  // Either branch, because either can be the honest one: the shape branch names the modal share,
+  // the level branch names the spacing it is level to within. What must never happen is a count
+  // with no measured figure beside it to say what the count means.
+  const measured = /(\d+)% of them at (\d+) m/.test(captionText) || /within one (\d+) m level/.test(captionText);
+  if (Number(distinct) <= 1)
+    throw new Error(
+      `the volume drew one thermocline depth over all ${total} columns — the layer has no horizontal ` +
+        "shape at all, which is analytic form 1's field. The displacement term or the depth axis has gone.",
+    );
+  if (!measured)
+    throw new Error(`the caption reported a count without saying how much of the field is at it: ${captionText.slice(0, 300)}`);
   await volume.screenshot({ path: volumeShot });
   console.log(volumeShot);
   console.log(
-    `forecast: the volume placed the thermocline in ${placed} of ${total} columns over ${distinct} distinct depth(s)` +
-      (core ? `, ${core[1]} of which hold ${core[2]}% of them within ${core[3]} m` : ""),
+    `forecast: the volume placed the thermocline in ${placed} of ${total} columns over ${distinct} distinct depth(s); ` +
+      captionText.slice(captionText.indexOf("distinct depth"), captionText.indexOf("distinct depth") + 120).trim(),
   );
 
   const simTime = await page.getByTestId("sim-time").textContent();
@@ -580,6 +609,29 @@ try {
   await writeFile(
     outPath.replace(/\.png$/, ".provenance.json"),
     `${JSON.stringify(provenance, null, 2)}\n`,
+  );
+
+  /*
+   * **And a sidecar for the volume shot too.** The first version of the volume capture wrote the
+   * picture and nothing beside it, which made it the only asset under `site/docs/blog/assets/`
+   * with no provenance — a picture of a running system whose run, condition, sim time and clock
+   * rate were unrecorded, which is a claim rather than evidence. It shares this run's facts and
+   * carries its own: the surface count the caption stated at the shutter, and the caption itself.
+   */
+  await writeFile(
+    volumeShot.replace(/\.png$/, ".provenance.json"),
+    `${JSON.stringify(
+      {
+        ...provenance,
+        image: basename(volumeShot),
+        image_size: pngSize(await readFile(volumeShot)),
+        element_box: undefined,
+        surface: { columns: Number(total), placed: Number(placed), distinct_depths: Number(distinct) },
+        volume_caption: captionText.replace(/\s+/g, " ").trim(),
+      },
+      null,
+      2,
+    )}\n`,
   );
 
   /**

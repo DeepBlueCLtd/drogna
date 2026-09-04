@@ -1,0 +1,31 @@
+{
+  "image": "forecast-column-volume.png",
+  "run_id": "loiter-arriving-pahu",
+  "view": "forecast",
+  "start_condition": "arriving",
+  "sim_time": "2026-01-01T03:27:00Z",
+  "clock_pinned": "rate 0",
+  "holding": "analysis.loiter-arriving-pahu-run-t12420-contributions",
+  "rays_drawn": 4,
+  "column": "read off the served contributions header, so it is a column an instrument reached",
+  "warmed": "stepped in bursts of 60 ticks at rate 0 until 3 analysis cycles had published beyond the seed's own (108 bursts), then 0 further burst(s) until the field was drawn",
+  "viewport": {
+    "width": 2560,
+    "height": 3022
+  },
+  "image_size": {
+    "width": 816,
+    "height": 423
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "141.0.7390.37"
+  },
+  "caption": "",
+  "surface": {
+    "columns": 1920,
+    "placed": 1920,
+    "distinct_depths": 13
+  },
+  "volume_caption": "26 level(s) of sound_speed, each a genuine area query against analysis.loiter-arriving-pahu-run-t12420, drawn semi-transparent with depth exaggerated. The pale surface through them is the thermocline, placed per column at the midpoint of the level pair whose temperature falls fastest — the run’s own definition, applied to each column rather than to the domain mean. Its brightness is the drop across that interval. 1920 of 1920 columns have one, over 13 distinct depths — so it is level to within one 40 m level across the field, and domes only where a feature displaces it: the eddy and the drifting feature are tens of kilometres across in a domain hundreds wide, so most columns fall fastest in the same pair. What this shows at this resolution is where the strongest gradient sits, which is a sonar question whatever its shape."
+}

@@ -44,11 +44,12 @@ it, because there was nothing there to resolve.
 warm and cool the water also move the layer.**
 
 `thermoclineDepthAt(world, longitude, latitude, seconds)` returns the layer's depth at a
-place: the authored `depth_m` plus `displacement_m_per_c` times the eddy, front and moving
+place: the authored `depth_m` plus `displacement_m_per_c` times the eddy and moving
 anomalies evaluated **at that nominal depth**. The three thermocline terms take that local
 depth as an argument instead of reading `depth_m` themselves.
 
-Three parts of that were arguable.
+Four parts of that were arguable, and the fourth was found by measurement rather than
+thought.
 
 ### The anomalies are read at the layer's nominal depth, not at the depth being sampled
 
@@ -73,22 +74,57 @@ tuned into a shape the composition rule does not imply.
 `p.depth_m`. A caller that forgot it would then silently get form 1's flat field back —
 which is the exact fault this version exists to remove, arriving quietly. It is required.
 
+### The front does not displace the layer, and this was not the first answer
+
+The first version used all three features, on the obvious argument that every anomaly
+should move the layer. The front's anomaly is a `tanh`. It *saturates* rather than
+decaying, so as a displacement it does not tilt the layer near the front — it holds one
+half of the domain permanently deep and the other permanently shallow, out to the corners.
+The eddy and the drifting feature use radial Gaussians that fall to nothing, which is what
+a local displacement has to do.
+
+The estimators said so before the argument was finished. Recovering the drifting feature's
+centre across the five AT-06 seeds, error in km against its own 40 km radius:
+
+| terms | 1180001 | 1180002 | 1180003 | 1180004 | 1180005 |
+|---|---|---|---|---|---|
+| none (form 1) | 9.7 | 20.5 | 7.0 | declined | 25.5 |
+| eddy, front and moving | 8.8 | 16.8 | 4.8 | **64.9** | 21.6 |
+| front alone | 12.8 | **60.7** | 9.8 | declined | 33.6 |
+| eddy and moving | 6.7 | 14.2 | 3.1 | 1.9 | 15.1 |
+
+A global cold half and warm half at the layer's depth is a blob the size of the domain,
+and a blob estimator finds it. Dropping the front leaves the estimator **better than form 1
+on every seed**, including the one form 1 could not find at all. The front's own horizontal
+step is already in the field through `frontAnomalyT`; stepping the layer with it as well
+was double-counting the one feature that needs no help being seen. The front's anchor
+recovery agreed independently: with the front displacing, seed 1180003 put the anchor 74 to
+97 km across the front against a 30 km bound, at every grid size tried, and 1 km without it.
+
+**And the coefficient is 20 m/°C because that is where the estimators still hold.** At 30
+the front's anchor on seed 1180003 goes back over its bound; the drop from 30 to 20 costs
+35 m of relief and one distinct depth in four.
+
 ## The depth axis moves too, and pays for itself
 
-Form 2 gives the layer 107 m of relief across the domain, and a pick quantised to level
+Form 2 gives the layer 69 m of relief across the domain, and a pick quantised to level
 midpoints needs spacing fine enough to carry it. Six levels still show one depth. The
 axis goes to **26 levels, 40 m apart** — the layer-to-spacing ratio the manifest publishes
 rises from 0.15 to 0.75.
 
-Over the now-cast, which is the true field sampled, the surface then takes four distinct
-depths: 1,000 columns at 100 m, 783 at 60 m, 136 at 140 m and one at 20 m. Over a served
-**analysis** it is looser, and that is worth stating because the drawing draws an analysis
-and not the truth — five depths spanning 20–180 m at the end of the pre-roll, and later in
-a run sixteen depths whose extremes reach 840 m apart, of which three hold ninety-four per
-cent of the columns inside 80 m. The layer is the 80 m; the 840 m is two columns whose
-profile falls fastest somewhere deep. `Volume.tsx` reports the former and names the latter,
-having first been written to print max minus min and call the result doming — which is the
-same fault as form 1's, arriving from the other direction.
+**The doming is local, and the drawing says so rather than being made to look otherwise.**
+The two features that displace the layer are tens of kilometres across in a domain hundreds
+wide, so most of the field is level: over the now-cast the surface takes three distinct
+depths, 1,831 of 1,920 columns at 100 m with 48 at 140 m and 41 at 60 m. That is what an
+eddy does to a thermocline, and it is not the domain-wide undulation the first version
+produced by letting the front step the whole field. Over a served **analysis** it is looser,
+which is worth stating because the drawing draws an analysis and not the truth — thirteen
+depths, 82% at 100 m, two holding ninety-four per cent inside 40 m.
+
+`Volume.tsx` prints those shares. It was first written to print max minus min and call the
+result doming, which against one analysis read "16 distinct depths spanning 840 m" — true of
+two columns and false of the layer, and the same fault as form 1's arriving from the other
+direction.
 
 Depth multiplies against the horizontal, and the horizontal was generous: 96 × 80 over the
 domain is 5.3 km cells against an eddy of 64 km radius, twelve cells across its radius. The
@@ -108,6 +144,13 @@ Every stored field changes, every manifest changes, and the four seed artefacts 
 rebuilt by `pnpm snapshots` under `check-snapshot-drift`. `ANALYTIC_FORM_VERSION` is 2, and
 a reader that understands only form 1 must refuse the new manifests rather than reconstruct
 a flat layer from them — which is what the version exists for.
+
+**Nothing was enforcing that**, which the bump exposed: `lib/manifest-world.ts` cast a manifest
+to a world without looking at the number, so a form 1 document would have produced
+`depth_m + undefined × anomaly` — `NaN` at every point in the domain, with no reason given
+anywhere. It now refuses, in both directions, and `manifest-world.test.ts` watches the refusal
+fail as well as pass. The protection the master describes is a mechanism rather than a sentence
+for the first time.
 
 Two manifests carried `analytic_form_version: 1` as a typed literal while spreading the
 env-generator's manifest wholesale: the analyst's and the model runner's. The bump made

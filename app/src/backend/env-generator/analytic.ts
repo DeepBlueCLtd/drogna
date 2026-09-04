@@ -135,6 +135,29 @@ export function frontAnomalyS(p: ManifestFrontParameters, longitude: number, lat
  * The sign is the ocean's: warm water above an isopycnal presses it down, cool water lets it rise.
  * `displacement_m_per_c` is positive, so a warm-core eddy deepens the layer beneath it and a cold
  * one domes it — the doming FR-120 names.
+ *
+ * **The front is deliberately not one of the terms, and this is the interesting decision here.**
+ * The obvious form was "every anomaly displaces the layer", and the front's anomaly is a `tanh`:
+ * it *saturates* rather than decaying, so as a displacement it does not tilt the layer near the
+ * front, it holds one half of the domain permanently deep and the other permanently shallow, out
+ * to the edges. The eddy and the drifting feature use radial Gaussians that fall to nothing, which
+ * is what a local displacement has to do.
+ *
+ * That is an argument from shape, and the measurement agrees with it emphatically. Recovering the
+ * drifting feature's centre across the five AT-06 seeds, error in km against its own 40 km radius:
+ *
+ * | terms | 1180001 | 1180002 | 1180003 | 1180004 | 1180005 |
+ * |---|---|---|---|---|---|
+ * | none (form 1) | 9.7 | 20.5 | 7.0 | declined | 25.5 |
+ * | eddy, front and moving | 8.8 | 16.8 | 4.8 | **64.9** | 21.6 |
+ * | front alone | 12.8 | **60.7** | 9.8 | declined | 33.6 |
+ * | eddy and moving | 6.7 | 14.2 | 3.1 | 1.9 | 15.1 |
+ *
+ * The front's term alone breaks a seed on its own, and dropping it leaves the estimator *better
+ * than form 1 on every seed* — including the one form 1 could not find at all. A global cold half
+ * and warm half at the layer's depth is a blob the size of the domain, and a blob estimator finds
+ * it. The front's own horizontal step is already in the field through `frontAnomalyT`; stepping
+ * the layer with it as well was double-counting the one feature that needs no help being seen.
  */
 export function thermoclineDepthAt(
   w: WorldParameters,
@@ -145,7 +168,6 @@ export function thermoclineDepthAt(
   const nominal = w.thermocline.depth_m;
   const anomalyC =
     eddyAnomalyT(w.eddy, longitude, latitude, nominal) +
-    frontAnomalyT(w.front, longitude, latitude, nominal) +
     w.moving.sign * w.moving.strength_c * movingMembership(w.moving, longitude, latitude, nominal, secondsFromOrigin);
   return nominal + w.thermocline.displacement_m_per_c * anomalyC;
 }

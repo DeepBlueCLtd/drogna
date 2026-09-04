@@ -53,10 +53,12 @@ pnpm capture:background  # Background's proofs: keyboard, greyscale, clipped lab
 read "what CI runs" until a branch shipped seven consecutive red CI runs while `pnpm check`
 reported green on every commit of it. After the checks, CI runs `pnpm replay-proof` and then
 seven capture proofs — `capture:glance operator`, `capture:background`, `capture:messages`,
-`capture:map`, `capture:mobile`, `capture:consumers` and `capture:forecast`. **This list is the
-only one in the tree, so it goes stale the way it did before**: it said six for the length of
-feature 124, one commit after the paragraph below was written about exactly that. A pull request
-adding a capture step amends this line in the same change.
+`capture:map`, `capture:mobile`, `capture:consumers` and `capture:forecast`. **This list is held
+to `ci.yml` and to `package.json` by `check-capture-inventory`**, in both directions and
+including the two numbers in this paragraph, because it went stale exactly as asked not to: it
+said six for the length of feature 124, one commit after a sentence was added here asking the
+next author to keep it in step. A sentence asking for something is not a check that it happened.
+Amend this line and the workflow together, or `pnpm gates` says which of the two you moved.
 
 The proof is out of `check` because it re-runs the marked tests' files, and paying that twice
 locally would make `pnpm check` a command nobody runs; its cheap half — that every

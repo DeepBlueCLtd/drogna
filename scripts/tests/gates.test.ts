@@ -394,6 +394,17 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
     ]);
 
+    // **Two sentences stating the total is itself the finding.** The first match anywhere in
+    // the record wins, so a record that explains the rule before stating it had the gate holding
+    // the explanation's number — five — and leaving the one beside the list unheld. This
+    // fixture's own list is correct (three things: two captures and replay-proof), so with the
+    // match taking the first occurrence silently it reported a wrong number on a right record,
+    // and taking the last it would have reported nothing on a wrong one. Neither is a check.
+    expect(captureInventory(join(fixtures, 'capture-decoy')).map((finding) => finding.message)).toEqual([
+      expect.stringMatching(/2 sentences state how many more things CI runs/),
+      expect.stringMatching(/says CI runs five more things.*it runs 3/),
+    ]);
+
     // **A comment naming a command is not a step.** The pattern is deliberately wide, having
     // been too narrow twice — but run over the whole file it also matched prose, and this
     // workflow carries a fifteen-line comment above the forecast step. Three findings on a

@@ -365,7 +365,8 @@
 .forecast-column-caption,
 .forecast-column-basis,
 .forecast-column-where,
-.forecast-column-busy {
+.forecast-column-busy,
+.forecast-column-stale {
   margin: 0;
   font-size: 0.8em;
   color: var(--shell-dim);

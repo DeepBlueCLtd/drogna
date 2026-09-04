@@ -155,7 +155,17 @@ export function instrumentAt(index: number): (typeof INSTRUMENTS)[number] {
 }
 
 
-/** True once a column carries more sources than the palette has distinct entries. */
+/**
+ * True once a column carries more sources than there are distinct **hatches**, which is what
+ * runs out first.
+ *
+ * The colour ran out long before this: hue keys on the *instrument*, so the shipped loitering
+ * column of six sources over two instruments already draws six bands in two colours, by design
+ * and with the label beside each. What `textureSlot` promises is that no two sources of one
+ * column share a hatch, and that promise is what `% INSTRUMENTS.length` breaks at the seventh
+ * source. The notice this gates said "two of them share a colour and a hatch", describing a
+ * mechanism the palette stopped using when hue moved onto the instrument.
+ */
 export function paletteExhausted(sourceCount: number): boolean {
   return sourceCount > INSTRUMENTS.length;
 }

@@ -1043,6 +1043,55 @@ the part worth recording, because each was a sentence asserting a property the c
       `new Set(urls).size` — which is 1 for exactly that duplicate. It counted the entries in the
       end, but the line as written passed on the case its own comment named.
 
+- [x] T022y **A fourteenth round, run because the round before it flipped the geometry that the
+      rays, the markers, the cursor and the keyboard all sit on — in the branch's last hour.**
+      Two independent passes, and they agreed on the fault that mattered.
+
+      **A cell with no reading was marked unserved in one of the two display modes.** The
+      `-Infinity` seed fixed last round reaches the class only through `dominantAt`; the
+      named-share branch built `{ key: showing, value: shares[showing] }` unconditionally, which
+      is truthy whatever the value is. A `null` cell — CoverageJSON's own idiom for one that was
+      not sampled, and the producer that fix was made for — then drew at `fillOpacity={0}` with
+      no outline, pixel-identical to a cell whose share is exactly nought, under a readout
+      printing `NaN%` and a profile printing "not served": one input, three spellings. Both are
+      fixed and the test blanks a cell of a document the backend itself served, joining the map
+      to the field on position rather than on index, because the map is thinned and the first
+      version of that test blanked one cell and checked another.
+
+      **"This console has stopped asking for the depth axis" could not be said by a region that
+      had one.** `gridGaveUp` was read in exactly one place, inside `if (!analysis || !grid)`, so
+      once an axis had been read the console could spend its whole allowance on every later cycle,
+      stop for good, and go on offering the first cycle's depth chips over the current cycle's
+      field with nothing saying the depths were old — the permanent-wrong-sentence class this
+      feature fixed in the other direction.
+
+      **The profile derived the palette a second time, twelve lines under a prop docstring saying
+      it must not.** Its bands read `paletteSlots(served.sources)` while its numbers table read
+      `ray.paletteSlot`; nothing compared the two, and the slot assignment moved twice on this
+      branch alone. The set now carries the slots it was built from.
+
+      **And the palette fix introduced a regression that the existing suite caught.** Gating
+      `bandsFor` on the ray set's slots existing took the *background* bands with them: with the
+      per-source document refused there is no ray set, and those three bands are the level's own
+      `shares` and read no slot at all. That is FR-130's fault — a refusal taking the numbers that
+      do not read it — reintroduced by the guard against a different one, and *FR-130: a refused
+      field takes the map and leaves the numbers* went red on the full run. Recorded because a
+      suite that catches the fix is the only evidence it was worth writing.
+
+      **The exhaustion notice named the wrong carrier.** It said two sources "share a colour and a
+      hatch" — but sources of one instrument share a colour *by design* since the hue moved onto
+      the instrument. What runs out at the seventh source is the hatch.
+
+      **The plan is not to scale and nothing said so.** `preserveAspectRatio="none"` over a
+      cell-indexed viewBox is roughly four to one in kilometres per pixel at the shipped field, so
+      a source due north-east leaves the column at nearer 077° than 045° — in a map flipped
+      north-up last round on a *direction* argument. Stated on the surface.
+
+      **And the gate held its own prose number by first-match-wins.** A second sentence of that
+      shape anywhere earlier in `CLAUDE.md` silently became the number checked. A second
+      occurrence is now itself the finding, with a fixture whose record is correct and which the
+      gate mis-reported before the change.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot
@@ -1058,6 +1107,25 @@ the part worth recording, because each was a sentence asserting a property the c
         against a planted document rather than a run.
       - **Q-01 is open** (T030): whether the palette survives greyscale *as composited* rather than
         as declared is a question a capture answers and a comment cannot.
+      - **The depth axis is taken from the *analysis* holding and joined against the
+        *contributions* holding**, on a 1e-9 relative float equality. It holds today because one
+        `manifest` object is passed to both publications, and nothing in the tree asserts the two
+        grids are equal. Taking the axis from the document actually being joined against would
+        remove the assumption rather than guard it; that is a change to the region's geometry and
+        this branch has already made one of those in its last hour. Named here as the next
+        author's first move.
+      - **Palette stability is scoped to columns whose instrument sets agree**, which the
+        docstring states and no test asks of two columns with *different* sets — a run-wide
+        instrument list, which no served document carries, is what would close it.
+      - **`contributionResidual` ships with only test callers.** The two passes disagreed:
+        one called it the honest disposition (the test says so outright rather than hiding it),
+        one called it Principle VI in miniature. Left as it is, and recorded as contested rather
+        than settled.
+      - **Nine commit subjects on this branch exceed `CLAUDE.md`'s ~72 characters** and several
+        retell the story rather than name the change. Not fixed, because rewriting pushed history
+        costs more than it buys; recorded so the next branch does not repeat it.
+      - **`check-capture-inventory` reads `.github/workflows/ci.yml` alone.** A capture step in a
+        second workflow is invisible to it. No second workflow runs one today.
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
@@ -1074,8 +1142,14 @@ the part worth recording, because each was a sentence asserting a property the c
 
 - [ ] T026 Nothing drawn that was not fetched: moving the timeline to an unfetched run shows
       it arriving (SC-006).
-- [ ] T027 No polling: advance the clock with no announcement, assert no fetch; publish one,
-      assert a refetch (SC-007).
+- [x] T027 No polling: advance the clock with no announcement, assert no fetch; publish one,
+      assert a refetch (SC-007). Both halves are in `forecast.test.tsx`: *FR-136: a restatement
+      of the standing analysis re-queries nothing* ticks past `restate_every_ticks` and asserts
+      the fetch count is unchanged, and *FR-136: a new cycle re-reads the field once, not twice*
+      crosses a cycle boundary and asserts each new collection is queried exactly once. The
+      second half was written for a fault the first could not see — a fresh grid literal firing
+      the slab effect a second time per cycle — so the "assert a refetch" clause is held with a
+      count rather than a presence.
 - [ ] T028 Motion is the system's or is declared as illustration, and reads no host clock —
       `check-wallclock` covers the second half; the first is a test that nothing animates while
       nothing is arriving.

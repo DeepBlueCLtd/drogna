@@ -150,6 +150,19 @@ export interface RaySet {
    * did not, so the caption beneath the map could not.
    */
   readonly noSuchLevel: boolean;
+  /**
+   * The palette assignment these rays were built from, carried so that a consumer drawing the
+   * *same* sources by another route reads it rather than deriving it again.
+   *
+   * `Profile` did derive it again — `paletteSlots(served?.sources ?? [])`, twelve lines under a
+   * prop docstring saying the set is passed in because "two derivations of one thing from the
+   * same two inputs agree only by inspection". Its bands took their hue and hatch from that
+   * second call while its numbers table took them from `ray.paletteSlot`, and nothing compared
+   * the two. They agreed because both went through this function; the slot assignment moved
+   * twice on this branch alone, and either move touching only one caller would have made a
+   * band and the row beneath it describe one source in two colours.
+   */
+  readonly slots: PaletteSlots;
 }
 
 /**
@@ -269,6 +282,7 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
     // contribution absent from the stack and from the sum and nothing saying so.
     reachedCount: rays.filter((ray) => ray.reachedHere).length,
     noSuchLevel,
+    slots,
   };
 }
 
@@ -291,10 +305,12 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
  * Sorted rather than encountered, for the reason `Ray.paletteSlot` gives at length — an
  * encounter order is a fact about which column was asked for, and the region asks about several.
  */
-export function paletteSlots(sources: readonly AnalysisContributionsSource[]): {
+export interface PaletteSlots {
   readonly hue: readonly number[];
   readonly texture: readonly number[];
-} {
+}
+
+export function paletteSlots(sources: readonly AnalysisContributionsSource[]): PaletteSlots {
   const instruments = [...new Set(sources.map((source) => source.datastream_id))].sort();
   // **The texture is the source's own rank in the column, and the arithmetic that produced it
   // before was the fault it was written against.** That version stepped from the *instrument's*

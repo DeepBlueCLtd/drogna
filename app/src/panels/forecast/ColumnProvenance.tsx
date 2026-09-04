@@ -35,9 +35,12 @@
  * That last clause was false when it was written, and measured so: the analysis lands first and
  * the *grid* one round trip later, and the grid was a fresh object literal each cycle, so the slab
  * effect fired on the analysis and again on the grid's new identity — two byte-identical
- * full-grid area queries per cycle, one thrown away. `gridForAnalysis` memoises on the axis's own
- * values now, so a cycle that spans the same depths hands back the same object and the second
- * fetch does not happen. `FR-136` holds the restatement case; `FR-136: a new cycle re-reads the
+ * full-grid area queries per cycle, one thrown away. `gridForAnalysis` still builds a fresh
+ * literal every call; what holds the identity is `sameGrid` in the setter beside it, which
+ * compares the axis's own values and keeps the standing object where they agree, so a cycle
+ * that spans the same depths does not move the dependency and the second fetch does not happen.
+ * This paragraph named `gridForAnalysis` as the memoiser, sending a reader tracing the fetch to
+ * the one function in the path that does not answer for it. `FR-136` holds the restatement case; `FR-136: a new cycle re-reads the
  * field once` holds this one.
  *
  * This paragraph read "not on an announcement" while both effects were announcement-driven, which
@@ -686,6 +689,23 @@ export function ColumnProvenance({
         </div>
       </div>
 
+      {/* **A grid already read does not make the give-up sayable.** `gridGaveUp` was read in one
+          place, inside `if (!analysis || !grid)`, so it could only ever be stated by a region that
+          had never obtained an axis at all. Once one had been read, the console could spend its
+          three attempts on every later cycle, stop asking for good, and go on offering the first
+          cycle's depth chips over the current cycle's provenance collection with nothing saying
+          the axis was old — the same permanent-wrong-sentence fault this feature fixed in the
+          other direction, where the region kept saying the store "had none when this console
+          asked" after it had answered. */}
+      {gridGaveUp && (
+        <p className="forecast-column-stale" data-testid="column-grid-stale">
+          these depths are from an earlier analysis cycle: the grid is read from a holding’s own
+          manifest, the store was asked several times over for this cycle’s and refused, and this
+          console has stopped asking. The field and the columns below are current; the depths they
+          are filed under may not be. Reloading the page starts a new run and asks again.
+        </p>
+      )}
+
       {/* **`busy` alone, not `busy && !slab`.** With a field already drawn, the chip for the new
           depth reads pressed the instant it is clicked while the map keeps rendering the previous
           depth's field for the whole round trip — and this line, which is the only thing that
@@ -775,10 +795,23 @@ export function ColumnProvenance({
             {drawn.rows.map((sourceRow, row) =>
               drawn.cols.map((sourceCol, col) => {
                 const shares = sharesAt(sourceRow, sourceCol);
-                const shown = showing === 'dominant' ? dominantAt(sourceRow, sourceCol) : { key: showing, value: shares[showing] };
                 // A cell with nothing readable in it is drawn as the ground it sits on and marked
                 // unserved — not as the first share at nought, which is what a `-Infinity` seed
                 // made it, complete with the negative class.
+                //
+                // **And in both display modes.** The named-share branch used to construct
+                // `{ key: showing, value: shares[showing] }` unconditionally, which is truthy
+                // whatever the value is, so `is-unserved` was reachable only through
+                // `dominantAt`. A `null` cell — CoverageJSON's own idiom for one that was not
+                // sampled, and the producer the dominant fix was made for — then drew at
+                // `fillOpacity={0}` with no outline: pixel-identical to a cell whose share is
+                // exactly nought, under a readout printing `NaN%`. One input, three spellings.
+                const shown =
+                  showing === 'dominant'
+                    ? dominantAt(sourceRow, sourceCol)
+                    : Number.isFinite(shares[showing])
+                      ? { key: showing, value: shares[showing] }
+                      : undefined;
                 const source = shown ? shareOf(shown.key) : undefined;
                 const magnitude = shown && Number.isFinite(shown.value) ? Math.min(Math.abs(shown.value), 1) : 0;
                 const isHere = cursor?.row === row && cursor?.col === col;
@@ -947,6 +980,23 @@ export function ColumnProvenance({
             </p>
           )}
 
+          {/* **The plan is not to scale, and until this line nothing said so.** The map is one
+              square per grid cell stretched to the box (`preserveAspectRatio="none"`), so a
+              degree of longitude and a degree of latitude get different numbers of pixels — at
+              the shipped field and this box, roughly four to one in kilometres per pixel once
+              `cos(latitude)` is taken in. A ray to a source due north-east therefore leaves the
+              column at nearer 077° than 045°. That matters because direction is being treated as
+              meaningful here: this map was flipped north-up precisely so a source to the
+              north-east would not be drawn to the south-east. Which way a ray points is true;
+              the angle it makes is not, and a reader comparing two bearings off the picture
+              needs to know which of those they have. */}
+          <p className="forecast-ray-note" data-testid="forecast-not-to-scale">
+            The plan is one square per grid cell, stretched to this box, so <strong>bearings are
+            not to scale</strong>: which side of the column a source lies on is true, the angle it
+            subtends is not. The exact position of every cell is in the readout below, and each
+            source’s own position is in the table under it.
+          </p>
+
           {/* The readout under the map rather than a floating tooltip: it cannot be clipped at
               a phone's width, it is the same for a pointer and for the keyboard cursor, and a
               screen reader meets it in document order rather than chasing a popup. */}
@@ -959,7 +1009,10 @@ export function ColumnProvenance({
                 {SOURCES.map((source) => (
                   <span className="forecast-share-figure" key={source.key}>
                     <span className="forecast-share-swatch" style={{ background: source.hue }} aria-hidden="true" />
-                    {source.label} {(cellShares[source.key] * 100).toFixed(0)}%
+                    {source.label}{' '}
+                    {Number.isFinite(cellShares[source.key])
+                      ? `${(cellShares[source.key] * 100).toFixed(0)}%`
+                      : 'not served'}
                   </span>
                 ))}
               </>

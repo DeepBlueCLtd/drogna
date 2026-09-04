@@ -46,7 +46,9 @@ chosen. Below it a map of the grid at that depth, mostly rust-coloured hatching 
 departure forecast still dominates the field, with a green patch where the platform has been
 sampling; a pale ring marks the picked column and the six instrument-sources that reached it are
 marked immediately beside it, because the platform's two instruments sample the cells it is
-crossing and every source is within a cell or two of the column. Beneath the map a depth profile, one stacked bar of hatched bands per level
+crossing and every source is within a cell or two of the column. Under the map a line stating
+that the plan is one square per grid cell stretched to the box, so which side of the column a
+source lies on is true and the angle it subtends is not. Beneath that a depth profile, one stacked bar of hatched bands per level
 with its figures printed underneath. At 0 m: archive 0.0%, departure −11.9%, model −81.4%,
 measurement from earlier cycles 0.5%, then this cycle's six sources — the 50 m instrument's three
 casts at 110.4%, 39.4% and 39.2%, the 200 m instrument's three at −1.4%, 1.6% and 3.7% — and

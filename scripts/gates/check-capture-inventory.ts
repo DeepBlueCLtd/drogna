@@ -73,8 +73,16 @@ const COUNTED = /\b([a-z]+)\s+capture proofs\b/;
  * It counts `replay-proof` and the captures together, so it is the capture count plus one. A
  * number in prose beside a list is a second place for the same fact to be wrong, which this gate's
  * own docstring says; there were two such numbers and it held one.
+ *
+ * **Held to one occurrence, because the gate cannot tell two apart.** It is matched over the
+ * whole record — the sentence sits in the same paragraph as the list today and need not tomorrow
+ * — and run that way the *first* match anywhere wins. A second sentence of this shape (a quoted
+ * example, a later paragraph explaining the rule rather than stating it) would silently become
+ * the number checked while the one beside the list went unheld. So a second occurrence is itself
+ * reported: the fix is one sentence carrying the number, which is the arrangement the gate was
+ * written to hold.
  */
-const AFTER_THE_CHECKS = /CI runs ([a-z]+) more things than it does/;
+const AFTER_THE_CHECKS = /CI runs ([a-z]+) more things than it does/g;
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 
 function read(root: string, path: string): string {
@@ -120,6 +128,7 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
   const named = [...sentence[0].matchAll(NAMED)].map((match) => match[1]);
   const line = record.slice(0, sentence.index).split('\n').length;
 
+
   // A named proof that no script defines is a third way for the three to disagree, and the
   // cheapest to check: `package.json` is the only place a `pnpm run` name can come from.
   const manifest = read(root, join('package.json'));
@@ -154,19 +163,27 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
     }
   }
 
-  const total = AFTER_THE_CHECKS.exec(record);
+  const totals = [...record.matchAll(AFTER_THE_CHECKS)];
+  const total = totals[0];
   const totalStated = total ? NUMBER_WORDS.indexOf(total[1]) : -1;
+  if (totals.length > 1) {
+    findings.push({
+      file: relative(root, join(root, RECORD)),
+      line,
+      message: `${totals.length} sentences state how many more things CI runs than \`pnpm check\`; the gate holds the first and cannot tell which is beside the list`,
+    });
+  }
   if (totalStated < 0) {
     findings.push({
       file: relative(root, join(root, RECORD)),
       line,
-      message: 'the paragraph states no number of things CI runs after the checks',
+      message: 'the record states no number of things CI runs after the checks',
     });
   } else if (totalStated !== ran.length + 1) {
     findings.push({
       file: relative(root, join(root, RECORD)),
       line,
-      message: `the paragraph says CI runs ${total?.[1]} more things than \`pnpm check\`; it runs ${ran.length + 1} — ${ran.length} captures and replay-proof`,
+      message: `the record says CI runs ${total?.[1]} more things than \`pnpm check\`; it runs ${ran.length + 1} — ${ran.length} captures and replay-proof`,
     });
   }
 

@@ -150,14 +150,29 @@ async function pickAColumn(page: Page, prefix: string) {
         holding: holding.holding_id,
         why: "no drawn cell to click",
       };
-    nearest.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     // Polled rather than slept. Opening a column is seven position queries and a contributions
     // read, and after a resize the panel has remounted and is refetching its slab as well — a
     // fixed 800 ms was enough at the shot's width and not at a phone's, where the first version
     // of the narrow pass reported "no column could be opened" for a column that opened a moment
     // later.
+    //
+    // **And the click is inside the loop, because a cycle clears the picked column.** The narrow
+    // pass runs the clock at `max_rate` so a panel remounted by a breakpoint crossing recovers on
+    // a restatement rather than waiting on a frozen clock for one; at that rate a new analysis
+    // lands roughly every 0.17 s of real time, and every one of them clears the pick by design —
+    // it is a different field. Clicking once and then polling loses the race whenever a cycle
+    // falls between the two, and the poll has no way to notice: it reports "no column could be
+    // opened" and reddens CI for a layout that is fine. Re-picking each pass costs one click on
+    // a cell already open and closes the window.
     let rays = 0;
     for (let wait = 0; wait < 60 && rays === 0; wait++) {
+      const cell = document.querySelector(
+        `rect.share-cell[data-lon="${nearest.getAttribute("data-lon")}"][data-lat="${nearest.getAttribute("data-lat")}"]`,
+      );
+      // The node is re-created on every cycle, so the *position* is what identifies the cell —
+      // the captured `nearest` is detached from the document the moment the field is redrawn and
+      // clicking it does nothing at all.
+      (cell ?? nearest).dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await new Promise((settled) => setTimeout(settled, 200));
       rays = document.querySelectorAll("line.forecast-ray").length;
     }

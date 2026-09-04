@@ -26,8 +26,9 @@ import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
-import { ForecastPanel, FORECAST_REGIONS, GRID_ATTEMPTS, spendAttempt } from './ForecastPanel.js';
+import { ForecastPanel, FORECAST_REGIONS, GRID_ATTEMPTS, sameGrid, spendAttempt } from './ForecastPanel.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, contributionResidual, raysFor } from './rays.js';
+import { columnGridOf, type ColumnGrid } from './ColumnProvenance.js';
 import { sourceOf } from './shares.js';
 import { FORECAST_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
 import { readFileSync } from 'node:fs';
@@ -992,6 +993,135 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(screen.getByTestId('column-profile').textContent).toMatch(/archive/);
     });
 
+    it('a region that has stopped asking for the depth axis says so over the field it is still drawing', async () => {
+      // **The fault.** `gridGaveUp` was read in exactly one place — inside `if (!analysis ||
+      // !grid)` — so it could only ever be stated by a region that had *never* obtained an axis.
+      // Once one had been read the console could spend its whole allowance on every later cycle,
+      // stop asking for good, and go on offering the first cycle's depth chips over the current
+      // cycle's field with nothing anywhere saying the depths were old. That is the same
+      // permanent-wrong-sentence class this feature fixed in the other direction, where the
+      // region kept saying the store "had none when this console asked" after it had answered.
+      await toAField();
+      expect(document.querySelectorAll('rect.share-cell').length, 'no field to go stale over').toBeGreaterThan(0);
+      expect(screen.queryByTestId('column-grid-stale'), 'stale before anything was refused').toBeNull();
+
+      // The holdings inventory alone refuses; every other query answers, so the field below keeps
+      // being re-read for each new cycle and the region is drawing current data under old depths.
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes(config.shell.endpoints.holdings)) {
+          return Promise.resolve(new Response('{"refused":"planted"}', { status: 503 }));
+        }
+        return passthrough(input, init);
+      }) as typeof globalThis.fetch);
+
+      // Enough cycles to spend the whole allowance: the axis is asked for once per *analysis
+      // cycle*, and the bound is the panel's own rather than a number typed here.
+      // A cycle at a time, with the round trip let out in between: the ask is asynchronous and
+      // the refusal is only spent when it lands, so ticking the whole span inside one `act`
+      // spends one attempt however many cycles it covers.
+      for (let attempt = 0; attempt < GRID_ATTEMPTS + 1; attempt++) {
+        await act(async () => {
+          for (let i = 0; i < config.scheduler.max_interval_ticks * 2; i++) runtime.clock.tickOnce();
+        });
+        for (let flush = 0; flush < 6; flush++) {
+          await act(async () => {
+            await Promise.resolve();
+          });
+        }
+      }
+
+      const stale = screen.getByTestId('column-grid-stale');
+      expect(stale.textContent).toMatch(/earlier analysis cycle/);
+      // And it is said *beside a drawn field*, which is the state the sentence could not reach.
+      expect(document.querySelectorAll('rect.share-cell').length).toBeGreaterThan(0);
+      expect(screen.queryByTestId('column-absent'), 'the region fell back to its no-axis branch').toBeNull();
+    });
+
+    it('XI: a cell with no reading is marked unserved in every display mode, not only the strongest', async () => {
+      // **The fault.** The dominant path was fixed to return nothing for a cell with no finite
+      // share — the `-Infinity` seed that drew "archive, negative". The named-share path built
+      // `{ key: showing, value: shares[showing] }` unconditionally, which is truthy whatever the
+      // value is, so `is-unserved` was unreachable through it. A `null` cell then drew at
+      // `fillOpacity={0}` with no outline, pixel-identical to a cell whose share is exactly
+      // nought, under a readout printing `NaN%` — one input, and the region saying two things
+      // about it. `null` for an unsampled cell is CoverageJSON's own idiom and Principle XI does
+      // not allow "our backend does not send that" as the answer.
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      await openColumnAt(at.longitude, at.latitude);
+
+      // **The cell to blank is chosen on the map and blanked in the document**, and the two are
+      // not the same index: the map is thinned to what a panel can show, so drawn cell *n* is
+      // served cell *n × step*. Picking one and blanking the other is how the first version of
+      // this test failed against the fix — the same drawn-versus-served confusion the readout
+      // shipped with. The position on the cell is the join, because it is the served axes'.
+      const before = [...document.querySelectorAll('rect.share-cell')];
+      expect(before.length, 'no field to blank a cell of').toBeGreaterThan(0);
+      const target = before[Math.floor(before.length / 2)];
+      const targetLongitude = Number(target.getAttribute('data-lon'));
+      const targetLatitude = Number(target.getAttribute('data-lat'));
+      expect(Number.isFinite(targetLongitude) && Number.isFinite(targetLatitude)).toBe(true);
+
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal('fetch', (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const answered = await passthrough(input, init);
+        if (!String(input).includes('/area?')) return answered;
+        // The served field, with one cell of every share replaced by `null` — the document is
+        // otherwise the backend's own, so nothing else about this test is invented.
+        const body = (await answered.json()) as {
+          domain: { axes: { x: { values: number[] }; y: { values: number[] } } };
+          ranges: Record<string, { values: (number | null)[] }>;
+        };
+        const longitudes = body.domain.axes.x.values;
+        const latitudes = body.domain.axes.y.values;
+        const col = longitudes.findIndex((value) => value.toFixed(4) === targetLongitude.toFixed(4));
+        const row = latitudes.findIndex((value) => value.toFixed(4) === targetLatitude.toFixed(4));
+        if (col < 0 || row < 0) throw new Error('the picked cell is not in the served field, so nothing would be blanked');
+        const blanked = row * longitudes.length + col;
+        for (const range of Object.values(body.ranges)) {
+          if (range.values.length <= blanked) throw new Error('the served range is shorter than the cell picked off its own map');
+          range.values[blanked] = null;
+        }
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+      }) as typeof globalThis.fetch);
+
+      // Re-read the field at another depth so the planted body is the one drawn.
+      const depths = [...document.querySelectorAll('[aria-label="depth"] button.forecast-chip')];
+      expect(depths.length, 'no depth to change to').toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(depths[depths.length - 1]);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const shown = [...document.querySelectorAll('[aria-label="which contribution to show"] button.forecast-chip')];
+      const named = shown.slice(1);
+      expect(named.length, 'no named share to switch to').toBeGreaterThan(0);
+      for (const chip of named) {
+        await act(async () => {
+          fireEvent.click(chip);
+        });
+        const cell = document.querySelector(
+          `rect.share-cell[data-lon="${targetLongitude.toFixed(4)}"][data-lat="${targetLatitude.toFixed(4)}"]`,
+        );
+        expect(cell, `the blanked cell is not on the map under ${chip.textContent}`).toBeTruthy();
+        if (!cell) throw new Error('unreachable');
+        expect(
+          cell.getAttribute('class') ?? '',
+          `${chip.textContent}: a cell with no reading is drawn exactly as one reading nought`,
+        ).toContain('is-unserved');
+        // And the readout beneath says the same thing the cell does.
+        await act(async () => {
+          fireEvent.mouseEnter(cell);
+        });
+        const readout = document.querySelector('.forecast-share-readout')?.textContent ?? '';
+        expect(readout, `${chip.textContent}: the readout printed a figure for a cell with no reading`).not.toMatch(/NaN/);
+        expect(readout).toMatch(/not served/);
+      }
+    });
+
     it('FR-130: a refused field takes the map and leaves the numbers, which do not read it', async () => {
       // **The fault.** The numbers table, the SC-001 caption and FR-125's named condition were
       // all gated on the ray *geometry*, which is undefined whenever the slab is. None of the
@@ -1186,6 +1316,45 @@ describe('what one attempt at the depth axis costs', () => {
     expect(spent).toBe(2);
     spent = spendAttempt(spent, 'answered');
     expect(spent).toBe(0);
+  });
+
+  // `sameGrid` is what actually holds the axis's identity across a cycle — the comment beside it
+  // named `gridForAnalysis`, which builds a fresh literal every call and memoises nothing. It is
+  // hand-written field equality, so it is complete only against the shape it was written for.
+  // This walks the keys of a grid the *shell itself* built rather than a list typed here: a
+  // sixth member on `ColumnGrid` that `sameGrid` does not compare fails on that member's own
+  // name, which is the failure a reader can act on.
+  it('sees a change in every member the axis actually carries', () => {
+    // Through `columnGridOf`, the shell's own producer, rather than a `ColumnGrid` literal typed
+    // here: a literal would carry the five members this test's author knew about, which is
+    // exactly the blind spot being closed. The manifest is minimal and cast because
+    // `columnGridOf` reads `manifest.grid` and nothing else, and the numbers are arbitrary —
+    // what is held is which *keys* come out, not what is in them.
+    const grid: ColumnGrid | undefined = columnGridOf({
+      manifest: {
+        grid: {
+          longitude: { minimum: 3, count: 4, spacing: 0.25 },
+          latitude: { minimum: 45, count: 3, spacing: 0.5 },
+          depth: { minimum: 0, count: 6, spacing: 200 },
+        },
+      },
+    } as unknown as Parameters<typeof columnGridOf>[0]);
+    if (!grid) throw new Error('the shell’s own producer returned no grid, so this test holds nothing');
+    expect(sameGrid(grid, { ...grid })).toBe(true);
+    expect(sameGrid(undefined, grid)).toBe(false);
+
+    const keys = Object.keys(grid) as (keyof typeof grid)[];
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      const moved =
+        key === 'depthsM'
+          ? { ...grid, depthsM: [...grid.depthsM, 1234] }
+          : { ...grid, [key]: (grid[key] as number) + 1 };
+      expect(sameGrid(grid, moved), `${key} moved and sameGrid still called it the same axis`).toBe(false);
+    }
+    // A member whose *values* move without its length is the case an element-wise comparison is
+    // written for, and a length check alone would pass it.
+    expect(sameGrid(grid, { ...grid, depthsM: grid.depthsM.map((depth) => depth + 1) })).toBe(false);
   });
 });
 

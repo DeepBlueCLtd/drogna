@@ -42,8 +42,11 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { levelAtDepth, modelledRaysIn, paletteSlots, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { levelAtDepth, modelledRaysIn, sourceLabels, type PaletteSlots, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
+
+/** The slot table for a column with no served sources: no band reads it, and none can. */
+const NO_SOURCES: PaletteSlots = { hue: [], texture: [] };
 
 export interface ProfileLevel {
   readonly depthM: number;
@@ -111,7 +114,7 @@ function bandsFor(
   level: ProfileLevel,
   document: AnalysisContributions | undefined,
   labels: readonly string[],
-  slots: ReturnType<typeof paletteSlots>,
+  slots: PaletteSlots,
 ): Band[] {
   // A refused depth has no reading at all, so it has no bands: the row states the refusal
   // rather than drawing a bar out of four unknowns.
@@ -234,10 +237,18 @@ export function Profile({
   // handed over beside it.
   const modelledDrawn = rays ? modelledRaysIn(rays).map((ray) => ray.datastreamId) : [];
   const labels = served ? sourceLabels(served.sources) : [];
-  // The palette is the instrument's, not the served array's — see `Ray.paletteSlot`. Computed
-  // once here and passed down rather than derived per band, so the bar and the swatch beside its
-  // row cannot disagree about which colour a source has.
-  const slots = paletteSlots(served?.sources ?? []);
+  // The palette is the instrument's, not the served array's — see `Ray.paletteSlot`. Taken off
+  // the ray set the map drew rather than derived here, which is what the `rays` prop's docstring
+  // above asks for and what this line used to do the opposite of: `paletteSlots(served.sources)`
+  // a second time, feeding the bands, while the numbers table below read `ray.paletteSlot`.
+  //
+  // **Empty, not absent, where there is no ray set.** Gating `bandsFor` on the slots existing
+  // took the *background* bands with them: with the per-source document refused there is no ray
+  // set, and those three bands are the level's own `shares` and read no slot at all. That is the
+  // fault this region already fixed once — a refused field taking the numbers that do not read
+  // it — reintroduced by the guard. Where there are no sources there are no slots to disagree
+  // about, so an empty table is not a second derivation of anything.
+  const slots = rays?.slots ?? NO_SOURCES;
   const exhausted = served ? paletteExhausted(served.sources.length) : false;
 
   return (
@@ -305,9 +316,11 @@ export function Profile({
 
       {exhausted && (
         <p className="forecast-column-refused">
-          this column carries more sources than the palette has distinct entries, so two of them
-          share a colour and a hatch. The figures beneath each level are what separates them, and
-          this notice is here rather than a quiet repetition.
+          this column carries more sources than the palette has distinct hatches, so two of them
+          are drawn with the same one. Sources of one instrument already share a colour by design
+          — the hatch is what tells them apart — so beyond this count the ordinal and the figures
+          beneath each level are what separates them, and this notice is here rather than a quiet
+          repetition.
         </p>
       )}
 

@@ -103,8 +103,15 @@ export function spendAttempt(spent: number, outcome: 'answered' | 'absent' | 're
  *
  * By value, because the grid is rebuilt from the holding's manifest on every cycle and a fresh
  * object literal is a fresh dependency for anything keyed on it.
+ *
+ * **Exported for the test that walks `ColumnGrid`'s own keys.** Hand-written field equality is
+ * complete only against the shape it was written for: it names five members and `ColumnGrid` has
+ * five, and nothing would fail if a sixth arrived. The failure would be silent and would look
+ * like a fix — either the duplicate full-grid area query per cycle coming back, or a stale grid
+ * held across a genuine axis change — so the test perturbs every key the type actually carries
+ * rather than the five this function happens to know about.
  */
-function sameGrid(standing: ColumnGrid | undefined, fresh: ColumnGrid): boolean {
+export function sameGrid(standing: ColumnGrid | undefined, fresh: ColumnGrid): boolean {
   if (!standing) return false;
   return (
     standing.depthsM.length === fresh.depthsM.length &&

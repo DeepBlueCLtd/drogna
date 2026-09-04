@@ -11,19 +11,19 @@
   "warmed": "stepped in bursts of 60 ticks at rate 0 until 3 analysis cycles had published (20 bursts)",
   "viewport": {
     "width": 2560,
-    "height": 1213
+    "height": 1250
   },
   "image_size": {
     "width": 816,
-    "height": 1173
+    "height": 1211
   },
   "element_box": {
     "width": 815,
-    "height": 1172
+    "height": 1209
   },
   "browser": {
     "name": "chromium",
     "version": "141.0.7390.37"
   },
-  "caption": "The forecast tab's centre region with a water column open: the four provenance shares at 0 m, the rays to the six instrument-sources that reached the picked column, the depth profile, and the table of what produced each width."
+  "caption": ""
 }

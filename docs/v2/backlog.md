@@ -1,20 +1,20 @@
 # Outstanding work in drogna, in the order it should be done
 
-*Read against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.
-The five P1 lines this document identified are discharged on the branch that carries it;
-the counts below are stated as of that branch.*
+*Triaged against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.
+The count was retaken from the tree at feature 125, on 4 September 2026, and only the count:
+the prose below still argues from the triage.*
 
 Seventy unticked task lines sat across the V2 feature specs when this triage began. Read
-against the tree rather than the record, most were not work: over half belong to a feature
-that is complete on an open pull request, and twenty were declined on purpose and should
-stay declined. Five have since been discharged, leaving **sixty-five**.
+against the tree rather than the record, most were not work: over half belonged to a feature
+that was complete on an open pull request, and twenty were declined on purpose and should
+stay declined. **#107 has since merged**, so feature 123's lines are gone and feature 124's
+are in the tree; the count is now 59 and the table below is where it is broken down.
 
 **This file is a dated snapshot, and the task lines are the authority.** Where the two
 disagree, the lines win and this file is wrong. It carries no gate — no check in
-`scripts/gates.registry` reads `docs/v2/` — so it will drift, and the counts below are
-already false the moment #107 merges: the 65, the −37, P0 in its entirety, and the note that
-feature 124's file is not yet on `main` all die with that merge. (Feature 124 stays unstarted
-— the merge ticks none of its 35 lines.) Regenerate the counts with
+`scripts/gates.registry` reads `docs/v2/` — so it will drift, and it did: this paragraph used
+to say the counts would be false the moment #107 merged, and then #107 merged and they were,
+for a day, until feature 125 retook them. P0 died with that merge. Regenerate the counts with
 `grep -hcE '^- \[ \] ' specs/1*/tasks.md | paste -sd+ | bc` rather than trusting the table —
 `grep -c` over several files reports per file and never prints the total.
 
@@ -53,8 +53,10 @@ what is left.
 The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.
 
-Feature 124 is specified on PR #107 and unstarted, at 35 task lines. It is not in the count
-because its file is not on `main` yet.
+Feature 124 is merged and partly done: 36 task lines, 8 ticked, 28 unticked. Those 28 are the
+bulk of what the retaken count holds and are the first place to look for real work. This
+paragraph used to say the feature was unstarted at 35 lines and not in the count; all three
+were true before #107 merged and none is now.
 
 ---
 

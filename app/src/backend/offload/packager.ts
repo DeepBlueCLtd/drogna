@@ -8,10 +8,13 @@
  * departure on its declared topic. No real transfer and no verified-receipt
  * eviction until V3: the ledger states beyond 'staged' hold zero, honestly.
  *
- * A reader may ask for a window now (FR-65). The prompt stages over the release this
- * packager last heard — it does not invent one, and with nothing released yet it says
- * so — and it is answered under exactly the rules a released run is answered under:
- * declined at the staging bound, declined where the interval holds no measurements.
+ * A reader may ask for a window now (FR-65). The prompt stages over the forecast the coverage
+ * store says stands — it does not invent one, and with nothing standing it says so — and it is
+ * answered under exactly the rules a released run is answered under: declined at the staging
+ * bound, declined where the interval holds no measurements. It reads the store rather than
+ * remembering the last release it heard because since feature 125 there may not have been one:
+ * a start condition whose artefact carries the forecast eras holds the model runner back for
+ * the whole pre-roll, and `returning`'s script prompts for a package inside it.
  * The only thing the prompt changes is where the measurement interval ends: at the
  * current tick rather than at the release's. A bundle nobody can score is not staged,
  * prompted or not, and that decline is half the reason this control is worth having.
@@ -51,22 +54,18 @@ export class OffloadPackager {
   private simTime = { value: '', tick: 0 };
   private intervalStartTick = 0;
   private stagedBundles: StagedBundle[] = [];
-  /** The last release heard: what a prompted window is staged over. */
   /**
    * The run a bundle has actually been staged for.
    *
-   * Kept apart from `lastPublished`, which is only "the run this component has *heard* of".
-   * The two diverge on the path this feature adds: through a replayed pre-roll nothing is
-   * announced at all, so a bundle staged from a reader's prompt — read out of the store —
-   * left `lastPublished` unset. A dedupe keyed on the announcement would then have let the
-   * *next* restatement of that same run stage it a second time.
-   *
-   * The first attempt did key on `lastPublished` and looked right, because the test covering
-   * it restarted the runner in a **live** run, where the announcement handler had set the
-   * field — so the guard worked and the path that needed it was never exercised. Keyed on
-   * what was actually staged, a restatement of a run already bundled is a no-op on both
-   * paths: measured, restarting the runner after a replayed open leaves the count where it
-   * was, on the live run and the snapshot-backed one alike.
+   * A first attempt kept a separate `lastPublished` — "the run this component has *heard*
+   * of" — and deduped on that. It looked right, because the test covering it restarted the
+   * runner in a **live** run, where the announcement handler had set the field; on the path
+   * that needed the guard, a replayed pre-roll announces nothing, so the field stayed unset
+   * and the next restatement would have staged the run a second time. That field is gone: the
+   * prompt reads the store directly, so "heard of" was never the question. Keyed on what was
+   * actually staged, a restatement of a run already bundled is a no-op on both paths —
+   * measured, restarting the runner after a replayed open leaves the count where it was, on
+   * the live run and the snapshot-backed one alike.
    *
    * What this deliberately does **not** suppress is the first staging of a run this component
    * had not heard of. A replayed run learns of the standing forecast when the model runner
@@ -162,7 +161,7 @@ export class OffloadPackager {
       // believing the run has no forecast at all. `returning`'s card promises a staged
       // package and its script prompts for one mid-pre-roll, at a tick where the runner is
       // held back; before this line it declined, and the Offload surface told the reader
-      // nothing had been released while the store held eight forecasts.
+      // nothing had been released while the store held four forecasts and their spread fields.
       //
       // So the store is consulted before the ledger is written: what stands is a fact about
       // the inventory, and reading it is the same resumption rule the environment generator
@@ -198,9 +197,6 @@ export class OffloadPackager {
    * interval — is decided by the rules that were already here.
    */
   private stage(published: StandingRun, uptoTick: number): void {
-    // Recorded before the bound check below, so a run declined for want of staging room is
-    // not staged again by the next announcement of the same run.
-    this.stagedForRunId = published.run_id;
     const windowIndex = this.stagedBundles.length + this.declined.length;
     if (!this.producing || this.stagedBytes >= this.config.staging_bound_bytes) {
       // At the bound with nothing evictable — and in V2 nothing is ever
@@ -266,6 +262,14 @@ export class OffloadPackager {
       },
     };
 
+    // Recorded here and not at the top of this method, which is where it was: the three
+    // declines above return before this line, and setting it ahead of them meant a *declined*
+    // window recorded the run as staged. A reader whose `offload-now` prompt landed in an
+    // interval holding no measurements would then have the model runner's restatement of that
+    // same run suppressed as a duplicate, and the run would never get a bundle at all — the
+    // "zero staged bundles against a live run's five" outcome FR-125-05 exists to prevent,
+    // one configuration edit away. The field is named for what was staged; now it holds it.
+    this.stagedForRunId = published.run_id;
     this.stagedBundles.push({ manifest, sibling, fieldByteLength: holding.descriptor.field.byte_length });
     this.stagedBytes += holding.descriptor.field.byte_length;
     this.intervalStartTick = uptoTick;

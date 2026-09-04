@@ -16,7 +16,7 @@
  * spends the visit believing no forecast exists. Measured before this existed: `returning`
  * opened with **zero** staged bundles against a live run's five, its card promising "a
  * package staged for offload" while the Offload surface told the reader nothing had been
- * released and the timeline drew eight forecasts beside it.
+ * released and the timeline drew all four beside it.
  *
  * **This is a reading of the store, not a new claim about the run.** Every field comes off
  * the descriptor the model runner published and the manifest embedded in it: the run id, the

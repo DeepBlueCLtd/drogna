@@ -281,7 +281,7 @@ export class ModelRunner {
    * The second was measured and is why this exists. `returning`'s card promises "a package
    * staged for offload, with the measurement geometry beside it"; replaying its artefact
    * produced **zero** staged bundles against a live run's five, and the Offload surface told
-   * the reader nothing had been released while the store held eight forecasts and the
+   * the reader nothing had been released while the store held four forecasts and their spread fields and the
    * timeline was drawing them.
    *
    * **Reconstructed from what this component itself wrote, and by this component.** Every

@@ -456,7 +456,7 @@ describe('the start conditions (feature 120)', () => {
    *    geometry beside it". Its script prompts for one mid-pre-roll, at a tick where the
    *    runner is held back, and the packager declined: **zero** staged bundles against a live
    *    run's five, with the Offload surface telling the reader nothing had been released
-   *    while the store held eight forecasts and the timeline drew them.
+   *    while the store held four forecasts and their spread fields and the timeline drew them.
    *  - The scheduler, counting from a request nobody answered rather than from the standing
    *    forecast's validity, reached its next run at 611, 1,272, 1,514 and 1,790 ticks where a
    *    live run of the same conditions reaches it at 599, 1,794, 1,080 and 639.
@@ -542,10 +542,9 @@ describe('the start conditions (feature 120)', () => {
       // The card's promise, where a card makes one. `returning` is the condition whose script
       // prompts for a package mid-pre-roll, at a tick where the model runner is held back.
       if (condition.id === 'returning') {
-        const offload = page.offload as unknown as { stagedBundles: unknown[]; declined: string[] };
         expect(
-          offload.stagedBundles.length,
-          `returning's card promises a staged package and the replayed run staged none: ${offload.declined.join('; ')}`,
+          page.offload.staged().length,
+          `returning's card promises a staged package and the replayed run staged none: ${page.offload.declined.join('; ')}`,
         ).toBeGreaterThan(0);
       }
       const pageCadence = await ticksToNextForecast(page, limit);

@@ -382,19 +382,40 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
     await act(async () => {
       runtime.clock.tickOnce();
     });
-    // Nothing yet: the cycle's announcement was made before this panel existed.
-    expect(document.querySelector('.forecast-share-map')).toBeNull();
+    for (let flush = 0; flush < 6; flush++) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
 
+    // **This used to assert the field was still undrawn here, and that was the fault, not the
+    // requirement.** The restatement closed the gap for a console that waits one cadence; it
+    // could not close it for a console that waits for ever, which is what a reader gets when the
+    // analyst has nothing to restate — a start condition restores the coverage store and not the
+    // analyst's memory, so on a snapshot-seeded visit there is no standing analysis in it and no
+    // restatement is ever made. Reported from a running instance: three analyses in the store and
+    // the region saying none had been announced. The console reads what stands off the inventory
+    // now, so the field is there at once, and the region says it read it rather than heard it.
+    expect(
+      document.querySelector('.forecast-share-map'),
+      'the console could not read a standing analysis the store already held',
+    ).toBeTruthy();
+    expect(screen.getByTestId('column-analysis-adopted').textContent).toMatch(/read from the store/);
+
+    // And the restatement still supersedes it: what this console is told outranks what it went
+    // and looked up, because the announcement is the current cycle and the adopted one is
+    // whatever was last published before anyone was listening.
     await act(async () => {
       for (let i = 0; i < config.analyst.restate_every_ticks + 2; i++) runtime.clock.tickOnce();
     });
     await act(async () => {
       await Promise.resolve();
     });
+    expect(document.querySelector('.forecast-share-map')).toBeTruthy();
     expect(
-      document.querySelector('.forecast-share-map'),
-      'the analysis was never restated, so the field stayed undrawn',
-    ).toBeTruthy();
+      screen.queryByTestId('column-analysis-adopted'),
+      'the region still says it read the analysis after being told one',
+    ).toBeNull();
   });
 
   it('states a feature it could not recover rather than leaving it out of the drawing', async () => {

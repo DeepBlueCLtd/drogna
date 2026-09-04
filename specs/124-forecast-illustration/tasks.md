@@ -1273,6 +1273,25 @@ the part worth recording, because each was a sentence asserting a property the c
       analysis has been announced yet"; after: 1920 cells, six chips, and the region saying it read
       the analysis from the store.
 
+- [x] T038 **The full suite caught the adoption fix breaking an existing test, and the test was
+      the thing that was wrong.** *a console that opens after an analysis can still read a column
+      from it* asserted, in its middle, that the field was **still undrawn** before the analyst's
+      next restatement. That was a description of the old mechanism rather than of the
+      requirement: the restatement closes the gap for a console that waits one cadence and cannot
+      close it for one that waits for ever, which is what a reader gets when the analyst has
+      nothing to restate. The test's own headline — that such a console can read a column — is
+      what the requirement says, and the fix makes it true at once instead of a cadence later. So
+      the middle assertion is replaced by the new truth and by a check that an announcement still
+      supersedes what was looked up. Watched failing with the adoption removed: *"the console
+      could not read a standing analysis the store already held: expected null to be truthy"*.
+
+      **And the failure arrived disguised.** It surfaced as `TypeError: Cannot read properties of
+      undefined (reading 'name')` with no stack — thrown inside chai's own pretty-printer
+      (`inspectClass`) while formatting the failure message for an SVG element. The assertion that
+      actually failed was an ordinary `toBeNull()`. Recorded because the next person to fail an
+      assertion against a DOM node in this suite will lose the same twenty minutes chasing a
+      TypeError that is not theirs: wrap the test body and print `e.stack`, and chai names itself.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

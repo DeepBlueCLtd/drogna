@@ -42,7 +42,7 @@
  * bar, which would claim the first while meaning any of the three.
  */
 import type { AnalysisContributions } from '../../generated/types.js';
-import { backgroundRaysIn, contributionResidual, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
+import { backgroundRaysIn, levelAtDepth, sourceLabels, type Ray, type RaySet } from './rays.js';
 import { BACKGROUND_SOURCES, MEASUREMENT, instrumentAt, paletteExhausted, type SourceKey } from './shares.js';
 
 export interface ProfileLevel {
@@ -83,6 +83,12 @@ export interface ProfileProps {
    * row showing as pressed, and a caption reading "re-weighted to 1 m". That is the fault
    * T022l fixed in the region, left standing in the type.
    */
+  /**
+   * Whether the map above is drawn. Only the sentence that says "the rays above" depends on it:
+   * the table, the caption and FR-125's notice are the served document's own arithmetic and are
+   * shown whether or not the field behind the rays could be fetched.
+   */
+  readonly mapped: boolean;
   readonly selectedLevel: number | undefined;
   readonly onSelectLevel: (depthM: number | undefined) => void;
 }
@@ -194,6 +200,7 @@ export function Profile({
   levels,
   contributions,
   rays,
+  mapped,
   selectedLevel,
   onSelectLevel,
 }: ProfileProps) {
@@ -218,10 +225,11 @@ export function Profile({
         comparable within a level; the figures are comparable between them.
       </p>
 
-      {/* `rays` as well as `served`, because the sentence is about the map: with the area query
-          refused there is a served column and no field to draw on, so this stated what "the rays
-          above" showed over an empty space. */}
-      {served && rays && (
+      {/* `mapped` as well as `served`, because this sentence alone is about the map: with the
+          area query refused there is a served column and no field to draw on, so it stated what
+          "the rays above" showed over an empty space. Everything else below is the document's
+          own arithmetic and does not wait on a field. */}
+      {served && rays && mapped && (
         <p className="forecast-column-selected" aria-live="polite">
           {selectedLevel === undefined ? (
             <>
@@ -347,6 +355,13 @@ export function Profile({
       {/* FR-130: the two numbers behind any contribution, stated in the region it is drawn in.
           Under the profile rather than in a tooltip, for the reason the map's readout is: it
           cannot be clipped at a phone's width, and a screen reader meets it in document order. */}
+      {/* **Gated on the served column, not on the ray geometry.** These were `{rays && …}`, and
+          `rays` is undefined whenever the *slab* is — so a reader who changed to a depth whose
+          area query was refused lost the FR-130 table, the SC-001 caption and the FR-125 notice
+          along with the map, silently: the only message on the page named the refused *field*,
+          and none of these four surfaces reads the field. They are computed from the contributions
+          document, which is still in hand and still drawing the bands one element above. Only the
+          rays' geometry needs the slab, and `tableRays` is what carries the distinction. */}
       {rays && rays.rays.length > 0 && (
         <table className="forecast-column-numbers" data-testid="contribution-numbers">
           <caption>
@@ -398,12 +413,13 @@ export function Profile({
         <p className="forecast-column-caption">
           {rays.reachedCount} of this column’s {rays.rays.length} source
           {rays.rays.length === 1 ? '' : 's'} reached {selectedLevel === undefined ? 'it' : 'that level'}, contributing{' '}
-          {/* Summed over the rays that are drawn, through the same function SC-001 is asserted
-              with. This printed `ω − remainder`, which is the published weight rearranged: it
-              agrees with the drawn rays exactly when the identity holds, so a drawing that had
-              lost one would have gone on printing a total that included it. The number now says
-              what is on the screen. */}
-          {(contributionResidual(rays).drawn - rays.remainder).toFixed(4)} between them, with{' '}
+          {/* Summed over the rays themselves. This printed `ω − remainder`, which is the
+              published weight rearranged: it agreed with the drawn set exactly when SC-001's
+              identity held, so a surface that had lost a ray would have gone on printing a total
+              that included it. Routing it through `contributionResidual` was the first
+              correction and was worse — that function adds the remainder and this expression
+              subtracted it again, machinery around a sum. */}
+          {rays.rays.reduce((total, ray) => total + ray.contribution, 0).toFixed(4)} between them, with{' '}
           {rays.remainder.toFixed(4)} more from observations beyond its reach — coupling the gain
           carries through the inverse, which has no position and so is a band here and never a
           ray. Together they are ω = {rays.observationWeight.toFixed(4)}, the weight this cycle’s

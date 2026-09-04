@@ -7,9 +7,20 @@
  * in the profile — is exactly the kind of duplication this repository has paid for before.
  *
  * **The instruments** are feature 124's sources: the datastreams whose observations the gain
- * actually weighed. They are a different vocabulary and get different colours deliberately, so
- * a reader never has to wonder whether the green in the profile's baseline and the green in a
- * ray mean the same thing. Colour is not the only carrier for either: a ray carries its
+ * actually weighed. They are a different vocabulary and get different hues deliberately, so a
+ * reader in colour never has to wonder whether the green in the profile's baseline and the green
+ * in a ray mean the same thing.
+ *
+ * **In greyscale the hues do not separate them, and saying otherwise was the claim that failed.**
+ * Measured with the shell's own `contrast`, `archive` `#3987e5` against instrument slot 1
+ * `#e0584a` comes to **1.019** — one grey, twice — and three other cross-vocabulary pairs are
+ * worse than the worst pair *within* the instrument ramp, which the test below holds to a derived
+ * floor. Two such bands sit side by side in one stacked bar, so this is not theoretical. What
+ * separates them without colour is the **hatch angle**: the four shares are odd multiples of 15°
+ * and the six instruments are multiples of 30°, so no share direction can equal an instrument's
+ * however either list grows, and `greyscale.test.ts` asserts that of the two lists. Six ordered
+ * hues cannot also clear a contrast bound against four more; the texture is what carries it, and
+ * that is stated here rather than assumed. Colour is not the only carrier for either: a ray carries its
  * instrument's dash, a profile band carries its hatch angle, the legends name them, and every
  * figure is printed in text — which is what SRD-v2 FR-138 requires.
  *
@@ -23,12 +34,24 @@
  * The four shares, in the analyst's own storage order, which never changes and is never cycled.
  * Hues are the validated categorical steps for a dark surface; `pattern` names the hatch that
  * carries the same identity without colour.
+ *
+ * **The angle is here rather than computed from the position, and that is a fault being fixed.**
+ * The map drew each share's hatch at `index * 45` — 0°, 45°, 90°, 135° — inside the JSX, while
+ * `INSTRUMENTS` below hatch at multiples of 30 starting at 0. Slots 0 and 3 therefore collided
+ * exactly with archive and measurement, in one region, one surface above the other, which is the
+ * confusion the two vocabularies are given different textures to avoid. Worse, the check written
+ * to hold that line asserted `!('angle' in source)` — the angles were not on `SOURCES` to be
+ * seen, so it tested a key name and passed whatever the map drew.
+ *
+ * The four are now odd multiples of 15, which no multiple of 30 can equal, so a share hatch and
+ * an instrument hatch cannot land on the same direction however either list grows; and
+ * `greyscale.test.ts` asserts that of the two lists rather than of a property name.
  */
 export const SOURCES = [
-  { key: 'archive', label: 'archive', hue: '#3987e5', pattern: 'hatch-archive' },
-  { key: 'departure', label: 'departure', hue: '#d95926', pattern: 'hatch-departure' },
-  { key: 'measurement', label: 'measurement', hue: '#199e70', pattern: 'hatch-measurement' },
-  { key: 'model', label: 'model', hue: '#c98500', pattern: 'hatch-model' },
+  { key: 'archive', label: 'archive', hue: '#3987e5', pattern: 'hatch-archive', angle: 15 },
+  { key: 'departure', label: 'departure', hue: '#d95926', pattern: 'hatch-departure', angle: 75 },
+  { key: 'measurement', label: 'measurement', hue: '#199e70', pattern: 'hatch-measurement', angle: 105 },
+  { key: 'model', label: 'model', hue: '#c98500', pattern: 'hatch-model', angle: 165 },
 ] as const;
 
 export type SourceKey = (typeof SOURCES)[number]['key'];
@@ -42,8 +65,15 @@ export type SourceKey = (typeof SOURCES)[number]['key'];
  */
 export const BACKGROUND_SOURCES = SOURCES.filter((source) => source.key !== 'measurement');
 
-/** The measurement share itself, the one the background is not. */
-export const MEASUREMENT = SOURCES.find((source) => source.key === 'measurement') ?? SOURCES[0];
+/**
+ * The measurement share itself, the one the background is not.
+ *
+ * Indexed rather than searched with a fallback. `find(...) ?? SOURCES[0]` was the first spelling
+ * and it shipped a new unreachable branch in the same change that removed one — `SOURCES` is a
+ * literal that contains `measurement`, so the fallback could never be taken and was a second
+ * opinion about which share to use if it were.
+ */
+export const MEASUREMENT = SOURCES[2];
 
 /**
  * The instrument palette: hue, hatch angle and dash by position in the column's own source list.

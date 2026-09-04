@@ -41,7 +41,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
-import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, raysFor, underScale } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawableRays, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -77,13 +77,17 @@ interface Slab {
   readonly shares: Readonly<Record<SourceKey, readonly number[]>>;
 }
 
-/** Every share unknown, for a depth whose query was refused. */
-const EMPTY_SHARES: Readonly<Record<SourceKey, number>> = {
-  archive: Number.NaN,
-  departure: Number.NaN,
-  measurement: Number.NaN,
-  model: Number.NaN,
-};
+/**
+ * Every share unknown, for a depth whose query was refused.
+ *
+ * Built from `SOURCES` rather than written out, and spread by the two callers that fill it in
+ * rather than each writing the literal again. Three copies of "what unknown looks like" sat in
+ * this file, all of which had to agree — and the four keys are the analyst's storage order,
+ * which `SOURCES` is already the one statement of.
+ */
+const EMPTY_SHARES: Readonly<Record<SourceKey, number>> = Object.fromEntries(
+  SOURCES.map((source) => [source.key, Number.NaN]),
+) as Record<SourceKey, number>;
 
 interface Column {
   readonly longitude: number;
@@ -98,7 +102,7 @@ interface RangeBody {
 
 
 function sharesFrom(body: RangeBody, at: (values: number[]) => number): Record<SourceKey, number> {
-  const out = { archive: Number.NaN, departure: Number.NaN, measurement: Number.NaN, model: Number.NaN };
+  const out = { ...EMPTY_SHARES };
   for (const [name, range] of Object.entries(body.ranges ?? {})) {
     const key = sourceOf(name);
     if (key && range.values) out[key] = at(range.values);
@@ -200,8 +204,9 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    * The slab at the chosen depth, through an EDR **area** query — one request for the whole
    * field rather than one per cell, which is the query the standard has for exactly this.
    */
+  const provenanceOf = analysis?.collections.provenance;
   useEffect(() => {
-    if (!analysis || !grid || depthM === undefined) return;
+    if (!analysis || !provenanceOf || !grid || depthM === undefined) return;
     const token = ++wantedSlab.current;
     let cancelled = false;
     setBusy(true);
@@ -247,7 +252,17 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     return () => {
       cancelled = true;
     };
-  }, [analysis, grid, depthM, edrPrefix]);
+    // **The collection's name, not the analysis object, and this is FR-136 being kept rather
+    // than merely claimed.** `analysis` is the payload of `analysis_standing`, which the analyst
+    // republishes every `restate_every_ticks` with a fresh `sim_time` — a new object each time,
+    // and therefore a new dependency each time. Measured: one full-grid EDR area query, same
+    // collection, same `z`, every 60 ticks for as long as the tab is open, under a header
+    // saying "not on a tick, not on an announcement, not on a timer". `SC-010: nothing polls`
+    // could not see it, because it measures a window in which no analysis exists at all.
+    //
+    // A restatement carries the same collection names, so keyed on the name it changes nothing
+    // and a genuinely new cycle asks once — which is what the sentence above always meant.
+  }, [provenanceOf, grid, depthM, edrPrefix]);
 
   /** The water column under a picked cell, through one position query per depth. */
   const readColumn = useCallback(
@@ -339,58 +354,16 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
     for (let x = 0; x < slab.longitudes.length; x += stepX) cols.push(x);
     const rows: number[] = [];
     for (let y = 0; y < slab.latitudes.length; y += stepY) rows.push(y);
-    return { cols, rows, width: slab.longitudes.length };
+    return { cols, rows };
   }, [slab]);
 
   /**
-   * Where a longitude and latitude fall in the drawn map's coordinates, which are one unit per
-   * drawn cell.
-   *
-   * **Interpolated, and the previous version's snapping is why.** This used to snap a value to
-   * the nearest served axis entry and then that entry to the nearest *drawn* column, on the
-   * argument that "two served cells can share one drawn column and the line lands within that".
-   * Measured on the shipped loitering condition, that argument's conclusion was wrong: the
-   * platform's sources sit within a cell or two of the column they reach, the map is thinned by
-   * two, and **four of six rays came out with `x1 === x2` and `y1 === y2`** — including the one
-   * carrying the whole width encoding. A line of zero length is not a thin line, it is no line,
-   * and nothing in the tree measured one: the SC-003 assertion compared `"23.5,20.5"` to itself
-   * and the containment check could not fail because the snapping structurally returned a cell
-   * centre.
-   *
-   * So the position is carried through continuously: a fractional index on the served axis, by
-   * linear interpolation between the two entries that bracket the value, divided by the thinning
-   * step. Thinning still costs resolution — a served cell is half a drawn unit at step 2 — but it
-   * no longer costs the line its existence. The figures beneath still carry what the picture
-   * cannot: the separation stated is the analysis's own, cell centre to cell centre.
-   *
-   * A value outside the axis is clamped to the drawn extent. The axes carry cell *centres* and
-   * an observation sits inside a cell, so this is at most half a cell and only ever at the grid's
-   * rim; it is a clamp rather than an invention because the alternative — a marker outside the
-   * map — reads as a place the source is not.
+   * `placeOn` lives in `rays.ts`, beside the arithmetic it belongs to, and this is the reason it
+   * moved there: it was a `useCallback` in this file — a pure function of three arguments that
+   * no unit test could reach — and its predecessor drew four of six rays as points. `rays.ts`
+   * opens by arguing that the thing the picture is a picture *of* must be testable on its own,
+   * and the one function that had just been got wrong was the one exempt from it.
    */
-  const placeOn = useCallback(
-    (axis: readonly number[], kept: readonly number[], value: number): number | undefined => {
-      if (axis.length === 0 || kept.length === 0) return undefined;
-      let served = 0;
-      if (axis.length > 1) {
-        const ascending = axis[axis.length - 1] >= axis[0];
-        served = ascending === (value < axis[0]) ? 0 : axis.length - 1;
-        for (let index = 0; index < axis.length - 1; index++) {
-          const from = axis[index];
-          const to = axis[index + 1];
-          if (value >= Math.min(from, to) && value <= Math.max(from, to)) {
-            served = to === from ? index : index + (value - from) / (to - from);
-            break;
-          }
-        }
-      }
-      // `kept` is `0, step, 2*step, …` by construction, so a served index divided by the step is
-      // the drawn column it falls in, fraction and all.
-      const step = kept.length > 1 ? kept[1] - kept[0] : 1;
-      return Math.min(Math.max(served / step + 0.5, 0), kept.length);
-    },
-    [],
-  );
 
   /**
    * The rays for the picked column, at the chosen level (FR-122, FR-128).
@@ -402,13 +375,30 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
    * there is no third coordinate to give it.
    */
   const served = typeof contributions === 'object' ? contributions : undefined;
+
+  /**
+   * The ray *set* — what each source contributed — which needs the served column and nothing
+   * else.
+   *
+   * Split from the geometry below, and the split is a fault being fixed. The two used to be one
+   * memo that returned `undefined` unless a **slab** was also in hand, and the profile's numbers
+   * table, its SC-001 caption and FR-125's named condition were all gated on it. None of the
+   * three reads the field: they are the served document's own arithmetic. So a reader who moved
+   * to a depth whose area query was refused lost the map — correctly, it could not be drawn —
+   * and lost the two numbers FR-130 requires along with it, with the only message on the page
+   * naming the refused field and nothing naming what had gone with it.
+   */
+  const raySet = useMemo(() => (served ? raysFor(served, selectedLevel) : undefined), [served, selectedLevel]);
+
   const rays = useMemo(() => {
-    if (!served || !slab || !drawn || !column) return undefined;
-    const set = raysFor(served, selectedLevel);
+    if (!served || !raySet || !slab || !drawn || !column) return undefined;
+    const set = raySet;
     const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
     const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
     if (x === undefined || y === undefined) return undefined;
-    const drawnRays = set.rays.flatMap((ray) => {
+    // `drawableRays`, not `set.rays`: FR-125's exclusion belongs to the picture and not only to
+    // the caption beneath it. The reasoning is in `rays.ts` beside the filter.
+    const drawnRays = drawableRays(set).flatMap((ray) => {
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
       const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
       if (sourceX === undefined || sourceY === undefined) return [];
@@ -419,7 +409,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
       return [{ ray, x: sourceX, y: sourceY, instrument: instrumentAt(ray.sourceIndex) }];
     });
     return { set, from: { x, y }, drawn: drawnRays };
-  }, [served, slab, drawn, column, selectedLevel, placeOn]);
+  }, [served, raySet, slab, drawn, column]);
 
   /** How many rays are at the width floor rather than at their own width (FR-122). */
   const underScaleCount = rays ? rays.set.rays.filter(underScale).length : 0;
@@ -427,7 +417,7 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
   const sharesAt = useCallback(
     (row: number, col: number): Record<SourceKey, number> => {
       const index = row * (slab?.longitudes.length ?? 0) + col;
-      const out = { archive: Number.NaN, departure: Number.NaN, measurement: Number.NaN, model: Number.NaN };
+      const out = { ...EMPTY_SHARES };
       if (!slab) return out;
       for (const source of SOURCES) out[source.key] = slab.shares[source.key][index] ?? Number.NaN;
       return out;
@@ -580,14 +570,18 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
                   a solid block of colour at a glance and as a direction on inspection: the
                   colour carries identity for most readers and the angle carries it for the rest,
                   which is what the ΔE 8.4 adjacent pair obliges. */}
-              {SOURCES.map((source, index) => (
+              {SOURCES.map((source) => (
                 <pattern
                   key={source.pattern}
                   id={source.pattern}
                   patternUnits="userSpaceOnUse"
                   width="0.5"
                   height="0.5"
-                  patternTransform={`rotate(${index * 45})`}
+                  // The share's own declared angle, not `index * 45`. Computed from the position
+                  // it produced 0°, 45°, 90°, 135°, two of which are exactly an instrument's
+                  // hatch — and the angle was invisible to the test that claimed to hold the two
+                  // vocabularies apart, because it was never on `SOURCES` at all.
+                  patternTransform={`rotate(${source.angle})`}
                 >
                   <rect x="0" y="0" width="0.5" height="0.5" fill={source.hue} fillOpacity="0.45" />
                   <line x1="0" y1="0" x2="0" y2="0.5" stroke={source.hue} strokeWidth="0.18" />
@@ -790,7 +784,10 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
           latitude={column.latitude}
           levels={column.levels}
           contributions={contributions}
-          rays={rays?.set}
+          // The set, not the geometry: the profile's table and caption are the served
+          // document's arithmetic and must not vanish with the map.
+          rays={raySet}
+          mapped={rays !== undefined}
           selectedLevel={selectedLevel}
           onSelectLevel={setSelectedLevel}
         />

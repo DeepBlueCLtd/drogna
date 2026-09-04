@@ -650,7 +650,7 @@
 }
 
 /* The four kinds of band carry a shape as well as a colour: the background's three are plain,
-   what earlier cycles left is stippled, this cycle's sources are solid at full strength, and
+   what earlier cycles left is dimmed, this cycle's sources are solid at full strength, and
    the remainder is the one band that is not a place. Colour is never the only carrier. */
 .forecast-column-segment.is-earlier {
   opacity: 0.55;

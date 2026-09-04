@@ -51,8 +51,8 @@ with its figures printed underneath. At 0 m: archive 0.0%, departure −11.9%, m
 measurement from earlier cycles 0.5%, then this cycle's six sources at 39.2%, 3.7%, 39.4%, 1.6%,
 110.4% and −1.4%, and beyond this cell's reach 0.0% — summing to 100.0%. At 600 m, 800 m and
 1000 m an italic line states that no observation was within reach of that level, because the
-correlation reaches exactly zero beyond twice its half-width, and the bar is the departure
-forecast alone. At the foot a table of what produced each width: each source with its
+correlation reaches exactly zero beyond twice its half-width; the 600 m and 800 m bars are the
+departure forecast alone at 100.0%, and the 1000 m bar is departure 84.5% beside model 15.5%. At the foot a table of what produced each width: each source with its
 contribution, its separation from the cell in kilometres and in depth, its own declared error and
 the forecast's at that cell.](../assets/124-what-a-number-is-made-of.png)
 

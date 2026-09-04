@@ -94,6 +94,15 @@ async function pickAColumn(page: Page, prefix: string) {
     const header = await (await fetch(`${prefix}/${holding.holding_id}`)).json();
     if (!header.sources?.length) return { rays: 0, holding: holding.holding_id, why: 'the cycle assimilated nothing' };
     const want = header.sources[0].cell;
+    // **Polled for, not assumed.** The caller waits for the field before calling this, and that
+    // was still not enough: between the wait and the click the field can be re-rendered — a new
+    // cycle's slab arriving, a depth reset — and the picker reported "no drawn cell to click"
+    // about half the time at a phone's width. A function that needs cells waits for cells.
+    let drawn = document.querySelectorAll('rect.share-cell').length;
+    for (let wait = 0; wait < 60 && drawn === 0; wait++) {
+      await new Promise((settled) => setTimeout(settled, 200));
+      drawn = document.querySelectorAll('rect.share-cell').length;
+    }
     let nearest: SVGRectElement | undefined;
     let best = Infinity;
     for (const node of document.querySelectorAll('rect.share-cell')) {
@@ -306,36 +315,52 @@ try {
    * Nothing is re-warmed: the page is the one that was just shot, so the loop is warm, the column
    * is open and the resize is the only variable.
    */
+  // **The clock runs for this pass, and only for this pass.** The shot above is taken at rate 0
+  // and is the artefact; this is a layout measurement, and it needs a live loop rather than a
+  // deterministic instant. Stepping it was tried and does not work: crossing the breakpoint
+  // remounts the panel, the remounted panel draws nothing until the analyst restates, and any
+  // remount landing *after* the last step then waits for a restatement that a frozen clock never
+  // delivers — about half of runs failed with "no drawn cell to click" for exactly that reason,
+  // and no amount of polling wall time fixes a stopped simulation. Nothing here is recorded in
+  // the sidecar, so nothing here reads host time into an artefact.
+  //
+  // The rate is the configured maximum, not 1. At rate 1 a restatement is `restate_every_ticks`
+  // of *real* seconds away — 60 — so a remount landing between the wait and the click left the
+  // region blank for longer than any poll worth writing, and one run in six still failed. At the
+  // declared ceiling a restatement is about a second, so the recovery this pass depends on is
+  // fast rather than merely possible. The bound is read from the clock's own configuration
+  // (Constitution IV), never typed here.
+  const narrowRate = config.clock.max_rate;
+  const running = await page.evaluate(async (rate: number) => {
+    const response = await fetch('/api/ctl/clock/rate', { method: 'PUT', body: JSON.stringify({ rate }) });
+    return response.ok;
+  }, narrowRate);
+  if (!running) throw new Error(`the clock would not run at ${narrowRate} for the narrow pass`);
+
   const narrow: string[] = [];
   for (const size of NARROW_SIZES) {
     await page.setViewportSize(size);
     await page.waitForFunction((want: number) => window.innerWidth === want, size.width, { timeout: 15_000 });
-    // **Time is let through, and the reason is worth writing down because it nearly went in as a
-    // bug report.** Crossing the breakpoint changes presentation, which remounts the panel; the
-    // remounted panel subscribes to `analysis_standing` and the region reads "no analysis has
-    // been announced yet" until one arrives. With the clock pinned that is for ever, so the
-    // first version of this pass reported the region as broken at a phone's width. It is not:
-    // the analyst *restates* the standing declaration every `restate_every_ticks`, which is what
-    // a standing topic is for and is the same mechanism the run cost uses. Stepping that many
-    // ticks is what a second of a running clock would have done on its own.
-    await page.evaluate(
-      async ({ ticks, restate }: { ticks: number; restate: number }) => {
-        for (let stepped = 0; stepped < restate + ticks; stepped += ticks) {
-          await fetch('/api/ctl/clock/step', { method: 'POST', body: JSON.stringify({ ticks }) });
-        }
-      },
-      { ticks: stepTicks, restate: config.analyst.restate_every_ticks },
-    );
     // The narrow presentation puts regions behind disclosures, so a surface can be in the
-    // document and not on the screen — FR-011 working, not a fault, and why these are opened the
-    // way `shell/narrow.test.tsx` opens them before measuring.
-    await page.evaluate(() => {
-      for (const details of document.querySelectorAll('details')) details.open = true;
-    });
-    await page.waitForSelector('.forecast-share-map', { timeout: 60_000 });
-    // Picked again here: at a phone's width the shell changes presentation and the panel
-    // remounts, so the column open at the desk is not open on the phone. Measuring without
-    // re-picking measured an empty region and said the region held.
+    // document and not on the screen — FR-011 working, not a fault. Re-opened on every poll,
+    // because a remount recreates them closed.
+    await page.waitForFunction(
+      () => {
+        for (const details of document.querySelectorAll('details')) details.open = true;
+        const field = document.querySelector('.forecast-share-map');
+        return (
+          field !== null &&
+          document.querySelectorAll('rect.share-cell').length > 0 &&
+          field.getBoundingClientRect().height > 0
+        );
+      },
+      undefined,
+      { timeout: 120_000, polling: 250 },
+    );
+
+    // Picked again here: crossing the breakpoint remounts the panel, so the column open at the
+    // desk is not open on the phone, and measuring without re-picking measured an empty region
+    // and called the region sound.
     const there = await pickAColumn(page, config.shell.endpoints.contributions);
     if (there.rays === 0) {
       narrow.push(`${size.width}x${size.height}: no column could be opened (${there.why})`);

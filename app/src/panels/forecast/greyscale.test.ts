@@ -87,8 +87,19 @@ describe('the instrument palette without colour', () => {
     // profile band uses the angle, and neither depends on the hue being told apart.
     expect(new Set(INSTRUMENTS.map((instrument) => instrument.angle)).size).toBe(INSTRUMENTS.length);
     expect(new Set(INSTRUMENTS.map((instrument) => instrument.dash)).size).toBe(INSTRUMENTS.length);
-    // And the two vocabularies never collide on texture: a share is a flat band, an instrument
-    // is a hatched one, so a reader is never asked whether one green means the other's thing.
-    expect(SOURCES.every((source) => !('angle' in source))).toBe(true);
+    // **And the two vocabularies never collide on texture**, asked of the two lists of angles
+    // rather than of a property name. This read `SOURCES.every((source) => !('angle' in source))`
+    // and could not fail: the share hatch angles were computed as `index * 45` inside the JSX and
+    // were never on `SOURCES` to be found, so the assertion tested a key's absence while the map
+    // drew archive at 0° and measurement at 90° — exactly instrument slots 0 and 3, in the same
+    // region, one surface above the other.
+    const shareAngles = SOURCES.map((source) => source.angle);
+    expect(new Set(shareAngles).size, 'two shares hatch at the same angle').toBe(SOURCES.length);
+    for (const angle of shareAngles) {
+      expect(
+        INSTRUMENTS.some((instrument) => instrument.angle % 180 === angle % 180),
+        `a share hatches at ${angle}°, which is an instrument's own direction`,
+      ).toBe(false);
+    }
   });
 });

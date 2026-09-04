@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { AnalysisContributions, AnalysisContributionsSource } from '../../generated/types.js';
-import { backgroundRaysIn, contributionResidual, raysFor, sourceLabels } from './rays.js';
+import { backgroundRaysIn, contributionResidual, drawableRays, levelAtDepth, placeOn, raysFor, sourceLabels } from './rays.js';
 
 function source(
   id: string,
@@ -218,11 +218,23 @@ describe('the rays a column is made of', () => {
       source('a.cell-0', -11.4),
       source('d.cell-3', -11.0, 'shore-temperature-broadcast', 'modelled'),
     ];
-    const named = backgroundRaysIn(raysFor(admitted));
+    const set = raysFor(admitted);
+    const named = backgroundRaysIn(set);
     expect(named.map((ray) => ray.datastreamId)).toEqual(['shore-temperature-broadcast']);
     // And it is found by what it is, not by what it is called: the same source under any name
     // is still the background.
     expect(named[0].kind).toBe('modelled');
+
+    // **And it is not drawn**, which is what "not among the rays" says. Reporting it in a
+    // paragraph while the map drew it anyway put the guard on the sentence rather than on the
+    // surface — and the SRD's FR-123 amendment, which declines to build the docked marginal
+    // nodes, leans on this guard for the day an analyst admits a non-spatial source.
+    expect(drawableRays(set).map((ray) => ray.datastreamId)).not.toContain('shore-temperature-broadcast');
+    expect(drawableRays(set)).toHaveLength(set.rays.length - 1);
+    // It stays in the set the table and the ω identity are read from: it is part of what the
+    // gain weighed, and dropping it there would break SC-001 silently instead of loudly.
+    expect(set.rays).toHaveLength(3);
+    expect(drawableRays(raysFor(document()))).toHaveLength(3);
   });
 });
 
@@ -235,5 +247,108 @@ describe('telling two sources of one instrument apart', () => {
     // And a column where every instrument appears once keeps the plain names: the ordinal is
     // there to remove an ambiguity, not as decoration.
     expect(sourceLabels([source('a.cell-0', -11.4, 'temperature-050m')])).toEqual(['temperature-050m']);
+  });
+});
+
+describe('where a position lands on the drawn map', () => {
+  // The served axis of a five-cell grid, thinned by two: cells 0, 2 and 4 are drawn, so the map
+  // is three units wide and a served cell is half a unit.
+  const axis = [-11.4, -11.2, -11.0, -10.8, -10.6];
+  const kept = [0, 2, 4];
+
+  it('puts a cell centre at the centre of the drawn column it falls in', () => {
+    expect(placeOn(axis, kept, -11.4)).toBeCloseTo(0.5, 10);
+    expect(placeOn(axis, kept, -11.0)).toBeCloseTo(1.5, 10);
+    expect(placeOn(axis, kept, -10.6)).toBeCloseTo(2.5, 10);
+  });
+
+  it('interpolates between two axis entries rather than snapping to one', () => {
+    // **The fault this replaced.** Snapping put every one of these at 0.5 or 1.5, so two sources
+    // a cell apart shared a point and the ray between a column and its source had no length.
+    const between = [-11.3, -11.2, -11.1].map((value) => placeOn(axis, kept, value) as number);
+    expect(new Set(between).size, 'three distinct positions collapsed to fewer').toBe(3);
+    expect(between[0]).toBeCloseTo(0.75, 10);
+    expect(between[1]).toBeCloseTo(1.0, 10);
+    expect(between[2]).toBeCloseTo(1.25, 10);
+    // Monotone: moving east never moves the mark west.
+    expect(between[0]).toBeLessThan(between[1]);
+    expect(between[1]).toBeLessThan(between[2]);
+  });
+
+  it('reads a descending axis the same way, since a latitude axis may run either way', () => {
+    const down = [46.8, 46.6, 46.4, 46.2, 46.0];
+    expect(placeOn(down, kept, 46.8)).toBeCloseTo(0.5, 10);
+    expect(placeOn(down, kept, 46.0)).toBeCloseTo(2.5, 10);
+    expect(placeOn(down, kept, 46.5)).toBeCloseTo(1.25, 10);
+  });
+
+  it('clamps outside the axis to the drawn extent rather than marking a place off the map', () => {
+    // The axes carry cell centres and an observation sits inside a cell, so this is at most half
+    // a cell and only at the grid's rim. A mark outside the viewBox would read as a place the
+    // source is not.
+    expect(placeOn(axis, kept, -12)).toBe(0.5);
+    expect(placeOn(axis, kept, -9)).toBe(2.5);
+    for (const value of [-12, -9, -11.4, -10.6, -11.1]) {
+      const at = placeOn(axis, kept, value) as number;
+      expect(at).toBeGreaterThanOrEqual(0);
+      expect(at).toBeLessThanOrEqual(kept.length);
+    }
+  });
+
+  it('says nothing where there is no axis or nothing drawn, rather than answering zero', () => {
+    expect(placeOn([], kept, -11)).toBeUndefined();
+    expect(placeOn(axis, [], -11)).toBeUndefined();
+    // A one-entry axis is one place, and it is the middle of the only drawn column.
+    expect(placeOn([-11], [0], -11)).toBeCloseTo(0.5, 10);
+    expect(placeOn([-11], [0], 40)).toBeCloseTo(0.5, 10);
+  });
+});
+
+describe('matching a displayed depth to a level the document carries', () => {
+  function axis(depths: readonly number[]): AnalysisContributions {
+    const base = document();
+    return {
+      ...base,
+      levels: depths.map((depth, index) => ({ ...base.levels[0], depth_index: index, depth_m: depth })),
+    };
+  }
+
+  it('reads a non-uniform axis at the spacing it actually has, not the spacing at the top', () => {
+    // A fine near-surface axis coarsening with depth, which is the ordinary shape for an ocean
+    // model and which the masters do not forbid. Derived from the first gap alone the tolerance
+    // is 5 m, and every level below 20 m falls outside it — so the profile prints "the analysis
+    // carries no level at this depth" for levels the document plainly carries.
+    const coarsening = axis([0, 10, 20, 100, 300, 700]);
+    // Asked *off* the level, which is the only place a tolerance is visible at all — asking for
+    // the level's own depth matches under any tolerance, which is why the first version of this
+    // test passed with the fault planted and proved nothing.
+    //
+    // 320 m is 20 m from the 300 m level, whose own neighbours are 200 and 400 m away: a
+    // tolerance of 100 m, and a match. Derived from the *top* gap it is 5 m, and 320 m is a
+    // depth "the analysis does not carry" — for a level 20 m away on an axis whose steps down
+    // there are 400 m wide.
+    expect(levelAtDepth(coarsening, 320)?.depth_m, '320 m went unmatched on a 400 m step').toBe(300);
+    expect(levelAtDepth(coarsening, 660)?.depth_m).toBe(700);
+    for (const depth of [0, 10, 20, 100, 300, 700]) {
+      expect(levelAtDepth(coarsening, depth)?.depth_m, `${depth} m went unmatched`).toBe(depth);
+    }
+    // And it still refuses a depth between two levels, which is what the tolerance is for — up
+    // where the axis is fine, 35 m from the nearest level is not that level.
+    expect(levelAtDepth(coarsening, 55)).toBeUndefined();
+    expect(levelAtDepth(coarsening, 500)).toBeUndefined();
+  });
+
+  it('refuses a depth the document does not carry, on a uniform axis', () => {
+    const uniform = axis([0, 200, 400]);
+    expect(levelAtDepth(uniform, 200)?.depth_m).toBe(200);
+    // Inside half a spacing is this level; beyond it is no level at all.
+    expect(levelAtDepth(uniform, 290)?.depth_m).toBe(200);
+    expect(levelAtDepth(uniform, 800)).toBeUndefined();
+  });
+
+  it('answers only for its own depth when the document carries one level', () => {
+    const single = axis([400]);
+    expect(levelAtDepth(single, 400)?.depth_m).toBe(400);
+    expect(levelAtDepth(single, 0)).toBeUndefined();
   });
 });

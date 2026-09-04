@@ -517,8 +517,11 @@ the part worth recording, because each was a sentence asserting a property the c
       second navigation dropped the query string, so `DROGNA_FORECAST_START` had no effect and
       the shell was answering 503 when the evaluate fired. And `image_size` came off the
       element's box rather than the file, which is why the two disagreed by two pixels. All
-      fixed, the shot re-taken and reproducible byte-for-byte, and **added to CI** — it ran
-      nowhere, which is why four faults survived in it.
+      fixed, the shot re-taken, and **added to CI** — it ran nowhere, which is why four faults
+      survived in it. Two consecutive runs produced byte-identical PNGs with identical
+      provenance, which is an observation and not a check: nothing on disk compares the committed
+      artefact with a fresh one, here or for any of the estate's eight other blog assets. Said
+      plainly because the alternative is a claim about a check that does not exist.
 
       Two more checks that could not fail: the SC-005 loop tested a source id against the
       *share* vocabulary when a source id is `<datastream>.cell-<n>`, and the proportionality

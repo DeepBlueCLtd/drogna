@@ -185,9 +185,15 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       runtime.clock.tickOnce();
     });
     // Both still name 124, but neither names it for the whole region any more, and what each
-    // says is unbuilt has narrowed to something specific. The centre region reads the shares
-    // the analyst already publishes and names 124 for the rays alone; the right one draws the
-    // forecast's features and names 124 for the ensemble spread along the route.
+    // says is unbuilt has narrowed to something specific: the centre region names 124 for the
+    // **volume** — the rays and the profile are built and it says so — and the right one draws
+    // the forecast's features and names 124 for the ensemble spread along the route.
+    //
+    // The comment here used to say the centre region "names 124 for the rays alone", and the
+    // assertion below matched `/rays/` against it. That stopped being true when `stillToCome`
+    // was rewritten: the match now succeeds against a clause saying the rays *work*, so the
+    // check passed for the opposite of its stated reason. Matched on what each region actually
+    // names as missing.
     for (const region of ['volume', 'ahead']) {
       const section = document.querySelector(`[data-region="${region}"]`);
       expect(section?.textContent).toMatch(/not built/);
@@ -196,7 +202,7 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(section?.querySelector('canvas')).toBeNull();
     }
     expect(document.querySelector('[data-region="ahead"]')?.textContent).toMatch(/ensemble spread/);
-    expect(document.querySelector('[data-region="volume"]')?.textContent).toMatch(/rays/);
+    expect(document.querySelector('[data-region="volume"]')?.textContent).toMatch(/volume/);
   });
 
   it('FR-140: the help tour does not call a region unbuilt that the panel draws', async () => {
@@ -746,6 +752,76 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         expect(painted, 'an absent source’s marker is painted in the ground colour').not.toBe(ground);
         expect(marker.getAttribute('fill')).toBe('none');
       }
+    });
+
+    it('FR-136: a restatement of the standing analysis re-queries nothing', async () => {
+      // **The claim this holds, and why the existing one could not.** `ColumnProvenance`'s header
+      // says "not on a tick, not on an announcement, not on a timer". The slab effect depended on
+      // the `analysis` *object*, and the analyst republishes `analysis_standing` every
+      // `restate_every_ticks` with a fresh `sim_time` — a new object, so a new dependency, so one
+      // full-grid EDR area query a minute for as long as the tab is open.
+      //
+      // `SC-010: nothing polls` advances a window in which **no analysis exists at all**
+      // (`scheduler.max_interval_ticks` is far longer than the window it measures), so it has
+      // never been in a state where this could fail. This one warms until a field is drawn first,
+      // which is the state the fault lives in.
+      await toAField();
+      expect(document.querySelectorAll('rect.share-cell').length).toBeGreaterThan(0);
+
+      const before = fetched.length;
+      const areasBefore = fetched.filter((url) => url.includes('/area?')).length;
+      await act(async () => {
+        // Past a restatement, and well short of another analysis cycle.
+        for (let i = 0; i < config.analyst.restate_every_ticks + 5; i++) runtime.clock.tickOnce();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(
+        fetched.filter((url) => url.includes('/area?')).length,
+        `the field was re-queried on the restatement: ${fetched.slice(before).join(', ')}`,
+      ).toBe(areasBefore);
+      expect(fetched.length, `${fetched.length - before} fetch(es) on a restatement`).toBe(before);
+    });
+
+    it('FR-130: a refused field takes the map and leaves the numbers, which do not read it', async () => {
+      // **The fault.** The numbers table, the SC-001 caption and FR-125's named condition were
+      // all gated on the ray *geometry*, which is undefined whenever the slab is. None of the
+      // three reads the slab — they are the served column's own arithmetic — so a reader who
+      // moved to a depth whose area query was refused lost the two numbers FR-130 requires along
+      // with the map, and the only message on the page named the refused *field*.
+      const holding = await toAField();
+      const at = await reachedColumn(holding.holding_id);
+      await openColumnAt(at.longitude, at.latitude);
+      expect(screen.queryByTestId('contribution-numbers'), 'no table to lose').toBeTruthy();
+
+      // Refuse the field, and only the field: the column's own queries still answer.
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes('/area?')) {
+          return Promise.resolve(new Response('{"refused":"planted"}', { status: 503 }));
+        }
+        return passthrough(input, init);
+      }) as typeof globalThis.fetch);
+
+      const depths = [...document.querySelectorAll('[aria-label="depth"] button.forecast-chip')];
+      expect(depths.length, 'no depth to change to').toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(depths[depths.length - 1]);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // The map is gone, and the region says why.
+      expect(document.querySelector('svg.forecast-share-map rect.share-cell')).toBeNull();
+      expect(screen.getByTestId('column-provenance').textContent).toMatch(/refused/);
+      // The numbers are not, because they never came from the field.
+      const table = screen.queryByTestId('contribution-numbers');
+      expect(table, 'the numbers table went with the map it does not read').toBeTruthy();
+      expect(table?.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('column-profile').textContent).toMatch(/reached/);
     });
 
     it('SC-001, AT-07: the drawn contributions and the remainder sum to the weight the holding published', async () => {

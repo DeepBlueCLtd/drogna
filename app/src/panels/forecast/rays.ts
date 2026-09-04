@@ -122,16 +122,29 @@ export function levelAtDepth(
   for (const level of document.levels) {
     if (!nearest || Math.abs(level.depth_m - depthM) < Math.abs(nearest.depth_m - depthM)) nearest = level;
   }
-  // Nearest, but only if it is *this* level: half the spacing of the document's own axis is
-  // the widest a match can be and still be a match. A display depth with no level within that
-  // is a depth this document does not carry, and saying so is the point.
   if (!nearest) return undefined;
-  // Half the spacing of the document's own axis is the widest a match can be and still be one.
+  // Nearest, but only if it is *this* level: half the axis's own spacing **at that level** is the
+  // widest a match can be and still be one. A display depth with no level within that is a depth
+  // this document does not carry, and saying so is the point.
+  //
+  // The gap either side of the matched level, rather than the gap between the first two. Those
+  // are the same number on the shipped axis (0, 200, … 1000) and are not the same number on a
+  // non-uniform one — a fine near-surface axis coarsening with depth is the ordinary shape for an
+  // ocean model, and derived from the top gap the tolerance would be too tight for every level
+  // below the first coarsening: the profile would print "the analysis carries no level at this
+  // depth" for a level the document plainly carries. Nothing in the masters says the axis is
+  // uniform, so this reads the neighbours it actually has.
+  //
   // A document carrying a single level carries exactly that depth and no tolerance can be
-  // derived from it, so the spacing is nought and the match is exact — an `Infinity` there
-  // would make a one-level document answer for every depth asked of it.
-  const spacing =
-    document.levels.length > 1 ? Math.abs(document.levels[1].depth_m - document.levels[0].depth_m) : 0;
+  // derived from it, so the spacing is nought and the match is exact — an `Infinity` there would
+  // make a one-level document answer for every depth asked of it.
+  const at = document.levels.indexOf(nearest);
+  const gaps: number[] = [];
+  if (at > 0) gaps.push(Math.abs(nearest.depth_m - document.levels[at - 1].depth_m));
+  if (at >= 0 && at < document.levels.length - 1) {
+    gaps.push(Math.abs(document.levels[at + 1].depth_m - nearest.depth_m));
+  }
+  const spacing = gaps.length > 0 ? Math.min(...gaps) : 0;
   return Math.abs(nearest.depth_m - depthM) <= spacing / 2 ? nearest : undefined;
 }
 
@@ -295,4 +308,67 @@ export function drawnWidthOf(ray: Ray): number {
  */
 export function underScale(ray: Ray): boolean {
   return ray.reachedHere && ray.weight * RAY_WIDTH_PX < RAY_MIN_DRAWN_PX;
+}
+
+/**
+   * Where a longitude and latitude fall in the drawn map's coordinates, which are one unit per
+   * drawn cell.
+   *
+   * **Interpolated, and the previous version's snapping is why.** This used to snap a value to
+   * the nearest served axis entry and then that entry to the nearest *drawn* column, on the
+   * argument that "two served cells can share one drawn column and the line lands within that".
+   * Measured on the shipped loitering condition, that argument's conclusion was wrong: the
+   * platform's sources sit within a cell or two of the column they reach, the map is thinned by
+   * two, and **four of six rays came out with `x1 === x2` and `y1 === y2`** — including the one
+   * carrying the whole width encoding. A line of zero length is not a thin line, it is no line,
+   * and nothing in the tree measured one: the SC-003 assertion compared `"23.5,20.5"` to itself
+   * and the containment check could not fail because the snapping structurally returned a cell
+   * centre.
+   *
+   * So the position is carried through continuously: a fractional index on the served axis, by
+   * linear interpolation between the two entries that bracket the value, divided by the thinning
+   * step. Thinning still costs resolution — a served cell is half a drawn unit at step 2 — but it
+   * no longer costs the line its existence. The figures beneath still carry what the picture
+   * cannot: the separation stated is the analysis's own, cell centre to cell centre.
+   *
+   * A value outside the axis is clamped to the drawn extent. The axes carry cell *centres* and
+   * an observation sits inside a cell, so this is at most half a cell and only ever at the grid's
+   * rim; it is a clamp rather than an invention because the alternative — a marker outside the
+   * map — reads as a place the source is not.
+   */
+export function placeOn(axis: readonly number[], kept: readonly number[], value: number): number | undefined {
+  if (axis.length === 0 || kept.length === 0) return undefined;
+  let served = 0;
+  if (axis.length > 1) {
+      const ascending = axis[axis.length - 1] >= axis[0];
+      served = ascending === (value < axis[0]) ? 0 : axis.length - 1;
+      for (let index = 0; index < axis.length - 1; index++) {
+        const from = axis[index];
+        const to = axis[index + 1];
+        if (value >= Math.min(from, to) && value <= Math.max(from, to)) {
+          served = to === from ? index : index + (value - from) / (to - from);
+          break;
+        }
+      }
+  }
+  // `kept` is `0, step, 2*step, …` by construction, so a served index divided by the step is
+  // the drawn column it falls in, fraction and all.
+  const step = kept.length > 1 ? kept[1] - kept[0] : 1;
+  return Math.min(Math.max(served / step + 0.5, 0), kept.length);
+}
+
+/**
+ * The rays that may be **drawn on the map**: the set, less any modelled origin.
+ *
+ * FR-125 and SC-005 say the standing forecast is not among the rays, and `backgroundRaysIn`
+ * above reports one that appears — but reporting it and drawing it anyway put the guard on the
+ * sentence rather than on the surface, which matters because the SRD's FR-123 amendment leans on
+ * exactly this guard for the day an analyst admits a non-spatial source.
+ *
+ * It is only the *map* that loses it. The numbers table, the caption and the ω identity keep it,
+ * because it is part of what the gain weighed: dropping it there would silently break the SC-001
+ * sum, which is how a reader would learn that something had gone wrong.
+ */
+export function drawableRays(set: RaySet): readonly Ray[] {
+  return set.rays.filter((ray) => ray.kind !== 'modelled');
 }

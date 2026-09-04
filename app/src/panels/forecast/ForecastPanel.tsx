@@ -340,9 +340,6 @@ export function ForecastPanel({ params }: PanelProps) {
     };
   }, [client, config.topics, config.endpoints.holdings, drawable, validator]);
 
-  // Whether the centre region's grid is still unknown, read inside a subscription without
-  // making the subscription depend on it — a dependency there would tear down and rebuild
-  // every subscription the moment the grid arrived.
   /**
    * The depth axis, fetched once for each analysis cycle the panel comes to draw. The only
    * place it is fetched.

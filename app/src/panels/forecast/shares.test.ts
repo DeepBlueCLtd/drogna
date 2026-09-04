@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { AnalysisContributions, ConfigRun } from '../../generated/types.js';
 import { absenceOf } from './Profile.js';
-import { sourceOf } from './shares.js';
+import { BACKGROUND_SOURCES, MEASUREMENT, SOURCES, sourceOf } from './shares.js';
 
 const config = runConfigDocument as ConfigRun;
 
@@ -48,6 +48,18 @@ describe('which share a served parameter is', () => {
     // A share whose label stopped beginning with its key is a vocabulary change, and the shell
     // is meant to miss it rather than match something near it.
     expect(sourceOf('temperature_share_what_the_boat_brought')).toBeUndefined();
+  });
+});
+
+describe('the two share lists derived from the one', () => {
+  it('names the measurement share and the three that are not it, whatever the order becomes', () => {
+    // `MEASUREMENT` is `SOURCES[2]` — indexed rather than searched, because a `find` needs a
+    // fallback TypeScript cannot see is unreachable and the fallback is then a second opinion
+    // about which share to use. The index is what this holds, so reordering `SOURCES` fails here
+    // rather than silently colouring the earlier-cycles band as the archive.
+    expect(MEASUREMENT.key).toBe('measurement');
+    expect(BACKGROUND_SOURCES.map((source) => source.key)).toEqual(['archive', 'departure', 'model']);
+    expect(BACKGROUND_SOURCES).toHaveLength(SOURCES.length - 1);
   });
 });
 

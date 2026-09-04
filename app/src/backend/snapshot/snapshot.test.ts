@@ -22,7 +22,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, ConfigStartConditionsCondition } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
@@ -71,6 +71,32 @@ function freshStore(runId: string) {
     new Router(),
   );
   return { broker, transport, store };
+}
+
+/**
+ * How many of an artefact's own holdings a restart cannot write back. The *count* is read off
+ * the artefact — a publication is declined exactly when its era's pointer already names a
+ * different holding published at a later tick, so within a pointed era it is everything
+ * behind that era's last tick. The *set of pointed eras* is not: it is written out below and
+ * must match the three pointer branches in `CoverageStore.publish`. Said plainly rather than
+ * claimed derived, because the two are not the same kind of number — though the failure
+ * direction is the safe one, since a new pointed era makes this expect too few and the test
+ * fails rather than passes.
+ *
+ * `leaving` yields zero by this rule and by the store's, because its one now-cast and its one
+ * forecast pair are the last of their eras; a bare `> 0` would have had to exempt it, and an
+ * exemption is where a number nobody can derive goes to hide.
+ */
+function expectedSuperseded(holdings: { descriptor: { era: string; published_at: { tick: number } } }[]): number {
+  const POINTED = ['nowcast', 'departure', 'instance'];
+  let count = 0;
+  for (const era of POINTED) {
+    const ticks = holdings.filter((h) => h.descriptor.era === era).map((h) => h.descriptor.published_at.tick);
+    if (ticks.length === 0) continue;
+    const last = Math.max(...ticks);
+    count += ticks.filter((tick) => tick < last).length;
+  }
+  return count;
 }
 
 describe('the committed seed-data artefacts (feature 120)', () => {
@@ -136,6 +162,102 @@ describe('the committed seed-data artefacts (feature 120)', () => {
     }
   });
 
+  it('a restart reports what the store already held newer, and no refusal it did not make', async () => {
+    vi.useFakeTimers();
+    // The restart path, which is a reader's path: the snapshot-source node in the Operator
+    // tab has a restart verb, and the Intro copy this feature rewrote sends a reader to that
+    // node to check whether the run took the artefact. A restarted source is a fresh instance
+    // holding the whole artefact again, so it republishes every holding over a store whose
+    // era pointers have already reached the artefact's own last one. Each republication is
+    // byte-identical and accepted; each earlier one would rewind a pointer, and the store
+    // declines to write it.
+    //
+    // Watched failing twice, which is why the assertions are shaped this way. The first
+    // version of the source counted a superseded publication as replayed and drew
+    // '26 of 26 holding(s) replayed' over holdings the store had not written — so the count
+    // is asserted. The correction that only excluded it from `published` pushed it into the
+    // refusals instead, so the same restart reported '9 refused by the store' with no reason
+    // against a store that refused nothing, and turned the node's status to `degraded` — so
+    // the refusals, the status and the detail line are asserted too, and the second fault
+    // passes the first assertion.
+    for (const condition of withArtefacts) {
+      const expectation = expectationFor(condition);
+      const { transport, store } = freshStore(expectation.runId);
+      const clock = transport.connect(config.clock.id, config.clock.id);
+      const beats: { status: string; detail: string; figures: { key: string; value: number }[] }[] = [];
+      // Read as the Operator plane reads it — through the broker, under the role the rules
+      // grant `ctl/heartbeat` to — rather than by reaching into the component.
+      transport
+        .connect('operator-observer', config.operator.id)
+        .subscribe(config.snapshot_source.heartbeat.topic, (message) => {
+          const payload = message.payload as {
+            component: string;
+            status: string;
+            detail: string;
+            figures: { key: string; value: number }[];
+          };
+          if (payload.component === config.snapshot_source.id) beats.push(payload);
+        });
+
+      const contents = await decodeSnapshot(artefactBytes(condition));
+      const held = contents.holdings.length;
+      const last = Math.max(...contents.holdings.map((holding) => holding.descriptor.published_at.tick));
+      const sample = { run_id: expectation.runId, tick: last, sim_time: 'x', mode: 'lockstep', rate: 0 };
+      const first = new SnapshotSource(
+        config.snapshot_source,
+        transport.connect(config.snapshot_source.id, config.snapshot_source.id),
+        store,
+        expectation,
+        contents,
+      );
+      first.start();
+      clock.publish(config.clock.topics.clock, sample);
+      first.stop();
+      const inventoryBefore = store.holdings().map((holding) => holding.holding_id);
+
+      // The restart. A second instance on the same store, exactly as `ComponentControl`
+      // constructs one.
+      const restarted = new SnapshotSource(
+        config.snapshot_source,
+        transport.connect(config.snapshot_source.id, config.snapshot_source.id),
+        store,
+        expectation,
+        await decodeSnapshot(artefactBytes(condition)),
+      );
+      restarted.start();
+      clock.publish(config.clock.topics.clock, sample);
+      // The face is read at the next beat, which is what the Operator plane reads: the
+      // emitter's cadence is host time by ADR-0006, so the timer is advanced rather than
+      // waited on, and rather than the component being asked directly for its counters.
+      beats.length = 0;
+      vi.advanceTimersByTime(config.snapshot_source.heartbeat.interval_seconds * 1000);
+
+      expect(
+        restarted.refused,
+        `${condition.id}: the store refused nothing on the restart; every holding it declined ` +
+          'to write was one it already held something newer than',
+      ).toEqual([]);
+      const beat = beats.at(-1);
+      expect(beat, `${condition.id}: the node published no heartbeat after the restart`).toBeDefined();
+      expect(beat?.status, `${condition.id}: ${beat?.detail}`).toBe('ok');
+      expect(beat?.detail, condition.id).not.toContain('refused by the store');
+      const replayed = beat?.figures.find((figure) => figure.key === 'replayed')?.value ?? -1;
+      const superseded = beat?.figures.find((figure) => figure.key === 'superseded')?.value ?? 0;
+      expect(restarted.outstanding(), `${condition.id}: the restart left holdings unreleased`).toBe(0);
+      expect(
+        replayed + superseded,
+        `${condition.id}: the two counters do not account for every holding in the artefact`,
+      ).toBe(held);
+      expect(superseded, `${condition.id}`).toBe(expectedSuperseded(contents.holdings));
+      expect(
+        store.holdings().map((holding) => holding.holding_id),
+        `${condition.id}: the restart changed the store's inventory`,
+      ).toEqual(inventoryBefore);
+      restarted.stop();
+    }
+    vi.useRealTimers();
+  });
+
   it('a corrupted field is refused by the store, counted, and never lands', async () => {
     const condition = withArtefacts[0];
     const expectation = expectationFor(condition);
@@ -187,7 +309,10 @@ describe('the committed seed-data artefacts (feature 120)', () => {
   });
 
   it.each([
-    ['no artefact was expected', undefined, /no committed artefact.*authored live/, 'ok'],
+    // The forecasts, not just the ocean: since feature 125 the artefact carries all four eras,
+    // so a run without one computes the analyses and the forecast instances too. The tour and
+    // the Intro panel send the reader to this node for exactly that statement.
+    ['no artefact was expected', undefined, /no committed artefact.*forecasts were computed live/, 'ok'],
     [
       'one was expected and could not be fetched',
       './snapshots/arriving.snapshot answered 404',
@@ -242,7 +367,22 @@ describe('the committed seed-data artefacts (feature 120)', () => {
       expect(again.holdings.length).toBe(original.holdings.length);
       for (const [index, holding] of again.holdings.entries()) {
         expect(holding.descriptor).toEqual(original.holdings[index].descriptor);
-        expect([...holding.bytes]).toEqual([...original.holdings[index].bytes]);
+        // A typed-array walk, not `expect([...a]).toEqual([...b])`. The spread built two JS
+        // number arrays per holding and handed them to a deep-equality that reports every
+        // element; over the four artefacts' 54.7 MB that took 36.6 s of this file's 60 s
+        // budget on an idle machine and timed out at 65.9 s under load — a CI flake that
+        // arrived with the forecast eras, the artefacts having grown from 9.6 MB decoded.
+        // The same comparison this way is 2.8 s, and it still names the first byte that
+        // differs, which is all a failure needs to say.
+        const mine = holding.bytes;
+        const theirs = original.holdings[index].bytes;
+        expect(mine.byteLength).toBe(theirs.byteLength);
+        let differsAt = -1;
+        for (let i = 0; i < mine.length && differsAt < 0; i += 1) if (mine[i] !== theirs[i]) differsAt = i;
+        expect(
+          differsAt,
+          `'${holding.descriptor.holding_id}' differs at byte ${differsAt}: wrote ${theirs[differsAt]}, read back ${mine[differsAt]}`,
+        ).toBe(-1);
       }
     }
   });

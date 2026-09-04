@@ -2019,7 +2019,9 @@
         "root_seed": 1180001,
         "snapshot_eras": [
           "archive",
-          "nowcast"
+          "nowcast",
+          "analysis",
+          "instance"
         ],
         "platform": {
           "latitude": 47.45,
@@ -2101,7 +2103,9 @@
         "root_seed": 1180002,
         "snapshot_eras": [
           "archive",
-          "nowcast"
+          "nowcast",
+          "analysis",
+          "instance"
         ],
         "platform": {
           "latitude": 46.78,
@@ -2182,7 +2186,9 @@
         "root_seed": 1180003,
         "snapshot_eras": [
           "archive",
-          "nowcast"
+          "nowcast",
+          "analysis",
+          "instance"
         ],
         "platform": {
           "latitude": 46.1,
@@ -2276,7 +2282,9 @@
         "root_seed": 1180004,
         "snapshot_eras": [
           "archive",
-          "nowcast"
+          "nowcast",
+          "analysis",
+          "instance"
         ],
         "platform": {
           "latitude": 46.28,

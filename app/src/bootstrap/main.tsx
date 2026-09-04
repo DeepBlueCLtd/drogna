@@ -20,7 +20,7 @@ import { Welcome, type WelcomePreparation } from '../shell/Welcome.js';
 import { viewFromHash } from '../shell/views.js';
 import {
   artefactPath,
-  authorsCoveredBySnapshot,
+  heldBackBySnapshot,
   conditionById,
   conditionFromSearch,
   configForCondition,
@@ -203,7 +203,7 @@ async function boot(
   // Whoever the artefact speaks for is held back for the pre-roll; where there is none,
   // this is the condition unchanged and everybody runs. One script, two crews.
   const script = artefact.contents
-    ? holdingBack(condition, authorsCoveredBySnapshot(condition, effective.snapshot_source))
+    ? holdingBack(condition, heldBackBySnapshot(condition, effective.snapshot_source))
     : condition;
 
   await runPreRoll(

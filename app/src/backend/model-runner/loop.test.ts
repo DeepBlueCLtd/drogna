@@ -252,6 +252,35 @@ describe('the forecast loop (feature 105)', { timeout: 120_000 }, () => {
     runtime.stop();
   });
 
+  it('leaves the instance pointer on the mean, not on the spread it publishes alongside', async () => {
+    /**
+     * The mean and its spread carry one era and one publication tick, so the store's rewind
+     * guard (strict `<` on ticks) lets the second of the pair take the pointer: the order
+     * `emit` publishes them in *is* which one `currentInstance()` names. Everything feature
+     * 125 reconstructs hangs off that — `standingPair` asks for `<id>-spread`, so a reversed
+     * order makes it ask for `<id>-spread-spread`, find nothing, and return undefined, and
+     * the scheduler's validity, the offload staging, the analyst's spread and telemetry's
+     * ledger all revert to pre-125 behaviour with nothing said anywhere.
+     *
+     * `standing-run.ts` called that order "a fact about `emit`, not a coincidence to rely
+     * on", and an adversarial pass pointed out that nothing in the tree made it a fact.
+     * Watched failing: swapping the two `publishInstance` calls in `emit` fails this here,
+     * by name, rather than somewhere downstream in a skill assertion.
+     */
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const record = await drive(runtime, config, 2000);
+    expect(record.published.length).toBeGreaterThanOrEqual(1);
+    const current = runtime.store.currentInstance();
+    expect(current?.descriptor.holding_id, 'the era pointer names the spread, not the forecast').toBe(
+      record.published.at(-1)?.run_id,
+    );
+    // And the sibling is there under the name the reconstruction asks for, which is the other
+    // half of the same rule.
+    expect(runtime.store.holding(`${current?.descriptor.holding_id}-spread`)).toBeDefined();
+    runtime.stop();
+  });
+
   // AT-04: byte-identity
   it('replays byte-identically: one seed, one loop, twice (AT-04 grows with the loop)', async () => {
     const config = lockstepConfig();

@@ -392,13 +392,18 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     const runtime = buildBackend(config, options, validator);
     const seen = watch(runtime, config);
     // **The second run, not the first, and the difference is not incidental.** A restarted
-    // scheduler counts run ids from zero again, so a restart during the *first* run has the
-    // new scheduler asking for the same `…-run-0` that is already occupying — and the
-    // occupying run's publication then clears the new scheduler's outstanding run by an id
+    // scheduler used to count run ids from zero again, so a restart during the *first* run had
+    // the new scheduler asking for the same `…-run-0` that was already occupying — and the
+    // occupying run's publication then cleared the new scheduler's outstanding run by an id
     // collision rather than by anything being right. The first draft of this test restarted
     // during run 0, was rescued by that collision, and passed against the unfixed code on
-    // every assertion but one. The window this is about is the second run occupying while
-    // the restarted scheduler asks for the first id again.
+    // every assertion but one.
+    //
+    // Run identifiers are derived from the request tick now, so that collision cannot happen
+    // any more and the rescue is gone with it. The second run is kept all the same: it is the
+    // window this test is *about* — a restarted scheduler's first floor firing into a runner
+    // that is still occupied — and a test that no longer needs its precaution is not a test
+    // that should quietly drop it.
     await driveUntil(
       runtime.clock,
       () => seen.started.length >= 2 && seen.published.length < seen.started.length,
@@ -518,4 +523,152 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     expect(seen.decisions.at(-1)?.decision).toBe('accepted');
     runtime.stop();
   });
+  /**
+   * FR-31, through the one door that was still open: a run requested into a component
+   * that is not there to hear it.
+   *
+   * The `run-failed` release covers the model runner, which is still present to say it
+   * will not deliver. The analyst is not: it takes a run request synchronously and holds
+   * no pending state, so a request published while it is stopped is not declined, not
+   * failed and not remembered. It vanishes, and the scheduler's outstanding-run guard
+   * latches on it for the rest of the visit.
+   *
+   * Watched happening before the watchdog existed, by exactly the steps below — stop the
+   * analyst from the Operator tab, let the cadence floor come due, start it again — and the
+   * loop never turned another cycle: `analysis` and `instance` frozen where they stood, every
+   * later divergence declined as a duplicate of a run nobody was working on. Driven through
+   * the plane's own endpoints rather than by calling `stop()`, because the reachability by an
+   * ordinary reader is the point.
+   */
+  it('FR-31: the loop recovers from a run requested into a stopped analyst', async () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+    const command = (id: string, verb: 'stop' | 'start') =>
+      runtime.httpBackend.handle({
+        method: 'POST',
+        path: `${config.operator.http.command_prefix}/${id}/${verb}`,
+        body: '',
+      });
+
+    // The loop turning, as a reader would find it.
+    await driveUntil(runtime.clock, () => seen.published.length >= 1, config.scheduler.max_interval_ticks * 6);
+    const whileWarm = seen.published.length;
+    expect(whileWarm, 'the loop never turned at all, so this test proves nothing').toBeGreaterThan(0);
+
+    const requestedWhileWarm = seen.requests.length;
+    expect((await command(config.analyst.id, 'stop')).status).toBe(200);
+
+    // Driven until a run is actually requested into the silence, not for a tick count that
+    // might not reach one. The cadence floor comes due on its own schedule and is then *held*
+    // while the standing forecast still has life in it (FR-115), so "max_interval ticks have
+    // passed" is not the same event as "a run was requested" — and a version of this test that
+    // assumed it was passed against the unfixed scheduler, having never set the latch it was
+    // written to catch.
+    await driveUntil(
+      runtime.clock,
+      () => seen.requests.length > requestedWhileWarm,
+      config.scheduler.max_interval_ticks * 6,
+    );
+    expect(
+      seen.requests.length,
+      'no run was requested while the analyst was stopped, so the latch this test needs was never set',
+    ).toBeGreaterThan(requestedWhileWarm);
+    expect(seen.published.length, 'a run published with the analyst stopped').toBe(whileWarm);
+
+    // The reader changes their mind, as the Operator tab invites them to.
+    expect((await command(config.analyst.id, 'start')).status).toBe(200);
+
+    // The watchdog releases the run nobody was working on, and the floor turns the loop
+    // again. Without it this waits out the whole limit and the count never moves.
+    await driveUntil(
+      runtime.clock,
+      () => seen.published.length > whileWarm,
+      config.scheduler.max_interval_ticks * 6,
+    );
+    expect(
+      seen.published.length,
+      'the loop never turned again after the analyst came back: the outstanding-run guard is still latched',
+    ).toBeGreaterThan(whileWarm);
+    runtime.stop();
+  });
+
+  /**
+   * The identifier rule, held to the thing it exists to prevent.
+   *
+   * Run identifiers were `<run>-run-<sequence>`, counted in this component's memory, and this
+   * component is restartable from the Operator tab. A fresh instance counted from zero and
+   * asked for identifiers a previous one had already spent — so the analyst and the model
+   * runner published `analysis.<run>-run-0` and its forecast a second time, over holdings
+   * already in the store. `CoverageStore.publish` sets by id, so the first pair was replaced
+   * in place. Silently: each holding is internally consistent, both digests check out, and
+   * the reader simply finds one fewer forecast than the timeline showed a moment earlier.
+   *
+   * **This test exists because the fix shipped without one.** An adversarial pass reverted
+   * `identifierForThisTick` to the counter and every one of the 686 app tests stayed green —
+   * the change was in exactly the condition `CLAUDE.md`'s second lesson forbids, and one
+   * commit earlier this branch had retired a *different* untested guard for being worthless.
+   * The assertion is over the store's own bytes rather than over the shape of an identifier,
+   * because the identifier is the mechanism and the replaced holding is the harm.
+   */
+  it('a restarted scheduler does not republish over holdings a previous instance named', async () => {
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const seen = watch(runtime, config);
+
+    // Two runs in, so a restarted instance counting from zero lands on ids already spent.
+    await driveUntil(runtime.clock, () => seen.started.length >= 2, config.scheduler.max_interval_ticks * 6);
+    expect(seen.started.length, 'the loop never reached a second run').toBeGreaterThanOrEqual(2);
+
+    /**
+     * Every holding a run identifier names, as id -> field digest, so a replacement in place
+     * is visible. Filtered to the eras the identifier rule governs: the store prunes a
+     * superseded now-cast by design, and an unfiltered inventory would report that as a
+     * holding "lost" the moment this test's drive crossed a now-cast cadence boundary —
+     * failing with a message about a reissued identifier that would not be true.
+     */
+    const inventory = () =>
+      new Map(
+        runtime.store
+          .holdings()
+          .filter((holding) => holding.era === 'analysis' || holding.era === 'instance')
+          .map((holding) => [holding.holding_id, holding.field.sha256]),
+      );
+    const before = inventory();
+    expect(before.size, 'nothing was in the store to be overwritten').toBeGreaterThan(0);
+
+    // The Operator tab's own verbs.
+    runtime.control.stop(config.scheduler.id);
+    runtime.control.start(config.scheduler.id);
+
+    // Far enough for the restarted instance's first floor to fire and be answered in full.
+    await driveUntil(
+      runtime.clock,
+      () => seen.published.length > seen.started.length - 1 && runtime.store.holdings().length > before.size,
+      config.scheduler.max_interval_ticks * 6,
+    );
+
+    const after = inventory();
+    const replaced = [...before]
+      .filter(([id, digest]) => after.has(id) && after.get(id) !== digest)
+      .map(([id]) => id);
+    const lost = [...before.keys()].filter((id) => !after.has(id));
+    expect(
+      { replaced, lost },
+      'a restarted scheduler reissued an identifier a previous instance had spent, and the store replaced the holding',
+    ).toEqual({ replaced: [], lost: [] });
+
+    // **And nothing was refused on the way, which is the assertion that keeps this test able
+    // to fail.** The coverage store now refuses a second set of bytes under a held id, so with
+    // the identifier derivation reverted the holdings survive — and the assertion above passes,
+    // masked by the guard behind it. The refusal reaches the analyst as a `throw` inside a
+    // broker subscription, which the broker catches and counts, so a reissued identifier shows
+    // up here as a delivery fault. Watched: with the counter restored this reads 1 and the
+    // inventory reads clean.
+    expect(
+      runtime.broker.deliveryFaults,
+      'a publication was refused during the restart: an identifier was reissued and the store, not the identifier rule, is what saved the holdings',
+    ).toBe(0);
+    runtime.stop();
+  }, 180_000);
 });

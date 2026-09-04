@@ -96,10 +96,108 @@ describe('the synthetic ocean (feature 102)', () => {
       holding_id: 'nowcast.tampered.t0',
     };
     const verdict = runtime.store.publish({ descriptor, bytes: tampered });
-    expect(verdict.published).toBe(false);
+    expect(verdict.outcome).toBe('refused');
+    if (verdict.outcome !== 'refused') throw new Error('unreachable');
     expect(verdict.refusal).toMatch(/does not match the digest its descriptor records/);
     expect(verdict.refusal).toMatch(/pointer untouched/);
     expect(runtime.store.holdings().map((holding) => holding.holding_id)).toEqual(before);
+    runtime.stop();
+  });
+
+  it('refuses a second set of bytes under a holding id it already holds (feature 125, watched)', () => {
+    /**
+     * The digest check above proves the staged bytes match the descriptor that travelled
+     * with them. A *replacement* satisfies that exactly — both holdings are internally
+     * consistent, both digests check out — so it passed, the map entry was overwritten, and
+     * the reader found the field they were looking at replaced by a different one under the
+     * same name. Perfectly silent.
+     *
+     * Watched happening from the Operator tab with the clock stopped: restart the scheduler
+     * at the tick a run was requested at, and a rate change republishes that tick to the
+     * fresh instance, whose cadence floor fires and reissues the same tick-derived
+     * identifier. Four analysis holdings replaced, clock never moving.
+     */
+    const runtime = buildBackend(lockstepConfig(), options, validator);
+    const nowcast = runtime.store.currentNowcast();
+    if (!nowcast) throw new Error('no nowcast');
+    const standing = runtime.store.holding(nowcast.descriptor.holding_id);
+    if (!standing) throw new Error('the store lost the now-cast between reading it twice');
+
+    // Different bytes, honestly described: a descriptor whose digest matches what it carries.
+    const different = new Uint8Array(nowcast.bytes);
+    different[7] ^= 0xff;
+    const descriptor: CoverageHolding = {
+      ...nowcast.descriptor,
+      field: { ...nowcast.descriptor.field, sha256: `sha256:${sha256Hex(different)}` },
+    };
+    const verdict = runtime.store.publish({ descriptor, bytes: different });
+    expect(verdict.outcome).toBe('refused');
+    if (verdict.outcome !== 'refused') throw new Error('unreachable');
+    expect(verdict.refusal).toMatch(/already held/);
+    expect(verdict.refusal).toMatch(/one set of bytes for the life of a run/);
+    // And the bytes that were there are the bytes that are there.
+    expect(runtime.store.holding(nowcast.descriptor.holding_id)?.descriptor.field.sha256).toBe(
+      standing.descriptor.field.sha256,
+    );
+
+    // Restating what is already held is not a loss, and the snapshot source depends on it.
+    expect(runtime.store.publish({ descriptor: nowcast.descriptor, bytes: nowcast.bytes }).outcome).toBe('written');
+    runtime.stop();
+  });
+
+  it('will not let a republication rewind an era pointer (feature 125, watched)', () => {
+    /**
+     * Identical bytes are allowed — the snapshot source's whole job is to put back what was
+     * authored — but "these are the bytes that were there" is not "this should move the
+     * pointer forward", and everything downstream reads the pointer.
+     *
+     * Watched happening on `returning` through the plane's own verbs, by pressing restart on
+     * the snapshot source: a fresh instance holds the whole artefact again and republishes it,
+     * and the `instance` pointer went from `…-run-t9930` back to `…-run-t9171` while the live
+     * now-cast holding was deleted. The monitor then scored live soundings against a
+     * 759-tick-stale forecast, and telemetry — keyed on the live run — dropped every residual
+     * it published. The now-cast half predates the forecast eras; the `instance` half arrived
+     * with them, because until this feature an artefact carried no instance holdings.
+     */
+    const config = lockstepConfig();
+    const runtime = buildBackend(config, options, validator);
+    const first = runtime.store.currentNowcast();
+    if (!first) throw new Error('no nowcast');
+    const stale = { descriptor: first.descriptor, bytes: first.bytes };
+
+    // Let the cadence move the pointer on.
+    for (let i = 0; i < config.env_generator.nowcast.interval_ticks; i++) runtime.clock.tickOnce();
+    const standing = runtime.store.currentNowcast();
+    expect(standing?.descriptor.holding_id, 'the cadence did not move the pointer').not.toBe(
+      first.descriptor.holding_id,
+    );
+
+    // The older holding, republished byte for byte, exactly as a restarted source would.
+    // Accounted for and not written — the outcome that names the difference, and the one the
+    // snapshot source counts apart from both a replay and a refusal.
+    expect(
+      runtime.store.publish(stale).outcome,
+      'identical bytes behind the era pointer are superseded, neither written nor refused',
+    ).toBe('superseded');
+    expect(
+      runtime.store.currentNowcast()?.descriptor.holding_id,
+      'a republication of an older holding rewound the era pointer',
+    ).toBe(standing?.descriptor.holding_id);
+    const inventory = runtime.store.holdings().map((holding) => holding.holding_id);
+    expect(inventory, 'the standing holding was deleted by a republication of its predecessor').toContain(
+      String(standing?.descriptor.holding_id),
+    );
+    // **And the superseded holding is not resurrected.** The first version of this guard held
+    // the pointer back and left the insert unconditional, which put the discarded now-cast
+    // back into the inventory where no pointer named it — worse than the fault it replaced,
+    // because three readers resolve the now-cast by scanning the inventory rather than by
+    // asking the pointer, and they disagree the moment there is more than one: the EDR
+    // collection takes the last, the map's axis lookup the first, and the environment
+    // generator reads its cadence from whichever it finds.
+    expect(
+      inventory.filter((id) => id.startsWith('nowcast.')),
+      'a republication of a superseded now-cast put it back in the inventory',
+    ).toEqual([String(standing?.descriptor.holding_id)]);
     runtime.stop();
   });
 

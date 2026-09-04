@@ -1,20 +1,20 @@
 # Outstanding work in drogna, in the order it should be done
 
-*Read against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.
-The five P1 lines this document identified are discharged on the branch that carries it;
-the counts below are stated as of that branch.*
+*Triaged against `main` @ `3ad5212` and open pull request #107, on 2 September 2026.
+The count was retaken from the tree at feature 125, on 4 September 2026, and only the count:
+the prose below still argues from the triage.*
 
 Seventy unticked task lines sat across the V2 feature specs when this triage began. Read
-against the tree rather than the record, most were not work: over half belong to a feature
-that is complete on an open pull request, and twenty were declined on purpose and should
-stay declined. Five have since been discharged, leaving **sixty-five**.
+against the tree rather than the record, most were not work: over half belonged to a feature
+that was complete on an open pull request, and twenty were declined on purpose and should
+stay declined. **#107 has since merged**, so feature 123's lines are gone and feature 124's
+are in the tree; the count is now 59 and the table below is where it is broken down.
 
 **This file is a dated snapshot, and the task lines are the authority.** Where the two
 disagree, the lines win and this file is wrong. It carries no gate — no check in
-`scripts/gates.registry` reads `docs/v2/` — so it will drift, and the counts below are
-already false the moment #107 merges: the 65, the −37, P0 in its entirety, and the note that
-feature 124's file is not yet on `main` all die with that merge. (Feature 124 stays unstarted
-— the merge ticks none of its 35 lines.) Regenerate the counts with
+`scripts/gates.registry` reads `docs/v2/` — so it will drift, and it did: this paragraph used
+to say the counts would be false the moment #107 merged, and then #107 merged and they were,
+for a day, until feature 125 retook them. P0 died with that merge. Regenerate the counts with
 `grep -hcE '^- \[ \] ' specs/1*/tasks.md | paste -sd+ | bc` rather than trusting the table —
 `grep -c` over several files reports per file and never prints the total.
 
@@ -22,53 +22,54 @@ feature 124's file is not yet on `main` all die with that merge. (Feature 124 st
 
 | | |
 |---:|---|
-| 70 | Unticked lines in `specs/1NN-*/tasks.md` at `3ad5212`, where this triage began |
-| −5 | **Discharged on this branch** — the whole of P1, below |
-| **65** | Unticked now |
-| −37 | Feature 123, the forward step — complete on PR #107 |
-| −20 | Declined or deliberately not done, each carrying its reason in the line |
-| **8** | **Work**, below — of which one is not a developer's to action |
+| **59** | Unticked lines in `specs/1NN-*/tasks.md`, retaken at feature 125 |
+| 28 | `specs/124-forecast-illustration/tasks.md` |
+| 6 | `specs/113-operator-flowchart/tasks.md` |
+| 4 | `specs/125-forecast-eras/tasks.md` |
+| 3 | `specs/101-foundations-shell/tasks.md` |
+| 3 | `specs/111-background-tab/tasks.md` |
+| 3 | `specs/122-operator-actions/tasks.md` |
+| 2 | `specs/106-uncertainty-planning/tasks.md` |
+| 2 | `specs/110-walkthrough/tasks.md` |
+| 2 | `specs/120-start-conditions/tasks.md` |
+| 1 | `specs/102-synthetic-ocean/tasks.md` |
+| 1 | `specs/103-sensing/tasks.md` |
+| 1 | `specs/104-query-seam/tasks.md` |
+| 1 | `specs/105-forecast-loop/tasks.md` |
+| 1 | `specs/108-advisories/tasks.md` |
+| 1 | `specs/114-operator-controls/tasks.md` |
+
+**Retaken from the tree rather than patched.** The previous table derived a bolded total from
+figures measured at `3ad5212` — 70 unticked, less 5 discharged, less 37 for feature 123, less
+20 declined — and feature 125 first edited one row of it and changed the total, which left a
+number that reproduced from nothing while a paragraph beside it explained that the number was
+wrong. The document's own recipe gives 59, and the rows above are what it gives, per file.
+What is *not* retaken is the split between work and declined: that is a judgement about 59
+lines and it is the part a reader actually wants, so it is left undone and said to be undone
+rather than carried forward from a count that no longer holds. Feature 123's rows are gone
+because #107 merged; feature 124's 28 are the bulk of
+what is left.
 
 The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.
 
-Feature 124 is specified on PR #107 and unstarted, at 35 task lines. It is not in the count
-because its file is not on `main` yet.
+Feature 124 is merged and partly done: 36 task lines, 8 ticked, 28 unticked. Those 28 are the
+bulk of what the retaken count holds and are the first place to look for real work. This
+paragraph used to say the feature was unstarted at 35 lines and not in the count; all three
+were true before #107 merged and none is now.
 
 ---
 
-## P0 — Land what is already built
+## P0 — Land what is already built — **closed**
 
-### PR #107 — review and merge the forward-step implementation
-
-Branch `claude/srd-model-forecast-specs-ws9x3d`: the two-layer kernel, run cost expressed in
-simulation time, the scheduler's `held-for-cost` decision, and the left region and timeline
-of `#/view/forecast` — plus the feature 124 specification. Feature 123's task lines are all
-ticked on the branch (83 at the current tip; 11 of them are already ticked on `main`, from the
-record-reconciliation phase that merged as `cd938b1`).
-
-Only P2 below waits on this merge for its *specification*: within `specs/`, #107 touches
-`123-forward-step` and `124-forecast-illustration` and nothing else, so P3's captures, P4's
-gate and P6 can all proceed in parallel. (P1 already did, and is discharged.)
-
-One row below is entangled with #107 in code even though it is not in `specs/`: P5's forecast
-eras is discharged by changing run-identifier derivation in
-`app/src/backend/scheduler/scheduler.ts`, and #107 adds 244 lines to that same file for the
-cost-hold state machine. Take that row after the merge, not beside it.
-
-**Do not expect a snapshot diff.** The committed artefacts hold only the `archive` and
-`nowcast` eras, both authored by `env-generator` (`app/config/run.json:2305-2310`, and every
-condition's `snapshot_eras`), so no model-runner output reaches them and no kernel change can
-move them. This was checked rather than assumed: a planted kernel fault shifting every
-forecast temperature by 5 °C and tripling its spread leaves `check-snapshot-drift` exiting 0,
-while the kernel is confirmed to run 125 times during the pre-rolls and have its output
-discarded by the era filter. **The forecast kernel has no snapshot regression cover at all**,
-which is the deliberate consequence of the P5 item below, and is worth knowing before you
-lean on the gate during review.
-
-**Done when** #107 is merged and `pnpm check` is green on `main`.
-
----
+#107 merged on 3 September 2026, which is what this row was waiting for, and the row is kept
+as a heading rather than deleted so that the argument above it — that most of the seventy
+unticked lines were not work — still has the thing it was arguing about. Its body said the
+committed artefacts held only `archive` and `nowcast`, so no model-runner change could move
+them and **the forecast kernel had no snapshot regression cover at all**. Feature 125 closed
+that too: every condition declares all four eras, so the analyst's and the model runner's own
+bytes are in the artefacts and under `check-snapshot-drift`. Re-planted rather than assumed —
+the same 5 °C shift, in the configured kernel this time, fails the gate on all four conditions.
 
 ## P1 — The replay proof, and the record *(done on this branch)*
 
@@ -166,7 +167,9 @@ rows below and stay open.
 ## P2 — Feature 124, the illustration surface
 
 The largest piece of real work, and the only one with a written specification waiting for it.
-35 task lines, and the only row that needs #107 merged first.
+36 task lines, 8 of them ticked — this row was written when the feature was unstarted on #107
+and outside the count; #107 has merged, `#/view/forecast` is on `main`, and the remaining 28
+lines are the bulk of the 59.
 
 SRD-v2 §5.20, *The forward step, its cost, and what made the field* (spanning
 FR-106 to FR-140, of which roughly FR-120 onward is this feature's half) says plainly which
@@ -251,21 +254,23 @@ than leaving it as an open line.
 **Done when** the plan is present on open, or the line is closed as declined with that
 argument written in it.
 
-### The forecast eras in the artefacts
+### The forecast eras in the artefacts — **done, feature 125**
 
-The other 10.9 MB and the other 2.1 seconds. Blocked on the scheduler's run identifiers, which
-reset on restart: holding the loop back for a pre-roll means restarting it, and the first live
-cycle would republish under the artefact's first cycle's holding identifiers and silently
-replace them. `app/src/bootstrap/start-condition.test.ts:228` refuses the declaration in those
-words, so the tempting one-line edit fails loudly instead of losing holdings a minute after the
-console opens.
+Taken after a reader reported ~20 s on `arriving` against the 5.3 s ADR-0041 measured for it:
+the same harness on a slower machine, which is the case the byte-for-seconds trade had never
+been run against. Headless Chromium, click to console, `arriving`, over three runs of each:
+3.8–4.0 s → 2.2–2.5 s. Artefacts 1.73 MB → 27.7 MB.
 
-This is also what leaves the forecast kernel with no snapshot regression cover, as P0 notes.
-Whoever takes this row should say in it whether that cover is a reason to do the work sooner.
+**The blocker this row recorded was wrong about its own cause**, and the refusing test had
+never been seen to fail — the second lesson in `CLAUDE.md`, at work. `holdingBack` does not
+stop the scheduler, so the run sequence never reset. What was actually there: holding the
+analyst back meant the scheduler's request reached nobody, the outstanding-run guard latched,
+and the run opened onto a loop that never turned again. The same fault was reachable from the
+Operator tab with no artefact in sight — an FR-31 violation in `main`, found by doing the work
+rather than by looking for it. ADR-0041 carries the amendment; the scheduler carries a watchdog
+and tick-derived run identifiers.
 
-**Done when** run identifiers survive a restart — or are namespaced by era — the refusing test
-is retired with its reason, and the artefacts carry the eras. Read the `pnpm snapshots` diff
-before committing it.
+The forecast kernel now has the snapshot regression cover P0 said it lacked.
 
 ### NetCDF export
 
@@ -369,9 +374,18 @@ it that records two checks built and one watched failing.
 and both P0 and P1 exist because a check was trusted without being watched fail. `pnpm
 replay-proof` names the generator's byte-identity test in its header and excludes it by its
 selector — and would still print *held* over zero tests, because vitest exits 0 on an empty
-selection. `check-snapshot-drift` covers no forecast-kernel output, which a planted 5 °C shift
+selection. `check-snapshot-drift` covered no forecast-kernel output, which a planted 5 °C shift
 confirmed by passing clean. Neither was found by reading; both were found by trying to break
 them.
+
+That second one is closed by feature 125, and re-planting the same 5 °C shift is what closed
+it: the gate now fails on all four conditions. Worth recording how the re-plant went, because
+it nearly produced a false all-clear of its own. The first attempt patched
+`kernel.ts:132` — which is inside `shift-advect-v1`, the second implementation ADR-0042 keeps
+registered and that `run.json` does not select — and the gate reported **ok**, exactly as it
+had before. A planted violation in code the run never reaches proves the same nothing as no
+plant at all. The configured kernel is `shallow-two-layer-v1`; check which one you are in
+before believing either result.
 
 **And check the checker.** Two rounds of adversarial review produced four findings that did
 not survive verification, two of them here: that `ClockStrip.tsx` arrived with feature 105

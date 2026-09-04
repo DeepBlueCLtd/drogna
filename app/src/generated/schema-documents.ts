@@ -3356,7 +3356,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "release_margin_ticks": {
         "type": "integer",
         "minimum": 0,
-        "description": "How far ahead of the standing forecast's lapse a held run is released, in ticks. A warranted scheduled or prompted run is HELD while the standing forecast has more life left than the run costs plus this margin, and released as that headroom decays, so the new run lands as the old one lapses (SRD-v2 FR-115). The rule runs the opposite way to the obvious reading on purpose: 'affordable when the run fits inside the remaining validity' becalms the loop permanently, because the cadence floor fires precisely when validity has lapsed and there is then no headroom at all. This is a margin and never a cost — the cost arrives on the run_cost topic from the component that will spend it. No default: it is required, so a default here would be a value nothing can ever read."
+        "description": "How far ahead of the standing forecast's lapse a held run is released, in ticks. A warranted scheduled or prompted run is HELD while the standing forecast has more life left than the run costs plus this margin, and released as that headroom decays, so the new run lands as the old one lapses (SRD-v2 FR-115). The rule runs the opposite way to the obvious reading on purpose: 'affordable when the run fits inside the remaining validity' becalms the loop permanently, because the cadence floor fires precisely when validity has lapsed and there is then no headroom at all. This is a margin and never a cost — the cost arrives on the run_cost topic from the component that will spend it. No default: it is required, so a default here would be a value nothing can ever read. From feature 125 it is also the watchdog's slack: a run in flight for longer than the run's cost plus this margin is abandoned, so that a component held back through a replayed pre-roll cannot latch the outstanding-run guard and becalm the loop for good (FR-31). Two uses of one knob, said here rather than discovered later: shortening it for a tighter release also shortens how long the scheduler waits before declaring a run lost, and a restarted scheduler has heard no cost yet, so for up to restate_every_ticks it waits on this margin alone — at the shipped values 30 ticks against a 9-tick cost."
       },
       "prompt_event": {
         "type": "string",
@@ -9919,7 +9919,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-published.schema.json",
     "title": "drogna model run published",
-    "description": "The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a new forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.",
+    "description": "The message the publisher publishes on ctl/run-published once a completed run has become visible in one indivisible step. It is how every consumer learns that a forecast exists: nothing in drogna polls the query layer to ask whether anything has changed. From feature 125 the message is also **restated**: the model runner republishes the standing run, read back from the coverage store's own descriptors, when it starts and finds a forecast it did not publish — a reader restarting it from the operator plane, or a start condition whose committed artefact carries the forecast eras and so holds it back for the whole pre-roll. Without that, four components that hold nothing but what this message told them (the scheduler its remaining validity, the offload packager the run it would stage, the analyst its background spread, telemetry its skill ledger) spend the visit believing no forecast exists. A restatement carries the same run_id as the release it restates, which is how a consumer tells the two apart: a consumer that must not act twice on one run compares that id against what it already holds, and one that only needs the standing facts can act on either. It carries the collection identifiers under which the two fields are servable, so a consumer can address them without a configuration file having been edited anywhere.",
     "type": "object",
     "required": [
       "component",
@@ -9946,7 +9946,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "sim_time": {
         "type": "string",
-        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision."
+        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision. A restatement carries this same instant, read off the holding's descriptor — not the instant it is being said at, which an earlier version of this description claimed on the grounds that nothing reasoning about the forecast read the field. Two panels did: the Forecast timeline renders how long a run took as the distance from its request to this instant, and drew a 9-tick run as a 510-tick one; the consumers frame renders it as when the basis was published. A restatement is a statement about when the run happened, and the run happened when it happened — which is the convention the coverage store already re-announces a standing holding under. Every field of a restatement therefore equals the release it restates."
       },
       "tick": {
         "type": "integer",
@@ -10087,7 +10087,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://schemas.harness.invalid/run-request.schema.json",
     "title": "drogna model run request",
-    "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the root seed and the run sequence by the coverage store's own rule, so a replay requests the same run under the same name and a published run's name can be read back as the sequence it was. Amended for V2 (SRD-v2 FR-31, E1 resolved plan §9.7): the scheduler holds a cadence floor, so a run can be warranted on schedule alone — such a request carries cause \"scheduled\" with divergence and region null, and every display labels runs by this cause.",
+    "description": "The message the scheduler publishes on ctl/run-request, and the only route by which a model run begins. It carries the divergence that justified it in full rather than by reference, so that the reason a run was spent is legible from the request alone and does not depend on another message still being retained. The run identifier is derived from the scenario run and the simulation tick the run was requested at, so a replay requests the same run under the same name. It was once derived from the root seed and the run sequence, and a published run's name could be read back as the sequence it was; that is no longer true and a name must not be parsed for one — run_sequence carries the ordinal, and run_id records why the derivation moved. Amended for V2 (SRD-v2 FR-31, E1 resolved plan §9.7): the scheduler holds a cadence floor, so a run can be warranted on schedule alone — such a request carries cause \"scheduled\" with divergence and region null, and every display labels runs by this cause.",
     "type": "object",
     "required": [
       "component",
@@ -10124,12 +10124,12 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "run_id": {
         "type": "string",
-        "description": "Deterministic model run identifier, derived from the root seed and the logical run ordinal. It names the run in every later message and in the coverage store."
+        "description": "Deterministic model run identifier: the scenario run identifier and the simulation tick the run was requested at. It names the run in every later message and in the coverage store. It was a function of the root seed and the run ordinal until the ordinal was found to be a counter held in the scheduler's memory — which resets when a reader restarts that component from the operator plane, so a restarted scheduler reissued identifiers an earlier instance had already used, and holdings published under them replaced their predecessors silently (ADR-0041 named this as the blocker on committing the forecast eras). Simulation time is the monotonic thing the scheduler hears rather than keeps: it survives a restart, and within one scheduler instance a run is requested at most once per tick. Across instances this narrows the fault rather than closing it — restarting the scheduler at the very tick a run was requested at reissues that identifier, where the counter collided on every restart — and the remainder is closed by the coverage store, which refuses a second set of bytes under a holding id it already holds."
       },
       "run_sequence": {
         "type": "integer",
         "minimum": 0,
-        "description": "Which run of this scenario this is, counting from zero. It is the other half of the identifier rule — run_id is a function of the root seed and this number — and it is carried rather than left to be read back out of the name, so that a manifest can record it as a fact rather than as a parse. Before it was carried the run manifest recorded a null here for want of anything to record."
+        "description": "Which run of this scenario the requesting scheduler instance has reached, counting from zero. It was once the other half of the identifier rule and is not any longer — run_id is derived from the request tick, for the reason recorded there — so this is an ordinal and not an identity: a restarted scheduler counts from zero again while the identifiers it issues keep moving forward. It is carried and currently read by nothing. The earlier description justified it by a run manifest recording it as a fact rather than as a parse; no manifest schema has such a field, so that justification is withdrawn rather than repeated. It stays because removing a required property of a published master is a wire change owed its own reason, and because the ordinal is the one thing the identifier no longer says."
       },
       "initialisation_sim_time": {
         "type": "string",
@@ -10543,7 +10543,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       "config_digest": {
         "type": "string",
         "pattern": "^sha256:[0-9a-f]{64}$",
-        "description": "SHA-256 of the environment generator's configuration document as the build read it. The one thing that decides what the fields contain besides the seed, so a page whose configuration has moved refuses the artefact rather than mixing an old ocean with new bounds."
+        "description": "SHA-256 of the environment generator's configuration document as the build read it. It was once the one thing that decided what the fields contain besides the seed, and the source refuses a mismatch on that basis — which was total coverage while an artefact carried only the ocean. Since feature 125 an artefact also carries the analyst's and the model runner's output, whose contents follow config.analyst and config.model_runner, and neither is in this digest: an artefact built before a change to either is accepted, and the store's own digest check cannot see it because a stale artefact is perfectly self-consistent. check-snapshot-drift is what actually holds the bytes to the code and is unaffected; this field is a narrower guard than it was, and says so rather than claiming a guarantee it no longer gives. Widening it to cover every author is an artefact-format change and is recorded in specs/125-forecast-eras/spec.md."
       },
       "code_revision": {
         "type": "string",
@@ -11078,9 +11078,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
               "accepted",
               "minimum-interval",
               "duplicate-outstanding",
-              "held-for-cost"
+              "held-for-cost",
+              "abandoned"
             ],
-            "description": "accepted means a run was requested. The other three name the rule that held or declined it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held — the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing."
+            "description": "accepted means a run was requested. The others name the rule that held, declined or ended it, rather than collapsing every refusal into one word. held-for-cost is not a decline (SRD-v2 FR-115): the run is warranted and affordable later, and it is released as the standing forecast's remaining validity decays toward the run's cost. A divergence is never held — the world has already contradicted the standing forecast, so its nominal remaining validity is worth nothing. abandoned is not a decision about a new run but the end of an old one: the scheduler waited longer than the run's declared cost plus the release margin and released it, because nothing was ever going to publish it. It is published rather than merely counted because a run that vanished for want of a listener is otherwise indistinguishable from a quiet loop, which is the confusion FR-32 exists to prevent."
           },
           "detail": {
             "type": "string",

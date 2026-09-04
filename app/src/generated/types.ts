@@ -2360,7 +2360,7 @@ export type TelemetrySchedulerDecision = {
   "tick": TelemetryTickIndex;
   "kind": "scheduler-decision";
   "divergence_id": string | null;
-  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding" | "held-for-cost";
+  "decision": "accepted" | "minimum-interval" | "duplicate-outstanding" | "held-for-cost" | "abandoned";
   "detail": string;
   "run_id": string | null;
   "shortfall_ticks": number | null;

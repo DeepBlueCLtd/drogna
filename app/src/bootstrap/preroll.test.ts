@@ -30,8 +30,16 @@ import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, ConfigStartConditionsCondition, Observation } from '../generated/types.js';
 import { createSeamValidator } from '../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../backend/runtime/runtime.js';
-import { configForCondition, defaultCondition, preRollTicks } from './start-condition.js';
+import {
+  heldBackBySnapshot,
+  configForCondition,
+  defaultCondition,
+  holdingBack,
+  preRollTicks,
+} from './start-condition.js';
 import { runPreRoll } from './preroll.js';
+import { decodeSnapshot, encodeSnapshot } from '../backend/snapshot/codec.js';
+import { driveTicks, driveUntil } from '../backend/test-support/drive.js';
 
 const validator = createSeamValidator();
 const config = runConfigDocument as ConfigRun;
@@ -320,4 +328,333 @@ describe('the start conditions (feature 120)', () => {
       runtime.stop();
     }
   }, 120_000);
+  /**
+   * ADR-0041's far half, and the test the refusal in `start-condition.test.ts` was standing
+   * in for until this feature.
+   *
+   * The artefacts carry the forecast eras now, which means a run that replays one holds the
+   * **analyst and the model runner** back for the whole pre-roll — not just the ocean. Two
+   * things had to become true for that to be safe, and neither is visible in a snapshot's
+   * bytes, so neither is covered by `check-snapshot-drift`:
+   *
+   *  - the run must *open* holding what a live run would have produced, and
+   *  - the loop must still turn afterwards.
+   *
+   * The second is the one that was broken, and badly. Holding the analyst back means the
+   * scheduler's run request reaches nobody at all — the analyst takes a request synchronously
+   * and holds no pending state — so the outstanding-run guard latched and the console opened
+   * onto a loop that never turned again. Measured before the watchdog: `returning` opened with
+   * a run in flight that stayed in flight, and 5,400 further ticks produced not one analysis
+   * and not one forecast.
+   *
+   * The artefact is assembled here rather than by calling `buildSnapshot`, which lives in
+   * `scripts/` and is not on this side of the app's build. So the staging — filter by era,
+   * sort by publication tick, the header's six fields — is a copy, and a copy can drift from
+   * what `pnpm snapshots` ships. It has not, and `check-snapshot-drift` is what holds the
+   * shipped artefacts to the components; but a reader should know this proves the shape this
+   * file builds, and an earlier version of this comment claimed the opposite.
+   */
+  it('a run backed by the forecast eras opens like a live one, and keeps turning', async () => {
+    const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'loitering');
+    if (!condition) throw new Error('the configuration no longer offers loitering');
+    const eras: ReadonlySet<string> = new Set<string>(condition.snapshot_eras ?? []);
+    expect(eras.has('analysis') && eras.has('instance'), 'this case is about the forecast eras').toBe(true);
+
+    /** Lockstep, so the ticks after the pre-roll are this test's and not the host's. */
+    const effective = (() => {
+      const copy = configForCondition(JSON.parse(JSON.stringify(config)) as ConfigRun, condition);
+      copy.clock.mode = 'lockstep';
+      copy.clock.rate = 0;
+      return copy;
+    })();
+    const options = {
+      rootSeed: condition.root_seed,
+      startCondition: condition.id,
+      revision: 'test',
+      dirty: false,
+    };
+    const drive = async (runtime: BackendRuntime) =>
+      runPreRoll(
+        {
+          backend: runtime.httpBackend,
+          clock: effective.clock,
+          operator: effective.operator,
+          breathe,
+          onProgress: () => undefined,
+        },
+        runtime === live ? condition : holdingBack(condition, held),
+      );
+    const countByEra = (runtime: BackendRuntime) => {
+      const tally: Record<string, number> = {};
+      for (const holding of runtime.store.holdings()) tally[holding.era] = (tally[holding.era] ?? 0) + 1;
+      return tally;
+    };
+
+    // The control: everybody authors, which is exactly what `build-snapshots.ts` drives.
+    const live = buildBackend(effective, { ...options, snapshot: undefined }, validator);
+    await drive(live);
+    const liveTally = countByEra(live);
+    const staged = live.store
+      .holdings()
+      .filter((descriptor) => eras.has(descriptor.era))
+      .map((descriptor) => {
+        const holding = live.store.holding(descriptor.holding_id);
+        if (!holding) throw new Error(`the store lost '${descriptor.holding_id}' between listing and reading it`);
+        return holding;
+      })
+      .sort((a, b) => a.descriptor.published_at.tick - b.descriptor.published_at.tick);
+    const artefact = await decodeSnapshot(
+      await encodeSnapshot(
+        {
+          format: 'drogna-snapshot-1',
+          start_condition: condition.id,
+          run_id: live.runId,
+          root_seed: condition.root_seed,
+          config_digest: staged[0].descriptor.manifest.config_digest,
+          code_revision: 'test',
+        },
+        staged,
+      ),
+    );
+    live.stop();
+
+    // The page's path: the artefact replayed, its authors held back.
+    const held = heldBackBySnapshot(condition, effective.snapshot_source);
+    expect([...held].sort()).toEqual(['analyst', 'env-generator', 'model-runner']);
+    const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+    await drive(page);
+
+    // It opens holding what the live run held. Era by era, so a missing forecast half is a
+    // named difference rather than a count that happens to match.
+    expect(countByEra(page)).toEqual(liveTally);
+
+    // And it keeps turning. Without the scheduler's watchdog this waits out the limit with
+    // the count exactly where the pre-roll left it.
+    const forecasts = () => page.store.holdings().filter((holding) => holding.era === 'instance').length;
+    const onOpening = forecasts();
+    expect(onOpening, 'the run opened with no forecast at all').toBeGreaterThan(0);
+    await driveUntil(page.clock, () => forecasts() > onOpening, effective.scheduler.max_interval_ticks * 6);
+    expect(
+      forecasts(),
+      'the loop never turned after the console opened: a run was requested into the held-back analyst and never released',
+    ).toBeGreaterThan(onOpening);
+    page.stop();
+  }, 180_000);
+  /**
+   * What a replayed run knows, as against what it holds.
+   *
+   * Committing the forecast eras holds the **model runner** back for the whole pre-roll, and
+   * `run_published` is the only statement that a forecast stands. Four components hold
+   * nothing but what it told them — the scheduler its remaining validity, the offload
+   * packager the run it would stage, the analyst its background spread, telemetry its skill
+   * ledger — so replaying the holdings left every one of them believing the run had no
+   * forecast at all. The holdings were all there; the knowledge was not, and the per-era
+   * counts the case above compares cannot see the difference.
+   *
+   * Two things it cost, both measured before the fix:
+   *  - `returning`'s card promises "a package staged for offload, with the measurement
+   *    geometry beside it". Its script prompts for one mid-pre-roll, at a tick where the
+   *    runner is held back, and the packager declined: **zero** staged bundles against a live
+   *    run's five, with the Offload surface telling the reader nothing had been released
+   *    while the store held four forecasts and their spread fields and the timeline drew them.
+   *  - The scheduler, counting from a request nobody answered rather than from the standing
+   *    forecast's validity, reached its next run at 611, 1,272, 1,514 and 1,790 ticks where a
+   *    live run of the same conditions reaches it at 599, 1,794, 1,080 and 639.
+   *
+   * Both are held here, and the cadence one is held against a live run driven in the same
+   * test rather than against a number typed into it — which is the assertion that would have
+   * refused the first attempt at this, a quiesced scheduler that turned the loop 10 ticks
+   * after opening and looked like an improvement.
+   */
+  // The bytes are held to identity by check-snapshot-drift and by the replay case above; what
+  // this asks is whether replaying them leaves the components that learn from announcements
+  // in the state a live run leaves them in.
+  // AT-04: not byte-identity — two different runs compared on when their loop next turns, not one run reproduced
+  it('a replayed run stages what its card promises, and keeps the cadence a live run keeps', async () => {
+    /** Ticks from the console opening to the next forecast the loop computes for itself. */
+    const ticksToNextForecast = async (runtime: BackendRuntime, limit: number) => {
+      const forecasts = () => runtime.store.holdings().filter((holding) => holding.era === 'instance').length;
+      const onOpening = forecasts();
+      let waited = 0;
+      while (waited < limit && forecasts() === onOpening) {
+        runtime.clock.tickOnce();
+        waited += 1;
+        if (waited % 200 === 0) await breathe();
+      }
+      return forecasts() > onOpening ? waited : Number.POSITIVE_INFINITY;
+    };
+
+    const readings: { condition: string; live: number; replayed: number }[] = [];
+    for (const condition of config.start_conditions.conditions) {
+      const effective = (() => {
+        const copy = configForCondition(JSON.parse(JSON.stringify(config)) as ConfigRun, condition);
+        copy.clock.mode = 'lockstep';
+        copy.clock.rate = 0;
+        return copy;
+      })();
+      const options = { rootSeed: condition.root_seed, startCondition: condition.id, revision: 'test', dirty: false };
+      const held = heldBackBySnapshot(condition, effective.snapshot_source);
+      const limit = effective.scheduler.max_interval_ticks * 6;
+      const opened = async (artefact: Awaited<ReturnType<typeof decodeSnapshot>> | undefined) => {
+        const runtime = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+        await runPreRoll(
+          {
+            backend: runtime.httpBackend,
+            clock: effective.clock,
+            operator: effective.operator,
+            breathe,
+            onProgress: () => undefined,
+          },
+          artefact ? holdingBack(condition, held) : condition,
+        );
+        return runtime;
+      };
+
+      // The control, and the artefact built from it exactly as `pnpm snapshots` builds one.
+      const live = await opened(undefined);
+      const eras: ReadonlySet<string> = new Set<string>(condition.snapshot_eras ?? []);
+      const staged = live.store
+        .holdings()
+        .filter((descriptor) => eras.has(descriptor.era))
+        .map((descriptor) => {
+          const holding = live.store.holding(descriptor.holding_id);
+          if (!holding) throw new Error(`the store lost '${descriptor.holding_id}'`);
+          return holding;
+        })
+        .sort((a, b) => a.descriptor.published_at.tick - b.descriptor.published_at.tick);
+      const artefact = await decodeSnapshot(
+        await encodeSnapshot(
+          {
+            format: 'drogna-snapshot-1',
+            start_condition: condition.id,
+            run_id: live.runId,
+            root_seed: condition.root_seed,
+            config_digest: staged[0].descriptor.manifest.config_digest,
+            code_revision: 'test',
+          },
+          staged,
+        ),
+      );
+      const liveStaged = live.offload.staged().length;
+      const liveAbsorbed = (
+        JSON.parse(
+          (await live.httpBackend.handle({ method: 'GET', path: effective.telemetry.http.report_path, body: '' }))
+            .body,
+        ) as { latency: { sample_count: number } }
+      ).latency.sample_count;
+      const liveCadence = await ticksToNextForecast(live, limit);
+      live.stop();
+
+      // Counted on the wire during the pre-roll, because "did the ledger keep the pre-roll's
+      // evidence" is only a question where there was evidence: `leaving` and `arriving` stop
+      // their sensors for the whole pre-roll, so the monitor scores nothing and the ledger's
+      // first sample legitimately postdates the console. An assertion that assumed otherwise
+      // failed the fixed code on `leaving`.
+      const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+      await runPreRoll(
+        {
+          backend: page.httpBackend,
+          clock: effective.clock,
+          operator: effective.operator,
+          breathe,
+          onProgress: () => undefined,
+        },
+        holdingBack(condition, held),
+      );
+
+      /**
+       * **What the replayed run knows, on every condition, against its own live control.**
+       *
+       * A first version asserted `staged().length > 0` for `returning` alone, and passed for
+       * the wrong reason: `returning`'s script prompts `offload-now` mid-pre-roll, a path that
+       * never touches the restatement at all. Deleting the restatement entirely left it green,
+       * while `loitering` opened with zero staged bundles against a live run's two.
+       *
+       * Telemetry is the same shape and was worse. `forecast_run_id` is set from
+       * `run_published` and nothing else, so through a replayed pre-roll the ledger knew of no
+       * forecast and dropped every sample the monitor scored against the one the artefact
+       * supplied — the node reading "no forecast to score" while the Forecast tab drew what it
+       * was scoring against, and still reading zero for 300 ticks after the console opened.
+       */
+      /**
+       * **Did the ledger keep what the monitor scored during the pre-roll?**
+       *
+       * The ledger's key comes from `run_published` and nothing else, so through a replayed
+       * pre-roll it was null and every sample the monitor scored against the artefact's own
+       * forecast was dropped — 52 of them on `loitering`, the node reading "no forecast to
+       * score" while the Forecast tab drew what it was scoring against.
+       *
+       * Read from the live report rather than from `lastStatistics`, because statistics land
+       * on a cadence and the restatement arrives a tick after the console opens: a state read
+       * after driving reads `reporting` whether the pre-roll's evidence was kept or thrown
+       * away. `latency.sample_count` is incremented in `absorb`, so it counts exactly what the
+       * ledger accepted, live. Held to the live control rather than to a guess about the
+       * condition — `leaving` and `arriving` stop their sensors, and what samples they do
+       * produce are scored against the departure brief rather than a forecast run, so their
+       * ledgers legitimately hold nothing at this instant.
+       */
+      const absorbed = async (runtime: BackendRuntime) => {
+        const answer = await runtime.httpBackend.handle({
+          method: 'GET',
+          path: effective.telemetry.http.report_path,
+          body: '',
+        });
+        return (JSON.parse(answer.body) as { latency: { sample_count: number } }).latency.sample_count;
+      };
+      if (liveAbsorbed > 0) {
+        expect(
+          await absorbed(page),
+          `${condition.id}: the live run's ledger held ${liveAbsorbed} scored sample(s) at this point and the ` +
+            'replayed run holds none — the monitor scored against the forecast the artefact supplied and the ' +
+            'ledger discarded every one, for want of a run nothing had told it about',
+        ).toBeGreaterThan(0);
+      }
+
+      // One clock sample first. The model runner restates the standing run on its first sample
+      // after the pre-roll restarts it, so a packager that learned of the run only from that
+      // restatement has not heard it at the instant the pre-roll returns — `loitering` reads 0
+      // staged at that instant and 1 a tick later. That one-tick window is real and is the
+      // reader's first second at the shipped rate; it is not what this assertion is about, and
+      // an assertion that ignored it failed the fixed code.
+      await driveTicks(page.clock, 1);
+
+      // Not parity — a replayed run legitimately stages fewer windows, because the releases
+      // that happened inside the artefact's own run are not re-announced one by one, and the
+      // spec records that gap. The fault's shape is *zero where the live run staged*, which is
+      // what "zero staged bundles against a live run's five" was. `leaving` and `arriving` stop
+      // the offload component for their whole pre-roll, so their live runs stage nothing
+      // either and there is nothing here to hold them to — which an unconditional `> 0`
+      // asserted anyway, and failed the fixed code on.
+      if (liveStaged > 0) {
+        expect(
+          page.offload.staged().length,
+          `${condition.id}: the live run staged ${liveStaged} and the replayed run staged none: ` +
+            `${page.offload.declined.join('; ') || 'no reason given'}`,
+        ).toBeGreaterThan(0);
+      }
+      // Last, because it drives the clock until the loop turns — and a new run closes the
+      // ledger and opens a staging window, so every reading above must be taken at the instant
+      // the console opens, which is where the faults they cover are visible.
+      // The settle above already spent one tick of the replayed run's cadence, so the two
+      // measurements start a tick apart; add it back rather than move the settle, because
+      // moving it would take the staging reading after the loop had turned.
+      const consumedBySettle = 1;
+      const pageCadence = consumedBySettle + (await ticksToNextForecast(page, limit));
+      page.stop();
+      readings.push({ condition: condition.id, live: liveCadence, replayed: pageCadence });
+      expect(Number.isFinite(liveCadence), `${condition.id}: the live run never computed a forecast`).toBe(true);
+    }
+
+    // Every condition, against its own live run rather than a number typed in here. Two of
+    // the four agree by coincidence whichever way the fix goes — `leaving` and `returning`
+    // both read 599 and 639 with the resume disabled — so a case that checked one condition
+    // proved nothing, which is how the first draft of this passed against the unfixed tree.
+    const differing = readings.filter((reading) => reading.live !== reading.replayed);
+    expect(
+      differing,
+      `a replayed run reached its next forecast on a cadence the live run did not:\n${readings
+        .map((r) => `${r.condition}: live ${r.live}, replayed ${r.replayed}`)
+        .join('\n')}`,
+    ).toEqual([]);
+  }, 600_000);
 });

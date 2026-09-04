@@ -51,6 +51,15 @@ export class SnapshotSource {
   private readonly pending: StagedHolding[];
   private readonly total: number;
   private published = 0;
+  /**
+   * Holdings the store declined to write because it already held something newer for that
+   * era. Counted apart from both of the others, because it is neither: the bytes were
+   * accounted for, so it is not a refusal, and nothing was written, so it is not a replay.
+   * It is reached on a restart — the source republishes an artefact whose instants the
+   * running loop has since passed — and on that path it is the ordinary outcome rather
+   * than a fault.
+   */
+  private superseded = 0;
   /** Refusals from the store, kept and reported: a snapshot may not fail quietly. */
   readonly refused: string[] = [];
 
@@ -90,17 +99,25 @@ export class SnapshotSource {
         detail:
           this.total === 0
             ? this.unavailable === undefined
-              ? 'no committed artefact for this start condition; the ocean was authored live'
-              : `the committed artefact was expected and could not be used, so the ocean was authored live instead: ${this.unavailable}`
+              ? 'no committed artefact for this start condition; the ocean and its forecasts were computed live'
+              : `the committed artefact was expected and could not be used, so the ocean and its forecasts were computed live instead: ${this.unavailable}`
             : `${this.published} of ${this.total} holding(s) replayed from the committed artefact` +
+              (this.superseded > 0
+                ? `; ${this.superseded} the store already held newer holdings than`
+                : '') +
               (this.refused.length > 0 ? `; ${this.refused.length} refused by the store` : ''),
         figures:
           this.total === 0
             ? []
             : [
                 { key: 'replayed', value: this.published, of: this.total, label: 'replayed' },
-                // Absent until one has happened: a face may not draw a zero where nothing
-                // has gone wrong (FR-58).
+                // Both absent until one has happened: a face may not draw a zero where
+                // nothing has gone wrong (FR-58). Superseded is not a fault and does not
+                // move the status, but it is the difference between the two numbers above
+                // and a reader who is told only 'replayed' is left to guess at it.
+                ...(this.superseded === 0
+                  ? []
+                  : [{ key: 'superseded', value: this.superseded, label: 'already newer' }]),
                 ...(this.refused.length === 0
                   ? []
                   : [{ key: 'refused', value: this.refused.length, label: 'refused' }]),
@@ -143,8 +160,26 @@ export class SnapshotSource {
     while (this.pending.length > 0 && this.pending[0].descriptor.published_at.tick <= tick) {
       const staged = this.pending.shift() as StagedHolding;
       const verdict = this.store.publish(staged);
-      if (verdict.published) this.published += 1;
-      else this.refused.push(`${staged.descriptor.holding_id}: ${verdict.refusal ?? 'refused'}`);
+      // Three outcomes, one counter each, and a switch rather than a chain ending in `else`:
+      // both faults this exists to close were an `else` sweeping up a case nobody had named
+      // — first a superseded publication counted as replayed, then the same one reported as a
+      // store refusal with no reason to give for it. A fourth outcome would land in no case
+      // here and be counted nowhere, so the compiler is asked instead.
+      switch (verdict.outcome) {
+        case 'written':
+          this.published += 1;
+          break;
+        case 'superseded':
+          this.superseded += 1;
+          break;
+        case 'refused':
+          this.refused.push(`${staged.descriptor.holding_id}: ${verdict.refusal}`);
+          break;
+        default: {
+          const unnamed: never = verdict;
+          throw new Error(`the coverage store returned an outcome this source cannot count: ${JSON.stringify(unnamed)}`);
+        }
+      }
     }
   }
 }

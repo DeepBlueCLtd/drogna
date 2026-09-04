@@ -371,14 +371,25 @@ try {
       cycles: number;
       budget: number;
     }) => {
+      // **Counted as an increase over what the page started with, not as a total.** The
+      // predicate was `seen >= cycles` against the whole store, which assumes the store starts
+      // empty of contributions holdings. It does not: a start condition's seed snapshot carries
+      // its pre-roll, and once feature 125 regenerated those artefacts the seed carried the
+      // analysis holdings too. The loop then exited on burst 0 without stepping once, no analysis
+      // was ever announced, and the region stood at "no analysis has been announced yet" while
+      // the sidecar was ready to record "until 3 analysis cycles had published". The count has to
+      // be of cycles *this capture drove*, which is the difference.
+      let baseline = -1;
       let seen = 0;
       let burst = 0;
       for (; burst < budget; burst++) {
         const inventory = await (await fetch("/api/ctl/holdings")).json();
-        seen = inventory.holdings.filter(
+        const held = inventory.holdings.filter(
           (holding: { field: { format: string } }) =>
             holding.field.format === "drogna-contributions-v1",
         ).length;
+        if (baseline < 0) baseline = held;
+        seen = held - baseline;
         if (seen >= cycles) break;
         const response = await fetch("/api/ctl/clock/step", {
           method: "POST",
@@ -429,15 +440,24 @@ try {
        .then(() => true)
        .catch(() => false);
      if (up) break;
-     await page.evaluate(
+     // **The response is read.** `CLAUDE.md` records this script's first version asking for 120
+     // ticks against a declared bound of 60, so every step was refused, the simulation advanced
+     // by nothing, and the failure surfaced as a picture rather than an error — because the
+     // response was not read. A settle loop that ignores its own refusals is that fault again:
+     // twenty bursts that all advanced nothing look exactly like twenty bursts that did.
+     const stepped = await page.evaluate(
        async (ticks: number) => {
-         await fetch("/api/ctl/clock/step", {
+         const response = await fetch("/api/ctl/clock/step", {
            method: "POST",
            body: JSON.stringify({ ticks }),
          });
+         return response.ok ? "" : `${response.status} ${await response.text()}`;
        },
        stepTicks,
      );
+     if (stepped) {
+       throw new Error(`the step endpoint refused while waiting for the field: ${stepped}`);
+     }
    }
    if (settling >= SETTLE_BURSTS) {
      const said = await page
@@ -509,7 +529,7 @@ try {
     rays_drawn: picked.rays,
     column:
       "read off the served contributions header, so it is a column an instrument reached",
-    warmed: `stepped in bursts of ${stepTicks} ticks at rate 0 until ${cycles} analysis cycles had published (${warmed.bursts} bursts), then ${settling} further burst(s) until the field was drawn`,
+    warmed: `stepped in bursts of ${stepTicks} ticks at rate 0 until ${cycles} analysis cycles had published beyond the seed's own (${warmed.bursts} bursts), then ${settling} further burst(s) until the field was drawn`,
     viewport: { width, height: shotHeight },
     // **Read out of the file's own header, not off the element's box.** These disagreed —
     // 388x1592 recorded for a 390x1593 file — because the box is CSS pixels before rounding and

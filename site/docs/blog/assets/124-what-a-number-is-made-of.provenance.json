@@ -3,23 +3,23 @@
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
   "start_condition": "arriving",
-  "sim_time": "2026-01-01T01:59:00Z",
+  "sim_time": "2026-01-01T02:34:00Z",
   "clock_pinned": "rate 0",
-  "holding": "analysis.loiter-arriving-pahu-run-2-contributions",
-  "rays_drawn": 6,
+  "holding": "analysis.loiter-arriving-pahu-run-t9190-contributions",
+  "rays_drawn": 4,
   "column": "read off the served contributions header, so it is a column an instrument reached",
-  "warmed": "stepped in bursts of 60 ticks at rate 0 until 3 analysis cycles had published (20 bursts), then 0 further burst(s) until the field was drawn",
+  "warmed": "stepped in bursts of 60 ticks at rate 0 until 3 analysis cycles had published beyond the seed's own (55 bursts), then 0 further burst(s) until the field was drawn",
   "viewport": {
     "width": 2560,
-    "height": 1250
+    "height": 1253
   },
   "image_size": {
     "width": 816,
-    "height": 1211
+    "height": 1213
   },
   "element_box": {
     "width": 815,
-    "height": 1209
+    "height": 1212
   },
   "browser": {
     "name": "chromium",

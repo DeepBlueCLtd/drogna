@@ -1151,6 +1151,38 @@ the part worth recording, because each was a sentence asserting a property the c
       read the previous pass started. Guarded on the readout being absent, so the click fires once
       and then only after a cycle has actually cleared the pick.
 
+- [x] T022aa **CI failed twice on the capture, and the diagnosis was not the one the first fix
+      assumed.** The wait for the share field was made to drive rather than wait, on the reading
+      that the region had spent its one axis-ask for the last cycle. The real fault is one level
+      earlier and simpler: **the warm loop counted contributions holdings in the store as a
+      total**, and the store does not start empty of them. `arriving`'s pre-roll publishes several
+      analysis cycles before the pin, and — once feature 125 regenerated the seed artefacts — the
+      snapshot carries them too. `seen >= cycles` was therefore true on burst 0, the loop stepped
+      *nothing*, no analysis was ever announced, and the region stood at "no analysis has been
+      announced yet" while the sidecar was ready to record "until 3 analysis cycles had
+      published". It passed most of the time only because the panel is usually mounted during the
+      pre-roll and catches an announcement from it; on a slow runner it mounts too late and there
+      is no later one, ever. Counted as an increase over what the page started with, it is the
+      number of cycles this capture actually drove.
+
+      Watched failing: the absolute count planted back reproduces CI's own error verbatim —
+      *"no share field was drawn after 3 cycles and 20 further bursts; the region says: no
+      analysis has been announced yet"* — and the merged tree passes with the difference.
+
+      **And the settle loop did not read its own step responses.** `CLAUDE.md` records this exact
+      script asking for 120 ticks against a bound of 60, so every step was refused and the
+      simulation advanced by nothing, with the failure surfacing as a picture rather than an
+      error — because the response was not read. Twenty bursts that all advanced nothing look
+      exactly like twenty that did. Read now, and a refusal throws.
+
+      The drive-rather-than-wait change is kept: it is what turned the second failure from a bare
+      selector timeout into a sentence naming the state, and that sentence is what made the real
+      cause findable.
+
+      **The picture changed under the merge**, from six sources to four and to a level where the
+      gain extrapolates hard, so the entry's alt text is rewritten against the picture actually
+      taken rather than the one it described.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

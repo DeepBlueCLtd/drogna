@@ -104,19 +104,3 @@ export function standingRunFacts(store: CoverageStore): StandingRun | undefined 
     digests: { forecast: standing.descriptor.field.sha256, uncertainty: spread.descriptor.field.sha256 },
   };
 }
-
-/**
- * The same facts as the announcement the model runner publishes, for the model runner to
- * restate. Only the addressing is the restating component's own — `component` and
- * `scenario_run_id`; the run's instant comes off the descriptor, for the reason recorded
- * above.
- */
-export function standingRunFromStore(
-  store: CoverageStore,
-  component: string,
-  scenarioRunId: string,
-): RunPublished | undefined {
-  const facts = standingRunFacts(store);
-  if (!facts) return undefined;
-  return { component, scenario_run_id: scenarioRunId, ...facts };
-}

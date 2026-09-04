@@ -170,6 +170,37 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       publication now writes nothing at all, and the test asserts the inventory as well as the
       pointer — it catches both the original fault and my own first fix for it.
 
+- [x] **T062** Telemetry scored against a run it had never been told about, and threw the
+      evidence away. `forecastRunId` is set from `run_published` alone, and the model runner is
+      held back for the whole of a replayed pre-roll. On `loitering`, 52 residuals scored and
+      52 discarded; on `leaving`, whose sensors are stopped throughout, the node read "no
+      forecast to score" over a store holding two forecasts — `no-forecast` where the honest
+      state is `warming`. The ledger now reads the standing run from the store at the two
+      points it is *used*: absorbing a sample, and publishing statistics. A first version
+      filled a null only and went stale on `arriving`, whose artefact replays three cycles; a
+      second called it from the sample path alone and left `leaving` reading `no-forecast`,
+      which is how the second harm was found.
+
+- [x] **T063** The snapshot source counted a superseded publication as replayed, and drew
+      "N of N holding(s)" on the node the Intro panel sends a reader to. `publish()` now
+      reports `superseded` alongside `published`, and the source counts only what the store
+      wrote. A rewinding publication is not a refusal — the bytes were accounted for — so
+      neither counter was right for it before.
+
+- [x] **T064** `standingRunFromStore` was a one-caller wrapper that added the two addressing
+      fields; inlined into the model runner, where the addressing belongs. `standingRunFacts`
+      now has two callers that share only the facts, which is what it is for.
+
+- [x] **T065** The replayed-cadence test takes its readings in the order the faults are
+      visible in: absorbed and staged at the instant the console opens, cadence last, because
+      driving the clock to the next forecast closes the ledger and opens a staging window. The
+      offload reading spends one clock sample first — the restatement rides the runner's first
+      sample after the pre-roll, so `loitering` reads 0 staged at the instant the pre-roll
+      returns and 1 a tick later — and the cadence adds that tick back rather than moving the
+      settle. Planted against it: disabling the resume leaves `leaving` and `returning`
+      agreeing by coincidence (599 and 639) and `arriving` and `loitering` failing (1,794 →
+      1,329 and 1,080 → 219), which is why a case that checked one condition proved nothing.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

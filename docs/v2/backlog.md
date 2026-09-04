@@ -60,39 +60,16 @@ were true before #107 merged and none is now.
 
 ---
 
-## P0 — Land what is already built
+## P0 — Land what is already built — **closed**
 
-### PR #107 — review and merge the forward-step implementation
-
-Branch `claude/srd-model-forecast-specs-ws9x3d`: the two-layer kernel, run cost expressed in
-simulation time, the scheduler's `held-for-cost` decision, and the left region and timeline
-of `#/view/forecast` — plus the feature 124 specification. Feature 123's task lines are all
-ticked on the branch (83 at the current tip; 11 of them are already ticked on `main`, from the
-record-reconciliation phase that merged as `cd938b1`).
-
-Only P2 below waits on this merge for its *specification*: within `specs/`, #107 touches
-`123-forward-step` and `124-forecast-illustration` and nothing else, so P3's captures, P4's
-gate and P6 can all proceed in parallel. (P1 already did, and is discharged.)
-
-One row below is entangled with #107 in code even though it is not in `specs/`: P5's forecast
-eras is discharged by changing run-identifier derivation in
-`app/src/backend/scheduler/scheduler.ts`, and #107 adds 244 lines to that same file for the
-cost-hold state machine. Take that row after the merge, not beside it.
-
-**Closed by feature 125 — expect a snapshot diff now.** This paragraph recorded that the
-committed artefacts held only the `archive` and `nowcast` eras, so no model-runner output
-reached them and no kernel change could move them: a planted kernel fault shifting every
-forecast temperature by 5 °C and tripling its spread left `check-snapshot-drift` exiting 0,
-while the kernel ran 125 times during the pre-rolls and had its output discarded by the era
-filter. Every condition now declares `analysis` and `instance` as well, so the analyst's and
-the model runner's own bytes are in the artefacts and under the gate. **The forecast kernel
-has snapshot regression cover**, as a side effect of the P5 row below being taken. Re-planted
-rather than assumed: the same 5 °C shift, in the configured kernel this time, fails
-`check-snapshot-drift` on all four conditions.
-
-**Done when** #107 is merged and `pnpm check` is green on `main`.
-
----
+#107 merged on 3 September 2026, which is what this row was waiting for, and the row is kept
+as a heading rather than deleted so that the argument above it — that most of the seventy
+unticked lines were not work — still has the thing it was arguing about. Its body said the
+committed artefacts held only `archive` and `nowcast`, so no model-runner change could move
+them and **the forecast kernel had no snapshot regression cover at all**. Feature 125 closed
+that too: every condition declares all four eras, so the analyst's and the model runner's own
+bytes are in the artefacts and under `check-snapshot-drift`. Re-planted rather than assumed —
+the same 5 °C shift, in the configured kernel this time, fails the gate on all four conditions.
 
 ## P1 — The replay proof, and the record *(done on this branch)*
 
@@ -190,7 +167,9 @@ rows below and stay open.
 ## P2 — Feature 124, the illustration surface
 
 The largest piece of real work, and the only one with a written specification waiting for it.
-35 task lines, and the only row that needs #107 merged first.
+36 task lines, 8 of them ticked — this row was written when the feature was unstarted on #107
+and outside the count; #107 has merged, `#/view/forecast` is on `main`, and the remaining 28
+lines are the bulk of the 59.
 
 SRD-v2 §5.20, *The forward step, its cost, and what made the field* (spanning
 FR-106 to FR-140, of which roughly FR-120 onward is this feature's half) says plainly which

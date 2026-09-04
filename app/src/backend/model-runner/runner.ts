@@ -31,7 +31,7 @@ import type {
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
-import { standingRunFromStore } from '../lib/standing-run.js';
+import { standingRunFacts } from '../lib/standing-run.js';
 import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
@@ -304,9 +304,15 @@ export class ModelRunner {
     // Once per instance whether or not it finds anything: a cold run has an empty store on
     // its first sample and must not keep asking.
     this.resumeConsidered = true;
-    const standing = standingRunFromStore(this.store, this.config.id, this.runId);
+    const standing = standingRunFacts(this.store);
     if (!standing) return;
-    this.client.publish(this.config.topics.run_published, standing);
+    // Only the addressing is this component's own; every fact about the run comes off the
+    // descriptor it wrote itself.
+    this.client.publish(this.config.topics.run_published, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      ...standing,
+    } satisfies RunPublished);
   }
 
   start(): void {

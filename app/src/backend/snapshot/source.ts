@@ -143,7 +143,7 @@ export class SnapshotSource {
     while (this.pending.length > 0 && this.pending[0].descriptor.published_at.tick <= tick) {
       const staged = this.pending.shift() as StagedHolding;
       const verdict = this.store.publish(staged);
-      if (verdict.published) this.published += 1;
+      if (verdict.published && !verdict.superseded) this.published += 1;
       else this.refused.push(`${staged.descriptor.holding_id}: ${verdict.refusal ?? 'refused'}`);
     }
   }

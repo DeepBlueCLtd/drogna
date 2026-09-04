@@ -39,7 +39,7 @@ import {
 } from './start-condition.js';
 import { runPreRoll } from './preroll.js';
 import { decodeSnapshot, encodeSnapshot } from '../backend/snapshot/codec.js';
-import { driveUntil } from '../backend/test-support/drive.js';
+import { driveTicks, driveUntil } from '../backend/test-support/drive.js';
 
 const validator = createSeamValidator();
 const config = runConfigDocument as ConfigRun;
@@ -535,19 +535,111 @@ describe('the start conditions (feature 120)', () => {
           staged,
         ),
       );
+      const liveStaged = live.offload.staged().length;
+      const liveAbsorbed = (
+        JSON.parse(
+          (await live.httpBackend.handle({ method: 'GET', path: effective.telemetry.http.report_path, body: '' }))
+            .body,
+        ) as { latency: { sample_count: number } }
+      ).latency.sample_count;
       const liveCadence = await ticksToNextForecast(live, limit);
       live.stop();
 
-      const page = await opened(artefact);
-      // The card's promise, where a card makes one. `returning` is the condition whose script
-      // prompts for a package mid-pre-roll, at a tick where the model runner is held back.
-      if (condition.id === 'returning') {
+      // Counted on the wire during the pre-roll, because "did the ledger keep the pre-roll's
+      // evidence" is only a question where there was evidence: `leaving` and `arriving` stop
+      // their sensors for the whole pre-roll, so the monitor scores nothing and the ledger's
+      // first sample legitimately postdates the console. An assertion that assumed otherwise
+      // failed the fixed code on `leaving`.
+      const page = buildBackend(effective, { ...options, snapshot: artefact }, validator);
+      await runPreRoll(
+        {
+          backend: page.httpBackend,
+          clock: effective.clock,
+          operator: effective.operator,
+          breathe,
+          onProgress: () => undefined,
+        },
+        holdingBack(condition, held),
+      );
+
+      /**
+       * **What the replayed run knows, on every condition, against its own live control.**
+       *
+       * A first version asserted `staged().length > 0` for `returning` alone, and passed for
+       * the wrong reason: `returning`'s script prompts `offload-now` mid-pre-roll, a path that
+       * never touches the restatement at all. Deleting the restatement entirely left it green,
+       * while `loitering` opened with zero staged bundles against a live run's two.
+       *
+       * Telemetry is the same shape and was worse. `forecast_run_id` is set from
+       * `run_published` and nothing else, so through a replayed pre-roll the ledger knew of no
+       * forecast and dropped every sample the monitor scored against the one the artefact
+       * supplied — the node reading "no forecast to score" while the Forecast tab drew what it
+       * was scoring against, and still reading zero for 300 ticks after the console opened.
+       */
+      /**
+       * **Did the ledger keep what the monitor scored during the pre-roll?**
+       *
+       * The ledger's key comes from `run_published` and nothing else, so through a replayed
+       * pre-roll it was null and every sample the monitor scored against the artefact's own
+       * forecast was dropped — 52 of them on `loitering`, the node reading "no forecast to
+       * score" while the Forecast tab drew what it was scoring against.
+       *
+       * Read from the live report rather than from `lastStatistics`, because statistics land
+       * on a cadence and the restatement arrives a tick after the console opens: a state read
+       * after driving reads `reporting` whether the pre-roll's evidence was kept or thrown
+       * away. `latency.sample_count` is incremented in `absorb`, so it counts exactly what the
+       * ledger accepted, live. Held to the live control rather than to a guess about the
+       * condition — `leaving` and `arriving` stop their sensors, and what samples they do
+       * produce are scored against the departure brief rather than a forecast run, so their
+       * ledgers legitimately hold nothing at this instant.
+       */
+      const absorbed = async (runtime: BackendRuntime) => {
+        const answer = await runtime.httpBackend.handle({
+          method: 'GET',
+          path: effective.telemetry.http.report_path,
+          body: '',
+        });
+        return (JSON.parse(answer.body) as { latency: { sample_count: number } }).latency.sample_count;
+      };
+      if (liveAbsorbed > 0) {
         expect(
-          page.offload.staged().length,
-          `returning's card promises a staged package and the replayed run staged none: ${page.offload.declined.join('; ')}`,
+          await absorbed(page),
+          `${condition.id}: the live run's ledger held ${liveAbsorbed} scored sample(s) at this point and the ` +
+            'replayed run holds none — the monitor scored against the forecast the artefact supplied and the ' +
+            'ledger discarded every one, for want of a run nothing had told it about',
         ).toBeGreaterThan(0);
       }
-      const pageCadence = await ticksToNextForecast(page, limit);
+
+      // One clock sample first. The model runner restates the standing run on its first sample
+      // after the pre-roll restarts it, so a packager that learned of the run only from that
+      // restatement has not heard it at the instant the pre-roll returns — `loitering` reads 0
+      // staged at that instant and 1 a tick later. That one-tick window is real and is the
+      // reader's first second at the shipped rate; it is not what this assertion is about, and
+      // an assertion that ignored it failed the fixed code.
+      await driveTicks(page.clock, 1);
+
+      // Not parity — a replayed run legitimately stages fewer windows, because the releases
+      // that happened inside the artefact's own run are not re-announced one by one, and the
+      // spec records that gap. The fault's shape is *zero where the live run staged*, which is
+      // what "zero staged bundles against a live run's five" was. `leaving` and `arriving` stop
+      // the offload component for their whole pre-roll, so their live runs stage nothing
+      // either and there is nothing here to hold them to — which an unconditional `> 0`
+      // asserted anyway, and failed the fixed code on.
+      if (liveStaged > 0) {
+        expect(
+          page.offload.staged().length,
+          `${condition.id}: the live run staged ${liveStaged} and the replayed run staged none: ` +
+            `${page.offload.declined.join('; ') || 'no reason given'}`,
+        ).toBeGreaterThan(0);
+      }
+      // Last, because it drives the clock until the loop turns — and a new run closes the
+      // ledger and opens a staging window, so every reading above must be taken at the instant
+      // the console opens, which is where the faults they cover are visible.
+      // The settle above already spent one tick of the replayed run's cadence, so the two
+      // measurements start a tick apart; add it back rather than move the settle, because
+      // moving it would take the staging reading after the loop had turned.
+      const consumedBySettle = 1;
+      const pageCadence = consumedBySettle + (await ticksToNextForecast(page, limit));
       page.stop();
       readings.push({ condition: condition.id, live: liveCadence, replayed: pageCadence });
       expect(Number.isFinite(liveCadence), `${condition.id}: the live run never computed a forecast`).toBe(true);

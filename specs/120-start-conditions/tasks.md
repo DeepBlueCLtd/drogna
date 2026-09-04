@@ -211,7 +211,10 @@ but those controls, driven from a script.
 
 ## Deliberately not done
 
-- [x] **The forecast eras in the artefacts.** Done in feature 125, not here. This line
+- [x] **The forecast eras in the artefacts — done in feature 125, not declined.** It sits under
+      this heading because that is where it was written and moving it would lose the record of
+      what was believed; a count that classifies by heading should read the tick, not the
+      heading. This line
       recorded the work as blocked on the scheduler's run identifiers resetting on restart —
       which was the wrong cause: `holdingBack` never stops the scheduler, so that reset never
       happened, and the test that refused the declaration in those words had never been seen

@@ -33,6 +33,12 @@ export interface PublicationVerdict {
   readonly published: boolean;
   /** When refused, names the mismatch. */
   readonly refusal?: string;
+  /**
+   * Set where the store already holds something newer for this era and wrote nothing. Not a
+   * refusal — the bytes were accounted for — but not a replay either, so a caller counting
+   * what it put back must not count it.
+   */
+  readonly superseded?: boolean;
 }
 
 export class CoverageStore {
@@ -241,7 +247,12 @@ export class CoverageStore {
       pointedAt.descriptor.holding_id !== descriptor.holding_id &&
       descriptor.published_at.tick < pointedAt.descriptor.published_at.tick;
 
-    if (rewinds) return { published: true };
+    // Reported as superseded rather than simply published: the snapshot source counts what it
+    // put back and draws "N of N holding(s) replayed" on its own face, and a holding the store
+    // declined to write is not one it replayed. The distinction matters on exactly the node
+    // the Intro panel now sends a reader to, whose justification is that they can look rather
+    // than take somebody's word.
+    if (rewinds) return { published: true, superseded: true };
 
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).

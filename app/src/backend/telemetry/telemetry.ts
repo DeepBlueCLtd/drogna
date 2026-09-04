@@ -32,6 +32,7 @@ import type {
   TelemetryResidualStatistics,
 } from '../../generated/types.js';
 import { configDigest } from '../lib/sha256.js';
+import { standingRunFacts } from '../lib/standing-run.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { soundSpeedMs } from '../env-generator/analytic.js';
 import { sampleHolding, timeAxisPosixOrigin } from '../query/field-sampler.js';
@@ -116,6 +117,7 @@ export class Telemetry {
       const previousTick = this.simTime.tick;
       this.simTime = { value: sample.sim_time, tick: sample.tick };
       if (sample.tick > previousTick && sample.tick % this.config.cadence_ticks === 0) {
+        this.adoptStandingRun();
         this.publishStatistics();
         this.publishSkill();
       }
@@ -155,14 +157,7 @@ export class Telemetry {
       // away 58 scored samples and left the Telemetry surface reporting "0 scored sample(s)"
       // while the monitor went on publishing residuals into it — silence shown where there
       // is traffic, which is the half of Principle VII that is easiest to ship by accident.
-      if (published.run_id === this.forecastRunId) return;
-      this.forecastRunId = published.run_id;
-      this.residuals = [];
-      this.persistenceErrors = [];
-      this.firstSampleTime = null;
-      this.lastSampleTime = null;
-      this.regions.clear();
-      this.latency = { count: 0, totalSeconds: 0, maximumSeconds: 0 };
+      this.adoptRun(published.run_id);
     });
     this.client.subscribe(this.config.topics.telemetry, (message) => {
       this.telemetryMessageCount += 1;
@@ -176,7 +171,56 @@ export class Telemetry {
     this.heartbeat.stop();
   }
 
+  /**
+   * The run that stands, when this component was never told of one.
+   *
+   * `forecastRunId` is set from `run_published` and from nothing else, and since feature 125
+   * the model runner is held back for the whole of a replayed pre-roll — so through every tick
+   * of it this ledger knew of no forecast. Two harms, both measured. On `loitering` it dropped
+   * every sample the monitor scored against the forecast the artefact had supplied: **52
+   * scored, 52 discarded**, and the restatement arriving a tick after the console opens cannot
+   * repair that, the evidence being already thrown away. On `leaving`, whose sensors are
+   * stopped for the whole pre-roll so no sample ever arrives, the node read **"no forecast to
+   * score" over a store holding two forecasts** — `no-forecast` where the honest state is
+   * `warming`, which is the difference between "there is nothing to score against" and "there
+   * is nothing scored yet".
+   *
+   * So the store is asked for the run that stands: the same resumption rule the model runner
+   * and the offload packager follow, and the same reading. Not a second opinion about which
+   * run is current — the store's own era pointer *is* the current run, and an announcement
+   * about it does exactly what this does. A first version only ever filled a null, and went
+   * stale on `arriving`, whose artefact replays three cycles: the ledger adopted the first and
+   * then dropped every sample the monitor scored against the second and third.
+   *
+   * Called where the ledger is *used*, not on a cadence, because both harms are at the point
+   * of use: one drops a sample, the other states a condition. A first version called it only
+   * from the sample path and left `leaving` reading `no-forecast`, which is how the second
+   * harm was found.
+   */
+  private adoptStandingRun(): void {
+    const standing = standingRunFacts(this.store);
+    if (standing) this.adoptRun(standing.run_id);
+  }
+
+  /**
+   * Begin scoring a run. A **new** current run closes the previous ledger — skill is per run,
+   * and evidence against a superseded field is not carried (the monitor's rule, held here
+   * too) — and the run already being scored closes nothing, which is what makes a restatement
+   * of it inert.
+   */
+  private adoptRun(runId: string): void {
+    if (runId === this.forecastRunId) return;
+    this.forecastRunId = runId;
+    this.residuals = [];
+    this.persistenceErrors = [];
+    this.firstSampleTime = null;
+    this.lastSampleTime = null;
+    this.regions.clear();
+    this.latency = { count: 0, totalSeconds: 0, maximumSeconds: 0 };
+  }
+
   private absorb(report: TelemetryResidualSampleReport): void {
+    this.adoptStandingRun();
     if (report.forecast_run_id !== this.forecastRunId) return;
     const forecast = this.store.holding(report.forecast_run_id);
     if (!forecast) return;

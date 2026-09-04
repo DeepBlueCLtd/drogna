@@ -247,6 +247,13 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       lesson repeated in the commit that was fixing the record. Both passes found it. Every
       occurrence in the tree is now the three-run spread.
 
+- [x] **T072** Telemetry asked `standingRunFacts` for one field on every absorbed residual
+      sample, and that helper parses two instants into BigInt microseconds and assembles a
+      grid, a collection set and a digest pair to answer. `standingRunId` is the two map
+      lookups the question actually is, and holds the same rule — a forecast without its
+      spread names no run. A feature whose subject is compute at the boundary should not put
+      an announcement's worth of work on a per-sample path.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

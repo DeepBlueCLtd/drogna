@@ -32,7 +32,7 @@ import type {
   TelemetryResidualStatistics,
 } from '../../generated/types.js';
 import { configDigest } from '../lib/sha256.js';
-import { standingRunFacts } from '../lib/standing-run.js';
+import { standingRunId } from '../lib/standing-run.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { soundSpeedMs } from '../env-generator/analytic.js';
 import { sampleHolding, timeAxisPosixOrigin } from '../query/field-sampler.js';
@@ -198,8 +198,8 @@ export class Telemetry {
    * harm was found.
    */
   private adoptStandingRun(): void {
-    const standing = standingRunFacts(this.store);
-    if (standing) this.adoptRun(standing.run_id);
+    const standing = standingRunId(this.store);
+    if (standing !== undefined) this.adoptRun(standing);
   }
 
   /**

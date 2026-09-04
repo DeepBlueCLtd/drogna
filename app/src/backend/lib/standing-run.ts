@@ -65,6 +65,24 @@ export function spreadHoldingIdFor(forecastHoldingId: string): string {
   return `${forecastHoldingId}-spread`;
 }
 
+/**
+ * The standing run's identifier, and nothing else. Two map lookups against the eight-field
+ * reconstruction below, which parses two instants into BigInt microseconds and assembles a
+ * grid, a collection set and a digest pair. Telemetry needs the id alone and asks on **every
+ * absorbed residual sample**, so it asks here — a feature whose whole subject is compute at
+ * the boundary should not put an announcement's worth of work on a per-sample path.
+ *
+ * The same standing-run rule as the full reconstruction, deliberately: a forecast without its
+ * spread is half a publication and names no run, which is why the sibling is looked up rather
+ * than assumed.
+ */
+export function standingRunId(store: CoverageStore): string | undefined {
+  const standing = store.currentInstance();
+  if (!standing) return undefined;
+  if (!store.holding(spreadHoldingIdFor(standing.descriptor.holding_id))) return undefined;
+  return standing.descriptor.holding_id;
+}
+
 export function standingRunFacts(store: CoverageStore): StandingRun | undefined {
   const standing = store.currentInstance();
   if (!standing) return undefined;

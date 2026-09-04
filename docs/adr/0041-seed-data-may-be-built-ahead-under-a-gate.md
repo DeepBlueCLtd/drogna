@@ -178,8 +178,12 @@ Three changes, and the order matters — the second is unsafe without the first,
 
 ### The numbers, remeasured
 
-Headless Chromium, click to console, `arriving`: 4.7 s with the ocean alone, 2.2 s with all
-four eras. The artefacts go from 1.73 MB to 27.7 MB across the four.
+Headless Chromium, click to console, `arriving`, three runs of each rather than the one this
+line first carried: **3.8, 4.0, 3.8 s** with the ocean alone against **2.2, 2.4, 2.5 s** with
+all four eras. The single reading it replaces said 4.7 s, which was the high end of a spread
+this container's load moves by a second — a difference big enough to change the ratio the
+paragraph below argues from, so the spread is recorded rather than a best number. The
+artefacts go from 1.73 MB to 27.7 MB across the four.
 
 That is a much worse ratio than the ocean's 45%-for-4%, and it is worth being plain that it
 is a *conditional* win rather than a free one. The saving is compute and scales with how

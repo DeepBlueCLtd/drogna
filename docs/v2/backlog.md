@@ -258,8 +258,8 @@ argument written in it.
 
 Taken after a reader reported ~20 s on `arriving` against the 5.3 s ADR-0041 measured for it:
 the same harness on a slower machine, which is the case the byte-for-seconds trade had never
-been run against. Headless Chromium, click to console, `arriving`: 4.7 s → 2.2 s. Artefacts
-1.73 MB → 27.7 MB.
+been run against. Headless Chromium, click to console, `arriving`, over three runs of each:
+3.8–4.0 s → 2.2–2.5 s. Artefacts 1.73 MB → 27.7 MB.
 
 **The blocker this row recorded was wrong about its own cause**, and the refusing test had
 never been seen to fail — the second lesson in `CLAUDE.md`, at work. `holdingBack` does not

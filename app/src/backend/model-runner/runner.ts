@@ -31,8 +31,11 @@ import type {
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
+import { spreadHoldingIdFor, standingRunFacts } from '../lib/standing-run.js';
+import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
+import { publicationFault } from '../coverage-store/store.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import { shallowTwoLayerKernel, shiftAdvectKernel, type KernelParameters, type ModelKernel } from './kernel.js';
 import { carryFeatures, estimateFeatures, type FeatureGrid } from './features.js';
@@ -93,6 +96,8 @@ export class ModelRunner {
    */
   private lastFeatures: ForecastFeatures | undefined;
   private featuresStatedAtTick: number | undefined;
+  /** Whether this instance has already looked in the store for a run it did not publish. */
+  private resumeConsidered = false;
 
   constructor(
     private readonly config: ConfigModelRunner,
@@ -260,10 +265,64 @@ export class ModelRunner {
     this.featuresStatedAtTick = this.simTime.tick;
   }
 
+  /**
+   * A standing run this instance did not publish, restated once so the components that
+   * learn from the announcement rather than from the store are not left behind.
+   *
+   * `run_published` is the only statement that a forecast stands, and four components hold
+   * nothing but what it told them: the scheduler its validity, the offload packager the run
+   * it would stage, the analyst the spread field its next background covariance is built
+   * from, and telemetry the run its skill is scored against. All four learn it once and keep
+   * it in memory, so an instance of *this* component that did not publish the run cannot
+   * hand it on — and there are two ordinary ways to be that instance. A reader restarts the
+   * runner from the Operator tab; or a start condition's artefact carries the forecast eras,
+   * which holds this component back for the whole pre-roll while the snapshot source replays
+   * what it would have authored.
+   *
+   * The second was measured and is why this exists. `returning`'s card promises "a package
+   * staged for offload, with the measurement geometry beside it"; replaying its artefact
+   * produced **zero** staged bundles against a live run's five, and the Offload surface told
+   * the reader nothing had been released while the store held four forecasts and their spread fields and the
+   * timeline was drawing them.
+   *
+   * **Reconstructed from what this component itself wrote, and by this component.** Every
+   * field comes off the stored descriptor and the manifest embedded in it — the run id, the
+   * two collection ids, their digests, the grid, and the time axis the validity is read from.
+   * The snapshot source could not do this: it would be composing a statement no component
+   * made, which is the fixture hazard ADR-0041 exists to forbid. The environment generator
+   * already resumes from the store's inventory on a restart for the same reason and under
+   * the same rule — descriptors, never a truth-derived field.
+   *
+   * Nothing is recomputed and no forecast is re-run, exactly as `restateFeatures` recomputes
+   * nothing: the instant is the one it is being said at and the run id is the run's own, so a
+   * listener tells a restatement from a new run the way it always has. The features cannot be
+   * restated with it — they are derived per step and are not in the store — so the feature
+   * surface stays empty until the first live run, which is what a restarted runner has always
+   * done.
+   */
+  private resumeStandingRun(): void {
+    if (this.resumeConsidered) return;
+    // Once per instance whether or not it finds anything: a cold run has an empty store on
+    // its first sample and must not keep asking.
+    this.resumeConsidered = true;
+    const standing = standingRunFacts(this.store);
+    if (!standing) return;
+    // Only the addressing is this component's own; every fact about the run comes off the
+    // descriptor it wrote itself.
+    this.client.publish(this.config.topics.run_published, {
+      component: this.config.id,
+      scenario_run_id: this.runId,
+      ...standing,
+    } satisfies RunPublished);
+  }
+
   start(): void {
     this.client.subscribe(this.config.topics.clock, (message) => {
       const sample = message.payload as { sim_time: string; tick: number };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      // Before the cost, because a listener that learns a run stands and then learns what one
+      // costs is in the state a continuously running instance leaves it in.
+      this.resumeStandingRun();
       // The cost is stated once simulation time exists, and before any run could be
       // warranted: the scheduler holds a run against this figure, so a figure that arrived
       // after the first decision would have been a decision made in its absence. It is then
@@ -495,8 +554,8 @@ export class ModelRunner {
     );
 
     const forecastId = request.run_id;
-    const spreadId = `${request.run_id}-spread`;
-    const validityEnd = this.isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
+    const spreadId = spreadHoldingIdFor(request.run_id);
+    const validityEnd = isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
 
     // Everything above has been computed. Nothing below has happened yet: the publication
     // waits out the ticks the run costs (ADR-0043), released by the clock subscription this
@@ -732,14 +791,8 @@ export class ModelRunner {
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
-    if (!verdict.published) {
-      throw new Error(`coverage store refused instance ${holdingId}: ${verdict.refusal}`);
-    }
+    if (verdict.outcome !== 'written') throw publicationFault(verdict, `instance ${holdingId}`);
     return digest;
   }
 
-  private isoPlusSeconds(iso: string, seconds: number): string {
-    const millis = Date.parse(iso.slice(0, 23) + 'Z') + seconds * 1000;
-    return `${new Date(millis).toISOString().slice(0, 19)}.000000Z`;
-  }
 }

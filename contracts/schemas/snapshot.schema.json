@@ -30,7 +30,7 @@
     "config_digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$",
-      "description": "SHA-256 of the environment generator's configuration document as the build read it. The one thing that decides what the fields contain besides the seed, so a page whose configuration has moved refuses the artefact rather than mixing an old ocean with new bounds."
+      "description": "SHA-256 of the environment generator's configuration document as the build read it. It was once the one thing that decided what the fields contain besides the seed, and the source refuses a mismatch on that basis \u2014 which was total coverage while an artefact carried only the ocean. Since feature 125 an artefact also carries the analyst's and the model runner's output, whose contents follow config.analyst and config.model_runner, and neither is in this digest: an artefact built before a change to either is accepted, and the store's own digest check cannot see it because a stale artefact is perfectly self-consistent. check-snapshot-drift is what actually holds the bytes to the code and is unaffected; this field is a narrower guard than it was, and says so rather than claiming a guarantee it no longer gives. Widening it to cover every author is an artefact-format change and is recorded in specs/125-forecast-eras/spec.md."
     },
     "code_revision": {
       "type": "string",

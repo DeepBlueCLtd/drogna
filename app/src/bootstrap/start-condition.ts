@@ -116,8 +116,30 @@ export function preRollTicks(condition: ConfigStartConditionsCondition): number 
  * of the eras it carries, from the declaration in the snapshot source's configuration.
  * Empty where the condition declares no artefact, which is what makes "hold these back"
  * and "there is nothing to hold back" the same line of code at the call site.
+ *
+ * **The authors and nobody else, and that was measured twice.** The scheduler is not held
+ * back, though it decides when two of these components act, so through a replayed pre-roll
+ * it requests runs the held-back analyst is not there to hear. Those requests reach nobody
+ * and the watchdog releases them; a review read that as a stall — the console opening onto
+ * a loop that stayed quiet for another 611 to 1,790 ticks — and it was answered by quiescing
+ * the scheduler alongside the authors.
+ *
+ * That was the wrong fix, because the reading was wrong. A **live** run of the same four
+ * conditions, driven to the same tick with nobody held back, publishes its next forecast
+ * after 599, 1,794, 1,080 and 639 ticks: the quiet is the cadence, not a stall, and the
+ * replayed run's 611 to 1,790 sits inside it. Quiescing the scheduler replaced it with a
+ * fresh instance that knows of no standing forecast and so fires its cadence floor on the
+ * first sample after the console opens — a run 10 to 21 ticks after the one the artefact had
+ * just supplied, against a 600-tick minimum interval, which is a cadence no live run can
+ * produce and a model run spent for nothing.
+ *
+ * What that left — the replayed run reaching the right cadence for the wrong reason, its
+ * scheduler counting from a request nobody answered rather than from the standing forecast's
+ * validity — is fixed where it belongs: the model runner restates the standing run from the
+ * store's own descriptors when it resumes (`backend/lib/standing-run.ts`), and the replayed
+ * cadence is now the live cadence exactly.
  */
-export function authorsCoveredBySnapshot(
+export function heldBackBySnapshot(
   condition: ConfigStartConditionsCondition,
   source: ConfigSnapshotSource,
 ): ReadonlySet<string> {

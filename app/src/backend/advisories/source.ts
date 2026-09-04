@@ -15,6 +15,7 @@ import type { Advisory, ConfigAdvisorySource, OperatorCommand } from '../../gene
 import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
+import { isoPlusSeconds } from '../lib/sim-time.js';
 import { backgroundTemperature, backgroundSalinity, soundSpeedMs } from '../env-generator/analytic.js';
 import type { EnvGenerator } from '../env-generator/generator.js';
 import type { FeatureStore } from '../feature-store/store.js';
@@ -122,7 +123,7 @@ export class AdvisorySource {
       kind,
       valid_time: {
         start_sim_time: this.simTime.value,
-        end_sim_time: plusSeconds(this.simTime.value, validSeconds),
+        end_sim_time: isoPlusSeconds(this.simTime.value, validSeconds),
       },
       region: { bbox },
       guidance: {
@@ -138,10 +139,6 @@ export class AdvisorySource {
   }
 }
 
-function plusSeconds(iso: string, seconds: number): string {
-  const millis = Date.parse(iso.slice(0, 23) + 'Z') + seconds * 1000;
-  return `${new Date(millis).toISOString().slice(0, 23)}000Z`;
-}
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;

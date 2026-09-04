@@ -29,10 +29,53 @@ export interface StagedHolding {
   readonly bytes: Uint8Array;
 }
 
-export interface PublicationVerdict {
-  readonly published: boolean;
-  /** When refused, names the mismatch. */
-  readonly refusal?: string;
+/**
+ * What the store did with a publication. Three outcomes, named rather than encoded in a
+ * boolean, because two consecutive faults on this branch were the same mistake about that
+ * boolean: a `published: true` that had written nothing was first counted as a replay
+ * ("26 of 26 holding(s) replayed" over holdings the store declined to write) and then, once
+ * excluded from that counter, fell into the `else` and was reported as a store refusal —
+ * with no reason, because it carries none. Both were on the snapshot source's face, which is
+ * the node the Intro panel sends a reader to. A caller must now say which of the three it
+ * means; `publicationFault` below is what makes the compiler ask, for the callers that treat
+ * anything but a write as a fault.
+ */
+export type PublicationVerdict =
+  /** Written: the holding is in the inventory and its era's pointer names what it should. */
+  | { readonly outcome: 'written' }
+  /**
+   * Accounted for, and not written: the store already holds something newer for this era, so
+   * writing would rewind a pointer. Not a refusal — these are bytes the store agrees with —
+   * and not a replay either.
+   */
+  | { readonly outcome: 'superseded' }
+  /** Refused, with the mismatch named. */
+  | { readonly outcome: 'refused'; readonly refusal: string };
+
+/**
+ * The message for an outcome that is not a write, for a component publishing its own work.
+ *
+ * Exhaustive by construction rather than by comment: the parameter is *every* outcome except
+ * `written`, so a fourth member added to the union widens it and the switch below stops
+ * compiling. That is the guard the type was introduced for — the two faults it closes were
+ * both a case nobody had named being swept into a branch that meant something else, and an
+ * `if (outcome === 'refused')` chain would let a fourth one through in silence.
+ */
+export function publicationFault(
+  verdict: Exclude<PublicationVerdict, { outcome: 'written' }>,
+  what: string,
+): Error {
+  switch (verdict.outcome) {
+    case 'refused':
+      return new Error(`coverage store refused ${what}: ${verdict.refusal}`);
+    case 'superseded':
+      // Unreachable while a component publishes at the tick it is on, which is never behind
+      // its own era pointer. Raised rather than folded into success, because folding an
+      // unreachable case into success is what this type exists to prevent.
+      return new Error(
+        `coverage store superseded ${what}: it was dated behind its era's own pointer, which means this component authored out of order`,
+      );
+  }
 }
 
 export class CoverageStore {
@@ -149,17 +192,105 @@ export class CoverageStore {
     const recorded = staged.descriptor.field.sha256;
     if (measured !== recorded) {
       return {
-        published: false,
+        outcome: 'refused',
         refusal: `staged field does not match the digest its descriptor records: descriptor says ${recorded}, the bytes are ${measured}; holding refused, pointer untouched`,
       };
     }
     if (staged.bytes.byteLength !== staged.descriptor.field.byte_length) {
       return {
-        published: false,
+        outcome: 'refused',
         refusal: `staged field is ${staged.bytes.byteLength} bytes where its descriptor records ${staged.descriptor.field.byte_length}; holding refused, pointer untouched`,
       };
     }
     const descriptor = staged.descriptor;
+    /**
+     * A holding id names one set of bytes for the life of a run.
+     *
+     * Without this the map entry was simply overwritten, and the loss was perfectly silent:
+     * both holdings are internally consistent, both digests check out against their own
+     * descriptors, and the reader finds the field they were looking at replaced by a
+     * different one under the same name. The digest check above cannot see it — it proves
+     * the staged bytes match the descriptor that travelled with them, which a replacement
+     * satisfies exactly.
+     *
+     * Reachable from the Operator tab with the clock stopped, and watched happening: restart
+     * the scheduler at the tick a run was requested at, and a rate change republishes that
+     * tick to the fresh instance, whose cadence floor fires and reissues the same
+     * tick-derived identifier. Four analysis holdings were replaced with the clock never
+     * moving. Deriving run identifiers from the request tick narrows that fault — it needs
+     * the restart to land inside the requesting tick, where the counter it replaced collided
+     * on every restart — but it does not close it, and the store is where it closes, because
+     * the store is what owns the holdings.
+     *
+     * Re-publishing the *same* bytes stays allowed. A restatement of what is already held is
+     * not a loss, and the snapshot source's whole job is to put bytes back exactly as they
+     * were authored.
+     */
+    const standing = this.holdingsById.get(descriptor.holding_id);
+    if (standing !== undefined && standing.descriptor.field.sha256 !== recorded) {
+      return {
+        outcome: 'refused',
+        refusal: `'${descriptor.holding_id}' is already held, with field ${standing.descriptor.field.sha256}; a holding id names one set of bytes for the life of a run, so this publication is refused rather than replacing it silently`,
+      };
+    }
+    /**
+     * **An era pointer never moves backwards in publication time.**
+     *
+     * The guard above is keyed on bytes, and identical bytes are allowed because that is the
+     * snapshot source's whole job. But "these are the bytes that were there" is not the same
+     * claim as "this publication should move the pointer forward", and everything below the
+     * `set` calls acts on the pointer rather than on the bytes.
+     *
+     * Watched happening, on `returning`, through the plane's own verbs — and reachable by
+     * pressing **restart** on the very node the Intro panel and the walkthrough now send a
+     * reader to. A restarted snapshot source is a fresh instance holding the whole artefact
+     * again, so on its next sample it republishes every holding. Each is accepted, being
+     * byte-identical; each then rewound its era pointer:
+     *
+     *     BEFORE  instance = …-run-t9930   nowcast = nowcast.….t9900   (tick 9939)
+     *     AFTER   instance = …-run-t9171   nowcast = nowcast.….t9000
+     *     LOST    nowcast.….t9900
+     *
+     * The monitor scores live soundings against `currentInstance()`, so it began scoring
+     * against a 759-tick-stale forecast and publishing residuals named for it; telemetry keys
+     * its ledger by the live run and dropped every one — silence shown where there is traffic.
+     * The analyst takes the same field as its next background. And the now-cast branch below
+     * *deletes* the holding it supersedes, so a row a reader was looking at left the inventory.
+     *
+     * The now-cast half of this predates the forecast eras; the `instance` half arrived with
+     * them, because until this feature an artefact carried no instance holdings and a replay
+     * could not touch that pointer. Both are closed here, because the rule is one rule.
+     *
+     * **A rewinding publication is a no-op, and the first version of this guard was not.** It
+     * held the pointer back and left the insert above it unconditional, which resurrected the
+     * superseded now-cast the store had deliberately deleted — into the end of the inventory,
+     * where no pointer named it and nothing would free it. That is worse than the fault it
+     * replaced, because three readers resolve the now-cast by scanning the inventory rather
+     * than by asking the pointer, and they disagree once there is more than one: the EDR
+     * collection takes the last (serving a field 900 ticks stale), the map's axis lookup takes
+     * the first (so values and time axis can come from different holdings), and the
+     * environment generator reads `lastNowcastTick` from whichever it finds and authors its
+     * next now-cast off-cadence. Measured on `returning`: five now-casts where there should be
+     * one, and 5.9 MB of bytes nothing points at, retained for the life of the run.
+     *
+     * So nothing is written. The store already holds what this publication is trying to say,
+     * and it is reported as published because it was: the bytes are accounted for, and the
+     * snapshot source's count of what it replayed stays true.
+     */
+    const pointedId = this.eraPointers.get(descriptor.era);
+    const pointedAt = pointedId === undefined ? undefined : this.holdingsById.get(pointedId);
+    const rewinds =
+      pointedAt !== undefined &&
+      pointedAt.descriptor.holding_id !== descriptor.holding_id &&
+      descriptor.published_at.tick < pointedAt.descriptor.published_at.tick;
+
+    // Its own outcome, not a shade of one of the others: the snapshot source counts what it
+    // put back and draws "N of N holding(s) replayed" on its own face, and a holding the store
+    // declined to write is neither one it replayed nor one it was refused. The distinction
+    // matters on exactly the node the Intro panel now sends a reader to, whose justification
+    // is that they can look rather than take somebody's word.
+    if (rewinds) return { outcome: 'superseded' };
+
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).
     this.holdingsById.set(descriptor.holding_id, { descriptor, bytes: staged.bytes });
@@ -178,7 +309,7 @@ export class CoverageStore {
       this.eraPointers.set('instance', descriptor.holding_id);
     }
     this.announce(descriptor);
-    return { published: true };
+    return { outcome: 'written' };
   }
 
   holdings(): CoverageHolding[] {

@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import runConfigDocument from '../../config/run.json';
 import type { ConfigRun, ConfigStartConditions } from '../generated/types.js';
 import {
-  authorsCoveredBySnapshot,
+  heldBackBySnapshot,
   conditionById,
   holdingBack,
   conditionFromSearch,
@@ -190,7 +190,7 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
 
   it('holds back exactly the components the declared eras name as their authors', () => {
     for (const condition of conditions.conditions) {
-      const covered = authorsCoveredBySnapshot(condition, config.snapshot_source);
+      const covered = heldBackBySnapshot(condition, config.snapshot_source);
       const expected = new Set(
         (condition.snapshot_eras ?? []).map((era) => config.snapshot_source.authors[era]),
       );
@@ -207,35 +207,52 @@ describe('the committed artefacts a condition declares (feature 120, ADR-0041)',
   });
 
   /**
-   * The cut point, guarded.
+   * The cut point, and the refusal that used to stand here.
    *
-   * Which eras are worth committing is meant to be a one-line edit, and for the ocean
-   * eras it is. Extending it to the forecast eras is NOT, and the reason is not size: it
-   * is that holding the loop back for a pre-roll means restarting the scheduler after
-   * one, and a restarted scheduler rebuilds from configuration with its run sequence at
-   * zero. Run identifiers are `<run>-run-<sequence>`, and they are the holding ids the
-   * analyst and the model runner publish under — so the first live cycle after the
-   * console opens would republish under the identifier the artefact's first cycle
-   * already used, and the store would replace it. Silently: the digests match, because
-   * each holding is internally consistent; the reader would simply find one fewer
-   * forecast than the timeline showed a moment earlier.
+   * Until this feature the shipped value was `["archive", "nowcast"]` and a test in this
+   * place *refused* the forecast eras, in these words: holding the loop back for a pre-roll
+   * restarts the scheduler, whose run sequence resets to zero, so the first live cycle
+   * republishes under the artefact's first cycle's holding ids and replaces them. It was
+   * right that the declaration was unsafe and wrong about why, and both halves are worth
+   * keeping.
    *
-   * So the edit is made safe rather than left as a trap. Flipping it fails here, with the
-   * reason, instead of producing a run that quietly loses holdings a minute after
-   * opening. What unblocks it is deriving a run identifier that survives a restart, which
-   * is a change to the scheduler and belongs to whichever feature makes it.
+   * Wrong about why: `holdingBack` never stops the scheduler. It stops the authors the
+   * declared eras name — the analyst and the model runner — and the scheduler runs through
+   * the whole pre-roll untouched, so the reset it warned of never happened.
+   *
+   * Right that it was unsafe, for a worse reason that was measured rather than reasoned.
+   * Holding the analyst back means the scheduler's run request reaches *nobody*: the analyst
+   * takes a request synchronously and holds no pending state, so the request is not declined,
+   * not failed and not remembered, and the outstanding-run guard latched on it. A run backed
+   * by the forecast eras did not lose a holding a minute after opening — it opened with a
+   * loop that never turned again at all, and the same fault was reachable from the Operator
+   * tab with no artefact in sight.
+   *
+   * Three changes retired it, and each is proven where it lives rather than here:
+   * `scheduler.test.ts` holds the watchdog that releases a run nobody is working on (FR-31)
+   * and the run identifiers derived from the request tick, which *narrow* an instance's reuse
+   * of another's identifier rather than closing it; `env-generator/generator.test.ts` holds
+   * the coverage store refusing a second set of bytes under a held holding id, which closes
+   * the remainder; and `preroll.test.ts` drives a snapshot-backed pre-roll and holds the run
+   * to opening with what a live run produces, to still turning afterwards on the cadence a
+   * live run keeps, and to staging what its card promises.
+   *
+   * What stays here is the declaration itself, so that a future edit narrowing it has to
+   * say why.
    */
-  it('refuses to declare the forecast eras until a restarted scheduler stops reusing run ids', () => {
-    const authoredByTheLoop = new Set(['analysis', 'instance']);
+  it('declares every era the snapshot source knows an author for', () => {
+    // Against the master's own enum rather than a list typed in here, and as a set, because
+    // the order of `snapshot_eras` carries no meaning — `heldBackBySnapshot` builds a Set and
+    // the artefact is sorted by publication tick. A first version compared a four-element
+    // literal and failed a pure reordering with the message "declares no eras", which is
+    // false of the one edit it would have caught.
+    const known = Object.keys(config.snapshot_source.authors).sort();
     for (const condition of conditions.conditions) {
-      const declared = (condition.snapshot_eras ?? []).filter((era) => authoredByTheLoop.has(era));
       expect(
-        declared,
-        `'${condition.id}' declares ${declared.join(' and ')}. Holding the loop back for the ` +
-          `pre-roll restarts the scheduler, whose run sequence resets to zero, so the first ` +
-          `live cycle republishes under the artefact's first cycle's holding ids and replaces ` +
-          `them. Derive a run identifier that survives a restart first.`,
-      ).toEqual([]);
+        [...(condition.snapshot_eras ?? [])].sort(),
+        `'${condition.id}' declares ${(condition.snapshot_eras ?? []).join(', ') || 'no eras'}; narrowing the ` +
+          `cut point is an ordinary configuration edit (FR-18) and this test is where the reason for one goes`,
+      ).toEqual(known);
     }
   });
 });

@@ -55,11 +55,24 @@ export class Scheduler {
   private simTime = { value: '', tick: 0 };
   private lastRequestTick: number | undefined;
   private runSequence = 0;
-  private inFlight: string | undefined;
+  /**
+   * The run this component is waiting on, and the tick it was requested at — one field,
+   * because they are one fact. They were two, and four paths had to remember to write both;
+   * a fifth clearing only the id would have left the watchdog below reading a stale tick or
+   * never firing at all.
+   */
+  private inFlight: { id: string; sinceTick: number } | undefined;
   private validityEnd: string | undefined;
   declinedByPolicy = 0;
   heldForCost = 0;
-  /** Outstanding runs released because the component that owed them said it would not. */
+  /**
+   * Outstanding runs released without a publication: because the component that owed one
+   * said it would not, and — since the watchdog below — because nobody said anything at all.
+   * One counter for both, and they are **not** told apart on any surface: the watchdog
+   * publishes an `abandoned` decision, the `run-failed` path publishes nothing and only sets
+   * `lastDecision`. A reader watching this figure climb cannot tell which happened without
+   * reading Messages for the runner's own report.
+   */
   abandoned = 0;
   requested: { run_id: string; cause: RunRequest['cause'] }[] = [];
   /**
@@ -185,6 +198,9 @@ export class Scheduler {
       }
       this.lastSample = { tick: sample.tick, millis };
       this.simTime = { value: sample.sim_time, tick: sample.tick };
+      // Before either of the two below, both of which read `inFlight` and would otherwise
+      // be reading a guard that no longer stands for anything.
+      this.abandonStalledRun();
       this.releaseHeldPrompt();
       this.considerCadenceFloor();
     });
@@ -203,7 +219,7 @@ export class Scheduler {
     // out; this is the other half of that sentence.
     this.client.subscribe(this.config.topics.telemetry, (message) => {
       const report = message.payload as { kind?: string; run_id?: string; detail?: string };
-      if (report.kind !== 'run-failed' || report.run_id !== this.inFlight) return;
+      if (report.kind !== 'run-failed' || report.run_id !== this.inFlight?.id) return;
       this.inFlight = undefined;
       this.lastDecision = `released run ${report.run_id}, which will not be published: ${report.detail ?? 'no reason given'}`;
       this.abandoned += 1;
@@ -216,7 +232,7 @@ export class Scheduler {
     });
     this.client.subscribe(this.config.topics.run_published, (message) => {
       const published = message.payload as RunPublished;
-      if (published.run_id === this.inFlight) this.inFlight = undefined;
+      if (published.run_id === this.inFlight?.id) this.inFlight = undefined;
       if (published.current) this.validityEnd = published.valid_time.end_sim_time;
     });
     this.heartbeat.start();
@@ -224,6 +240,79 @@ export class Scheduler {
 
   stop(): void {
     this.heartbeat.stop();
+  }
+
+  /**
+   * A run nobody is going to publish, released on the scheduler's own authority.
+   *
+   * The `run-failed` subscription above covers the case where the component that owed the
+   * run is still there to say so — the model runner stopped mid-cost, or refusing a second
+   * run. It cannot cover the case where the request reached **nobody**. The analyst takes a
+   * run request synchronously and holds no pending state, so a request published while it is
+   * stopped is not declined, not failed and not remembered: it simply vanishes, and this
+   * component waits on a publication that no component is aware it owes.
+   *
+   * That was reachable by an ordinary operator verb and was watched happening. Stop the
+   * analyst from the Operator tab, let the cadence floor come due, start it again — and the
+   * loop never turns for the rest of the visit, because `inFlight` was latched by a request
+   * the analyst never heard. Every divergence and every cadence floor after it is declined
+   * as a duplicate, for ever. That is the permanently becalmed loop FR-31 forbids, so the
+   * guard cannot be allowed to clear only on the say-so of a component that may not be
+   * listening.
+   *
+   * The bound is what the run itself costs, plus the release margin: the model runner
+   * publishes `cost_ticks` on its own topic and this component already holds it, so the
+   * watchdog waits exactly as long as a working run would have taken and not a tick longer.
+   *
+   * It was the cadence floor's whole interval in the first draft, on the argument that any
+   * bound above the cost would do. **What the tighter bound buys is not what was first
+   * claimed for it, and the claim was measured false.** It was said to give the reader a
+   * faster recovery; measured on `loitering` — stop the analyst, let the floor come due,
+   * start it again — the next forecast arrives 1,809 ticks later under this bound and 1,810
+   * under the one it replaced. One tick. Releasing `inFlight` does not release the cadence:
+   * `lastRequestTick` still points at the request that vanished, and `considerCadenceFloor`
+   * measures from it, so the floor fires at `request + maximumInterval` either way.
+   *
+   * What it does buy is the window between: while a run is held in flight every divergence is
+   * declined as `duplicate-outstanding`, so at 39 ticks the world can be acted on from the
+   * minimum interval onward, where at 1,800 it could not be acted on at all until the floor
+   * came due. That is a real difference and it is the reason to prefer this bound.
+   *
+   * Resetting `lastRequestTick` on release would make the first claim true, and is not done:
+   * the cadence a replayed run opens on currently matches a live run's to the tick on all
+   * four conditions, and re-requesting every 39 ticks through a pre-roll whose loop is held
+   * back would fill the Messages tab with requests nobody can answer.
+   *
+   * An unstated cost is treated as nothing, leaving the margin alone — which is the right
+   * failing, because the only way the cost is unknown is that the runner has never spoken,
+   * and a runner that has never spoken is not working on anything.
+   */
+  private abandonStalledRun(): void {
+    if (this.inFlight === undefined) return;
+    const outstanding = this.simTime.tick - this.inFlight.sinceTick;
+    const bound = (this.runCostTicks ?? 0) + this.config.release_margin_ticks;
+    if (outstanding <= bound) return;
+    const abandoned = this.inFlight.id;
+    this.inFlight = undefined;
+    this.abandoned += 1;
+    this.lastDecision =
+      `released run ${abandoned}, outstanding ${outstanding} tick(s) against a run costing ` +
+      `${this.runCostTicks ?? 0} plus a ${this.config.release_margin_ticks}-tick margin — nobody is going to ` +
+      'publish it, so it is released rather than waited on for ever';
+    // Published, not merely recorded. `lastDecision` reaches a reader through the heartbeat,
+    // and the two calls that follow this one on the same clock sample — the held prompt and
+    // the cadence floor — overwrite it before any heartbeat can fire, so the sentence above
+    // was unreachable output in the first draft.
+    //
+    // Where it surfaces, stated exactly: the Operator tab's decision drawer, which takes
+    // whatever this component last decided, and Messages, which carries the topic. **Not**
+    // the Forecast timeline — that filters to `held-for-cost`, and a run that vanished into
+    // a component that was not listening never announced a start for the timeline to
+    // annotate anyway. An earlier draft of this comment claimed the timeline as the consumer
+    // and was wrong; the enum value was widened on that claim, so it is corrected rather than
+    // quietly dropped. Drawing an abandoned run on the timeline is a reasonable thing to want
+    // and is not done here.
+    this.reportDecision(null, 'abandoned', this.lastDecision, abandoned, null);
   }
 
   /**
@@ -250,7 +339,7 @@ export class Scheduler {
   private considerPrompt(): void {
     if (this.inFlight !== undefined) {
       this.declinedByPolicy += 1;
-      this.lastDecision = `declined by policy: an operator prompt while run ${this.inFlight} is in flight`;
+      this.lastDecision = `declined by policy: an operator prompt while run ${this.inFlight.id} is in flight`;
       this.reportDecision(null, 'duplicate-outstanding', this.lastDecision, null);
       return;
     }
@@ -280,7 +369,7 @@ export class Scheduler {
   private considerDivergence(divergence: Divergence): void {
     if (this.inFlight !== undefined) {
       this.declinedByPolicy += 1;
-      this.lastDecision = `declined by policy: divergence ${divergence.divergence_id} while run ${this.inFlight} is in flight`;
+      this.lastDecision = `declined by policy: divergence ${divergence.divergence_id} while run ${this.inFlight.id} is in flight`;
       this.reportDecision(divergence.divergence_id, 'duplicate-outstanding', this.lastDecision, null);
       return;
     }
@@ -307,7 +396,7 @@ export class Scheduler {
    */
   private reportDecision(
     divergenceId: string | null,
-    decision: 'accepted' | 'minimum-interval' | 'duplicate-outstanding' | 'held-for-cost',
+    decision: 'accepted' | 'minimum-interval' | 'duplicate-outstanding' | 'held-for-cost' | 'abandoned',
     detail: string,
     runIdentifier: string | null,
     shortfallTicks: number | null = null,
@@ -445,8 +534,47 @@ export class Scheduler {
     this.reportDecision(null, 'held-for-cost', this.lastDecision, null, shortfall);
   }
 
+  /**
+   * The identifier a run is known by, everywhere: the holding ids the analyst and the model
+   * runner publish under, and the name in every later message.
+   *
+   * **Derived from the tick the run was requested at, not from a counter, and that is the
+   * whole of the point.** A counter lives in this component's memory, and this component is
+   * restartable from the operator plane — so a restarted scheduler counted from zero again
+   * and asked for identifiers a previous instance had already used. `scheduler.test.ts`
+   * records a draft of the restart test that *passed* because of exactly that collision: the
+   * occupying run's publication cleared the new scheduler's outstanding run by an id clash
+   * rather than by anything being right.
+   *
+   * The same reset is what ADR-0041 named as the blocker on committing the forecast eras,
+   * because a run that replays an artefact holds the loop back for its pre-roll and the live
+   * cycles afterwards would republish under the artefact's own identifiers and silently
+   * replace them.
+   *
+   * Simulation time is the one monotonic thing this component hears rather than keeps: it
+   * survives a restart, because the clock does not restart with it. Within one instance a run
+   * is requested at most once per tick — the outstanding-run guard and the minimum interval
+   * each forbid a second — so the identifiers an instance issues cannot repeat.
+   *
+   * **Across instances it is a narrowing and not a closure, and the difference is worth
+   * stating exactly**, because an earlier draft of this comment claimed closure in three
+   * places. Both guards are this instance's memory. Restart the scheduler at the very tick a
+   * run was requested at and a rate change republishes that tick to the fresh instance, whose
+   * cadence floor fires and reissues the same identifier — watched from the Operator tab with
+   * the clock never moving, and four analysis holdings were replaced. The counter this
+   * replaced collided on *every* restart, so this is a real narrowing; what closes the
+   * remainder is the coverage store refusing a second set of bytes under a holding id it
+   * already holds, which is where it belongs, because the store owns the holdings.
+   *
+   * `run_sequence` stays the ordinal count of runs this instance has requested and is carried
+   * as a fact, but it is no longer half of the identifier rule; the master says so.
+   */
+  private identifierForThisTick(): string {
+    return `${this.runId}-run-t${this.simTime.tick}`;
+  }
+
   private request(cause: RunRequest['cause'], divergence: Divergence | undefined): string {
-    const runIdentifier = `${this.runId}-run-${this.runSequence}`;
+    const runIdentifier = this.identifierForThisTick();
     const request: RunRequest = {
       component: this.config.id,
       scenario_run_id: this.runId,
@@ -466,7 +594,7 @@ export class Scheduler {
     }
     this.runSequence += 1;
     this.lastRequestTick = this.simTime.tick;
-    this.inFlight = runIdentifier;
+    this.inFlight = { id: runIdentifier, sinceTick: this.simTime.tick };
     this.requested.push({ run_id: runIdentifier, cause });
     this.lastDecision =
       cause === 'divergence'

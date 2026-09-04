@@ -25,3 +25,19 @@ export function formatMicros(totalMicros: bigint): string {
 export function simTimeAtTick(epochMicros: bigint, tickIntervalUs: number, tick: number): string {
   return formatMicros(epochMicros + BigInt(tick) * BigInt(tickIntervalUs));
 }
+
+/**
+ * An instant advanced by whole seconds of simulation time, at the precision the seam uses.
+ *
+ * Three components had written this arithmetic out by hand, and the copies were not the same:
+ * the model runner truncated to whole seconds and appended `.000000`, while the advisory
+ * source and the copy added for feature 125 preserved milliseconds. They agree only because every simulated instant on
+ * disk lands on a whole second, `tick_interval_us` being 1,000,000 — so a sub-second tick
+ * interval would have made a *restatement* of a run's validity differ from the announcement it
+ * was restating, and nothing would have caught it. Built on the BigInt microseconds this
+ * module exists for, which is the guarantee its header already claims: no two components
+ * disagreeing about a timestamp.
+ */
+export function isoPlusSeconds(iso: string, seconds: number): string {
+  return formatMicros(parseEpochMicros(iso) + BigInt(Math.round(seconds * 1e6)));
+}

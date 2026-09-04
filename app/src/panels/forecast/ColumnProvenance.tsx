@@ -59,7 +59,7 @@
  * hatched against the grain and printed with their sign rather than floored to zero.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
+import type { AnalysisContributions, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale, withinWindow } from './rays.js';
@@ -68,6 +68,30 @@ import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shar
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
 const MAP = { maxCells: 48, height: 190 };
+
+/**
+ * The analysis the region reads, and how it came by it.
+ *
+ * **Three collection names, not an announcement.** The region only ever used
+ * `collections.analysis`, `.provenance` and `.contributions` of the `AnalysisPublished` it was
+ * handed; carrying the whole announcement made it look as though the rest — the run id, the
+ * background era, the observation counts — was load-bearing here, and it was the reason the only
+ * way to fill this region was to hear one. A console that was not listening when the last cycle
+ * published can read those three names off the store's own inventory instead, which is the same
+ * query layer this region already asks for its depth axis.
+ *
+ * `heard` is the difference, and the region states it: an announcement this console received is a
+ * different fact from a standing analysis it went and looked up, and a surface that showed them
+ * identically would be claiming to have been told something it inferred.
+ */
+export interface StandingAnalysis {
+  readonly collections: {
+    readonly analysis: string;
+    readonly provenance: string;
+    readonly contributions: string;
+  };
+  readonly heard: boolean;
+}
 
 export interface ColumnGrid {
   readonly minimumLongitude: number;
@@ -161,7 +185,7 @@ function sharesFrom<T>(
 }
 
 export interface ColumnProvenanceProps {
-  readonly analysis: AnalysisPublished | undefined;
+  readonly analysis: StandingAnalysis | undefined;
   readonly grid: ColumnGrid | undefined;
   /** The EDR prefix the boundary serves on, from configuration — never assembled here. */
   readonly edrPrefix: string;
@@ -846,6 +870,21 @@ export function ColumnProvenance({
           "asked several times over for this cycle's", which was a per-cycle claim read off a
           per-tab counter: three refusals across three cycles satisfy it while this cycle was
           asked once. Both are gone. What is left is what the two collection names say. */}
+      {/* **Heard, or looked up.** An announcement this console received and a standing analysis it
+          went and read off the store's inventory are different facts, and a region that drew them
+          identically would be claiming to have been told something it inferred. The second is the
+          ordinary case for a reader who opens the console after a start condition's pre-roll: the
+          analyst restates only what it holds in memory and a snapshot restores the store, not that
+          memory, so nothing is announced until a new cycle runs. */}
+      {!analysis.heard && (
+        <p className="forecast-column-stale" data-testid="column-analysis-adopted">
+          this analysis was <strong>read from the store’s inventory</strong>, not announced to this
+          console: the cycle that published it did so before this page was open. It is the latest
+          the store holds, and every figure below is queried from it the same way. A new cycle
+          announces itself here when the loop runs one.
+        </p>
+      )}
+
       {axisIsStale && (
         <p className="forecast-column-stale" data-testid="column-grid-stale">
           these depths are from an earlier analysis cycle: the grid is read from a holding’s own

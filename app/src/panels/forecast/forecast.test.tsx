@@ -26,7 +26,14 @@ import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
-import { ForecastPanel, FORECAST_REGIONS, GRID_ATTEMPTS, sameGrid, spendAttempt } from './ForecastPanel.js';
+import {
+  ForecastPanel,
+  FORECAST_REGIONS,
+  GRID_ATTEMPTS,
+  sameGrid,
+  spendAttempt,
+  standingAnalysisIn,
+} from './ForecastPanel.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, contributionResidual, raysFor } from './rays.js';
 import { columnGridOf, type ColumnGrid } from './ColumnProvenance.js';
 import { sourceOf } from './shares.js';
@@ -1456,6 +1463,68 @@ describe('what one attempt at the depth axis costs', () => {
     // A member whose *values* move without its length is the case an element-wise comparison is
     // written for, and a length check alone would pass it.
     expect(sameGrid(grid, { ...grid, depthsM: grid.depthsM.map((depth) => depth + 1) })).toBe(false);
+  });
+});
+
+describe('what stands, for a console that heard no announcement', () => {
+  // **The gap a reader met as a region that never filled.** The analyst restates only what it
+  // holds in memory; a start condition restores the coverage store and not that memory. So on a
+  // snapshot-seeded visit the store holds the pre-roll's analyses and the region says "no analysis
+  // has been announced yet" for the whole visit, until a breach or the cadence floor produces a
+  // new one. Feature 125 fixed this shape for the scheduler, telemetry, the model runner and the
+  // offload packager; `standing-run.ts` lists the analyst among the four and the analyst is the
+  // one it did not reach.
+  const holding = (id: string, era: string, tick: number) =>
+    ({ holding_id: id, era, published_at: { sim_time: '2026-01-01T00:00:00Z', tick } }) as never;
+
+  it('reads the newest analysis whose siblings have landed', () => {
+    const standing = standingAnalysisIn({
+      holdings: [
+        holding('analysis.run-a', 'analysis', 100),
+        holding('analysis.run-a-provenance', 'analysis', 100),
+        holding('analysis.run-a-contributions', 'analysis', 100),
+        holding('analysis.run-b', 'analysis', 500),
+        holding('analysis.run-b-provenance', 'analysis', 500),
+        holding('analysis.run-b-contributions', 'analysis', 500),
+      ],
+    } as never);
+    expect(standing?.collections).toEqual({
+      analysis: 'analysis.run-b',
+      provenance: 'analysis.run-b-provenance',
+      contributions: 'analysis.run-b-contributions',
+    });
+    // Read, not heard, and the region says which.
+    expect(standing?.heard).toBe(false);
+  });
+
+  it('refuses a cycle whose siblings have not landed, rather than naming a collection nothing serves', () => {
+    // The store mid-publication: the base holding is in and the two the region queries are not.
+    // Naming them would put the region into a fetch that cannot answer, which is worse than the
+    // sentence it already has. This is the rule `standingPair` applies to a run's spread.
+    expect(
+      standingAnalysisIn({
+        holdings: [holding('analysis.run-c', 'analysis', 900), holding('analysis.run-c-provenance', 'analysis', 900)],
+      } as never),
+    ).toBeUndefined();
+  });
+
+  it('is not fooled by a sibling that sorts later, and reads nothing from an empty store', () => {
+    // `-provenance` and `-contributions` are analysis-era holdings too, and one of them is the
+    // newest thing in the store on every cycle. Taken as a base holding, the region would query
+    // `analysis.run-d-provenance-provenance`.
+    const standing = standingAnalysisIn({
+      holdings: [
+        holding('analysis.run-d', 'analysis', 10),
+        holding('analysis.run-d-provenance', 'analysis', 11),
+        holding('analysis.run-d-contributions', 'analysis', 12),
+      ],
+    } as never);
+    expect(standing?.collections.analysis).toBe('analysis.run-d');
+    expect(standingAnalysisIn({ holdings: [] } as never)).toBeUndefined();
+    // A forecast is not an analysis, however new it is.
+    expect(
+      standingAnalysisIn({ holdings: [holding('forecast.run-e', 'instance', 9000)] } as never),
+    ).toBeUndefined();
   });
 });
 

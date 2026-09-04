@@ -57,7 +57,7 @@ import { displayInstant } from '../../shell/display.js';
 import { HelpButton } from '../../shell/walkthrough/HelpButton.js';
 import { forecastTour } from '../../shell/walkthrough/tour.js';
 import { FeatureTracks } from './FeatureTracks.js';
-import { ColumnProvenance, columnGridOf, type ColumnGrid } from './ColumnProvenance.js';
+import { ColumnProvenance, columnGridOf, type ColumnGrid, type StandingAnalysis } from './ColumnProvenance.js';
 import './forecast.css';
 
 /**
@@ -150,10 +150,59 @@ export const FORECAST_REGIONS = [
  * inventory yet the chooser stays undrawn, which is the honest state — a chooser over the wrong
  * axis is worse than no chooser.
  */
-function gridForAnalysis(inventory: HoldingsInventory, analysis: AnalysisPublished | undefined): ColumnGrid | undefined {
+function gridForAnalysis(inventory: HoldingsInventory, analysis: StandingAnalysis | undefined): ColumnGrid | undefined {
   if (!analysis) return undefined;
   const named = inventory.holdings.find((holding) => holding.holding_id === analysis.collections.analysis);
   return columnGridOf(named as CoverageHolding | undefined);
+}
+
+/**
+ * The analysis this console should read, taken from the store's own inventory, for a console
+ * that was not listening when the last one was published.
+ *
+ * **The gap this closes, which a reader met as a region that never filled.** The centre region
+ * reads `analysis_standing`, and the analyst publishes that by restating what it holds *in
+ * memory* — `restateLastAnalysis` returns immediately when it has nothing. A start condition
+ * restores the coverage store and not the analyst's memory, so on a snapshot-seeded visit the
+ * analyst has no standing analysis to restate: the store holds the pre-roll's analyses, the query
+ * layer will serve them, and the region says "no analysis has been announced yet" for the whole
+ * visit — until a *new* analysis happens, which needs a breach or the cadence floor. Reported
+ * from a running instance sitting at that sentence with three analyses in the store.
+ *
+ * It is the fault feature 125 was written for, one component further on. `backend/lib/standing-run.ts`
+ * names the four components that "hold nothing but what it told them" and lists the analyst among
+ * them; the scheduler, telemetry, the model runner and the offload packager each adopt from the
+ * store now, and the analyst does not — its file carries no reference to that module.
+ *
+ * **Read here rather than announced there, and that is the honest half of the fix.** An
+ * `AnalysisPublished` carries `observations` — how many were assimilated, how many clamped, the
+ * worst displacement — which are facts about a cycle that ran and are on no descriptor. An
+ * analyst reconstructing its own announcement would have to invent them, which is exactly the
+ * thing ADR-0041 forbids: a snapshot source composing an announcement no component ever made. The
+ * region does not need them. It needs three collection names, so three collection names are what
+ * this recovers, and the surface says it read them rather than heard them.
+ *
+ * The sibling collections are required to be present, not merely named: the ids follow the
+ * analyst's own convention (`spreadHoldingIdFor` reads the run's spread the same way), and a base
+ * holding whose provenance or contributions has not landed means the store is mid-publication
+ * rather than standing on something — the rule `standingPair` applies to a run.
+ */
+export function standingAnalysisIn(inventory: HoldingsInventory): StandingAnalysis | undefined {
+  const held = new Set(inventory.holdings.map((holding) => holding.holding_id));
+  let best: { id: string; tick: number } | undefined;
+  for (const holding of inventory.holdings) {
+    if (holding.era !== 'analysis') continue;
+    // The base holding of a cycle, not one of its three siblings.
+    const id = holding.holding_id;
+    if (/-(error|provenance|contributions)$/.test(id)) continue;
+    if (!held.has(`${id}-provenance`) || !held.has(`${id}-contributions`)) continue;
+    if (!best || holding.published_at.tick > best.tick) best = { id, tick: holding.published_at.tick };
+  }
+  if (!best) return undefined;
+  return {
+    collections: { analysis: best.id, provenance: `${best.id}-provenance`, contributions: `${best.id}-contributions` },
+    heard: false,
+  };
 }
 
 /**
@@ -247,7 +296,26 @@ export function ForecastPanel({ params }: PanelProps) {
   const [indicator, setIndicator] = useState<ForecastIndicator | undefined>();
   const [cost, setCost] = useState<RunCost | undefined>();
   const [features, setFeatures] = useState<ForecastFeatures | undefined>();
-  const [analysis, setAnalysis] = useState<AnalysisPublished | undefined>();
+  const [announced, setAnnounced] = useState<AnalysisPublished | undefined>();
+  /**
+   * The standing analysis read off the store's inventory, for a console that heard none.
+   *
+   * Asked for **once**, when this panel mounts without an announcement, and never again: an
+   * analysis that lands later arrives on the topic, because anything that produces one announces
+   * it. So this is not a poll and cannot become one — there is no cadence here to make it a fetch
+   * per tick, which is the sentence `ColumnProvenance`'s own header has to stay true to.
+   */
+  const [adopted, setAdopted] = useState<StandingAnalysis | undefined>();
+
+  /**
+   * What the region reads: what this console was told, or failing that what the store says
+   * stands. An announcement always wins — it is the current cycle, and the adopted one is
+   * whatever was last published before anyone was listening.
+   */
+  const analysis: StandingAnalysis | undefined = useMemo(
+    () => (announced ? { collections: announced.collections, heard: true } : adopted),
+    [announced, adopted],
+  );
   /**
    * Which analysis the depth axis in hand was taken from, so it is fetched once per cycle and a
    * standing restatement — which carries the same collection names — asks for nothing.
@@ -258,6 +326,8 @@ export function ForecastPanel({ params }: PanelProps) {
    * the thing it bounds is a retry on the analyst's restatement cadence, not a user action.
    */
   const attemptsRef = useRef(0);
+  /** Whether the store has been asked what stands; see the adoption effect below. */
+  const askedStoreRef = useRef(false);
   /** Which analysis the axis has already been asked for and honestly not got. */
   const askedForRef = useRef<string | undefined>(undefined);
   /** True once the axis has been asked for its allowance of times and not got. */
@@ -334,7 +404,7 @@ export function ForecastPanel({ params }: PanelProps) {
       // Nothing is fetched here, and nothing is fetched until a reader picks a square.
       client.subscribe(config.topics.analysis_standing, (message) => {
         if (!drawable(message.topic, message.payload)) return;
-        setAnalysis(message.payload as AnalysisPublished);
+        setAnnounced(message.payload as AnalysisPublished);
       }),
     );
     stops.push(
@@ -445,6 +515,41 @@ export function ForecastPanel({ params }: PanelProps) {
    * `levelAtDepth` refuses row by row and the profile states. Clearing it would take the whole
    * region away over one failed inventory fetch, which is the worse of the two.
    */
+  /**
+   * Ask the store, once, what analysis stands — for a console that heard none.
+   *
+   * See `standingAnalysisIn` for why this exists: the analyst restates only what it holds in
+   * memory, a start condition restores the store and not that memory, and a reader who opens the
+   * console after a snapshot-seeded pre-roll therefore meets a region that says nothing has been
+   * announced while the store holds several analyses the query layer will serve.
+   *
+   * **Once, and only where nothing was heard.** The guard is `announced`, not `analysis` — with
+   * `analysis` this would re-ask the moment it adopted one, having just satisfied its own
+   * condition. Nothing here is clocked: an analysis published later is announced, and the
+   * subscription above supersedes whatever this found.
+   */
+  useEffect(() => {
+    if (announced || adopted || askedStoreRef.current) return;
+    askedStoreRef.current = true;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(config.endpoints.holdings);
+        if (!response.ok || cancelled) return;
+        const body: unknown = await response.json();
+        if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
+        const standing = standingAnalysisIn(body as HoldingsInventory);
+        if (standing) setAdopted(standing);
+      } catch {
+        // Nothing to say and nothing to retry: the region's existing sentence — that no analysis
+        // has been announced — is then exactly true of this console, and the next cycle announces.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [announced, adopted, config.endpoints.holdings, validator]);
+
   useEffect(() => {
     const named = analysis?.collections.analysis;
     if (!named || gridForRef.current === named) return;

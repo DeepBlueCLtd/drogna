@@ -1234,6 +1234,45 @@ the part worth recording, because each was a sentence asserting a property the c
       route survives, and the guard is watched failing — asked for `'all'`, the arrow pans and no
       cursor is ever drawn.
 
+- [x] T037 **A reader reported the region empty on a running instance, with three analyses in
+      the store.** Two separate things, and only one was a fault.
+
+      *The loop was not becalmed.* Ticks are seconds; `arriving`'s pre-roll is 5940, so the console
+      opened at 01:39:00Z. The report was at 02:00:33Z — tick 7233 — with the last run at tick 5469
+      and `scheduler.max_interval_ticks` 1800, so the cadence floor was due at 7269: thirty-six
+      ticks away. Nothing was warranted before that because the residual was 0.78 m/s against a
+      1.2 threshold at streak 0 of 3, which is the control loop declining, not failing.
+
+      *The empty region was a fault, and a known one this component was missed by.* The region
+      reads `analysis_standing`; the analyst publishes that by restating what it holds **in
+      memory**, and `restateLastAnalysis` returns at once when it holds nothing. A start condition
+      restores the coverage store and not the analyst's memory, so on a snapshot-seeded visit the
+      store holds the pre-roll's analyses, the query layer will serve them, and the region says
+      "no analysis has been announced yet" for the whole visit — until a breach or the cadence
+      floor produces a new one. `backend/lib/standing-run.ts` was written for exactly this shape
+      and names four components that "hold nothing but what it told them", **the analyst among
+      them**; the scheduler, telemetry, the model runner and the offload packager each adopt from
+      the store now, and `analyst.ts` carries no reference to that module. The record named it and
+      the tree did not do it.
+
+      **Fixed on the reading side, not by having the analyst invent an announcement.** An
+      `AnalysisPublished` carries `observations` — assimilated, clamped, worst displacement —
+      which are facts about a cycle that ran and are on no descriptor, so an analyst rebuilding
+      its own announcement would have to make them up: the thing ADR-0041 forbids in as many
+      words. The region never needed them. It read exactly three fields of that announcement, all
+      collection names, so the prop is narrowed to `StandingAnalysis` — three names and whether
+      they were *heard* — and a console that heard nothing reads them off the holdings inventory
+      once, through the query layer it already asks for its depth axis. The surface states which
+      of the two it has, because an announcement received and a standing analysis looked up are
+      different facts.
+
+      Watched failing, both guards on the reader: without the sibling check it names collections
+      the store does not hold, and without the suffix check it picks `analysis.run-d-contributions`
+      as a base holding and would query `…-contributions-provenance`. And end to end, against a
+      stopped clock with no announcement possible — before: nought cells, nought depth chips, "no
+      analysis has been announced yet"; after: 1920 cells, six chips, and the region saying it read
+      the analysis from the store.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

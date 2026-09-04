@@ -208,7 +208,7 @@ remainder by refusing a second set of bytes under a holding id it already holds.
 
 Measured, because both obvious answers were wrong. Switching components off one at a time
 put 300 of a tick's 568 microseconds in the **environment generator** rather than in the
-assimilation: it re-evaluates a 96×80×6 grid over four time steps every 900 ticks and the
+assimilation: it re-evaluates a 48×40×26 grid over four time steps every 900 ticks and the
 coverage store keeps only the newest, so `returning` computed ten now-casts and discarded
 eight. Nothing reads the intermediate ones — the monitor scores against the forecast, the
 analyst falls back to a now-cast only on a cold start.

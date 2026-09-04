@@ -763,8 +763,8 @@ export function ColumnProvenance({
       The map here is a <strong>plan at one depth</strong>; the{' '}
       <strong>semi-transparent volume</strong> below it is the setting that plan is a section
       through, with the <strong>thermocline drawn as a surface</strong> — placed per column rather
-      than at the one depth the run publishes, and captioned there with how much of the field is
-      level and how much is not. What is <strong>not built</strong> is the
+      than at the one depth the run publishes, and captioned there with the depths it found and how
+      level the field is. What is <strong>not built</strong> is the
       last of <strong>feature 124</strong>: the forecast’s own features — the eddy, the front, the
       drifting one — carried <em>with depth</em> through that volume. They are drawn in plan today
       in the region to the right, and what is missing is the dimension rather than the figure.

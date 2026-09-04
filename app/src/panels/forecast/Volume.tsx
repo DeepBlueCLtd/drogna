@@ -472,7 +472,7 @@ export function Volume({
             depth{relief.distinct === 1 ? '' : 's'}
           </strong>
           {relief.coreSpanM <= relief.spacingM
-            ? ` — so it is level to within one ${relief.spacingM} m level across the field, and domes only where a feature displaces it: the eddy and the drifting feature are tens of kilometres across in a domain hundreds wide, so most columns fall fastest in the same pair. What this shows at this resolution is where the strongest gradient sits, which is a sonar question whatever its shape.`
+            ? ` — so it is level to within one ${relief.spacingM} m level across most of the field. What this shows is where each column's strongest gradient sits, which is a sonar question whatever its shape; where a column differs from its neighbours this cannot say whether a feature moved the layer there or the analysis is simply less sure of that column.`
             : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. The layer is level across most of the field and displaced where a feature acts on it: a warm one presses it down beneath itself, a cool one lets it rise. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
         </p>
       )}

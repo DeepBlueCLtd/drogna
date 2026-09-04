@@ -549,27 +549,27 @@ try {
    * nothing here, and shot the picture and exited 0. A proof added in answer to a fault that
    * passes on that fault is the thing `CLAUDE.md` puts second in the file.
    *
-   * **What is asserted is that the layer's depth varies at all**, which is exactly what analytic
-   * form 1 could not do: `thermoclineAnomalyT` took no position there, so the surface had *one*
-   * distinct depth over every column at every spacing from 200 m down to 10 m. One here means the
-   * displacement term or the depth axis has gone, and that is the regression #113 was raised for.
+   * **And what it does not check, because a proof that cannot fail is worse than no proof.**
    *
-   * It is deliberately not "the surface is not flat". The doming form 2 produces is local — an
-   * eddy and a drifting feature in a domain hundreds of kilometres wide — so the caption's own
-   * level branch is the honest one on the shipped configuration, and a proof demanding the other
-   * branch would be demanding a picture rather than checking one. The count is the falsifiable
-   * part; the shares below it are asserted to be *present* so the caption cannot quietly stop
-   * saying how much of the field holds the shape it reports.
+   * The obvious assertion here is "the layer takes more than one depth", which is exactly what
+   * analytic form 1 could not do (#113). It was written, and it is worthless, and the measurement
+   * says why. `thermoclineSurface` over the *truth* field distinguishes the two forms cleanly —
+   * three distinct depths with the displacement, one without. Over the *served analysis*, which is
+   * what this region draws, it does not: four distinct depths with the displacement and four
+   * without, because assimilation puts enough scatter into a weakly-constrained column to move its
+   * steepest pair on its own. Setting `displacement_m_per_c` to nought and running this command
+   * passed it.
+   *
+   * So the shape check lives in `generator.test.ts`, over the field the manifest describes and
+   * against a bound derived from the manifest's own displacement — where it goes red on a zero
+   * displacement and on a too-coarse axis, both watched. What is asserted *here* is what a picture
+   * can honestly be asked for: that the surface was placed, and that the caption states a measured
+   * figure beside its count rather than a bare number.
    */
   // Either branch, because either can be the honest one: the shape branch names the modal share,
   // the level branch names the spacing it is level to within. What must never happen is a count
   // with no measured figure beside it to say what the count means.
   const measured = /(\d+)% of them at (\d+) m/.test(captionText) || /within one (\d+) m level/.test(captionText);
-  if (Number(distinct) <= 1)
-    throw new Error(
-      `the volume drew one thermocline depth over all ${total} columns — the layer has no horizontal ` +
-        "shape at all, which is analytic form 1's field. The displacement term or the depth axis has gone.",
-    );
   if (!measured)
     throw new Error(`the caption reported a count without saying how much of the field is at it: ${captionText.slice(0, 300)}`);
   await volume.screenshot({ path: volumeShot });
@@ -625,7 +625,11 @@ try {
         ...provenance,
         image: basename(volumeShot),
         image_size: pngSize(await readFile(volumeShot)),
-        element_box: undefined,
+        // The volume's own box, not the centre region's: a sidecar describes the artefact beside
+        // it, and inheriting the region's would have been a measurement of a different picture.
+        element_box: await volume.boundingBox().then((b) =>
+          b ? { width: Math.round(b.width), height: Math.round(b.height) } : undefined,
+        ),
         surface: { columns: Number(total), placed: Number(placed), distinct_depths: Number(distinct) },
         volume_caption: captionText.replace(/\s+/g, " ").trim(),
       },

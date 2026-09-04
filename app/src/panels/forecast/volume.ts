@@ -10,11 +10,17 @@
  * plane drawn where a surface was promised would claim the field is flat, which is the one
  * thing the drawing exists to disprove.
  *
- * The shape is real and is in the served field: the seeded eddy and front perturb temperature
- * horizontally, so the depth at which a *column* falls fastest moves from column to column even
- * though the analytic thermocline term itself is horizontally uniform. Nothing here invents it —
- * every value comes from an area query the shell makes through the query layer, one per level,
- * as the Map's own volume already does.
+ * The shape is real and is in the served field: analytic form 2 displaces the layer where a
+ * feature warms or cools the water at it (#113, ADR-0044), so the depth at which a *column* falls
+ * fastest moves from column to column. Nothing here invents it — every value comes from an area
+ * query the shell makes through the query layer, one per level, as the Map's own volume does.
+ *
+ * **What that shape is not is recoverable from this pick alone, on the field this draws.** The
+ * volume reads a served *analysis*, and assimilation puts scatter into weakly-constrained columns:
+ * over the truth field the surface takes three distinct depths with the displacement and one
+ * without, and over the analysis four either way. The pick is faithful to the field it is given;
+ * it is not evidence about the layer. `generator.test.ts` holds the shape, against the manifest
+ * and against a bound derived from it, which is where a claim about the world belongs.
  *
  * **The pick is the harness's own, not a second opinion about it.** `model-runner/features.ts`
  * defines the published estimate as the level pair whose temperature falls fastest, reported at

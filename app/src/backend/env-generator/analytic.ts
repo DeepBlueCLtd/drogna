@@ -143,21 +143,29 @@ export function frontAnomalyS(p: ManifestFrontParameters, longitude: number, lat
  * to the edges. The eddy and the drifting feature use radial Gaussians that fall to nothing, which
  * is what a local displacement has to do.
  *
- * That is an argument from shape, and the measurement agrees with it emphatically. Recovering the
- * drifting feature's centre across the five AT-06 seeds, error in km against its own 40 km radius:
+ * That is an argument from shape, and the measurement agrees with it. Recovering the drifting
+ * feature's centre, error in km against its own 40 km radius — every figure below printed by
+ * `features.test.ts` itself, over the seeds that file actually runs, so the table reproduces by
+ * being the test's own output rather than a probe's:
  *
- * | terms | 1180001 | 1180002 | 1180003 | 1180004 | 1180005 |
+ * | terms, at the shipped 20 m/°C | 1234 | 1180001 | 1180002 | 1180003 | 1180004 |
  * |---|---|---|---|---|---|
- * | none (form 1) | 9.7 | 20.5 | 7.0 | declined | 25.5 |
- * | eddy, front and moving | 8.8 | 16.8 | 4.8 | **64.9** | 21.6 |
- * | front alone | 12.8 | **60.7** | 9.8 | declined | 33.6 |
- * | eddy and moving | 6.7 | 14.2 | 3.1 | 1.9 | 15.1 |
+ * | none (analytic form 1) | 3.1 | 9.7 | 20.5 | 7.0 | *declined* |
+ * | eddy, front and moving | 3.1 | 8.8 | 17.6 | 5.4 | *declined* |
+ * | eddy and moving (shipped) | **2.4** | **8.3** | **14.5** | **4.7** | **3.6** |
  *
- * The front's term alone breaks a seed on its own, and dropping it leaves the estimator *better
- * than form 1 on every seed* — including the one form 1 could not find at all. A global cold half
- * and warm half at the layer's depth is a blob the size of the domain, and a blob estimator finds
- * it. The front's own horizontal step is already in the field through `frontAnomalyT`; stepping
- * the layer with it as well was double-counting the one feature that needs no help being seen.
+ * Dropping the front is better on every seed, and on 1180004 — `returning`'s own — it is the
+ * difference between a position and a refusal: with the front in the displacement the estimator
+ * declines there exactly as form 1 does, because a global cold half and warm half at the layer's
+ * depth is a blob the size of the domain and it drowns a 40 km one. The front's own horizontal
+ * step is already in the field through `frontAnomalyT`; stepping the layer with it as well was
+ * double-counting the one feature that needs no help being seen.
+ *
+ * **And the coefficient is 20 because that is where the front's *anchor* still lands.** With the
+ * front excluded, 30 and 40 m/°C both recover the drifting feature better still (1.9 km on
+ * 1180004) — and both put seed 1180003's front anchor outside its 30 km bound. The layer's shape
+ * and the front's position are read off the same horizontal structure, so buying more of one
+ * spends the other. That is the tension ADR-0044's last section is about, met here in miniature.
  */
 export function thermoclineDepthAt(
   w: WorldParameters,

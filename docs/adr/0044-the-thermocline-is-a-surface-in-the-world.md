@@ -84,26 +84,30 @@ The eddy and the drifting feature use radial Gaussians that fall to nothing, whi
 a local displacement has to do.
 
 The estimators said so before the argument was finished. Recovering the drifting feature's
-centre across the five AT-06 seeds, error in km against its own 40 km radius:
+centre, error in km against its own 40 km radius. Every figure is printed by
+`features.test.ts` over the seeds that file runs, so the table reproduces by being the
+test's own output — an earlier draft of it was taken from a standalone probe, quoted a
+seed the repository does not contain, and did not reproduce, which is what a measurement
+that lives beside the thing it measures is for:
 
-| terms | 1180001 | 1180002 | 1180003 | 1180004 | 1180005 |
+| terms, at the shipped 20 m/°C | 1234 | 1180001 | 1180002 | 1180003 | 1180004 |
 |---|---|---|---|---|---|
-| none (form 1) | 9.7 | 20.5 | 7.0 | declined | 25.5 |
-| eddy, front and moving | 8.8 | 16.8 | 4.8 | **64.9** | 21.6 |
-| front alone | 12.8 | **60.7** | 9.8 | declined | 33.6 |
-| eddy and moving | 6.7 | 14.2 | 3.1 | 1.9 | 15.1 |
+| none (analytic form 1) | 3.1 | 9.7 | 20.5 | 7.0 | *declined* |
+| eddy, front and moving | 3.1 | 8.8 | 17.6 | 5.4 | *declined* |
+| eddy and moving (shipped) | **2.4** | **8.3** | **14.5** | **4.7** | **3.6** |
 
-A global cold half and warm half at the layer's depth is a blob the size of the domain,
-and a blob estimator finds it. Dropping the front leaves the estimator **better than form 1
-on every seed**, including the one form 1 could not find at all. The front's own horizontal
-step is already in the field through `frontAnomalyT`; stepping the layer with it as well
-was double-counting the one feature that needs no help being seen. The front's anchor
-recovery agreed independently: with the front displacing, seed 1180003 put the anchor 74 to
-97 km across the front against a 30 km bound, at every grid size tried, and 1 km without it.
+A global cold half and warm half at the layer's depth is a blob the size of the domain, and
+a blob estimator finds it. Dropping the front is better on every seed, and on 1180004 —
+`returning`'s own — it is the difference between a position and a refusal: with the front
+displacing, the estimator declines there exactly as form 1 does. The front's own horizontal
+step is already in the field through `frontAnomalyT`; stepping the layer with it as well was
+double-counting the one feature that needs no help being seen.
 
-**And the coefficient is 20 m/°C because that is where the estimators still hold.** At 30
-the front's anchor on seed 1180003 goes back over its bound; the drop from 30 to 20 costs
-35 m of relief and one distinct depth in four.
+**And the coefficient is 20 m/°C because that is where the front's own anchor still lands.**
+With the front excluded, 30 and 40 m/°C both recover the drifting feature better still —
+1.9 km on 1180004 — and both put seed 1180003's front anchor outside its 30 km bound. The
+layer's shape and the front's position are read off the same horizontal structure, so buying
+more of one spends the other; the last section of this ADR is that tension at full size.
 
 ## The depth axis moves too, and pays for itself
 
@@ -121,10 +125,19 @@ produced by letting the front step the whole field. Over a served **analysis** i
 which is worth stating because the drawing draws an analysis and not the truth — thirteen
 depths, 82% at 100 m, two holding ninety-four per cent inside 40 m.
 
-`Volume.tsx` prints those shares. It was first written to print max minus min and call the
-result doming, which against one analysis read "16 distinct depths spanning 840 m" — true of
-two columns and false of the layer, and the same fault as form 1's arriving from the other
-direction.
+`Volume.tsx` prints the count and, on the shipped configuration, the level it is level to
+within — its other branch, which names the modal share, is for a field whose commonest depths
+span more than one level and nothing ships in that state. It was first written to print max
+minus min and call the result doming, which against one analysis read "16 distinct depths
+spanning 840 m" — true of two columns and false of the layer, and the same fault as form 1's
+arriving from the other direction.
+
+**And it attributes nothing.** The count it prints is four with the displacement and four
+without, because the analysis it reads carries assimilation scatter that moves a weakly-held
+column's steepest pair on its own; only over the truth field does the count separate the two
+forms (three against one). So the caption says where each column's gradient sits and says it
+cannot tell a displaced layer from an unsure column — and the proof of the shape is a unit
+test over the manifest, not a picture.
 
 Depth multiplies against the horizontal, and the horizontal was generous: 96 × 80 over the
 domain is 5.3 km cells against an eddy of 64 km radius, twelve cells across its radius. The

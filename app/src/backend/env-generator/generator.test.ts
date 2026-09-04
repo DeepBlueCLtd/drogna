@@ -394,9 +394,11 @@ describe('the synthetic ocean (feature 102)', () => {
    * The cost guard on the density. Publishing a now-cast is one synchronous pass —
    * every cell evaluated from the analytic form, then SHA-256 over the bytes, and again
    * in the store's own digest check — and the generator repeats it every
-   * `interval_ticks` for as long as the run lasts. At the shipped 96 x 80 x 6 x 4 that
-   * pass measures about 270 ms on a development machine against 18 ms at 24 x 20, and a
-   * forecast run over the same grid about 420 ms against 27 ms.
+   * `interval_ticks` for as long as the run lasts. Measured at 96 x 80 x 6 x 4, which the
+   * grid was when this note was written, that pass took about 270 ms on a development
+   * machine against 18 ms at 24 x 20, and a forecast run over the same grid about 420 ms
+   * against 27 ms. #113 spent the horizontal on depth: 48 x 40 x 26 x 4 is 8% more cells
+   * than that, so the figures stand and the ceiling below is unaffected.
    *
    * At the rate the map is watched that is one pass every fifteen minutes of wall time
    * and nobody sees it. Wound forward it is what the clock's pace is spent on: the

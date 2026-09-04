@@ -1,5 +1,5 @@
 {
-  "image": "forecast-column-volume.png",
+  "image": "124-the-ocean-was-flat.png",
   "run_id": "loiter-arriving-pahu",
   "view": "forecast",
   "start_condition": "arriving",
@@ -17,15 +17,19 @@
     "width": 816,
     "height": 423
   },
+  "element_box": {
+    "width": 815,
+    "height": 422
+  },
   "browser": {
     "name": "chromium",
     "version": "141.0.7390.37"
   },
-  "caption": "",
+  "caption": "The Forecast tab's volume, twenty-six levels of sound speed with the thermocline drawn as a surface through them, opened on the analysis the rays beside it came from.",
   "surface": {
     "columns": 1920,
     "placed": 1920,
     "distinct_depths": 13
   },
-  "volume_caption": "26 level(s) of sound_speed, each a genuine area query against analysis.loiter-arriving-pahu-run-t12420, drawn semi-transparent with depth exaggerated. The pale surface through them is the thermocline, placed per column at the midpoint of the level pair whose temperature falls fastest — the run’s own definition, applied to each column rather than to the domain mean. Its brightness is the drop across that interval. 1920 of 1920 columns have one, over 13 distinct depths — so it is level to within one 40 m level across the field, and domes only where a feature displaces it: the eddy and the drifting feature are tens of kilometres across in a domain hundreds wide, so most columns fall fastest in the same pair. What this shows at this resolution is where the strongest gradient sits, which is a sonar question whatever its shape."
+  "volume_caption": "26 level(s) of sound_speed, each a genuine area query against analysis.loiter-arriving-pahu-run-t12420, drawn semi-transparent with depth exaggerated. The pale surface through them is the thermocline, placed per column at the midpoint of the level pair whose temperature falls fastest \u2014 the run\u2019s own definition, applied to each column rather than to the domain mean. Its brightness is the drop across that interval. 1920 of 1920 columns have one, over 13 distinct depths \u2014 so it is level to within one 40 m level across most of the field. What this shows is where each column's strongest gradient sits, which is a sonar question whatever its shape; where a column differs from its neighbours this cannot say whether a feature moved the layer there or the analysis is simply less sure of that column."
 }

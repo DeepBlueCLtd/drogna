@@ -148,7 +148,7 @@ function depthAveragedAnomaly(temperature: Float32Array, grid: FeatureGrid): Flo
  * scenario's grid, the recovered centres move from 164 km and 181 km of error to 7 km each.
  *
  * Computed through a summed-area table, so the cost is one pass over the field rather than
- * one window per cell: a run happens inside a browser tab, and a 96 x 80 grid with a 41-cell
+ * one window per cell: a run happens inside a browser tab, and a 48 x 40 grid with a 21-cell
  * window is thirteen million reads done the naive way.
  */
 function highPassWindow(lonCount: number, latCount: number): number {

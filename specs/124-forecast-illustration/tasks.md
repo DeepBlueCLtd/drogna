@@ -209,10 +209,19 @@ published today.
       `ColumnProvenance.tsx` already selects a column by square with arrow keys and enter;
       the volume's grid is the same selection and must not be a second one. *Built as that
       reconciliation asks:* the volume is rendered inside `ColumnProvenance`, where `column` and
-      `readColumn` already live, and a click goes through `cube.ts`'s own inverse — tested as a
-      round trip against `toCartesian`, which is why the projection is imported rather than
-      written again. Driven live: clicking the volume opened the column at 46.22°N, -10.90°E in
-      the profile beneath it. The keyboard route to a square is the share map's, unchanged, which
+      `readColumn` already live. A click is resolved against a **pickable grid of squares on the
+      surface plane**, which is what FR-06 asks for in as many words — "nothing inside the volume
+      is clickable" — so deck.gl returns the square or nothing and `cellBounds` reads the column's
+      position off the served axes.
+
+      *The first version did read the canvas coordinate, and that is the fault the requirement
+      names.* It took `info.coordinate`, deck.gl's ground-plane unprojection, which is where the
+      ray through the pixel crosses depth nought and not where the cell the reader pointed at is
+      drawn: a click on a deep cell opened a column about 180 km away, and a click on the empty
+      canvas beside the box opened one outside the domain, clearing the reader's rays and figures
+      for a position the analysis never covered. `cube.ts`'s inverse is tested as a round trip
+      against `toCartesian` and was not the problem — the problem was asking it a question about a
+      plane the reader was not clicking on. The keyboard route to a square is the share map's, unchanged, which
       is what "must not be a second one" means in code.
 - [x] T012 The parameter control, defaulting to sound speed, and the depth control.
       *Reconciled:* a depth control exists on the share map (123's T084) and walks the same

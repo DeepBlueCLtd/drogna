@@ -22,9 +22,18 @@ export function Volume(props: ComponentProps<typeof VolumeComponent>) {
   return (
     <Suspense
       fallback={
-        // Named, because a silent gap where a drawing is going to be reads as a drawing that
-        // failed. This is the one state the reader meets before any query has been made.
-        <p className="not-landed" data-testid="forecast-volume-state">
+        /*
+         * Named, because a silent gap where a drawing is going to be reads as a drawing that
+         * failed. This is the one state the reader meets before any query has been made.
+         *
+         * **Its own marker, not the loaded component's.** It wore `forecast-volume-state`, which
+         * `Volume.tsx` also wears for "reading levels…", "refused" and "no values to scale a ramp
+         * over" — so a proof that found the marker could not tell a chunk still downloading from a
+         * query the server declined. `data/lazy.tsx` carries a note about a mobile capture that
+         * once measured a placeholder and reported it as the map; that is the same fault one step
+         * earlier, and one marker for two components is how it arrives.
+         */
+        <p className="not-landed" data-testid="forecast-volume-pending">
           the volume is loading…
         </p>
       }

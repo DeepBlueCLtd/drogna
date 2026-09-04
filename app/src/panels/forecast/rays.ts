@@ -316,11 +316,21 @@ export function paletteSlots(sources: readonly AnalysisContributionsSource[]): {
 export function sourceLabels(sources: readonly AnalysisContributionsSource[]): readonly string[] {
   const seen = new Map<string, number>();
   for (const source of sources) seen.set(source.datastream_id, (seen.get(source.datastream_id) ?? 0) + 1);
-  const used = new Map<string, number>();
+  // **Numbered by sorted `source_id`, not by position in the served array.** The array is built by
+  // first encounter while walking *this column's* levels, so the ordinal was a fact about which
+  // column was asked for: `temperature-050m ·2` named one cell in one column and a different cell
+  // in the next, at the same hue and the same dash, with nothing saying the labels had been
+  // reassigned. That is the fault the hue and the texture were both moved off encounter order to
+  // fix — and the ordinal is what those fixes handed the job of telling two sources of one
+  // instrument apart, so it was the one place it still mattered.
+  const order = [...sources].map((source) => source.source_id).sort();
   return sources.map((source) => {
     if ((seen.get(source.datastream_id) ?? 0) < 2) return source.datastream_id;
-    const ordinal = (used.get(source.datastream_id) ?? 0) + 1;
-    used.set(source.datastream_id, ordinal);
+    const ordinal =
+      order.filter((id) => {
+        const other = sources.find((candidate) => candidate.source_id === id);
+        return other?.datastream_id === source.datastream_id && id <= source.source_id;
+      }).length;
     return `${source.datastream_id} ·${ordinal}`;
   });
 }

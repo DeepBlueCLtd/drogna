@@ -496,3 +496,22 @@ describe('a served index the source table does not carry', () => {
     expect(set.reachedCount).toBe(3);
   });
 });
+
+describe('the ordinal that tells two sources of one instrument apart', () => {
+  it('is the same in two columns that carry the same two sources', () => {
+    // **The fault the hue and the texture were both moved off encounter order to fix, surviving
+    // in the label those fixes handed the job to.** `contributions.ts` builds `sources` by first
+    // encounter while walking this column's levels, so the ordinal was a fact about which column
+    // was asked for: `·2` named one cell in one column and another in the next, at the same hue
+    // and the same dash, with nothing saying the labels had been reassigned.
+    const a = [source('temperature-050m.cell-11', -11.4, 'temperature-050m'), source('temperature-050m.cell-12', -11.0, 'temperature-050m')];
+    const b = [source('temperature-050m.cell-12', -11.0, 'temperature-050m'), source('temperature-050m.cell-11', -11.4, 'temperature-050m')];
+    const labelOf = (sources: AnalysisContributionsSource[], id: string) =>
+      sourceLabels(sources)[sources.findIndex((entry) => entry.source_id === id)];
+    for (const id of ['temperature-050m.cell-11', 'temperature-050m.cell-12']) {
+      expect(labelOf(a, id), `${id} was renumbered between columns`).toBe(labelOf(b, id));
+    }
+    expect(labelOf(a, 'temperature-050m.cell-11')).toBe('temperature-050m ·1');
+    expect(labelOf(a, 'temperature-050m.cell-12')).toBe('temperature-050m ·2');
+  });
+});

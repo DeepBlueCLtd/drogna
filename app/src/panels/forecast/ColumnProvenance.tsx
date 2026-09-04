@@ -547,13 +547,24 @@ export function ColumnProvenance({
     [slab],
   );
 
+  /**
+   * The strongest share at a cell, or **nothing** where none of the four is a number.
+   *
+   * It used to seed with `SOURCES[0]` at `-Infinity` and return that when nothing was finite, so a
+   * cell with no readable share drew as the *archive*, hatched, at 0.15 opacity — and with the
+   * negative class, because `-Infinity < 0`. The shell asserting a provenance for a cell nothing
+   * was served for, while the readout beneath printed `archive NaN%`: two surfaces disagreeing on
+   * one input. The whole-slab guard added for the same fault catches a field in which no *name*
+   * resolved; this is the per-cell case, which a CoverageJSON producer using `null` for unsampled
+   * cells — the standard's own idiom — reaches with every name resolving.
+   */
   const dominantAt = useCallback(
-    (row: number, col: number): { key: SourceKey; value: number } => {
+    (row: number, col: number): { key: SourceKey; value: number } | undefined => {
       const shares = sharesAt(row, col);
-      let best: { key: SourceKey; value: number } = { key: SOURCES[0].key, value: -Infinity };
+      let best: { key: SourceKey; value: number } | undefined;
       for (const source of SOURCES) {
         const value = shares[source.key];
-        if (Number.isFinite(value) && value > best.value) best = { key: source.key, value };
+        if (Number.isFinite(value) && (!best || value > best.value)) best = { key: source.key, value };
       }
       return best;
     },
@@ -733,8 +744,11 @@ export function ColumnProvenance({
               drawn.cols.map((sourceCol, col) => {
                 const shares = sharesAt(sourceRow, sourceCol);
                 const shown = showing === 'dominant' ? dominantAt(sourceRow, sourceCol) : { key: showing, value: shares[showing] };
-                const source = shareOf(shown.key);
-                const magnitude = Number.isFinite(shown.value) ? Math.min(Math.abs(shown.value), 1) : 0;
+                // A cell with nothing readable in it is drawn as the ground it sits on and marked
+                // unserved — not as the first share at nought, which is what a `-Infinity` seed
+                // made it, complete with the negative class.
+                const source = shown ? shareOf(shown.key) : undefined;
+                const magnitude = shown && Number.isFinite(shown.value) ? Math.min(Math.abs(shown.value), 1) : 0;
                 const isHere = cursor?.row === row && cursor?.col === col;
                 return (
                   <rect
@@ -746,9 +760,9 @@ export function ColumnProvenance({
                     // The share is carried by opacity against the console's own ground, which
                     // is monotonic in lightness by construction — a sequential ramp that needs
                     // no second hue and cannot invert.
-                    fill={showing === 'dominant' ? `url(#${source.pattern})` : source.hue}
-                    fillOpacity={showing === 'dominant' ? Math.max(magnitude, 0.15) : magnitude}
-                    className={`share-cell${isHere ? ' is-here' : ''}${shown.value < 0 ? ' is-negative' : ''}`}
+                    fill={source ? (showing === 'dominant' ? `url(#${source.pattern})` : source.hue) : 'none'}
+                    fillOpacity={source ? (showing === 'dominant' ? Math.max(magnitude, 0.15) : magnitude) : 0}
+                    className={`share-cell${isHere ? ' is-here' : ''}${shown && shown.value < 0 ? ' is-negative' : ''}${source ? '' : ' is-unserved'}`}
                     // Where this cell is, from the served axes: the readout beneath states it
                     // for the one under the cursor, and this states it for every one, so the
                     // drawing can be checked against the holding cell by cell.

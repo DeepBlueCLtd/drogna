@@ -499,7 +499,11 @@ export function ForecastPanel({ params }: PanelProps) {
           return;
         }
         gridForRef.current = named;
-        attemptsRef.current = 0;
+        // Through the policy, not beside it. The reset was written inline, so `spendAttempt`'s
+        // `'answered'` arm had no production caller and the test asserting it held a path the
+        // panel never took — in a function extracted *because* the policy could not be reached
+        // through the panel.
+        attemptsRef.current = spendAttempt(attemptsRef.current, 'answered');
         setGridGaveUp(false);
         // **The same object where the axis is the same, because the identity is a dependency.**
         // `columnGridOf` returns a fresh literal, and `ColumnProvenance`'s slab effect depends on

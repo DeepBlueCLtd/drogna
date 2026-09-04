@@ -192,7 +192,11 @@ drawing in it.
       proportional *within the drawn set*, normalised by the widest, because a contribution is a
       gain coefficient rather than a share and T002's measured magnitudes would otherwise draw
       one ray as a slab and the rest as hairlines.
-- [ ] T014 Spatial sources placed where they are; non-spatial sources docked at the margin in
+- [ ] T014 **The docking half is declined; the placement half is built.** One box cannot carry
+      two answers, and this one said `[x]` over a requirement `spec.md` cites as outstanding and
+      then `[ ]` over a body beginning "*Built.*" — both spellings were wrong in one direction or
+      the other. Left unticked because the task as written is not done: spatial sources placed
+      where they are; non-spatial sources docked at the margin in
       positions stable across selections, from a declared order rather than from whatever the
       holding happened to list first. The remainder (T002) has no position and is not a ray:
       it is stated in the region, as coupling from beyond the column's reach.
@@ -971,6 +975,56 @@ the part worth recording, because each was a sentence asserting a property the c
       analyses over a window a test can afford to drive. A fourth spelling would be an assertion
       that looks like coverage and is not, which is what this feature has spent ten rounds
       removing. It is said in the test and in the pull request instead.
+
+- [x] T022w **A twelfth round, and the last of them: the `·1`/`·2` ordinal was still assigned by
+      encounter order.**
+
+      T022r moved the hue off the served array's encounter order and T022s moved the texture; the
+      *ordinal* is what both of those fixes handed the job of telling two sources of one instrument
+      apart, and it was left on encounter order. `contributions.ts` builds `sources` by first
+      encounter while walking this column's levels, so `temperature-050m ·2` named one cell in one
+      column and a different cell in the next, at the same hue and the same dash, with nothing
+      saying the labels had been reassigned — which is the sentence `rays.ts` uses about the fault
+      it was written to close. Numbered by sorted `source_id` now, watched failing across two
+      columns carrying the same two sources.
+
+      **And the bar and the table beneath it listed the same six sources in opposite orders**, which
+      the committed capture shows: the figures ran `·1, ·1, ·2, ·2, ·3, ·3` and the FR-130 table
+      five elements below, sorted by id, ran `·3, ·2, ·1`. `rays.ts` opens by arguing that a set
+      ordered by what the holding listed first is stable only by luck, and the bar a reader looks
+      at first was ordered exactly that way. Both are the declared order now, and the alt text was
+      re-read against the re-captured picture rather than assumed to still hold.
+
+      **A cell with no readable share drew as the archive, negative.** The strongest-share search
+      seeded at `-Infinity` and returned that when nothing was finite, so such a cell drew hatched
+      as the first share at 0.15 opacity with the negative class, while the readout beneath printed
+      `archive NaN%`. The whole-slab guard added last round catches a field in which no *name*
+      resolved; this is the per-cell case, which a CoverageJSON producer using `null` for unsampled
+      cells reaches with every name resolving.
+
+      **`spendAttempt`'s reset arm had no production caller.** The reset was written inline beside
+      it, so the test asserting `'answered'` held a path the panel never took — in a function
+      extracted *because* the policy could not be reached through the panel.
+
+      And T014 said both things at once: `[x]` over a requirement `spec.md` calls outstanding, then
+      `[ ]` over a body beginning "*Built.*". It is two tasks in one box — placement, which is
+      built and captured, and the docking, which is declined — and the line says so now.
+
+## What this branch leaves undone, and why
+
+      Written here rather than only in the pull request, because the reason is the part that cannot
+      be reconstructed later.
+
+      - **The axis retry's once-per-cycle half is unheld.** Three spellings of a bound were tried
+        and all three passed with the mechanism removed: the panel is announced too few analyses
+        over a window a test can afford to drive. A fourth would be an assertion that looks like
+        coverage and is not.
+      - **`modelledRaysIn`, `noSuchLevel`, `gridGaveUp` and the share-collision refusals are
+        unreachable against today's analyst**, which serves one variable and marks every source
+        `measured`. They are Principle XI machinery — the seam may be remote — and each is tested
+        against a planted document rather than a run.
+      - **Q-01 is open** (T030): whether the palette survives greyscale *as composited* rather than
+        as declared is a question a capture answers and a comment cannot.
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying

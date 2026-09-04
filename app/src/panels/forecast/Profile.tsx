@@ -164,7 +164,16 @@ function bandsFor(
   });
 
   if (served) {
-    for (const entry of served.contributions) {
+    // **Ordered by source id, like the table five elements below.** These walked
+    // `served.contributions` in the level's own array order — first encounter — so the bar's
+    // figures ran `·1, ·1, ·2, ·2, ·3, ·3` while the FR-130 table under it, sorted by id, ran
+    // `·3, ·2, ·1` for each instrument. Same screen, same six sources, opposite direction, and
+    // `rays.ts` opens by arguing that a set ordered by what the holding listed first is stable
+    // only by luck. The committed capture shows both orders at once.
+    const ordered = [...served.contributions].sort((left, right) =>
+      (document?.sources[left.source]?.source_id ?? '').localeCompare(document?.sources[right.source]?.source_id ?? ''),
+    );
+    for (const entry of ordered) {
       const source = document?.sources[entry.source];
       if (!source) continue;
       const hue = instrumentAt(slots.hue[entry.source] ?? 0).hue;

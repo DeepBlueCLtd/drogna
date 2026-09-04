@@ -756,3 +756,13 @@
   opacity: 0.7;
   stroke-width: 1.2;
 }
+
+/* A cell with no readable share is drawn as the ground it sits on. It used to draw as the first
+   share, hatched, with the negative class, because the strongest-share search seeded at -Infinity
+   and returned that when nothing was finite — the shell asserting a provenance for a cell nothing
+   was served for. Marked so the cursor and the keyboard still reach it. */
+.share-cell.is-unserved {
+  stroke: var(--shell-dim);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.1 0.1;
+}

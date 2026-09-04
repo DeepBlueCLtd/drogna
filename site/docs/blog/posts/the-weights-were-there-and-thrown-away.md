@@ -48,8 +48,10 @@ sampling; a pale ring marks the picked column and the six instrument-sources tha
 marked immediately beside it, because the platform's two instruments sample the cells it is
 crossing and every source is within a cell or two of the column. Beneath the map a depth profile, one stacked bar of hatched bands per level
 with its figures printed underneath. At 0 m: archive 0.0%, departure −11.9%, model −81.4%,
-measurement from earlier cycles 0.5%, then this cycle's six sources at 39.2%, 3.7%, 39.4%, 1.6%,
-110.4% and −1.4%, and beyond this cell's reach 0.0% — summing to 100.0%. At 600 m, 800 m and
+measurement from earlier cycles 0.5%, then this cycle's six sources — the 50 m instrument's three
+casts at 110.4%, 39.4% and 39.2%, the 200 m instrument's three at −1.4%, 1.6% and 3.7% — and
+beyond this cell's reach 0.0%, summing to 100.0%. The bands run in the same order as the
+table at the foot. At 600 m, 800 m and
 1000 m an italic line states that no observation was within reach of that level, because the
 correlation reaches exactly zero beyond twice its half-width; the 600 m and 800 m bars are the
 departure forecast alone at 100.0%, and the 1000 m bar is departure 84.5% beside model 15.5%. At the foot a table of what produced each width: each source with its

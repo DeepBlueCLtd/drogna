@@ -566,6 +566,63 @@ the part worth recording, because each was a sentence asserting a property the c
       measurement was of a stopped harness, again, one layer further in. The pass steps that many
       ticks before it measures, which is what a second of a running clock would have done.
 
+- [x] T022p **A fifth round, against the tree being published, and four of its findings were
+      faults the fourth round's fixes had introduced or left standing.**
+
+      **The two hatch vocabularies collided, and the check written to stop them could not fail.**
+      The share map hatched at `index * 45` — 0°, 45°, 90°, 135° — against an instrument palette
+      at multiples of 30 from 0, so slots 0 and 3 were archive's and measurement's own directions,
+      in one region, one surface above the other, and the two are drawn as adjacent bands of one
+      bar. The assertion was `SOURCES.every((source) => !('angle' in source))`: the angles were
+      computed inside the JSX and were never on `SOURCES`, so it tested a key's absence and
+      passed whatever the map drew. This is V1's recorded trap — a gate reporting a file of
+      deliberate violations as clean — reproduced exactly. Declared angles now, odd multiples of
+      15 against multiples of 30, and the check reads the two lists.
+
+      **And the claim the palettes separate without colour was false.** Measured with the shell's
+      own `contrast`: archive `#3987e5` against instrument slot 1 `#e0584a` is **1.019**, and
+      three more cross-vocabulary pairs are worse than the worst pair *inside* the instrument
+      ramp, which the test bounds. Six ordered hues cannot also clear a bound against four more;
+      the hatch is what carries it, and `shares.ts` says so now instead of claiming the hues do.
+
+      **The region re-queried the whole field every 60 ticks**, under its own header saying "not
+      on a tick, not on an announcement, not on a timer" (FR-136). The slab effect depended on
+      the `analysis` object, and a standing restatement is a new object. `SC-010: nothing polls`
+      measures a window in which no analysis exists at all, so it has never been in a state where
+      it could fail; the new test warms a field first and was watched catching the query by name.
+
+      **A refused area query took the numbers with the map.** The FR-130 table, the SC-001 caption
+      and FR-125's notice were gated on the ray *geometry*, which is undefined whenever the slab
+      is — and none of the three reads the slab. The set is split from the geometry.
+
+      **FR-125 was enforced in the caption and not in the picture**: `backgroundRaysIn` named a
+      modelled origin and the map drew it anyway, so the guard the SRD's FR-123 amendment leans
+      on guarded a sentence. `drawableRays` keeps it out of the drawing and in the table, where
+      removing it would break SC-001 silently rather than loudly.
+
+      **`placeOn` had no unit test** — the fix at the centre of T022n, a `useCallback` no test
+      could reach, in a file whose opening paragraph argues that the arithmetic must be testable
+      on its own. Moved, with five cases, watched failing against the snapping it replaced.
+      **`levelAtDepth`'s tolerance came from the first two levels**, which is far too tight below
+      the first coarsening of a non-uniform axis; it reads the matched level's own neighbours now.
+      The first version of *that* test asked for the level's own depth, where no tolerance is
+      visible at all, and passed with the fault planted — the third time this round that a test
+      had to be re-aimed before it could see anything.
+
+      Smaller: the FR-17 assertion's `/rays/` began matching a sentence saying the rays *work*;
+      the alt text was wrong about the 1000 m row; a CSS comment claimed a stipple the rule does
+      not draw; an unreachable `?? SOURCES[0]` shipped in the same change that removed one;
+      `drawn.width` was read nowhere; the all-NaN share record had three copies; and this file
+      claimed byte-identity as though something on disk checked it — nothing does, here or for
+      any of the estate's other blog assets, and it now says so.
+
+      The narrow pass runs the clock at its configured ceiling rather than stepping it. Crossing
+      the breakpoint remounts the panel, which draws nothing until a restatement, so a remount
+      landing after the last step waits for one a stopped clock never delivers — half of runs
+      failed on it, and no amount of polling wall time fixes a frozen simulation. Eight
+      consecutive runs clean. The shot is still taken at rate 0 and is still byte-identical
+      between runs.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath

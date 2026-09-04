@@ -404,11 +404,32 @@ describe('which palette entry a source is drawn in', () => {
       source('c.cell-2', -10.6, 'temperature-200m'),
     ];
     expect(paletteSlots(twice).hue).toEqual([1, 0, 1]);
-    // …and they are told apart *within* the column by dash and hatch, which step once per further
-    // source of that instrument. Colour alone would have drawn three adjacent bands of one bar
-    // identically, which is the defect the greyscale work exists against.
-    expect(paletteSlots(twice).texture).toEqual([1, 0, 2]);
+    // …and they are told apart *within* the column by dash and hatch. `a.cell-0`, `b.cell-1`,
+    // `c.cell-2` sorted is their own order, so the texture ranks are 0, 1, 2.
+    expect(paletteSlots(twice).texture).toEqual([0, 1, 2]);
     expect(sourceLabels(twice)).toEqual(['temperature-200m ·1', 'temperature-050m', 'temperature-200m ·2']);
+  });
+
+  it('gives no two sources of a column the same texture, which is the whole of what it is for', () => {
+    // **The check that was missing, and the fault it now catches.** The texture used to step from
+    // the *instrument's* slot once per further source of it, which walks onto other instruments'
+    // slots: on the shipped loitering column — three `temperature-050m` and three
+    // `temperature-200m` — bands two and three came out identical in angle and dash, as adjacent
+    // segments of one bar, leaving a 1.438:1 hue pair as the only thing between them. The old
+    // assertion tested a column with one repeated instrument, which is exactly the case where the
+    // stepping cannot collide.
+    const shipped = [
+      source('temperature-050m.cell-3981', -11.4, 'temperature-050m'),
+      source('temperature-200m.cell-11661', -11.3, 'temperature-200m'),
+      source('temperature-050m.cell-3982', -11.2, 'temperature-050m'),
+      source('temperature-200m.cell-11662', -11.1, 'temperature-200m'),
+      source('temperature-050m.cell-3983', -11.0, 'temperature-050m'),
+      source('temperature-200m.cell-11663', -10.9, 'temperature-200m'),
+    ];
+    const slots = paletteSlots(shipped);
+    expect(new Set(slots.texture).size, 'two sources of one column share a texture').toBe(shipped.length);
+    // The hue still says which instrument, so the two carriers are doing different jobs.
+    expect(new Set(slots.hue).size).toBe(2);
   });
 
   it('is a rank in the column’s own instruments, which is all the shell can promise', () => {

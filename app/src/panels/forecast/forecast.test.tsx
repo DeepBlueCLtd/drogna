@@ -26,7 +26,7 @@ import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../../backend/runtime/runtime.js';
 import { createSeamFetch } from '../../seam/http.js';
 import type { PanelParams } from '../../shell/Shell.js';
-import { ForecastPanel, FORECAST_REGIONS } from './ForecastPanel.js';
+import { ForecastPanel, FORECAST_REGIONS, GRID_ATTEMPTS, spendAttempt } from './ForecastPanel.js';
 import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, contributionResidual, raysFor } from './rays.js';
 import { sourceOf } from './shares.js';
 import { FORECAST_TOUR_STEPS, uncoveredSubjects } from '../../shell/walkthrough/tour.js';
@@ -815,6 +815,52 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       expect(caption).toContain(whole.observationWeight.toFixed(4));
     });
 
+    it('a cycle whose axis is not in the inventory yet does not spend the retry allowance', async () => {
+      // **The fault.** The depth-axis retry is bounded so a permanently-failing inventory is not
+      // one fetch per restatement for the life of the tab. The attempt was counted before the
+      // request and given back only on success — so a cycle whose axis the inventory does not
+      // carry *yet*, which is an honest answer and not a failed fetch, spent one too. Enough of
+      // those and the region stopped asking for good, however many later analyses would have
+      // answered: the deleted holdings subscription's own fault, in a smaller shape.
+      //
+      // Warmed first, so the loop is announcing analyses before the store is made to answer
+      // empty — the state the fault lives in is "asked, answered honestly, nothing there yet".
+      await toAField();
+      expect(document.querySelectorAll('rect.share-cell').length).toBeGreaterThan(0);
+
+      const passthrough = globalThis.fetch;
+      let empties = 0;
+      vi.stubGlobal('fetch', ((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes(config.shell.endpoints.holdings)) {
+          empties += 1;
+          return Promise.resolve(new Response('{"holdings":[]}', { status: 200 }));
+        }
+        return passthrough(input, init);
+      }) as typeof globalThis.fetch);
+      // Well past the allowance: every new cycle's axis is asked for and is not there.
+      await act(async () => {
+        for (let i = 0; i < config.scheduler.max_interval_ticks * 8; i++) runtime.clock.tickOnce();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(empties, 'the axis was never asked for while the store was empty').toBeGreaterThan(0);
+
+      // Now the store answers again. If a not-yet answer had spent the allowance, the region has
+      // stopped asking and the field never comes back.
+      vi.stubGlobal('fetch', passthrough);
+      await act(async () => {
+        for (let i = 0; i < config.scheduler.max_interval_ticks * 3; i++) runtime.clock.tickOnce();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(
+        document.querySelectorAll('rect.share-cell').length,
+        'the region stopped asking for an axis it had only not been given yet',
+      ).toBeGreaterThan(0);
+    });
+
     it('FR-136: a restatement of the standing analysis re-queries nothing', async () => {
       // **The claim this holds, and why the existing one could not.** `ColumnProvenance`'s header
       // says "not on a tick, not on an announcement, not on a timer". The slab effect depended on
@@ -1041,6 +1087,36 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
  * repository — the suite's total is close enough to vitest's worker-reply deadline that a
  * file which pays for what it does not use is a flake nobody will be able to reproduce.
  */
+describe('what one attempt at the depth axis costs', () => {
+  // The policy is out here rather than driven through the panel, and that is the finding as much
+  // as the fix: the region asks for the axis only when a *new analysis cycle* lands, and on the
+  // shipped configuration that is rarer than the window a test can afford to drive — the panel
+  // test above sees one such ask across eight scheduler intervals. Two versions of this policy
+  // were wrong and neither could be reached.
+  it('spends nothing on an inventory that answered honestly and had nothing yet', () => {
+    // The fault: this used to cost one, and enough of them in a row silenced the region for the
+    // life of the panel however many later cycles would have answered.
+    let spent = 0;
+    for (let cycle = 0; cycle < GRID_ATTEMPTS * 4; cycle++) spent = spendAttempt(spent, 'absent');
+    expect(spent, 'a cycle whose axis is not published yet spent the allowance').toBe(0);
+    expect(spent).toBeLessThan(GRID_ATTEMPTS);
+  });
+
+  it('spends on a refusal, and stops the region asking once the allowance is gone', () => {
+    let spent = 0;
+    for (let attempt = 0; attempt < GRID_ATTEMPTS; attempt++) spent = spendAttempt(spent, 'refused');
+    expect(spent).toBe(GRID_ATTEMPTS);
+    expect(spent >= GRID_ATTEMPTS, 'a seam that will not answer is asked for ever').toBe(true);
+  });
+
+  it('gives the whole allowance back on an answer, because one answer is not that seam', () => {
+    let spent = spendAttempt(spendAttempt(0, 'refused'), 'refused');
+    expect(spent).toBe(2);
+    spent = spendAttempt(spent, 'answered');
+    expect(spent).toBe(0);
+  });
+});
+
 describe('the Forecast tab’s help tour', () => {
   it('FR-140: every region the surface offers has a step, and no step invents one', () => {
     expect(uncoveredSubjects('forecast', FORECAST_REGIONS, FORECAST_TOUR_STEPS)).toEqual([]);

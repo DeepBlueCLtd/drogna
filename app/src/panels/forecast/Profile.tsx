@@ -249,7 +249,11 @@ export function Profile({
           area query refused there is a served column and no field to draw on, so it stated what
           "the rays above" showed over an empty space. Everything else below is the document's
           own arithmetic and does not wait on a field. */}
-      {served && rays && mapped && (
+      {/* `!noSuchLevel` too: the sentence claims "the same sources at the same places, at that
+          level's widths" about a level the document has not got, over a map drawing every ray at
+          width nought, and the caption below then says there is no such level. The guard went on
+          one of the two sentences. */}
+      {served && rays && mapped && !rays.noSuchLevel && (
         <p className="forecast-column-selected" aria-live="polite">
           {selectedLevel === undefined ? (
             <>

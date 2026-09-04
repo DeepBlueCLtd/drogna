@@ -67,7 +67,36 @@ import './forecast.css';
  * and what they say is part of what the view says.
  */
 /** How many failed inventory fetches the depth axis is retried over before the region gives up. */
-const GRID_ATTEMPTS = 3;
+export const GRID_ATTEMPTS = 3;
+
+/**
+ * What one attempt at the depth axis costs, by what came back.
+ *
+ * A function rather than three `+= 1`s in an effect, because the *policy* is the thing that was
+ * wrong twice and neither version could be reached by a test: the panel asks for the axis only
+ * when a new analysis cycle lands, and on the shipped configuration that is rarer than the window
+ * a reasonable test can drive.
+ *
+ * - `'answered'` — the axis is in hand. The allowance resets: a seam that answers once is not the
+ *   seam the allowance is for.
+ * - `'absent'` — the inventory answered, and honestly, and does not carry this cycle's holding
+ *   yet. **Spends nothing.** It used to spend one, and enough of those in a row silenced the
+ *   region for the life of the panel however many later cycles would have answered — which is the
+ *   fault the deleted holdings subscription existed against, in a smaller shape.
+ * - `'refused'` — a non-2xx, a body that fails its master, or a throw. This is what the allowance
+ *   is for, and the only thing that spends it.
+ *
+ * A *cancelled* attempt is not an outcome at all and is deliberately absent from this list. React
+ * runs the previous effect's cleanup before the next body, so a restatement arriving mid-fetch
+ * discards that result — counting the attempt before the request made that cost one, and three
+ * fast restatements then disabled the region. A restatement is 60 ticks, which is about 60 ms of
+ * real time at the configured `max_rate`, and `capture:forecast` drives at exactly that right
+ * after a breakpoint crossing has remounted the panel.
+ */
+export function spendAttempt(spent: number, outcome: 'answered' | 'absent' | 'refused'): number {
+  if (outcome === 'answered') return 0;
+  return outcome === 'refused' ? spent + 1 : spent;
+}
 
 export const FORECAST_REGIONS = [
   { id: 'indicator', label: 'why a run is warranted, and what one costs', element: '[data-region="indicator"]' },
@@ -204,6 +233,8 @@ export function ForecastPanel({ params }: PanelProps) {
    * the thing it bounds is a retry on the analyst's restatement cadence, not a user action.
    */
   const attemptsRef = useRef(0);
+  /** True once the axis has been asked for its allowance of times and not got. */
+  const [gridGaveUp, setGridGaveUp] = useState(false);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
   const [entries, setEntries] = useState<readonly Entry[]>([]);
   const [selected, setSelected] = useState<string | undefined>(() => address.current());
@@ -383,27 +414,59 @@ export function ForecastPanel({ params }: PanelProps) {
     // `restate_every_ticks` for the life of the tab, unbacked-off and invisible. The region's own
     // header two files away says "not on a tick, not on an announcement, not on a timer", and the
     // sibling slab effect was corrected against that sentence in this same series. After the
-    // allowance the chooser stays undrawn and the region says so, which is the honest end.
-    if (attemptsRef.current >= GRID_ATTEMPTS) return;
+    // allowance the region stops asking and says so — `gaveUp`, below, rather than leaving the
+    // "the store had none when this console asked" sentence standing, which describes a state it
+    // is no longer in.
+    if (attemptsRef.current >= GRID_ATTEMPTS) {
+      setGridGaveUp(true);
+      return;
+    }
     let cancelled = false;
-    attemptsRef.current += 1;
     void (async () => {
       try {
         const response = await fetch(config.endpoints.holdings);
-        if (!response.ok) return;
+        // **The attempt is spent where the answer was bad, and nowhere else.** It used to be
+        // counted *before* the request, which made a cancellation cost one: React runs the
+        // previous effect's cleanup before the next body, so a restatement arriving while a fetch
+        // was in flight discarded that fetch's result and then spent another attempt on the
+        // retry. Three fast restatements — a restatement is 60 ticks, which is ~60 ms of real
+        // time at the configured `max_rate`, and `capture:forecast` drives at exactly that right
+        // after a breakpoint crossing has remounted the panel — and the region was dead for the
+        // session. Over a network seam the round trip is bounded by nothing at all, which is the
+        // case Principle XI says no code path may assume away.
+        if (!response.ok) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          return;
+        }
         const body: unknown = await response.json();
-        if (cancelled || !validator.validate('holdings-inventory', body).ok) return;
+        if (cancelled) return;
+        if (!validator.validate('holdings-inventory', body).ok) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
+          return;
+        }
         const grid = gridForAnalysis(body as HoldingsInventory, analysis);
-        // A cycle whose axis is not in the inventory yet is not a failure of this fetch, so it
-        // does not spend the allowance: the attempt is counted before the request and given back
-        // here, and only a fetch that answered nothing usable leaves it spent.
-        if (!grid) return;
+        // **Given back here, and the comment that said so used to be the only thing doing it.** A
+        // cycle whose axis the inventory does not carry *yet* is not a failed fetch — the request
+        // answered, and answered honestly — so it must not spend the allowance. It did: the
+        // attempt was counted before the request and never returned on this path, so three such
+        // cycles in a row silenced the region for the life of the panel, however many later
+        // analyses would have answered. That is the fault the deleted holdings subscription
+        // existed against, in a smaller shape.
+        // A cycle whose axis the inventory does not carry *yet* is an honest answer and not a
+        // failed fetch, so it spends nothing: the effect asks again on the next restatement, and
+        // the allowance is there for a seam that will not answer at all.
+        if (!grid) {
+          attemptsRef.current = spendAttempt(attemptsRef.current, 'absent');
+          return;
+        }
         gridForRef.current = named;
-        attemptsRef.current = 0;
+        attemptsRef.current = spendAttempt(attemptsRef.current, 'answered');
+        setGridGaveUp(false);
         setColumnGrid(grid);
       } catch {
         // Left for the next restatement to ask again, within the allowance above; a chooser over
         // no axis is drawn as absent.
+        attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
       }
     })();
     return () => {
@@ -516,6 +579,7 @@ export function ForecastPanel({ params }: PanelProps) {
             edrPrefix={config.endpoints.edr}
             contributionsPrefix={config.endpoints.contributions}
             validator={validator}
+            gridGaveUp={gridGaveUp}
           />
         </section>
 

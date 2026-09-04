@@ -61,7 +61,7 @@ import type { AnalysisContributions, AnalysisContributionsSource } from '../../g
 /** One drawn ray: a source, where it is, how much it did, and the two numbers behind that. */
 export interface Ray {
   readonly sourceId: string;
-  /** Where this source sits in the served document's own table: its palette slot. */
+  /** Where this source sits in the served document's own table — the index `level.contributions[].source` refers to, and how a ray is paired back to `document.sources`. It is **not** the palette slot; that is `paletteSlot` below, and this line said otherwise for as long as the two were the same number. */
   readonly sourceIndex: number;
   /**
    * Which palette entry draws this ray — the *instrument's* slot, not the source's.
@@ -272,7 +272,8 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
 /**
  * The palette entries each source is drawn in, by position in the served `sources` array: `hue`
  * is the rank of its instrument among the column's own instruments, sorted by name, and `texture`
- * steps from there once per further source of that same instrument.
+ * is the source's own rank among the column's sources, sorted by id — unique within the column,
+ * which the stepping arithmetic it replaced was not.
  *
  * Sorted rather than encountered, for the reason `Ray.paletteSlot` gives at length — an
  * encounter order is a fact about which column was asked for, and the region asks about several.
@@ -282,17 +283,24 @@ export function paletteSlots(sources: readonly AnalysisContributionsSource[]): {
   readonly texture: readonly number[];
 } {
   const instruments = [...new Set(sources.map((source) => source.datastream_id))].sort();
-  const ordinal = new Map<string, number>();
+  // **The texture is the source's own rank in the column, and the arithmetic that produced it
+  // before was the fault it was written against.** That version stepped from the *instrument's*
+  // slot once per further source of it — `(slot + nth) % INSTRUMENTS.length` — which walks onto
+  // other instruments' slots: on the shipped loitering column of three `temperature-050m` and
+  // three `temperature-200m` sources, bands two and three came out at the same angle and the same
+  // dash, and so did four and five, as *directly adjacent segments of one bar*. In greyscale the
+  // only thing left between them was a hue pair at 1.438:1 — one grey, twice, which is the defect
+  // this field's own docstring says it exists to prevent.
+  //
+  // A rank over the sorted source ids is unique within the column by construction, which is the
+  // property that was wanted; and it does not have to be stable between columns, because that is
+  // what the hue carries.
+  const ranked = [...sources].map((source) => source.source_id).sort();
   const hue: number[] = [];
   const texture: number[] = [];
   for (const source of sources) {
-    const slot = instruments.indexOf(source.datastream_id);
-    const nth = ordinal.get(source.datastream_id) ?? 0;
-    ordinal.set(source.datastream_id, nth + 1);
-    hue.push(slot);
-    // Stepped within `INSTRUMENTS`, so the angle stays a multiple of 30 and cannot collide with a
-    // share's hatch or the remainder band's however many sources one instrument has.
-    texture.push((slot + nth) % INSTRUMENTS.length);
+    hue.push(instruments.indexOf(source.datastream_id));
+    texture.push(ranked.indexOf(source.source_id) % INSTRUMENTS.length);
   }
   return { hue, texture };
 }

@@ -1,0 +1,7 @@
+jobs:
+  checks:
+    steps:
+      - name: Glance
+        run: pnpm run capture:glance operator
+      - name: Map
+        run: pnpm run capture:map

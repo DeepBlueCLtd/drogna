@@ -102,13 +102,35 @@ interface RangeBody {
 }
 
 
-function sharesFrom(body: RangeBody, at: (values: number[]) => number): Record<SourceKey, number> {
+/**
+ * The four shares a position response carries, and `undefined` where two of its parameter names
+ * read as one share.
+ *
+ * **The same ambiguity the area path refuses, refused here too.** `sourceOf` reads the segment
+ * after the last `_share_` and so discards the variable: with two variables' provenance served,
+ * `temperature_share_measurement` and `salinity_share_measurement` both answer `measurement` and
+ * the last writer won. The slab was given a check for that and this — the path that builds the
+ * profile's background bands — was not, so one region had two behaviours on one input.
+ */
+function sharesFrom(
+  body: RangeBody,
+  at: (values: number[]) => number,
+): { shares: Record<SourceKey, number>; collided: string[] } {
   const out = { ...EMPTY_SHARES };
+  const claimed = new Map<SourceKey, string>();
+  const collided: string[] = [];
   for (const [name, range] of Object.entries(body.ranges ?? {})) {
     const key = sourceOf(name);
-    if (key && range.values) out[key] = at(range.values);
+    if (!key || !range.values) continue;
+    const already = claimed.get(key);
+    if (already !== undefined) {
+      collided.push(`${already} and ${name} both read as the ${key} share`);
+      continue;
+    }
+    claimed.set(key, name);
+    out[key] = at(range.values);
   }
-  return out;
+  return { shares: out, collided };
 }
 
 export interface ColumnProvenanceProps {
@@ -133,9 +155,25 @@ export interface ColumnProvenanceProps {
    * send that" is not a property this side may rely on. The master is committed and was unused.
    */
   readonly validator: SeamValidator;
+  /**
+   * True once the panel has asked for the depth axis its allowance of times and not got it.
+   *
+   * "Not known yet" and "asked several times and stopped" are different facts, and were the same
+   * sentence: with the allowance spent the region went on saying the store "had none when this
+   * console asked", which describes a state it is no longer in and a wait that is no longer
+   * happening.
+   */
+  readonly gridGaveUp: boolean;
 }
 
-export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefix, validator }: ColumnProvenanceProps) {
+export function ColumnProvenance({
+  analysis,
+  grid,
+  edrPrefix,
+  contributionsPrefix,
+  validator,
+  gridGaveUp,
+}: ColumnProvenanceProps) {
   const [depthIndex, setDepthIndex] = useState(0);
   /**
    * Opens on the strongest source, and that is a choice about what a reader meets first.
@@ -334,7 +372,13 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
             levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
             continue;
           }
-          levels.push({ depthM: depth, shares: sharesFrom(body, (values) => values[0] ?? Number.NaN) });
+          const read = sharesFrom(body, (values) => values[0] ?? Number.NaN);
+          if (read.collided.length > 0) {
+            failed.push(`the column at ${depth} m is ambiguous: ${read.collided.join('; ')}`);
+            levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
+            continue;
+          }
+          levels.push({ depthM: depth, shares: read.shares });
         } catch (error) {
           failed.push(`the column at ${depth} m could not be read: ${String(error)}`);
           levels.push({ depthM: depth, shares: EMPTY_SHARES, refused: true });
@@ -506,7 +550,9 @@ export function ColumnProvenance({ analysis, grid, edrPrefix, contributionsPrefi
         <p className="not-landed" data-testid="column-absent">
           {!analysis
             ? 'no analysis has been announced yet, so there is no provenance to read. This region answers from the analysis cycle’s own published field rather than from a store the shell reaches into privately, and it waits for one to exist rather than drawing a field that would resolve to nothing.'
-            : 'an analysis has been announced, but the grid it spans is not known yet: it is read from a holding’s own manifest, and the store had none when this console asked.'}
+            : gridGaveUp
+              ? 'an analysis has been announced, but the grid it spans could not be read: it comes from a holding’s own manifest, the store was asked for it several times over, and this console has stopped asking. Reopening the view asks again.'
+              : 'an analysis has been announced, but the grid it spans is not known yet: it is read from a holding’s own manifest, and the store had none when this console asked.'}
         </p>
         {stillToCome}
       </div>

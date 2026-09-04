@@ -1,0 +1,9 @@
+jobs:
+  checks:
+    steps:
+      - name: Glance
+        run: pnpm run capture:glance operator
+      - name: Map
+        run: pnpm run capture:map
+      - name: Widgets, in the form CLAUDE.md's own commands table uses
+        run: pnpm capture:widgets

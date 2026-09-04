@@ -30,20 +30,22 @@
  *   DROGNA_FORECAST_CYCLES  analysis cycles to warm through (default 3)
  *   DROGNA_FORECAST_CAPTION the sidecar's caption
  */
-import { createServer } from 'node:http';
-import { mkdirSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
-import { basename, dirname, extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { chromium, type Page } from 'playwright';
-import runConfigDocument from '../../app/config/run.json' with { type: 'json' };
-import type { ConfigRun } from '../../app/src/generated/types.js';
+import { createServer } from "node:http";
+import { mkdirSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium, type Page } from "playwright";
+import runConfigDocument from "../../app/config/run.json" with { type: "json" };
+import type { ConfigRun } from "../../app/src/generated/types.js";
 
 const config = runConfigDocument as ConfigRun;
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const distDir = join(repoRoot, 'app', 'dist');
-const outPath = process.argv[2] ?? join(repoRoot, '.capture', 'forecast-column.png');
-const startCondition = process.env.DROGNA_FORECAST_START ?? config.start_conditions.default;
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const distDir = join(repoRoot, "app", "dist");
+const outPath =
+  process.argv[2] ?? join(repoRoot, ".capture", "forecast-column.png");
+const startCondition =
+  process.env.DROGNA_FORECAST_START ?? config.start_conditions.default;
 /**
  * Wide, and for a stated reason: the centre region is one column of a three-column layout, so
  * the viewport width is what the FR-130 numbers table gets. At 1280 the region is 388 px and the
@@ -65,6 +67,14 @@ const width = Number(process.env.DROGNA_FORECAST_WIDTH ?? 2560);
  * right" is not a reproducible instruction.
  */
 const cycles = Number(process.env.DROGNA_FORECAST_CYCLES ?? 3);
+/**
+ * How many times the page is reloaded trying to catch the pre-roll's own instant before the pin.
+ *
+ * The window is a mount, a render and a round trip against one real second, and nothing bounds
+ * it; three is enough that a machine which loses the race once does not lose the build, and few
+ * enough that a machine losing it every time says so rather than looping.
+ */
+const PIN_ATTEMPTS = 3;
 const height = 1000;
 
 /**
@@ -73,7 +83,8 @@ const height = 1000;
  * the point is that the sidecar's dimensions come from the bytes that were written.
  */
 function pngSize(bytes: Buffer): { width: number; height: number } {
-  if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47) throw new Error('the capture is not a PNG');
+  if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47)
+    throw new Error("the capture is not a PNG");
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
@@ -88,40 +99,58 @@ function pngSize(bytes: Buffer): { width: number; height: number } {
  */
 async function pickAColumn(page: Page, prefix: string) {
   return page.evaluate(async (prefix: string) => {
-    const inventory = await (await fetch('/api/ctl/holdings')).json();
+    const inventory = await (await fetch("/api/ctl/holdings")).json();
     const holdings = inventory.holdings.filter(
-      (holding: { field: { format: string } }) => holding.field.format === 'drogna-contributions-v1',
+      (holding: { field: { format: string } }) =>
+        holding.field.format === "drogna-contributions-v1",
     );
     // The standing cycle, which is the one the panel draws: a start condition pre-rolls several.
     const holding = holdings[holdings.length - 1];
-    if (!holding) return { rays: 0, holding: 'none', why: 'no contributions holding was published' };
-    const header = await (await fetch(`${prefix}/${holding.holding_id}`)).json();
-    if (!header.sources?.length) return { rays: 0, holding: holding.holding_id, why: 'the cycle assimilated nothing' };
+    if (!holding)
+      return {
+        rays: 0,
+        holding: "none",
+        why: "no contributions holding was published",
+      };
+    const header = await (
+      await fetch(`${prefix}/${holding.holding_id}`)
+    ).json();
+    if (!header.sources?.length)
+      return {
+        rays: 0,
+        holding: holding.holding_id,
+        why: "the cycle assimilated nothing",
+      };
     const want = header.sources[0].cell;
     // **Polled for, not assumed.** The caller waits for the field before calling this, and that
     // was still not enough: between the wait and the click the field can be re-rendered — a new
     // cycle's slab arriving, a depth reset — and the picker reported "no drawn cell to click"
     // about half the time at a phone's width. A function that needs cells waits for cells.
-    let drawn = document.querySelectorAll('rect.share-cell').length;
+    let drawn = document.querySelectorAll("rect.share-cell").length;
     for (let wait = 0; wait < 60 && drawn === 0; wait++) {
       await new Promise((settled) => setTimeout(settled, 200));
-      drawn = document.querySelectorAll('rect.share-cell').length;
+      drawn = document.querySelectorAll("rect.share-cell").length;
     }
     let nearest: SVGRectElement | undefined;
     let best = Infinity;
-    for (const node of document.querySelectorAll('rect.share-cell')) {
+    for (const node of document.querySelectorAll("rect.share-cell")) {
       const cell = node as SVGRectElement;
       const distance = Math.hypot(
-        Number(cell.getAttribute('data-lon')) - want.longitude,
-        Number(cell.getAttribute('data-lat')) - want.latitude,
+        Number(cell.getAttribute("data-lon")) - want.longitude,
+        Number(cell.getAttribute("data-lat")) - want.latitude,
       );
       if (distance < best) {
         best = distance;
         nearest = cell;
       }
     }
-    if (!nearest) return { rays: 0, holding: holding.holding_id, why: 'no drawn cell to click' };
-    nearest.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    if (!nearest)
+      return {
+        rays: 0,
+        holding: holding.holding_id,
+        why: "no drawn cell to click",
+      };
+    nearest.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     // Polled rather than slept. Opening a column is seven position queries and a contributions
     // read, and after a resize the panel has remounted and is refetching its slab as well — a
     // fixed 800 ms was enough at the shot's width and not at a phone's, where the first version
@@ -130,9 +159,13 @@ async function pickAColumn(page: Page, prefix: string) {
     let rays = 0;
     for (let wait = 0; wait < 60 && rays === 0; wait++) {
       await new Promise((settled) => setTimeout(settled, 200));
-      rays = document.querySelectorAll('line.forecast-ray').length;
+      rays = document.querySelectorAll("line.forecast-ray").length;
     }
-    return { rays, holding: holding.holding_id, why: 'picked from the served header' };
+    return {
+      rays,
+      holding: holding.holding_id,
+      why: "picked from the served header",
+    };
   }, prefix);
 }
 
@@ -147,94 +180,143 @@ const NARROW_SIZES = [
 ];
 
 const MIME: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.svg': 'image/svg+xml',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.snapshot': 'application/octet-stream',
-  '.woff2': 'font/woff2',
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".snapshot": "application/octet-stream",
+  ".woff2": "font/woff2",
 };
 
 const server = createServer((request, response) => {
   void (async () => {
-    const path = normalize((request.url ?? '/').split('?')[0]).replace(/^\/+/, '') || 'index.html';
+    const path =
+      normalize((request.url ?? "/").split("?")[0]).replace(/^\/+/, "") ||
+      "index.html";
     try {
       const body = await readFile(join(distDir, path));
-      response.writeHead(200, { 'content-type': MIME[extname(path)] ?? 'application/octet-stream' });
+      response.writeHead(200, {
+        "content-type": MIME[extname(path)] ?? "application/octet-stream",
+      });
       response.end(body);
     } catch {
       response.writeHead(404);
-      response.end('not found');
+      response.end("not found");
     }
   })();
 });
-await new Promise<void>((ready) => server.listen(0, '127.0.0.1', ready));
+await new Promise<void>((ready) => server.listen(0, "127.0.0.1", ready));
 const address = server.address();
-if (address === null || typeof address === 'string') throw new Error('no listening address');
+if (address === null || typeof address === "string")
+  throw new Error("no listening address");
 const base = `http://127.0.0.1:${address.port}/`;
 
-const browser = await chromium.launch({ executablePath: process.env.DROGNA_CHROMIUM_PATH });
+const browser = await chromium.launch({
+  executablePath: process.env.DROGNA_CHROMIUM_PATH,
+});
 try {
-  const page = await browser.newPage({ viewport: { width, height } });
-  // **One navigation, carrying both the start condition and the view.** This was two: a first
-  // goto with `?start=` and a second with the hash alone. The second dropped the query, which
-  // makes it a full reload onto the *default* condition — so `DROGNA_FORECAST_START` did
-  // nothing, and the evaluate that followed ran against a shell that had not finished
-  // provisioning a run and was answering 503. `capture:glance` has always done it in one.
-  await page.goto(`${base}?start=${startCondition}#/view/forecast`);
-  await page.getByTestId('sim-time').waitFor({ timeout: 60_000 });
-
-  // Warmed through the shell's own step endpoint, in bursts, until an analysis cycle has
-  // published — the clock is pinned to rate 0 first, so nothing here reads host time and the
-  // picture is of a stated simulated instant (Principle I).
-  //
-  // **Every response is read, and the burst size comes from the configuration.** The first
-  // version sent `ticks: 120` and checked nothing. `operator.step.maximum_ticks` is 60, so the
-  // plane refused all sixty bursts — "120 ticks is beyond the declared bound of 60" — and the
-  // loop advanced the simulation by nothing at all. What made the picture was the pre-roll
-  // running on at the configured rate while Playwright worked, which is exactly the host-time
-  // dependence the docstring above claims is absent: the sidecar recorded `rate 1` and a
-  // `sim_time` 22 seconds past the pre-roll's end. A refusal is now a thrown error rather than
-  // a silent no-op, and the bound is read from the same document the plane reads it from
-  // (Constitution IV).
   const stepTicks = config.operator.step.maximum_ticks;
-  const pinned = await page.evaluate(async () => {
-    const response = await fetch('/api/ctl/clock/rate', { method: 'PUT', body: JSON.stringify({ rate: 0 }) });
-    return { ok: response.ok, status: response.status, body: await response.text() };
-  });
-  if (!pinned.ok) throw new Error(`the clock would not pin: ${pinned.status} ${pinned.body}`);
-  await page.waitForFunction(
-    () => /rate 0/.test(document.querySelector('[data-testid="sim-rate"]')?.textContent ?? ''),
-    { timeout: 30_000 },
-  );
+  // The pin has to catch the pre-roll's own instant; where it does not, the page is reloaded and
+  // the whole approach tried again. The loop exits the moment `drift === 0`.
+  let page = await browser.newPage({ viewport: { width, height } });
+  for (let attempt = 0; ; attempt++) {
+    if (attempt > 0)
+      page = await browser.newPage({ viewport: { width, height } });
+    // **One navigation, carrying both the start condition and the view.** This was two: a first
+    // goto with `?start=` and a second with the hash alone. The second dropped the query, which
+    // makes it a full reload onto the *default* condition — so `DROGNA_FORECAST_START` did
+    // nothing, and the evaluate that followed ran against a shell that had not finished
+    // provisioning a run and was answering 503. `capture:glance` has always done it in one.
+    await page.goto(`${base}?start=${startCondition}#/view/forecast`);
+    await page.getByTestId("sim-time").waitFor({ timeout: 60_000 });
 
-  // **The instant the pin caught, checked against the one the configuration says it should.**
-  //
-  // The pre-roll pins the clock for its own script and, in a `finally`, restores the configured
-  // rate — one tick per real second — *before the shell mounts*. This script pins only after
-  // waiting for the shell to render, so the simulation free-runs for the width of that render and
-  // round trip. The committed sidecar happens to show none of that drift, which is evidence the
-  // window was under a second on one machine and not that it is bounded; on a loaded runner the
-  // shot is of a different simulated instant, of possibly a different cycle, and nothing else
-  // here would notice — `warmed.cycles >= 3` and `picked.rays > 0` both still hold.
-  //
-  // So the bound is taken from disk rather than from hope: a condition's pre-roll is the sum of
-  // its legs' ticks, and one tick is `tick_interval_us`, so the simulated instant the pin should
-  // have caught is arithmetic over `run.json`. Anything past it is host time in the artefact.
-  const preRollTicks = (config.start_conditions.conditions.find((entry) => entry.id === startCondition)?.legs ?? [])
-    .reduce((total, leg) => total + leg.ticks, 0);
-  const tickSeconds = config.clock.tick_interval_us / 1_000_000;
-  const epoch = Date.parse(config.clock.epoch);
-  const atPin = await page.getByTestId('sim-time').textContent();
-  const drift = Math.round((Date.parse(atPin ?? '') - epoch) / 1000 / tickSeconds) - preRollTicks;
-  if (!Number.isFinite(drift)) throw new Error(`the shell states no readable simulated time: ${atPin}`);
-  if (drift !== 0) {
-    throw new Error(
-      `the clock ran on for ${drift} tick(s) before it was pinned: the shot would be of ${atPin} rather than the ` +
-        `${startCondition} pre-roll's own ${preRollTicks} ticks, which is host time in the artefact`,
+    // Warmed through the shell's own step endpoint, in bursts, until an analysis cycle has
+    // published — the clock is pinned to rate 0 first, so nothing here reads host time and the
+    // picture is of a stated simulated instant (Principle I).
+    //
+    // **Every response is read, and the burst size comes from the configuration.** The first
+    // version sent `ticks: 120` and checked nothing. `operator.step.maximum_ticks` is 60, so the
+    // plane refused all sixty bursts — "120 ticks is beyond the declared bound of 60" — and the
+    // loop advanced the simulation by nothing at all. What made the picture was the pre-roll
+    // running on at the configured rate while Playwright worked, which is exactly the host-time
+    // dependence the docstring above claims is absent: the sidecar recorded `rate 1` and a
+    // `sim_time` 22 seconds past the pre-roll's end. A refusal is now a thrown error rather than
+    // a silent no-op, and the bound is read from the same document the plane reads it from
+    // (Constitution IV).
+    const pinned = await page.evaluate(async () => {
+      const response = await fetch("/api/ctl/clock/rate", {
+        method: "PUT",
+        body: JSON.stringify({ rate: 0 }),
+      });
+      return {
+        ok: response.ok,
+        status: response.status,
+        body: await response.text(),
+      };
+    });
+    if (!pinned.ok)
+      throw new Error(
+        `the clock would not pin: ${pinned.status} ${pinned.body}`,
+      );
+    await page.waitForFunction(
+      () =>
+        /rate 0/.test(
+          document.querySelector('[data-testid="sim-rate"]')?.textContent ?? "",
+        ),
+      { timeout: 30_000 },
     );
+
+    // **The instant the pin caught, checked against the one the configuration says it should.**
+    //
+    // The pre-roll pins the clock for its own script and, in a `finally`, restores the configured
+    // rate — one tick per real second — *before the shell mounts*. This script pins only after
+    // waiting for the shell to render, so the simulation free-runs for the width of that render and
+    // round trip. The committed sidecar happens to show none of that drift, which is evidence the
+    // window was under a second on one machine and not that it is bounded; on a loaded runner the
+    // shot is of a different simulated instant, of possibly a different cycle, and nothing else
+    // here would notice — `warmed.cycles >= 3` and `picked.rays > 0` both still hold.
+    //
+    // So the bound is taken from disk rather than from hope: a condition's pre-roll is the sum of
+    // its legs' ticks, and one tick is `tick_interval_us`, so the simulated instant the pin should
+    // have caught is arithmetic over `run.json`. Anything past it is host time in the artefact.
+    const preRollTicks = (
+      config.start_conditions.conditions.find(
+        (entry) => entry.id === startCondition,
+      )?.legs ?? []
+    ).reduce((total, leg) => total + leg.ticks, 0);
+    const tickSeconds = config.clock.tick_interval_us / 1_000_000;
+    const epoch = Date.parse(config.clock.epoch);
+    const atPin = await page.getByTestId("sim-time").textContent();
+    const drift =
+      Math.round((Date.parse(atPin ?? "") - epoch) / 1000 / tickSeconds) -
+      preRollTicks;
+    if (!Number.isFinite(drift))
+      throw new Error(`the shell states no readable simulated time: ${atPin}`);
+    if (drift !== 0) {
+      // **Reloaded, not failed.** The window this drift measures — the pre-roll restoring the
+      // configured rate, then a mount, a render and a Playwright round trip — is bounded by
+      // nothing, so at one tick per real second a loaded runner can spend a tick inside it. The
+      // first version threw here, which turned an unbounded window into a red CI step for a capture
+      // that was otherwise correct, and `CLAUDE.md`'s own account of seven consecutive red runs is
+      // the argument against doing that lightly. The artefact still has to be at the stated instant
+      // — a tolerance would put host time in it — so the answer is to take the picture again rather
+      // than to accept a different one or to give up on the first slow frame.
+      if (attempt >= PIN_ATTEMPTS) {
+        throw new Error(
+          `the clock ran on before it could be pinned on ${PIN_ATTEMPTS} attempts, most recently by ${drift} tick(s): ` +
+            `the shot would be of ${atPin} rather than the ${startCondition} pre-roll's own ${preRollTicks} ticks, ` +
+            `which is host time in the artefact`,
+        );
+      }
+      console.log(
+        `forecast: the clock ran on ${drift} tick(s) before the pin; reloading (attempt ${attempt + 1})`,
+      );
+      await page.close();
+      continue;
+    }
+    break;
   }
 
   // **The loop stops on a fact about the store, not on a class appearing in the document.** Its
@@ -245,36 +327,58 @@ try {
   // fixed count would at least have been honest; asking the coverage store how many
   // contributions holdings it has is both, and it is the same question the picker below asks.
   const warmed = await page.evaluate(
-    async ({ ticks, cycles, budget }: { ticks: number; cycles: number; budget: number }) => {
+    async ({
+      ticks,
+      cycles,
+      budget,
+    }: {
+      ticks: number;
+      cycles: number;
+      budget: number;
+    }) => {
       let seen = 0;
       let burst = 0;
       for (; burst < budget; burst++) {
-        const inventory = await (await fetch('/api/ctl/holdings')).json();
+        const inventory = await (await fetch("/api/ctl/holdings")).json();
         seen = inventory.holdings.filter(
-          (holding: { field: { format: string } }) => holding.field.format === 'drogna-contributions-v1',
+          (holding: { field: { format: string } }) =>
+            holding.field.format === "drogna-contributions-v1",
         ).length;
         if (seen >= cycles) break;
-        const response = await fetch('/api/ctl/clock/step', { method: 'POST', body: JSON.stringify({ ticks }) });
-        if (!response.ok) return { bursts: burst, cycles: 0, refused: `${response.status} ${await response.text()}` };
+        const response = await fetch("/api/ctl/clock/step", {
+          method: "POST",
+          body: JSON.stringify({ ticks }),
+        });
+        if (!response.ok)
+          return {
+            bursts: burst,
+            cycles: 0,
+            refused: `${response.status} ${await response.text()}`,
+          };
       }
-      return { bursts: burst, cycles: seen, refused: '' };
+      return { bursts: burst, cycles: seen, refused: "" };
     },
     { ticks: stepTicks, cycles, budget: 600 },
   );
-  if (warmed.refused) throw new Error(`the step endpoint refused: ${warmed.refused}`);
+  if (warmed.refused)
+    throw new Error(`the step endpoint refused: ${warmed.refused}`);
   if (warmed.cycles < cycles) {
-    throw new Error(`only ${warmed.cycles} of ${cycles} analysis cycles published within the step budget`);
+    throw new Error(
+      `only ${warmed.cycles} of ${cycles} analysis cycles published within the step budget`,
+    );
   }
-  await page.waitForSelector('.forecast-share-map', { timeout: 60_000 });
+  await page.waitForSelector(".forecast-share-map", { timeout: 60_000 });
 
   const picked = await pickAColumn(page, config.shell.endpoints.contributions);
 
   if (picked.rays === 0) {
-    throw new Error(`no column drew a ray (${picked.why}); the picture would show an empty region`);
+    throw new Error(
+      `no column drew a ray (${picked.why}); the picture would show an empty region`,
+    );
   }
 
-  const region = await page.$('.forecast-column');
-  if (!region) throw new Error('the centre region is not on the page');
+  const region = await page.$(".forecast-column");
+  if (!region) throw new Error("the centre region is not on the page");
 
   // **The viewport is grown to the region before the shutter.** The first committed artefact was
   // 390x1593 with its last 659 rows a single flat `--shell-bg`: the region is taller than a
@@ -284,41 +388,48 @@ try {
   // not contain it. Measured, resized, measured again; and the shot is refused rather than
   // truncated if the region still will not fit.
   const first = await region.boundingBox();
-  if (!first) throw new Error('the centre region has no box to measure');
+  if (!first) throw new Error("the centre region has no box to measure");
   const shotHeight = Math.ceil(first.height) + 40;
   await page.setViewportSize({ width, height: shotHeight });
   await page.waitForFunction(
-    (wanted: number) => (document.querySelector('.forecast-column')?.getBoundingClientRect().height ?? 0) <= wanted,
+    (wanted: number) =>
+      (document.querySelector(".forecast-column")?.getBoundingClientRect()
+        .height ?? 0) <= wanted,
     shotHeight,
     { timeout: 30_000 },
   );
   const box = await region.boundingBox();
-  if (!box) throw new Error('the centre region has no box to measure');
+  if (!box) throw new Error("the centre region has no box to measure");
   if (box.height > shotHeight) {
-    throw new Error(`the region is ${Math.round(box.height)}px tall in a ${shotHeight}px viewport; it would be clipped`);
+    throw new Error(
+      `the region is ${Math.round(box.height)}px tall in a ${shotHeight}px viewport; it would be clipped`,
+    );
   }
 
   // The clock is asserted still stopped at the shutter rather than assumed: the resize above
   // gives the shell a frame to react in, and a picture whose sidecar says `rate 0` has to have
   // been taken at rate 0.
-  const rateAtShutter = (await page.getByTestId('sim-rate').textContent()) ?? '';
-  if (!/rate 0/.test(rateAtShutter)) throw new Error(`the clock was running at the shutter: ${rateAtShutter}`);
+  const rateAtShutter =
+    (await page.getByTestId("sim-rate").textContent()) ?? "";
+  if (!/rate 0/.test(rateAtShutter))
+    throw new Error(`the clock was running at the shutter: ${rateAtShutter}`);
 
   mkdirSync(dirname(outPath), { recursive: true });
   await region.screenshot({ path: outPath });
 
-  const simTime = await page.getByTestId('sim-time').textContent();
-  const runId = await page.locator('.shell-run').textContent();
+  const simTime = await page.getByTestId("sim-time").textContent();
+  const runId = await page.locator(".shell-run").textContent();
   const provenance = {
     image: basename(outPath),
-    run_id: runId ?? 'unknown',
-    view: 'forecast',
+    run_id: runId ?? "unknown",
+    view: "forecast",
     start_condition: startCondition,
-    sim_time: simTime ?? 'unknown',
+    sim_time: simTime ?? "unknown",
     clock_pinned: rateAtShutter,
     holding: picked.holding,
     rays_drawn: picked.rays,
-    column: 'read off the served contributions header, so it is a column an instrument reached',
+    column:
+      "read off the served contributions header, so it is a column an instrument reached",
     warmed: `stepped in bursts of ${stepTicks} ticks at rate 0 until ${cycles} analysis cycles had published (${warmed.bursts} bursts)`,
     viewport: { width, height: shotHeight },
     // **Read out of the file's own header, not off the element's box.** These disagreed —
@@ -326,11 +437,17 @@ try {
     // the shot is device pixels after it. A sidecar's whole job is to describe the artefact
     // beside it, so it reads the artefact.
     image_size: pngSize(await readFile(outPath)),
-    element_box: { width: Math.round(box.width), height: Math.round(box.height) },
-    browser: { name: 'chromium', version: browser.version() },
-    caption: process.env.DROGNA_FORECAST_CAPTION ?? '',
+    element_box: {
+      width: Math.round(box.width),
+      height: Math.round(box.height),
+    },
+    browser: { name: "chromium", version: browser.version() },
+    caption: process.env.DROGNA_FORECAST_CAPTION ?? "",
   };
-  await writeFile(outPath.replace(/\.png$/, '.provenance.json'), `${JSON.stringify(provenance, null, 2)}\n`);
+  await writeFile(
+    outPath.replace(/\.png$/, ".provenance.json"),
+    `${JSON.stringify(provenance, null, 2)}\n`,
+  );
 
   /**
    * **The same region at a phone's width, warmed and with the column still open.**
@@ -363,25 +480,36 @@ try {
   // (Constitution IV), never typed here.
   const narrowRate = config.clock.max_rate;
   const running = await page.evaluate(async (rate: number) => {
-    const response = await fetch('/api/ctl/clock/rate', { method: 'PUT', body: JSON.stringify({ rate }) });
+    const response = await fetch("/api/ctl/clock/rate", {
+      method: "PUT",
+      body: JSON.stringify({ rate }),
+    });
     return response.ok;
   }, narrowRate);
-  if (!running) throw new Error(`the clock would not run at ${narrowRate} for the narrow pass`);
+  if (!running)
+    throw new Error(
+      `the clock would not run at ${narrowRate} for the narrow pass`,
+    );
 
   const narrow: string[] = [];
   for (const size of NARROW_SIZES) {
     await page.setViewportSize(size);
-    await page.waitForFunction((want: number) => window.innerWidth === want, size.width, { timeout: 15_000 });
+    await page.waitForFunction(
+      (want: number) => window.innerWidth === want,
+      size.width,
+      { timeout: 15_000 },
+    );
     // The narrow presentation puts regions behind disclosures, so a surface can be in the
     // document and not on the screen — FR-011 working, not a fault. Re-opened on every poll,
     // because a remount recreates them closed.
     await page.waitForFunction(
       () => {
-        for (const details of document.querySelectorAll('details')) details.open = true;
-        const field = document.querySelector('.forecast-share-map');
+        for (const details of document.querySelectorAll("details"))
+          details.open = true;
+        const field = document.querySelector(".forecast-share-map");
         return (
           field !== null &&
-          document.querySelectorAll('rect.share-cell').length > 0 &&
+          document.querySelectorAll("rect.share-cell").length > 0 &&
           field.getBoundingClientRect().height > 0
         );
       },
@@ -394,7 +522,9 @@ try {
     // and called the region sound.
     const there = await pickAColumn(page, config.shell.endpoints.contributions);
     if (there.rays === 0) {
-      narrow.push(`${size.width}x${size.height}: no column could be opened (${there.why})`);
+      narrow.push(
+        `${size.width}x${size.height}: no column could be opened (${there.why})`,
+      );
       continue;
     }
     const measured = await page.evaluate((label: string) => {
@@ -408,10 +538,12 @@ try {
       // Skipping them silently made a list of three boxes read as coverage of three when it was
       // coverage of one, and the failure was invisible: the pass reported the region sound.
       const measuredHere: string[] = [];
-      for (const selector of ['.forecast-column', '.forecast-column-readout']) {
+      for (const selector of [".forecast-column", ".forecast-column-readout"]) {
         const node = document.querySelector(selector);
         if (!node) {
-          out.push(`${label}: ${selector} was not on the page, so nothing was measured of it`);
+          out.push(
+            `${label}: ${selector} was not on the page, so nothing was measured of it`,
+          );
           continue;
         }
         measuredHere.push(selector);
@@ -419,7 +551,9 @@ try {
         // content a reader cannot reach. The numbers table is *meant* to scroll inside its own
         // box, which is why it is not in this list.
         if (node.scrollWidth > node.clientWidth + 1) {
-          out.push(`${label}: ${selector} is ${node.scrollWidth}px of content in a ${node.clientWidth}px box`);
+          out.push(
+            `${label}: ${selector} is ${node.scrollWidth}px of content in a ${node.clientWidth}px box`,
+          );
         }
       }
       // **The map is measured against what contains it, and the reason is that the other test
@@ -430,30 +564,48 @@ try {
       // than no selector, because the list reads as coverage.
       // The under-scale note is measured where it exists and its absence is a fact rather than a
       // gap: a column whose rays are all above the floor draws no note, which is correct.
-      const note = document.querySelector('.forecast-ray-note');
+      const note = document.querySelector(".forecast-ray-note");
       if (note && note.scrollWidth > note.clientWidth + 1) {
-        out.push(`${label}: the under-scale note is ${note.scrollWidth}px of content in a ${note.clientWidth}px box`);
+        out.push(
+          `${label}: the under-scale note is ${note.scrollWidth}px of content in a ${note.clientWidth}px box`,
+        );
       }
 
-      const map = document.querySelector('.forecast-share-map');
+      const map = document.querySelector(".forecast-share-map");
       const holder = map?.parentElement;
-      if (map && holder && map.getBoundingClientRect().width > holder.clientWidth + 1) {
+      if (
+        map &&
+        holder &&
+        map.getBoundingClientRect().width > holder.clientWidth + 1
+      ) {
         out.push(
           `${label}: the share field is ${Math.round(map.getBoundingClientRect().width)}px wide in a ${holder.clientWidth}px column`,
         );
       }
-      return { failures: out, measured: [...measuredHere, ...(note ? ['.forecast-ray-note'] : [])] };
+      return {
+        failures: out,
+        measured: [...measuredHere, ...(note ? [".forecast-ray-note"] : [])],
+      };
     }, `${size.width}x${size.height}`);
     narrow.push(...measured.failures);
     // Printed, so the proof says what it looked at as well as what it found. A pass that reports
     // only failures cannot be told from a pass that measured nothing.
-    console.log(`forecast: ${size.width}x${size.height} measured ${measured.measured.join(', ')}, and the share field`);
+    console.log(
+      `forecast: ${size.width}x${size.height} measured ${measured.measured.join(", ")}, and the share field`,
+    );
   }
-  if (narrow.length > 0) throw new Error(`the centre region does not hold at a phone's width:\n${narrow.join('\n')}`);
+  if (narrow.length > 0)
+    throw new Error(
+      `the centre region does not hold at a phone's width:\n${narrow.join("\n")}`,
+    );
 
   console.log(outPath);
-  console.log(`forecast: ${picked.rays} ray(s) drawn from ${picked.holding}; sim time ${simTime ?? 'unknown'}`);
-  console.log(`forecast: the region holds, warmed and with a column open, at ${NARROW_SIZES.map((size) => `${size.width}x${size.height}`).join(', ')}`);
+  console.log(
+    `forecast: ${picked.rays} ray(s) drawn from ${picked.holding}; sim time ${simTime ?? "unknown"}`,
+  );
+  console.log(
+    `forecast: the region holds, warmed and with a column open, at ${NARROW_SIZES.map((size) => `${size.width}x${size.height}`).join(", ")}`,
+  );
 } finally {
   await browser.close();
   server.close();

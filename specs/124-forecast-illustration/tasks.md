@@ -765,6 +765,64 @@ the part worth recording, because each was a sentence asserting a property the c
       than the composited pixel, which is Q-01 and now says so; and three different start
       conditions were each called "the shipped" one.
 
+- [x] T022s **An eighth round. Its two largest findings are the previous round's own fixes, and the
+      gate the previous round added could not see the fault it was built for.**
+
+      **The texture fix collided.** T022r keyed the hue on the instrument so a colour means the
+      same thing in two columns, then stepped the *texture* from the instrument's slot once per
+      further source of it — which walks onto other instruments' slots. Measured against a driven
+      backend on the loitering column of three `temperature-050m` and three `temperature-200m`
+      sources: bands two and three came out at the same angle and the same dash, and so did four
+      and five, as **directly adjacent segments of one bar**, leaving a hue pair at 1.438:1 as the
+      only thing between them. That is the defect the field's own docstring says it exists to
+      prevent, and the third time in this feature that a fix for a colour collision has produced
+      one. The texture is the source's own rank among the column's sorted ids now — unique by
+      construction, which is the property that was wanted. *And the test could not see it*: it
+      asserted the texture slots of a column with one repeated instrument, which is exactly the
+      case where the stepping cannot collide. The check that was missing — no two sources of one
+      column share a texture — is the one that now fails against the arithmetic it replaced.
+
+      **`check-capture-inventory` reported clean on two neighbouring spellings of its own
+      violation.** `run: pnpm capture:widgets` without the `run` verb — the form `CLAUDE.md`'s own
+      commands table uses, and therefore the one a contributor copies — added a proof the record
+      did not name and the gate passed. `capture:consumers2` matched as `capture:consumers`,
+      because the token class stopped at a digit, so a step running a script that does not exist
+      passed the name check *and* the count. I declared that gate working after planting three
+      variants of **one** spelling. It now reads both forms, allows digits, checks the name
+      against `package.json`, and has the fixture test 21 of the other 24 gates have — four
+      fixtures, including a record that has lost the sentence entirely, which must throw rather
+      than pass.
+
+      **The retry allowance was spent on two paths that should not spend it.** A cycle whose axis
+      the inventory does not carry *yet* is an honest answer, and it cost one — the comment
+      claimed it was given back and nothing gave it back. Worse: the attempt was counted *before*
+      the request, so a restatement arriving mid-fetch cancelled that fetch and spent an attempt
+      on the retry. A restatement is 60 ticks, about 60 ms of real time at the configured
+      `max_rate`, and `capture:forecast` drives at exactly that immediately after a breakpoint
+      crossing has remounted the panel; three of those and the region was dead for the session.
+      The policy is `spendAttempt` now, out of the effect and unit-tested, **because neither wrong
+      version could be reached through the panel**: the axis is asked for only when a new analysis
+      cycle lands, and that is rarer than a test can afford to drive — the panel test sees one such
+      ask across eight scheduler intervals.
+
+      **The drift check was a hard CI failure on an unbounded window.** Requiring the pin to catch
+      the pre-roll's exact instant is right — a tolerance would put host time in the artefact — but
+      throwing on the first slow frame turns a mount, a render and a round trip against one real
+      second into a red build for a capture that is otherwise correct, which is the shape
+      `CLAUDE.md` records seven consecutive red runs of. It reloads and tries again, three times,
+      and says which it is doing; watched both retrying and giving up against a planted delay.
+
+      Smaller: the "re-weighted to N m: the same sources at the same places" sentence rendered
+      *beside* the "the analysis carries no level at N m" caption — the guard went on one of the
+      two; the position path that builds the profile's background bands had no check for the
+      share-name ambiguity the area path was given one for, so one region had two behaviours on
+      one input; `Ray.sourceIndex`'s docstring said it was the palette slot, which is the field
+      below it and the whole point of the previous round; the header docstring said every figure
+      is read through EDR, which stopped being true when the contributions prefix arrived;
+      `Profile` named `tableRays` as the mechanism carrying a distinction, and no such identifier
+      exists; and `shares.test.ts`'s comment still argued for the `SOURCES[2]` spelling deleted a
+      commit earlier, over an assertion that cannot catch what the comment says it catches.
+
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying
       the forecast extends there. *Reconciled:* still a stated absence in the region, beneath

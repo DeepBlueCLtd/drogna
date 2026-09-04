@@ -32,10 +32,21 @@ import { REPO_ROOT, type Finding } from './lib.js';
 const RECORD = join('CLAUDE.md');
 const WORKFLOW = join('.github', 'workflows', 'ci.yml');
 
-/** `run: pnpm run capture:glance operator` → `capture:glance`. */
-const CI_STEP = /run:\s*pnpm\s+run\s+(capture:[a-z-]+)/g;
+/**
+ * `run: pnpm run capture:glance operator` → `capture:glance`, and `run: pnpm capture:map` too.
+ *
+ * **Both spellings, and digits, because the first version of this regex had two blind spots and I
+ * found them by planting three variants of one spelling.** `pnpm run x` was required, so a step
+ * written `run: pnpm capture:widgets` — which is the form `CLAUDE.md`'s own commands table uses,
+ * and therefore the one a contributor copies — added a proof the record did not name and the gate
+ * reported clean. And `[a-z-]+` stopped at a digit, so `capture:consumers2` matched as
+ * `capture:consumers`: a step running a script that does not exist passed both the name check and
+ * the count. A gate whose own pattern is narrower than the thing it holds is the trap this gate
+ * was written about, one level down.
+ */
+const CI_STEP = /run:\s*pnpm\s+(?:run\s+)?(capture:[a-z0-9:_-]+)/g;
 /** The backticked command names inside the sentence that lists them. */
-const NAMED = /`(capture:[a-z-]+)[^`]*`/g;
+const NAMED = /`(capture:[a-z0-9:_-]+?)(?:\s[^`]*)?`/g;
 /** "seven capture proofs", so the prose count is held to the list beside it. */
 const COUNTED = /\b([a-z]+)\s+capture proofs\b/;
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
@@ -67,7 +78,21 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
   const named = [...sentence[0].matchAll(NAMED)].map((match) => match[1]);
   const line = record.slice(0, sentence.index).split('\n').length;
 
+  // A named proof that no script defines is a third way for the three to disagree, and the
+  // cheapest to check: `package.json` is the only place a `pnpm run` name can come from.
+  const manifest = read(root, join('package.json'));
+  const defined = new Set(Object.keys((JSON.parse(manifest) as { scripts?: Record<string, string> }).scripts ?? {}));
+
   const findings: Finding[] = [];
+  for (const proof of ran) {
+    if (!defined.has(proof)) {
+      findings.push({
+        file: relative(root, join(root, WORKFLOW)),
+        line: 1,
+        message: `CI runs ${proof} and package.json defines no such script`,
+      });
+    }
+  }
   for (const proof of ran) {
     if (!named.includes(proof)) {
       findings.push({

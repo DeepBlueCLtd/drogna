@@ -45,8 +45,8 @@ depth control reading 0, 200, 400, 600, 800 and 1000 metres — the analysis's o
 chosen. Below it a map of the grid at that depth, mostly rust-coloured hatching where the
 departure forecast still dominates the field, with a green patch where the platform has been
 sampling; a pale ring marks the picked column and the six instrument-sources that reached it are
-marked immediately beside it, because on this scenario the platform loiters and every source is
-within a cell or two. Beneath the map a depth profile, one stacked bar of hatched bands per level
+marked immediately beside it, because the platform's two instruments sample the cells it is
+crossing and every source is within a cell or two of the column. Beneath the map a depth profile, one stacked bar of hatched bands per level
 with its figures printed underneath. At 0 m: archive 0.0%, departure −11.9%, model −81.4%,
 measurement from earlier cycles 0.5%, then this cycle's six sources at 39.2%, 3.7%, 39.4%, 1.6%,
 110.4% and −1.4%, and beyond this cell's reach 0.0% — summing to 100.0%. At 600 m, 800 m and

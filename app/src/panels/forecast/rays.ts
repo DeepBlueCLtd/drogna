@@ -452,23 +452,3 @@ export function placeOn(axis: readonly number[], kept: readonly number[], value:
   return Math.min(Math.max(served / step + 0.5, 0), kept.length);
 }
 
-/**
- * The rays that may be **drawn on the map**, which is all of them.
- *
- * **This filtered out `kind: 'modelled'` sources, and that was a misreading of the master held
- * for four rounds.** The master says of `kind`: *"Modelled: another party's model output admitted
- * as an observation."* A modelled source is therefore a **contributing** source — it is in ω, it
- * has a position, and SRD FR-124 says in as many words that it "is drawn as such". What FR-125
- * keeps out of the ray set is the *standing forecast*, which the same master note says never
- * enters as an observation at all: it is the background the bands sit on, and it is structurally
- * absent from the source table rather than filtered out of it.
- *
- * So the filter dropped a source that reached the column — no line, no origin marker — while the
- * paragraph beneath declared it "the baseline these bands sit on", with its band drawn in the
- * stack above and its contribution listed in the table. The function is kept, and kept trivial,
- * because the name is where a reader looks for this rule and its absence would read as an
- * oversight rather than as a decision.
- */
-export function drawableRays(set: RaySet): readonly Ray[] {
-  return set.rays;
-}

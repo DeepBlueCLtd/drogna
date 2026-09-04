@@ -75,7 +75,13 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
   const workflow = read(root, WORKFLOW);
   const record = read(root, RECORD);
 
-  const ran = [...workflow.matchAll(CI_STEP)].map((match) => match[1]);
+  // **Distinct proofs, not steps.** The record names *commands* and the workflow runs *steps*,
+  // and one proof can be run twice — `capture:glance` already takes a view argument, and a second
+  // `pnpm run capture:glance consumers` step is a plausible next change. Counting steps made an
+  // honest record red: seven names against eight steps, fixable only by writing "eight" over a
+  // list of seven or by backticking one command twice. The membership checks were always
+  // set-shaped; the counts were not.
+  const ran = [...new Set([...workflow.matchAll(CI_STEP)].map((match) => match[1]))];
   if (ran.length === 0) {
     throw new Error(`${WORKFLOW} runs no capture proof — the gate has nothing to hold the record to`);
   }

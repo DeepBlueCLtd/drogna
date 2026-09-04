@@ -305,7 +305,7 @@ try {
       // than to accept a different one or to give up on the first slow frame.
       if (attempt >= PIN_ATTEMPTS) {
         throw new Error(
-          `the clock ran on before it could be pinned on ${PIN_ATTEMPTS} attempts, most recently by ${drift} tick(s): ` +
+          `the clock ran on before it could be pinned on ${attempt + 1} attempts, most recently by ${drift} tick(s): ` +
             `the shot would be of ${atPin} rather than the ${startCondition} pre-roll's own ${preRollTicks} ticks, ` +
             `which is host time in the artefact`,
         );

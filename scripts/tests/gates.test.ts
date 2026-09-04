@@ -394,6 +394,12 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
     ]);
 
+    // **One proof run at two views is one proof.** The record names commands and the workflow
+    // runs steps; counting steps made an honest record red — seven names against eight steps,
+    // fixable only by writing "eight" over a list of seven. `capture:glance` already takes a view
+    // argument, so a second such step is a plausible next change rather than a hypothetical.
+    expect(captureInventory(join(fixtures, 'capture-twice'))).toEqual([]);
+
     // And a record that has lost the sentence entirely is a refusal, not a pass: a gate that
     // cannot find what it holds has proved nothing.
     expect(() => captureInventory(join(fixtures, 'capture-unnamed'))).toThrow(/no longer carries the sentence/);

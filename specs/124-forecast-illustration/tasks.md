@@ -192,7 +192,7 @@ drawing in it.
       proportional *within the drawn set*, normalised by the widest, because a contribution is a
       gain coefficient rather than a share and T002's measured magnitudes would otherwise draw
       one ray as a slab and the rest as hairlines.
-- [x] T014 Spatial sources placed where they are; non-spatial sources docked at the margin in
+- [ ] T014 Spatial sources placed where they are; non-spatial sources docked at the margin in
       positions stable across selections, from a declared order rather than from whatever the
       holding happened to list first. The remainder (T002) has no position and is not a ray:
       it is stated in the region, as coupling from beyond the column's reach.
@@ -213,7 +213,7 @@ drawing in it.
       beside every source, and every source in this harness is `measured`.
 - [x] T016 The standing forecast is not in the ray set (SC-005), and the omission is a named
       condition in the code rather than an absence to be read as an oversight.
-      *Built.* `backgroundRaysIn` is the named condition, and it is tested against a source
+      *Built, and renamed at T022t:* `modelledRaysIn` is the named condition, and it is tested against a source
       table that admits the archive — which no analyst here produces, so the test plants what
       the code is guarding against rather than asserting an absence that cannot fail.
 - [x] T017 Rays never descend into the volume: drawn on the surface plane, held by a test over
@@ -881,6 +881,51 @@ the part worth recording, because each was a sentence asserting a property the c
       check read an absent region as one that draws; the narrow pass measured a column a running
       clock can clear between the pick and the measurement, and now stops the clock once it has
       what it needs; and the pin's give-up message counted three attempts after four.
+
+- [x] T022u **A tenth round, and it found the ninth round's record claiming a fix that was not
+      made — the same fault, one round on.** T022t's own headline is that three of the eighth
+      round's six claimed corrections were never made, and its list closes with "the pin's give-up
+      message counted three attempts after four". It still did. The edit batch that carried it
+      aborted on a later item's assertion and wrote nothing, and I checked the batch's exit rather
+      than the file.
+
+      So the process changed rather than only the line: edits are applied all-or-nothing, every
+      target is asserted **before** anything is written, and every batch is followed by a
+      verification pass that re-reads the file for what should be there and what should not. That
+      pass caught two leftover imports in this round that the previous method would have shipped.
+
+      **`drawableRays` was an identity function with three justifications describing a filter.**
+      Once the modelled misreading was corrected the function returned its argument, and it was
+      kept "because the name is where a reader looks for this rule" — which is the
+      interface-for-its-own-sake Principle VI names. Two of its assertions were true for every
+      input and every implementation, which is the shape T022q deleted three of one round earlier.
+      Gone; the reasoning is at the call site where the decision is.
+
+      **The master said the ray is drawn from the cell centre.** `analysis-contributions.schema.json`
+      described `cell` as "its centre: where the ray is drawn from", while `rays.ts` argues at
+      length for drawing from `observed` and does. The master is what a V3 backend and any
+      external consumer generate from, so this is the one place the two accounts must agree.
+      Amended, and `pnpm generate` re-run.
+
+      **The blog entry explained the short rays by the wrong scenario.** The alt text said "on this
+      scenario the platform loiters"; the capture's own sidecar records `arriving`, which is a
+      transit. The explanation was causal and false of the run in the picture — and the alt text is
+      the only description a reader has once the instance is gone.
+
+      Smaller: `T014` was ticked while `spec.md` cites the same task as not built, so it is
+      unticked with its reason, matching this file's own convention for a declined item; `T016`'s
+      tick still named `backgroundRaysIn` and a plant that was replaced two rounds ago;
+      `spendAttempt`'s docstring says a cancelled attempt is not an outcome and two of the three
+      spend sites did not honour it, so two overlapping requests against a refusing endpoint burned
+      two of three allowances in one restatement interval; an honest "the inventory does not carry
+      it yet" was asked again on every restatement rather than once per cycle, unbounded, two files
+      from a header saying "not on a timer"; a refusal from the previous column stood under the new
+      column's heading for a round trip; and the depth chip read pressed over the previous depth's
+      field with the one line that would have said so suppressed in exactly that case.
+
+      `check-capture-inventory` also counted CI *steps* where the record names *commands*, so a
+      second view of one proof — `capture:glance` already takes one — would have made an honest
+      record red. Counted distinct now, with a fixture.
 
 - [ ] T023 The ensemble spread ahead, along the planned route where one exists, widening
       against tau. Outside the holding's time axis the region says so rather than implying

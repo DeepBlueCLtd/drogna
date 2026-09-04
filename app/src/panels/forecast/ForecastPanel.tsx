@@ -233,6 +233,8 @@ export function ForecastPanel({ params }: PanelProps) {
    * the thing it bounds is a retry on the analyst's restatement cadence, not a user action.
    */
   const attemptsRef = useRef(0);
+  /** Which analysis the axis has already been asked for and honestly not got. */
+  const askedForRef = useRef<string | undefined>(undefined);
   /** True once the axis has been asked for its allowance of times and not got. */
   const [gridGaveUp, setGridGaveUp] = useState(false);
   const [columnGrid, setColumnGrid] = useState<ColumnGrid | undefined>();
@@ -424,10 +426,19 @@ export function ForecastPanel({ params }: PanelProps) {
     // operator has stopped, no next restatement arrives and that sentence is permanent. Two
     // representations of one fact, updated at different moments.
     if (attemptsRef.current >= GRID_ATTEMPTS) return;
+    // Asked once for this analysis, whatever the answer was: see the `!grid` branch below.
+    if (askedForRef.current === named) return;
     let cancelled = false;
     void (async () => {
       try {
         const response = await fetch(config.endpoints.holdings);
+        // **Checked here, not after the body is read.** `spendAttempt`'s docstring says a
+        // cancelled attempt is not an outcome, and two of the three spend sites did not honour
+        // it: a refusal or a throw on a request whose effect had already been torn down spent one
+        // and moved the give-up flag. Two overlapping requests against a refusing endpoint —
+        // which a restatement every 60 ticks makes ordinary, and which the narrow capture pass
+        // drives deliberately — burned two of three allowances in one restatement interval.
+        if (cancelled) return;
         // **The attempt is spent where the answer was bad, and nowhere else.** It used to be
         // counted *before* the request, which made a cancellation cost one: React runs the
         // previous effect's cleanup before the next body, so a restatement arriving while a fetch
@@ -457,11 +468,16 @@ export function ForecastPanel({ params }: PanelProps) {
         // cycles in a row silenced the region for the life of the panel, however many later
         // analyses would have answered. That is the fault the deleted holdings subscription
         // existed against, in a smaller shape.
-        // A cycle whose axis the inventory does not carry *yet* is an honest answer and not a
-        // failed fetch, so it spends nothing: the effect asks again on the next restatement, and
-        // the allowance is there for a seam that will not answer at all.
+        // **An honest "not there" is answered once per cycle, not once per restatement.** It
+        // spends none of the allowance — the allowance is for a seam that will not answer at all —
+        // but it must not be asked again for the *same* analysis either: `analysis` is a fresh
+        // object on every restatement, so "spends nothing" alone meant one full inventory fetch
+        // every `restate_every_ticks`, unbacked-off, for the life of the tab, two files from a
+        // header that says "not on a tick, not on an announcement, not on a timer". Recording the
+        // name here bounds it to one ask per cycle, and the next cycle's own name asks again.
         if (!grid) {
           attemptsRef.current = spendAttempt(attemptsRef.current, 'absent');
+          askedForRef.current = named;
           return;
         }
         gridForRef.current = named;
@@ -470,7 +486,8 @@ export function ForecastPanel({ params }: PanelProps) {
         setColumnGrid(grid);
       } catch {
         // Left for the next restatement to ask again, within the allowance above; a chooser over
-        // no axis is drawn as absent.
+        // no axis is drawn as absent. Cancelled reads spend nothing, as above.
+        if (cancelled) return;
         attemptsRef.current = spendAttempt(attemptsRef.current, 'refused');
         setGridGaveUp(attemptsRef.current >= GRID_ATTEMPTS);
       }

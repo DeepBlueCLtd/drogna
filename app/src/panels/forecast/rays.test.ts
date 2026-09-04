@@ -11,7 +11,6 @@ import type { AnalysisContributions, AnalysisContributionsSource } from '../../g
 import {
   modelledRaysIn,
   contributionResidual,
-  drawableRays,
   levelAtDepth,
   paletteSlots,
   placeOn,
@@ -245,9 +244,11 @@ describe('the rays a column is made of', () => {
     // out of the source table, it is structurally absent from it. Removing a modelled source's
     // ray dropped a line for a source that reached the column while the region's own paragraph
     // called it the baseline and its band was drawn in the stack.
-    expect(drawableRays(set).map((ray) => ray.datastreamId)).toContain('shore-temperature-broadcast');
-    expect(drawableRays(set)).toHaveLength(set.rays.length);
-    expect(drawableRays(raysFor(document()))).toHaveLength(3);
+    // Asserted over `set.rays`, which is what the region maps over. The two assertions this
+    // replaces went through a `drawableRays` filter *after* it had become the identity, so both
+    // were true for every input and every implementation — the shape T022q deleted three of.
+    expect(set.rays.map((ray) => ray.datastreamId)).toContain('shore-temperature-broadcast');
+    expect(set.rays).toHaveLength(3);
   });
 });
 

@@ -53,7 +53,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisContributions, AnalysisPublished, CoverageHolding } from '../../generated/types.js';
 import { Profile, type ProfileLevel } from './Profile.js';
 import type { SeamValidator } from '../../seam/validate.js';
-import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawableRays, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
+import { RAY_MIN_DRAWN_PX, RAY_WIDTH_PX, drawnWidthOf, placeOn, raysFor, underScale } from './rays.js';
 import { SOURCES, instrumentAt, sourceOf, type SourceKey, shareOf } from './shares.js';
 
 /** The map's drawn resolution. The field is 96×80; this is what a panel can show legibly. */
@@ -348,6 +348,12 @@ export function ColumnProvenance({
       // the width of that trip — the mismatch the token exists to prevent, arriving by the one
       // door the token does not watch.
       setContributions(undefined);
+      // **And the refusals with it**, for the reason the comment above gives about the document.
+      // They were written only after the whole read, so between a click and the seven position
+      // queries answering, the *previous* column's "the column at 400 m was refused: 503" stood
+      // under the new column's heading and coordinates — a claim about content that is present
+      // and correct, attributed to a place it is not about.
+      setColumnRefusals([]);
       const levels: ProfileLevel[] = [];
       const failed: string[] = [];
       for (const depth of grid.depthsM) {
@@ -470,9 +476,15 @@ export function ColumnProvenance({
     const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
     const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
     if (x === undefined || y === undefined) return undefined;
-    // `drawableRays`, not `set.rays`: FR-125's exclusion belongs to the picture and not only to
-    // the caption beneath it. The reasoning is in `rays.ts` beside the filter.
-    const drawnRays = drawableRays(raySet).flatMap((ray) => {
+    // **Every source in the set, and FR-125 needs no filter here.** There was a `drawableRays`
+    // between these two, dropping `kind: 'modelled'` sources on a misreading of the master:
+    // modelled means "another party's model output *admitted as an observation*", so such a source
+    // contributes and FR-124 says it is drawn as such. What FR-125 keeps out of the rays is the
+    // standing forecast, which never enters as an observation and is therefore not in the source
+    // table to be filtered. Once that was understood the function was the identity, and it was
+    // kept for a round with three comments still describing it as a filter and two assertions
+    // that could not fail — machinery earning nothing, which is what Principle VI calls it.
+    const drawnRays = raySet.rays.flatMap((ray) => {
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
       const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
       if (sourceX === undefined || sourceY === undefined) return [];
@@ -496,10 +508,10 @@ export function ColumnProvenance({
   /**
    * How many rays are at the width floor rather than at their own width (FR-122).
    *
-   * Counted over `rays.drawn` — what the map actually draws — and not over the whole set. The
-   * set can carry a modelled origin that `drawableRays` keeps off the map, so a sentence reading
-   * "N rays are drawn at the thinnest width this map can show" would have counted one that is
-   * not drawn at all: the guard applied to the drawing but not to the sentence about it.
+   * Counted over `rays.drawn`, which is what the map puts on the screen. The two sets are the
+   * same length by construction — the only thing that can drop a ray is a placement that returns
+   * nothing, and that needs an empty axis, which `drawn` already guards — so this is the drawn
+   * count *because that is what the sentence is about*, not because the two can differ.
    */
   const underScaleCount = rays ? rays.drawn.filter(({ ray }) => underScale(ray)).length : 0;
 
@@ -612,7 +624,18 @@ export function ColumnProvenance({
         </div>
       </div>
 
-      {busy && !slab && <p className="forecast-column-busy">reading the share field…</p>}
+      {/* **`busy` alone, not `busy && !slab`.** With a field already drawn, the chip for the new
+          depth reads pressed the instant it is clicked while the map keeps rendering the previous
+          depth's field for the whole round trip — and this line, which is the only thing that
+          would have said so, was suppressed in exactly that case. The surface then contradicted
+          itself silently: a pressed 400 m chip over a 0 m field, with the readout beneath naming
+          the depth the field actually is. The same pair whose disagreement the token comment
+          above records as a shipped fault. */}
+      {busy && (
+        <p className="forecast-column-busy">
+          reading the share field{slab ? ` at ${grid.depthsM[depthIndex].toFixed(0)} m; the map below is still ${slab.depthM.toFixed(0)} m` : ''}…
+        </p>
+      )}
 
       {drawn && slab && (
         <>

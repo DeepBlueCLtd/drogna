@@ -447,10 +447,18 @@ export class EnvGenerator {
     };
 
     const verdict = this.store.publish({ descriptor, bytes });
-    if (!verdict.published) {
+    if (verdict.outcome === 'refused') {
       // A refusal of the generator's own publication is a fault worth shouting about,
       // not swallowing: the heartbeat carries it until somebody looks.
       throw new Error(`coverage store refused the ${era} holding: ${verdict.refusal}`);
+    }
+    if (verdict.outcome === 'superseded') {
+      // Unreachable while this component publishes at the tick it is on, which is never
+      // behind its own era pointer. Said out loud rather than folded into the count,
+      // because folding it into the count is the fault the outcome type was made for.
+      throw new Error(
+        `coverage store superseded the ${era} holding ${holdingId}: it was dated behind this era's own pointer, which means this component authored out of order`,
+      );
     }
     this.published += 1;
   }

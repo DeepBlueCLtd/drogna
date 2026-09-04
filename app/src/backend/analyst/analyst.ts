@@ -535,7 +535,12 @@ export class Analyst {
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
-    if (!verdict.published) throw new Error(`coverage store refused ${holdingId}: ${verdict.refusal}`);
+    if (verdict.outcome === 'refused') throw new Error(`coverage store refused ${holdingId}: ${verdict.refusal}`);
+    // The analysis era carries no pointer, so nothing here can rewind one; the branch is
+    // named anyway, because a silent third case is what this type exists to prevent.
+    if (verdict.outcome === 'superseded') {
+      throw new Error(`coverage store superseded ${holdingId}: it was dated behind its era's pointer`);
+    }
     return digest;
   }
 }

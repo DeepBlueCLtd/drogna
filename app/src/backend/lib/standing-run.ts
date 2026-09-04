@@ -51,10 +51,24 @@ export type StandingRun = Pick<
  * reached the wire, which is why nothing broke, but a field that is false wherever it is
  * cheapest to fill in is a field waiting to be logged or forwarded.
  */
+/**
+ * How a forecast's spread holding is named from the forecast's own id. One definition, used
+ * by the model runner that writes the pair and by the reconstruction below that reads it —
+ * it was written out twice, which is a suffix waiting to be changed in one place. Both
+ * members carry `era: 'instance'` and share a publication tick, so the era pointer settles on
+ * whichever is published second: the runner publishes the spread first for that reason, and
+ * `currentInstance()` names the mean. If that order ever reverses, this lookup asks for
+ * `…-spread-spread`, finds nothing, and every consumer of the standing run silently reverts
+ * to pre-125 behaviour — so the order is a fact about `emit`, not a coincidence to rely on.
+ */
+export function spreadHoldingIdFor(forecastHoldingId: string): string {
+  return `${forecastHoldingId}-spread`;
+}
+
 export function standingRunFacts(store: CoverageStore): StandingRun | undefined {
   const standing = store.currentInstance();
   if (!standing) return undefined;
-  const spread = store.holding(`${standing.descriptor.holding_id}-spread`);
+  const spread = store.holding(spreadHoldingIdFor(standing.descriptor.holding_id));
   if (!spread) return undefined;
   const grid = standing.descriptor.manifest.grid;
   const start = isoPlusSeconds(grid.time.origin_sim_time, grid.time.start_offset_seconds);

@@ -201,6 +201,52 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       agreeing by coincidence (599 and 639) and `arriving` and `loitering` failing (1,794 →
       1,329 and 1,080 → 219), which is why a case that checked one condition proved nothing.
 
+- [x] **T066** T063 fixed one miscount and made another. Excluding a superseded publication
+      from `published` left it falling into the `else`, so a restarted snapshot source
+      reported it as a *store refusal* — with no reason, because a superseded verdict carries
+      none — turned its node `degraded`, and drew a `refused` figure FR-58 permits only once
+      something has gone wrong. On the shipped artefacts that is 4 on `arriving`, 2 on
+      `loitering` and 6 on `returning`, against a store that refused nothing, on the exact
+      node the Intro copy in this feature sends a reader to. Both adversarial passes found it
+      independently. Watched failing twice, once per fault: the original miscount fails the
+      superseded count, my correction fails the refusals.
+
+- [x] **T067** The shape underneath T063 and T066, which both passes named: `published: true`
+      meaning "nothing was written" is a boolean whose name lies, and three other callers read
+      it — `env-generator` incremented its own published count on it. `PublicationVerdict` is
+      now `{ outcome: 'written' | 'superseded' | 'refused' }`, so a caller must say which of
+      the three it means and the compiler asks. The three live authors throw on `superseded`
+      rather than folding it into success: it is unreachable while a component publishes at
+      its own tick, and an unreachable case swept into the success branch is exactly what
+      produced two faults here.
+
+- [x] **T068** The restatement test asserted three fields of ten under a comment claiming "the
+      whole message", and `run-published.schema.json` states the equality as contract. It now
+      compares the restatement to the original announcement, captured live — `valid_time` in
+      particular is computed by one formula in `emit` and another in `standingRunFacts`, and
+      they agreed by construction rather than by assertion. Planted: an off-by-one step in the
+      reconstruction's `valid_time`; the three spot checks pass it, the whole-message
+      comparison fails on `end_sim_time`.
+
+- [x] **T069** `release_margin_ticks` acquired a second meaning — the watchdog's slack — and
+      its master was not amended, which is T052's lesson repeated. Amended, including the
+      residue a pass found: a restarted scheduler has heard no cost for up to
+      `restate_every_ticks`, so its bound is the margin alone, 30 ticks against a 9-tick cost
+      at shipped values. Safe by 3× and not derived from anything; said in the master rather
+      than left to be discovered by tuning.
+
+- [x] **T070** The `-spread` suffix was written out in both the component that names the pair
+      and the reconstruction that reads it. One definition now, `spreadHoldingIdFor`, carrying
+      the reason it is load-bearing: both members share an era and a tick, so the pointer
+      settles on whichever is published second, and a reversed order would leave every
+      consumer of the standing run silently reverting to pre-125 behaviour.
+
+- [x] **T071** The stale boot figure, again, in the two documents that carry authority.
+      `a5a414e` corrected the ADR and the backlog and left `specs/120-start-conditions/`
+      quoting 4.7 s — the exact reading the ADR now names as an outlier — which is T046's
+      lesson repeated in the commit that was fixing the record. Both passes found it. Every
+      occurrence in the tree is now the three-run spread.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

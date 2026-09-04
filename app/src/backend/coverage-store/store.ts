@@ -29,17 +29,27 @@ export interface StagedHolding {
   readonly bytes: Uint8Array;
 }
 
-export interface PublicationVerdict {
-  readonly published: boolean;
-  /** When refused, names the mismatch. */
-  readonly refusal?: string;
+/**
+ * What the store did with a publication. Three outcomes, named rather than encoded in a
+ * boolean, because two consecutive faults on this branch were the same mistake about that
+ * boolean: a `published: true` that had written nothing was first counted as a replay
+ * ("26 of 26 holding(s) replayed" over holdings the store declined to write) and then, once
+ * excluded from that counter, fell into the `else` and was reported as a store refusal —
+ * with no reason, because it carries none. Both were on the snapshot source's face, which is
+ * the node the Intro panel sends a reader to. A caller must now say which of the three it
+ * means, and the compiler asks it to.
+ */
+export type PublicationVerdict =
+  /** Written: the holding is in the inventory and its era's pointer names what it should. */
+  | { readonly outcome: 'written' }
   /**
-   * Set where the store already holds something newer for this era and wrote nothing. Not a
-   * refusal — the bytes were accounted for — but not a replay either, so a caller counting
-   * what it put back must not count it.
+   * Accounted for, and not written: the store already holds something newer for this era, so
+   * writing would rewind a pointer. Not a refusal — these are bytes the store agrees with —
+   * and not a replay either.
    */
-  readonly superseded?: boolean;
-}
+  | { readonly outcome: 'superseded' }
+  /** Refused, with the mismatch named. */
+  | { readonly outcome: 'refused'; readonly refusal: string };
 
 export class CoverageStore {
   private readonly holdingsById = new Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }>();
@@ -155,13 +165,13 @@ export class CoverageStore {
     const recorded = staged.descriptor.field.sha256;
     if (measured !== recorded) {
       return {
-        published: false,
+        outcome: 'refused',
         refusal: `staged field does not match the digest its descriptor records: descriptor says ${recorded}, the bytes are ${measured}; holding refused, pointer untouched`,
       };
     }
     if (staged.bytes.byteLength !== staged.descriptor.field.byte_length) {
       return {
-        published: false,
+        outcome: 'refused',
         refusal: `staged field is ${staged.bytes.byteLength} bytes where its descriptor records ${staged.descriptor.field.byte_length}; holding refused, pointer untouched`,
       };
     }
@@ -192,7 +202,7 @@ export class CoverageStore {
     const standing = this.holdingsById.get(descriptor.holding_id);
     if (standing !== undefined && standing.descriptor.field.sha256 !== recorded) {
       return {
-        published: false,
+        outcome: 'refused',
         refusal: `'${descriptor.holding_id}' is already held, with field ${standing.descriptor.field.sha256}; a holding id names one set of bytes for the life of a run, so this publication is refused rather than replacing it silently`,
       };
     }
@@ -247,12 +257,12 @@ export class CoverageStore {
       pointedAt.descriptor.holding_id !== descriptor.holding_id &&
       descriptor.published_at.tick < pointedAt.descriptor.published_at.tick;
 
-    // Reported as superseded rather than simply published: the snapshot source counts what it
+    // Its own outcome, not a shade of one of the others: the snapshot source counts what it
     // put back and draws "N of N holding(s) replayed" on its own face, and a holding the store
-    // declined to write is not one it replayed. The distinction matters on exactly the node
-    // the Intro panel now sends a reader to, whose justification is that they can look rather
-    // than take somebody's word.
-    if (rewinds) return { published: true, superseded: true };
+    // declined to write is neither one it replayed nor one it was refused. The distinction
+    // matters on exactly the node the Intro panel now sends a reader to, whose justification
+    // is that they can look rather than take somebody's word.
+    if (rewinds) return { outcome: 'superseded' };
 
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).
@@ -272,7 +282,7 @@ export class CoverageStore {
       this.eraPointers.set('instance', descriptor.holding_id);
     }
     this.announce(descriptor);
-    return { published: true };
+    return { outcome: 'written' };
   }
 
   holdings(): CoverageHolding[] {

@@ -221,8 +221,8 @@ but those controls, driven from a script.
       to fail. What was actually there: holding the analyst back meant the scheduler's request
       reached nobody, its outstanding-run guard latched, and the run opened onto a loop that
       never turned again. See ADR-0041's amendment. All four conditions now declare
-      `["archive", "nowcast", "analysis", "instance"]`; 27.7 MB committed; `arriving` 4.7 s to
-      2.2 s, click to console, in headless Chromium.
+      `["archive", "nowcast", "analysis", "instance"]`; 27.7 MB committed; `arriving` 3.8–4.0 s
+      to 2.2–2.5 s over three runs of each, click to console, in headless Chromium.
 - [ ] NetCDF export. The input names it; SRD-v2 FR-39 holds offload to announcement-only in
       V2, and this feature makes that path reachable — `returning` arrives with a package
       staged and its measurement geometry beside it — rather than widening FR-39. Reasoned

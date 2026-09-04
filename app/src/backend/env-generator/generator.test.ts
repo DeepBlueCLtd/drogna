@@ -96,7 +96,8 @@ describe('the synthetic ocean (feature 102)', () => {
       holding_id: 'nowcast.tampered.t0',
     };
     const verdict = runtime.store.publish({ descriptor, bytes: tampered });
-    expect(verdict.published).toBe(false);
+    expect(verdict.outcome).toBe('refused');
+    if (verdict.outcome !== 'refused') throw new Error('unreachable');
     expect(verdict.refusal).toMatch(/does not match the digest its descriptor records/);
     expect(verdict.refusal).toMatch(/pointer untouched/);
     expect(runtime.store.holdings().map((holding) => holding.holding_id)).toEqual(before);
@@ -130,7 +131,8 @@ describe('the synthetic ocean (feature 102)', () => {
       field: { ...nowcast.descriptor.field, sha256: `sha256:${sha256Hex(different)}` },
     };
     const verdict = runtime.store.publish({ descriptor, bytes: different });
-    expect(verdict.published).toBe(false);
+    expect(verdict.outcome).toBe('refused');
+    if (verdict.outcome !== 'refused') throw new Error('unreachable');
     expect(verdict.refusal).toMatch(/already held/);
     expect(verdict.refusal).toMatch(/one set of bytes for the life of a run/);
     // And the bytes that were there are the bytes that are there.
@@ -139,7 +141,7 @@ describe('the synthetic ocean (feature 102)', () => {
     );
 
     // Restating what is already held is not a loss, and the snapshot source depends on it.
-    expect(runtime.store.publish({ descriptor: nowcast.descriptor, bytes: nowcast.bytes }).published).toBe(true);
+    expect(runtime.store.publish({ descriptor: nowcast.descriptor, bytes: nowcast.bytes }).outcome).toBe('written');
     runtime.stop();
   });
 
@@ -171,7 +173,12 @@ describe('the synthetic ocean (feature 102)', () => {
     );
 
     // The older holding, republished byte for byte, exactly as a restarted source would.
-    expect(runtime.store.publish(stale).published, 'identical bytes must still be accepted').toBe(true);
+    // Accounted for and not written — the outcome that names the difference, and the one the
+    // snapshot source counts apart from both a replay and a refusal.
+    expect(
+      runtime.store.publish(stale).outcome,
+      'identical bytes behind the era pointer are superseded, neither written nor refused',
+    ).toBe('superseded');
     expect(
       runtime.store.currentNowcast()?.descriptor.holding_id,
       'a republication of an older holding rewound the era pointer',

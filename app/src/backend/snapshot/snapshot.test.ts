@@ -22,7 +22,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import runConfigDocument from '../../../config/run.json';
 import type { ConfigRun, ConfigStartConditionsCondition } from '../../generated/types.js';
 import { createSeamValidator } from '../../seam/validate.js';
@@ -71,6 +71,28 @@ function freshStore(runId: string) {
     new Router(),
   );
   return { broker, transport, store };
+}
+
+/**
+ * How many of an artefact's own holdings a restart cannot write back, read off the artefact
+ * rather than typed in or taken from the store. Only two eras carry a pointer, and a
+ * publication is declined exactly when its era's pointer already names a *different* holding
+ * published at a *later* tick — so within an era, everything behind that era's last tick.
+ *
+ * `leaving` yields zero by this rule and by the store's, because its one now-cast and its one
+ * forecast pair are the last of their eras; a bare `> 0` would have had to exempt it, and an
+ * exemption is where a number nobody can derive goes to hide.
+ */
+function expectedSuperseded(holdings: { descriptor: { era: string; published_at: { tick: number } } }[]): number {
+  const POINTED = ['nowcast', 'departure', 'instance'];
+  let count = 0;
+  for (const era of POINTED) {
+    const ticks = holdings.filter((h) => h.descriptor.era === era).map((h) => h.descriptor.published_at.tick);
+    if (ticks.length === 0) continue;
+    const last = Math.max(...ticks);
+    count += ticks.filter((tick) => tick < last).length;
+  }
+  return count;
 }
 
 describe('the committed seed-data artefacts (feature 120)', () => {
@@ -134,6 +156,102 @@ describe('the committed seed-data artefacts (feature 120)', () => {
       );
       source.stop();
     }
+  });
+
+  it('a restart reports what the store already held newer, and no refusal it did not make', async () => {
+    vi.useFakeTimers();
+    // The restart path, which is a reader's path: the snapshot-source node in the Operator
+    // tab has a restart verb, and the Intro copy this feature rewrote sends a reader to that
+    // node to check whether the run took the artefact. A restarted source is a fresh instance
+    // holding the whole artefact again, so it republishes every holding over a store whose
+    // era pointers have already reached the artefact's own last one. Each republication is
+    // byte-identical and accepted; each earlier one would rewind a pointer, and the store
+    // declines to write it.
+    //
+    // Watched failing twice, which is why the assertions are shaped this way. The first
+    // version of the source counted a superseded publication as replayed and drew
+    // '26 of 26 holding(s) replayed' over holdings the store had not written — so the count
+    // is asserted. The correction that only excluded it from `published` pushed it into the
+    // refusals instead, so the same restart reported '9 refused by the store' with no reason
+    // against a store that refused nothing, and turned the node's status to `degraded` — so
+    // the refusals, the status and the detail line are asserted too, and the second fault
+    // passes the first assertion.
+    for (const condition of withArtefacts) {
+      const expectation = expectationFor(condition);
+      const { transport, store } = freshStore(expectation.runId);
+      const clock = transport.connect(config.clock.id, config.clock.id);
+      const beats: { status: string; detail: string; figures: { key: string; value: number }[] }[] = [];
+      // Read as the Operator plane reads it — through the broker, under the role the rules
+      // grant `ctl/heartbeat` to — rather than by reaching into the component.
+      transport
+        .connect('operator-observer', config.operator.id)
+        .subscribe(config.snapshot_source.heartbeat.topic, (message) => {
+          const payload = message.payload as {
+            component: string;
+            status: string;
+            detail: string;
+            figures: { key: string; value: number }[];
+          };
+          if (payload.component === config.snapshot_source.id) beats.push(payload);
+        });
+
+      const contents = await decodeSnapshot(artefactBytes(condition));
+      const held = contents.holdings.length;
+      const last = Math.max(...contents.holdings.map((holding) => holding.descriptor.published_at.tick));
+      const sample = { run_id: expectation.runId, tick: last, sim_time: 'x', mode: 'lockstep', rate: 0 };
+      const first = new SnapshotSource(
+        config.snapshot_source,
+        transport.connect(config.snapshot_source.id, config.snapshot_source.id),
+        store,
+        expectation,
+        contents,
+      );
+      first.start();
+      clock.publish(config.clock.topics.clock, sample);
+      first.stop();
+      const inventoryBefore = store.holdings().map((holding) => holding.holding_id);
+
+      // The restart. A second instance on the same store, exactly as `ComponentControl`
+      // constructs one.
+      const restarted = new SnapshotSource(
+        config.snapshot_source,
+        transport.connect(config.snapshot_source.id, config.snapshot_source.id),
+        store,
+        expectation,
+        await decodeSnapshot(artefactBytes(condition)),
+      );
+      restarted.start();
+      clock.publish(config.clock.topics.clock, sample);
+      // The face is read at the next beat, which is what the Operator plane reads: the
+      // emitter's cadence is host time by ADR-0006, so the timer is advanced rather than
+      // waited on, and rather than the component being asked directly for its counters.
+      beats.length = 0;
+      vi.advanceTimersByTime(config.snapshot_source.heartbeat.interval_seconds * 1000);
+
+      expect(
+        restarted.refused,
+        `${condition.id}: the store refused nothing on the restart; every holding it declined ` +
+          'to write was one it already held something newer than',
+      ).toEqual([]);
+      const beat = beats.at(-1);
+      expect(beat, `${condition.id}: the node published no heartbeat after the restart`).toBeDefined();
+      expect(beat?.status, `${condition.id}: ${beat?.detail}`).toBe('ok');
+      expect(beat?.detail, condition.id).not.toContain('refused by the store');
+      const replayed = beat?.figures.find((figure) => figure.key === 'replayed')?.value ?? -1;
+      const superseded = beat?.figures.find((figure) => figure.key === 'superseded')?.value ?? 0;
+      expect(restarted.outstanding(), `${condition.id}: the restart left holdings unreleased`).toBe(0);
+      expect(
+        replayed + superseded,
+        `${condition.id}: the two counters do not account for every holding in the artefact`,
+      ).toBe(held);
+      expect(superseded, `${condition.id}`).toBe(expectedSuperseded(contents.holdings));
+      expect(
+        store.holdings().map((holding) => holding.holding_id),
+        `${condition.id}: the restart changed the store's inventory`,
+      ).toEqual(inventoryBefore);
+      restarted.stop();
+    }
+    vi.useRealTimers();
   });
 
   it('a corrupted field is refused by the store, counted, and never lands', async () => {

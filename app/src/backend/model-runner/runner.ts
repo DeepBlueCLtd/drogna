@@ -31,7 +31,7 @@ import type {
 import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
-import { standingRunFacts } from '../lib/standing-run.js';
+import { spreadHoldingIdFor, standingRunFacts } from '../lib/standing-run.js';
 import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
@@ -553,7 +553,7 @@ export class ModelRunner {
     );
 
     const forecastId = request.run_id;
-    const spreadId = `${request.run_id}-spread`;
+    const spreadId = spreadHoldingIdFor(request.run_id);
     const validityEnd = isoPlusSeconds(request.initialisation_sim_time, (this.config.steps - 1) * this.config.step_seconds);
 
     // Everything above has been computed. Nothing below has happened yet: the publication
@@ -790,8 +790,15 @@ export class ModelRunner {
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
-    if (!verdict.published) {
+    if (verdict.outcome === 'refused') {
       throw new Error(`coverage store refused instance ${holdingId}: ${verdict.refusal}`);
+    }
+    if (verdict.outcome === 'superseded') {
+      // Unreachable while this component publishes at its own tick; named rather than
+      // swept into the success branch, which is the fault the outcome type was made for.
+      throw new Error(
+        `coverage store superseded instance ${holdingId}: it was dated behind the instance pointer, which means this component authored out of order`,
+      );
     }
     return digest;
   }

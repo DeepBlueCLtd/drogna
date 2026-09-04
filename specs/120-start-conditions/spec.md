@@ -240,8 +240,8 @@ for 1.73 MB of artefacts across all four.
 **Superseded by feature 125, which committed the forecast eras too.** The table above is the
 ocean-only cut point this feature shipped and is left as the record of it; the numbers on the
 line above it are not the current ones. Across the four the artefacts are now 27.7 MB, and
-`arriving` opens in 2.2 s against 4.7 s, measured in headless Chromium rather than in the
-browser this table used — a different machine and a different stopwatch, so the two tables
+`arriving` opens in 2.2–2.5 s against 3.8–4.0 s over three runs of each, measured in headless
+Chromium rather than in the browser this table used — a different machine and a different stopwatch, so the two tables
 are not comparable row for row. The per-era counts here (`analysis ×12`, `instance ×8`) are
 `returning` before feature 124 added a fourth analysis holding; it is 16 and 8 now.
 ADR-0041's amendment carries the current account.

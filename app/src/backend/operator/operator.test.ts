@@ -59,6 +59,16 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
     it('restating the standing run neither closes the skill ledger nor stages a second bundle', async () => {
       const config = lockstepConfig();
       const runtime = buildBackend(config, options, validator);
+      // Subscribed before the loop turns, so the original announcement is captured and the
+      // restatement can be compared against it rather than against three fields read off a
+      // descriptor. `component` and `scenario_run_id` are in the comparison too: the runner
+      // restates its own run, so its addressing is the same addressing.
+      const announcements: RunPublished[] = [];
+      runtime.transport
+        .connect('restatement-probe', 'shell')
+        .subscribe(config.model_runner.topics.run_published, (message) => {
+          announcements.push(message.payload as RunPublished);
+        });
       await driveUntil(runtime.clock, () => runtime.telemetry.lastStatistics?.state === 'reporting', 8000);
       const scoredBefore = runtime.telemetry.lastStatistics?.count ?? 0;
       const runBefore = runtime.telemetry.lastStatistics?.forecast_run_id;
@@ -67,13 +77,13 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       expect(scoredBefore, 'nothing was scored, so there is no ledger to lose').toBeGreaterThan(0);
 
       const statementBefore = runtime.telemetry.lastStatistics;
-      const announcements: RunPublished[] = [];
-      const probe = runtime.transport.connect('restatement-probe', 'shell');
-      probe.subscribe(config.model_runner.topics.run_published, (message) => {
-        announcements.push(message.payload as RunPublished);
-      });
       const release = runtime.store.currentInstance();
       expect(release, 'no forecast stands, so there is nothing to restate').toBeDefined();
+      const original = [...announcements]
+        .reverse()
+        .find((announcement) => announcement.run_id === release?.descriptor.holding_id);
+      expect(original, 'the standing run was never announced live').toBeDefined();
+      const saidBefore = announcements.length;
 
       runtime.control.stop(config.model_runner.id);
       runtime.control.start(config.model_runner.id);
@@ -89,12 +99,19 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       // a 9-tick run as a 510-tick one, and the consumers frame renders it as when the basis
       // was published. Asserting the whole message rather than the field that was wrong,
       // because the fault was a class and not a typo.
-      expect(announcements.length, 'the standing run was not restated').toBeGreaterThan(0);
+      expect(announcements.length, 'the standing run was not restated').toBeGreaterThan(saidBefore);
       const restated = announcements.at(-1);
-      expect(restated?.run_id).toBe(release?.descriptor.holding_id);
+      // The whole message, so that the claim `run-published.schema.json` now makes — every
+      // field of a restatement equals the release it restates — is the thing under test. It
+      // matters that this is not three spot checks: `valid_time` is computed by one formula
+      // in the runner's own `emit` and by another in `standingRunFacts`, off the manifest
+      // grid, and they agree today by construction rather than by assertion.
+      expect(restated).toEqual(original);
+      expect(validator.validate('run-published', restated).refusals).toEqual([]);
+      // And equal to the descriptor the runner itself wrote, which is where the dating fault
+      // was: an announcement matching a *stale copy of itself* would satisfy the line above.
       expect(restated?.sim_time).toBe(release?.descriptor.published_at.sim_time);
       expect(restated?.tick).toBe(release?.descriptor.published_at.tick);
-      expect(validator.validate('run-published', restated).refusals).toEqual([]);
 
       // The staging check belongs here and not after the sweep below: nothing legitimate can
       // have released a run within a fraction of `min_interval_ticks` of the restart —

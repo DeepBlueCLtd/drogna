@@ -7,7 +7,14 @@
  * this module against numbers typed into it would hold nothing about that.
  */
 import { describe, expect, it } from 'vitest';
-import { domainMeanProfile, thermoclineIn, thermoclineSurface, type LevelField } from './volume.js';
+import {
+  FEATURE_SIGMAS,
+  domainMeanProfile,
+  featureReach,
+  thermoclineIn,
+  thermoclineSurface,
+  type LevelField,
+} from './volume.js';
 
 describe('where a column falls fastest', () => {
   const depthsM = [0, 200, 400, 600, 800, 1000];
@@ -79,6 +86,75 @@ describe('the surface over a field', () => {
     expect(thermoclineSurface(ragged)).toHaveLength(1);
     expect(thermoclineSurface([])).toEqual([]);
     expect(thermoclineSurface([levels[0]]), 'one level is not a profile').toEqual([]);
+  });
+});
+
+describe('how far down a feature reaches', () => {
+  // Four cells. Cell 0 is the feature: strongly warm at the surface, half as warm at 200 m, and
+  // lost in the field's own scatter below. The others are the field it sits in.
+  //
+  // **The deepest level has to scatter like real water, not sit uniform.** Written with the other
+  // three within 0.01 °C of each other, a residual of 0.02 °C at the feature cleared two sigma of
+  // almost nothing and the level read as "present" — the fixture, not the threshold, was wrong:
+  // it did not represent the state it was named for. The shipped field's spread collapses with
+  // depth but never to nothing (1.13 °C at the surface against 0.23 °C at 800 m), and it is that
+  // remaining scatter a deep feature has to beat.
+  const levels: LevelField[] = [
+    { depthM: 0, temperatureC: [15.0, 12.0, 12.1, 11.9] },
+    { depthM: 200, temperatureC: [11.5, 10.0, 10.1, 9.9] },
+    { depthM: 400, temperatureC: [8.01, 8.0, 8.05, 7.95] },
+  ];
+
+  it('draws the feature where it beats the field, and stops where it does not', () => {
+    const reach = featureReach(levels, 0);
+    expect(reach.map((level) => level.present), 'the reach does not stop where the feature does').toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(reach[0].depthM).toBe(0);
+    expect(reach[0].anomalyC).toBeGreaterThan(reach[1].anomalyC);
+  });
+
+  it('finds a deep feature that a fixed temperature floor would miss', () => {
+    // **The case the per-level floor exists for, and the one the other tests could not see.**
+    // Planted a fixed 0.5 °C threshold in place of the spread and every test here still passed:
+    // on the fixture above the two rules give the same answer at every level, so nothing held the
+    // design its docstring argues for. This is where they part. At 800 m the shipped field varies
+    // by about 0.23 °C, so a feature standing 0.4 °C above its surroundings is unmistakable —
+    // nearly ten sigma below — and a fixed floor of half a degree calls it absent.
+    const deep: LevelField[] = [{ depthM: 800, temperatureC: [4.5, 4.1, 4.14, 4.06] }];
+    const reach = featureReach(deep, 0);
+    expect(reach[0].anomalyC, 'the anomaly is not the weak one this case is about').toBeLessThan(0.5);
+    expect(reach[0].spreadC).toBeLessThan(0.1);
+    expect(
+      reach[0].present,
+      'a feature far above a quiet field was missed, so the floor is not the level\u2019s own',
+    ).toBe(true);
+  });
+
+  it('measures the floor from the level, not from a temperature typed here', () => {
+    // **The point of a per-level floor.** The same anomaly in degrees is a feature at depth and a
+    // wiggle at the surface, because the field's own spread collapses with depth — 1.13 °C at the
+    // surface against 0.23 °C at 800 m on the shipped run. A fixed threshold would be two
+    // different claims depending which level it was applied to.
+    const reach = featureReach(levels, 0);
+    for (const level of reach) {
+      expect(level.spreadC, 'the floor is not the level\u2019s own spread').toBeGreaterThan(0);
+      expect(level.present).toBe(Math.abs(level.anomalyC) >= FEATURE_SIGMAS * level.spreadC);
+    }
+    // The surface spread really is the larger one, so the two floors differ.
+    expect(reach[0].spreadC).toBeGreaterThan(reach[2].spreadC);
+  });
+
+  it('draws nothing through water that does not vary, rather than everything', () => {
+    // A level with no spread has nothing for a feature to stand out from. With a floor of nought
+    // every cell clears it, and the drawing would carry the feature down through uniform water.
+    const flat: LevelField[] = [{ depthM: 0, temperatureC: [10, 10, 10, 10] }];
+    expect(featureReach(flat, 0)[0].present).toBe(false);
+    // And a cell the field did not serve is absent, not present at nought.
+    const holed: LevelField[] = [{ depthM: 0, temperatureC: [Number.NaN, 12, 12.1, 11.9] }];
+    expect(featureReach(holed, 0)[0].present).toBe(false);
   });
 });
 

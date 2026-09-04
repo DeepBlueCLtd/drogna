@@ -106,6 +106,84 @@ export function thermoclineSurface(levels: readonly LevelField[]): (Thermocline 
 }
 
 /**
+ * How many of a level's own standard deviations a feature must clear at its centre to be drawn
+ * there.
+ *
+ * **Measured against the shipped field rather than chosen.** The eddy's anomaly at its own centre
+ * runs 2.06σ, 2.32σ, 0.18σ, 1.09σ, 0.03σ and −0.65σ down the six levels: it is unmistakable in
+ * the top two and indistinguishable from the field's own wiggle below them, and the nearest thing
+ * to a false positive is 1.09σ at 600 m. Two sigma separates those with room on both sides. The
+ * *floor itself* is the level's spread rather than a temperature typed in here, because a fixed
+ * threshold in degrees would be two different claims at the surface, where the field varies by
+ * 1.13 °C, and at 800 m where it varies by 0.23 °C.
+ */
+export const FEATURE_SIGMAS = 2;
+
+/** What a feature is doing at one level of the served field. */
+export interface FeatureReach {
+  readonly depthM: number;
+  /** The anomaly at the feature's own cell, against that level's mean. */
+  readonly anomalyC: number;
+  /** The level's own standard deviation: the wiggle the anomaly has to beat. */
+  readonly spreadC: number;
+  /** Whether the feature is distinguishable from the field here. */
+  readonly present: boolean;
+}
+
+/**
+ * A published feature carried **down** the served field (FR-120's second half, T010).
+ *
+ * **The holding publishes no depth for these, which is why this exists.**
+ * `forecast-features.schema.json` carries the eddy and the drifting feature as a centre, a radius
+ * and an anomaly peak, and the front as an anchor, a bearing and a step. All horizontal: there is
+ * no vertical extent anywhere in the document, and the estimator that writes it takes no manifest
+ * on purpose, because reading the authored depth scales would be forecasting from the truth.
+ *
+ * So the dimension is read off the field the features are *in*, which is what T010 asks for in as
+ * many words — "against the field they are in". At each level the feature's own cell is compared
+ * with that level's mean, and it is drawn while that anomaly clears the level's own spread by
+ * `FEATURE_SIGMAS`. On the shipped configuration the eddy reaches 200 m and stops, which is a
+ * fact about a surface-intensified feature rather than a limit of the drawing.
+ */
+export function featureReach(levels: readonly LevelField[], cell: number): FeatureReach[] {
+  return levels.map((level) => {
+    // **The feature's own cell is left out of the field it is compared with.** It is "the field
+    // they are in", not the field including them, and a feature that contributes to its own floor
+    // is measured against a yardstick it moved: on a four-cell level a strong eddy raises the
+    // spread enough that its own 2.25 °C anomaly cannot clear 2σ of 1.30 °C. One cell in 7,680
+    // changes nothing measurable on the shipped grid — the calibration above is unaffected — but
+    // the measure should not depend on the magnitude of the thing being measured at all.
+    let sum = 0;
+    let counted = 0;
+    for (let index = 0; index < level.temperatureC.length; index++) {
+      const value = level.temperatureC[index];
+      if (index === cell || !Number.isFinite(value)) continue;
+      sum += value;
+      counted += 1;
+    }
+    const mean = counted > 0 ? sum / counted : Number.NaN;
+    let squares = 0;
+    for (let index = 0; index < level.temperatureC.length; index++) {
+      const value = level.temperatureC[index];
+      if (index === cell || !Number.isFinite(value)) continue;
+      squares += (value - mean) ** 2;
+    }
+    const spreadC = counted > 0 ? Math.sqrt(squares / counted) : Number.NaN;
+    const at = level.temperatureC[cell];
+    const anomalyC = Number.isFinite(at) && Number.isFinite(mean) ? at - mean : Number.NaN;
+    return {
+      depthM: level.depthM,
+      anomalyC,
+      spreadC,
+      // A level with no spread has nothing to stand out from: everything or nothing would clear
+      // a floor of nought, and "everything" is the answer that draws a feature through water
+      // that is uniform.
+      present: Number.isFinite(anomalyC) && spreadC > 0 && Math.abs(anomalyC) >= FEATURE_SIGMAS * spreadC,
+    };
+  });
+}
+
+/**
  * The domain-mean profile of a served field, for holding this module against the run's own
  * published estimate.
  *

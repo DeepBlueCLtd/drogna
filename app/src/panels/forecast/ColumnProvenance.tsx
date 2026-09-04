@@ -315,10 +315,17 @@ export function ColumnProvenance({
           // provenance for a cell nothing was served for. `shares.ts` already states this rule for
           // the profile ("a non-number treated as a zero is exactly the reading FR-041 forbids");
           // the map above it did not follow it.
-          const resolved = SOURCES.filter((source) => read.shares[source.key].length > 0);
-          if (resolved.length === 0) {
+          // **Every share, not merely one.** The first version of this guard asked whether *any*
+          // name resolved, which leaves the case that actually happened: one label renamed —
+          // `analyst.shares.archive` set to "historical archive", which its own master permits —
+          // resolves three of four, so no refusal is stated, the readout prints "archive NaN%" and
+          // that share's field draws as a uniformly empty rectangle, indistinguishable from
+          // "nought everywhere". `shares.ts` records that exact fault costing the departure share
+          // four features of silence, and `Profile.tsx` prints "not served" for it two files away.
+          const missing = SOURCES.filter((source) => read.shares[source.key].length === 0);
+          if (missing.length > 0) {
             setSlabRefusals([
-              `the share field at ${depthM} m carried no share this shell recognises: ${Object.keys(body.ranges ?? {}).join(', ') || 'no ranges at all'}`,
+              `the share field at ${depthM} m carried no ${missing.map((source) => source.label).join(', ')} share: served ${Object.keys(body.ranges ?? {}).join(', ') || 'no ranges at all'}`,
             ]);
             setSlab(undefined);
           } else if (read.collided.length > 0) {
@@ -463,6 +470,29 @@ export function ColumnProvenance({
     return { cols, rows };
   }, [slab]);
 
+  /**
+   * **North is up.** The served latitude axis *ascends* — `min + i * spacing` over ascending
+   * indices, which I measured off a running loop: row 0 is 44°N and the last row is 48°N — and the
+   * drawing put served row `r` at `y = r`, so the top edge of the map was the southernmost row and
+   * the whole field was upside down.
+   *
+   * It has been that way since the field was first drawn, and it did not matter while the region
+   * was a grid of coloured squares with no geometry on it. This feature is what makes it matter:
+   * it draws lines between two places on that plane, marks where instruments were, publishes a
+   * capture of the result, and its whole claim is that a reader can see where a number came from.
+   * A ray to an instrument north-east of the column was drawn to the south-east.
+   *
+   * The arrow keys move with it — `ArrowUp` now *increases* the served row, which is northward —
+   * and the readout, which reads the served axes, was right all along and is now right about the
+   * same cell the reader is looking at.
+   */
+  const screenRow = useCallback((row: number) => (drawn ? drawn.rows.length - 1 - row : row), [drawn]);
+  /** The same flip in continuous coordinates, for the rays' endpoints. */
+  const flipY = useCallback(
+    (at: number | undefined) => (at === undefined || !drawn ? undefined : drawn.rows.length - at),
+    [drawn],
+  );
+
   /** The served column, where one arrived and was not refused. */
   const served = typeof contributions === 'object' ? contributions : undefined;
 
@@ -495,7 +525,7 @@ export function ColumnProvenance({
     // name for the same value one line down from the second.
     if (!raySet || !slab || !drawn || !column) return undefined;
     const x = placeOn(slab.longitudes, drawn.cols, column.longitude);
-    const y = placeOn(slab.latitudes, drawn.rows, column.latitude);
+    const y = flipY(placeOn(slab.latitudes, drawn.rows, column.latitude));
     if (x === undefined || y === undefined) return undefined;
     // **Every source in the set, and FR-125 needs no filter here.** There was a `drawableRays`
     // between these two, dropping `kind: 'modelled'` sources on a misreading of the master:
@@ -507,7 +537,7 @@ export function ColumnProvenance({
     // that could not fail — machinery earning nothing, which is what Principle VI calls it.
     const drawnRays = raySet.rays.flatMap((ray) => {
       const sourceX = placeOn(slab.longitudes, drawn.cols, ray.longitude);
-      const sourceY = placeOn(slab.latitudes, drawn.rows, ray.latitude);
+      const sourceY = flipY(placeOn(slab.latitudes, drawn.rows, ray.latitude));
       if (sourceX === undefined || sourceY === undefined) return [];
       // `ray.sourceIndex` is the position `raysFor` built the ray from, so there is nothing to
       // search for and nothing to guard: the two spellings of a `findIndex` fallback this
@@ -687,8 +717,10 @@ export function ColumnProvenance({
             tabIndex={0}
             onKeyDown={(event) => {
               const step: Record<string, [number, number]> = {
-                ArrowUp: [-1, 0],
-                ArrowDown: [1, 0],
+                // North is up, so ArrowUp *increases* the served row index: `slab.latitudes`
+                // ascends and the drawing flips it (see `screenRow`).
+                ArrowUp: [1, 0],
+                ArrowDown: [-1, 0],
                 ArrowLeft: [0, -1],
                 ArrowRight: [0, 1],
               };
@@ -754,7 +786,7 @@ export function ColumnProvenance({
                   <rect
                     key={`${row}:${col}`}
                     x={col}
-                    y={row}
+                    y={screenRow(row)}
                     width={1}
                     height={1}
                     // The share is carried by opacity against the console's own ground, which
@@ -782,7 +814,7 @@ export function ColumnProvenance({
               <rect
                 className="share-cursor"
                 x={cursor.col}
-                y={cursor.row}
+                y={screenRow(cursor.row)}
                 width={1}
                 height={1}
                 pointerEvents="none"

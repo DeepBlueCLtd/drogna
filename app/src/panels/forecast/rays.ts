@@ -207,6 +207,11 @@ export function raysFor(document: AnalysisContributions, depthM?: number): RaySe
     remainder += level.remainder;
     observationWeight += level.observation_weight;
     for (const entry of level.contributions) {
+      // A `source` the table does not carry is discarded rather than summed: the master bounds
+      // the index only below, and such an entry contributed to `widest` — the normaliser every
+      // drawn width is divided by — while producing no ray, so every ray drew narrower than its
+      // share and the residual no longer closed.
+      if (entry.source < 0 || entry.source >= document.sources.length) continue;
       const running = summed.get(entry.source);
       if (running) {
         running.contribution += entry.contribution;

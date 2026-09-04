@@ -874,6 +874,27 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       ).toBeGreaterThan(0);
     });
 
+    it('north is up: a cell nearer the top of the map is nearer the north of the grid', async () => {
+      // **The map was drawn upside down**, and had been since the field was first drawn: the
+      // served latitude axis ascends (row 0 is the southernmost) and the drawing put served row
+      // `r` at `y = r`. It did not matter while the region was coloured squares; this feature is
+      // what makes it matter, because it draws lines between two places on that plane and its
+      // whole claim is that a reader can see where a number came from. A ray to an instrument
+      // north-east of the column was drawn to the south-east.
+      await toAField();
+      const cells = [...document.querySelectorAll('rect.share-cell')];
+      expect(cells.length).toBeGreaterThan(50);
+      const placed = cells.map((cell) => ({
+        y: Number(cell.getAttribute('y')),
+        lat: Number(cell.getAttribute('data-lat')),
+      }));
+      const top = placed.reduce((best, at) => (at.y < best.y ? at : best));
+      const bottom = placed.reduce((best, at) => (at.y > best.y ? at : best));
+      expect(top.lat, `the top of the map is ${top.lat}°N and the bottom ${bottom.lat}°N`).toBeGreaterThan(
+        bottom.lat,
+      );
+    });
+
     it('FR-136: a new cycle re-reads the field once, not twice', async () => {
       // **The half the restatement test cannot see.** It deliberately stops short of a cycle
       // boundary, so it measures the restatement case only. Across a boundary the analysis lands
@@ -901,8 +922,11 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       // One query per collection, at one depth: the reader changed no depth, so any second read of
       // a collection is the region asking twice for one cycle.
       for (const collection of collections) {
+        // Counted, not de-duplicated: the fault is *two byte-identical* queries, and
+        // `new Set([x, x]).size` is 1 — so the assertion passed on exactly the case its own
+        // comment named, and only the line below was doing the work.
         const forThis = areas.filter((url) => url.includes(`collections/${collection}/`));
-        expect(new Set(forThis).size, `${collection} was queried ${new Set(forThis).size} times for one cycle`).toBe(1);
+        expect(forThis.length, `${collection} was queried ${forThis.length} times for one cycle`).toBe(1);
       }
       expect(areas.length - areasBefore, 'more area queries than cycles announced').toBeLessThanOrEqual(
         collections.length - cyclesBefore,

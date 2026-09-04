@@ -96,7 +96,17 @@ export function runGate(root: string = REPO_ROOT): Finding[] {
   // honest record red: seven names against eight steps, fixable only by writing "eight" over a
   // list of seven or by backticking one command twice. The membership checks were always
   // set-shaped; the counts were not.
-  const ran = [...new Set([...workflow.matchAll(CI_STEP)].map((match) => match[1]))];
+  // **Comment lines are not steps.** The pattern is deliberately wide — it has been too narrow
+  // twice — but run over the whole file it also matched prose: this very workflow carries a
+  // fifteen-line comment above the forecast step, and `CLAUDE.md` names capture commands in
+  // sentences. A comment mentioning `pnpm run capture:widgets` produced three findings on a
+  // correct tree, and the only way to green them was to write a lie into the record. Width where
+  // the command may be written any way, and a skip where it is not a command at all.
+  const steps = workflow
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
+  const ran = [...new Set([...steps.matchAll(CI_STEP)].map((match) => match[1]))];
   if (ran.length === 0) {
     throw new Error(`${WORKFLOW} runs no capture proof — the gate has nothing to hold the record to`);
   }

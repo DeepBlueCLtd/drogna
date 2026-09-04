@@ -1010,6 +1010,39 @@ the part worth recording, because each was a sentence asserting a property the c
       `[ ]` over a body beginning "*Built.*". It is two tasks in one box — placement, which is
       built and captured, and the docking, which is declined — and the line says so now.
 
+- [x] T022x **A thirteenth round, and it found the map drawn upside down.**
+
+      The served latitude axis ascends — measured off a running loop, row 0 is 44°N and the last
+      row 48°N — and the drawing put served row `r` at `y = r`, so the top edge of the field was
+      the *southernmost* row. It has been that way since the field was first drawn and twelve
+      review rounds did not see it, because until this feature the region was coloured squares
+      with no geometry on them. This feature is what makes it matter: it draws lines between two
+      places on that plane, marks where instruments were, and publishes a capture whose whole
+      claim is that a reader can see where a number came from. A ray to an instrument north-east of
+      the column was drawn to the south-east, and `ArrowUp` moved the cursor north on screen while
+      the readout beneath it counted *down* in latitude.
+
+      **A renamed share label still printed `NaN%`.** The guard added last round asks whether *any*
+      of the four names resolved, which leaves the case that actually happened: one label changed —
+      `analyst.shares.archive` set to "historical archive", which its own master permits — resolves
+      three of four, so no refusal is stated, the readout reads "archive NaN%" and that share's
+      field draws as a uniformly empty rectangle. `shares.ts` records that exact fault costing the
+      departure share four features of silence, and the profile prints "not served" for it two
+      files away. Refused now when *any* share is missing, and the missing ones are named.
+
+      **The gate reddened CI for a YAML comment.** Widened twice to catch every form of the
+      command, it then matched prose — and this workflow carries a fifteen-line comment above the
+      forecast step. Three findings on a correct tree, greenable only by writing a lie into the
+      record. Comment lines are skipped, with a fixture.
+
+      **A stray `source` index inflated the normaliser.** The master bounds it only below, so an
+      entry naming source 9 in a six-source table contributed to `widest` — the number every drawn
+      width is divided by — while producing no ray, so every ray drew narrower than its share.
+
+      And the assertion added last round for "two byte-identical queries per cycle" compared
+      `new Set(urls).size` — which is 1 for exactly that duplicate. It counted the entries in the
+      end, but the line as written passed on the case its own comment named.
+
 ## What this branch leaves undone, and why
 
       Written here rather than only in the pull request, because the reason is the part that cannot

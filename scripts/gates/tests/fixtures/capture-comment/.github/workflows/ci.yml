@@ -1,0 +1,8 @@
+jobs:
+  checks:
+    steps:
+      # Before pushing anything with a face, run pnpm run capture:widgets locally too.
+      - name: Glance
+        run: pnpm run capture:glance operator
+      - name: Map
+        run: pnpm run capture:map

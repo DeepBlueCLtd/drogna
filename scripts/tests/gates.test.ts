@@ -394,6 +394,12 @@ describe('each gate catches its planted violation and passes a clean tree', () =
       expect.stringMatching(/says CI runs five more things.*it runs 3 — 2 captures and replay-proof/),
     ]);
 
+    // **A comment naming a command is not a step.** The pattern is deliberately wide, having
+    // been too narrow twice — but run over the whole file it also matched prose, and this
+    // workflow carries a fifteen-line comment above the forecast step. Three findings on a
+    // correct tree, greenable only by writing a lie into the record.
+    expect(captureInventory(join(fixtures, 'capture-comment'))).toEqual([]);
+
     // **Every form of the command, not the one the workflow happens to use.** Anchored on `run:`
     // the pattern could not see a multi-line `run: |` block (`|` is not whitespace) nor
     // `pnpm -C app run capture:x` (`-C app` sits between `pnpm` and `run`) — both ordinary YAML,

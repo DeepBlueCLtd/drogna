@@ -123,6 +123,28 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       claim from two eras to four. It now points the reader at the snapshot source's own node.
       The first attempt linked a `system` view that does not exist; `check-view-ids` caught it.
 
+- [x] **T055** The restatement was dated at the instant it was being said at, and the master
+      amended to say nothing reasoning about the forecast read that field. Two panels did, and
+      a review rendered both: the Forecast timeline computes how long a run took as the
+      distance from its request to that instant and drew a 9-tick run as a **510-tick** one;
+      the consumers frame renders it as when the basis was published and was out by the
+      distance from the run to the console opening — thousands of ticks in a replayed pre-roll.
+      A restatement carries the run's own instant now, off the descriptor, which is the
+      convention `CoverageStore.announce()` had already settled one file away. The test asserts
+      the whole message rather than the field that was wrong.
+- [x] **T056** `snapshot.test.ts`'s round-trip compared `[...bytes]` with `toEqual`, which
+      built two JS number arrays per holding. Fine over 9.6 MB of artefacts; over 54.7 MB it
+      took 36.6 s of a 60 s budget and **timed out at 65.9 s under load** — a CI flake this
+      feature introduced by growing the artefacts. A typed-array walk is 2.8 s and still names
+      the first differing byte; planted a single flipped byte in `decodeSnapshot` to check it.
+- [x] **T057** `standingRunFromStore` handed the offload packager a whole announcement it never
+      publishes, so the packager filled `component` with its own id — a packager claiming to
+      have published a forecast. Split: `standingRunFacts` is the store reading, and only the
+      component that publishes builds the envelope.
+- [x] **T058** The snapshot source's own heartbeat still said "the ocean was authored live"
+      after the tour and the Intro panel were changed to send the reader there for a statement
+      about the forecasts too.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

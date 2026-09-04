@@ -481,7 +481,7 @@ describe('the start conditions (feature 120)', () => {
       return forecasts() > onOpening ? waited : Number.POSITIVE_INFINITY;
     };
 
-    const readings: string[] = [];
+    const readings: { condition: string; live: number; replayed: number }[] = [];
     for (const condition of config.start_conditions.conditions) {
       const effective = (() => {
         const copy = configForCondition(JSON.parse(JSON.stringify(config)) as ConfigRun, condition);
@@ -547,7 +547,7 @@ describe('the start conditions (feature 120)', () => {
       }
       const pageCadence = await ticksToNextForecast(page, limit);
       page.stop();
-      readings.push(`${condition.id}: live ${liveCadence}, replayed ${pageCadence}`);
+      readings.push({ condition: condition.id, live: liveCadence, replayed: pageCadence });
       expect(Number.isFinite(liveCadence), `${condition.id}: the live run never computed a forecast`).toBe(true);
     }
 
@@ -555,10 +555,12 @@ describe('the start conditions (feature 120)', () => {
     // the four agree by coincidence whichever way the fix goes — `leaving` and `returning`
     // both read 599 and 639 with the resume disabled — so a case that checked one condition
     // proved nothing, which is how the first draft of this passed against the unfixed tree.
-    const differing = readings.filter((reading) => {
-      const [, live, replayed] = /live (\S+), replayed (\S+)$/.exec(reading) ?? [];
-      return live !== replayed;
-    });
-    expect(differing, `a replayed run reached its next forecast on a cadence the live run did not:\n${readings.join('\n')}`).toEqual([]);
+    const differing = readings.filter((reading) => reading.live !== reading.replayed);
+    expect(
+      differing,
+      `a replayed run reached its next forecast on a cadence the live run did not:\n${readings
+        .map((r) => `${r.condition}: live ${r.live}, replayed ${r.replayed}`)
+        .join('\n')}`,
+    ).toEqual([]);
   }, 600_000);
 });

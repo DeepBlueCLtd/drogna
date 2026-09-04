@@ -9946,7 +9946,7 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "sim_time": {
         "type": "string",
-        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision — or, for a restatement, the instant it is being said at, exactly as the forecast-features restatement does. The run itself is dated by valid_time, which is identical across a release and every restatement of it, so nothing that reasons about the forecast reads this field."
+        "description": "Simulation time at which the run became visible, ISO-8601 UTC with microsecond precision. A restatement carries this same instant, read off the holding's descriptor — not the instant it is being said at, which an earlier version of this description claimed on the grounds that nothing reasoning about the forecast read the field. Two panels did: the Forecast timeline renders how long a run took as the distance from its request to this instant, and drew a 9-tick run as a 510-tick one; the consumers frame renders it as when the basis was published. A restatement is a statement about when the run happened, and the run happened when it happened — which is the convention the coverage store already re-announces a standing holding under. Every field of a restatement therefore equals the release it restates."
       },
       "tick": {
         "type": "integer",

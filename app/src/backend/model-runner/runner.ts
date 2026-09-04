@@ -304,7 +304,7 @@ export class ModelRunner {
     // Once per instance whether or not it finds anything: a cold run has an empty store on
     // its first sample and must not keep asking.
     this.resumeConsidered = true;
-    const standing = standingRunFromStore(this.store, this.config.id, this.runId, this.simTime);
+    const standing = standingRunFromStore(this.store, this.config.id, this.runId);
     if (!standing) return;
     this.client.publish(this.config.topics.run_published, standing);
   }

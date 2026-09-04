@@ -36,12 +36,22 @@ import { isoPlusSeconds } from './sim-time.js';
  * a run always publishes together and so means the store is mid-publication rather than
  * standing on something.
  */
-export function standingRunFromStore(
-  store: CoverageStore,
-  component: string,
-  scenarioRunId: string,
-  simTime: { value: string; tick: number },
-): RunPublished | undefined {
+export type StandingRun = Pick<
+  RunPublished,
+  'run_id' | 'current' | 'sim_time' | 'tick' | 'valid_time' | 'grid_bounds' | 'collections' | 'digests'
+>;
+
+/**
+ * The facts about the standing forecast, without the announcement's envelope.
+ *
+ * Split from the announcement because only one of the two readers publishes. The offload
+ * packager needs the run's id, its forecast collection and its validity window and nothing
+ * else; handed a whole `RunPublished` it had to invent a `component`, and the only value it
+ * has to hand is its own id — a packager claiming to have published a forecast. It never
+ * reached the wire, which is why nothing broke, but a field that is false wherever it is
+ * cheapest to fill in is a field waiting to be logged or forwarded.
+ */
+export function standingRunFacts(store: CoverageStore): StandingRun | undefined {
   const standing = store.currentInstance();
   if (!standing) return undefined;
   const spread = store.holding(`${standing.descriptor.holding_id}-spread`);
@@ -49,10 +59,25 @@ export function standingRunFromStore(
   const grid = standing.descriptor.manifest.grid;
   const start = isoPlusSeconds(grid.time.origin_sim_time, grid.time.start_offset_seconds);
   return {
-    component,
-    scenario_run_id: scenarioRunId,
-    sim_time: simTime.value,
-    tick: simTime.tick,
+    /**
+     * **The instant the run was published, not the instant it is being restated at.**
+     *
+     * A first version dated the restatement at the moment it was said, on the analogy of the
+     * forecast-features restatement, and amended the master to say that nothing reasoning
+     * about the forecast reads this field. Two panels did. The Forecast timeline overwrites a
+     * run's `publishedAtTick` from it and then renders "published at tick N, X tick(s) after
+     * it began" — a run that took its declared 9 ticks was drawn as taking 510. The consumers
+     * frame renders it as "published <instant>" and was out by the distance from the run's
+     * real publication to the console opening, which in a replayed pre-roll is thousands of
+     * ticks.
+     *
+     * The harness had already settled this one file away: `CoverageStore.announce()`
+     * re-announces a standing holding on an operator prompt carrying
+     * `descriptor.published_at.sim_time` — the original instant. A restatement is a statement
+     * about when the run happened, and the run happened when it happened.
+     */
+    sim_time: standing.descriptor.published_at.sim_time,
+    tick: standing.descriptor.published_at.tick,
     // The holding id, not the descriptor's `run_id`. A coverage holding carries both and
     // they are not the same thing: `run_id` on the descriptor is the **scenario** run
     // (`loiter-loitering-pahv`), while the model run this announcement is about is the
@@ -78,4 +103,20 @@ export function standingRunFromStore(
     collections: { forecast: standing.descriptor.holding_id, uncertainty: spread.descriptor.holding_id },
     digests: { forecast: standing.descriptor.field.sha256, uncertainty: spread.descriptor.field.sha256 },
   };
+}
+
+/**
+ * The same facts as the announcement the model runner publishes, for the model runner to
+ * restate. Only the addressing is the restating component's own — `component` and
+ * `scenario_run_id`; the run's instant comes off the descriptor, for the reason recorded
+ * above.
+ */
+export function standingRunFromStore(
+  store: CoverageStore,
+  component: string,
+  scenarioRunId: string,
+): RunPublished | undefined {
+  const facts = standingRunFacts(store);
+  if (!facts) return undefined;
+  return { component, scenario_run_id: scenarioRunId, ...facts };
 }

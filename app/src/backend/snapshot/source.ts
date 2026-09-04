@@ -90,8 +90,8 @@ export class SnapshotSource {
         detail:
           this.total === 0
             ? this.unavailable === undefined
-              ? 'no committed artefact for this start condition; the ocean was authored live'
-              : `the committed artefact was expected and could not be used, so the ocean was authored live instead: ${this.unavailable}`
+              ? 'no committed artefact for this start condition; the ocean and its forecasts were computed live'
+              : `the committed artefact was expected and could not be used, so the ocean and its forecasts were computed live instead: ${this.unavailable}`
             : `${this.published} of ${this.total} holding(s) replayed from the committed artefact` +
               (this.refused.length > 0 ? `; ${this.refused.length} refused by the store` : ''),
         figures:

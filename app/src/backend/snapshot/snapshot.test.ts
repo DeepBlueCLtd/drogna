@@ -187,7 +187,10 @@ describe('the committed seed-data artefacts (feature 120)', () => {
   });
 
   it.each([
-    ['no artefact was expected', undefined, /no committed artefact.*authored live/, 'ok'],
+    // The forecasts, not just the ocean: since feature 125 the artefact carries all four eras,
+    // so a run without one computes the analyses and the forecast instances too. The tour and
+    // the Intro panel send the reader to this node for exactly that statement.
+    ['no artefact was expected', undefined, /no committed artefact.*forecasts were computed live/, 'ok'],
     [
       'one was expected and could not be fetched',
       './snapshots/arriving.snapshot answered 404',
@@ -242,7 +245,22 @@ describe('the committed seed-data artefacts (feature 120)', () => {
       expect(again.holdings.length).toBe(original.holdings.length);
       for (const [index, holding] of again.holdings.entries()) {
         expect(holding.descriptor).toEqual(original.holdings[index].descriptor);
-        expect([...holding.bytes]).toEqual([...original.holdings[index].bytes]);
+        // A typed-array walk, not `expect([...a]).toEqual([...b])`. The spread built two JS
+        // number arrays per holding and handed them to a deep-equality that reports every
+        // element; over the four artefacts' 54.7 MB that took 36.6 s of this file's 60 s
+        // budget on an idle machine and timed out at 65.9 s under load — a CI flake that
+        // arrived with the forecast eras, the artefacts having grown from 9.6 MB decoded.
+        // The same comparison this way is 8.3 s, and it still names the first byte that
+        // differs, which is all a failure needs to say.
+        const mine = holding.bytes;
+        const theirs = original.holdings[index].bytes;
+        expect(mine.byteLength).toBe(theirs.byteLength);
+        let differsAt = -1;
+        for (let i = 0; i < mine.length && differsAt < 0; i += 1) if (mine[i] !== theirs[i]) differsAt = i;
+        expect(
+          differsAt,
+          `'${holding.descriptor.holding_id}' differs at byte ${differsAt}: wrote ${theirs[differsAt]}, read back ${mine[differsAt]}`,
+        ).toBe(-1);
       }
     }
   });

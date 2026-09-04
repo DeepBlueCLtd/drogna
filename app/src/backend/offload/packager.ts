@@ -27,7 +27,7 @@ import type {
   RunPublished,
 } from '../../generated/types.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
-import { standingRunFromStore } from '../lib/standing-run.js';
+import { standingRunFacts, type StandingRun } from '../lib/standing-run.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import type { ObservationStore } from '../observation-store/store.js';
@@ -170,7 +170,7 @@ export class OffloadPackager {
       // So the store is consulted before the ledger is written: what stands is a fact about
       // the inventory, and reading it is the same resumption rule the environment generator
       // and the model runner already follow.
-      const against = this.lastPublished ?? standingRunFromStore(this.coverageStore, this.config.id, this.runId, this.simTime);
+      const against = this.lastPublished ?? standingRunFacts(this.coverageStore);
       if (!against) {
         // Genuinely nothing to stage a bundle OF. Said in the ledger rather than answered
         // with an empty bundle.
@@ -200,7 +200,7 @@ export class OffloadPackager {
    * reader asked. Everything else — the bound, the missing holding, the empty
    * interval — is decided by the rules that were already here.
    */
-  private stage(published: RunPublished, uptoTick: number): void {
+  private stage(published: StandingRun, uptoTick: number): void {
     // Recorded before the bound check below, so a run declined for want of staging room is
     // not staged again by the next announcement of the same run.
     this.stagedForRunId = published.run_id;

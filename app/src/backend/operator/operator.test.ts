@@ -22,6 +22,7 @@ import type {
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
+import type { RunPublished } from '../../generated/types.js';
 
 const validator = createSeamValidator();
 
@@ -66,9 +67,31 @@ describe('the operator view (feature 107)', { timeout: 120_000 }, () => {
       expect(scoredBefore, 'nothing was scored, so there is no ledger to lose').toBeGreaterThan(0);
 
       const statementBefore = runtime.telemetry.lastStatistics;
+      const announcements: RunPublished[] = [];
+      const probe = runtime.transport.connect('restatement-probe', 'shell');
+      probe.subscribe(config.model_runner.topics.run_published, (message) => {
+        announcements.push(message.payload as RunPublished);
+      });
+      const release = runtime.store.currentInstance();
+      expect(release, 'no forecast stands, so there is nothing to restate').toBeDefined();
+
       runtime.control.stop(config.model_runner.id);
       runtime.control.start(config.model_runner.id);
       await driveTicks(runtime.clock, 20);
+
+      // **A restatement equals the release it restates, field for field.** The first version
+      // dated it at the instant it was being said at, and amended the master to say nothing
+      // reasoning about the forecast read that field. Two panels did: the Forecast timeline
+      // computes how long a run took as the distance from its request to this instant and drew
+      // a 9-tick run as a 510-tick one, and the consumers frame renders it as when the basis
+      // was published. Asserting the whole message rather than the field that was wrong,
+      // because the fault was a class and not a typo.
+      expect(announcements.length, 'the standing run was not restated').toBeGreaterThan(0);
+      const restated = announcements.at(-1);
+      expect(restated?.run_id).toBe(release?.descriptor.holding_id);
+      expect(restated?.sim_time).toBe(release?.descriptor.published_at.sim_time);
+      expect(restated?.tick).toBe(release?.descriptor.published_at.tick);
+      expect(validator.validate('run-published', restated).refusals).toEqual([]);
 
       // The staging check belongs here and not after the sweep below: `min_interval_ticks` is
       // 600, so nothing legitimate can have released a run twenty ticks after the restart —

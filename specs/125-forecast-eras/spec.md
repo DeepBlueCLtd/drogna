@@ -96,6 +96,16 @@ backlog's P0 row wanted and is also ~27 MB of git history per change.
   findings into the analysis manifest, so the store can answer for them, or a narrower standing
   message that claims only what the store knows — both are changes to what the analyst records,
   and belong to whoever makes them.
+- **A replayed run stages fewer offload windows than a live one, on every condition that
+  stages at all.** Measured at the console opening: `loitering` 1 against a live 2,
+  `returning` 2 against a live 5. The releases that happened inside the artefact's own run
+  are not re-announced one by one — the restatement says what stands, not what has stood —
+  so the packager's first window is the one after the console opens. That is the honest
+  consequence of restating a run rather than replaying its announcements, and closing it
+  would mean the snapshot source synthesising publications no component made, which is
+  what ADR-0041 forbids. The requirement the test holds is therefore *not zero where the
+  live run staged*, not parity; an earlier draft of this line recorded `returning` alone,
+  which is the record naming one instance of a shape rather than the shape.
 - **The features are not restated with the run.** `forecast_features` is derived per step and
   is not in the store, so the feature surface is empty until the first live run — which is
   what a restarted runner has always done, and is the one part of a resumed run's knowledge

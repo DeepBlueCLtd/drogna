@@ -33,6 +33,7 @@ import { Rng, SEED_DERIVATION, streamSeed } from '../lib/rng.js';
 import { ulpAt } from '../lib/ulp.js';
 import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
+import { publicationFault } from '../coverage-store/store.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import {
   ANALYTIC_FORM_VERSION,
@@ -447,19 +448,9 @@ export class EnvGenerator {
     };
 
     const verdict = this.store.publish({ descriptor, bytes });
-    if (verdict.outcome === 'refused') {
-      // A refusal of the generator's own publication is a fault worth shouting about,
-      // not swallowing: the heartbeat carries it until somebody looks.
-      throw new Error(`coverage store refused the ${era} holding: ${verdict.refusal}`);
-    }
-    if (verdict.outcome === 'superseded') {
-      // Unreachable while this component publishes at the tick it is on, which is never
-      // behind its own era pointer. Said out loud rather than folded into the count,
-      // because folding it into the count is the fault the outcome type was made for.
-      throw new Error(
-        `coverage store superseded the ${era} holding ${holdingId}: it was dated behind this era's own pointer, which means this component authored out of order`,
-      );
-    }
+    // Anything but a write is a fault in this component's own publication, worth shouting
+    // about rather than swallowing: the heartbeat carries it until somebody looks.
+    if (verdict.outcome !== 'written') throw publicationFault(verdict, `the ${era} holding ${holdingId}`);
     this.published += 1;
   }
 

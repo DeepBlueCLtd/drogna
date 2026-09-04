@@ -160,13 +160,26 @@ export class SnapshotSource {
     while (this.pending.length > 0 && this.pending[0].descriptor.published_at.tick <= tick) {
       const staged = this.pending.shift() as StagedHolding;
       const verdict = this.store.publish(staged);
-      // Three outcomes, one counter each. Written as a switch rather than a chain because
-      // both faults this exists to close were an `else` that swept up a case nobody had
-      // named: first a superseded publication counted as replayed, then the same one
-      // reported as a store refusal with no reason to give for it.
-      if (verdict.outcome === 'written') this.published += 1;
-      else if (verdict.outcome === 'superseded') this.superseded += 1;
-      else this.refused.push(`${staged.descriptor.holding_id}: ${verdict.refusal}`);
+      // Three outcomes, one counter each, and a switch rather than a chain ending in `else`:
+      // both faults this exists to close were an `else` sweeping up a case nobody had named
+      // — first a superseded publication counted as replayed, then the same one reported as a
+      // store refusal with no reason to give for it. A fourth outcome would land in no case
+      // here and be counted nowhere, so the compiler is asked instead.
+      switch (verdict.outcome) {
+        case 'written':
+          this.published += 1;
+          break;
+        case 'superseded':
+          this.superseded += 1;
+          break;
+        case 'refused':
+          this.refused.push(`${staged.descriptor.holding_id}: ${verdict.refusal}`);
+          break;
+        default: {
+          const unnamed: never = verdict;
+          throw new Error(`the coverage store returned an outcome this source cannot count: ${JSON.stringify(unnamed)}`);
+        }
+      }
     }
   }
 }

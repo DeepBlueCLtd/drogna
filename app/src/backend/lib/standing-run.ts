@@ -42,16 +42,6 @@ export type StandingRun = Pick<
 >;
 
 /**
- * The facts about the standing forecast, without the announcement's envelope.
- *
- * Split from the announcement because only one of the two readers publishes. The offload
- * packager needs the run's id, its forecast collection and its validity window and nothing
- * else; handed a whole `RunPublished` it had to invent a `component`, and the only value it
- * has to hand is its own id — a packager claiming to have published a forecast. It never
- * reached the wire, which is why nothing broke, but a field that is false wherever it is
- * cheapest to fill in is a field waiting to be logged or forwarded.
- */
-/**
  * How a forecast's spread holding is named from the forecast's own id. One definition, used
  * by the model runner that writes the pair and by the reconstruction below that reads it —
  * it was written out twice, which is a suffix waiting to be changed in one place. Both
@@ -66,28 +56,47 @@ export function spreadHoldingIdFor(forecastHoldingId: string): string {
 }
 
 /**
- * The standing run's identifier, and nothing else. Two map lookups against the eight-field
- * reconstruction below, which parses two instants into BigInt microseconds and assembles a
- * grid, a collection set and a digest pair. Telemetry needs the id alone and asks on **every
- * absorbed residual sample**, so it asks here — a feature whose whole subject is compute at
- * the boundary should not put an announcement's worth of work on a per-sample path.
- *
- * The same standing-run rule as the full reconstruction, deliberately: a forecast without its
- * spread is half a publication and names no run, which is why the sibling is looked up rather
- * than assumed.
+ * **What "a run stands" means, in one place.** A forecast the store's `instance` pointer
+ * names, and the spread that travels with it: a pair a run always publishes together, so a
+ * forecast without its sibling means the store is mid-publication rather than standing on
+ * something. Both readers below apply this rule, and they must not be able to disagree about
+ * it — a first version wrote it out twice, and telemetry scoring a run the packager declines
+ * to stage over is what that costs.
  */
-export function standingRunId(store: CoverageStore): string | undefined {
-  const standing = store.currentInstance();
-  if (!standing) return undefined;
-  if (!store.holding(spreadHoldingIdFor(standing.descriptor.holding_id))) return undefined;
-  return standing.descriptor.holding_id;
-}
-
-export function standingRunFacts(store: CoverageStore): StandingRun | undefined {
+function standingPair(store: CoverageStore) {
   const standing = store.currentInstance();
   if (!standing) return undefined;
   const spread = store.holding(spreadHoldingIdFor(standing.descriptor.holding_id));
   if (!spread) return undefined;
+  return { standing, spread };
+}
+
+/**
+ * The standing run's identifier, and nothing else — the whole of what telemetry's ledger
+ * asks, on every absorbed residual sample. Separate from the reconstruction below only to
+ * skip building an announcement nobody reads: measured at ~3 µs a call against ~0.1 µs, over
+ * roughly 2,000 samples in `returning`'s pre-roll, so **≈6 ms of a 2,200–2,500 ms boot** —
+ * 0.3% of the win this feature exists for, which is worth having and is not worth a second
+ * copy of the rule. Hence `standingPair`.
+ */
+export function standingRunId(store: CoverageStore): string | undefined {
+  return standingPair(store)?.standing.descriptor.holding_id;
+}
+
+/**
+ * The facts about the standing forecast, without the announcement's envelope.
+ *
+ * Split from the announcement because only one of the two readers publishes. The offload
+ * packager needs the run's id, its forecast collection and its validity window and nothing
+ * else; handed a whole `RunPublished` it had to invent a `component`, and the only value it
+ * has to hand is its own id — a packager claiming to have published a forecast. It never
+ * reached the wire, which is why nothing broke, but a field that is false wherever it is
+ * cheapest to fill in is a field waiting to be logged or forwarded.
+ */
+export function standingRunFacts(store: CoverageStore): StandingRun | undefined {
+  const pair = standingPair(store);
+  if (!pair) return undefined;
+  const { standing, spread } = pair;
   const grid = standing.descriptor.manifest.grid;
   const start = isoPlusSeconds(grid.time.origin_sim_time, grid.time.start_offset_seconds);
   return {

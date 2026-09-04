@@ -35,6 +35,7 @@ import { spreadHoldingIdFor, standingRunFacts } from '../lib/standing-run.js';
 import { isoPlusSeconds } from '../lib/sim-time.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE, insideSoundSpeedValidity } from '../env-generator/analytic.js';
+import { publicationFault } from '../coverage-store/store.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import { shallowTwoLayerKernel, shiftAdvectKernel, type KernelParameters, type ModelKernel } from './kernel.js';
 import { carryFeatures, estimateFeatures, type FeatureGrid } from './features.js';
@@ -790,16 +791,7 @@ export class ModelRunner {
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
-    if (verdict.outcome === 'refused') {
-      throw new Error(`coverage store refused instance ${holdingId}: ${verdict.refusal}`);
-    }
-    if (verdict.outcome === 'superseded') {
-      // Unreachable while this component publishes at its own tick; named rather than
-      // swept into the success branch, which is the fault the outcome type was made for.
-      throw new Error(
-        `coverage store superseded instance ${holdingId}: it was dated behind the instance pointer, which means this component authored out of order`,
-      );
-    }
+    if (verdict.outcome !== 'written') throw publicationFault(verdict, `instance ${holdingId}`);
     return digest;
   }
 

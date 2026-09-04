@@ -39,6 +39,7 @@ import type {
 import { configDigest, sha256Hex } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { KM_PER_DEGREE_LATITUDE } from '../env-generator/analytic.js';
+import { publicationFault } from '../coverage-store/store.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import { CONTRIBUTIONS_FORMAT, encodeContributions } from '../lib/contributions-format.js';
 import { F32_FORMAT } from '../lib/holding-format.js';
@@ -535,12 +536,7 @@ export class Analyst {
       manifest,
     };
     const verdict = this.store.publish({ descriptor, bytes });
-    if (verdict.outcome === 'refused') throw new Error(`coverage store refused ${holdingId}: ${verdict.refusal}`);
-    // The analysis era carries no pointer, so nothing here can rewind one; the branch is
-    // named anyway, because a silent third case is what this type exists to prevent.
-    if (verdict.outcome === 'superseded') {
-      throw new Error(`coverage store superseded ${holdingId}: it was dated behind its era's pointer`);
-    }
+    if (verdict.outcome !== 'written') throw publicationFault(verdict, holdingId);
     return digest;
   }
 }

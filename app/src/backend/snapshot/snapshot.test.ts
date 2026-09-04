@@ -74,10 +74,14 @@ function freshStore(runId: string) {
 }
 
 /**
- * How many of an artefact's own holdings a restart cannot write back, read off the artefact
- * rather than typed in or taken from the store. Only two eras carry a pointer, and a
- * publication is declined exactly when its era's pointer already names a *different* holding
- * published at a *later* tick — so within an era, everything behind that era's last tick.
+ * How many of an artefact's own holdings a restart cannot write back. The *count* is read off
+ * the artefact — a publication is declined exactly when its era's pointer already names a
+ * different holding published at a later tick, so within a pointed era it is everything
+ * behind that era's last tick. The *set of pointed eras* is not: it is written out below and
+ * must match the three pointer branches in `CoverageStore.publish`. Said plainly rather than
+ * claimed derived, because the two are not the same kind of number — though the failure
+ * direction is the safe one, since a new pointed era makes this expect too few and the test
+ * fails rather than passes.
  *
  * `leaving` yields zero by this rule and by the store's, because its one now-cast and its one
  * forecast pair are the last of their eras; a bare `> 0` would have had to exempt it, and an

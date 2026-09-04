@@ -37,7 +37,8 @@ export interface StagedHolding {
  * excluded from that counter, fell into the `else` and was reported as a store refusal —
  * with no reason, because it carries none. Both were on the snapshot source's face, which is
  * the node the Intro panel sends a reader to. A caller must now say which of the three it
- * means, and the compiler asks it to.
+ * means; `publicationFault` below is what makes the compiler ask, for the callers that treat
+ * anything but a write as a fault.
  */
 export type PublicationVerdict =
   /** Written: the holding is in the inventory and its era's pointer names what it should. */
@@ -50,6 +51,32 @@ export type PublicationVerdict =
   | { readonly outcome: 'superseded' }
   /** Refused, with the mismatch named. */
   | { readonly outcome: 'refused'; readonly refusal: string };
+
+/**
+ * The message for an outcome that is not a write, for a component publishing its own work.
+ *
+ * Exhaustive by construction rather than by comment: the parameter is *every* outcome except
+ * `written`, so a fourth member added to the union widens it and the switch below stops
+ * compiling. That is the guard the type was introduced for — the two faults it closes were
+ * both a case nobody had named being swept into a branch that meant something else, and an
+ * `if (outcome === 'refused')` chain would let a fourth one through in silence.
+ */
+export function publicationFault(
+  verdict: Exclude<PublicationVerdict, { outcome: 'written' }>,
+  what: string,
+): Error {
+  switch (verdict.outcome) {
+    case 'refused':
+      return new Error(`coverage store refused ${what}: ${verdict.refusal}`);
+    case 'superseded':
+      // Unreachable while a component publishes at the tick it is on, which is never behind
+      // its own era pointer. Raised rather than folded into success, because folding an
+      // unreachable case into success is what this type exists to prevent.
+      return new Error(
+        `coverage store superseded ${what}: it was dated behind its era's own pointer, which means this component authored out of order`,
+      );
+  }
+}
 
 export class CoverageStore {
   private readonly holdingsById = new Map<string, { descriptor: CoverageHolding; bytes: Uint8Array }>();

@@ -254,6 +254,40 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       spread names no run. A feature whose subject is compute at the boundary should not put
       an announcement's worth of work on a per-sample path.
 
+- [x] **T073** `standingRunId` was a second copy of the standing-run rule, and its
+      justification was a performance claim with no measurement behind it — which is the
+      shape this repository refuses in tests and should refuse in prose. Measured: ~3 µs a
+      call against ~0.1 µs, ~2,000 samples in `returning`'s pre-roll, so ≈6 ms of a
+      2,200–2,500 ms boot — 0.3% of the win it was invoked in the name of. Worth having, not
+      worth a second copy: both readers now go through one `standingPair`, and the comment
+      carries the measured number instead of the rhetoric.
+
+- [x] **T074** Two comments described machinery the code did not have. `PublicationVerdict`
+      claimed the compiler asks a caller to name the outcome — it did not, at three of four
+      call sites, all if-chains that would take a fourth outcome as success. `publicationFault`
+      takes `Exclude<PublicationVerdict, { outcome: 'written' }>` and switches over it, so a
+      fourth member stops the build; the snapshot source is a real switch with a `never`
+      default, as its own comment already claimed. Planted a fourth outcome: the build fails
+      in both places.
+
+- [x] **T075** The spread-before-forecast publication order was called "a fact about `emit`,
+      not a coincidence to rely on", and nothing in the tree made it a fact. The pair shares
+      an era and a tick, so the pointer settles on whichever is written second; reversed, the
+      sibling lookup asks for `…-spread-spread` and every consumer of the standing run
+      reverts to pre-125 behaviour in silence. Asserted now in `loop.test.ts`, and watched
+      failing by swapping the two calls — it fails by name rather than downstream in a skill
+      assertion.
+
+- [x] **T076** The plan had no Constitution Check section, which governance requires and
+      three of the four other V2 plans carry. Written, and not as a formality: this change
+      amends five masters, moves three faces, grows the committed artefacts sixteen-fold, and
+      leaves one Principle VII edge knowingly open.
+
+- [x] **T077** `expectedSuperseded`'s comment claimed the whole expectation was read off the
+      artefact. The count is; the set of pointed eras is written out and must match the
+      store's three pointer branches. Said plainly, with the note that the failure direction
+      is the safe one.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and
@@ -279,3 +313,19 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
 - [ ] **T034** A blog entry. No new face in the shell and no new backend simulation to watch
       work (D17) — this moves existing components' output into the artefacts and fixes a
       scheduler fault.
+- [ ] **T079** Verify whether a snapshot-backed visit still authors one now-cast at tick 0
+      and throws it away. A pass reasoned that the rate pin republishes tick 0 before leg 1's
+      stop commands, at which point the env-generator sees the replayed archive but no
+      now-cast — the artefact carrying only the last one — and so authors a full field the
+      artefact's later now-cast then supersedes. It could not close the loop from the era-tick
+      tables, and neither could this: both paths end with one now-cast at the same tick.
+      Pre-existing from feature 120 if real, and small against a 2.2 s boot, but it is an
+      open question rather than a settled one.
+- [ ] **T078** Rewrite the branch's commit subjects to the title rule. Both adversarial
+      passes counted them: nine of nineteen run over ~72 characters, and three carry the
+      narrative form the table in CLAUDE.md refuses — "a boolean that lies", "the quiet was
+      not a stall", "so a replayed run knows what it holds". The rule is right and the
+      subjects break it. Not fixed, because the fix is a nineteen-commit rewrite of pushed
+      history whose only product is shorter index entries, and the record those commits carry
+      is worth more than the form. The pull request title obeys the rule; this line is the
+      admission rather than a claim that the miss did not happen.

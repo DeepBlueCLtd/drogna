@@ -138,6 +138,26 @@ describe('the volume (feature 124, FR-120)', () => {
     expect(screen.getByTestId('forecast-volume-state').textContent).toMatch(/carried no sound_speed to draw/);
   });
 
+  it('says there is no thermocline to place, rather than calling an empty surface level', async () => {
+    // A column that warms with depth has no thermocline, and `thermoclineIn` declines it. With
+    // every column declining, `coreSpanM` is 0 and the level branch's test (`0 <= spacing`) is
+    // true — so the caption read "0 of 4 columns have one, over 0 distinct depths — so it is
+    // level to within one 40 m level", which is a statement about a field it placed nothing in.
+    const WARMING: Record<number, number[]> = { 0: [4, 4, 4, 4], 40: [6, 6, 6, 6], 80: [8, 8, 8, 8], 120: [10, 10, 10, 10] };
+    vi.stubGlobal('fetch', async (url: string) => {
+      const depthM = Number(new URL(url, 'http://x').searchParams.get('z'));
+      const body = coverage(depthM, ['temperature']) as { ranges: Record<string, { values: number[] }> };
+      body.ranges.temperature.values = WARMING[depthM];
+      return new Response(JSON.stringify(body), { status: 200 });
+    });
+    render(<Volume {...props} />);
+    await settle();
+    const caption = screen.getByTestId('forecast-volume-caption').textContent ?? '';
+    expect(caption).toContain('0 of 4 columns');
+    expect(caption).toMatch(/no thermocline to place/);
+    expect(caption, 'an empty surface was captioned as a level one').not.toMatch(/level to within/);
+  });
+
   it('captions the surface with the count and level its own input implies', async () => {
     vi.stubGlobal('fetch', async (url: string) => {
       const depthM = Number(new URL(url, 'http://x').searchParams.get('z'));

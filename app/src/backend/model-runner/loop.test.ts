@@ -11,7 +11,7 @@ import type { ConfigRun, Divergence, RunPublished, RunRequest } from '../../gene
 import { createSeamValidator } from '../../seam/validate.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
 import { buildBackend, type BackendRuntime } from '../runtime/runtime.js';
-import { SOUND_SPEED } from '../env-generator/analytic.js';
+import { SOUND_SPEED } from '../../seam/ocean-relations.js';
 
 const validator = createSeamValidator();
 

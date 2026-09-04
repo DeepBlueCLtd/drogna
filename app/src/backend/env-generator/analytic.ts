@@ -336,16 +336,16 @@ export function tauAt(
   return tau.background_seconds * (1 - bestWeight) + bestTau * bestWeight;
 }
 
-// **Pressure and sound speed moved to `app/src/seam/ocean-relations.ts`** and are re-exported
-// here so every existing caller keeps working. They are declared relations rather than the
-// analytic ocean — functions of three numbers that read no field — and a manifest points a
-// client at the implementation, so it has to be reachable from both sides of the seam.
-// ADR-0005's "single implementation in drogna" is what the move preserves: feature 124's volume
-// needs sound speed from served temperature and salinity, and the alternative was a second copy.
-export {
-  PRESSURE_RELATION,
-  SOUND_SPEED,
-  insideSoundSpeedValidity,
-  pressureDbar,
-  soundSpeedMs,
-} from '../../seam/ocean-relations.js';
+// **Pressure and sound speed live in `app/src/seam/ocean-relations.ts`.** They are declared
+// relations rather than the analytic ocean — functions of three numbers that read no field — and
+// a manifest points a client at the implementation, so it has to be reachable from both sides of
+// the seam. ADR-0005's "single implementation in drogna" is what the move preserves: feature 124's
+// volume needs sound speed from served temperature and salinity, and the alternative was a second
+// copy.
+//
+// They were re-exported from here for a while, so the eight backend call sites would not have to
+// change. That cost the move most of its point: every consumer still read `from
+// '../env-generator/analytic.js'`, so a reader of `monitor.ts` or `sensors.ts` saw the relation
+// attributed to the analytic-ocean module that the file above says it is not, and `grep
+// ocean-relations` found no backend consumer of a relation the whole backend uses. Eight one-line
+// edits buy a tree where the owner is visible at the point of use, which is what the move was for.

@@ -604,6 +604,38 @@ export function ColumnProvenance({
     const rows = inY.filter((_, at) => at % stepY === 0);
     return { cols, rows };
   }, [slab, view.rect]);
+  /**
+   * The drawn cell a position falls in, or `undefined` where it falls outside the window the
+   * map is currently showing. Half a step of tolerance at each edge, so a click on the
+   * outermost cell's outer half is that cell rather than nothing.
+   */
+  const cursorAt = useCallback(
+    (longitude: number, latitude: number): { row: number; col: number } | undefined => {
+      if (!slab || !drawn) return undefined;
+      const nearest = (values: readonly number[], indices: readonly number[], value: number) => {
+        let best = -1;
+        let closest = Infinity;
+        indices.forEach((source, at) => {
+          const distance = Math.abs((values[source] ?? Number.NaN) - value);
+          if (distance < closest) {
+            closest = distance;
+            best = at;
+          }
+        });
+        // The drawn step, which is the spacing after thinning rather than the field's own.
+        const step =
+          indices.length > 1
+            ? Math.abs((values[indices[1]] ?? 0) - (values[indices[0]] ?? 0))
+            : Number.POSITIVE_INFINITY;
+        return best >= 0 && closest <= step / 2 ? best : undefined;
+      };
+      const col = nearest(slab.longitudes, drawn.cols, longitude);
+      const row = nearest(slab.latitudes, drawn.rows, latitude);
+      return col === undefined || row === undefined ? undefined : { row, col };
+    },
+    [slab, drawn],
+  );
+
 
   /**
    * **North is up.** The served latitude axis *ascends* — `min + i * spacing` over ascending
@@ -758,13 +790,20 @@ export function ColumnProvenance({
 
   // What is still feature 124's is a fact about the region, not about whether an analysis has
   // landed, so it is said on both branches.
+  //
+  // **Which is why it names the volume's control rather than describing the volume.** It said
+  // "the volume below it … captioned there with the depths it found", present tense, on both
+  // branches — including the one that renders when no analysis has been announced, where the
+  // reader is told there is no provenance to read and then given a description of a map, a
+  // surface and a caption that are not on the page. The sentence before it named an absence and
+  // was safe anywhere; a sentence describing a drawing is not, and the comment above was written
+  // for the first kind and not revisited when it became the second.
   const stillToCome = (
     <p className="forecast-column-basis">
-      The map here is a <strong>plan at one depth</strong>; the{' '}
-      <strong>semi-transparent volume</strong> below it is the setting that plan is a section
-      through, with the <strong>thermocline drawn as a surface</strong> — placed per column rather
-      than at the one depth the run publishes, and captioned there with the depths it found and how
-      level the field is. What is <strong>not built</strong> is the
+      The map here is a <strong>plan at one depth</strong>, and the{' '}
+      <strong>semi-transparent volume</strong> the chip above opens is the setting it is a section
+      through, with the <strong>thermocline drawn as a surface</strong>. What is{' '}
+      <strong>not built</strong> is the
       last of <strong>feature 124</strong>: the forecast’s own features — the eddy, the front, the
       drifting one — carried <em>with depth</em> through that volume. They are drawn in plan today
       in the region to the right, and what is missing is the dimension rather than the figure.
@@ -1368,7 +1407,26 @@ export function ColumnProvenance({
           // both say the volume must not be a second selection, and this is what that means in
           // code — one `readColumn`, one `column`, two drawings of them.
           column={column}
-          onPickColumn={(longitude, latitude) => void readColumn(longitude, latitude)}
+          onPickColumn={(longitude, latitude) => {
+            /*
+             * **The cursor moves with the column, or the two regions disagree about which one
+             * is open.** `Volume.tsx`'s header states the invariant — "a reader who picks in
+             * one and looks at the other must not find two different columns open" — and this
+             * was the one path into `column` that did not keep it: the share map's highlight
+             * and its readout are `cursor`-only, and clicking a square in the volume moved the
+             * rays, the profile, the numbers and the volume's own marker while leaving the
+             * square the reader picked *before* still lit, with its latitude and longitude
+             * printed underneath. Every other route sets it — a click through `onMouseEnter`,
+             * a keyboard Enter through the cursor itself — and this one had no reason not to.
+             *
+             * Outside the drawn window the cursor is cleared rather than snapped to the
+             * nearest edge: a snap would light a square the reader did not choose, which is
+             * the same fault one cell wide instead of a hundred kilometres.
+             */
+            const at = cursorAt(longitude, latitude);
+            setCursor(at);
+            void readColumn(longitude, latitude);
+          }}
         />
       )}
 

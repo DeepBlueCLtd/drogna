@@ -1122,6 +1122,15 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
       if (!map) throw new Error('unreachable');
       const before = document.querySelectorAll('rect.share-cell').length;
       expect(before).toBeGreaterThan(0);
+      // Captured while the whole field is drawn, so the zoomed span below has something real to
+      // be narrower than.
+      const spanBeforeZoom = (() => {
+        const lons = [...document.querySelectorAll('rect.share-cell')]
+          .map((cell) => Number(cell.getAttribute('data-lon')))
+          .filter((lon) => Number.isFinite(lon));
+        return Math.max(...lons) - Math.min(...lons);
+      })();
+      expect(spanBeforeZoom).toBeGreaterThan(0);
       expect(map.getAttribute('aria-label')).toMatch(/over the whole field/);
       expect(screen.queryByTestId('forecast-view-note'), 'a note before anything moved').toBeNull();
 
@@ -1145,19 +1154,40 @@ describe('the Forecast tab (feature 123)', { timeout: 240_000 }, () => {
         /Magnified.*of the field\u2019s \d+\u00d7\d+ cells at full resolution/s,
       );
 
-      // The cells drawn are the ones in view: at the shipped grid the whole field is thinned by
-      // two, so a window over part of it is drawn at a finer step than the whole ever was.
-      const zoomed = [...document.querySelectorAll('rect.share-cell')].map((cell) => ({
-        lon: Number(cell.getAttribute('data-lon')),
-        lat: Number(cell.getAttribute('data-lat')),
-      }));
+      /*
+       * **The cells drawn are the ones in view, so the window is narrower than the field.**
+       *
+       * This comment used to say the field is "thinned by two, so a window is drawn at a finer
+       * step than the whole ever was", which was true at 96 x 80 against a 48-cell ceiling and
+       * is not true at head: #113 spent the horizontal on depth and the field is 48 wide, so it
+       * is drawn whole and zooming yields bigger squares rather than more of them. The window
+       * ordering is unchanged and correct — it is what makes that a fact about the configuration
+       * — but the property this test can still hold is the one below.
+       *
+       * Two assertions went with the comment. `const spanBefore = 1; expect(spanBefore).toBe(1)`
+       * compared a literal with itself, and `finest > 0` measured the smallest gap between
+       * *distinct sorted* values, which is positive by construction. Both were true of every
+       * possible run. What is actually at stake when the map is magnified is that fewer columns
+       * are drawn than the field holds, and that they are the ones inside the view.
+       */
+      const cellsOf = () =>
+        [...document.querySelectorAll('rect.share-cell')].map((cell) => ({
+          lon: Number(cell.getAttribute('data-lon')),
+          lat: Number(cell.getAttribute('data-lat')),
+        }));
+      const spanOf = (cells: { lon: number }[]) => {
+        const lons = cells.map((c) => c.lon).filter((lon) => Number.isFinite(lon));
+        return lons.length > 1 ? Math.max(...lons) - Math.min(...lons) : 0;
+      };
+      const zoomed = cellsOf();
       expect(zoomed.length).toBeGreaterThan(0);
-      const spanBefore = 1;
-      const lons = [...new Set(zoomed.map((c) => c.lon))].sort((a, b) => a - b);
-      expect(lons.length, 'a zoomed map with one column of cells').toBeGreaterThan(1);
-      const finest = Math.min(...lons.slice(1).map((lon, at) => lon - lons[at]));
-      expect(finest, 'the zoomed step is not finer than a whole cell').toBeGreaterThan(0);
-      expect(spanBefore).toBe(1);
+      expect(new Set(zoomed.map((c) => c.lon)).size, 'a zoomed map with one column of cells').toBeGreaterThan(1);
+      // The comparison is against the *unzoomed* state captured before `+`, which is the only
+      // thing here that makes it a claim: a window covers less of the domain than the whole.
+      expect(
+        spanOf(zoomed),
+        'magnified, the map still spans as much longitude as it did over the whole field',
+      ).toBeLessThan(spanBeforeZoom);
 
       // Home puts it back, and the note goes with it.
       await act(async () => {

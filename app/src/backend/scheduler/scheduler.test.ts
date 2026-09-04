@@ -23,7 +23,7 @@ import { Scheduler } from './scheduler.js';
 import { twoLayerStability } from '../model-runner/kernel.js';
 import type { SeamClient, SeamMessage } from '../../seam/transport.js';
 import { driveTicks, driveUntil } from '../test-support/drive.js';
-import { SOUND_SPEED } from '../env-generator/analytic.js';
+import { SOUND_SPEED } from '../../seam/ocean-relations.js';
 
 const validator = createSeamValidator();
 

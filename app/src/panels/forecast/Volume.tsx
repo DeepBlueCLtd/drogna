@@ -471,9 +471,11 @@ export function Volume({
             {relief.placed} of {surface.length} columns have one, over {relief.distinct} distinct
             depth{relief.distinct === 1 ? '' : 's'}
           </strong>
-          {relief.coreSpanM <= relief.spacingM
-            ? ` — so it is level to within one ${relief.spacingM} m level across most of the field. What this shows is where each column's strongest gradient sits, which is a sonar question whatever its shape; where a column differs from its neighbours this cannot say whether a feature moved the layer there or the analysis is simply less sure of that column.`
-            : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. The layer is level across most of the field and displaced where a feature acts on it: a warm one presses it down beneath itself, a cool one lets it rise. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
+          {relief.placed === 0
+            ? '. No column in this field falls with depth anywhere, so there is no thermocline to place — which is a different fact from one at depth nought, and is why none is drawn rather than a surface at the top of the box.'
+            : relief.coreSpanM <= relief.spacingM
+              ? ` — so it is level to within one ${relief.spacingM} m level across most of the field. What this shows is where each column's strongest gradient sits, which is a sonar question whatever its shape; where a column differs from its neighbours this cannot say whether a feature moved the layer there or the analysis is simply less sure of that column.`
+              : `, ${Math.round(relief.modalShare * 100)}% of them at ${relief.modalDepthM} m and ${relief.coreCount} depth${relief.coreCount === 1 ? '' : 's'} holding ${Math.round(relief.coreShare * 100)}% within ${relief.coreSpanM} m. The layer is level across most of the field and displaced where a feature acts on it: a warm one presses it down beneath itself, a cool one lets it rise. Columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
         </p>
       )}
     </div>

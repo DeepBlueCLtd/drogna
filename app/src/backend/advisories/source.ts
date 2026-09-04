@@ -16,7 +16,8 @@ import { Rng } from '../lib/rng.js';
 import { configDigest } from '../lib/sha256.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
 import { isoPlusSeconds } from '../lib/sim-time.js';
-import { backgroundTemperature, backgroundSalinity, soundSpeedMs } from '../env-generator/analytic.js';
+import { backgroundTemperature, backgroundSalinity } from '../env-generator/analytic.js';
+import { soundSpeedMs } from '../../seam/ocean-relations.js';
 import type { EnvGenerator } from '../env-generator/generator.js';
 import type { FeatureStore } from '../feature-store/store.js';
 

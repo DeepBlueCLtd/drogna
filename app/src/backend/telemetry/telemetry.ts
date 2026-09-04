@@ -34,7 +34,7 @@ import type {
 import { configDigest } from '../lib/sha256.js';
 import { standingRunId } from '../lib/standing-run.js';
 import { HeartbeatEmitter } from '../lib/heartbeat.js';
-import { soundSpeedMs } from '../env-generator/analytic.js';
+import { soundSpeedMs } from '../../seam/ocean-relations.js';
 import { sampleHolding, timeAxisPosixOrigin } from '../query/field-sampler.js';
 import type { CoverageStore } from '../coverage-store/store.js';
 import type { Router } from '../runtime/router.js';

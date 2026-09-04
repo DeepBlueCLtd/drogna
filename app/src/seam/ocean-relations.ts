@@ -17,6 +17,11 @@
  * about the arithmetic changed in the move, and `ocean-relations.test.ts` holds the coefficients
  * against the values the previous implementation produced.
  *
+ * Every consumer imports from here. `analytic.ts` re-exported these for a while so the backend's
+ * call sites would not have to change, and that made the move invisible exactly where it matters
+ * — a reader of `monitor.ts` saw the relation attributed to the analytic ocean. The eight edits
+ * were cheaper than the misattribution.
+ *
  * **These are relations, not the ocean.** Nothing here reads a field, a holding or a manifest, and
  * nothing here knows what the true ocean is: they are functions of three numbers. The analytic
  * true ocean stays in `backend/env-generator/analytic.ts`, where a front's shape and an eddy's

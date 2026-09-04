@@ -239,8 +239,11 @@ published today.
       unchanged and the panel derives sound speed per cell from the temperature and salinity it
       already queries. The ripple the note predicted was real and is the record of it: the
       implementation path is a string in every manifest, so all four snapshots regenerated — read
-      rather than trusted, and the only differences were that path, its length prefix and the
-      code revision, with none of the 2,382 field digests moved. `sound_speed` is the control's
+      rather than trusted, and *for that commit alone* the only differences were that path, its
+      length prefix and the code revision, with none of the 2,382 field digests moved. (Analytic
+      form 2 landed two commits later and moved every field; ADR-0044 has that. The figure here
+      is about the seam move, which is what makes it worth having: a move that touches every
+      manifest and no field.) `sound_speed` is the control's
       first entry and its default.
 
 ## The rays
@@ -1463,6 +1466,13 @@ the part worth recording, because each was a sentence asserting a property the c
       the thing that moves; `pnpm capture:motion`.
       *Built:* `site/docs/blog/posts/the-weights-were-there-and-thrown-away.md`, with the
       capture and its provenance beside it.
+
+      *And a second entry, which the rule asks for and this line did not anticipate.*
+      `the-drawing-was-honest-and-the-ocean-was-flat.md` carries the volume: a new face in the
+      shell, which `CLAUDE.md` counts one entry per rather than one per feature. It is also the
+      entry for what the volume's honesty found — analytic form 2 and issue #113 — which is the
+      part a reader outside the project would recognise. Recorded here so a reader checking this
+      task against the tree finds two entries where the line named one, and knows why.
 
       **Captured still rather than moving — and the reason first written here was wrong about a
       file in this repository.** It said `capture:motion` "drives the clock and films what the

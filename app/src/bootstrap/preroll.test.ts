@@ -347,9 +347,12 @@ describe('the start conditions (feature 120)', () => {
    * a run in flight that stayed in flight, and 5,400 further ticks produced not one analysis
    * and not one forecast.
    *
-   * Driven against a real artefact built the way `pnpm snapshots` builds one, because an
-   * artefact assembled by the test would prove the test's idea of a snapshot and not the
-   * shipped one.
+   * The artefact is assembled here rather than by calling `buildSnapshot`, which lives in
+   * `scripts/` and is not on this side of the app's build. So the staging — filter by era,
+   * sort by publication tick, the header's six fields — is a copy, and a copy can drift from
+   * what `pnpm snapshots` ships. It has not, and `check-snapshot-drift` is what holds the
+   * shipped artefacts to the components; but a reader should know this proves the shape this
+   * file builds, and an earlier version of this comment claimed the opposite.
    */
   it('a run backed by the forecast eras opens like a live one, and keeps turning', async () => {
     const condition = config.start_conditions.conditions.find((candidate) => candidate.id === 'loitering');

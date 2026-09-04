@@ -184,7 +184,7 @@ four eras. The artefacts go from 1.73 MB to 27.7 MB across the four.
 That is a much worse ratio than the ocean's 45%-for-4%, and it is worth being plain that it
 is a *conditional* win rather than a free one. The saving is compute and scales with how
 slow the reader's machine is; the cost is bytes and does not. On the machine this was
-measured on, `returning`'s 11.1 MB is roughly a wash against the seconds it saves at 25
+measured on, `returning`'s 11.29 MB is roughly a wash against the seconds it saves at 25
 Mbps. On the machine that reported twenty seconds it is not close. The harness is a thing
 people are shown, usually on a good connection and not always on a fast laptop, so the
 trade is taken — with the ratio recorded here so that a future reader who has better

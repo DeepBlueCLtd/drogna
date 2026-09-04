@@ -620,9 +620,20 @@ describe('affording a run (feature 123, FR-115)', { timeout: 240_000 }, () => {
     await driveUntil(runtime.clock, () => seen.started.length >= 2, config.scheduler.max_interval_ticks * 6);
     expect(seen.started.length, 'the loop never reached a second run').toBeGreaterThanOrEqual(2);
 
-    /** Every holding as id -> field digest, so a replacement in place is visible. */
+    /**
+     * Every holding a run identifier names, as id -> field digest, so a replacement in place
+     * is visible. Filtered to the eras the identifier rule governs: the store prunes a
+     * superseded now-cast by design, and an unfiltered inventory would report that as a
+     * holding "lost" the moment this test's drive crossed a now-cast cadence boundary —
+     * failing with a message about a reissued identifier that would not be true.
+     */
     const inventory = () =>
-      new Map(runtime.store.holdings().map((holding) => [holding.holding_id, holding.field.sha256]));
+      new Map(
+        runtime.store
+          .holdings()
+          .filter((holding) => holding.era === 'analysis' || holding.era === 'instance')
+          .map((holding) => [holding.holding_id, holding.field.sha256]),
+      );
     const before = inventory();
     expect(before.size, 'nothing was in the store to be overwritten').toBeGreaterThan(0);
 

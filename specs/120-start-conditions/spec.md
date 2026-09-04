@@ -146,8 +146,11 @@ suite can fail rather than a description of a file somebody wrote.
   configuration. Each is named.
 - **FR-18** Which eras are committed is **configuration**. The shipped value was the ocean —
   archive and now-cast — with the forecast eras guarded by a test rather than merely unset.
-  Feature 125 declared all four; the guard is retired and the reason it was wrong is in
-  ADR-0041's amendment.
+  Feature 125 declared all four. The guard is not retired but **inverted**: the test that
+  refused the forecast eras now requires every condition to declare every era the snapshot
+  source names an author for, so narrowing the cut point is still a configuration edit and is
+  now also a test edit, which is where the reason for one goes. The reason the original
+  refusal was wrong is in ADR-0041's amendment.
 - **FR-13** The scenario gains a **quay approaches** reference area, so "leaving quay-side"
   and "returning to quay-side" name a place on the map rather than a figure of speech. It is
   reference geometry like the domain and the loiter region, provisioned from configuration

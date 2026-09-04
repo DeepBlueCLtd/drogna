@@ -22,19 +22,33 @@ feature 124's file is not yet on `main` all die with that merge. (Feature 124 st
 
 | | |
 |---:|---|
-| 70 | Unticked lines in `specs/1NN-*/tasks.md` at `3ad5212`, where this triage began |
-| −5 | **Discharged on this branch** — the whole of P1, below |
-| **65** | Unticked now |
-| −37 | Feature 123, the forward step — complete on PR #107 |
-| −1 | The forecast eras in the artefacts — closed by feature 125 |
-| −20 | Declined or deliberately not done, each carrying its reason in the line |
-| **7** | **Work**, below — of which one is not a developer's to action |
+| **59** | Unticked lines in `specs/1NN-*/tasks.md`, retaken at feature 125 |
+| 28 | `specs/124-forecast-illustration/tasks.md` |
+| 6 | `specs/113-operator-flowchart/tasks.md` |
+| 4 | `specs/125-forecast-eras/tasks.md` |
+| 3 | `specs/101-foundations-shell/tasks.md` |
+| 3 | `specs/111-background-tab/tasks.md` |
+| 3 | `specs/122-operator-actions/tasks.md` |
+| 2 | `specs/106-uncertainty-planning/tasks.md` |
+| 2 | `specs/110-walkthrough/tasks.md` |
+| 2 | `specs/120-start-conditions/tasks.md` |
+| 1 | `specs/102-synthetic-ocean/tasks.md` |
+| 1 | `specs/103-sensing/tasks.md` |
+| 1 | `specs/104-query-seam/tasks.md` |
+| 1 | `specs/105-forecast-loop/tasks.md` |
+| 1 | `specs/108-advisories/tasks.md` |
+| 1 | `specs/114-operator-controls/tasks.md` |
 
-**This table no longer reproduces from the tree, and one edited row does not make it current.**
-It was taken at `3ad5212`; #107 has merged and feature 124 has landed since, so the document's
-own `grep` gives 59 unticked lines rather than 65, and feature 125's four declined lines are in
-neither bucket. The `−1` above is honest about one row and says nothing about the rest. Retake
-the whole count before leaning on it — the tree is the authority and this is a claim about it.
+**Retaken from the tree rather than patched.** The previous table derived a bolded total from
+figures measured at `3ad5212` — 70 unticked, less 5 discharged, less 37 for feature 123, less
+20 declined — and feature 125 first edited one row of it and changed the total, which left a
+number that reproduced from nothing while a paragraph beside it explained that the number was
+wrong. The document's own recipe gives 59, and the rows above are what it gives, per file.
+What is *not* retaken is the split between work and declined: that is a judgement about 59
+lines and it is the part a reader actually wants, so it is left undone and said to be undone
+rather than carried forward from a count that no longer holds. Feature 123's rows are gone
+because #107 merged; feature 124's 28 are the bulk of
+what is left.
 
 The V1 specs (`specs/0NN-*`) carry a further 11 unticked lines; that directory is the
 archived record and is not live work.

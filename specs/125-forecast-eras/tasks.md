@@ -159,6 +159,17 @@ the reason is the part that cannot be reconstructed later (CLAUDE.md, lesson 1).
       audited against the branch — no stray artefact was ever staged. This is what CLAUDE.md's
       first working practice is about, and `git add -A` is how it would have got in.
 
+- [x] **T061** The rewind guard's first version was half right and made things worse: it held
+      the pointer back and left the insert unconditional, resurrecting the superseded now-cast
+      into the inventory where no pointer named it and nothing would free it. Three readers
+      resolve the now-cast by scanning the inventory rather than asking the pointer, and they
+      disagree once there is more than one — the EDR collection takes the last and served a
+      field 900 ticks stale, the map's axis lookup takes the first, and the environment
+      generator read its cadence from whichever it found and authored off-cadence. Measured on
+      `returning`: five now-casts where there should be one, 5.9 MB retained. A rewinding
+      publication now writes nothing at all, and the test asserts the inventory as well as the
+      pointer — it catches both the original fault and my own first fix for it.
+
 ## Declined, with the reason
 
 - [ ] **T030** Quiesce the scheduler through a replayed pre-roll. **Built, measured and

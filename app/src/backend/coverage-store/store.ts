@@ -217,6 +217,22 @@ export class CoverageStore {
      * The now-cast half of this predates the forecast eras; the `instance` half arrived with
      * them, because until this feature an artefact carried no instance holdings and a replay
      * could not touch that pointer. Both are closed here, because the rule is one rule.
+     *
+     * **A rewinding publication is a no-op, and the first version of this guard was not.** It
+     * held the pointer back and left the insert above it unconditional, which resurrected the
+     * superseded now-cast the store had deliberately deleted — into the end of the inventory,
+     * where no pointer named it and nothing would free it. That is worse than the fault it
+     * replaced, because three readers resolve the now-cast by scanning the inventory rather
+     * than by asking the pointer, and they disagree once there is more than one: the EDR
+     * collection takes the last (serving a field 900 ticks stale), the map's axis lookup takes
+     * the first (so values and time axis can come from different holdings), and the
+     * environment generator reads `lastNowcastTick` from whichever it finds and authors its
+     * next now-cast off-cadence. Measured on `returning`: five now-casts where there should be
+     * one, and 5.9 MB of bytes nothing points at, retained for the life of the run.
+     *
+     * So nothing is written. The store already holds what this publication is trying to say,
+     * and it is reported as published because it was: the bytes are accounted for, and the
+     * snapshot source's count of what it replayed stays true.
      */
     const pointedId = this.eraPointers.get(descriptor.era);
     const pointedAt = pointedId === undefined ? undefined : this.holdingsById.get(pointedId);
@@ -225,10 +241,12 @@ export class CoverageStore {
       pointedAt.descriptor.holding_id !== descriptor.holding_id &&
       descriptor.published_at.tick < pointedAt.descriptor.published_at.tick;
 
+    if (rewinds) return { published: true };
+
     // Atomic by construction: the Map entry and era pointer land in one synchronous
     // step; no reader interleaves (ADR-0030's scheduling model).
     this.holdingsById.set(descriptor.holding_id, { descriptor, bytes: staged.bytes });
-    if (descriptor.era === 'nowcast' && !rewinds) {
+    if (descriptor.era === 'nowcast') {
       const previous = this.eraPointers.get('nowcast');
       if (previous !== undefined && previous !== descriptor.holding_id) this.holdingsById.delete(previous);
       this.eraPointers.set('nowcast', descriptor.holding_id);
@@ -238,7 +256,7 @@ export class CoverageStore {
       // exists so a reader can ask for the brief by era, as it asks for the now-cast.
       this.eraPointers.set('departure', descriptor.holding_id);
     }
-    if (descriptor.era === 'instance' && !rewinds) {
+    if (descriptor.era === 'instance') {
       // Instances accumulate as holdings (FR-30); the pointer names the current one.
       this.eraPointers.set('instance', descriptor.holding_id);
     }

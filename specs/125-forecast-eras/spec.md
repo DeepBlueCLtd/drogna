@@ -82,6 +82,20 @@ backlog's P0 row wanted and is also ~27 MB of git history per change.
   consumer is a counter is not a refusal anybody hears" — for a fault fixed one feature ago.
   Making a store refusal a published fact rather than a throw is the right fix and is a change
   to how every author reports, not to this feature.
+- **The analyst does not restate its standing analysis, so the Forecast tab's provenance
+  region reads "no analysis has been announced yet" for the first 599–1,794 ticks of a
+  replayed run, over a store holding four to sixteen analyses.** This is the same shape as the
+  offload fault FR-125-05 exists for, and it is not fixed for a reason that is a fact about the
+  message rather than an omission: `analysis_published` carries the cycle's own findings — how
+  many observations were assimilated, how many were clamped, the worst displacement — and those
+  live nowhere but the cycle that computed them. The store holds the fields, not the reckoning.
+  A restatement would have to invent that block, which is precisely the composing-a-statement-
+  no-component-made hazard ADR-0041 forbids and that the model runner's restatement is careful
+  to avoid. The panel's sentence is at least true as written: it says no analysis has been
+  *announced*, not that none exists. Closing it properly means either carrying the cycle's
+  findings into the analysis manifest, so the store can answer for them, or a narrower standing
+  message that claims only what the store knows — both are changes to what the analyst records,
+  and belong to whoever makes them.
 - **The features are not restated with the run.** `forecast_features` is derived per step and
   is not in the store, so the feature surface is empty until the first live run — which is
   what a restarted runner has always done, and is the one part of a resumed run's knowledge

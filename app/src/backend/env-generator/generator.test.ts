@@ -176,10 +176,21 @@ describe('the synthetic ocean (feature 102)', () => {
       runtime.store.currentNowcast()?.descriptor.holding_id,
       'a republication of an older holding rewound the era pointer',
     ).toBe(standing?.descriptor.holding_id);
+    const inventory = runtime.store.holdings().map((holding) => holding.holding_id);
+    expect(inventory, 'the standing holding was deleted by a republication of its predecessor').toContain(
+      String(standing?.descriptor.holding_id),
+    );
+    // **And the superseded holding is not resurrected.** The first version of this guard held
+    // the pointer back and left the insert unconditional, which put the discarded now-cast
+    // back into the inventory where no pointer named it — worse than the fault it replaced,
+    // because three readers resolve the now-cast by scanning the inventory rather than by
+    // asking the pointer, and they disagree the moment there is more than one: the EDR
+    // collection takes the last, the map's axis lookup the first, and the environment
+    // generator reads its cadence from whichever it finds.
     expect(
-      runtime.store.holdings().map((holding) => holding.holding_id),
-      'the standing holding was deleted by a republication of its predecessor',
-    ).toContain(String(standing?.descriptor.holding_id));
+      inventory.filter((id) => id.startsWith('nowcast.')),
+      'a republication of a superseded now-cast put it back in the inventory',
+    ).toEqual([String(standing?.descriptor.holding_id)]);
     runtime.stop();
   });
 

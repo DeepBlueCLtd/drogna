@@ -198,21 +198,25 @@ published today.
       written again. Driven live: clicking the volume opened the column at 46.22°N, -10.90°E in
       the profile beneath it. The keyboard route to a square is the share map's, unchanged, which
       is what "must not be a second one" means in code.
-- [ ] T012 The parameter control, defaulting to sound speed, and the depth control.
+- [x] T012 The parameter control, defaulting to sound speed, and the depth control.
       *Reconciled:* a depth control exists on the share map (123's T084) and walks the same
       column; the volume shares it rather than gaining a second. The parameter control is new.
 
-      *Half built, and the half that is not is blocked on a decision already taken elsewhere.*
-      The control exists and offers what an analysis holding carries — temperature and salinity.
-      It does **not** default to sound speed, because sound speed is not served: it is derived
-      from the pair, and ADR-0005 makes that derivation "the single implementation in drogna", so
-      a second one in this panel is ruled out by that decision rather than by preference. Three
-      routes, none of them this task's to take alone: move `soundSpeedMs` into `app/src/seam/`
-      (clean, but its implementation path is written into published manifests, so it ripples into
-      snapshot regeneration); have the query layer serve a derived `sound_speed` parameter
-      (architecturally the best fit — the query layer is a point of use — but a backend change);
-      or amend T012. Left unticked with the reason, which is the part that cannot be
-      reconstructed later.
+      *Blocked, then unblocked by the first of the three routes it named.* The control shipped
+      first offering only what an analysis holding carries — temperature and salinity — because
+      sound speed is derived from the pair and ADR-0005 makes that derivation "the single
+      implementation in drogna", so a second one in this panel was ruled out by that decision
+      rather than by preference. The three routes recorded here were: move `soundSpeedMs` into
+      `app/src/seam/`; have the query layer serve a derived `sound_speed`; or amend the task.
+
+      *Built as the first.* `app/src/seam/ocean-relations.ts` now holds the pressure and sound
+      speed relations and `env-generator/analytic.ts` re-exports them, so every backend caller is
+      unchanged and the panel derives sound speed per cell from the temperature and salinity it
+      already queries. The ripple the note predicted was real and is the record of it: the
+      implementation path is a string in every manifest, so all four snapshots regenerated — read
+      rather than trusted, and the only differences were that path, its length prefix and the
+      code revision, with none of the 2,382 field digests moved. `sound_speed` is the control's
+      first entry and its default.
 
 ## The rays
 

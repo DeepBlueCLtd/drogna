@@ -335,16 +335,16 @@
     },
     "nowcast": {
       "grid": {
-        "longitude": 96,
-        "latitude": 80,
-        "depth": 6
+        "longitude": 48,
+        "latitude": 40,
+        "depth": 26
       },
       "interval_ticks": 900,
       "time_steps": 4,
       "step_seconds": 3600
     },
     "departure": {
-      "grid": { "longitude": 48, "latitude": 40, "depth": 6 },
+      "grid": { "longitude": 48, "latitude": 40, "depth": 26 },
       "time_steps": 12,
       "step_seconds": 3600
     },
@@ -403,7 +403,8 @@
           "depth_m": 80,
           "thickness_m": 30,
           "temperature_drop_c": 4,
-          "salinity_rise_psu": 0.1
+          "salinity_rise_psu": 0.1,
+          "displacement_m_per_c": 30
         },
         "jitter": {
           "depth_m": 15,

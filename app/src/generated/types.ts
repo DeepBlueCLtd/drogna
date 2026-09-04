@@ -389,6 +389,7 @@ export type ConfigEnvGenerator = {
         "thickness_m": number;
         "temperature_drop_c": number;
         "salinity_rise_psu": number;
+        "displacement_m_per_c": number;
       };
       "jitter": {
         "depth_m": number;
@@ -1629,6 +1630,7 @@ export type ManifestThermoclineParameters = {
   "thickness_m": number;
   "temperature_drop_c": number;
   "salinity_rise_psu": number;
+  "displacement_m_per_c": number;
 };
 
 /** manifest.schema.json #/$defs/moving_parameters */

@@ -55,13 +55,24 @@ describe('the departure brief (feature 121)', () => {
     // world at each step would differ here, and the eddy and the moving feature are
     // both live over this window, so the difference would be real rather than a
     // rounding artefact.
+    // Counted, then asserted once. An `expect` per cell was a million assertions the
+    // moment the depth axis was raised (#113) and timed this test out; it also reported
+    // only the first offender, where the count says whether one cell drifted or the whole
+    // brief was re-evaluated — which is the difference the test is actually about.
+    let compared = 0;
+    const drifted: string[] = [];
     for (let variable = 0; variable < grid.time.count * perStep * 2; variable += grid.time.count * perStep) {
       for (let step = 1; step < grid.time.count; step++) {
         for (let cell = 0; cell < perStep; cell++) {
-          expect(values[variable + step * perStep + cell]).toBe(values[variable + cell]);
+          compared += 1;
+          const held = values[variable + step * perStep + cell];
+          const issued = values[variable + cell];
+          if (held !== issued && drifted.length < 4) drifted.push(`step ${step} cell ${cell}: ${held} != ${issued}`);
         }
       }
     }
+    expect(compared).toBe(grid.time.count > 1 ? 2 * (grid.time.count - 1) * perStep : 0);
+    expect(drifted).toEqual([]);
     runtime.stop();
   });
 

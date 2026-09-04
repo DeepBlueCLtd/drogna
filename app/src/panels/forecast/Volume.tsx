@@ -9,17 +9,18 @@
  * the served field, by `volume.ts`'s pick, rather than as the plane the published domain mean
  * would give.
  *
- * **And on the shipped configuration it comes out nearly flat, which is measured and stated
- * rather than hoped past.** Driven against `arriving`: 7,679 of 7,680 columns place it at 100 m
- * and one at 300 m. The cause is the profile, not the pick — the domain-mean gradients run 4.49,
- * 1.64, 0.92, 0.51, 0.29 °C per 100 m, so the shallowest pair wins by nearly three to one
- * everywhere, and the authored thermocline is a layer an order of magnitude thinner than the
- * 200 m level spacing. `model-runner/features.ts` says the same of its own estimate: "a 200 m grid
- * cannot see a 30 m layer". FR-120's doming is not visible at this depth resolution *by anyone*,
- * and this drawing is not the thing that could make it so. The caption states the count it found,
- * because a picture captioned as a doming surface over two distinct depths would be exactly the
- * false illumination this region exists to avoid — and what it does show, where the column's
- * strongest gradient sits, is a sonar question whatever it is called.
+ * **The first version of this drawing came out flat, and saying so is what fixed it.** Driven
+ * against `arriving` as first shipped, 7,679 of 7,680 columns placed the thermocline at 100 m and
+ * one at 300 m. The caption stated that count rather than calling the result a doming surface,
+ * and the measurement behind it became issue #113 — which found the cause was neither the pick
+ * nor the drawing but the world: analytic form 1's `thermoclineAnomalyT` took no longitude or
+ * latitude, so the layer was one depth everywhere and no grid spacing could resolve a shape that
+ * was not there. Form 2 displaces the layer where a feature warms or cools the water at it, and
+ * the depth axis was raised to 26 levels to carry the result.
+ *
+ * The caption still states what it measured rather than what it hoped for, and still says the
+ * flatness is the grid's when it finds one, because that is the branch that stopped a false
+ * claim once already and the configuration can change again.
  *
  * **The geometry is the Map's, imported rather than copied.** `cube.ts` already carries a
  * lon/lat/depth triple into the space an OrbitView rotates and carries a clicked point back out,
@@ -225,23 +226,52 @@ export function Volume({
    * How much shape the surface actually has, measured rather than assumed.
    *
    * **The caption said "the shape a single published depth cannot show" and the tree did not
-   * support it.** Driven against the shipped configuration: 7,679 of 7,680 columns place the
-   * thermocline at 100 m and exactly one at 300 m. The reason is in the profile, not in the pick
-   * — the domain-mean gradients are 4.49, 1.64, 0.92, 0.51 and 0.29 °C per 100 m, so the
-   * shallowest pair wins by nearly three to one everywhere, and the authored thermocline is a
-   * layer an order of magnitude thinner than the 200 m spacing. `features.ts` says as much about
-   * its own estimate: "a 200 m grid cannot see a 30 m layer".
+   * support it.** Measured against the configuration as first shipped: 7,679 of 7,680 columns
+   * placed the thermocline at 100 m and exactly one at 300 m. That measurement became issue #113
+   * and then analytic form 2, and the span below is the one the drawing now reports.
    *
-   * So the surface is drawn and the count is stated. A drawing that called two distinct depths a
-   * doming surface would be the false illumination this region exists to avoid, and hiding the
-   * surface would throw away the one thing it does show — where the water column's strongest
-   * gradient sits, which is a sonar question whatever it is called.
+   * The branch stays. A drawing that called two distinct depths a doming surface would be the
+   * false illumination this region exists to avoid, and the surface is worth drawing either way
+   * — where the water column's strongest gradient sits is a sonar question whatever its shape.
+   * The spacing quoted in the flat case is read off the levels, not typed: it said "200 m" while
+   * the axis was being changed to 40, which is how a caption becomes a lie without anyone
+   * editing it.
+   *
+   * **And the span reported is the one most of the columns are in, not the outermost two.** The
+   * first version of this caption printed max minus min and said the surface "domes and tilts"
+   * across it. Against a served analysis late in a run that read "16 distinct depths spanning
+   * 840 m" — true of two columns and false of the layer, which is the shape of a claim this
+   * region is supposed to refuse. The same field's commonest three depths hold ninety per cent
+   * of the columns inside 80 m, and the picture agrees with that number rather than the other
+   * one. The tail is not hidden: the distinct count still names every depth taken, and the
+   * sentence says how much of the field the span covers.
    */
+  const CORE_SHARE = 0.9;
   const relief = useMemo(() => {
-    const depths = new Set<number>();
-    for (const cell of surface) if (cell) depths.add(cell.depthM);
-    return { distinct: depths.size, placed: surface.filter((cell) => cell !== undefined).length };
-  }, [surface]);
+    const counts = new Map<number, number>();
+    for (const cell of surface) if (cell) counts.set(cell.depthM, (counts.get(cell.depthM) ?? 0) + 1);
+    const placed = [...counts.values()].reduce((sum, count) => sum + count, 0);
+    // The depths that between them hold most of the columns, taken commonest first, and the
+    // span of *those*. See the note above: a min-to-max span is a statement about the two most
+    // extreme columns in the field and reads as a statement about the layer.
+    const core = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const kept: number[] = [];
+    let held = 0;
+    for (const [depthM, count] of core) {
+      if (held >= CORE_SHARE * placed) break;
+      kept.push(depthM);
+      held += count;
+    }
+    const spacings = levels.slice(1).map((level, at) => level.depthM - levels[at].depthM);
+    return {
+      distinct: counts.size,
+      placed,
+      coreCount: kept.length,
+      coreSpanM: kept.length > 0 ? Math.max(...kept) - Math.min(...kept) : 0,
+      coreShare: placed > 0 ? held / placed : 0,
+      spacingM: spacings.length > 0 ? Math.min(...spacings) : 0,
+    };
+  }, [surface, levels]);
 
   const first = levels[0];
   const strongest = useMemo(
@@ -387,8 +417,8 @@ export function Volume({
             depth{relief.distinct === 1 ? '' : 's'}
           </strong>
           {relief.distinct <= 2
-            ? ' — so it is nearly flat, and that is a fact about the grid rather than about the ocean: the levels are 200 m apart, the profile falls fastest in its shallowest pair almost everywhere, and the authored thermocline is a layer an order of magnitude thinner than the spacing can resolve. What this surface shows at this resolution is where the strongest gradient sits, not a doming thermocline.'
-            : ', so it domes and tilts where the features move it.'}
+            ? ` — so it is nearly flat, and that is a fact about the grid rather than about the ocean: the levels are ${relief.spacingM} m apart and the profile falls fastest in the same pair almost everywhere. What this surface shows at this resolution is where the strongest gradient sits, not a doming thermocline.`
+            : `, of which ${relief.coreCount} hold ${Math.round(relief.coreShare * 100)}% of them within ${relief.coreSpanM} m — so it domes and tilts where the features move it. A warm feature presses the layer down beneath it and a cool one lets it rise, which is the shape, not the drawing's. The columns outside that span are ones whose profile falls fastest somewhere deeper, and they are drawn where they were found.`}
         </p>
       )}
     </div>

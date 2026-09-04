@@ -516,6 +516,40 @@ try {
   mkdirSync(dirname(outPath), { recursive: true });
   await region.screenshot({ path: outPath });
 
+  /*
+   * **And a second shot, of the volume.** It is closed at rest — `lazy.tsx` withholds a third of
+   * the bundle until something asks for it — so the region shot above never contains it, and the
+   * one drawing in this tab that is a three-dimensional surface had no picture proving it renders
+   * at all. Opening it here rather than in a command of its own is the point: this proof has
+   * already paid for the expensive part, which is warming the loop until an analysis exists and
+   * opening a column on it.
+   *
+   * The caption is read back and the shot refused if the surface placed nothing, for the reason
+   * `capture:forecast` exists at all — a picture of an empty box is worse than no picture, and
+   * this region in particular is capable of drawing a convincing volume with no surface in it.
+   */
+  const volumeShot = outPath.replace(/\.png$/, "-volume.png");
+  await page.getByRole("button", { name: "show the volume" }).click();
+  const volume = page.getByTestId("forecast-volume");
+  await volume.waitFor({ state: "visible", timeout: 30_000 });
+  const caption = page.getByTestId("forecast-volume-caption");
+  await caption.waitFor({ state: "visible", timeout: 60_000 });
+  const captionText = (await caption.textContent()) ?? "";
+  const columns = /(\d+) of (\d+) columns have one, over (\d+) distinct/.exec(captionText);
+  if (!columns) throw new Error(`the volume drew no surface count: ${captionText.slice(0, 200)}`);
+  const [, placed, total, distinct] = columns;
+  if (Number(placed) === 0)
+    throw new Error(`the volume placed the thermocline in none of ${total} columns`);
+  // The shape claim as well as the count, because the count alone was what let a caption say
+  // "16 distinct depths spanning 840 m" about a field whose layer moves 80 m.
+  const core = /(\d+) hold (\d+)% of them within (\d+) m/.exec(captionText);
+  await volume.screenshot({ path: volumeShot });
+  console.log(volumeShot);
+  console.log(
+    `forecast: the volume placed the thermocline in ${placed} of ${total} columns over ${distinct} distinct depth(s)` +
+      (core ? `, ${core[1]} of which hold ${core[2]}% of them within ${core[3]} m` : ""),
+  );
+
   const simTime = await page.getByTestId("sim-time").textContent();
   const runId = await page.locator(".shell-run").textContent();
   const provenance = {

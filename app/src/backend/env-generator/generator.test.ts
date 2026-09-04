@@ -12,7 +12,8 @@ import type { ConfigRun, CoverageHolding, Manifest } from '../../generated/types
 import { createSeamValidator } from '../../seam/validate.js';
 import { buildBackend } from '../runtime/runtime.js';
 import { sha256Hex } from '../lib/sha256.js';
-import { kmOffsets, temperatureAt, type WorldParameters } from './analytic.js';
+import { kmOffsets, temperatureAt, thermoclineDepthAt, type WorldParameters } from './analytic.js';
+import { estimateFeatures } from '../model-runner/features.js';
 import { axisValues } from './generator.js';
 
 const validator = createSeamValidator();
@@ -225,6 +226,82 @@ describe('the synthetic ocean (feature 102)', () => {
     expect(announcements).toEqual([
       { era: 'nowcast', tick: config.env_generator.nowcast.interval_ticks },
     ]);
+    runtime.stop();
+  });
+
+  it('the thermocline surface recovered from the stored bytes has the shape the manifest predicts (issue #113, analytic form 2)', () => {
+    const runtime = buildBackend(lockstepConfig(), options, validator);
+    const nowcast = runtime.store.currentNowcast();
+    if (!nowcast) throw new Error('no nowcast');
+    const manifest = nowcast.descriptor.manifest;
+    const world = worldFromManifest(manifest);
+
+    const lons = axisValues(manifest.grid.longitude);
+    const lats = axisValues(manifest.grid.latitude);
+    const depths = axisValues(manifest.grid.depth);
+    const perLevel = lats.length * lons.length;
+    const cells = manifest.grid.time.count * depths.length * perLevel;
+    const temperature = new Float32Array(nowcast.bytes.buffer, 0, cells);
+
+    // One column at a time through the *published* estimator, rather than a second pick
+    // written here: a one-cell grid's domain mean is that column, so `estimateFeatures`
+    // answers the question it already answers for the whole domain. A transcription of
+    // its argmax would keep passing after the estimator changed, which is how this
+    // repository has been caught before.
+    const columnGrid = (longitude: number, latitude: number) => ({
+      longitudes: [longitude],
+      latitudes: [latitude],
+      depthsM: depths,
+      cellKmEast: manifest.grid.longitude.spacing,
+      cellKmNorth: manifest.grid.latitude.spacing,
+      referenceLatitude: latitude,
+    });
+    const column = new Float32Array(depths.length);
+    const recovered: { picked: number; predicted: number }[] = [];
+    lats.forEach((latitude, la) =>
+      lons.forEach((longitude, lo) => {
+        for (let level = 0; level < depths.length; level++) column[level] = temperature[level * perLevel + la * lons.length + lo];
+        const estimate = estimateFeatures(column, columnGrid(longitude, latitude)).thermocline;
+        if (!estimate || 'reason' in estimate) return;
+        recovered.push({ picked: estimate.depthM, predicted: thermoclineDepthAt(world, longitude, latitude, 0) });
+      }),
+    );
+    expect(recovered.length).toBe(perLevel);
+
+    /*
+     * **The bound is the manifest's own arithmetic, never a number typed here.** The layer
+     * spans `displacement_m_per_c` times the range of the feature anomalies at its nominal
+     * depth; divided by the depth spacing that is how many level boundaries the dome
+     * crosses, and a pick quantised to midpoints therefore takes at least that many values
+     * plus one.
+     *
+     * Analytic form 1 had no displacement term, so this predicted relief was nought and
+     * the assertion below reduced to "at least one distinct depth" — trivially true, which
+     * is exactly why form 1's flatness went unnoticed until #113 measured it. The bound
+     * has teeth only because the manifest now carries a displacement to derive it from.
+     */
+    const predicted = recovered.map((entry) => entry.predicted);
+    const relief = Math.max(...predicted) - Math.min(...predicted);
+    const expected = Math.floor(relief / manifest.grid.depth.spacing) + 1;
+    expect(expected).toBeGreaterThan(1);
+    const distinct = new Set(recovered.map((entry) => entry.picked));
+    expect(distinct.size).toBeGreaterThanOrEqual(expected);
+
+    /*
+     * Variety alone would pass on noise, so the shape is tied back to the manifest: the
+     * columns the bytes place the layer deepest in must be the columns the manifest
+     * predicts deepest. Grouped by the recovered depth, the mean predicted depth has to
+     * rise with it.
+     */
+    const groups = new Map<number, number[]>();
+    for (const entry of recovered) groups.set(entry.picked, [...(groups.get(entry.picked) ?? []), entry.predicted]);
+    const ordered = [...groups.entries()]
+      .filter(([, values]) => values.length >= 8)
+      .sort((a, b) => a[0] - b[0])
+      .map(([picked, values]) => ({ picked, mean: values.reduce((sum, v) => sum + v, 0) / values.length }));
+    expect(ordered.length).toBeGreaterThanOrEqual(2);
+    for (let at = 1; at < ordered.length; at++) expect(ordered[at].mean).toBeGreaterThan(ordered[at - 1].mean);
+
     runtime.stop();
   });
 

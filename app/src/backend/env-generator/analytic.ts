@@ -1,5 +1,14 @@
 /**
- * The analytic form, version 1 (manifest.schema.json `generator.analytic_form_version`).
+ * The analytic form, version 2 (manifest.schema.json `generator.analytic_form_version`).
+ *
+ * **Version 2 gives the thermocline a shape.** In form 1 `thermoclineAnomalyT` took only a depth:
+ * the layer sat at one depth everywhere and no resolution could make it dome, because there was
+ * nothing to resolve. FR-120 asks for a surface and says why — "the thermocline domes, tilts and
+ * breaks, and shape is the answer a sonar user is asking for" — so form 1 could not satisfy the
+ * requirement by any drawing, at any grid spacing (issue #113, measured: 7,680 of 7,680 columns
+ * picked one depth at every spacing from 200 m down to 10 m). Form 2 displaces the layer where a
+ * feature warms or cools the water at it, which is what a mesoscale feature does to an isopycnal,
+ * and the surface acquires the shape the requirement was asking to see.
  *
  * Everything the generator stores is evaluated from these pure functions of
  * (longitude, latitude, depth, seconds-from-origin) and the jittered parameters the
@@ -18,7 +27,7 @@ import type {
   ManifestThermoclineParameters,
 } from '../../generated/types.js';
 
-export const ANALYTIC_FORM_VERSION = 1;
+export const ANALYTIC_FORM_VERSION = 2;
 
 export const KM_PER_DEGREE_LATITUDE = 111.32;
 
@@ -110,19 +119,68 @@ export function frontAnomalyS(p: ManifestFrontParameters, longitude: number, lat
   return p.salinity_amplitude_psu * Math.tanh(x) * Math.exp(-depthM / p.depth_scale_m);
 }
 
-export function thermoclineMembership(p: ManifestThermoclineParameters, depthM: number): number {
-  const d = (depthM - p.depth_m) / p.thickness_m;
+/**
+ * How far the features push the layer at one place, and therefore where the layer is there.
+ *
+ * **Why the anomalies are evaluated at the layer's nominal depth rather than at the depth being
+ * asked about.** A layer's depth is a property of the place, not of the depth you happen to be
+ * sampling: if this read the anomaly at `depthM` the layer would sit somewhere different for every
+ * sample taken through the same column, which is not a surface at all. `depth_m` is the one depth
+ * every column shares, so it is the one that can be asked at.
+ *
+ * That also keeps this out of a loop. The displacement depends on the eddy, front and moving terms
+ * and those depend on position and time — but never on the thermocline, so nothing here reads what
+ * it is about to write.
+ *
+ * The sign is the ocean's: warm water above an isopycnal presses it down, cool water lets it rise.
+ * `displacement_m_per_c` is positive, so a warm-core eddy deepens the layer beneath it and a cold
+ * one domes it — the doming FR-120 names.
+ */
+export function thermoclineDepthAt(
+  w: WorldParameters,
+  longitude: number,
+  latitude: number,
+  secondsFromOrigin: number,
+): number {
+  const nominal = w.thermocline.depth_m;
+  const anomalyC =
+    eddyAnomalyT(w.eddy, longitude, latitude, nominal) +
+    frontAnomalyT(w.front, longitude, latitude, nominal) +
+    w.moving.sign * w.moving.strength_c * movingMembership(w.moving, longitude, latitude, nominal, secondsFromOrigin);
+  return nominal + w.thermocline.displacement_m_per_c * anomalyC;
+}
+
+/**
+ * The three terms below take the layer's depth *at this place* as an argument rather than reading
+ * `p.depth_m`. It is deliberately not defaulted: a caller that forgets it would silently get the
+ * flat form 1 field back, which is the fault this version exists to fix, and a default is how that
+ * would happen quietly.
+ */
+export function thermoclineMembership(
+  p: ManifestThermoclineParameters,
+  depthM: number,
+  layerDepthM: number,
+): number {
+  const d = (depthM - layerDepthM) / p.thickness_m;
   const sech = 1 / Math.cosh(d);
   return sech * sech;
 }
 
-export function thermoclineAnomalyT(p: ManifestThermoclineParameters, depthM: number): number {
+export function thermoclineAnomalyT(
+  p: ManifestThermoclineParameters,
+  depthM: number,
+  layerDepthM: number,
+): number {
   // Half the drop above, half below: the full drop is realised across the layer.
-  return (-p.temperature_drop_c / 2) * (1 + Math.tanh((depthM - p.depth_m) / p.thickness_m)) + p.temperature_drop_c / 2;
+  return (-p.temperature_drop_c / 2) * (1 + Math.tanh((depthM - layerDepthM) / p.thickness_m)) + p.temperature_drop_c / 2;
 }
 
-export function thermoclineAnomalyS(p: ManifestThermoclineParameters, depthM: number): number {
-  return (p.salinity_rise_psu / 2) * (1 + Math.tanh((depthM - p.depth_m) / p.thickness_m)) - p.salinity_rise_psu / 2;
+export function thermoclineAnomalyS(
+  p: ManifestThermoclineParameters,
+  depthM: number,
+  layerDepthM: number,
+): number {
+  return (p.salinity_rise_psu / 2) * (1 + Math.tanh((depthM - layerDepthM) / p.thickness_m)) - p.salinity_rise_psu / 2;
 }
 
 /** The moving feature's centre at a time: exact affine drift about reference_latitude. */
@@ -176,7 +234,7 @@ export function temperatureAt(
     backgroundTemperature(w.background, depthM) +
     eddyAnomalyT(w.eddy, longitude, latitude, depthM) +
     frontAnomalyT(w.front, longitude, latitude, depthM) +
-    thermoclineAnomalyT(w.thermocline, depthM) +
+    thermoclineAnomalyT(w.thermocline, depthM, thermoclineDepthAt(w, longitude, latitude, secondsFromOrigin)) +
     w.moving.sign * w.moving.strength_c * movingMembership(w.moving, longitude, latitude, depthM, secondsFromOrigin)
   );
 }
@@ -192,7 +250,7 @@ export function salinityAt(
     backgroundSalinity(w.background, depthM) +
     eddyAnomalyS(w.eddy, longitude, latitude, depthM) +
     frontAnomalyS(w.front, longitude, latitude, depthM) +
-    thermoclineAnomalyS(w.thermocline, depthM) +
+    thermoclineAnomalyS(w.thermocline, depthM, thermoclineDepthAt(w, longitude, latitude, secondsFromOrigin)) +
     w.moving.sign *
       w.moving.salinity_strength_psu *
       movingMembership(w.moving, longitude, latitude, depthM, secondsFromOrigin)
@@ -214,7 +272,7 @@ export const TAU_BLENDING_RULE = {
 export const TAU_MEMBERSHIP_RULE = {
   rule: 'anomaly-geometry',
   description:
-    'A feature’s membership at a location is the same normalised geometry its anomaly uses (radial Gaussian, sech² cross-front decayed by depth, sech² across the layer, drifting radial Gaussian), so the timescale and the anomaly it belongs to cannot drift apart; the moving feature’s tau advects with it.',
+    'A feature’s membership at a location is the same normalised geometry its anomaly uses (radial Gaussian, sech² cross-front decayed by depth, sech² across the layer about the layer’s displaced depth, drifting radial Gaussian), so the timescale and the anomaly it belongs to cannot drift apart; the moving feature’s tau advects with it and the thermocline’s domes with it.',
 } as const;
 
 export function tauAt(
@@ -228,7 +286,13 @@ export function tauAt(
   const memberships: [number, number][] = [
     [eddyMembership(w.eddy, longitude, latitude, depthM), tau.feature_seconds.eddy],
     [frontMembership(w.front, longitude, latitude, depthM), tau.feature_seconds.front],
-    [thermoclineMembership(w.thermocline, depthM), tau.feature_seconds.thermocline],
+    // The layer's membership follows the layer. TAU_MEMBERSHIP_RULE says a feature's membership is
+    // the same geometry its anomaly uses, so the displaced layer has to displace its tau with it or
+    // the two would drift apart exactly where the shape is.
+    [
+      thermoclineMembership(w.thermocline, depthM, thermoclineDepthAt(w, longitude, latitude, secondsFromOrigin)),
+      tau.feature_seconds.thermocline,
+    ],
     [movingMembership(w.moving, longitude, latitude, depthM, secondsFromOrigin), tau.feature_seconds.moving],
   ];
   let bestWeight = 0;

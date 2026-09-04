@@ -8,6 +8,7 @@ import {
   tauAt,
   temperatureAt,
   thermoclineAnomalyT,
+  thermoclineDepthAt,
   type WorldParameters,
 } from './analytic.js';
 
@@ -39,7 +40,7 @@ const world: WorldParameters = {
     salinity_amplitude_psu: -0.2,
     depth_scale_m: 250,
   },
-  thermocline: { depth_m: 80, thickness_m: 30, temperature_drop_c: 4, salinity_rise_psu: 0.1 },
+  thermocline: { depth_m: 80, thickness_m: 30, temperature_drop_c: 4, salinity_rise_psu: 0.1, displacement_m_per_c: 20 },
   moving: {
     centre_latitude: 45,
     centre_longitude: -12.5,
@@ -87,10 +88,50 @@ describe('the analytic form (v1)', () => {
   });
 
   it('the thermocline realises its full drop across the layer', () => {
-    const above = thermoclineAnomalyT(world.thermocline, 0);
-    const below = thermoclineAnomalyT(world.thermocline, 400);
+    const above = thermoclineAnomalyT(world.thermocline, 0, world.thermocline.depth_m);
+    const below = thermoclineAnomalyT(world.thermocline, 400, world.thermocline.depth_m);
     // Within the tanh tails: the surface sits 2.7 thicknesses above the layer.
     expect(above - below).toBeCloseTo(4, 1);
+  });
+
+  it('the layer follows the features that displace it (analytic form 2)', () => {
+    /*
+     * The layer sits where it was authored **on the front's own line**, not merely far from
+     * everything: the front's anomaly is a tanh, so it saturates at plus or minus its
+     * amplitude rather than decaying, and the two sides of the domain therefore carry two
+     * different layer depths all the way to the edges. That is a front doing what a front
+     * does — a step in the layer — and the only place its contribution is nought is where
+     * the step crosses. This test was written asserting a quiet far field and failed at
+     * 63.9 m against 80, which is the front's own -1.2 °C times 20 m/°C: the assertion was
+     * wrong about the composition, not the composition wrong about the ocean.
+     */
+    const onFront = thermoclineDepthAt(world, world.front.anchor_longitude, world.front.anchor_latitude, 0);
+    expect(frontSignedDistanceKm(world.front, world.front.anchor_longitude, world.front.anchor_latitude)).toBeCloseTo(0, 6);
+    expect(onFront).toBeCloseTo(world.thermocline.depth_m, 0);
+    const far = onFront;
+
+    // The eddy is warm-cored (sign +1), so it presses the layer down beneath it.
+    const underEddy = thermoclineDepthAt(world, world.eddy.centre_longitude, world.eddy.centre_latitude, 0);
+    expect(underEddy).toBeGreaterThan(far + 10);
+
+    // The moving feature is cold-cored (sign -1), so it domes the layer, and it takes the dome
+    // with it: the dome is under the centre at each time, not under the initial centre.
+    const start = movingCentreAt(world.moving, 0);
+    const later = movingCentreAt(world.moving, 5 * 86400);
+    expect(thermoclineDepthAt(world, start.longitude, start.latitude, 0)).toBeLessThan(far - 10);
+    expect(thermoclineDepthAt(world, later.longitude, later.latitude, 5 * 86400)).toBeLessThan(far - 10);
+    expect(thermoclineDepthAt(world, start.longitude, start.latitude, 5 * 86400)).toBeGreaterThan(
+      thermoclineDepthAt(world, later.longitude, later.latitude, 5 * 86400),
+    );
+  });
+
+  it('a zero displacement coefficient reproduces the flat layer of analytic form 1', () => {
+    // The version bump's own boundary, so "form 2 is a superset of form 1" is a checked claim
+    // rather than a sentence in a comment.
+    const flat: WorldParameters = { ...world, thermocline: { ...world.thermocline, displacement_m_per_c: 0 } };
+    for (const [lon, lat] of [[-13.9, 44.1], [world.eddy.centre_longitude, world.eddy.centre_latitude], [-9.5, 47]]) {
+      expect(thermoclineDepthAt(flat, lon, lat, 0)).toBe(flat.thermocline.depth_m);
+    }
   });
 
   it('the moving feature advects as an exact affine map', () => {

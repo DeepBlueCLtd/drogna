@@ -1760,7 +1760,8 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   "depth_m",
                   "thickness_m",
                   "temperature_drop_c",
-                  "salinity_rise_psu"
+                  "salinity_rise_psu",
+                  "displacement_m_per_c"
                 ],
                 "additionalProperties": false,
                 "properties": {
@@ -1777,6 +1778,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
                   },
                   "salinity_rise_psu": {
                     "type": "number"
+                  },
+                  "displacement_m_per_c": {
+                    "type": "number",
+                    "description": "Metres the layer moves per degree of feature anomaly at its nominal depth. Not jittered: it sets the shape of the doming rather than where the layer sits, and a run that varied it would vary the thing the drawing exists to show."
                   }
                 }
               },
@@ -7568,11 +7573,13 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
       },
       "thermocline_parameters": {
         "type": "object",
+        "description": "The layer's far-field depth and shape, and how far the features displace it. depth_m is its depth away from every feature; the depth at a point is depth_m plus displacement_m_per_c times the eddy, front and moving temperature anomalies evaluated at depth_m, so the layer domes over a cool feature and is depressed under a warm one. Analytic form 1 had no displacement term and the layer was horizontally uniform.",
         "required": [
           "depth_m",
           "thickness_m",
           "temperature_drop_c",
-          "salinity_rise_psu"
+          "salinity_rise_psu",
+          "displacement_m_per_c"
         ],
         "additionalProperties": false,
         "properties": {
@@ -7589,6 +7596,10 @@ export const schemaDocuments: Record<string, Record<string, unknown>> = {
           },
           "salinity_rise_psu": {
             "type": "number"
+          },
+          "displacement_m_per_c": {
+            "type": "number",
+            "description": "Metres of vertical displacement per degree of feature anomaly at the layer's nominal depth. Zero reproduces analytic form 1."
           }
         }
       },
